@@ -1,0 +1,28 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+package api
+
+import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
+type GetStateFnc = func(key string) ([]byte, error)
+
+type Verifier interface {
+	Verify(message, sigma []byte) error
+}
+
+type Ledger interface {
+	GetState(key string) ([]byte, error)
+}
+
+type SignatureProvider interface {
+	HasBeenSignedBy(id view.Identity, verifier Verifier) error
+}
+
+type Validator interface {
+	VerifyTokenRequest(ledger Ledger, signatureProvider SignatureProvider, binding string, tr *TokenRequest) ([]interface{}, error)
+
+	VerifyTokenRequestFromRaw(getState GetStateFnc, binding string, raw []byte) ([]interface{}, error)
+}
