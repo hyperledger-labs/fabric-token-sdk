@@ -57,10 +57,10 @@ The `Fabric Token SDK` issues are tracked in the GitHub issues tab.
 
 The `Fabric Token SDK` can be downloaded using `go get` as follows:
  ```
-go get github.com/hyperledger-labs/fabric-smart-client
+go get github.com/hyperledger-labs/fabric-token-sdk
 ```
 
-The above command clones the repo under `$GOPATH/github.com/hyperledger-labs/fabric-smart-client`.
+The above command clones the repo under `$GOPATH/github.com/hyperledger-labs/fabric-token-sdk`.
 
 We recommend to use `go 1.14.13`. We are testing the Token SDK also against more recent versions of the go-sdk to make sure the Token SDK works properly.
 
@@ -97,7 +97,7 @@ We also believe that when developing new functions running tests is preferable t
 
 ## Versioning
 
-We use [`SemVer`](https://semver.org/) for versioning. For the versions available, see the [`tags on this repository`](https://github.com/hyperledger-labs/fabric-smart-client/tags).
+We use [`SemVer`](https://semver.org/) for versioning. For the versions available, see the [`tags on this repository`](https://github.com/hyperledger-labs/fabric-token-sdk/tags).
 
 # License
 
