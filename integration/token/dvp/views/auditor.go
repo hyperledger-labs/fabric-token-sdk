@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
@@ -30,7 +32,10 @@ type RegisterAuditorView struct {
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
-	return context.RunView(ttx.NewRegisterAuditorView(context.Me(), &AuditView{}))
+	return context.RunView(ttx.NewRegisterAuditorView(
+		fabric.GetIdentityProvider(context).DefaultIdentity(),
+		&AuditView{},
+	))
 }
 
 type RegisterAuditorViewFactory struct{}

@@ -9,6 +9,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 )
@@ -71,6 +72,7 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	buyer.RegisterResponder(&views.BuyHouseView{}, &views.SellHouseView{})
 
 	tokenTopology := token.NewTopology()
+	tokenTopology.SetSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"TokenOrg"}, "100", "1")
 	tms.AddCertifier(certifier)

@@ -11,28 +11,31 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp"
 )
 
 var _ = Describe("EndToEnd", func() {
 	var (
-		network *integration.Infrastructure
+		ii *integration.Infrastructure
 	)
 
 	AfterEach(func() {
-		network.Stop()
+		ii.Stop()
 	})
 
 	Describe("Plain DVP", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.Generate(StartPort(), dvp.Topology("fabtoken")...)
+			ii, err = integration.New(StartPort(), "", dvp.Topology("fabtoken")...)
 			Expect(err).NotTo(HaveOccurred())
-			network.Start()
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
 		})
 
 		It("succeeded", func() {
-			dvp.TestAll(network)
+			dvp.TestAll(ii)
 		})
 	})
 })

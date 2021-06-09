@@ -74,6 +74,7 @@ func RequestRecipientIdentity(context view.Context, other view.Identity) (view.I
 }
 
 func (f requestPseudonymView) Call(context view.Context) (interface{}, error) {
+	logger.Debugf("request recipient to [%s] for channel [%s]", f.Other, f.Channel)
 	ts := token.GetManagementService(context, token.WithChannel(f.Channel))
 
 	if w := ts.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {

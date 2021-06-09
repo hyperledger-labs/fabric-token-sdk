@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
@@ -36,8 +37,12 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	tx, err := ttx.NewTransaction(context, ttx.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")))
 	assert.NoError(err)
 
-	wallet := ttx.GetIssuerWallet(context, p.Wallet)
-	assert.NoError(tx.Issue(wallet, recipient, p.Typ, p.Quantity), "failed issuing token")
+	assert.NoError(tx.Issue(
+		ttx.GetIssuerWallet(context, p.Wallet),
+		recipient,
+		p.Typ,
+		p.Quantity,
+	), "failed issuing token")
 
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed collecting endorsement")

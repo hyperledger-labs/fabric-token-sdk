@@ -34,6 +34,10 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed responding to action collect")
 
 	// 2. Endorse Sell Transaction
+	// Respond to a request for an identity
+	me, err := state.RespondRequestRecipientIdentity(context)
+	assert.NoError(err, "failed to respond to identity request")
+
 	txBoxed, err := context.RunView(endorser.NewReceiveTransactionView())
 	assert.NoError(err, "failed responding to action collect")
 	tx := txBoxed.(*endorser.Transaction)
@@ -59,10 +63,10 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	house := &House{}
 	assert.NoError(stateTx.Outputs().At(0).State(house))
 	assert.Equal(action.Amount, house.Valuation)
-	assert.Equal(context.Me(), house.Owner)
+	assert.Equal(me, house.Owner)
 
 	// 4. Sign and send back
-	_, err = context.RunView(endorser.NewEndorseView(tx, append([]view.Identity{context.Me()}, tokenTx.Signers()...)...))
+	_, err = context.RunView(endorser.NewEndorseView(tx, append([]view.Identity{me}, tokenTx.Signers()...)...))
 	assert.NoError(err)
 
 	// 5. Wait for confirmation

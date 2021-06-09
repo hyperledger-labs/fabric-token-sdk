@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package fabtoken
 
 import (
 	"testing"
@@ -25,5 +25,5 @@ func TestEndToEnd(t *testing.T) {
 }
 
 func StartPortDlog() int {
-	return integration.TokenZKATCCFabTokenBasePort.StartPortForNode()
+	return integration.FabTokenBasics.StartPortForNode()
 }

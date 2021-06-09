@@ -37,15 +37,17 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	tx.SetProposal("house", "Version-0.0", "sell")
 
 	// Prepare Payment
-	tx, err = d.preparePayment(tx, context)
+	tx, err = d.preparePayment(context, tx)
 	assert.NoError(err)
 
 	// Prepare House Transfer
-	tx, err = d.prepareHouseTransfer(tx)
+	var oldOwner view.Identity
+	var newOwner view.Identity
+	tx, oldOwner, newOwner, err = d.prepareHouseTransfer(context, tx)
 	assert.NoError(err)
 
 	// Collect signature from the parties
-	_, err = context.RunView(endorser.NewCollectEndorsementsView(tx, context.Me(), d.Buyer))
+	_, err = context.RunView(endorser.NewCollectEndorsementsView(tx, oldOwner, newOwner))
 	assert.NoError(err)
 
 	// Collect signature from zkat auditor signature
@@ -62,7 +64,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(endorser.NewOrderingView(tx))
 }
 
-func (d *SellHouseView) preparePayment(tx *endorser.Transaction, context view.Context) (*endorser.Transaction, error) {
+func (d *SellHouseView) preparePayment(context view.Context, tx *endorser.Transaction) (*endorser.Transaction, error) {
 	// we need house's valuation, let's load the state from the world state
 	house := &House{}
 	assert.NoError(state.GetWorldState(context).GetState("house", d.HouseID, house), "failed loading house with id %s", d.HouseID)
@@ -86,20 +88,24 @@ func (d *SellHouseView) preparePayment(tx *endorser.Transaction, context view.Co
 	return tx, nil
 }
 
-func (d *SellHouseView) prepareHouseTransfer(tx *endorser.Transaction) (*endorser.Transaction, error) {
+func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *endorser.Transaction) (*endorser.Transaction, view.Identity, view.Identity, error) {
 	// let's use the state package to hide the complexity of the rws management
 	// with a state-oriented programming
 	stx, err := state.Wrap(tx)
 	assert.NoError(err)
 
+	buyer, err := state.RequestRecipientIdentity(context, d.Buyer)
+	assert.NoError(err, "failed getting buyer identity")
+
 	// Add dependency to the existing state
 	house := &House{}
 	assert.NoError(stx.AddInputByLinearID(d.HouseID, house))
 	// Update the owner field
-	house.Owner = d.Buyer
+	oldOwner := house.Owner
+	house.Owner = buyer
 	assert.NoError(stx.AddOutput(house))
 
-	return tx, nil
+	return tx, oldOwner, buyer, nil
 }
 
 type SellHouseViewFactory struct{}

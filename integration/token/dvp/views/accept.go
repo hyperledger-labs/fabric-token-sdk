@@ -9,6 +9,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -48,6 +49,10 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 type AcceptHouseView struct{}
 
 func (a *AcceptHouseView) Call(context view.Context) (interface{}, error) {
+	// Respond to a request for an identity
+	_, err := state.RespondRequestRecipientIdentity(context)
+	assert.NoError(err, "failed to respond to identity request")
+
 	tx, err := state.ReceiveTransaction(context)
 	assert.NoError(err)
 
@@ -56,6 +61,7 @@ func (a *AcceptHouseView) Call(context view.Context) (interface{}, error) {
 	// Send it back endorsed
 	_, err = context.RunView(state.NewAcceptView(tx))
 	assert.NoError(err)
+
 	// Wait for confirmation
 	return context.RunView(state.NewFinalityView(tx))
 }

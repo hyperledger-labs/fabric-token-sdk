@@ -6,7 +6,6 @@ replace (
 	github.com/fsouza/go-dockerclient => github.com/fsouza/go-dockerclient v1.4.1
 	github.com/go-kit/kit => github.com/go-kit/kit v0.7.0
 	github.com/golang/protobuf => github.com/golang/protobuf v1.3.3
-	github.com/hyperledger-labs/fabric-smart-client => /Users/adc/golang/src/github.com/hyperledger-labs/fabric-smart-client
 	github.com/spf13/viper => github.com/spf13/viper v0.0.0-20150908122457-1967d93db724
 	go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20181228115726-23731bf9ba55
 	google.golang.org/genproto => google.golang.org/genproto v0.0.0-20190819201941-24fa4b261c55
@@ -18,9 +17,7 @@ require (
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/golang/protobuf v1.5.2
-	github.com/google/addlicense v0.0.0-20210428195630-6d92264d7170 // indirect
-	github.com/gordonklaus/ineffassign v0.0.0-20210522101830-0589229737b2 // indirect
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210607142141-d767a4b354fb
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210609074109-b623df1c373b
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20200930182727-344fda602252
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200424173110-d7076418f212
@@ -33,7 +30,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	go.uber.org/atomic v1.7.0
-	golang.org/x/sys v0.0.0-20210608053332-aa57babbf139 // indirect
 	google.golang.org/grpc v1.36.1 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect

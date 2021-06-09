@@ -7,6 +7,8 @@
 The `Fabric Token SDK` is a set of API and services that let developers create 
 token-based distributed application on Hyperledger Fabric.
 
+The Token SDK leverages the [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client) for transaction orchestration, check it out. 
+
 # Disclaimer
 
 `Fabric Token SDK` has not been audited and is provided as-is, use at your own risk. 

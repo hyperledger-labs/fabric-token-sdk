@@ -25,5 +25,5 @@ func TestEndToEnd(t *testing.T) {
 }
 
 func StartPort() int {
-	return integration.TokenDVPZKATFabTokenBasePort.StartPortForNode()
+	return integration.FabTokenDVP.StartPortForNode()
 }

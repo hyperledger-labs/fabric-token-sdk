@@ -8,6 +8,7 @@ package views
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -26,21 +27,26 @@ type IssueHouseView struct {
 }
 
 func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
+	assetOwner, err := state.RequestRecipientIdentity(context, p.Owner)
+	assert.NoError(err, "failed getting recipient identity")
+
 	// Prepare transaction
 	tx, err := state.NewTransaction(context)
 	assert.NoError(err)
 	tx.SetNamespace("house")
-	assert.NoError(tx.AddCommand("issue", context.Me(), p.Owner))
+
+	me := fabric.GetIdentityProvider(context).DefaultIdentity()
+	assert.NoError(tx.AddCommand("issue", me, assetOwner))
 
 	h := &House{
 		Address:   p.Address,
 		Valuation: p.Valuation,
-		Owner:     p.Owner,
+		Owner:     assetOwner,
 	}
 	err = tx.AddOutput(h)
 	assert.NoError(err, "failed adding output")
 
-	_, err = context.RunView(state.NewCollectEndorsementsView(tx, context.Me(), p.Owner, p.Approver))
+	_, err = context.RunView(state.NewCollectEndorsementsView(tx, me, assetOwner, p.Approver))
 	assert.NoError(err, "failed collecting endorsement")
 
 	// Send to the ordering service and wait for confirmation
