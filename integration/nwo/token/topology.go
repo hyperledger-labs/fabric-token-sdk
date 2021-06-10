@@ -9,6 +9,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	fsc2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	fsc "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	. "github.com/onsi/gomega"
 
 	token "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
@@ -87,8 +88,12 @@ func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *TMS {
 	return tms
 }
 
-func (t *Topology) SetSDK(fscTopology *fsc2.Topology) {
+func (t *Topology) SetDefaultSDK(fscTopology *fsc2.Topology) {
+	t.SetSDK(fscTopology, &token.SDK{})
+}
+
+func (t *Topology) SetSDK(fscTopology *fsc2.Topology, sdk api.SDK) {
 	for _, node := range fscTopology.Nodes {
-		node.AddSDK(&token.SDK{})
+		node.AddSDK(sdk)
 	}
 }

@@ -111,7 +111,7 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	manager.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology)
+	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
 	tms.AddCertifier(certifier)

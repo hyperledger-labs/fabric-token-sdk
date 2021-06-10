@@ -25,7 +25,9 @@ import (
 	packager2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/packager"
 )
 
-func (p *platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
+const DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main"
+
+func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
 	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
@@ -94,7 +96,7 @@ func (p *platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 	return cc, port
 }
 
-func (p *platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
+func (p *Platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
 	orgs := tms.TokenChaincode.Orgs
 
 	policy := "AND ("
@@ -121,7 +123,7 @@ func (p *platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
 			Version:         "Version-0.0",
 			Sequence:        "1",
 			InitRequired:    true,
-			Path:            "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main",
+			Path:            p.TokenChaincodePath,
 			Lang:            "golang",
 			Label:           tms.Namespace,
 			Policy:          policy,

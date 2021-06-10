@@ -72,7 +72,7 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	buyer.RegisterResponder(&views.BuyHouseView{}, &views.SellHouseView{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology)
+	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"TokenOrg"}, "100", "1")
 	tms.AddCertifier(certifier)
