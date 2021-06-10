@@ -25,8 +25,6 @@ import (
 	packager2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/packager"
 )
 
-const DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main"
-
 func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
 	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))

@@ -8,11 +8,13 @@ package tcc
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -53,9 +55,11 @@ func (r *RegisterCertifierView) Call(context view.Context) (interface{}, error) 
 		logger.Debugf("register certifier [%s]", r.Id.String())
 		_, err := context.RunView(chaincode.NewInvokeView(
 			tms.Namespace(), AddCertifierFunction, r.Id.Bytes(),
-		).WithNetwork(tms.Network()).WithChannel(tms.Channel()).WithInvokerIdentity(context.Me()))
+		).WithNetwork(tms.Network()).WithChannel(tms.Channel()).WithInvokerIdentity(
+			fabric.GetFabricNetworkService(context, tms.Network()).IdentityProvider().DefaultIdentity(),
+		))
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed auditor registration")
+			return nil, errors.WithMessagef(err, "failed certifier registration")
 		}
 		if err := kvs.GetService(context).Put(key, true); err != nil {
 			logger.Errorf("failed recording auditor has been registered to the chaincode [%s]", err)

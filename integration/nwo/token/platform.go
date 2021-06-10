@@ -30,6 +30,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/commands"
+)
+
+const (
+	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main"
+	DefaultTokenGenPath   = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 
 type Builder interface {
@@ -74,6 +81,7 @@ type Platform struct {
 	TCCs                   []*TCC
 	PublicParamsGenerators map[string]PublicParamsGenerator
 	TokenChaincodePath     string
+	TokenGenPath           string
 
 	colorIndex int
 }
@@ -89,6 +97,7 @@ func NewPlatform(registry *registry.Registry) *Platform {
 			"dlog":     &DLogPublicParamsGenerator{},
 		},
 		TokenChaincodePath: DefaultTokenChaincode,
+		TokenGenPath:       DefaultTokenGenPath,
 	}
 }
 
@@ -179,25 +188,25 @@ func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 	}
 
 	if opts.Certifier() {
-		// for _, tms := range p.Topology.TMSs {
-		// 	for _, certifier := range tms.Certifiers {
-		// 		if certifier == node.Name {
-		// 			sess, err := p.TokenGen(commands.CertifierKeygen{
-		// 				Driver: tms.Driver,
-		// 				PPPath: p.PublicParametersFile(tms),
-		// 				Output: p.CertifierCryptoMaterialDir(tms, node),
-		// 			})
-		// 			Expect(err).NotTo(HaveOccurred())
-		// 			Eventually(sess, p.EventuallyTimeout).Should(Exit(0))
-		// 			p.Wallets[node.Name].Certifiers = append(p.Wallets[node.Name].Certifiers, Identity{
-		// 				ID:      node.Name,
-		// 				MSPType: "certifier",
-		// 				MSPID:   "certifier",
-		// 				Path:    p.CertifierCryptoMaterialDir(tms, node),
-		// 			})
-		// 		}
-		// 	}
-		// }
+		for _, tms := range p.Topology.TMSs {
+			for _, certifier := range tms.Certifiers {
+				if certifier == node.Name {
+					sess, err := p.TokenGen(commands.CertifierKeygen{
+						Driver: tms.Driver,
+						PPPath: p.PublicParametersFile(tms),
+						Output: p.CertifierCryptoMaterialDir(tms, node),
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, p.EventuallyTimeout).Should(Exit(0))
+					p.Wallets[node.Name].Certifiers = append(p.Wallets[node.Name].Certifiers, Identity{
+						ID:      node.Name,
+						MSPType: "certifier",
+						MSPID:   "certifier",
+						Path:    p.CertifierCryptoMaterialDir(tms, node),
+					})
+				}
+			}
+		}
 	}
 }
 
@@ -208,7 +217,7 @@ func (p *Platform) DeployTokenChaincodes() {
 }
 
 func (p *Platform) TokenGen(command common.Command) (*Session, error) {
-	cmd := common.NewCommand(p.Registry.Builder.Build("github.com/hyperledger-labs/fabric-token0sdk/cmd/tokengen"), command)
+	cmd := common.NewCommand(p.Registry.Builder.Build(p.TokenGenPath), command)
 	return p.StartSession(cmd, command.SessionName())
 }
 
