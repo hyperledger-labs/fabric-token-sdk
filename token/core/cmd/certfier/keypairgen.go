@@ -66,6 +66,7 @@ func keyPairGen(args []string) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating public parameters manager")
 	}
+	// ppm.PublicParameters().GraphHiding()
 
 	// 2. generate certifier key-pair
 	fmt.Printf("Generate certifier key-pair...\n")

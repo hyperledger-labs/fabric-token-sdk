@@ -44,12 +44,12 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	)
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
 
-	certifier := fscTopology.AddNodeByName("certifier").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		token.WithCertifierIdentity(),
-	)
-	certifier.RegisterViewFactory("register", &views.RegisterCertifierViewFactory{})
+	// certifier := fscTopology.AddNodeByName("certifier").AddOptions(
+	// 	fabric.WithOrganization("Org1"),
+	// 	fabric.WithAnonymousIdentity(),
+	// 	token.WithCertifierIdentity(),
+	// )
+	// certifier.RegisterViewFactory("register", &views.RegisterCertifierViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -114,7 +114,7 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
-	tms.AddCertifier(certifier)
+	// tms.AddCertifier(certifier)
 
 	return []nwo.Topology{fabricTopology, tokenTopology, fscTopology}
 }

@@ -22,7 +22,7 @@ import (
 
 func TestAll(network *integration.Infrastructure) {
 	//registerIssuers(network)
-	registerCertifier(network)
+	// registerCertifier(network)
 	registerAuditor(network)
 
 	// Rest of the test
