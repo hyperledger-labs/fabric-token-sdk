@@ -1,3 +1,3 @@
-# The Token SDK Basics 
+# Delivery vs Payment 
 
 To be continued...

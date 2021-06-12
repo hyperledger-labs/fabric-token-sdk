@@ -1,4 +1,19 @@
-# The Fabric Token SDK Stack
+# The Fabric Token SDK
+
+The scope of the Fabric Token SDK is to deliver a set of API and services that let developers create token-based distributed application on Hyperledger Fabric.
+The `Fabric Token SDK` has the following characteristics;
+- It adopts the UTXO model. In the UTXO model, a direct acyclic graph reflects the movements of the assets. Nodes are token transactions. Edges are transaction outputs. Each new token transaction consumes some the UTXOs and create new ones.
+- Wallets contain a set of `secret keys` and keep track of the list of unspent outputs `owned` those keys.
+- It supports different privacy levels: from a plain instantiation, where everything is in the clear on the ledger, to Zero Knowledge-based instantiations that will obfuscate the ledger while enforcing the required invariants.
+- It can be easily extended to support different token exchange implementations (e.g., with different privacy levels, or cryptographic algorithms) by adopting a highly modular architecture.
+- It allows the developers to write their own services on top of the Token SDK to deliver customised services for their token-based applications.
+
+For the driver implementation supporting privacy via Zero Knowledge, we will follow 
+a simplified version of the blueprint described in the paper 
+[Privacy-preserving auditable token payments in a permissioned blockchain system]('https://eprint.iacr.org/2019/1058.pdf') 
+by Androulaki et al.
+
+## The Token SDK Stack
 
 This is the Fabric Token SDK stack: 
 
