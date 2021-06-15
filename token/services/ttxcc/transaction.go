@@ -126,7 +126,6 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
-	context.OnError(cctx.Release)
 	logger.Debugf("received transaction with id [%s]", cctx.ID())
 
 	return cctx, nil
@@ -191,6 +190,7 @@ func (t *Transaction) Selector() (token.Selector, error) {
 }
 
 func (t *Transaction) Release() {
+	logger.Debugf("releasing resources for tx [%s]", t.ID())
 	if err := t.TokenService().SelectorManager().Unlock(t.ID()); err != nil {
 		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
 	}

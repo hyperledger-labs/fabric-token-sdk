@@ -43,7 +43,7 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	tx := txBoxed.(*endorser.Transaction)
 
 	// 3. Validate transaction: The transaction consists of two namespace (zkat and house)
-	tokenTx, err = ttx.Wrap(tx)
+	tokenTx, err = ttx.Wrap(context, tx)
 	assert.NoError(err)
 
 	inputs, err := tokenTx.Inputs()
