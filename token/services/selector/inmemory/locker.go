@@ -127,7 +127,7 @@ func (d *locker) Start() {
 
 func (d *locker) scan() {
 	for {
-		logger.Debugf("garbage collector: scan locked tokens")
+		logger.Debugf("token collector: scan locked tokens")
 		var removeList []string
 		d.lock.RLock()
 		for id, entry := range d.locked {
@@ -154,21 +154,21 @@ func (d *locker) scan() {
 		d.lock.RUnlock()
 
 		d.lock.Lock()
-		logger.Debugf("garbage collector: freeing [%d] items", len(removeList))
+		logger.Debugf("token collector: freeing [%d] items", len(removeList))
 		for _, s := range removeList {
 			delete(d.locked, s)
 		}
 		d.lock.Unlock()
 
 		for {
-			logger.Debugf("garbage collector: sleep for some time...")
+			logger.Debugf("token collector: sleep for some time...")
 			time.Sleep(d.sleepTimeout)
 			d.lock.RLock()
 			l := len(d.locked)
 			d.lock.RUnlock()
 			if l > 0 {
-				// time to do some garbage collection
-				logger.Debugf("garbage collector: time to do some garbage collection, [%d] locked", l)
+				// time to do some token collection
+				logger.Debugf("token collector: time to do some token collection, [%d] locked", l)
 				break
 			}
 		}
