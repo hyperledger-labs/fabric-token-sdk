@@ -83,7 +83,11 @@ func (p *SDK) Install() error {
 		fabric2.NewNormalizer(p.registry),
 		fabric2.NewVaultProvider(p.registry),
 		fabric2.NewCertificationClientProvider(p.registry),
-		selector.NewProvider(p.registry, fabric2.NewLockerProvider(p.registry, 2*time.Second), 2, 5*time.Second),
+		selector.NewProvider(p.registry, fabric2.NewLockerProvider(
+			p.registry,
+			2*time.Second,
+			(5*time.Minute).Milliseconds(),
+		), 2, 5*time.Second),
 		view.NewSigServiceWrapper(view2.GetSigService(p.registry)),
 	)))
 
