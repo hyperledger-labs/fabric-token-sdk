@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -18,10 +19,7 @@ import (
 
 type QueryService interface {
 	ListUnspentTokens() (*token2.UnspentTokens, error)
-}
-
-type QueryEngine interface {
-	ListUnspentTokens() (*token2.UnspentTokens, error)
+	GetTokens(inputs ...*token2.Id) ([]*token2.Token, error)
 }
 
 type CertificationClient interface {
@@ -35,7 +33,7 @@ type CertClient interface {
 }
 
 type Locker interface {
-	Lock(id *token2.Id, txID string) error
+	Lock(id *token2.Id, txID string) (string, error)
 	UnlockIDs(id ...*token2.Id)
 	UnlockByTxID(txID string)
 }
@@ -119,7 +117,7 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 			}
 
 			// lock the token
-			if err := s.locker.Lock(t.Id, s.txID); err != nil {
+			if _, err := s.locker.Lock(t.Id, s.txID); err != nil {
 				locked = append(locked, t.Id)
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
@@ -148,22 +146,35 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 			}
 		}
 
+		concurrencyIssue := false
 		if target.Cmp(sum) <= 0 {
-			return toBeSpent, sum, nil
+			err := s.concurrencyCheck(toBeSpent)
+			if err == nil {
+				return toBeSpent, sum, nil
+			}
+			concurrencyIssue = true
+			logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
 		}
 
-		// if we reached this point is because there are not enough funds but why?
+		// if we reached this point is because there are not enough funds or there is a concurrency issue but why?
 
 		// Maybe it is a certification issue?
-		if target.Cmp(potentialSumWithNonCertified) <= 0 && s.requestCertification {
+		if !concurrencyIssue && target.Cmp(potentialSumWithNonCertified) <= 0 && s.requestCertification {
 			logger.Warnf("token selection failed: missing certifications, request them for [%s]", toBeCertified)
 			// request certification
 			err := s.certClient.RequestCertification(toBeCertified...)
 			if err == nil {
 				// TODO: refine this
-				return append(toBeSpent, toBeCertified...), potentialSumWithNonCertified, nil
+				ids := append(toBeSpent, toBeCertified...)
+				err := s.concurrencyCheck(ids)
+				if err == nil {
+					return ids, potentialSumWithNonCertified, nil
+				}
+				concurrencyIssue = true
+				logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
+			} else {
+				logger.Warnf("token selection failed: failed requesting token certification for [%v]: [%s]", toBeCertified, err)
 			}
-			logger.Warnf("token selection failed: failed requesting token certification for [%v]: [%s]", toBeCertified, err)
 		}
 
 		// Unlock and check the conditions for a retry
@@ -182,6 +193,14 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 		i++
 		if i >= s.numRetry {
 			// it is time to fail but how?
+			if concurrencyIssue {
+				logger.Debugf("concurrency issue, some of the tokens might not exist anymore")
+				return nil, nil, errors.WithMessagef(
+					token.SelectorSufficientFundsButConcurrencyIssue,
+					"token selection failed: sufficient funs but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
+				)
+			}
+
 			if target.Cmp(potentialSumWithLocked) <= 0 && potentialSumWithLocked.Cmp(sum) != 0 {
 				// funds are potentially enough but they are locked
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
@@ -211,6 +230,11 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 		logger.Debugf("token selection: let's wait [%v] before retry...", s.timeout)
 		time.Sleep(s.timeout)
 	}
+}
+
+func (s *selector) concurrencyCheck(ids []*token2.Id) error {
+	_, err := s.queryService.GetTokens(ids...)
+	return err
 }
 
 type allOwners struct{}
