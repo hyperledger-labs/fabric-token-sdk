@@ -16,11 +16,12 @@ type Transaction struct {
 	*Namespace
 }
 
-func Wrap(tx *endorser.Transaction, opts ...TxOption) (*Transaction, error) {
+func Wrap(context view.Context, tx *endorser.Transaction, opts ...TxOption) (*Transaction, error) {
 	namespace, err := NewNamespace(tx, opts...)
 	if err != nil {
 		return nil, err
 	}
+	context.OnError(namespace.Release)
 
 	return &Transaction{
 		Transaction: tx,
@@ -39,6 +40,7 @@ func NewTransaction(context view.Context, opts ...TxOption) (*Transaction, error
 		return nil, err
 	}
 	namespace.SetProposal()
+	context.OnError(namespace.Release)
 
 	return &Transaction{
 		Transaction: tx,
@@ -57,6 +59,7 @@ func NewTransactionFromBytes(context view.Context, bytes []byte) (*Transaction, 
 	if err != nil {
 		return nil, err
 	}
+	context.OnError(namespace.Release)
 
 	return &Transaction{
 		Transaction: tx,

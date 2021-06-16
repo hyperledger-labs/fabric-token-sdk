@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
@@ -127,6 +128,13 @@ func (t *Namespace) Endorsers() []view.Identity {
 
 func (t *Namespace) SetProposal() {
 	t.tx.SetProposal(t.tokenService().Namespace(), "Version-0.0", "")
+}
+
+func (t *Namespace) Release() {
+	logger.Debugf("releasing resources for tx [%s]", t.tx.ID())
+	if err := t.tokenService().SelectorManager().Unlock(t.tx.ID()); err != nil {
+		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.tx.ID(), err)
+	}
 }
 
 func (t *Namespace) updateRWSetAndMetadata(action interface{}) error {
