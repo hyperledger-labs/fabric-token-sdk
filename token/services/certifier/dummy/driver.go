@@ -40,6 +40,10 @@ func (c *CertificationService) Start() error {
 
 type Driver struct{}
 
+func NewDriver() *Driver {
+	return &Driver{}
+}
+
 func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, network, channel, namespace string) (driver.CertificationClient, error) {
 	return &CertificationClient{}, nil
 }

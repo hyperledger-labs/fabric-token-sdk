@@ -38,13 +38,13 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(fabric.WithOrganization("TokenOrg"), fabric.WithAnonymousIdentity())
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
 
-	// certifier
-	certifier := fscTopology.AddNodeByName("certifier").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		token.WithCertifierIdentity(),
-	)
-	certifier.RegisterViewFactory("register", &views.RegisterCertifierViewFactory{})
+	// // certifier
+	// certifier := fscTopology.AddNodeByName("certifier").AddOptions(
+	// 	fabric.WithOrganization("Org1"),
+	// 	fabric.WithAnonymousIdentity(),
+	// 	token.WithCertifierIdentity(),
+	// )
+	// certifier.RegisterViewFactory("register", &views.RegisterCertifierViewFactory{})
 
 	// issuers
 	fscTopology.AddNodeByName("cash_issuer").AddOptions(
@@ -72,10 +72,10 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	buyer.RegisterResponder(&views.BuyHouseView{}, &views.SellHouseView{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology)
+	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"TokenOrg"}, "100", "1")
-	tms.AddCertifier(certifier)
+	// tms.AddCertifier(certifier)
 
 	return []nwo.Topology{fabricTopology, tokenTopology, fscTopology}
 }

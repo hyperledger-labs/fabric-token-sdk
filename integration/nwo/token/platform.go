@@ -13,13 +13,11 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/alecthomas/template"
-	"github.com/hyperledger/fabric/msp"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -33,8 +31,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 
-	cryptofabtoken "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/commands"
+)
+
+const (
+	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main"
+	DefaultTokenGenPath   = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 
 type Builder interface {
@@ -46,6 +48,10 @@ type FabricNetwork interface {
 	DefaultIdemixOrgMSPDir() string
 	Topology() *topology.Topology
 	PeerChaincodeAddress(peerName string) string
+}
+
+type PublicParamsGenerator interface {
+	Generate(p *Platform, tms *TMS) ([]byte, error)
 }
 
 type TCC struct {
@@ -66,36 +72,45 @@ type Wallet struct {
 	Certifiers []Identity
 }
 
-type platform struct {
-	Registry          *registry.Registry
-	Topology          *Topology
-	FabricNetwork     FabricNetwork
-	EventuallyTimeout time.Duration
-	Wallets           map[string]*Wallet
-	TCCs              []*TCC
+type Platform struct {
+	Registry               *registry.Registry
+	Topology               *Topology
+	FabricNetwork          FabricNetwork
+	EventuallyTimeout      time.Duration
+	Wallets                map[string]*Wallet
+	TCCs                   []*TCC
+	PublicParamsGenerators map[string]PublicParamsGenerator
+	TokenChaincodePath     string
+	TokenGenPath           string
 
 	colorIndex int
 }
 
-func NewPlatform(registry *registry.Registry) *platform {
-	return &platform{
+func NewPlatform(registry *registry.Registry) *Platform {
+	return &Platform{
 		Registry:          registry,
 		EventuallyTimeout: 10 * time.Minute,
 		Wallets:           map[string]*Wallet{},
 		TCCs:              []*TCC{},
+		PublicParamsGenerators: map[string]PublicParamsGenerator{
+			"fabtoken": &FabTokenPublicParamsGenerator{},
+			"dlog":     &DLogPublicParamsGenerator{},
+		},
+		TokenChaincodePath: DefaultTokenChaincode,
+		TokenGenPath:       DefaultTokenGenPath,
 	}
 }
 
-func (p *platform) Name() string {
+func (p *Platform) Name() string {
 	return TopologyName
 }
 
-func (p *platform) GenerateConfigTree() {
+func (p *Platform) GenerateConfigTree() {
 	p.Topology = p.Registry.TopologyByName(TopologyName).(*Topology)
 	p.FabricNetwork = p.Registry.PlatformByName(fabric.TopologyName).(FabricNetwork)
 }
 
-func (p *platform) GenerateArtifacts() {
+func (p *Platform) GenerateArtifacts() {
 	fscTopology := p.Registry.TopologyByName(fsc.TopologyName).(*fsc.Topology)
 
 	// Generate public parameters
@@ -123,21 +138,21 @@ func (p *platform) GenerateArtifacts() {
 	}
 }
 
-func (p *platform) Load() {
+func (p *Platform) Load() {
 	p.Topology = p.Registry.TopologyByName(TopologyName).(*Topology)
 	p.FabricNetwork = p.Registry.PlatformByName(fabric.TopologyName).(FabricNetwork)
 }
 
-func (p *platform) Members() []grouper.Member {
+func (p *Platform) Members() []grouper.Member {
 	return nil
 }
 
-func (p *platform) PostRun() {
+func (p *Platform) PostRun() {
 	// Install Token Chaincodes
 	p.DeployTokenChaincodes()
 }
 
-func (p *platform) Cleanup() {
+func (p *Platform) Cleanup() {
 	for _, tcc := range p.TCCs {
 		for _, process := range tcc.Processes {
 			process.Signal(syscall.SIGKILL)
@@ -145,7 +160,11 @@ func (p *platform) Cleanup() {
 	}
 }
 
-func (p *platform) GenerateExtension(node *sfcnode.Node) {
+func (p *Platform) SetPublicParamsGenerator(name string, gen PublicParamsGenerator) {
+	p.PublicParamsGenerators[name] = gen
+}
+
+func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSs":        func() []*TMS { return p.Topology.TMSs },
 		"NodeKVSPath": func() string { return p.NodeKVSDir(node) },
@@ -160,7 +179,7 @@ func (p *platform) GenerateExtension(node *sfcnode.Node) {
 	p.Registry.AddExtension(node.Name, TopologyName, ext.String())
 }
 
-func (p *platform) GenerateCryptoMaterial(node *sfcnode.Node) {
+func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 	o := node.PlatformOpts()
 	opts := options(o)
 
@@ -169,44 +188,44 @@ func (p *platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 	}
 
 	if opts.Certifier() {
-		// for _, tms := range p.Topology.TMSs {
-		// 	for _, certifier := range tms.Certifiers {
-		// 		if certifier == node.Name {
-		// 			sess, err := p.TokenGen(commands.CertifierKeygen{
-		// 				Driver: tms.Driver,
-		// 				PPPath: p.PublicParametersFile(tms),
-		// 				Output: p.CertifierCryptoMaterialDir(tms, node),
-		// 			})
-		// 			Expect(err).NotTo(HaveOccurred())
-		// 			Eventually(sess, p.EventuallyTimeout).Should(Exit(0))
-		// 			p.Wallets[node.Name].Certifiers = append(p.Wallets[node.Name].Certifiers, Identity{
-		// 				ID:      node.Name,
-		// 				MSPType: "certifier",
-		// 				MSPID:   "certifier",
-		// 				Path:    p.CertifierCryptoMaterialDir(tms, node),
-		// 			})
-		// 		}
-		// 	}
-		// }
+		for _, tms := range p.Topology.TMSs {
+			for _, certifier := range tms.Certifiers {
+				if certifier == node.Name {
+					sess, err := p.TokenGen(commands.CertifierKeygen{
+						Driver: tms.Driver,
+						PPPath: p.PublicParametersFile(tms),
+						Output: p.CertifierCryptoMaterialDir(tms, node),
+					})
+					Expect(err).NotTo(HaveOccurred())
+					Eventually(sess, p.EventuallyTimeout).Should(Exit(0))
+					p.Wallets[node.Name].Certifiers = append(p.Wallets[node.Name].Certifiers, Identity{
+						ID:      node.Name,
+						MSPType: "certifier",
+						MSPID:   "certifier",
+						Path:    p.CertifierCryptoMaterialDir(tms, node),
+					})
+				}
+			}
+		}
 	}
 }
 
-func (p *platform) DeployTokenChaincodes() {
+func (p *Platform) DeployTokenChaincodes() {
 	for _, tcc := range p.TCCs {
 		p.FabricNetwork.DeployChaincode(tcc.Chaincode)
 	}
 }
 
-func (p *platform) TokenGen(command common.Command) (*Session, error) {
-	cmd := common.NewCommand(p.Registry.Builder.Build("github.com/hyperledger-labs/fabric-token0sdk/cmd/tokengen"), command)
+func (p *Platform) TokenGen(command common.Command) (*Session, error) {
+	cmd := common.NewCommand(p.Registry.Builder.Build(p.TokenGenPath), command)
 	return p.StartSession(cmd, command.SessionName())
 }
 
-func (p *platform) TokenChaincodeServerAddr(port uint16) string {
+func (p *Platform) TokenChaincodeServerAddr(port uint16) string {
 	return fmt.Sprintf("127.0.0.1:%d", port)
 }
 
-func (p *platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
+func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
 	ansiColorCode := p.nextColor()
 	fmt.Fprintf(
 		ginkgo.GinkgoWriter,
@@ -229,49 +248,26 @@ func (p *platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
 	)
 }
 
-func (p *platform) GeneratePublicParameters() {
-	// TODO: This should be generated in the context of the token-topology
-	path := filepath.Join(p.FabricNetwork.DefaultIdemixOrgMSPDir(), msp.IdemixConfigDirMsp, msp.IdemixConfigFileIssuerPublicKey)
-	ipkBytes, err := ioutil.ReadFile(path)
-	Expect(err).ToNot(HaveOccurred())
-
+func (p *Platform) GeneratePublicParameters() {
 	for _, tms := range p.Topology.TMSs {
 		var ppRaw []byte
-		switch tms.Driver {
-		case "dlog":
-			base, err := strconv.ParseInt(tms.TokenChaincode.PublicParamsGenArgs[0], 10, 64)
-			Expect(err).ToNot(HaveOccurred())
-			exp, err := strconv.ParseInt(tms.TokenChaincode.PublicParamsGenArgs[1], 10, 32)
-			Expect(err).ToNot(HaveOccurred())
-			pp, err := cryptodlog.Setup(
-				base,
-				int(exp),
-				ipkBytes,
-			)
-			Expect(err).ToNot(HaveOccurred())
-
-			ppRaw, err = pp.Serialize()
-			Expect(err).ToNot(HaveOccurred())
-		case "fabtoken":
-			// setup
-			pp, err := cryptofabtoken.Setup()
-			Expect(err).ToNot(HaveOccurred())
-			ppRaw, err = pp.Serialize()
-			Expect(err).ToNot(HaveOccurred())
-		default:
+		generator, ok := p.PublicParamsGenerators[tms.Driver]
+		if !ok {
 			panic(fmt.Sprintf("driver [%s] not recognized", tms.Driver))
 		}
+		ppRaw, err := generator.Generate(p, tms)
+		Expect(err).ToNot(HaveOccurred())
 		// Store pp
 		Expect(os.MkdirAll(p.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
 		Expect(ioutil.WriteFile(p.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
 	}
 }
 
-func (p *platform) NodeKVSDir(peer *sfcnode.Node) string {
+func (p *Platform) NodeKVSDir(peer *sfcnode.Node) string {
 	return filepath.Join(p.Registry.RootDir, "fscnodes", peer.ID(), "kvs")
 }
 
-func (p *platform) CertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) string {
+func (p *Platform) CertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) string {
 	return filepath.Join(
 		p.Registry.RootDir,
 		"crypto",
@@ -283,7 +279,7 @@ func (p *platform) CertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) stri
 	)
 }
 
-func (p *platform) PublicParametersDir() string {
+func (p *Platform) PublicParametersDir() string {
 	return filepath.Join(
 		p.Registry.RootDir,
 		"crypto",
@@ -292,7 +288,7 @@ func (p *platform) PublicParametersDir() string {
 	)
 }
 
-func (p *platform) PublicParametersFile(tms *TMS) string {
+func (p *Platform) PublicParametersFile(tms *TMS) string {
 	return filepath.Join(
 		p.Registry.RootDir,
 		"crypto",
@@ -302,7 +298,7 @@ func (p *platform) PublicParametersFile(tms *TMS) string {
 	)
 }
 
-func (p *platform) nextColor() string {
+func (p *Platform) nextColor() string {
 	color := p.colorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37

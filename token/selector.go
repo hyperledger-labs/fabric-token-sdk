@@ -9,13 +9,15 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var (
-	SelectorInsufficientFunds              = errors.New("insufficient funds")
-	SelectorSufficientButLockedFunds       = errors.New("sufficient but partially locked funds")
-	SelectorSufficientButNotCertifiedFunds = errors.New("sufficient but partially not certified")
+	SelectorInsufficientFunds                  = errors.New("insufficient funds")
+	SelectorSufficientButLockedFunds           = errors.New("sufficient but partially locked funds")
+	SelectorSufficientButNotCertifiedFunds     = errors.New("sufficient but partially not certified")
+	SelectorSufficientFundsButConcurrencyIssue = errors.New("sufficient funds but concurrency issue")
 )
 
 type OwnerFilter interface {

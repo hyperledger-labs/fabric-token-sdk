@@ -51,7 +51,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err)
 
 	// Collect signature from zkat auditor signature
-	zkatTx, err := ttx.Wrap(tx, ttx.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")))
+	zkatTx, err := ttx.Wrap(context, tx, ttx.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")))
 	assert.NoError(err)
 	_, err = context.RunView(ttx.NewCollectAuditorEndorsement(zkatTx))
 	assert.NoError(err)
@@ -74,7 +74,7 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *endorser.Transa
 	assert.NoError(err, "failed exchanging identities")
 
 	// collect token transfer from the buyer
-	tokenTx, err := ttx.Wrap(tx)
+	tokenTx, err := ttx.Wrap(context, tx)
 	assert.NoError(err)
 	_, err = context.RunView(ttx.NewCollectActionsView(tokenTx,
 		&ttx.ActionTransfer{
