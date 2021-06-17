@@ -15,8 +15,8 @@ token-based distributed application on Hyperledger Fabric.
   - Submit your issues [`here`][`fabric-token-sdk` Issues]. 
   - If you have any questions, queries or comments, find us on [GitHub discussions].
   
-- [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-client-sdk): The Token SDK leverages the 
-  [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client) for transaction orchestration, check it out.
+- [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client): The Token SDK leverages the 
+  `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out. 
   
 # Disclaimer
 
@@ -43,10 +43,6 @@ What would happen if the developers could use a `Fabric Token SDK` that let:
 - Add a token layer to existing Fabric distributed application?
 
 Developing Enterprise Token-based distributed applications would become simpler and more secure.
-
-# Issues
-
-The `Fabric Token SDK` issues are tracked in the GitHub issues tab.
 
 # Use the Fabric Token SDK
 

@@ -296,10 +296,10 @@ func registerCertifier(network *integration.Infrastructure) {
 
 func issueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
 	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
-		Wallet:    wallet,
-		TokenType: typ,
-		Quantity:  amount,
-		Recipient: network.Identity(receiver),
+		IssuerWallet: wallet,
+		TokenType:    typ,
+		Quantity:     amount,
+		Recipient:    network.Identity(receiver),
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())

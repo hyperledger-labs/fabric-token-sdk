@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -61,6 +62,10 @@ func (o *OutputStream) ByType(typ string) *OutputStream {
 	return o.Filter(func(t *Output) bool {
 		return t.Type == typ
 	})
+}
+
+func (o *OutputStream) Outputs() []*Output {
+	return o.outputs
 }
 
 func (o *OutputStream) Count() int {
