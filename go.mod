@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	go.uber.org/atomic v1.7.0
-	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1 // indirect
+	golang.org/x/sys v0.0.0-20210616094352-59db8d763f22 // indirect
 	golang.org/x/tools v0.1.3 // indirect
 	google.golang.org/grpc v1.36.1 // indirect
 	google.golang.org/protobuf v1.26.0 // indirect

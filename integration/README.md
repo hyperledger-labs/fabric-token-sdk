@@ -10,5 +10,5 @@ business processes by invoking the `initiator view` on the specific FSC nodes.
 Here is a list of available examples:
 
 - [`Tha Basics`](./token/tcc/basic/README.md): A showcase of all possibility that the Token SDK offers.
-- [`I Owe You`](./token/dvp/README.md): In this example, we see how to orchestrate a Delivery vs Payment use-case
+- [`DvP`](./token/dvp/README.md): In this example, we see how to orchestrate a Delivery vs Payment use-case
 

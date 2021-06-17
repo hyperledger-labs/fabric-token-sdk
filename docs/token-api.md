@@ -1,7 +1,6 @@
 # Token API
 
-The `Token API` offers a useful abstraction to deal with tokens in an 
-implementation and blockchain independent way.
+The `Token API` offers a useful abstraction to deal with tokens in an implementation and blockchain independent way.
 
 Let us start with defining the tokens that the Token SDK handles.
 A token consists of the following triplet:
@@ -16,9 +15,23 @@ A token consists of the following triplet:
 These tokens are `fungible` with the respect to the same type. In particular,
 tokens with the same denomination can be merged and split, if not otherwise forbidden.
 
-Let us now focus on the building blocks the Token API consists of:
+A token can be spent only by the `rightful owner`. This concept is implementation dependant. For example,
+if the `Owner` field contains a public-key, then a valid signature under public key must be presented to spend the token.
+If the `Owner` field contains a script, then an input that satisfies the script must be presented to spend the token.
 
-![img.png](imgs/token_api.png)
+The Token SDK supports the following basic operations:
+- The `Issue` operation creates new tokens. `Issuers` are in charge of issuing new tokens. Depending on the driver
+  implementation, an issuing policy can be used to identify the authorized issuers for a given type. 
+- The `Transfer` operation transfers the ownership of a given token. A transfer operation must refer to tokens of the same
+type.
+- The `Redeem` operation deletes tokens. Depending on the driver implementation, either the rightful owner or special
+parties, called `redeemers` can invoke this operation.
+
+A `Token Request` aggregates token operations that must be performed atomically.
+
+Let us now focus on the building blocks the `Token API` consists of:
+
+![token_api.png](imgs/token_api.png)
 
 - `Token Management Service`: The Token Management Service (TMS, for short) is the entry point of the Token SDK
   and gives access to the other building blocks.
@@ -60,27 +73,27 @@ Let us now focus on the building blocks the Token API consists of:
   A token request should:
     - Well-formed, and
     - Satisfies the constraints of the payment system. Namely:
-        - Only the rightful owner can transfer a token,
+        - Only the `rightful owner` can transfer a token,
         - No token can be created out of the blue,
         - Audited(able)
         - Etc. (Each implementation can enforce additional requirements, if needed)
 
 The tuple `(network, channel, namespace, public parameters)` uniquely identifies a TMS, where:
-- `network` is the identifier of the Fabric network of reference;
-- `channel` is the channel inside the Fabric network;
-- `namespace` is the namespace inside the channel where the tokens are stored.
+- `network` is the identifier of the network of reference;
+- `channel` is the channel inside the network, if available;
+- `namespace` is the namespace inside the channel that stores the tokens.
 - `public parameters` contain all information needed to operate the specific token infrastructure.
 
 ## Token Request
 
-Let us spend a few more words on the Token Request that is the core of the Token API.
+Let us spend a few more words on the `Token Request` that is the core of the Token API.
 The Token Request is a `container` of token actions (issue, transfer, and redeem) that must be performed atomically.
-Looking ahead, parties interacting to assemble a token transaction are, under the hood, assembling a Token Request that it is
+Looking ahead, parties interacting to assemble a token transaction are, under the hood, assembling a `Token Request` that it is
 later marshalled into the format required by the target Blockchain.
 
 This is the anatomy of a Token Request:
 
-![img_2.png](imgs/token_request.png)
+![token_request.png](imgs/token_request.png)
 
 It consists of three parts:
 - `Anchor`: It is used to bind the Actions to a given Transaction. In Fabric, the anchor is the Transaction ID.
@@ -88,16 +101,25 @@ It consists of three parts:
     - `Issues`, to create new Tokens;
     - `Transfers`, to manipulate Tokens (e.g., transfer ownership or redeem)
 
-  The actions in the collection are independent.
-  In addition, actions comes with a set of `Witnesses` that attest the will of the `Issuers` and/or the `Token Owners`
-  to perform a certain operation.
+  The actions in the collection are independent. An action cannot spend tokens created by another action in the same Token Request.
+  In addition, actions comes with a set of `Witnesses` to verify the `right to spend` or the `right to issue` a given token
 
 - `Metadata`: It is a collection of `Token Metadata`, one entry for each Token Action.
   Parties, assembling a token request, exchange metadata that contain secret information used by
   the parties to check the content of the token actions. This is particularly relevant when using ZK-based drivers.
-  Notice that, no metadata is stored on the ledger.
+  Notice that, the ledger does not store any metadata.
 
 As we mentioned earlier, a Token Request is itself agnostic to the details of the specific Blockchain.
 Indeed, a Token Request must be translated to the Transaction format of the target Blockchain to become meaningful.
 A service called `Token Request Translator` translates the token requests.
-The Token Request Translator does not belong to the Token API. It is offered as a service on top of the Token API.
+The `Token Request Translator` does not belong to the Token API. It is offered as a service on top of the `Token API`
+because it is blockchain dependant. 
+
+Here is a pictorial representation of the translation process. 
+
+![token_request_translator.png](imgs/token_request_translator.png)
+
+In the section dedicated to [`What you need to build Token-Based Applications on top of Fabric`](./services.md), 
+we will learn that a special chaincode called `Token Chaincode` performs
+1. The `validation` of the Token Request, and 
+2. The `translation` to the RWSet.
