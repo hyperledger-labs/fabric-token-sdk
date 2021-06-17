@@ -11,7 +11,10 @@ token-based distributed application on Hyperledger Fabric.
 
 - [`Documentation`](./docs/design.md): Discover the design principles of the Fabric Token SDK.
 - [`Examples`](./integration/README.md): Learn how to use the Fabric Smart Client via examples. There is nothing better than this.
-- `Feedback`: Your help is the key to the success of the Fabric Smart Client. Submit your issues [`here`][`fabric-token-sdk` Issues]
+- `Feedback`: Your help is the key to the success of the Fabric Token SDK. 
+  - Submit your issues [`here`][`fabric-token-sdk` Issues]. 
+  - If you have any questions, queries or comments, find us on [GitHub discussions].
+  
 - [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-client-sdk): The Token SDK leverages the 
   [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client) for transaction orchestration, check it out.
   
@@ -85,3 +88,4 @@ We use [`SemVer`](https://semver.org/) for versioning. For the versions availabl
 This project is licensed under the Apache 2 License - see the [`LICENSE`](LICENSE) file for details
 
 [`fabric-token-sdk` Issues]: https://github.com/hyperledger-labs/fabric-token-sdk/issues
+[GitHub discussions]: https://github.com/hyperledger-labs/fabric-token-sdk/discussions
