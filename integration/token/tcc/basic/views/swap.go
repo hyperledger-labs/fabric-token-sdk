@@ -72,7 +72,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed collecting endorsement")
 
 	// Send to the ordering service and wait for confirmation
-	_, err = context.RunView(ttxcc.NewOrderingView(tx))
+	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 
 	return tx.ID(), nil

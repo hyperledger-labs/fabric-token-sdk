@@ -10,15 +10,25 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
-type orderingView struct {
+type orderingAndFinalityView struct {
 	tx *Transaction
 }
 
-func NewOrderingView(tx *Transaction) *orderingView {
-	return &orderingView{tx: tx}
+// NewOrderingAndFinalityView returns a new instance of the orderingAndFinalityView struct.
+// The view does the following:
+// 1. It broadcasts the token token transaction to the proper Fabric ordering service.
+// 2. It waits for finality of the token transaction by listening to delivery events from one of the
+// Fabric peer nodes trusted by the FSC node.
+func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
+	return &orderingAndFinalityView{tx: tx}
 }
 
-func (o *orderingView) Call(context view.Context) (interface{}, error) {
+// Call execute the view.
+// The view does the following:
+// 1. It broadcasts the token token transaction to the proper Fabric ordering service.
+// 2. It waits for finality of the token transaction by listening to delivery events from one of the
+// Fabric peer nodes trusted by the FSC node.
+func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error) {
 	if err := fabric.GetDefaultNetwork(context).Ordering().Broadcast(o.tx.Payload.FabricEnvelope); err != nil {
 		return nil, err
 	}
