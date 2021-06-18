@@ -65,6 +65,8 @@ type IssueCashView struct {
 func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// As a first step operation, the issuer contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
+	// Notice that, this step would not be required if the issuer knew already which
+	// identity the recipient wants to use.
 	recipient, err := ttxcc.RequestRecipientIdentity(context, p.Recipient)
 	assert.NoError(err, "failed getting recipient identity")
 
@@ -73,6 +75,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// have been issued already including the current request.
 	// No check is performed for other types.
 	wallet := ttxcc.GetIssuerWallet(context, p.IssuerWallet)
+	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
 		history, err := wallet.HistoryTokens(ttxcc.WithType(p.TokenType))
@@ -94,7 +97,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	)
 	assert.NoError(err, "failed creating issue transaction")
 
-	// The issuer add a new issue operation to the transaction following the instruction received
+	// The issuer adds a new issue operation to the transaction following the instruction received
 	err = tx.Issue(
 		wallet,
 		recipient,
@@ -108,11 +111,13 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
 	// This is all done in one shot running the following view.
 	// Before completing, all recipients receive the approved Fabric transaction.
+	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
+	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign issue transaction")
 
 	// Last but not least, the issuer sends the transaction for ordering and waits for transaction finality.
-	_, err = context.RunView(ttxcc.NewOrderingView(tx))
+	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit issue transaction")
 
 	return tx.ID(), nil

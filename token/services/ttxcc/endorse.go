@@ -34,10 +34,26 @@ type collectEndorsementsView struct {
 	tx *Transaction
 }
 
+// NewCollectEndorsementsView returns an instance of the collectEndorsementsView struct.
+// This view does the following:
+// 1. It collects all the required signatures
+// to authorize any issue and transfer operation contained in the token transaction.
+// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+// 3. Before completing, all recipients receive the approved Fabric transaction.
+// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
+// the token transaction valid.
 func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
 	return &collectEndorsementsView{tx: tx}
 }
 
+// Call executes the view.
+// This view does the following:
+// 1. It collects all the required signatures
+// to authorize any issue and transfer operation contained in the token transaction.
+// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+// 3. Before completing, all recipients receive the approved Fabric transaction.
+// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
+// the token transaction valid.
 func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
 	// Store transient
 	err := c.tx.storeTransient()

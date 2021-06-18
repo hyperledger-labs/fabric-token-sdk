@@ -60,20 +60,23 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 	return json.Unmarshal(raw, r)
 }
 
-type requestPseudonymView struct {
+type RequestRecipientIdentityView struct {
 	Channel string
 	Other   view.Identity
 }
 
-func RequestRecipientIdentity(context view.Context, other view.Identity) (view.Identity, error) {
-	pseudonymBoxed, err := context.RunView(&requestPseudonymView{Other: other})
+// RequestRecipientIdentity executes the RequestRecipientIdentityView.
+// The sender contacts the recipient's FSC node identified via the passed view identity.
+// The sender gets back the identity the recipient wants to use to assign ownership of tokens.
+func RequestRecipientIdentity(context view.Context, recipient view.Identity) (view.Identity, error) {
+	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{Other: recipient})
 	if err != nil {
 		return nil, err
 	}
 	return pseudonymBoxed.(view.Identity), nil
 }
 
-func (f requestPseudonymView) Call(context view.Context) (interface{}, error) {
+func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("request recipient to [%s] for channel [%s]", f.Other, f.Channel)
 	ts := token.GetManagementService(context, token.WithChannel(f.Channel))
 
@@ -130,11 +133,11 @@ func (f requestPseudonymView) Call(context view.Context) (interface{}, error) {
 	}
 }
 
-type respondPseudonymView struct {
+type RespondRequestRecipientIdentityView struct {
 	Wallet string
 }
 
-func (s *respondPseudonymView) Call(context view.Context) (interface{}, error) {
+func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		return nil, err
@@ -188,12 +191,11 @@ func (s *respondPseudonymView) Call(context view.Context) (interface{}, error) {
 	return recipientIdentity, nil
 }
 
-func NewRespondRequestRecipientIdentityView() view.View {
-	return &respondPseudonymView{}
-}
-
+// RespondRequestRecipientIdentity executes the RespondRequestRecipientIdentityView.
+// The recipient sends back the identity to receive ownership of tokens.
+// The identity is taken from the default wallet
 func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error) {
-	id, err := context.RunView(NewRespondRequestRecipientIdentityView())
+	id, err := context.RunView(&RespondRequestRecipientIdentityView{})
 	if err != nil {
 		return nil, err
 	}

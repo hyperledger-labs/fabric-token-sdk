@@ -36,6 +36,7 @@ type Transaction struct {
 	opts *txOptions
 }
 
+// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
 func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := compile(opts...)
 	if err != nil {
@@ -131,6 +132,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	return cctx, nil
 }
 
+// ID returns the ID of this transaction. It is equal to the underlying Fabric transaction's ID.
 func (t *Transaction) ID() string {
 	return fabric.GetFabricNetworkService(t.sp, t.Network()).TransactionManager().ComputeTxID(&t.Payload.Id)
 }
@@ -151,11 +153,13 @@ func (t *Transaction) Bytes() ([]byte, error) {
 	return json.Marshal(t.Payload)
 }
 
+// Issue appends a new Issue operation to the TokenRequest inside this transaction
 func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ string, q uint64) error {
 	_, err := t.TokenRequest.Issue(wallet, receiver, typ, q)
 	return err
 }
 
+// Transfer appends a new Transfer operation to the TokenRequest inside this transaction
 func (t *Transaction) Transfer(wallet *token.OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...token.TransferOption) error {
 	_, err := t.TokenRequest.Transfer(wallet, typ, values, owners, opts...)
 	return err
@@ -185,6 +189,7 @@ func (t *Transaction) MarshallToAudit() ([]byte, error) {
 	return t.TokenRequest.MarshallToAudit()
 }
 
+// Selector returns the default token selector for this transaction
 func (t *Transaction) Selector() (token.Selector, error) {
 	return t.TokenService().SelectorManager().NewSelector(t.ID())
 }
