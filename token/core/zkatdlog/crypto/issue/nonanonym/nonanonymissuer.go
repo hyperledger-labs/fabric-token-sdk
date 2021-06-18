@@ -6,27 +6,20 @@ SPDX-License-Identifier: Apache-2.0
 package nonanonym
 
 import (
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
 // signing identity
 type SigningIdentity interface {
-	api2.SigningIdentity
-}
-
-//go:generate counterfeiter -o mock/identity.go -fake-name Identity . Identity
-
-// identity
-type Identity interface {
-	api2.Identity
+	driver.SigningIdentity
 }
 
 type Issuer struct {
@@ -53,12 +46,12 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 		return nil, nil, errors.Errorf("failed to generate zero knwoledge proof for issue")
 	}
 
-	issue, err := issue2.NewIssue(i.Signer.GetPublicVersion(), tokens, owners, proof, false)
+	signerRaw, err := i.Signer.Serialize()
 	if err != nil {
 		return nil, nil, err
 	}
 
-	signerRaw, err := i.Signer.GetPublicVersion().Serialize()
+	issue, err := issue2.NewIssue(signerRaw, tokens, owners, proof, false)
 	if err != nil {
 		return nil, nil, err
 	}

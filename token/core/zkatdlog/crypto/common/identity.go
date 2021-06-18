@@ -6,16 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
-
-//go:generate counterfeiter -o ../mock/identity.go -fake-name Identity . Identity
-
-// identity
-type Identity interface {
-	driver.Identity
-}
 
 //go:generate counterfeiter -o ../mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
@@ -39,8 +33,4 @@ func (S *WrappedSigningIdentity) Verify(message []byte, signature []byte) error 
 
 func (S *WrappedSigningIdentity) Sign(raw []byte) ([]byte, error) {
 	return S.Signer.Sign(raw)
-}
-
-func (S *WrappedSigningIdentity) GetPublicVersion() driver.Identity {
-	return S
 }

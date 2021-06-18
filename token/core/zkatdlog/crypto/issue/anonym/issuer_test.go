@@ -6,12 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 package anonym_test
 
 import (
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Issuer", func() {
@@ -69,7 +70,7 @@ var _ = Describe("Issuer", func() {
 				sig, err := issuer.SignTokenActions(raw, "0")
 				Expect(err).NotTo(HaveOccurred())
 				signed := append(raw, []byte("0")...)
-				err = issuer.Signer.GetPublicVersion().Verify(signed, sig)
+				err = issuer.Signer.Verify(signed, sig)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

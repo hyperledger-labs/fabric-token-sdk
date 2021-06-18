@@ -51,12 +51,6 @@ var _ = Describe("Issuer", func() {
 		signer = &mock.SigningIdentity{}
 		issuer = &nan.Issuer{}
 		issuer.New("ABC", signer, pp)
-
-		fakeIdentity := &mock.Identity{}
-		signer.GetPublicVersionReturns(fakeIdentity)
-		fakeIdentity.SerializeReturns([]byte("issuer"), nil)
-		fakeIdentity.VerifyReturns(nil)
-
 	})
 
 	Describe("Issue", func() {
@@ -71,7 +65,7 @@ var _ = Describe("Issuer", func() {
 				sig, err := issuer.SignTokenActions(raw, "0")
 				Expect(err).NotTo(HaveOccurred())
 				signed := append(raw, []byte("0")...)
-				err = signer.GetPublicVersion().Verify(signed, sig)
+				err = signer.Verify(signed, sig)
 				Expect(err).NotTo(HaveOccurred())
 			})
 		})

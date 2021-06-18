@@ -45,7 +45,7 @@ var _ = Describe("PublicParamsManager", func() {
 
 		asigner, _ := prepareECDSASigner()
 		auditor = &audit.Auditor{Signer: asigner, PedersenParams: pp.ZKATPedParams, NYMParams: pp.IdemixPK}
-		araw, err := asigner.GetPublicVersion().Serialize()
+		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
 
