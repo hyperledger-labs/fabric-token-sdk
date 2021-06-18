@@ -14,7 +14,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -400,7 +399,7 @@ func prepareTransfer(pp *crypto.PublicParams, id view.Identity) (*transfer2.Tran
 	inputs, tokenInfos := createInputs(pp, id)
 
 	fakeSigner := &mock.SigningIdentity{}
-	sender, err := transfer2.NewSender([]view2.Signer{fakeSigner, fakeSigner}, inputs, []string{"0", "1"}, tokenInfos, pp)
+	sender, err := transfer2.NewSender([]driver.Signer{fakeSigner, fakeSigner}, inputs, []string{"0", "1"}, tokenInfos, pp)
 	Expect(err).NotTo(HaveOccurred())
 	transfer, inf, err := sender.GenerateZKTransfer([]uint64{40, 20}, [][]byte{id, id})
 	Expect(err).NotTo(HaveOccurred())

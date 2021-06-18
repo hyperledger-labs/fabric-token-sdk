@@ -8,7 +8,6 @@ package anonym
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/pkg/errors"
 
@@ -22,6 +21,13 @@ type Authorization struct {
 	// (this corresponds to one of the issued tokens)
 }
 
+func NewAuthorization(typeNym, token *bn256.G1) *Authorization {
+	return &Authorization{
+		Type:  typeNym,
+		Token: token,
+	}
+}
+
 type AuthorizationWitness struct {
 	Sk      *bn256.Zr // issuer's secret key
 	TType   *bn256.Zr // type the issuer is authorized to issue
@@ -31,21 +37,48 @@ type AuthorizationWitness struct {
 	Index   int       // index of Type
 }
 
-type Signer struct {
-	*Verifier
-	Witness *AuthorizationWitness
-}
-
-type Verifier struct {
-	PedersenParams []*bn256.G1
-	Issuers        []*bn256.G1 // g_0^skg_1^type
-	Auth           *Authorization
-	BitLength      int
+func NewWitness(sk, ttype, value, tNymBF, tokenBF *bn256.Zr, index int) *AuthorizationWitness {
+	return &AuthorizationWitness{
+		Sk:      sk,
+		TType:   ttype,
+		TNymBF:  tNymBF,
+		Value:   value,
+		TokenBF: tokenBF,
+		Index:   index,
+	}
 }
 
 type Signature struct {
 	AuthorizationCorrectness []byte
 	TypeCorrectness          []byte
+}
+
+func (s *Signature) Serialize() ([]byte, error) {
+	return json.Marshal(s)
+}
+
+func (s *Signature) Deserialize(raw []byte) error {
+	return json.Unmarshal(raw, s)
+}
+
+type Signer struct {
+	*Verifier
+	Witness *AuthorizationWitness
+}
+
+// NewSigner initializes the prover
+func NewSigner(witness *AuthorizationWitness, issuers []*bn256.G1, auth *Authorization, bitLength int, pp []*bn256.G1) *Signer {
+
+	verifier := &Verifier{
+		PedersenParams: pp,
+		Issuers:        issuers,
+		Auth:           auth,
+		BitLength:      bitLength,
+	}
+	return &Signer{
+		Witness:  witness,
+		Verifier: verifier,
+	}
 }
 
 // check that the issuer knows the secret key of one of the commitments that link issuers to type
@@ -82,6 +115,27 @@ func (s *Signer) Sign(message []byte) ([]byte, error) {
 	return sig.Serialize()
 }
 
+func (s *Signer) Serialize() ([]byte, error) {
+	v := &Verifier{Auth: s.Auth, Issuers: s.Issuers, PedersenParams: s.PedersenParams, BitLength: s.BitLength}
+	return v.Serialize()
+}
+
+func (s *Signer) ToUniqueIdentifier() ([]byte, error) {
+	raw, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	logger.Debugf("ToUniqueIdentifier [%s]", string(raw))
+	return []byte(hash.Hashable(raw).String()), nil
+}
+
+type Verifier struct {
+	PedersenParams []*bn256.G1
+	Issuers        []*bn256.G1 // g_0^skg_1^type
+	Auth           *Authorization
+	BitLength      int
+}
+
 func (v *Verifier) Verify(message, rawsig []byte) error {
 	if len(v.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen parameters != 3")
@@ -109,54 +163,11 @@ func (v *Verifier) Verify(message, rawsig []byte) error {
 	return NewTypeCorrectnessVerifier(v.Auth.Type, v.Auth.Token, message, v.PedersenParams).Verify(sig.TypeCorrectness)
 }
 
-func (s *Signature) Serialize() ([]byte, error) {
-	return json.Marshal(s)
-}
-
-func (s *Signature) Deserialize(raw []byte) error {
-	return json.Unmarshal(raw, s)
-}
-
-func NewWitness(sk, ttype, value, tNymBF, tokenBF *bn256.Zr, index int) *AuthorizationWitness {
-	return &AuthorizationWitness{
-		Sk:      sk,
-		TType:   ttype,
-		TNymBF:  tNymBF,
-		Value:   value,
-		TokenBF: tokenBF,
-		Index:   index,
-	}
-}
-
-// Initialize the prover
-func NewSigner(witness *AuthorizationWitness, issuers []*bn256.G1, auth *Authorization, bitLength int, pp []*bn256.G1) *Signer {
-
-	verifier := &Verifier{
-		PedersenParams: pp,
-		Issuers:        issuers,
-		Auth:           auth,
-		BitLength:      bitLength,
-	}
-	return &Signer{
-		Witness:  witness,
-		Verifier: verifier,
-	}
-}
-
-func NewAuthorization(typeNym, token *bn256.G1) *Authorization {
-	return &Authorization{
-		Type:  typeNym,
-		Token: token,
-	}
-}
-
 func (v *Verifier) Serialize() ([]byte, error) {
-
 	return json.Marshal(v)
 }
 
 func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn256.G1, raw []byte) error {
-
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
 		return err
@@ -167,17 +178,4 @@ func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn
 	v.PedersenParams = pp
 	v.Issuers = issuers
 	return nil
-}
-
-func (s *Signer) GetPublicVersion() driver.Identity {
-	return &Verifier{Auth: s.Auth, Issuers: s.Issuers, PedersenParams: s.PedersenParams, BitLength: s.BitLength}
-}
-
-func (s *Signer) ToUniqueIdentifier() ([]byte, error) {
-	raw, err := json.Marshal(s)
-	if err != nil {
-		return nil, err
-	}
-	logger.Debugf("ToUniqueIdentifier [%s]", string(raw))
-	return []byte(hash.Hashable(raw).String()), nil
 }

@@ -7,12 +7,13 @@ package anonym
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog.issue")
@@ -50,11 +51,15 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 		i.Signer.(*Signer).Witness.Index,
 		i.PublicParams,
 	)
-
 	if err != nil {
 		return nil, nil, err
 	}
-	issue, err := issue2.NewIssue(i.Signer.GetPublicVersion(), tokens, owners, proof, true)
+
+	signerID, err := i.Signer.Serialize()
+	if err != nil {
+		return nil, nil, err
+	}
+	issue, err := issue2.NewIssue(signerID, tokens, owners, proof, true)
 	if err != nil {
 		return nil, nil, err
 	}

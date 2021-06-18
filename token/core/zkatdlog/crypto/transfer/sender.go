@@ -8,14 +8,12 @@ package transfer
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -26,14 +24,14 @@ type SigningIdentity interface {
 }
 
 type Sender struct {
-	Signers          []view.Signer
+	Signers          []driver.Signer
 	Inputs           []*token.Token
 	InputIDs         []string
 	InputInformation []*token.TokenInformation // contains the opening of the inputs to be spent
 	PublicParams     *crypto.PublicParams
 }
 
-func NewSender(signers []view.Signer, tokens []*token.Token, ids []string, inf []*token.TokenInformation, pp *crypto.PublicParams) (*Sender, error) {
+func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.TokenInformation, pp *crypto.PublicParams) (*Sender, error) {
 	if len(signers) != len(tokens) || len(tokens) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
@@ -120,8 +118,8 @@ func (t *TransferAction) NumOutputs() int {
 	return len(t.OutputTokens)
 }
 
-func (t *TransferAction) GetOutputs() []api2.Output {
-	var res []api2.Output
+func (t *TransferAction) GetOutputs() []driver.Output {
+	var res []driver.Output
 	for _, outputToken := range t.OutputTokens {
 		res = append(res, outputToken)
 	}

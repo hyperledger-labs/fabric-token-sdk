@@ -11,18 +11,18 @@ import (
 
 	"github.com/pkg/errors"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var _ = Describe("Sender", func() {
 	var (
 		fakeSigningIdentity *mock.SigningIdentity
-		signers             []view2.Signer
+		signers             []driver.Signer
 		pp                  *crypto.PublicParams
 
 		transfer *transfer2.TransferAction
@@ -41,7 +41,7 @@ var _ = Describe("Sender", func() {
 		owners = make([][]byte, 2)
 		owners[0] = []byte("bob")
 		owners[1] = []byte("charlie")
-		signers = make([]view2.Signer, 3)
+		signers = make([]driver.Signer, 3)
 		fakeSigningIdentity = &mock.SigningIdentity{}
 		signers[0] = fakeSigningIdentity
 		signers[1] = fakeSigningIdentity

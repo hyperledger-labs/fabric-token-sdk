@@ -18,12 +18,6 @@ const (
 	CertifierRole
 )
 
-// Signer is an interface which wraps the Sign method.
-type Signer interface {
-	// Sign signs message bytes and returns the signature or an error on failure.
-	Sign(message []byte) ([]byte, error)
-}
-
 type GetIdentityFunc func() (view.Identity, error)
 
 type IdentityInfo struct {

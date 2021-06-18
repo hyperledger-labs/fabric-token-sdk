@@ -8,13 +8,14 @@ package issue
 import (
 	"encoding/json"
 
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 // Issue specifies an issue of one or more tokens
@@ -81,7 +82,7 @@ func (i *IssueAction) GetCommitments() []*bn256.G1 {
 }
 
 // Initialize Issue
-func NewIssue(issuer common.Identity, coms []*bn256.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
+func NewIssue(issuer []byte, coms []*bn256.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
 	if len(owners) != len(coms) {
 		return nil, errors.Errorf("number of owners does not match number of tokens")
 	}
@@ -91,13 +92,8 @@ func NewIssue(issuer common.Identity, coms []*bn256.G1, owners [][]byte, proof [
 		outputs[i] = &token.Token{Owner: owners[i], Data: c}
 	}
 
-	raw, err := issuer.Serialize()
-	if err != nil {
-		return nil, errors.Errorf("cannot generate issue request: failed to serialize issuer's identity")
-	}
-
 	return &IssueAction{
-		Issuer:       raw,
+		Issuer:       issuer,
 		OutputTokens: outputs,
 		Proof:        proof,
 		Anonymous:    anonymous,

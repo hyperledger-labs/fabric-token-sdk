@@ -8,7 +8,6 @@ package common
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
@@ -22,8 +21,8 @@ type NYMSigner struct {
 }
 
 // get verifier
-func (s *NYMSigner) GetPublicVersion() driver.Identity {
-	return s.NYMVerifier
+func (s *NYMSigner) Serialize() ([]byte, error) {
+	return s.NYMVerifier.Serialize()
 }
 
 // sign message anonymously using Schnorr signature

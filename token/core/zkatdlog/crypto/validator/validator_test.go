@@ -15,9 +15,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
@@ -82,7 +80,7 @@ var _ = Describe("validator", func() {
 
 		asigner, _ := prepareECDSASigner()
 		auditor = &audit.Auditor{Signer: asigner, PedersenParams: pp.ZKATPedParams, NYMParams: pp.IdemixPK}
-		araw, err := asigner.GetPublicVersion().Serialize()
+		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
 
@@ -440,7 +438,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, api2.SigningIdentity) {
+func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.SigningIdentity) {
 	registry := registry2.New()
 	registry.RegisterService(&fakeProv{typ: "memory"})
 
@@ -524,9 +522,9 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 	return ir, issueMetadata
 }
 
-func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 
-	signers := make([]view2.Signer, 2)
+	signers := make([]driver.Signer, 2)
 	signers[0] = signer
 	signers[1] = signer
 

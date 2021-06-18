@@ -10,14 +10,15 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PublicParamsManager", func() {
@@ -44,7 +45,7 @@ var _ = Describe("PublicParamsManager", func() {
 
 		asigner, _ := prepareECDSASigner()
 		auditor = &audit.Auditor{Signer: asigner, PedersenParams: pp.ZKATPedParams, NYMParams: pp.IdemixPK}
-		araw, err := asigner.GetPublicVersion().Serialize()
+		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
 
@@ -58,7 +59,7 @@ var _ = Describe("PublicParamsManager", func() {
 			err error
 		)
 		BeforeEach(func() {
-			raw, err = auditor.Signer.GetPublicVersion().Serialize()
+			raw, err = auditor.Signer.Serialize()
 			Expect(err).NotTo(HaveOccurred())
 		})
 		When("addAuditor is called correctly", func() {

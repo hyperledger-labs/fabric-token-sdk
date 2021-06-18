@@ -13,21 +13,22 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
-	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *service) Transfer(txID string, wallet api3.OwnerWallet, ids []*token3.Id, outputTokens ...*token3.Token) (api3.TransferAction, *api3.TransferMetadata, error) {
+func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.Id, outputTokens ...*token3.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
 
 	var tokens []*token.Token
 	var inputIDs []string
 	var inputInf []*token.TokenInformation
-	var signers []view2.Signer
+	var signers []driver.Signer
 	var signerIds []view.Identity
 
 	qe, err := s.channel.Vault().NewQueryExecutor()
@@ -162,7 +163,7 @@ func (s *service) Transfer(txID string, wallet api3.OwnerWallet, ids []*token3.I
 		receiverIsSender[i] = s.ownerWallet(receiver) != nil
 	}
 
-	metadata := &api3.TransferMetadata{
+	metadata := &driver.TransferMetadata{
 		Outputs:            outputs,
 		Senders:            signerIds,
 		SenderAuditInfos:   senderAuditInfos,
@@ -176,7 +177,7 @@ func (s *service) Transfer(txID string, wallet api3.OwnerWallet, ids []*token3.I
 	return transfer, metadata, nil
 }
 
-func (s *service) VerifyTransfer(action api3.TransferAction, tokenInfos [][]byte) error {
+func (s *service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]byte) error {
 	tr, ok := action.(*transfer.TransferAction)
 	if !ok {
 		return errors.Errorf("expected *zkatdlog.Transfer")
@@ -202,7 +203,7 @@ func (s *service) VerifyTransfer(action api3.TransferAction, tokenInfos [][]byte
 	return transfer.NewVerifier(tr.InputCommitments, com, pp).Verify(tr.Proof)
 }
 
-func (s *service) DeserializeTransferAction(raw []byte) (api3.TransferAction, error) {
+func (s *service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	transfer := &transfer.TransferAction{}
 	err := transfer.Deserialize(raw)
 	if err != nil {
