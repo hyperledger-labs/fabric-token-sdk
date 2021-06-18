@@ -10,14 +10,15 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PublicParamsManager", func() {
@@ -58,7 +59,7 @@ var _ = Describe("PublicParamsManager", func() {
 			err error
 		)
 		BeforeEach(func() {
-			raw, err = auditor.Signer.GetPublicVersion().Serialize()
+			raw, err = auditor.Signer.Serialize()
 			Expect(err).NotTo(HaveOccurred())
 		})
 		When("addAuditor is called correctly", func() {

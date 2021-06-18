@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/pkg/errors"
@@ -26,7 +25,7 @@ import (
 
 // signing identity
 type SigningIdentity interface {
-	api2.SigningIdentity
+	driver.SigningIdentity
 }
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog.audit")

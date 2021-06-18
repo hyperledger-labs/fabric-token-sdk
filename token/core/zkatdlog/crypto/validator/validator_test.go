@@ -15,7 +15,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -526,7 +525,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 
 func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 
-	signers := make([]view2.Signer, 2)
+	signers := make([]driver.Signer, 2)
 	signers[0] = signer
 	signers[1] = signer
 

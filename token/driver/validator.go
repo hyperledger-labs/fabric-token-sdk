@@ -9,10 +9,6 @@ import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 type GetStateFnc = func(key string) ([]byte, error)
 
-type Verifier interface {
-	Verify(message, sigma []byte) error
-}
-
 type Ledger interface {
 	GetState(key string) ([]byte, error)
 }
