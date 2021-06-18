@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 */
 package fabtoken
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 type PublicParamsManager struct {
 	pp *PublicParams
@@ -42,7 +42,7 @@ func (v *PublicParamsManager) SetCertifier(bytes []byte) ([]byte, error) {
 	panic("SetCertifier cannot be called from fabtoken")
 }
 
-func (v *PublicParamsManager) PublicParameters() api.PublicParameters {
+func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.pp
 }
 

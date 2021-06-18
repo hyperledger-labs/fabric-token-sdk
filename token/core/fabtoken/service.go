@@ -17,7 +17,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
 
@@ -43,11 +43,11 @@ type service struct {
 	channel             Channel
 	namespace           string
 	pp                  *PublicParams
-	publicParamsFetcher api.PublicParamsFetcher
+	publicParamsFetcher driver.PublicParamsFetcher
 	publicParamsLoader  PublicParamsLoader
 	qe                  QueryEngine
 
-	identityProvider api.IdentityProvider
+	identityProvider driver.IdentityProvider
 	ownerWallets     []*ownerWallet
 	issuerWallets    []*issuerWallet
 	auditorWallets   []*auditorWallet
@@ -58,10 +58,10 @@ func NewService(
 	sp view2.ServiceProvider,
 	channel Channel,
 	namespace string,
-	publicParamsFetcher api.PublicParamsFetcher,
+	publicParamsFetcher driver.PublicParamsFetcher,
 	publicParamsLoader PublicParamsLoader,
 	qe QueryEngine,
-	identityProvider api.IdentityProvider,
+	identityProvider driver.IdentityProvider,
 ) *service {
 	return &service{
 		sp:                  sp,
@@ -117,7 +117,7 @@ func (s *service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, 
 	return nil
 }
 
-func (s *service) GenerateIssuerKeyPair(tokenType string) (api.Key, api.Key, error) {
+func (s *service) GenerateIssuerKeyPair(tokenType string) (driver.Key, driver.Key, error) {
 	panic("implement me")
 }
 
@@ -128,7 +128,7 @@ func (s *service) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 	return nil
 }
 
-func (s *service) RegisterIssuer(label string, sk api.Key, pk api.Key) error {
+func (s *service) RegisterIssuer(label string, sk driver.Key, pk driver.Key) error {
 	panic("implement me")
 }
 
@@ -144,7 +144,7 @@ func (s *service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return string(auditInfo), nil
 }
 
-func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte) (api.IssueAction, [][]byte, view.Identity, error) {
+func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte) (driver.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
 		if len(owner) == 0 {
 			return nil, nil, nil, errors.Errorf("all recipients should be defined")
@@ -180,12 +180,12 @@ func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		nil
 }
 
-func (s *service) VerifyIssue(tr api.IssueAction, tokenInfos [][]byte) error {
+func (s *service) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
 	// TODO:
 	return nil
 }
 
-func (s *service) DeserializeIssueAction(raw []byte) (api.IssueAction, error) {
+func (s *service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &IssueAction{}
 	if err := issue.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing issue action")
@@ -193,7 +193,7 @@ func (s *service) DeserializeIssueAction(raw []byte) (api.IssueAction, error) {
 	return issue, nil
 }
 
-func (s *service) Transfer(txID string, wallet api.OwnerWallet, ids []*token2.Id, Outputs ...*token2.Token) (api.TransferAction, *api.TransferMetadata, error) {
+func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.Id, Outputs ...*token2.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
 	id, err := wallet.GetRecipientIdentity()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting sender identity")
@@ -305,7 +305,7 @@ func (s *service) Transfer(txID string, wallet api.OwnerWallet, ids []*token2.Id
 		receiverIsSender[i] = s.ownerWallet(receiver) != nil
 	}
 
-	metadata := &api.TransferMetadata{
+	metadata := &driver.TransferMetadata{
 		Outputs:            outputs,
 		Senders:            signerIds,
 		SenderAuditInfos:   senderAuditInfos,
@@ -319,12 +319,12 @@ func (s *service) Transfer(txID string, wallet api.OwnerWallet, ids []*token2.Id
 	return transfer, metadata, nil
 }
 
-func (s *service) VerifyTransfer(tr api.TransferAction, tokenInfos [][]byte) error {
+func (s *service) VerifyTransfer(tr driver.TransferAction, tokenInfos [][]byte) error {
 	// TODO:
 	return nil
 }
 
-func (s *service) DeserializeTransferAction(raw []byte) (api.TransferAction, error) {
+func (s *service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	t := &TransferAction{}
 	if err := t.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing transfer action")
@@ -354,20 +354,20 @@ func (s *service) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*toke
 	return tok, tokInfo.Issuer, nil
 }
 
-func (s *service) AuditorCheck(tokenRequest *api.TokenRequest, tokenRequestMetadata *api.TokenRequestMetadata, txID string) error {
+func (s *service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
 	// TODO:
 	return nil
 }
 
-func (s *service) IdentityProvider() api.IdentityProvider {
+func (s *service) IdentityProvider() driver.IdentityProvider {
 	return s.identityProvider
 }
 
-func (s *service) Validator() api.Validator {
+func (s *service) Validator() driver.Validator {
 	return NewValidator(s.publicParams())
 }
 
-func (s *service) PublicParamsManager() api.PublicParamsManager {
+func (s *service) PublicParamsManager() driver.PublicParamsManager {
 	return NewPublicParamsManager(s.publicParams())
 }
 
@@ -375,7 +375,7 @@ func (s *service) NewCertificationRequest(ids []*token2.Id) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *service) Certify(wallet api.CertifierWallet, ids []*token2.Id, tokens [][]byte, request []byte) ([][]byte, error) {
+func (s *service) Certify(wallet driver.CertifierWallet, ids []*token2.Id, tokens [][]byte, request []byte) ([][]byte, error) {
 	return nil, nil
 }
 

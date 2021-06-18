@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type TokenVault interface {

@@ -7,11 +7,11 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type SignatureService struct {
-	s api.SigService
+	s driver.SigService
 }
 
 func (s *SignatureService) GetVerifier(id view.Identity) (Verifier, error) {

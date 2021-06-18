@@ -11,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // ServiceProvider is used to return instances of a given type

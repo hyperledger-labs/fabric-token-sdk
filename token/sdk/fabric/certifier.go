@@ -7,7 +7,7 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier"
 )
 
@@ -19,6 +19,6 @@ func NewCertificationClientProvider(sp view.ServiceProvider) *CertificationClien
 	return &CertificationClientProvider{sp: sp}
 }
 
-func (c *CertificationClientProvider) New(network string, channel string, namespace string, driver string) (api.CertificationClient, error) {
+func (c *CertificationClientProvider) New(network string, channel string, namespace string, driver string) (driver.CertificationClient, error) {
 	return certifier.NewCertificationClient(c.sp, network, channel, namespace, driver)
 }

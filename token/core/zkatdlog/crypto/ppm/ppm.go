@@ -11,10 +11,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
@@ -56,7 +56,7 @@ func (v *PublicParamsManager) AddIssuer(bytes []byte) ([]byte, error) {
 	return raw, nil
 }
 
-func (v *PublicParamsManager) PublicParameters() api.PublicParameters {
+func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.pp
 }
 

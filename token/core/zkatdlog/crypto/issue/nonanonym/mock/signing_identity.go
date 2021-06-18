@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
 )
 
@@ -45,14 +45,14 @@ type SigningIdentity struct {
 		result1 []byte
 		result2 error
 	}
-	GetPublicVersionStub        func() api.Identity
+	GetPublicVersionStub        func() driver.Identity
 	getPublicVersionMutex       sync.RWMutex
 	getPublicVersionArgsForCall []struct{}
 	getPublicVersionReturns     struct {
-		result1 api.Identity
+		result1 driver.Identity
 	}
 	getPublicVersionReturnsOnCall map[int]struct {
-		result1 api.Identity
+		result1 driver.Identity
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
@@ -216,7 +216,7 @@ func (fake *SigningIdentity) SignReturnsOnCall(i int, result1 []byte, result2 er
 	}{result1, result2}
 }
 
-func (fake *SigningIdentity) GetPublicVersion() api.Identity {
+func (fake *SigningIdentity) GetPublicVersion() driver.Identity {
 	fake.getPublicVersionMutex.Lock()
 	ret, specificReturn := fake.getPublicVersionReturnsOnCall[len(fake.getPublicVersionArgsForCall)]
 	fake.getPublicVersionArgsForCall = append(fake.getPublicVersionArgsForCall, struct{}{})
@@ -237,22 +237,22 @@ func (fake *SigningIdentity) GetPublicVersionCallCount() int {
 	return len(fake.getPublicVersionArgsForCall)
 }
 
-func (fake *SigningIdentity) GetPublicVersionReturns(result1 api.Identity) {
+func (fake *SigningIdentity) GetPublicVersionReturns(result1 driver.Identity) {
 	fake.GetPublicVersionStub = nil
 	fake.getPublicVersionReturns = struct {
-		result1 api.Identity
+		result1 driver.Identity
 	}{result1}
 }
 
-func (fake *SigningIdentity) GetPublicVersionReturnsOnCall(i int, result1 api.Identity) {
+func (fake *SigningIdentity) GetPublicVersionReturnsOnCall(i int, result1 driver.Identity) {
 	fake.GetPublicVersionStub = nil
 	if fake.getPublicVersionReturnsOnCall == nil {
 		fake.getPublicVersionReturnsOnCall = make(map[int]struct {
-			result1 api.Identity
+			result1 driver.Identity
 		})
 	}
 	fake.getPublicVersionReturnsOnCall[i] = struct {
-		result1 api.Identity
+		result1 driver.Identity
 	}{result1}
 }
 

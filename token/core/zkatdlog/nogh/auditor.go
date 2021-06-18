@@ -6,9 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 

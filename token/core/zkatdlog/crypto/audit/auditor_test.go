@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -29,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var _ = Describe("Auditor", func() {
@@ -53,9 +53,9 @@ var _ = Describe("Auditor", func() {
 				issue, metadata := createIssue(pp)
 				raw, err := issue.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&api.TokenRequest{Issues: [][]byte{raw}}, &api.TokenRequestMetadata{Issues: []api.IssueMetadata{metadata}}, nil, "1")
+				err = auditor.Check(&driver.TokenRequest{Issues: [][]byte{raw}}, &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}, nil, "1")
 				Expect(err).NotTo(HaveOccurred())
-				sig, err := auditor.Endorse(&api.TokenRequest{Issues: [][]byte{raw}}, "1")
+				sig, err := auditor.Endorse(&driver.TokenRequest{Issues: [][]byte{raw}}, "1")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(sig).To(Equal([]byte("auditor-signature")))
 			})
@@ -65,7 +65,7 @@ var _ = Describe("Auditor", func() {
 				issue, metadata := createBogusIssue(pp)
 				raw, err := issue.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&api.TokenRequest{Issues: [][]byte{raw}}, &api.TokenRequestMetadata{Issues: []api.IssueMetadata{metadata}}, nil, "1")
+				err = auditor.Check(&driver.TokenRequest{Issues: [][]byte{raw}}, &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}, nil, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("output at index [0] does not match the provided opening"))
 			})
@@ -77,9 +77,9 @@ var _ = Describe("Auditor", func() {
 				transfer, metadata, tokens := createTransfer(pp)
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&api.TokenRequest{Transfers: [][]byte{raw}}, &api.TokenRequestMetadata{Transfers: []api.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).NotTo(HaveOccurred())
-				sig, err := auditor.Endorse(&api.TokenRequest{Transfers: [][]byte{raw}}, "1")
+				sig, err := auditor.Endorse(&driver.TokenRequest{Transfers: [][]byte{raw}}, "1")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(sig).To(Equal([]byte("auditor-signature")))
 			})
@@ -89,7 +89,7 @@ var _ = Describe("Auditor", func() {
 				transfer, metadata, tokens := createTransferWithBogusOutput(pp)
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&api.TokenRequest{Transfers: [][]byte{raw}}, &api.TokenRequestMetadata{Transfers: []api.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(0))
 			})
@@ -104,7 +104,7 @@ var _ = Describe("Auditor", func() {
 				metadata.SenderAuditInfos[0] = raw
 				raw, err = transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&api.TokenRequest{Transfers: [][]byte{raw}}, &api.TokenRequestMetadata{Transfers: []api.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("input at index [0] does not match the provided opening"))
 				Expect(err.Error()).NotTo(ContainSubstring("attribute mistmatch"))
@@ -121,7 +121,7 @@ var _ = Describe("Auditor", func() {
 				metadata.ReceiverAuditInfos[0] = raw
 				raw, err = transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&api.TokenRequest{Transfers: [][]byte{raw}}, &api.TokenRequestMetadata{Transfers: []api.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("output at index [0] does not match the provided opening"))
 				Expect(err.Error()).To(ContainSubstring("attribute mistmatch"))
@@ -131,7 +131,7 @@ var _ = Describe("Auditor", func() {
 	})
 })
 
-func createIssue(pp *crypto.PublicParams) (*issue.IssueAction, api.IssueMetadata) {
+func createIssue(pp *crypto.PublicParams) (*issue.IssueAction, driver.IssueMetadata) {
 	issuer := prepareIssuer(pp)
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 
@@ -144,7 +144,7 @@ func createIssue(pp *crypto.PublicParams) (*issue.IssueAction, api.IssueMetadata
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata := api.IssueMetadata{}
+	metadata := driver.IssueMetadata{}
 	metadata.TokenInfo = marshalledinf
 	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
 	metadata.AuditInfos = make([][]byte, len(issue.OutputTokens))
@@ -158,7 +158,7 @@ func createIssue(pp *crypto.PublicParams) (*issue.IssueAction, api.IssueMetadata
 	return issue, metadata
 }
 
-func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, api.TransferMetadata, [][]*token.Token) {
+func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
@@ -168,7 +168,7 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, api.Tra
 		marshalledInfo[i], err = json.Marshal(inf[i])
 		Expect(err).NotTo(HaveOccurred())
 	}
-	metadata := api.TransferMetadata{}
+	metadata := driver.TransferMetadata{}
 	metadata.SenderAuditInfos = make([][]byte, len(transfer.Inputs))
 	for i := 0; i < len(transfer.Inputs); i++ {
 		metadata.SenderAuditInfos[i], err = auditInfo.Bytes()
@@ -191,7 +191,7 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, api.Tra
 	return transfer, metadata, tokns
 }
 
-func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, api.IssueMetadata) {
+func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, driver.IssueMetadata) {
 	issuer := prepareIssuer(pp)
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 
@@ -206,7 +206,7 @@ func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, api.IssueMet
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata := api.IssueMetadata{}
+	metadata := driver.IssueMetadata{}
 	metadata.TokenInfo = marshalledinf
 	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
 	metadata.AuditInfos = make([][]byte, len(issue.OutputTokens))
@@ -221,7 +221,7 @@ func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, api.IssueMet
 	return issue, metadata
 }
 
-func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.TransferAction, api.TransferMetadata, [][]*token.Token) {
+func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
@@ -232,7 +232,7 @@ func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Transfer
 		marshalledInfo[i], err = json.Marshal(inf[i])
 		Expect(err).NotTo(HaveOccurred())
 	}
-	metadata := api.TransferMetadata{}
+	metadata := driver.TransferMetadata{}
 	metadata.SenderAuditInfos = make([][]byte, len(transfer.Inputs))
 	for i := 0; i < len(transfer.Inputs); i++ {
 		metadata.SenderAuditInfos[i], err = auditInfo.Bytes()

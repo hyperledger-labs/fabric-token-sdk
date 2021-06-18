@@ -8,12 +8,12 @@ package issue
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
@@ -44,8 +44,8 @@ func (i *IssueAction) NumOutputs() int {
 	return len(i.OutputTokens)
 }
 
-func (i *IssueAction) GetOutputs() []api.Output {
-	var res []api.Output
+func (i *IssueAction) GetOutputs() []driver.Output {
+	var res []driver.Output
 	for _, token := range i.OutputTokens {
 		res = append(res, token)
 	}

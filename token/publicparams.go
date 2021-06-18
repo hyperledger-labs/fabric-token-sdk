@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 */
 package token
 
-import tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+import tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 type PublicParamsFetcher interface {
 	Fetch() ([]byte, error)

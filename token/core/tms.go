@@ -12,7 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type CallbackFunc func(network, channel, namespace string) error

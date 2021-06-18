@@ -12,7 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -247,7 +247,7 @@ func (e *Engine) PublicParams() ([]byte, error) {
 	return raw, nil
 }
 
-func (e *Engine) GetTokenInfos(ids []*token.Id, callback api.QueryCallbackFunc) error {
+func (e *Engine) GetTokenInfos(ids []*token.Id, callback driver.QueryCallbackFunc) error {
 	qe, err := e.channel.Vault().NewQueryExecutor()
 	if err != nil {
 		return err
@@ -270,7 +270,7 @@ func (e *Engine) GetTokenInfos(ids []*token.Id, callback api.QueryCallbackFunc) 
 	return nil
 }
 
-func (e *Engine) GetTokenCommitments(ids []*token.Id, callback api.QueryCallbackFunc) error {
+func (e *Engine) GetTokenCommitments(ids []*token.Id, callback driver.QueryCallbackFunc) error {
 	qe, err := e.channel.Vault().NewQueryExecutor()
 	if err != nil {
 		return err

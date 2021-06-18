@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.driver.identity.fabric")
@@ -30,17 +30,17 @@ type Mapper interface {
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers map[api.IdentityUsage]Mapper
+	mappers map[driver.IdentityUsage]Mapper
 }
 
-func NewProvider(sp view2.ServiceProvider, mappers map[api.IdentityUsage]Mapper) *Provider {
+func NewProvider(sp view2.ServiceProvider, mappers map[driver.IdentityUsage]Mapper) *Provider {
 	return &Provider{
 		sp:      sp,
 		mappers: mappers,
 	}
 }
 
-func (i *Provider) GetIdentityInfo(usage api.IdentityUsage, id string) *api.IdentityInfo {
+func (i *Provider) GetIdentityInfo(usage driver.IdentityUsage, id string) *driver.IdentityInfo {
 	mapper, ok := i.mappers[usage]
 	if !ok {
 		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
@@ -50,7 +50,7 @@ func (i *Provider) GetIdentityInfo(usage api.IdentityUsage, id string) *api.Iden
 		return nil
 	}
 	logger.Debugf("info for [%v] is [%s,%s]", id, id, eid)
-	return &api.IdentityInfo{
+	return &driver.IdentityInfo{
 		ID:           id,
 		EnrollmentID: eid,
 		GetIdentity: func() (view.Identity, error) {
@@ -69,7 +69,7 @@ func (i *Provider) GetIdentityInfo(usage api.IdentityUsage, id string) *api.Iden
 	}
 }
 
-func (i *Provider) LookupIdentifier(usage api.IdentityUsage, v interface{}) (view.Identity, string) {
+func (i *Provider) LookupIdentifier(usage driver.IdentityUsage, v interface{}) (view.Identity, string) {
 	mapper, ok := i.mappers[usage]
 	if !ok {
 		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
@@ -91,7 +91,7 @@ func (i *Provider) GetIdentityMetadata(identity view.Identity) ([]byte, error) {
 	panic("implement me")
 }
 
-func (i *Provider) GetSigner(identity view.Identity) (api.Signer, error) {
+func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	signer, err := view2.GetSigService(i.sp).GetSigner(identity)
 	if err != nil {
 		return nil, err

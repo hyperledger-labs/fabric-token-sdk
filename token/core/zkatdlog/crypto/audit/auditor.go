@@ -9,21 +9,17 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
-
-	"github.com/pkg/errors"
-
+	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -87,9 +83,9 @@ func NewAuditor(pp []*bn256.G1, nymparams []byte, signer SigningIdentity) *Audit
 	}
 }
 
-func (a *Auditor) Endorse(tokenRequest *api.TokenRequest, txID string) ([]byte, error) {
+func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
 	// Prepare signature
-	bytes, err := json.Marshal(&api.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
+	bytes, err := json.Marshal(&driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
 	if err != nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
 	}
@@ -98,7 +94,7 @@ func (a *Auditor) Endorse(tokenRequest *api.TokenRequest, txID string) ([]byte, 
 
 }
 
-func (a *Auditor) Check(tokenRequest *api.TokenRequest, tokenRequestMetadata *api.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
+func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
 	outputsFromIssue, err := getAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues")
@@ -197,7 +193,7 @@ func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 	return nil
 }
 
-func getAuditInfoForIssues(issues [][]byte, metadata []api.IssueMetadata) ([][]*AuditableToken, error) {
+func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
 	if len(issues) != len(metadata) {
 		return nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
@@ -227,7 +223,7 @@ func getAuditInfoForIssues(issues [][]byte, metadata []api.IssueMetadata) ([][]*
 	return outputs, nil
 }
 
-func getAuditInfoForTransfers(transfers [][]byte, metadata []api.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
+func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}

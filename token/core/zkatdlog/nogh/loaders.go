@@ -8,8 +8,8 @@ package nogh
 import (
 	"github.com/pkg/errors"
 
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

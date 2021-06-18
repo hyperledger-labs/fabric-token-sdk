@@ -10,7 +10,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 const Coin = uint64(1000000000)
@@ -59,14 +59,14 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(&api.SerializedPublicParameters{
+	return json.Marshal(&driver.SerializedPublicParameters{
 		Identifier: PublicParameters,
 		Raw:        raw,
 	})
 }
 
 func (pp *PublicParams) Deserialize(raw []byte) error {
-	publicParams := &api.SerializedPublicParameters{}
+	publicParams := &driver.SerializedPublicParameters{}
 	if err := json.Unmarshal(raw, publicParams); err != nil {
 		return err
 	}

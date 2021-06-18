@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -26,7 +26,7 @@ func NewValidator(pp *PublicParams) *Validator {
 	return &Validator{pp: pp}
 }
 
-func (v *Validator) VerifyTokenRequest(ledger api.Ledger, signatureProvider api.SignatureProvider, binding string, tr *api.TokenRequest) ([]interface{}, error) {
+func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
@@ -58,11 +58,11 @@ func (v *Validator) VerifyTokenRequest(ledger api.Ledger, signatureProvider api.
 	return actions, nil
 }
 
-func (v *Validator) VerifyTokenRequestFromRaw(getState api.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
+func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
 	if len(raw) == 0 {
 		return nil, errors.New("empty token request")
 	}
-	tr := &api.TokenRequest{}
+	tr := &driver.TokenRequest{}
 	err := json.Unmarshal(raw, tr)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal token request")
@@ -70,7 +70,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState api.GetStateFnc, binding 
 
 	// Prepare message expected to be signed
 	// TODO: encapsulate this somewhere
-	req := &api.TokenRequest{}
+	req := &driver.TokenRequest{}
 	req.Transfers = tr.Transfers
 	req.Issues = tr.Issues
 	bytes, err := json.Marshal(req)
@@ -96,8 +96,8 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState api.GetStateFnc, binding 
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
-func (v *Validator) unmarshalTransferActions(raw [][]byte) ([]api.TransferAction, error) {
-	res := make([]api.TransferAction, len(raw))
+func (v *Validator) unmarshalTransferActions(raw [][]byte) ([]driver.TransferAction, error) {
+	res := make([]driver.TransferAction, len(raw))
 	for i := 0; i < len(raw); i++ {
 		ta := &TransferAction{}
 		if err := ta.Deserialize(raw[i]); err != nil {
@@ -108,8 +108,8 @@ func (v *Validator) unmarshalTransferActions(raw [][]byte) ([]api.TransferAction
 	return res, nil
 }
 
-func (v *Validator) unmarshalIssueActions(raw [][]byte) ([]api.IssueAction, error) {
-	res := make([]api.IssueAction, len(raw))
+func (v *Validator) unmarshalIssueActions(raw [][]byte) ([]driver.IssueAction, error) {
+	res := make([]driver.IssueAction, len(raw))
 	for i := 0; i < len(raw); i++ {
 		ia := &IssueAction{}
 		if err := ia.Deserialize(raw[i]); err != nil {
@@ -120,7 +120,7 @@ func (v *Validator) unmarshalIssueActions(raw [][]byte) ([]api.IssueAction, erro
 	return res, nil
 }
 
-func (v *Validator) verifyAuditorSignature(signatureProvider api.SignatureProvider) error {
+func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
 	if v.pp.Auditor != nil {
 		identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
 		verifier, err := identityDeserializer.GetVerifier(v.pp.Auditor)
@@ -133,7 +133,7 @@ func (v *Validator) verifyAuditorSignature(signatureProvider api.SignatureProvid
 	return nil
 }
 
-func (v *Validator) verifyIssues(issues []api.IssueAction, signatureProvider api.SignatureProvider) error {
+func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
 		a := issue.(*IssueAction)
 
@@ -153,7 +153,7 @@ func (v *Validator) verifyIssues(issues []api.IssueAction, signatureProvider api
 	return nil
 }
 
-func (v *Validator) verifyTransfers(ledger api.Ledger, transferActions []api.TransferAction, signatureProvider api.SignatureProvider) error {
+func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driver.TransferAction, signatureProvider driver.SignatureProvider) error {
 	identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
@@ -196,22 +196,22 @@ func (v *Validator) verifyTransfers(ledger api.Ledger, transferActions []api.Tra
 	return nil
 }
 
-func (v *Validator) verifyIssue(issue api.IssueAction) error {
+func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	return nil
 }
 
-func (v *Validator) verifyTransfer(inputTokens [][]byte, tr api.TransferAction) error {
+func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferAction) error {
 	return nil
 }
 
 type backend struct {
-	getState   api.GetStateFnc
+	getState   driver.GetStateFnc
 	message    []byte
 	index      int
 	signatures [][]byte
 }
 
-func (b *backend) HasBeenSignedBy(id view.Identity, verifier api.Verifier) error {
+func (b *backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) error {
 	if b.index >= len(b.signatures) {
 		return errors.Errorf("invalid state, insufficient number of signatures")
 	}
