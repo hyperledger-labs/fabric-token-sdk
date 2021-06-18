@@ -16,12 +16,13 @@ import (
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -33,6 +34,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var fakeldger *mock.Ledger
@@ -51,11 +53,11 @@ var _ = Describe("validator", func() {
 		auditor      *audit.Auditor
 		ipk          []byte
 
-		air *api.TokenRequest // anonymous issue request
-		ir  *api.TokenRequest // regular issue request
-		rr  *api.TokenRequest // redeem request
-		tr  *api.TokenRequest // transfer request
-		ar  *api.TokenRequest // atomic action request
+		air *driver.TokenRequest // anonymous issue request
+		ir  *driver.TokenRequest // regular issue request
+		rr  *driver.TokenRequest // redeem request
+		tr  *driver.TokenRequest // transfer request
+		ar  *driver.TokenRequest // atomic action request
 	)
 	BeforeEach(func() {
 		fakeldger = &mock.Ledger{}
@@ -92,7 +94,7 @@ var _ = Describe("validator", func() {
 		Expect(ir).NotTo(BeNil())
 
 		// anonymous issue request metadata
-		var imetadata *api.TokenRequestMetadata
+		var imetadata *driver.TokenRequestMetadata
 		anonymissuer, air, imetadata = prepareAnonymousIssueRequest(sk, pp, auditor)
 		Expect(anonymissuer).NotTo(BeNil())
 		Expect(imetadata).NotTo(BeNil())
@@ -102,13 +104,13 @@ var _ = Describe("validator", func() {
 		Expect(sender).NotTo(BeNil())
 
 		// prepare transfer
-		var trmetadata *api.TokenRequestMetadata
+		var trmetadata *driver.TokenRequestMetadata
 		sender, tr, trmetadata, inputsForTransfer = prepareTransferRequest(pp, auditor)
 		Expect(sender).NotTo(BeNil())
 		Expect(trmetadata).NotTo(BeNil())
 
 		// atomic action request
-		ar = &api.TokenRequest{Issues: air.Issues, Transfers: tr.Transfers}
+		ar = &driver.TokenRequest{Issues: air.Issues, Transfers: tr.Transfers}
 		raw, err := json.Marshal(ar)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -121,9 +123,9 @@ var _ = Describe("validator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// auditor inspect token
-		metadata := &api.TokenRequestMetadata{}
-		metadata.Transfers = []api.TransferMetadata{trmetadata.Transfers[0]}
-		metadata.Issues = []api.IssueMetadata{imetadata.Issues[0]}
+		metadata := &driver.TokenRequestMetadata{}
+		metadata.Transfers = []driver.TransferMetadata{trmetadata.Transfers[0]}
+		metadata.Issues = []driver.IssueMetadata{imetadata.Issues[0]}
 
 		tokns := make([][]*tokn.Token, 1)
 		for i := 0; i < 2; i++ {
@@ -278,7 +280,7 @@ var _ = Describe("validator", func() {
 
 			Context("When the anonymissuer's signature is not valid: wrong txID", func() {
 				BeforeEach(func() {
-					request := &api.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
+					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
 					raw, err = json.Marshal(request)
 					Expect(err).NotTo(HaveOccurred())
 					ar.Signatures[0], err = anonymissuer.SignTokenActions(raw, "3")
@@ -292,7 +294,7 @@ var _ = Describe("validator", func() {
 			})
 			Context("when the sender's signature is not valid: wrong txID", func() {
 				BeforeEach(func() {
-					request := &api.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
+					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
 					raw, err = json.Marshal(request)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -320,7 +322,7 @@ func prepareECDSASigner() (*ecdsa.ECDSASigner, *ecdsa.ECDSAVerifier) {
 	return signer, signer.ECDSAVerifier
 }
 
-func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*nonanonym.Issuer, *api.TokenRequest, *api.TokenRequestMetadata) {
+func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*nonanonym.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
 	signer, err := ecdsa.NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -331,7 +333,7 @@ func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Aud
 	return issuer, ir, metadata
 }
 
-func prepareAnonymousIssueRequest(sk *bn256.Zr, pp *crypto.PublicParams, auditor *audit.Auditor) (*anonym.Issuer, *api.TokenRequest, *api.TokenRequestMetadata) {
+func prepareAnonymousIssueRequest(sk *bn256.Zr, pp *crypto.PublicParams, auditor *audit.Auditor) (*anonym.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
 	witness := anonym.NewWitness(sk, nil, nil, nil, nil, 1)
 
 	signer := anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams)
@@ -342,7 +344,7 @@ func prepareAnonymousIssueRequest(sk *bn256.Zr, pp *crypto.PublicParams, auditor
 	return issuer, ir, metadata
 }
 
-func prepareRedeemRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *api.TokenRequest, *api.TokenRequestMetadata, []*tokn.Token) {
+func prepareRedeemRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
@@ -350,7 +352,7 @@ func prepareRedeemRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*tra
 	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners)
 }
 
-func prepareTransferRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *api.TokenRequest, *api.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransferRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
@@ -473,9 +475,9 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, api2.SigningI
 	return id, auditInfo, signer
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*api.TokenRequest, *api.TokenRequestMetadata) {
+func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
 	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
-	ir := &api.TokenRequest{}
+	ir := &driver.TokenRequest{}
 	owners := make([][]byte, 1)
 	owners[0] = id
 	values := []uint64{40}
@@ -489,7 +491,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*api.TokenReque
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata := api.IssueMetadata{}
+	metadata := driver.IssueMetadata{}
 	metadata.TokenInfo = marshalledinf
 	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
 	metadata.AuditInfos = make([][]byte, len(issue.OutputTokens))
@@ -505,7 +507,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*api.TokenReque
 	Expect(err).NotTo(HaveOccurred())
 
 	// sign token request
-	ir = &api.TokenRequest{Issues: [][]byte{raw}}
+	ir = &driver.TokenRequest{Issues: [][]byte{raw}}
 	raw, err = json.Marshal(ir)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -513,7 +515,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*api.TokenReque
 	Expect(err).NotTo(HaveOccurred())
 	ir.Signatures = append(ir.Signatures, sig)
 
-	issueMetadata := &api.TokenRequestMetadata{Issues: []api.IssueMetadata{metadata}}
+	issueMetadata := &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}
 	err = auditor.Check(ir, issueMetadata, nil, "1")
 	Expect(err).NotTo(HaveOccurred())
 	ir.AuditorSignature, err = auditor.Endorse(ir, "1")
@@ -522,7 +524,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*api.TokenReque
 	return ir, issueMetadata
 }
 
-func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *api.TokenRequest, *api.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 
 	signers := make([]view2.Signer, 2)
 	signers[0] = signer
@@ -563,7 +565,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, audit
 	raw, err := transfer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
-	tr := &api.TokenRequest{Transfers: [][]byte{raw}}
+	tr := &driver.TokenRequest{Transfers: [][]byte{raw}}
 	raw, err = json.Marshal(tr)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -572,7 +574,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, audit
 		marshalledInfo[i], err = json.Marshal(inf[i])
 		Expect(err).NotTo(HaveOccurred())
 	}
-	metadata := api.TransferMetadata{}
+	metadata := driver.TransferMetadata{}
 	metadata.SenderAuditInfos = make([][]byte, len(transfer.Inputs))
 	for i := 0; i < len(transfer.Inputs); i++ {
 		metadata.SenderAuditInfos[i], err = auditInfo.Bytes()
@@ -593,7 +595,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer api2.SigningIdentity, audit
 	for i := 0; i < len(tokens); i++ {
 		tokns[0] = append(tokns[0], tokens[i])
 	}
-	transferMetadata := &api.TokenRequestMetadata{Transfers: []api.TransferMetadata{metadata}}
+	transferMetadata := &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}
 	err = auditor.Check(tr, transferMetadata, tokns, "1")
 	Expect(err).NotTo(HaveOccurred())
 

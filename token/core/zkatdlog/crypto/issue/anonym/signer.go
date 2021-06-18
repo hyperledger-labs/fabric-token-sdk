@@ -8,13 +8,12 @@ package anonym
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/o2omp"
-	"github.com/pkg/errors"
 )
 
 type Authorization struct {
@@ -170,7 +169,7 @@ func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn
 	return nil
 }
 
-func (s *Signer) GetPublicVersion() api.Identity {
+func (s *Signer) GetPublicVersion() driver.Identity {
 	return &Verifier{Auth: s.Auth, Issuers: s.Issuers, PedersenParams: s.PedersenParams, BitLength: s.BitLength}
 }
 

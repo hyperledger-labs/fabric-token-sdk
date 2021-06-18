@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package core
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
-func PublicParametersFromBytes(params []byte) (api.PublicParameters, error) {
+func PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := SerializedPublicParametersFromBytes(params)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling public params")
@@ -23,15 +23,15 @@ func PublicParametersFromBytes(params []byte) (api.PublicParameters, error) {
 	return d.PublicParametersFromBytes(params)
 }
 
-func SerializedPublicParametersFromBytes(raw []byte) (*api.SerializedPublicParameters, error) {
-	pp := &api.SerializedPublicParameters{}
+func SerializedPublicParametersFromBytes(raw []byte) (*driver.SerializedPublicParameters, error) {
+	pp := &driver.SerializedPublicParameters{}
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing public parameters")
 	}
 	return pp, nil
 }
 
-func NewPublicParametersManager(pp api.PublicParameters) (api.PublicParamsManager, error) {
+func NewPublicParametersManager(pp driver.PublicParameters) (driver.PublicParamsManager, error) {
 	d, ok := drivers[pp.Identifier()]
 	if !ok {
 		return nil, errors.Errorf("cannot load public paramenters, driver [%s] not found", pp.Identifier())

@@ -18,8 +18,8 @@ import (
 	"math/big"
 
 	"github.com/golang/protobuf/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
@@ -99,7 +99,7 @@ func (d *edsaVerifier) Verify(message, sigma []byte) error {
 	return nil
 }
 
-func NewSigner() (view.Identity, api.Signer, api.Verifier, error) {
+func NewSigner() (view.Identity, driver.Signer, driver.Verifier, error) {
 	// Create ephemeral key and store it in the context
 	sk, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
@@ -126,7 +126,7 @@ func NewVerifier(pk *ecdsa.PublicKey) *edsaVerifier {
 	return &edsaVerifier{pk: pk}
 }
 
-func NewIdentityFromBytes(raw []byte) (view.Identity, api.Verifier, error) {
+func NewIdentityFromBytes(raw []byte) (view.Identity, driver.Verifier, error) {
 	mspSI := &msp.SerializedIdentity{}
 	err := proto.Unmarshal(raw, mspSI)
 	if err != nil {

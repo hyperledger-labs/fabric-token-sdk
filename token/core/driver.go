@@ -9,7 +9,7 @@ import (
 	"sort"
 	"sync"
 
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var (

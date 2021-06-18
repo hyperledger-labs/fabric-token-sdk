@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type Normalizer interface {

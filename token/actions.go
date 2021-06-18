@@ -5,10 +5,10 @@ SPDX-License-Identifier: Apache-2.0
 */
 package token
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/api"
+import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 type IssueAction struct {
-	a api.IssueAction
+	a driver.IssueAction
 }
 
 func (i *IssueAction) Serialize() ([]byte, error) {
@@ -32,7 +32,7 @@ func (i *IssueAction) GetIssuer() []byte {
 }
 
 type TransferAction struct {
-	a api.TransferAction
+	a driver.TransferAction
 }
 
 func (t *TransferAction) Serialize() ([]byte, error) {

@@ -6,12 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type QueryEngine struct {
-	qe api.QueryEngine
+	qe driver.QueryEngine
 }
 
 func (q *QueryEngine) IsMine(id *token2.Id) (bool, error) {
@@ -39,7 +39,7 @@ func (q *QueryEngine) GetTokens(inputs ...*token2.Id) ([]*token2.Token, error) {
 }
 
 type Vault struct {
-	v api.Vault
+	v driver.Vault
 }
 
 func (v *Vault) NewQueryEngine() *QueryEngine {

@@ -9,7 +9,6 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -21,8 +20,8 @@ var logger = flogging.MustGetLogger("token-sdk.driver.identity.fabric")
 type MSPType int
 
 const (
-	X509MSPIdentity   = MSPType(view2.X509MSPIdentity)
-	IdemixMSPIdentity = MSPType(view2.IdemixMSPIdentity)
+	X509MSPIdentity MSPType = iota
+	IdemixMSPIdentity
 )
 
 const (

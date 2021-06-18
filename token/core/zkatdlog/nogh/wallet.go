@@ -12,9 +12,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -39,7 +39,7 @@ func (s *service) IssuerIdentity(label string) (view.Identity, error) {
 				return nil, errors.Wrapf(err, "failed serializing signer for [%s]", label)
 			}
 
-			if err := view2.GetSigService(s.sp).RegisterSignerWithType(view2.Unknown, fID, signer, signer); err != nil {
+			if err := view2.GetSigService(s.sp).RegisterSigner(fID, signer, signer); err != nil {
 				return nil, errors.Wrapf(err, "failed registering signer for [%s]", label)
 			}
 
@@ -107,7 +107,7 @@ func (s *service) registerIssuerSigner(signer SigningIdentity) error {
 		return errors.Wrapf(err, "failed serializing signer")
 	}
 
-	if err := view2.GetSigService(s.sp).RegisterSignerWithType(view2.Unknown, fID, signer, signer); err != nil {
+	if err := view2.GetSigService(s.sp).RegisterSigner(fID, signer, signer); err != nil {
 		return errors.Wrapf(err, "failed registering signer for [%s]", view.Identity(fID).UniqueID())
 	}
 

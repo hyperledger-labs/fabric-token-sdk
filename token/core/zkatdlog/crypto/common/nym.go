@@ -8,10 +8,10 @@ package common
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
-	"github.com/pkg/errors"
 )
 
 // this implements signing identity
@@ -22,7 +22,7 @@ type NYMSigner struct {
 }
 
 // get verifier
-func (s *NYMSigner) GetPublicVersion() api.Identity {
+func (s *NYMSigner) GetPublicVersion() driver.Identity {
 	return s.NYMVerifier
 }
 

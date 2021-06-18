@@ -12,7 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type TokenInformation struct {
@@ -68,8 +68,8 @@ func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
-func (i *IssueAction) GetOutputs() []api.Output {
-	var res []api.Output
+func (i *IssueAction) GetOutputs() []driver.Output {
+	var res []driver.Output
 	for _, output := range i.Outputs {
 		res = append(res, output)
 	}
@@ -110,8 +110,8 @@ func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
-func (t *TransferAction) GetOutputs() []api.Output {
-	var res []api.Output
+func (t *TransferAction) GetOutputs() []driver.Output {
+	var res []driver.Output
 	for _, output := range t.Outputs {
 		res = append(res, output)
 	}

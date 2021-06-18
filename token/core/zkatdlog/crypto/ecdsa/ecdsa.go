@@ -17,11 +17,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/api"
-
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger/fabric-protos-go/msp"
-
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
 )
@@ -114,7 +112,7 @@ func NewECDSAVerifier(pk *ecdsa.PublicKey) *ECDSAVerifier {
 	return &ECDSAVerifier{PK: pk}
 }
 
-func (s *ECDSASigner) GetPublicVersion() api.Identity {
+func (s *ECDSASigner) GetPublicVersion() driver.Identity {
 	return s.ECDSAVerifier
 }
 
