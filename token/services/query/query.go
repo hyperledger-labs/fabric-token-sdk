@@ -37,7 +37,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
-	unspentTokens, err := wallet.ListTokens(token.WithType(b.Type))
+	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (b *AllMyBalanceView) Call(context view.Context) (interface{}, error) {
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
-	unspentTokens, err := wallet.ListTokens()
+	unspentTokens, err := wallet.ListUnspentTokens()
 	if err != nil {
 		return nil, err
 	}

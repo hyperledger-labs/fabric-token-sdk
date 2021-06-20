@@ -39,7 +39,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// she does not hold already more than 3000 units of that type.
 	// Just a fancy query to show the capabilities of the services we are using.
 	for _, output := range outputs.ByRecipient(id).Outputs() {
-		unspentTokens, err := ttxcc.MyWallet(context).ListTokens(ttxcc.WithType(output.Type))
+		unspentTokens, err := ttxcc.MyWallet(context).ListUnspentTokens(ttxcc.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		assert.True(
 			unspentTokens.Sum(64).Cmp(token2.NewQuantityFromUInt64(3000)) <= 0,

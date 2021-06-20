@@ -202,14 +202,14 @@ func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error
 	return id.(view.Identity), nil
 }
 
-type exchangePseudonymView struct {
+type ExchangeRecipientIdentitiesView struct {
 	Network string
 	Channel string
 	Wallet  string
 	Other   view.Identity
 }
 
-func (f *exchangePseudonymView) Call(context view.Context) (interface{}, error) {
+func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
 	ts := token.GetManagementService(context, token.WithChannel(f.Channel))
 
 	if w := ts.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
@@ -364,10 +364,13 @@ func (s *respondExchangePseudonymView) Call(context view.Context) (interface{}, 
 	return []view.Identity{me, other}, nil
 }
 
-func ExchangeRecipientIdentitiesInitiator(context view.Context, myWalletID string, recipient view.Identity) (view.Identity, view.Identity, error) {
-	ids, err := context.RunView(&exchangePseudonymView{
+// ExchangeRecipientIdentities executes the ExchangeRecipientIdentitiesView using by passed wallet id to
+// derive the recipient identity to send to the passed recipient.
+// The function returns, the recipient identity of the sender, the recipient identity of the recipient
+func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity) (view.Identity, view.Identity, error) {
+	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
 		Channel: "",
-		Wallet:  myWalletID,
+		Wallet:  walletID,
 		Other:   recipient,
 	})
 	if err != nil {
@@ -377,7 +380,7 @@ func ExchangeRecipientIdentitiesInitiator(context view.Context, myWalletID strin
 	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
 }
 
-func ExchangeRecipientIdentitiesResponder(context view.Context) (view.Identity, view.Identity, error) {
+func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, view.Identity, error) {
 	ids, err := context.RunView(&respondExchangePseudonymView{})
 	if err != nil {
 		return nil, nil, err

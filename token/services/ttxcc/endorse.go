@@ -453,6 +453,24 @@ type endorseView struct {
 	tx *Transaction
 }
 
+// NewEndorseView returns an instance of the endorseView.
+// The view does the following:
+// 1. Wait for signature requests.
+// 2. Upon receiving a signature request, it validates the request and send back the requested signature.
+// 3. After, it waits to receive the Fabric Transaction. The Fabric Transaction is validated and stored locally
+// to be processed at time of committing.
+// 4. It sends back an ack.
+func NewEndorseView(tx *Transaction) *endorseView {
+	return &endorseView{tx: tx}
+}
+
+// Call executes the view.
+// The view does the following:
+// 1. Wait for signature requests.
+// 2. Upon receiving a signature request, it validates the request and send back the requested signature.
+// 3. After, it waits to receive the Fabric Transaction. The Fabric Transaction is validated and stored locally
+// to be processed at time of committing.
+// 4. It sends back an ack.
 func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
 	requestsToBeSigned, err := s.requestsToBeSigned()
@@ -555,8 +573,4 @@ func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 		}
 	}
 	return res, nil
-}
-
-func NewEndorseView(tx *Transaction) *endorseView {
-	return &endorseView{tx: tx}
 }
