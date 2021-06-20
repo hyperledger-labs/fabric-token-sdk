@@ -19,42 +19,20 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
-type ActionTransfer struct {
-	From      view.Identity
-	Type      string
-	Amount    uint64
-	Recipient view.Identity
-}
-
 type Actions struct {
 	Transfers []*ActionTransfer
 }
 
-func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) {
-	// transaction
-	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
-	if err != nil {
-		return nil, nil, err
-	}
-	cctx := txBoxed.(*Transaction)
-
-	// actions
-	payload, err := session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
-	if err != nil {
-		return nil, nil, err
-	}
-	actions := &Actions{}
-	unmarshalOrPanic(payload, actions)
-
-	// action
-	payload, err = session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
-	if err != nil {
-		return nil, nil, err
-	}
-	action := &ActionTransfer{}
-	unmarshalOrPanic(payload, action)
-
-	return cctx, action, nil
+// ActionTransfer describe a transfer operation
+type ActionTransfer struct {
+	// From is the sender
+	From view.Identity
+	// Type of tokens to transfer
+	Type string
+	// Amount to transfer
+	Amount uint64
+	// Recipient is the recipient of the transfer
+	Recipient view.Identity
 }
 
 type collectActionsView struct {
@@ -62,6 +40,10 @@ type collectActionsView struct {
 	actions *Actions
 }
 
+// NewCollectActionsView returns an instance of collectActionsView.
+// The view does the following:
+// For each action, the view contact the recipient by sending as first message the transaction.
+// Then, the view waits for the answer and append it to the transaction.
 func NewCollectActionsView(tx *Transaction, actions ...*ActionTransfer) *collectActionsView {
 	return &collectActionsView{
 		tx: tx,
@@ -166,6 +148,52 @@ type collectActionsResponderView struct {
 	action *ActionTransfer
 }
 
+type receiveActionsView struct{}
+
+// ReceiveAction runs the receiveActionsView.
+// The view does the following: It receives the transaction, the collection of actions, and the requested action.
+func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) {
+	res, err := context.RunView(&receiveActionsView{})
+	if err != nil {
+		return nil, nil, err
+	}
+	result := res.([]interface{})
+	return result[0].(*Transaction), result[1].(*ActionTransfer), nil
+}
+
+func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
+	// transaction
+	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
+	if err != nil {
+		return nil, err
+	}
+	cctx := txBoxed.(*Transaction)
+
+	// actions
+	payload, err := session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	actions := &Actions{}
+	unmarshalOrPanic(payload, actions)
+
+	// action
+	payload, err = session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	action := &ActionTransfer{}
+	unmarshalOrPanic(payload, action)
+
+	return []interface{}{cctx, action}, nil
+}
+
+// NewCollectActionsResponderView returns an instance of the collectActionsResponderView.
+// The view does the following: Sends back the transaction.
+func NewCollectActionsResponderView(tx *Transaction, action *ActionTransfer) *collectActionsResponderView {
+	return &collectActionsResponderView{tx: tx, action: action}
+}
+
 func (s *collectActionsResponderView) Call(context view.Context) (interface{}, error) {
 	response, err := s.tx.Bytes()
 	if err != nil {
@@ -178,10 +206,6 @@ func (s *collectActionsResponderView) Call(context view.Context) (interface{}, e
 	}
 
 	return nil, nil
-}
-
-func NewCollectActionsResponderView(tx *Transaction, action *ActionTransfer) *collectActionsResponderView {
-	return &collectActionsResponderView{tx: tx, action: action}
 }
 
 func marshalOrPanic(state interface{}) []byte {

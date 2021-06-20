@@ -30,9 +30,15 @@ func MyWallet(sp view2.ServiceProvider) *token.OwnerWallet {
 	return w
 }
 
-// MyWalletForChannel returns the default wallet for the passed channel, nil if not found.
-func MyWalletForChannel(sp view2.ServiceProvider, channel string) *token.OwnerWallet {
-	w := token.GetManagementService(sp, token.WithChannel(channel)).WalletManager().OwnerWallet("")
+// MyWalletFromTx returns the default wallet for the tuple (network, channel, namespace) as identified by the passed
+// transaction. Returns nil if no wallet is found.
+func MyWalletFromTx(sp view2.ServiceProvider, tx *Transaction) *token.OwnerWallet {
+	w := token.GetManagementService(
+		sp,
+		token.WithNetwork(tx.Network()),
+		token.WithChannel(tx.Channel()),
+		token.WithNamespace(tx.Namespace()),
+	).WalletManager().OwnerWallet("")
 	if w == nil {
 		return nil
 	}
@@ -51,7 +57,7 @@ func GetWallet(sp view2.ServiceProvider, id string) *token.OwnerWallet {
 }
 
 // GetWalletForChannel returns the wallet whose id is the passed id for the passed channel.
-// If the passed id is empty, GetWalletForChannel has the same behaviour of MyWalletForChannel.
+// If the passed id is empty, GetWalletForChannel has the same behaviour of MyWalletFromTx.
 // It returns nil, if no wallet is found.
 func GetWalletForChannel(sp view2.ServiceProvider, channel, id string) *token.OwnerWallet {
 	w := token.GetManagementService(sp, token.WithChannel(channel)).WalletManager().OwnerWallet(id)

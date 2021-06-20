@@ -57,10 +57,11 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	)
 	assert.NoError(err, "failed creating transaction")
 
+	// The sender will select tokens owned by this wallet
 	senderWallet := ttxcc.GetWallet(context, t.Wallet)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
-	// The senders adds a new transfer operation to the transaction following the instruction received.
+	// The sender adds a new transfer operation to the transaction following the instruction received.
 	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Transfer
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
 	// Token selection happens internally by invoking the default token selector:
@@ -109,29 +110,46 @@ type TransferWithSelectorView struct {
 }
 
 func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, error) {
+	// As a first step operation, the sender contacts the recipient's FSC node
+	// to ask for the identity to use to assign ownership of the freshly created token.
+	// Notice that, this step would not be required if the sender knew already which
+	// identity the recipient wants to use.
 	recipient, err := ttxcc.RequestRecipientIdentity(context, t.Recipient)
 	assert.NoError(err, "failed getting recipient")
 
-	// Prepare transaction
+	// At this point, the sender is ready to prepare the token transaction.
+	// The sender creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
 		ttxcc.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating transaction")
 
+	// The sender will select tokens owned by this wallet
+	senderWallet := ttxcc.GetWallet(context, t.Wallet)
+	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
+
+	// If no specific tokens are requested, then a custom token selection process start
 	if len(t.TokenIDs) == 0 {
+		// The sender uses the default token selector each transaction comes equipped with
 		selector, err := tx.Selector()
 		assert.NoError(err, "failed getting token selector")
 
+		// The sender tries to select the requested amount of tokens of the passed type.
+		// If a failure happens, the sender retries up to 5 times, waiting 10 seconds after each failure.
+		// This is just an example, any other policy can be implemented.
 		var ids []*token.Id
 		var sum token.Quantity
 
 		for i := 0; i < 5; i++ {
+			// Select the request amount of tokens of the given type
 			ids, sum, err = selector.Select(
 				ttxcc.GetWallet(context, t.Wallet),
 				token.NewQuantityFromUInt64(t.Amount).Decimal(),
 				t.Type,
 			)
+			// If an error occurs and retry has been asked, then wait first a bit
 			if err != nil && t.Retry {
 				time.Sleep(10 * time.Second)
 				continue
@@ -139,6 +157,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 			break
 		}
 		if err != nil {
+			// If finally not enough tokens were available, the sender can check what was the cause of the error:
 			cause := errors.Cause(err)
 			switch cause {
 			case nil:
@@ -148,27 +167,40 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 			case token2.SelectorSufficientButLockedFunds:
 				assert.NoError(err, "lemonade")
 			case token2.SelectorSufficientButNotCertifiedFunds:
-				assert.NoError(err, "mandarine")
+				assert.NoError(err, "mandarin")
+			case token2.SelectorSufficientFundsButConcurrencyIssue:
+				assert.NoError(err, "peach")
 			}
 		}
 
-		// do some check on the selected outputs
+		// If the sender reaches this point, it means that tokens are available.
+		// The sender can further inspect these tokens, if the business logic requires to do so.
+		// Here is an example. The sender double checks that the tokens selected are the expected
+
+		// First, the sender queries the vault to get the tokens
 		tokens, err := tx.TokenService().Vault().NewQueryEngine().GetTokens(ids...)
 		assert.NoError(err, "failed getting tokens from ids")
 
+		// Then, the sender double check that what returned by the selector is correct
 		recomputedSum := token.NewQuantityFromUInt64(0)
 		for _, tok := range tokens {
+			// Is the token of the right type?
 			assert.Equal(t.Type, tok.Type, "expected token of type [%s], got [%s]", t.Type, tok.Type)
+			// Add the quantity to the total
 			q, err := token.ToQuantity(tok.Quantity, 64)
 			assert.NoError(err, "failed converting quantity")
 			recomputedSum = recomputedSum.Add(q)
 		}
+		// Is the recomputed sum correct?
 		assert.True(sum.Cmp(recomputedSum) == 0, "sums do not match")
+		// Is the amount selected equal or larger than what requested?
 		assert.False(sum.Cmp(token.NewQuantityFromUInt64(t.Amount)) < 0, "if this point is reached, funds are sufficients")
 
 		t.TokenIDs = ids
 	}
 
+	// The sender adds a new transfer operation to the transaction following the instruction received.
+	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)` to pass the token ids selected above.
 	err = tx.Transfer(
 		ttxcc.GetWallet(context, t.Wallet),
 		t.Type,
@@ -178,6 +210,13 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	)
 	assert.NoError(err, "failed adding new tokens")
 
+	// The sender is ready to collect all the required signatures.
+	// In this case, the sender's and the auditor's signatures.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+	// This is all done in one shot running the following view.
+	// Before completing, all recipients receive the approved Fabric transaction.
+	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
+	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 
@@ -186,7 +225,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		time.Sleep(20 * time.Second)
 	}
 
-	// Send to the ordering service and wait for confirmation
+	// Send to the ordering service and wait for finality
 	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 

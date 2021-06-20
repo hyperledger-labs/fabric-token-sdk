@@ -308,7 +308,7 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 }
 
 func listIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
-	res, err := network.Client("issuer").CallView("history", common.JSONMarshall(&views.IssuerHistory{
+	res, err := network.Client("issuer").CallView("history", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
 	}))
@@ -409,12 +409,12 @@ func redeemCashByIDs(network *integration.Infrastructure, id string, wallet stri
 
 func swapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string) {
 	txid, err := network.Client(id).CallView("swap", common.JSONMarshall(&views.Swap{
-		Wallet:      wallet,
-		TypeLeft:    typeLeft,
-		AmountLeft:  amountLeft,
-		TypeRight:   typRight,
-		AmountRight: amountRight,
-		Recipient:   network.Identity(receiver),
+		AliceWallet:     wallet,
+		FromAliceType:   typeLeft,
+		FromAliceAmount: amountLeft,
+		FromBobType:     typRight,
+		FromBobAmount:   amountRight,
+		Bob:             network.Identity(receiver),
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())

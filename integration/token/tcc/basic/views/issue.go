@@ -78,7 +78,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
-		history, err := wallet.HistoryTokens(ttxcc.WithType(p.TokenType))
+		history, err := wallet.ListIssuedTokens(ttxcc.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
 		fmt.Printf("History [%s,%s]<[230]?\n", history.Sum(64).ToBigInt().Text(10), p.TokenType)
 

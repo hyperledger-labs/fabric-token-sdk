@@ -35,21 +35,14 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	issuer.RegisterViewFactory("history", &views.IssuerHistoryViewFactory{})
-	issuer.RegisterViewFactory("issuedTokenQuery", &views.IssuerHistoryViewFactory{})
+	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
-
-	// certifier := fscTopology.AddNodeByName("certifier").AddOptions(
-	// 	fabric.WithOrganization("Org1"),
-	// 	fabric.WithAnonymousIdentity(),
-	// 	token.WithCertifierIdentity(),
-	// )
-	// certifier.RegisterViewFactory("register", &views.RegisterCertifierViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -114,7 +107,6 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
-	// tms.AddCertifier(certifier)
 
 	return []nwo.Topology{fabricTopology, tokenTopology, fscTopology}
 }

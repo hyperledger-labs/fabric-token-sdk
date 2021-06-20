@@ -14,25 +14,32 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 )
 
-type IssuerHistory struct {
-	Wallet    string
+// ListIssuedTokens contains the input to query the list of issued tokens
+type ListIssuedTokens struct {
+	// Wallet whose identities own the token
+	Wallet string
+	// TokenType is the token type to select
 	TokenType string
 }
 
-type IssuerHistoryView struct {
-	*IssuerHistory
+type ListIssuedTokensView struct {
+	*ListIssuedTokens
 }
 
-func (p *IssuerHistoryView) Call(context view.Context) (interface{}, error) {
+func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
+	// Tokens issued by identities in this wallet will be listed
 	wallet := ttxcc.GetIssuerWallet(context, p.Wallet)
-	return wallet.HistoryTokens(ttxcc.WithType(p.TokenType))
+	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
+
+	// Return the list of issued tokens by type
+	return wallet.ListIssuedTokens(ttxcc.WithType(p.TokenType))
 }
 
-type IssuerHistoryViewFactory struct{}
+type ListIssuedTokensViewFactory struct{}
 
-func (i *IssuerHistoryViewFactory) NewView(in []byte) (view.View, error) {
-	f := &IssuerHistoryView{IssuerHistory: &IssuerHistory{}}
-	err := json.Unmarshal(in, f.IssuerHistory)
+func (i *ListIssuedTokensViewFactory) NewView(in []byte) (view.View, error) {
+	f := &ListIssuedTokensView{ListIssuedTokens: &ListIssuedTokens{}}
+	err := json.Unmarshal(in, f.ListIssuedTokens)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

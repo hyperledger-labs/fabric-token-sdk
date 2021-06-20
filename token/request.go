@@ -326,6 +326,7 @@ func (t *Request) Verify() error {
 	if _, err := t.Outputs(); err != nil {
 		return errors.WithMessagef(err, "failed verifying outputs")
 	}
+
 	return nil
 }
 

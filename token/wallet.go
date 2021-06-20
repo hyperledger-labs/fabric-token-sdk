@@ -192,7 +192,8 @@ func (o *OwnerWallet) GetTokenMetadata(token []byte) ([]byte, error) {
 	return o.w.GetTokenMetadata(token)
 }
 
-func (o *OwnerWallet) ListTokens(opts ...ListTokensOption) (*token2.UnspentTokens, error) {
+// ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.
+func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := compileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
@@ -220,7 +221,8 @@ func (i *IssuerWallet) GetSigner(identity view.Identity) (Signer, error) {
 	return i.w.GetSigner(identity)
 }
 
-func (i *IssuerWallet) HistoryTokens(opts ...ListTokensOption) (*token2.IssuedTokens, error) {
+// ListIssuedTokens returns the list of tokens issued by identities in this wallet and filter by the passed options
+func (i *IssuerWallet) ListIssuedTokens(opts ...ListTokensOption) (*token2.IssuedTokens, error) {
 	compiledOpts, err := compileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
