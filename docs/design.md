@@ -1,15 +1,15 @@
 # The Fabric Token SDK
 
 The scope of the `Fabric Token SDK` is to deliver a set of API and services that let developers create token-based 
-distributed application on Hyperledger Fabric.
+distributed applications on Hyperledger Fabric.
 The `Fabric Token SDK` has the following characteristics;
-- It adopts the UTXO model. In the UTXO model, a direct acyclic graph reflects the movements of the assets. 
+- It adopts the `UTXO model`. In the UTXO model, a direct acyclic graph reflects the movements of the assets. 
   Nodes are token transactions. Edges are transaction outputs. Each new token transaction consumes some the 
   UTXOs and create new ones.
-- Wallets contain a set of `secret keys` and keep track of the list of unspent outputs `owned` those keys.
-- It supports different privacy levels: from a `plain` instantiation, where everything is in the clear on the ledger, 
-  to `Zero Knowledge-based` instantiations that will obfuscate the ledger while enforcing the required invariants.
-- It allows the developers to write their own `services` on top of the Token SDK to deliver customised compoenents 
+- Key-Management via `Wallets`. A Wallet contains a set of `secret keys` and keep track of the list of unspent outputs `owned` those keys.
+- It supports `multplie privacy levels`: from a `plain` instantiation, where everything is in the clear on the ledger, 
+  to `Zero Knowledge-based` instantiations that will obfuscate the content of ledger while enforcing the required invariants.
+- It allows the developers to write their own `services` on top of the Token SDK to deliver customised components 
   for their token-based applications.
 
 ## The Token SDK Stack
@@ -18,7 +18,7 @@ This is the Fabric Token SDK stack:
 
 ![stack](imgs/stack.png)
 
-It consists of the following layers:
+It consists of the following layers (from the top):
 - `Services` (light-blue boxes): Services offer pre-packaged token-related functionalities,
 like `Token Transaction` assembling, `Token Selectors`, and so on.
 They are built of top of the `Token API` abstraction. Therefore, they are independent of the underlying token technology.
@@ -45,6 +45,6 @@ Le us explore in more details each layer of the Token SDK stack.
     a simplified version of the blueprint described in the paper
     [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')
     by Androulaki et al.
-- [`Services`](./services.md): It is at `service layer` that we will describe the integration with Fabric. 
+- [`Services`](./services.md): It is at the `service layer` that we will describe the integration with Fabric. 
   In particular, we will focus our attention on the lifecycle of a `Fabric Token Transaction`. 
   This will give us the chance to touch many building blocks.

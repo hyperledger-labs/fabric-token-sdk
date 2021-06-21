@@ -16,7 +16,7 @@ These tokens are `fungible` with the respect to the same type. In particular,
 tokens with the same denomination can be merged and split, if not otherwise forbidden.
 
 A token can be spent only by the `rightful owner`. This concept is implementation dependant. For example,
-if the `Owner` field contains a public-key, then a valid signature under public key must be presented to spend the token.
+if the `Owner` field contains a public-key, then a valid signature under that public key must be presented to spend the token.
 If the `Owner` field contains a script, then an input that satisfies the script must be presented to spend the token.
 
 The Token SDK supports the following basic operations:
@@ -25,7 +25,7 @@ The Token SDK supports the following basic operations:
 - The `Transfer` operation transfers the ownership of a given token. A transfer operation must refer to tokens of the same
 type.
 - The `Redeem` operation deletes tokens. Depending on the driver implementation, either the rightful owner or special
-parties, called `redeemers` can invoke this operation.
+parties, called `redeemers`, can invoke this operation.
 
 A `Token Request` aggregates token operations that must be performed atomically.
 
@@ -35,6 +35,12 @@ Let us now focus on the building blocks the `Token API` consists of:
 
 - `Token Management Service`: The Token Management Service (TMS, for short) is the entry point of the Token SDK
   and gives access to the other building blocks.
+  The tuple `(network, channel, namespace, public parameters)` uniquely identifies a TMS, where:
+   - `network` is the identifier of the network of reference;
+   - `channel` is the channel inside the network, if available;
+   - `namespace` is the namespace inside the channel that stores the tokens.
+   - `public parameters` contain all information needed to operate the specific token infrastructure.
+
 - `Public Parameters Manager`: Each TMS is associated to some public parameters that contain all information needed
   to operate the token infrastructure.
   Even though, parts of the public parameters are driver-specific, we can identify the following common information:
@@ -50,18 +56,20 @@ Let us now focus on the building blocks the `Token API` consists of:
   Examples of long-term identities are:
     - An `X509 Certificate` for an ECDSA signing public-key
     - An `Idemix Credential`. In this case, the wallet will contain also all pseudonyms derived from the credential.
+  
+  However, it is always the specific driver that dictates what a long-term identity is.
 
   All operations that require a signature refer to wallets to identify the signing and verification keys.
   There are wallets for `Token Issuers`, `Owners`, and `Auditors`.
   Depending on the nature of the wallet additional information can be extracted like:
-    - An Issuer Wallet gives access to the list of issued tokens
-    - A Token Owner Wallet gives access to the list of owned tokens
+    - An Issuer Wallet gives access to the list of issued tokens;
+    - A Token Owner Wallet gives access to the list of owned unspent tokens;
 
   The Wallet Manager offers API to manage wallets.
 - `Token Request`: The Token Request is a container of token actions (issue, transfer, and redeem) that must be
   performed atomically.
   The Token Request offers API to add actions or inspect actions already present in the container.
-  More information in the Section [Token Request](#token-request).
+  More information in Section [Token Request](#token-request).
 
 - `Validator`: The validator is the component that sets the validation rules for a Token Request. The rules depend on the
   type of tokens supported (fungible, non-fungible, and so on), and on the specific driver implementation.
@@ -77,13 +85,7 @@ Let us now focus on the building blocks the `Token API` consists of:
         - No token can be created out of the blue,
         - Audited(able)
         - Etc. (Each implementation can enforce additional requirements, if needed)
-
-The tuple `(network, channel, namespace, public parameters)` uniquely identifies a TMS, where:
-- `network` is the identifier of the network of reference;
-- `channel` is the channel inside the network, if available;
-- `namespace` is the namespace inside the channel that stores the tokens.
-- `public parameters` contain all information needed to operate the specific token infrastructure.
-
+  
 ## Token Request
 
 Let us spend a few more words on the `Token Request` that is the core of the Token API.
@@ -109,7 +111,7 @@ It consists of three parts:
   the parties to check the content of the token actions. This is particularly relevant when using ZK-based drivers.
   Notice that, the ledger does not store any metadata.
 
-As we mentioned earlier, a Token Request is itself agnostic to the details of the specific Blockchain.
+Looking ahead: As we mentioned earlier, a Token Request is itself agnostic to the details of the specific Blockchain.
 Indeed, a Token Request must be translated to the Transaction format of the target Blockchain to become meaningful.
 A service called `Token Request Translator` translates the token requests.
 The `Token Request Translator` does not belong to the Token API. It is offered as a service on top of the `Token API`
@@ -119,7 +121,6 @@ Here is a pictorial representation of the translation process.
 
 ![token_request_translator.png](imgs/token_request_translator.png)
 
+In Fabric, it is the `Token Chaincode` that performs validation and translations of token requests.
 In the section dedicated to [`What you need to build Token-Based Applications on top of Fabric`](./services.md), 
-we will learn that a special chaincode called `Token Chaincode` performs
-1. The `validation` of the Token Request, and 
-2. The `translation` to the RWSet.
+we will learn more about this process.
