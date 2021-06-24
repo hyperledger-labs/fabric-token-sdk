@@ -30,13 +30,9 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
-	ia, err := v.unmarshalIssueActions(tr.Issues)
+	ia, ta, err := UnmarshalIssueTransferActions(tr, binding)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
-	}
-	ta, err := v.unmarshalTransferActions(tr.Transfers)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
+		return nil, err
 	}
 	err = v.verifyIssues(ia, signatureProvider)
 	if err != nil {
@@ -56,6 +52,18 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	}
 
 	return actions, nil
+}
+
+func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
+	ia, err := unmarshalIssueActions(tr.Issues)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
+	}
+	ta, err := unmarshalTransferActions(tr.Transfers)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
+	}
+	return ia, ta, nil
 }
 
 func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
@@ -96,8 +104,8 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
-func (v *Validator) unmarshalTransferActions(raw [][]byte) ([]driver.TransferAction, error) {
-	res := make([]driver.TransferAction, len(raw))
+func unmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
+	res := make([]*TransferAction, len(raw))
 	for i := 0; i < len(raw); i++ {
 		ta := &TransferAction{}
 		if err := ta.Deserialize(raw[i]); err != nil {
@@ -108,8 +116,8 @@ func (v *Validator) unmarshalTransferActions(raw [][]byte) ([]driver.TransferAct
 	return res, nil
 }
 
-func (v *Validator) unmarshalIssueActions(raw [][]byte) ([]driver.IssueAction, error) {
-	res := make([]driver.IssueAction, len(raw))
+func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
+	res := make([]*IssueAction, len(raw))
 	for i := 0; i < len(raw); i++ {
 		ia := &IssueAction{}
 		if err := ia.Deserialize(raw[i]); err != nil {
@@ -133,27 +141,25 @@ func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignaturePro
 	return nil
 }
 
-func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider driver.SignatureProvider) error {
+func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
-		a := issue.(*IssueAction)
-
-		if err := v.verifyIssue(a); err != nil {
+		if err := v.verifyIssue(issue); err != nil {
 			return errors.Wrapf(err, "failed to verify issue action")
 		}
 
 		identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
-		verifier, err := identityDeserializer.GetVerifier(a.Issuer)
+		verifier, err := identityDeserializer.GetVerifier(issue.Issuer)
 		if err != nil {
-			return errors.Wrapf(err, "failed getting verifier for [%s]", view.Identity(a.Issuer).String())
+			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
 		}
-		if err := signatureProvider.HasBeenSignedBy(a.Issuer, verifier); err != nil {
+		if err := signatureProvider.HasBeenSignedBy(issue.Issuer, verifier); err != nil {
 			return errors.Wrapf(err, "failed verifying signature")
 		}
 	}
 	return nil
 }
 
-func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driver.TransferAction, signatureProvider driver.SignatureProvider) error {
+func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
 	identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
