@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/pkg/errors"
 
@@ -186,9 +188,16 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*Tra
 			}
 			logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner.Raw).UniqueID())
 
-			verifier, err := identityDeserializer.GetVerifier(tok.Owner.Raw)
+			ro := &RawOwner{}
+			if err := proto.Unmarshal(tok.Owner.Raw, ro); err != nil {
+				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, base64.StdEncoding.EncodeToString(tok.Owner.Raw))
+			}
+			if ro.Type != SerializedIdentityType {
+				return errors.Errorf("invalid type (%s), expected '%s'", ro.Type, SerializedIdentityType)
+			}
+			verifier, err := identityDeserializer.GetVerifier(ro.Identity)
 			if err != nil {
-				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
+				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(ro.Identity).UniqueID())
 			}
 			logger.Debugf("signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
 			if err := signatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier); err != nil {

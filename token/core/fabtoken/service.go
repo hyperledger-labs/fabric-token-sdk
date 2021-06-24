@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"encoding/base64"
 	"encoding/json"
+	"github.com/golang/protobuf/proto"
 	"sync"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -154,10 +156,15 @@ func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 	var outs []*TransferOutput
 	var infos [][]byte
 	for i, v := range values {
+		ro := &RawOwner{Type: SerializedIdentityType, Identity: owners[i]}
+		rawOwner, err := proto.Marshal(ro)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 		outs = append(outs, &TransferOutput{
 			Output: &token2.Token{
 				Owner: &token2.Owner{
-					Raw: owners[i],
+					Raw: rawOwner,
 				},
 				Type:     typ,
 				Quantity: token2.NewQuantityFromUInt64(v).Hex(),
@@ -201,7 +208,6 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 	var tokens []*token2.Token
 	var inputIDs []string
-	var signers []view2.Signer
 	var signerIds []view.Identity
 
 	qe, err := s.channel.Vault().NewQueryExecutor()
@@ -227,10 +233,20 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed unmarshalling token for id [%v]", id)
 		}
-		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
+
+		ro := &RawOwner{}
+		if err := proto.Unmarshal(tok.Owner.Raw, ro); err != nil {
+			return nil, nil, errors.Errorf( "failed deserializing owner [%d][%s][%s]", id.Index, id.TxId, base64.StdEncoding.EncodeToString(tok.Owner.Raw))
+		}
+
+		if ro.Type != SerializedIdentityType {
+			return nil, nil, errors.Errorf("unknown Owner type (%s), expected '%s'", ro.Type, SerializedIdentityType)
+		}
+
+		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(ro.Identity))
 
 		// Signer
-		si, err := view2.GetSigService(s.sp).GetSigningIdentity(tok.Owner.Raw)
+		si, err := view2.GetSigService(s.sp).GetSigningIdentity(ro.Identity)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
 		}
@@ -241,7 +257,6 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 		inputIDs = append(inputIDs, outputID)
 		tokens = append(tokens, tok)
-		signers = append(signers, si)
 		signerIds = append(signerIds, ser)
 	}
 
