@@ -33,6 +33,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 	// produce chaincode package
 	packageDir := filepath.Join(
 		p.Registry.RootDir,
+		"token",
 		"chaincodes",
 		"tcc",
 		tms.Channel,

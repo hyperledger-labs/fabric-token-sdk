@@ -1,0 +1,329 @@
+topologies:
+- name: fabric
+  logging:
+    spec: grpc=error:chaincode=debug:endorser=debug:info
+    format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
+      -> %{level:.4s} %{id:03x}%{color:reset} %{message}'''
+  organizations:
+  - msp_id: OrdererMSP
+    name: OrdererOrg
+    domain: example.com
+    enable_node_organizational_units: false
+    ca:
+      hostname: ca
+  - id: IdemixOrg
+    msp_id: IdemixOrgMSP
+    msp_type: idemix
+    name: IdemixOrg
+    domain: idemixorg.example.com
+    enable_node_organizational_units: false
+    ca:
+      hostname: ca
+  - id: TokenOrg
+    msp_id: TokenOrgMSP
+    name: TokenOrg
+    domain: tokenorg.example.com
+    enable_node_organizational_units: false
+    users: 1
+    ca:
+      hostname: ca
+  - id: HouseOrg
+    msp_id: HouseOrgMSP
+    name: HouseOrg
+    domain: houseorg.example.com
+    enable_node_organizational_units: false
+    users: 1
+    ca:
+      hostname: ca
+  - id: Org1
+    msp_id: Org1MSP
+    name: Org1
+    domain: org1.example.com
+    enable_node_organizational_units: false
+    users: 1
+    ca:
+      hostname: ca
+  peers:
+  - name: TokenOrg_peer_0
+    organization: TokenOrg
+    type: FabricPeer
+    channels:
+    - name: testchannel
+      anchor: true
+    devmode: false
+  - name: HouseOrg_peer_0
+    organization: HouseOrg
+    type: FabricPeer
+    channels:
+    - name: testchannel
+      anchor: true
+    devmode: false
+  - name: Org1_peer_0
+    organization: Org1
+    type: FabricPeer
+    channels:
+    - name: testchannel
+      anchor: true
+    devmode: false
+  consortiums:
+  - name: SampleConsortium
+    organizations:
+    - IdemixOrg
+    - TokenOrg
+    - HouseOrg
+    - Org1
+  system_channel:
+    name: systemchannel
+    profile: OrgsOrdererGenesis
+  channels:
+  - name: testchannel
+    profile: OrgsChannel
+    default: true
+  consensus:
+    type: solo
+  orderers:
+  - name: orderer
+    organization: OrdererOrg
+  profiles:
+  - name: OrgsOrdererGenesis
+    orderers:
+    - orderer
+  - name: OrgsChannel
+    consortium: SampleConsortium
+    organizations:
+    - IdemixOrg
+    - TokenOrg
+    - HouseOrg
+    - Org1
+    policies:
+    - name: Readers
+      type: ImplicitMeta
+      rule: ANY Readers
+    - name: Writers
+      type: ImplicitMeta
+      rule: ANY Writers
+    - name: Admins
+      type: ImplicitMeta
+      rule: ANY Admins
+    - name: LifecycleEndorsement
+      type: Signature
+      rule: OR ('TokenOrgMSP.member','HouseOrgMSP.member')
+    - name: Endorsement
+      type: ImplicitMeta
+      rule: ANY Endorsement
+  chaincodes:
+  - chaincode:
+      name: house
+      version: Version-0.0
+      path: github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state/cc/query
+      ctor: '{"Args":["init"]}'
+      policy: AND ('HouseOrgMSP.member')
+      lang: golang
+      collectionsconfig: ""
+      packagefile: ""
+      codefiles: {}
+      sequence: "1"
+      endorsementplugin: ""
+      validationplugin: ""
+      initrequired: true
+      label: house
+      signaturepolicy: AND ('HouseOrgMSP.member')
+      channelconfigpolicy: ""
+    channel: testchannel
+    peers:
+    - HouseOrg_peer_0
+  chaincodemode: net
+- name: token
+  tmss:
+  - channel: testchannel
+    namespace: zkat
+    driver: fabtoken
+    tokenchaincode:
+      orgs:
+      - TokenOrg
+      publicparamsgenargs:
+      - "100"
+      - "1"
+    certifiers: []
+- name: fsc
+  peers:
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      Responders:
+      - responder: '&views.TokenApproveView{}'
+        initiator: '&views.IssueCashView{}'
+      - responder: '&views.TokenApproveView{}'
+        initiator: '&views.SellHouseView{}'
+    name: token_approver
+    bootstrap: true
+    options:
+      mapping:
+        fabric:
+          mapping:
+            Organization: TokenOrg
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      Responders:
+      - responder: '&views.HouseApproveView{}'
+        initiator: '&views.IssueHouseView{}'
+      - responder: '&views.HouseApproveView{}'
+        initiator: '&views.SellHouseView{}'
+    name: house_approver
+    options:
+      mapping:
+        fabric:
+          mapping:
+            Organization: HouseOrg
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: register
+        type: '&views.RegisterAuditorViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+    name: auditor
+    options:
+      mapping:
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization: TokenOrg
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: issue_cash
+        type: '&views.IssueCashViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+    name: cash_issuer
+    options:
+      mapping:
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization: TokenOrg
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: issue_house
+        type: '&views.IssueHouseViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+    name: house_issuer
+    options:
+      mapping:
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization: HouseOrg
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: sell
+        type: '&views.SellHouseViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      Responders:
+      - responder: '&views.AcceptHouseView{}'
+        initiator: '&views.IssueHouseView{}'
+    name: seller
+    options:
+      mapping:
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization: Org1
+  - NodeSynthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      Responders:
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.IssueCashView{}'
+      - responder: '&views.BuyHouseView{}'
+        initiator: '&views.SellHouseView{}'
+    name: buyer
+    options:
+      mapping:
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization: Org1
+  logging:
+    spec: grpc=error:debug
+    format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
+      -> %{level:.4s} %{id:03x}%{color:reset} %{message}'''

@@ -68,5 +68,5 @@ clean:
 	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
 
 .PHONY: tokengen
-zkatgen:
+tokengen:
 	@go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen

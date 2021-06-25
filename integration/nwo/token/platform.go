@@ -167,7 +167,7 @@ func (p *Platform) SetPublicParamsGenerator(name string, gen PublicParamsGenerat
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSs":        func() []*TMS { return p.Topology.TMSs },
-		"NodeKVSPath": func() string { return p.NodeKVSDir(node) },
+		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
 		"Wallets":     func() *Wallet { return p.Wallets[node.Name] },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
@@ -194,7 +194,7 @@ func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 					sess, err := p.TokenGen(commands.CertifierKeygen{
 						Driver: tms.Driver,
 						PPPath: p.PublicParametersFile(tms),
-						Output: p.CertifierCryptoMaterialDir(tms, node),
+						Output: p.FSCCertifierCryptoMaterialDir(tms, node),
 					})
 					Expect(err).NotTo(HaveOccurred())
 					Eventually(sess, p.EventuallyTimeout).Should(Exit(0))
@@ -202,7 +202,7 @@ func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 						ID:      node.Name,
 						MSPType: "certifier",
 						MSPID:   "certifier",
-						Path:    p.CertifierCryptoMaterialDir(tms, node),
+						Path:    p.FSCCertifierCryptoMaterialDir(tms, node),
 					})
 				}
 			}
@@ -263,11 +263,11 @@ func (p *Platform) GeneratePublicParameters() {
 	}
 }
 
-func (p *Platform) NodeKVSDir(peer *sfcnode.Node) string {
+func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
 	return filepath.Join(p.Registry.RootDir, "fscnodes", peer.ID(), "kvs")
 }
 
-func (p *Platform) CertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) string {
+func (p *Platform) FSCCertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) string {
 	return filepath.Join(
 		p.Registry.RootDir,
 		"crypto",
@@ -282,8 +282,8 @@ func (p *Platform) CertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) stri
 func (p *Platform) PublicParametersDir() string {
 	return filepath.Join(
 		p.Registry.RootDir,
+		"token",
 		"crypto",
-		"token-sdk",
 		"pp",
 	)
 }
@@ -291,8 +291,8 @@ func (p *Platform) PublicParametersDir() string {
 func (p *Platform) PublicParametersFile(tms *TMS) string {
 	return filepath.Join(
 		p.Registry.RootDir,
+		"token",
 		"crypto",
-		"token-sdk",
 		"pp",
 		fmt.Sprintf("%s_%s_%s.pp", tms.Channel, tms.Namespace, tms.Driver),
 	)
