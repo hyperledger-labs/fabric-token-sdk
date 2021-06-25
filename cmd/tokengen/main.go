@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/artifactgen/gen"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/certfier"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/version"
@@ -42,6 +43,7 @@ func main() {
 
 	mainCmd.AddCommand(pp2.Cmd())
 	mainCmd.AddCommand(certfier.KeyPairGenCmd())
+	mainCmd.AddCommand(gen.Cmd())
 	mainCmd.AddCommand(version.Cmd())
 
 	// On failure Cobra prints the usage message and error string, so we only
