@@ -61,7 +61,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 		packageFile,
 		func(s string, s2 string) []byte {
 			// Is the public params?
-			if strings.HasSuffix(s, "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/params.go") {
+			if strings.HasSuffix(s, "/token/services/tcc/params.go") {
 				return paramsFile.Bytes()
 			}
 
