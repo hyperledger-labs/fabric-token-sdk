@@ -236,7 +236,7 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 		ro := &RawOwner{}
 		if err := proto.Unmarshal(tok.Owner.Raw, ro); err != nil {
-			return nil, nil, errors.Errorf( "failed deserializing owner [%d][%s][%s]", id.Index, id.TxId, base64.StdEncoding.EncodeToString(tok.Owner.Raw))
+			return nil, nil, errors.Errorf("failed deserializing owner [%d][%s][%s]", id.Index, id.TxId, base64.StdEncoding.EncodeToString(tok.Owner.Raw))
 		}
 
 		if ro.Type != SerializedIdentityType {
