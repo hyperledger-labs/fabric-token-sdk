@@ -9,11 +9,18 @@ package fabtoken
 import (
 	"crypto/x509"
 	"encoding/base64"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
 
 	"github.com/golang/protobuf/proto"
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger/fabric-protos-go/msp"
+	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 const (
@@ -77,3 +84,35 @@ func (r *RawOwner) String() string {
 }
 
 func (r *RawOwner) ProtoMessage() {}
+
+// RawOwnerIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
+type RawOwnerIdentityDeserializer struct {
+	*fabric.MSPX509IdentityDeserializer
+}
+
+func NewRawOwnerIdentityDeserializer() *RawOwnerIdentityDeserializer {
+	return &RawOwnerIdentityDeserializer{
+		MSPX509IdentityDeserializer: &fabric.MSPX509IdentityDeserializer{},
+	}
+}
+
+func (deserializer *RawOwnerIdentityDeserializer) GetVerifier(id view.Identity) (driver.Verifier, error) {
+	si := &RawOwner{}
+	err := json.Unmarshal(id, si)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+	}
+	return deserializer.MSPX509IdentityDeserializer.GetVerifier(si.Identity)
+}
+
+func (deserializer *RawOwnerIdentityDeserializer) DeserializeVerifier(raw []byte) (driver2.Verifier, error) {
+	return deserializer.GetVerifier(raw)
+}
+
+func (deserializer *RawOwnerIdentityDeserializer) DeserializeSigner(raw []byte) (driver2.Signer, error) {
+	return nil, errors.Errorf("signer deserialization not supported")
+}
+
+func (deserializer *RawOwnerIdentityDeserializer) Info(raw []byte, auditInfo []byte) (string, error) {
+	return "info not supported", nil
+}

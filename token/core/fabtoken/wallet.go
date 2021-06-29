@@ -6,10 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
+
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 func (s *service) Wallet(identity view.Identity) api2.Wallet {
@@ -51,6 +54,10 @@ func (s *service) ownerWallet(id interface{}) api2.OwnerWallet {
 		if err != nil {
 			panic(err)
 		}
+		id, err = s.wrapWalletIdentity(id)
+		if err != nil {
+			panic(err)
+		}
 		w := newOwnerWallet(s, idInfo.ID, id)
 		s.ownerWallets = append(s.ownerWallets, w)
 		logger.Debugf("created owner wallet [%s]", walletID)
@@ -84,6 +91,10 @@ func (s *service) issuerWallet(id interface{}) api2.IssuerWallet {
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.IssuerRole, walletID); idInfo != nil {
 		id, err := idInfo.GetIdentity()
+		if err != nil {
+			panic(err)
+		}
+		id, err = s.wrapWalletIdentity(id)
 		if err != nil {
 			panic(err)
 		}
@@ -140,6 +151,18 @@ func (s *service) CertifierWallet(id string) api2.CertifierWallet {
 
 func (s *service) CertifierWalletByIdentity(id view.Identity) api2.CertifierWallet {
 	return nil
+}
+
+func (s *service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
+	ro := &RawOwner{Type: SerializedIdentityType, Identity: id}
+	raw, err := json.Marshal(ro)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.IdentityProvider().Bind(raw, id); err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 type ownerWallet struct {

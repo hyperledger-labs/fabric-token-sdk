@@ -6,9 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/base64"
 	"encoding/json"
-	"github.com/golang/protobuf/proto"
 
 	"github.com/pkg/errors"
 
@@ -149,7 +147,7 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 			return errors.Wrapf(err, "failed to verify issue action")
 		}
 
-		identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
+		identityDeserializer := NewRawOwnerIdentityDeserializer()
 		verifier, err := identityDeserializer.GetVerifier(issue.Issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
@@ -162,7 +160,7 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 }
 
 func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
-	identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
+	identityDeserializer := NewRawOwnerIdentityDeserializer()
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {
@@ -188,16 +186,9 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*Tra
 			}
 			logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner.Raw).UniqueID())
 
-			ro := &RawOwner{}
-			if err := proto.Unmarshal(tok.Owner.Raw, ro); err != nil {
-				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, base64.StdEncoding.EncodeToString(tok.Owner.Raw))
-			}
-			if ro.Type != SerializedIdentityType {
-				return errors.Errorf("invalid type (%s), expected '%s'", ro.Type, SerializedIdentityType)
-			}
-			verifier, err := identityDeserializer.GetVerifier(ro.Identity)
+			verifier, err := identityDeserializer.GetVerifier(tok.Owner.Raw)
 			if err != nil {
-				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(ro.Identity).UniqueID())
+				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
 			}
 			logger.Debugf("signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
 			if err := signatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier); err != nil {

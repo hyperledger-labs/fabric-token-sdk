@@ -6,9 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/base64"
 	"encoding/json"
-	"github.com/golang/protobuf/proto"
 	"sync"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -19,6 +17,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
@@ -156,15 +155,10 @@ func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 	var outs []*TransferOutput
 	var infos [][]byte
 	for i, v := range values {
-		ro := &RawOwner{Type: SerializedIdentityType, Identity: owners[i]}
-		rawOwner, err := proto.Marshal(ro)
-		if err != nil {
-			return nil, nil, nil, err
-		}
 		outs = append(outs, &TransferOutput{
 			Output: &token2.Token{
 				Owner: &token2.Owner{
-					Raw: rawOwner,
+					Raw: owners[i],
 				},
 				Type:     typ,
 				Quantity: token2.NewQuantityFromUInt64(v).Hex(),
@@ -234,19 +228,10 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 			return nil, nil, errors.Wrapf(err, "failed unmarshalling token for id [%v]", id)
 		}
 
-		ro := &RawOwner{}
-		if err := proto.Unmarshal(tok.Owner.Raw, ro); err != nil {
-			return nil, nil, errors.Errorf("failed deserializing owner [%d][%s][%s]", id.Index, id.TxId, base64.StdEncoding.EncodeToString(tok.Owner.Raw))
-		}
-
-		if ro.Type != SerializedIdentityType {
-			return nil, nil, errors.Errorf("unknown Owner type (%s), expected '%s'", ro.Type, SerializedIdentityType)
-		}
-
-		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(ro.Identity))
+		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 
 		// Signer
-		si, err := view2.GetSigService(s.sp).GetSigningIdentity(ro.Identity)
+		si, err := view2.GetSigService(s.sp).GetSigningIdentity(tok.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
 		}

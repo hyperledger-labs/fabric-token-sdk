@@ -44,4 +44,8 @@ type IdentityProvider interface {
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	GetIdentityMetadata(identity view.Identity) ([]byte, error)
+
+	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
+	// identity is associated to id.
+	Bind(id view.Identity, longTerm view.Identity) error
 }

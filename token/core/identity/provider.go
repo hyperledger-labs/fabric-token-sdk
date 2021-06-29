@@ -131,3 +131,32 @@ func (i *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 	}
 	return ai.EnrollmentID(), nil
 }
+
+// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
+// identity is associated to id.
+func (i *Provider) Bind(id view.Identity, to view.Identity) error {
+	sigService := view2.GetSigService(i.sp)
+	signer, err := sigService.GetSigner(to)
+	if err != nil {
+		return err
+	}
+	verifier, err := sigService.GetVerifier(to)
+	if err != nil {
+		return err
+	}
+	auditInfo, err := sigService.GetAuditInfo(to)
+	if err != nil {
+		return err
+	}
+
+	if err := sigService.RegisterSigner(id, signer, verifier); err != nil {
+		return err
+	}
+	if err := sigService.RegisterAuditInfo(id, auditInfo); err != nil {
+		return err
+	}
+	if err := view2.GetEndpointService(i.sp).Bind(to, id); err != nil {
+		return err
+	}
+	return nil
+}
