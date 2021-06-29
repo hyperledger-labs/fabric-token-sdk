@@ -17,6 +17,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
@@ -201,7 +202,6 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 	var tokens []*token2.Token
 	var inputIDs []string
-	var signers []view2.Signer
 	var signerIds []view.Identity
 
 	qe, err := s.channel.Vault().NewQueryExecutor()
@@ -227,6 +227,7 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed unmarshalling token for id [%v]", id)
 		}
+
 		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 
 		// Signer
@@ -241,7 +242,6 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 		inputIDs = append(inputIDs, outputID)
 		tokens = append(tokens, tok)
-		signers = append(signers, si)
 		signerIds = append(signerIds, ser)
 	}
 

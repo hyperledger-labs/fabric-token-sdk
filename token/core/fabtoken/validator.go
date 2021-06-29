@@ -147,7 +147,7 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 			return errors.Wrapf(err, "failed to verify issue action")
 		}
 
-		identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
+		identityDeserializer := NewRawOwnerIdentityDeserializer()
 		verifier, err := identityDeserializer.GetVerifier(issue.Issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
@@ -160,7 +160,7 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 }
 
 func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
-	identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
+	identityDeserializer := NewRawOwnerIdentityDeserializer()
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {

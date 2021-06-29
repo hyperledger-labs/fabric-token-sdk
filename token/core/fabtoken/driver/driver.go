@@ -6,8 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"fmt"
+	"reflect"
+	"sync"
+
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
@@ -16,6 +21,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
+
+var once sync.Once
+
+type DeserializerManager interface {
+	AddDeserializer(deserializer sig2.Deserializer)
+}
 
 type Driver struct {
 }
@@ -29,6 +40,15 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 }
 
 func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, network string, channel driver.Channel, namespace string) (driver.TokenManagerService, error) {
+	once.Do(func() {
+		// Register deserializers
+		dm, err := sp.GetService(reflect.TypeOf((*DeserializerManager)(nil)))
+		if err != nil {
+			panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
+		}
+		dm.(DeserializerManager).AddDeserializer(fabtoken.NewRawOwnerIdentityDeserializer())
+	})
+
 	qe := vault.NewVault(sp, channel, namespace).QueryEngine()
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	return fabtoken.NewService(
