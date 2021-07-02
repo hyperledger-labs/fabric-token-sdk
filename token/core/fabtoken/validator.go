@@ -13,24 +13,27 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Validator struct {
-	pp *PublicParams
+	pp           *PublicParams
+	deserializer driver.Deserializer
 }
 
-func NewValidator(pp *PublicParams) *Validator {
-	return &Validator{pp: pp}
+func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator {
+	return &Validator{
+		pp:           pp,
+		deserializer: deserializer,
+	}
 }
 
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
-	ia, ta, err := UnmarshalIssueTransferActions(tr, binding)
+	ia, ta, err := unmarshalIssueTransferActions(tr, binding)
 	if err != nil {
 		return nil, err
 	}
@@ -52,18 +55,6 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	}
 
 	return actions, nil
-}
-
-func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
-	ia, err := unmarshalIssueActions(tr.Issues)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
-	}
-	ta, err := unmarshalTransferActions(tr.Transfers)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
-	}
-	return ia, ta, nil
 }
 
 func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
@@ -104,34 +95,9 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
-func unmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
-	res := make([]*TransferAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ta := &TransferAction{}
-		if err := ta.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ta
-	}
-	return res, nil
-}
-
-func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
-	res := make([]*IssueAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ia := &IssueAction{}
-		if err := ia.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ia
-	}
-	return res, nil
-}
-
 func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
 	if v.pp.Auditor != nil {
-		identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
-		verifier, err := identityDeserializer.GetVerifier(v.pp.Auditor)
+		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.Auditor)
 		if err != nil {
 			return errors.Errorf("failed to deserialize auditor's public key")
 		}
@@ -147,8 +113,7 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 			return errors.Wrapf(err, "failed to verify issue action")
 		}
 
-		identityDeserializer := NewRawOwnerIdentityDeserializer()
-		verifier, err := identityDeserializer.GetVerifier(issue.Issuer)
+		verifier, err := v.deserializer.GetIssuerVerifier(issue.Issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
 		}
@@ -160,7 +125,6 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 }
 
 func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
-	identityDeserializer := NewRawOwnerIdentityDeserializer()
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {
@@ -176,7 +140,7 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*Tra
 				return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
 			}
 			if len(bytes) == 0 {
-				return errors.Errorf("finput to spend [%s] does not exists", in)
+				return errors.Errorf("input to spend [%s] does not exists", in)
 			}
 			inputTokens = append(inputTokens, bytes)
 			tok := &token2.Token{}
@@ -186,7 +150,7 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*Tra
 			}
 			logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner.Raw).UniqueID())
 
-			verifier, err := identityDeserializer.GetVerifier(tok.Owner.Raw)
+			verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner.Raw)
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
 			}
@@ -229,4 +193,40 @@ func (b *backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) er
 
 func (b *backend) GetState(key string) ([]byte, error) {
 	return b.getState(key)
+}
+
+func unmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
+	ia, err := unmarshalIssueActions(tr.Issues)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
+	}
+	ta, err := unmarshalTransferActions(tr.Transfers)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
+	}
+	return ia, ta, nil
+}
+
+func unmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
+	res := make([]*TransferAction, len(raw))
+	for i := 0; i < len(raw); i++ {
+		ta := &TransferAction{}
+		if err := ta.Deserialize(raw[i]); err != nil {
+			return nil, err
+		}
+		res[i] = ta
+	}
+	return res, nil
+}
+
+func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
+	res := make([]*IssueAction, len(raw))
+	for i := 0; i < len(raw); i++ {
+		ia := &IssueAction{}
+		if err := ia.Deserialize(raw[i]); err != nil {
+			return nil, err
+		}
+		res[i] = ia
+	}
+	return res, nil
 }

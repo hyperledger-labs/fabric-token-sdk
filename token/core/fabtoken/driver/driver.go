@@ -55,11 +55,8 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		sp,
 		channel,
 		namespace,
-		publicParamsFetcher,
-		&fabtoken.VaultPublicParamsLoader{
-			TokenVault:          qe,
-			PublicParamsFetcher: publicParamsFetcher,
-		},
+		&fabtoken.VaultPublicParamsLoader{TokenVault: qe, PublicParamsFetcher: publicParamsFetcher},
+		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
 		identity.NewProvider(
 			sp,
@@ -69,15 +66,16 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 				driver.OwnerRole:   fabric.NewMapper(fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
 			},
 		),
+		fabtoken.NewDeserializer(),
 	), nil
 }
 
 func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
-	return fabtoken.NewValidator(params.(*fabtoken.PublicParams)), nil
+	return fabtoken.NewValidator(params.(*fabtoken.PublicParams), fabtoken.NewDeserializer()), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
-	return fabtoken.NewPublicParamsManager(params.(*fabtoken.PublicParams)), nil
+	return fabtoken.NewPublicParamsManagerFromParams(params.(*fabtoken.PublicParams)), nil
 }
 
 func init() {

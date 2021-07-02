@@ -114,12 +114,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 		// contact issuer and ask for the signature unless it is me
 		party := issue.Issuer
 		logger.Debugf("collecting signature on request (issue) from [%s]", party.UniqueID())
-		if w := token.GetManagementService(context, token.WithChannel(c.tx.Channel())).WalletManager().IssuerWalletByIdentity(party); w != nil {
-			// Sign
-			signer, err := w.GetSigner(party)
-			if err != nil {
-				return nil, err
-			}
+		if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
 			logger.Debugf("signing [%s][%s]", hash.Hashable(requestRaw).String(), c.tx.ID())
 			logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
 			sigma, err := signer.Sign(append(requestRaw, []byte(c.tx.ID())...))
@@ -127,7 +122,6 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 				return nil, err
 			}
 			c.tx.TokenRequest.AppendSignature(sigma)
-
 			continue
 		}
 
@@ -206,15 +200,10 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 
 			logger.Debugf("collecting signature on request (transfer) from [%s]", party.UniqueID())
 
-			if w := token.GetManagementService(context, token.WithChannel(c.tx.Channel())).WalletManager().OwnerWalletByIdentity(party); w != nil {
+			if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
 				logger.Debugf("collecting signature on request (transfer) from [%s], it is me!", party.UniqueID())
-				// Sign
-				si, err := w.GetSigner(party)
-				if err != nil {
-					return nil, err
-				}
 				logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
-				sigma, err := si.Sign(signatureRequest.MessageToSign())
+				sigma, err := signer.Sign(signatureRequest.MessageToSign())
 				if err != nil {
 					return nil, err
 				}
@@ -332,7 +321,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *fabri
 		}
 		logger.Debugf("distribute env to [%s]?", party.UniqueID())
 		isMe := false
-		if w := token.GetManagementService(context, token.WithChannel(c.tx.Channel())).WalletManager().Wallet(party); w != nil {
+		if _, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
 			isMe = true
 		}
 		logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
@@ -567,7 +556,7 @@ func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 	var res []*token.Transfer
 	for _, transfer := range s.tx.TokenRequest.Transfers() {
 		for _, sender := range transfer.Senders {
-			if s.tx.TokenService().WalletManager().OwnerWalletByIdentity(sender) != nil {
+			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
 				res = append(res, transfer)
 			}
 		}

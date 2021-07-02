@@ -119,3 +119,14 @@ type WalletService interface {
 	// CertifierWalletByIdentity returns an instance of the CertifierWallet interface that contains the passed identity.
 	CertifierWalletByIdentity(identity view.Identity) CertifierWallet
 }
+
+// Deserializer models the deserializer of owner, issuer, and auditor identities to
+// get signature verifiers
+type Deserializer interface {
+	// GetOwnerVerifier returns the verifier associated to the passed owner identity
+	GetOwnerVerifier(id view.Identity) (Verifier, error)
+	// GetIssuerVerifier returns the verifier associated to the passed issuer identity
+	GetIssuerVerifier(id view.Identity) (Verifier, error)
+	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
+	GetAuditorVerifier(id view.Identity) (Verifier, error)
+}
