@@ -21,12 +21,22 @@ type CertificationStorage interface {
 }
 
 type QueryEngine interface {
+	// IsMine returns true if the passed id is owned by any known wallet
 	IsMine(id *token.Id) (bool, error)
+	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
+	// ListAuditTokens returns the audited tokens associated to the passed ids
 	ListAuditTokens(ids ...*token.Id) ([]*token.Token, error)
+	// ListHistoryIssuedTokens returns the list of issues tokens
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+	// PublicParams returns the public parameters
 	PublicParams() ([]byte, error)
+	// GetTokenInfos retrieves the token information for the passed ids.
+	// For each id, the callback is invoked to unmarshal the token information
 	GetTokenInfos(ids []*token.Id, callback QueryCallbackFunc) error
+	// GetTokenCommitments retrieves the token commitments for the passed ids.
+	// For each id, the callback is invoked to unmarshal the token commitment
 	GetTokenCommitments(ids []*token.Id, callback QueryCallbackFunc) error
-	GetTokens(inputs ...*token.Id) ([]*token.Token, error)
+	// GetTokens returns the list of tokens with their respective vault keys
+	GetTokens(inputs ...*token.Id) ([]string, []*token.Token, error)
 }

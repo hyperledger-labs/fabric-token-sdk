@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -293,33 +294,35 @@ func (e *Engine) GetTokenCommitments(ids []*token.Id, callback driver.QueryCallb
 	return nil
 }
 
-func (e *Engine) GetTokens(ids ...*token.Id) ([]*token.Token, error) {
+func (e *Engine) GetTokens(inputs ...*token.Id) ([]string, []*token.Token, error) {
 	logger.Debugf("retrieve tokens from ids...")
 	qe, err := e.channel.Vault().NewQueryExecutor()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer qe.Done()
 
 	var res []*token.Token
-	for _, id := range ids {
+	var resKeys []string
+	for _, id := range inputs {
 		idKey, err := keys.CreateFabtokenKey(id.TxId, int(id.Index))
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed generating id key [%v]", id)
+			return nil, nil, errors.Wrapf(err, "failed generating id key [%v]", id)
 		}
 		tokRaw, err := qe.GetState(e.namespace, idKey)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting token for key [%v]", idKey)
+			return nil, nil, errors.Wrapf(err, "failed getting token for key [%v]", idKey)
 		}
 		if len(tokRaw) == 0 {
-			return nil, errors.Errorf("token not found for key [%v]", idKey)
+			return nil, nil, errors.Errorf("token not found for key [%v]", idKey)
 		}
 		tok := &token.Token{}
 		if err := json.Unmarshal(tokRaw, tok); err != nil {
-			return nil, errors.Wrapf(err, "failed unmarshalling token for key [%v]", idKey)
+			return nil, nil, errors.Wrapf(err, "failed unmarshalling token for key [%v]", idKey)
 		}
+		resKeys = append(resKeys, idKey)
 		res = append(res, tok)
 	}
 	logger.Debugf("retrieve tokens from ids done")
-	return res, nil
+	return resKeys, res, nil
 }

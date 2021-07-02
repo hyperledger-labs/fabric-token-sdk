@@ -7,10 +7,19 @@ package fabtoken
 
 import (
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type TokenVault interface {
 	PublicParams() ([]byte, error)
+}
+
+type VaultTokenLoader struct {
+	TokenVault api2.QueryEngine
+}
+
+func (s *VaultTokenLoader) GetTokens(ids []*token.Id) ([]string, []*token.Token, error) {
+	return s.TokenVault.GetTokens(ids...)
 }
 
 type VaultPublicParamsLoader struct {
@@ -42,6 +51,20 @@ func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
 	return pp, nil
 }
 
-func (s *VaultPublicParamsLoader) SetPublicParamsFetcher(f api2.PublicParamsFetcher) {
-	s.PublicParamsFetcher = f
+func (s *VaultPublicParamsLoader) ForceFetch() (*PublicParams, error) {
+	logger.Debugf("force public parameters fetch")
+	raw, err := s.PublicParamsFetcher.Fetch()
+	if err != nil {
+		logger.Errorf("failed retrieving public params [%s]", err)
+		return nil, err
+	}
+
+	logger.Debugf("unmarshal public parameters")
+	pp := &PublicParams{}
+	err = pp.Deserialize(raw)
+	if err != nil {
+		return nil, err
+	}
+	logger.Debugf("unmarshal public parameters done")
+	return pp, nil
 }

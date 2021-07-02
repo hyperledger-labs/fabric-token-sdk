@@ -35,7 +35,8 @@ func (q *QueryEngine) PublicParams() ([]byte, error) {
 }
 
 func (q *QueryEngine) GetTokens(inputs ...*token2.Id) ([]*token2.Token, error) {
-	return q.qe.GetTokens(inputs...)
+	_, tokens, err := q.qe.GetTokens(inputs...)
+	return tokens, err
 }
 
 type Vault struct {
