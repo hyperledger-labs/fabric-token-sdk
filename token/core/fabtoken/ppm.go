@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -73,7 +74,11 @@ func (v *PublicParamsManager) ForceFetch() error {
 	return nil
 }
 
-func (v *PublicParamsManager) publicParams() *PublicParams {
+func (v *PublicParamsManager) AuditorIdentity() view.Identity {
+	return v.PublicParams().Auditor
+}
+
+func (v *PublicParamsManager) PublicParams() *PublicParams {
 	if v.pp == nil {
 		if v.publicParamsLoader == nil {
 			panic("public parameters loaded not set")

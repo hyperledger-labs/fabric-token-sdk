@@ -55,7 +55,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		sp,
 		channel,
 		namespace,
-		&fabtoken.VaultPublicParamsLoader{TokenVault: qe, PublicParamsFetcher: publicParamsFetcher},
+		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{TokenVault: qe, PublicParamsFetcher: publicParamsFetcher}),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
 		identity.NewProvider(

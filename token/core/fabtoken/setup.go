@@ -8,6 +8,7 @@ package fabtoken
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -74,6 +75,10 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", publicParams.Identifier)
 	}
 	return json.Unmarshal(publicParams.Raw, pp)
+}
+
+func (pp *PublicParams) AuditorIdentity() view.Identity {
+	return pp.Auditor
 }
 
 func Setup() (*PublicParams, error) {

@@ -17,15 +17,19 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type Validator struct {
-	pp           *PublicParams
-	deserializer driver.Deserializer
+type ValidationParameters interface {
+	AuditorIdentity() view.Identity
 }
 
-func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator {
+type Validator struct {
+	validationParameters ValidationParameters
+	deserializer         driver.Deserializer
+}
+
+func NewValidator(validationParameters ValidationParameters, deserializer driver.Deserializer) *Validator {
 	return &Validator{
-		pp:           pp,
-		deserializer: deserializer,
+		validationParameters: validationParameters,
+		deserializer:         deserializer,
 	}
 }
 
@@ -80,7 +84,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(bytes).String(), binding)
 	signed := append(bytes, []byte(binding)...)
 	var signatures [][]byte
-	if len(v.pp.Auditor) != 0 {
+	if len(v.validationParameters.AuditorIdentity()) != 0 {
 		signatures = append(signatures, tr.AuditorSignature)
 		signatures = append(signatures, tr.Signatures...)
 	} else {
@@ -96,13 +100,13 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 }
 
 func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
-	if v.pp.Auditor != nil {
-		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.Auditor)
+	if v.validationParameters.AuditorIdentity() != nil {
+		verifier, err := v.deserializer.GetAuditorVerifier(v.validationParameters.AuditorIdentity())
 		if err != nil {
 			return errors.Errorf("failed to deserialize auditor's public key")
 		}
 
-		return signatureProvider.HasBeenSignedBy(v.pp.Auditor, verifier)
+		return signatureProvider.HasBeenSignedBy(v.validationParameters.AuditorIdentity(), verifier)
 	}
 	return nil
 }

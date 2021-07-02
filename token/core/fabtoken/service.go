@@ -8,12 +8,12 @@ package fabtoken
 import (
 	"sync"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Channel interface {
@@ -38,11 +38,16 @@ type TokenLoader interface {
 	GetTokens(ids []*token2.Id) ([]string, []*token2.Token, error)
 }
 
+type PublicParametersManager interface {
+	driver.PublicParamsManager
+	AuditorIdentity() view.Identity
+}
+
 type service struct {
 	sp          view2.ServiceProvider
 	channel     Channel
 	namespace   string
-	ppm         *PublicParamsManager
+	ppm         PublicParametersManager
 	tokenLoader TokenLoader
 	qe          QueryEngine
 
@@ -58,7 +63,7 @@ func NewService(
 	sp view2.ServiceProvider,
 	channel Channel,
 	namespace string,
-	publicParamsLoader PublicParamsLoader,
+	ppm PublicParametersManager,
 	tokenLoader TokenLoader,
 	qe QueryEngine,
 	identityProvider driver.IdentityProvider,
@@ -70,10 +75,10 @@ func NewService(
 		namespace:        namespace,
 		tokenLoader:      tokenLoader,
 		qe:               qe,
+		ppm:              ppm,
 		identityProvider: identityProvider,
 		deserializer:     deserializer,
 	}
-	s.ppm = NewPublicParamsManager(publicParamsLoader)
 	return s
 }
 
@@ -82,7 +87,7 @@ func (s *service) IdentityProvider() driver.IdentityProvider {
 }
 
 func (s *service) Validator() driver.Validator {
-	return NewValidator(s.ppm.publicParams(), s.deserializer)
+	return NewValidator(s.ppm, s.deserializer)
 }
 
 func (s *service) PublicParamsManager() driver.PublicParamsManager {
