@@ -140,7 +140,7 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*Tra
 				return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
 			}
 			if len(bytes) == 0 {
-				return errors.Errorf("finput to spend [%s] does not exists", in)
+				return errors.Errorf("input to spend [%s] does not exists", in)
 			}
 			inputTokens = append(inputTokens, bytes)
 			tok := &token2.Token{}

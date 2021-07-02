@@ -320,6 +320,11 @@ func (e *Engine) GetTokens(inputs ...*token.Id) ([]string, []*token.Token, error
 		if err := json.Unmarshal(tokRaw, tok); err != nil {
 			return nil, nil, errors.Wrapf(err, "failed unmarshalling token for key [%v]", idKey)
 		}
+
+		idKey, err = keys.CreateTokenKey(id.TxId, int(id.Index))
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed generating id key [%v]", id)
+		}
 		resKeys = append(resKeys, idKey)
 		res = append(res, tok)
 	}
