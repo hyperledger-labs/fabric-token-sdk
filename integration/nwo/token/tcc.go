@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -32,7 +33,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 
 	// produce chaincode package
 	packageDir := filepath.Join(
-		p.Registry.RootDir,
+		p.Context.RootDir(),
 		"token",
 		"chaincodes",
 		"tcc",
@@ -53,7 +54,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 	err = t.Execute(io.MultiWriter(paramsFile), nil)
 	Expect(err).ToNot(HaveOccurred())
 
-	port := p.Registry.ReservePort()
+	port := p.Context.ReservePort()
 	err = packager2.New().PackageChaincode(
 		cc.Chaincode.Path,
 		cc.Chaincode.Lang,
@@ -109,7 +110,7 @@ func (p *Platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
 
 	var peers []string
 	for _, org := range orgs {
-		for _, peer := range p.FabricNetwork.Topology().Peers {
+		for _, peer := range p.Fabric(tms).Topology().Peers {
 			if peer.Organization == org {
 				peers = append(peers, peer.Name)
 			}

@@ -15,6 +15,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -46,7 +47,7 @@ func (c *CertificationService) SetWallet(network string, channel string, namespa
 func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	// 1. receive request
 	logger.Debugf("receive certification request [%s]", context.ID())
-	s := session.JSon(context)
+	s := session.JSON(context)
 	var cr *CertificationRequest
 	if err := s.Receive(&cr); err != nil {
 		return nil, errors.WithMessage(err, "failed receiving certification request")
@@ -148,7 +149,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 		return nil, errors.Errorf("no certifiers defined")
 	}
 
-	s, err := session.NewJSon(context, i, i.certifier)
+	s, err := session.NewJSON(context, i, i.certifier)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed opening session to [%s]", i.certifier)
 	}

@@ -61,7 +61,7 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set Token Service")
-	fabricNetwork := fabric.GetDefaultNetwork(p.registry)
+	fabricNetwork := fabric.GetDefaultFNS(p.registry)
 
 	tmsProvider := core.NewTMSProvider(fabricNetwork, p.registry,
 		func(network, channel, namespace string) error {

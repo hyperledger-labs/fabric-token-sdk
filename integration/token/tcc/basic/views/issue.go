@@ -92,7 +92,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
 		ttxcc.WithAuditor(
-			fabric.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed creating issue transaction")

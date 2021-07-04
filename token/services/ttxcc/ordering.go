@@ -25,7 +25,7 @@ func NewOrderingView(tx *Transaction) *orderingView {
 // The view does the following:
 // 1. It broadcasts the token token transaction to the proper Fabric ordering service.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
-	if err := fabric.GetDefaultNetwork(context).Ordering().Broadcast(o.tx.Payload.FabricEnvelope); err != nil {
+	if err := fabric.GetDefaultFNS(context).Ordering().Broadcast(o.tx.Payload.FabricEnvelope); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -50,7 +50,7 @@ func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
 // 2. It waits for finality of the token transaction by listening to delivery events from one of the
 // Fabric peer nodes trusted by the FSC node.
 func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error) {
-	if err := fabric.GetDefaultNetwork(context).Ordering().Broadcast(o.tx.Payload.FabricEnvelope); err != nil {
+	if err := fabric.GetDefaultFNS(context).Ordering().Broadcast(o.tx.Payload.FabricEnvelope); err != nil {
 		return nil, err
 	}
 	return nil, fabric.GetChannel(context, o.tx.Network(), o.tx.Channel()).Finality().IsFinal(o.tx.ID())

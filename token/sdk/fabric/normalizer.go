@@ -8,6 +8,7 @@ package fabric
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tcc "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/fetcher"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -23,7 +24,7 @@ func NewNormalizer(sp view.ServiceProvider) *Normalizer {
 
 func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions {
 	if len(opt.Network) == 0 {
-		opt.Network = fabric.GetDefaultNetwork(n.sp).Name()
+		opt.Network = fabric.GetDefaultFNS(n.sp).Name()
 	}
 	if len(opt.Channel) == 0 {
 		opt.Channel = fabric.GetFabricNetworkService(n.sp, opt.Network).DefaultChannel()

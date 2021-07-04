@@ -1,5 +1,7 @@
 topologies:
-- name: fabric
+- name: default
+  type: fabric
+  default: true
   logging:
     spec: grpc=error:chaincode=debug:endorser=debug:info
     format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
@@ -97,7 +99,8 @@ topologies:
   chaincodemode: net
 - name: token
   tmss:
-  - channel: testchannel
+  - network: default
+    channel: testchannel
     namespace: zkat
     driver: fabtoken
     tokenchaincode:
@@ -108,6 +111,7 @@ topologies:
       - "2"
     certifiers: []
 - name: fsc
+  type: fsc
   peers:
   - NodeSynthesizer:
       Aliases:
@@ -145,7 +149,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org1
+            Organization:
+            - Network: ""
+              Org: Org1
             X509Identities:
             - issuer.id1
             - issuer.owner
@@ -172,7 +178,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org1
+            Organization:
+            - Network: ""
+              Org: Org1
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -211,7 +219,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org2
+            Organization:
+            - Network: ""
+              Org: Org2
             X509Identities:
             - alice.id1
   - NodeSynthesizer:
@@ -254,7 +264,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org2
+            Organization:
+            - Network: ""
+              Org: Org2
             X509Identities:
             - bob.id1
   - NodeSynthesizer:
@@ -297,7 +309,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org2
+            Organization:
+            - Network: ""
+              Org: Org2
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -336,7 +350,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org2
+            Organization:
+            - Network: ""
+              Org: Org2
             X509Identities:
             - manager.id1
             - manager.id2

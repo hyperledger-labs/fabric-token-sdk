@@ -8,10 +8,9 @@ package main
 import (
 	"io/ioutil"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/onsi/ginkgo"
 	"github.com/onsi/gomega"
-
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic"
@@ -19,7 +18,7 @@ import (
 
 func main() {
 	gomega.RegisterFailHandler(ginkgo.Fail)
-	topologies := map[string][]nwo.Topology{}
+	topologies := map[string][]api.Topology{}
 
 	topologies["tcc_basic_fabtoken.yaml"] = basic.Topology("fabtoken")
 	topologies["tcc_basic_dlog.yaml"] = basic.Topology("dlog")
@@ -27,7 +26,7 @@ func main() {
 	topologies["dvp_dlog.yaml"] = dvp.Topology("dlog")
 
 	for name, topologies := range topologies {
-		t := nwo.Topologies{Topologies: topologies}
+		t := api.Topologies{Topologies: topologies}
 		raw, err := t.Export()
 		if err != nil {
 			panic(err)
