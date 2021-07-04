@@ -34,7 +34,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting recipient identity")
 
 	// Prepare transaction
-	tx, err := ttx.NewTransaction(context, ttx.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")))
+	tx, err := ttx.NewTransaction(context, ttx.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")))
 	assert.NoError(err)
 
 	assert.NoError(tx.Issue(

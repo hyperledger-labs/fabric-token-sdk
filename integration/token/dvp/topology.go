@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package dvp
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 
@@ -14,14 +14,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 )
 
-func Topology(tokenSDKDriver string) []nwo.Topology {
+func Topology(tokenSDKDriver string) []api.Topology {
 	orgs := []string{"TokenOrg", "HouseOrg", "Org1"}
 
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
 	fabricTopology.AddOrganizationsByName(orgs...)
 	fabricTopology.SetNamespaceApproverOrgsOR("TokenOrg", "HouseOrg")
-	fabricTopology.AddNamespaceWithUnanimity("house", "HouseOrg").SetStateQuery()
+	fabricTopology.AddNamespaceWithUnanimity("house", "HouseOrg").SetStateChaincode()
 
 	fscTopology := fsc.NewTopology()
 
@@ -77,5 +77,5 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	tms.SetNamespace([]string{"TokenOrg"}, "100", "1")
 	// tms.AddCertifier(certifier)
 
-	return []nwo.Topology{fabricTopology, tokenTopology, fscTopology}
+	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }

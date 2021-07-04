@@ -35,7 +35,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err)
 	tx.SetNamespace("house")
 
-	me := fabric.GetIdentityProvider(context).DefaultIdentity()
+	me := fabric.GetDefaultIdentityProvider(context).DefaultIdentity()
 	assert.NoError(tx.AddCommand("issue", me, assetOwner))
 
 	h := &House{
@@ -50,7 +50,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed collecting endorsement")
 
 	// Send to the ordering service and wait for confirmation
-	_, err = context.RunView(state.NewOrderingView(tx))
+	_, err = context.RunView(state.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 	return h.LinearID, nil
 }

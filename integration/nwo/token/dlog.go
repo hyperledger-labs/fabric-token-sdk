@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -19,7 +20,7 @@ type DLogPublicParamsGenerator struct {
 }
 
 func (d *DLogPublicParamsGenerator) Generate(p *Platform, tms *TMS) ([]byte, error) {
-	path := filepath.Join(p.FabricNetwork.DefaultIdemixOrgMSPDir(), msp.IdemixConfigDirMsp, msp.IdemixConfigFileIssuerPublicKey)
+	path := filepath.Join(p.Fabric(tms).DefaultIdemixOrgMSPDir(), msp.IdemixConfigDirMsp, msp.IdemixConfigFileIssuerPublicKey)
 	ipkBytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err

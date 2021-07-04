@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package basic
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 
@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views"
 )
 
-func Topology(tokenSDKDriver string) []nwo.Topology {
+func Topology(tokenSDKDriver string) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -108,5 +108,5 @@ func Topology(tokenSDKDriver string) []nwo.Topology {
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
 
-	return []nwo.Topology{fabricTopology, tokenTopology, fscTopology}
+	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }

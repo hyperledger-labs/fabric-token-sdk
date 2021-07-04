@@ -10,11 +10,11 @@ import (
 	"fmt"
 	"io/ioutil"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 
@@ -82,7 +82,7 @@ func gen(args []string) error {
 	if err := yaml.Unmarshal(raw, t); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
 	}
-	t2 := []nwo.Topology{}
+	t2 := []api.Topology{}
 	for i, topology := range names.Topologies {
 		switch topology.Name {
 		case fabric.TopologyName:

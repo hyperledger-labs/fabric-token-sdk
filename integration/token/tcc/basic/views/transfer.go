@@ -53,7 +53,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")),
+		ttxcc.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating transaction")
 
@@ -122,7 +122,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")),
+		ttxcc.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating transaction")
 

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -31,6 +32,7 @@ type Chaincode struct {
 type TMS struct {
 	Fabric *topology.Topology `yaml:"-"`
 
+	Network        string
 	Channel        string
 	Namespace      string
 	Driver         string
@@ -64,6 +66,10 @@ func (t *Topology) Name() string {
 	return t.TopologyName
 }
 
+func (t *Topology) Type() string {
+	return t.TopologyName
+}
+
 func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *TMS {
 	found := false
 	for _, s := range Drivers {
@@ -78,6 +84,7 @@ func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *TMS {
 
 	tms := &TMS{
 		Fabric:         fabric,
+		Network:        fabric.TopologyName,
 		Channel:        fabric.Channels[0].Name,
 		Namespace:      "zkat",
 		Driver:         driver,

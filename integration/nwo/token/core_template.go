@@ -16,7 +16,8 @@ token:
         opts:
           path: {{ NodeKVSPath }}
   tms: {{ range TMSs }}
-  - channel: {{ .Channel }}
+  - network: {{ .Network }}
+    channel: {{ .Channel }}
     namespace: {{ .Namespace }}
     certification: 
       interactive:

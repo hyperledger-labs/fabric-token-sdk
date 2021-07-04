@@ -123,7 +123,7 @@ type RegisterAuditorView struct{}
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(ttxcc.NewRegisterAuditorView(
-		fabric.GetIdentityProvider(context).DefaultIdentity(),
+		fabric.GetDefaultIdentityProvider(context).DefaultIdentity(),
 		&AuditView{},
 	))
 }

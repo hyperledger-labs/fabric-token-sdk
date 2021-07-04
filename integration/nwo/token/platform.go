@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -18,6 +19,7 @@ import (
 	"time"
 
 	"github.com/alecthomas/template"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -25,8 +27,6 @@ import (
 	"github.com/tedsuo/ifrit/grouper"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/registry"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
@@ -73,9 +73,9 @@ type Wallet struct {
 }
 
 type Platform struct {
-	Registry               *registry.Registry
+	Context                api2.Context
 	Topology               *Topology
-	FabricNetwork          FabricNetwork
+	Builder                api2.Builder
 	EventuallyTimeout      time.Duration
 	Wallets                map[string]*Wallet
 	TCCs                   []*TCC
@@ -86,9 +86,11 @@ type Platform struct {
 	colorIndex int
 }
 
-func NewPlatform(registry *registry.Registry) *Platform {
+func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
 	return &Platform{
-		Registry:          registry,
+		Context:           ctx,
+		Topology:          t.(*Topology),
+		Builder:           builder,
 		EventuallyTimeout: 10 * time.Minute,
 		Wallets:           map[string]*Wallet{},
 		TCCs:              []*TCC{},
@@ -105,13 +107,15 @@ func (p *Platform) Name() string {
 	return TopologyName
 }
 
+func (p *Platform) Type() string {
+	return TopologyName
+}
+
 func (p *Platform) GenerateConfigTree() {
-	p.Topology = p.Registry.TopologyByName(TopologyName).(*Topology)
-	p.FabricNetwork = p.Registry.PlatformByName(fabric.TopologyName).(FabricNetwork)
 }
 
 func (p *Platform) GenerateArtifacts() {
-	fscTopology := p.Registry.TopologyByName(fsc.TopologyName).(*fsc.Topology)
+	fscTopology := p.Context.TopologyByName(fsc.TopologyName).(*fsc.Topology)
 
 	// Generate public parameters
 	p.GeneratePublicParameters()
@@ -139,8 +143,6 @@ func (p *Platform) GenerateArtifacts() {
 }
 
 func (p *Platform) Load() {
-	p.Topology = p.Registry.TopologyByName(TopologyName).(*Topology)
-	p.FabricNetwork = p.Registry.PlatformByName(fabric.TopologyName).(FabricNetwork)
 }
 
 func (p *Platform) Members() []grouper.Member {
@@ -176,7 +178,7 @@ func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	err = t.Execute(io.MultiWriter(ext), p)
 	Expect(err).NotTo(HaveOccurred())
 
-	p.Registry.AddExtension(node.Name, TopologyName, ext.String())
+	p.Context.AddExtension(node.Name, TopologyName, ext.String())
 }
 
 func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
@@ -212,12 +214,12 @@ func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 
 func (p *Platform) DeployTokenChaincodes() {
 	for _, tcc := range p.TCCs {
-		p.FabricNetwork.DeployChaincode(tcc.Chaincode)
+		p.Fabric(tcc.TMS).DeployChaincode(tcc.Chaincode)
 	}
 }
 
 func (p *Platform) TokenGen(command common.Command) (*Session, error) {
-	cmd := common.NewCommand(p.Registry.Builder.Build(p.TokenGenPath), command)
+	cmd := common.NewCommand(p.Builder.Build(p.TokenGenPath), command)
 	return p.StartSession(cmd, command.SessionName())
 }
 
@@ -264,12 +266,12 @@ func (p *Platform) GeneratePublicParameters() {
 }
 
 func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.Registry.RootDir, "fscnodes", peer.ID(), "kvs")
+	return filepath.Join(p.Context.RootDir(), "fscnodes", peer.ID(), "kvs")
 }
 
 func (p *Platform) FSCCertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) string {
 	return filepath.Join(
-		p.Registry.RootDir,
+		p.Context.RootDir(),
 		"crypto",
 		"fsc",
 		peer.ID(),
@@ -281,7 +283,7 @@ func (p *Platform) FSCCertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) s
 
 func (p *Platform) PublicParametersDir() string {
 	return filepath.Join(
-		p.Registry.RootDir,
+		p.Context.RootDir(),
 		"token",
 		"crypto",
 		"pp",
@@ -290,7 +292,7 @@ func (p *Platform) PublicParametersDir() string {
 
 func (p *Platform) PublicParametersFile(tms *TMS) string {
 	return filepath.Join(
-		p.Registry.RootDir,
+		p.Context.RootDir(),
 		"token",
 		"crypto",
 		"pp",
@@ -306,4 +308,8 @@ func (p *Platform) nextColor() string {
 
 	p.colorIndex++
 	return fmt.Sprintf("%dm", color)
+}
+
+func (p *Platform) Fabric(tms *TMS) FabricNetwork {
+	return p.Context.PlatformByName(tms.Network).(FabricNetwork)
 }

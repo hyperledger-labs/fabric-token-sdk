@@ -1,5 +1,7 @@
 topologies:
-- name: fabric
+- name: default
+  type: fabric
+  default: true
   logging:
     spec: grpc=error:chaincode=debug:endorser=debug:info
     format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
@@ -135,7 +137,8 @@ topologies:
   chaincodemode: net
 - name: token
   tmss:
-  - channel: testchannel
+  - network: default
+    channel: testchannel
     namespace: zkat
     driver: dlog
     tokenchaincode:
@@ -146,6 +149,7 @@ topologies:
       - "1"
     certifiers: []
 - name: fsc
+  type: fsc
   peers:
   - NodeSynthesizer:
       Aliases:
@@ -172,7 +176,9 @@ topologies:
       mapping:
         fabric:
           mapping:
-            Organization: TokenOrg
+            Organization:
+            - Network: ""
+              Org: TokenOrg
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -197,7 +203,9 @@ topologies:
       mapping:
         fabric:
           mapping:
-            Organization: HouseOrg
+            Organization:
+            - Network: ""
+              Org: HouseOrg
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -221,7 +229,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: TokenOrg
+            Organization:
+            - Network: ""
+              Org: TokenOrg
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -245,7 +255,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: TokenOrg
+            Organization:
+            - Network: ""
+              Org: TokenOrg
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -269,7 +281,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: HouseOrg
+            Organization:
+            - Network: ""
+              Org: HouseOrg
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -296,7 +310,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org1
+            Organization:
+            - Network: ""
+              Org: Org1
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -322,7 +338,9 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
-            Organization: Org1
+            Organization:
+            - Network: ""
+              Org: Org1
   logging:
     spec: grpc=error:debug
     format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}

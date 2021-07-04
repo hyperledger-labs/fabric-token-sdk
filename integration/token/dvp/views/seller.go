@@ -51,7 +51,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err)
 
 	// Collect signature from zkat auditor signature
-	zkatTx, err := ttx.Wrap(context, tx, ttx.WithAuditor(fabric.GetIdentityProvider(context).Identity("auditor")))
+	zkatTx, err := ttx.Wrap(context, tx, ttx.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")))
 	assert.NoError(err)
 	_, err = context.RunView(ttx.NewCollectAuditorEndorsement(zkatTx))
 	assert.NoError(err)
@@ -67,7 +67,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 func (d *SellHouseView) preparePayment(context view.Context, tx *endorser.Transaction) (*endorser.Transaction, error) {
 	// we need house's valuation, let's load the state from the world state
 	house := &House{}
-	assert.NoError(state.GetWorldState(context).GetState("house", d.HouseID, house), "failed loading house with id %s", d.HouseID)
+	assert.NoError(state.GetVault(context).GetState("house", d.HouseID, house), "failed loading house with id %s", d.HouseID)
 
 	// exchange pseudonyms for the token transfer
 	me, other, err := ttx.ExchangeRecipientIdentitiesInitiator(context, d.Wallet, d.Buyer)
