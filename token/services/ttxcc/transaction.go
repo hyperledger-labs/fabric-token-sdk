@@ -32,8 +32,8 @@ type Payload struct {
 
 type Transaction struct {
 	*Payload
-	sp   view2.ServiceProvider
-	opts *txOptions
+	SP   view2.ServiceProvider
+	Opts *txOptions
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -79,8 +79,8 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 			Namespace:      tms.Namespace(),
 			Transient:      map[string][]byte{},
 		},
-		sp:   sp,
-		opts: txOpts,
+		SP:   sp,
+		Opts: txOpts,
 	}
 	sp.OnError(tx.Release)
 	return tx, nil
@@ -93,7 +93,7 @@ func NewTransactionFromBytes(sp view.Context, network string, raw []byte) (*Tran
 			FabricEnvelope: fabric.GetFabricNetworkService(sp, network).TransactionManager().NewEnvelope(),
 			Transient:      map[string][]byte{},
 		},
-		sp: sp,
+		SP: sp,
 	}
 	err := json.Unmarshal(raw, tx.Payload)
 	if err != nil {
@@ -134,7 +134,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 
 // ID returns the ID of this transaction. It is equal to the underlying Fabric transaction's ID.
 func (t *Transaction) ID() string {
-	return fabric.GetFabricNetworkService(t.sp, t.Network()).TransactionManager().ComputeTxID(&t.Payload.Id)
+	return fabric.GetFabricNetworkService(t.SP, t.Network()).TransactionManager().ComputeTxID(&t.Payload.Id)
 }
 
 func (t *Transaction) Network() string {
@@ -214,7 +214,7 @@ func (t *Transaction) storeTransient() error {
 		return err
 	}
 
-	ch, err := fabric.GetFabricNetworkService(t.sp, t.Network()).Channel(t.Channel())
+	ch, err := fabric.GetFabricNetworkService(t.SP, t.Network()).Channel(t.Channel())
 	if err != nil {
 		return errors.Wrapf(err, "failed getting channel [%s:%s]", t.Network(), t.Channel())
 	}
@@ -263,5 +263,5 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 }
 
 func (t *Transaction) TokenService() *token.ManagementService {
-	return token.GetManagementService(t.sp, token.WithChannel(t.Channel()))
+	return token.GetManagementService(t.SP, token.WithChannel(t.Channel()))
 }
