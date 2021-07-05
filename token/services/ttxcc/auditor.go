@@ -70,7 +70,7 @@ func newAuditingViewInitiator(tx *Transaction) *AuditingViewInitiator {
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
-	session, err := context.GetSession(a, a.tx.opts.auditor)
+	session, err := context.GetSession(a, a.tx.Opts.auditor)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
 	}
@@ -90,9 +90,9 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	var msg *view.Message
 	select {
 	case msg = <-ch:
-		logger.Debug("reply received from %s", a.tx.opts.auditor)
+		logger.Debug("reply received from %s", a.tx.Opts.auditor)
 	case <-time.After(60 * time.Second):
-		return nil, errors.Errorf("Timeout from party %s", a.tx.opts.auditor)
+		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.auditor)
 	}
 	if msg.Status == view.ERROR {
 		return nil, errors.New(string(msg.Payload))
@@ -105,9 +105,9 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling message to sign")
 	}
-	logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.opts.auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
+	logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
 
-	v, err := a.tx.TokenService().SigService().GetVerifier(a.tx.opts.auditor)
+	v, err := a.tx.TokenService().SigService().GetVerifier(a.tx.Opts.auditor)
 	if err != nil {
 		return nil, err
 	}

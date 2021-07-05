@@ -77,12 +77,12 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	distributionList = append(distributionList, parties...)
 
 	// 2. Audit
-	if !c.tx.opts.auditor.IsNone() {
+	if !c.tx.Opts.auditor.IsNone() {
 		_, err := context.RunView(newAuditingViewInitiator(c.tx))
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.opts.auditor.String())
+			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.auditor.String())
 		}
-		distributionList = append(distributionList, c.tx.opts.auditor)
+		distributionList = append(distributionList, c.tx.Opts.auditor)
 	}
 
 	// 3. Endorse and return the Fabric transaction envelope
