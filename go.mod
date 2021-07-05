@@ -17,7 +17,7 @@ require (
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/golang/protobuf v1.5.2
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210704050941-c7da5dbada77
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210705163810-afca9dc42e20
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20200930182727-344fda602252
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200424173110-d7076418f212
