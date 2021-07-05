@@ -34,18 +34,18 @@ func NewValidator(validationParameters ValidationParameters, deserializer driver
 }
 
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
-	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
+	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
 	ia, ta, err := unmarshalIssueTransferActions(tr, binding)
 	if err != nil {
 		return nil, err
 	}
-	err = v.verifyIssues(ia, signatureProvider)
+	err = v.VerifyIssues(ia, signatureProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", binding)
 	}
-	err = v.verifyTransfers(ledger, ta, signatureProvider)
+	err = v.VerifyTransfers(ledger, ta, signatureProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", binding)
 	}
@@ -99,7 +99,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
-func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
+func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
 	if v.validationParameters.AuditorIdentity() != nil {
 		verifier, err := v.deserializer.GetAuditorVerifier(v.validationParameters.AuditorIdentity())
 		if err != nil {
@@ -111,7 +111,7 @@ func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignaturePro
 	return nil
 }
 
-func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
+func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
 		if err := v.verifyIssue(issue); err != nil {
 			return errors.Wrapf(err, "failed to verify issue action")
@@ -128,7 +128,7 @@ func (v *Validator) verifyIssues(issues []*IssueAction, signatureProvider driver
 	return nil
 }
 
-func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
+func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {
