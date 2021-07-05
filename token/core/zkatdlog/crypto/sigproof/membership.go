@@ -142,12 +142,12 @@ func (v *MembershipVerifier) Verify(raw []byte) error {
 
 	com, err := v.recomputeCommitments(proof)
 	if err != nil {
-		return nil
+		return err
 	}
 
 	chal, err := v.computeChallenge(proof.Commitment, com, proof.Signature)
 	if err != nil {
-		return nil
+		return err
 	}
 	if chal.Cmp(proof.Challenge) != 0 {
 		return errors.Errorf("invalid membership proof")
