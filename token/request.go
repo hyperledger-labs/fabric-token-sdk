@@ -13,12 +13,44 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// IssueOptions models the options that can be passed to the issue command
+type IssueOptions struct {
+	// Attributes is a container of generic options that might be driver specific
+	Attributes map[interface{}]interface{}
+}
+
+func compileIssueOptions(opts ...IssueOption) (*IssueOptions, error) {
+	txOptions := &IssueOptions{}
+	for _, opt := range opts {
+		if err := opt(txOptions); err != nil {
+			return nil, err
+		}
+	}
+	return txOptions, nil
+}
+
+// IssueOption is a function that modify IssueOptions
+type IssueOption func(*IssueOptions) error
+
+// WithIssueAttribute sets an attribute to be used to customize the issue command
+func WithIssueAttribute(attr, value interface{}) IssueOption {
+	return func(o *IssueOptions) error {
+		o.Attributes[attr] = value
+		return nil
+	}
+}
+
+// TransferOptions models the options that can be passed to the transfer command
 type TransferOptions struct {
+	// Attributes is a container of generic options that might be driver specific
+	Attributes map[interface{}]interface{}
+	// Selector is the custom token selector to use. If nil, the default will be used.
 	Selector Selector
+	// TokenIDs to transfer. If empty, the tokens will be selected.
 	TokenIDs []*token2.Id
 }
 
@@ -32,8 +64,10 @@ func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
 	return txOptions, nil
 }
 
+// TransferOption is a function that modify TransferOptions
 type TransferOption func(*TransferOptions) error
 
+// WithTokenSelector sets the passed token selector
 func WithTokenSelector(selector Selector) TransferOption {
 	return func(o *TransferOptions) error {
 		o.Selector = selector
@@ -41,9 +75,18 @@ func WithTokenSelector(selector Selector) TransferOption {
 	}
 }
 
+// WithTokenIDs sets the tokens ids to transfer
 func WithTokenIDs(ids ...*token2.Id) TransferOption {
 	return func(o *TransferOptions) error {
 		o.TokenIDs = ids
+		return nil
+	}
+}
+
+// WithTransferAttribute sets an attribute to be used to customize the transfer command
+func WithTransferAttribute(attr, value interface{}) TransferOption {
+	return func(o *TransferOptions) error {
+		o.Attributes[attr] = value
 		return nil
 	}
 }
@@ -66,26 +109,26 @@ type Transfer struct {
 
 type Request struct {
 	TxID         string
-	Actions      *api2.TokenRequest
-	Metadata     *api2.TokenRequestMetadata
+	Actions      *driver.TokenRequest
+	Metadata     *driver.TokenRequestMetadata
 	TokenService *ManagementService `json:"-"`
 }
 
 func NewRequest(tokenService *ManagementService, txid string) *Request {
 	return &Request{
 		TxID:         txid,
-		Actions:      &api2.TokenRequest{},
-		Metadata:     &api2.TokenRequestMetadata{},
+		Actions:      &driver.TokenRequest{},
+		Metadata:     &driver.TokenRequestMetadata{},
 		TokenService: tokenService,
 	}
 }
 
 func NewRequestFromBytes(tokenService *ManagementService, txid string, trRaw []byte, trmRaw []byte) (*Request, error) {
-	tr := &api2.TokenRequest{}
+	tr := &driver.TokenRequest{}
 	if err := tr.FromBytes(trRaw); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling token request [%d]", len(trRaw))
 	}
-	trm := &api2.TokenRequestMetadata{}
+	trm := &driver.TokenRequestMetadata{}
 	if len(trmRaw) != 0 {
 		if err := trm.FromBytes(trmRaw); err != nil {
 			return nil, errors.Wrapf(err, "failed unmarshalling token request metadata [%d]", len(trmRaw))
@@ -103,7 +146,7 @@ func (t *Request) ID() string {
 	return t.TxID
 }
 
-func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64) (*IssueAction, error) {
+func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	if receiver.IsNone() {
 		return nil, errors.Errorf("all recipients should be defined")
 	}
@@ -113,8 +156,21 @@ func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		return nil, errors.WithMessagef(err, "failed getting issuer identity for type [%s]", typ)
 	}
 
+	opt, err := compileIssueOptions(opts...)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
+
 	// Compute Issue
-	issue, tokenInfos, issuer, err := t.TokenService.tms.Issue(id, typ, []uint64{q}, [][]byte{receiver})
+	issue, tokenInfos, issuer, err := t.TokenService.tms.Issue(
+		id,
+		typ,
+		[]uint64{q},
+		[][]byte{receiver},
+		&driver.IssueOptions{
+			Attributes: opt.Attributes,
+		},
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +193,7 @@ func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	t.Metadata.Issues = append(t.Metadata.Issues,
-		api2.IssueMetadata{
+		driver.IssueMetadata{
 			Issuer:     issuer,
 			Outputs:    outputs,
 			TokenInfo:  tokenInfos,
@@ -345,7 +401,7 @@ func (t *Request) IsValid() error {
 }
 
 func (t *Request) MarshallToAudit() ([]byte, error) {
-	bytes, err := json.Marshal(&api2.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
+	bytes, err := json.Marshal(&driver.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
 	if err != nil {
 		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", t.TxID)
 	}
@@ -353,7 +409,7 @@ func (t *Request) MarshallToAudit() ([]byte, error) {
 }
 
 func (t *Request) MarshallToSign() ([]byte, error) {
-	req := &api2.TokenRequest{
+	req := &driver.TokenRequest{
 		Issues:    t.Actions.Issues,
 		Transfers: t.Actions.Transfers,
 	}
