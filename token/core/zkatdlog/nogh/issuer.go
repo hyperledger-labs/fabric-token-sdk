@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte) (api3.IssueAction, [][]byte, view.Identity, error) {
+func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts ...api3.IssueOption) (api3.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
 		if len(owner) == 0 {
 			return nil, nil, nil, errors.Errorf("all recipients should be defined")
