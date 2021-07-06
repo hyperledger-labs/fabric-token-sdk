@@ -136,38 +136,15 @@ func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*Tra
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {
-		var inputTokens [][]byte
-		inputs, err := t.GetInputs()
+		inputTokens, err := RetrieveInputsFromTransferAction(t, ledger)
 		if err != nil {
-			return errors.Wrapf(err, "failed to retrieve input IDs")
+			return err
 		}
-		for _, in := range inputs {
-			logger.Debugf("load token [%d][%s]", i, in)
-			bytes, err := ledger.GetState(in)
-			if err != nil {
-				return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
-			}
-			if len(bytes) == 0 {
-				return errors.Errorf("input to spend [%s] does not exists", in)
-			}
-			inputTokens = append(inputTokens, bytes)
-			tok := &token2.Token{}
-			err = json.Unmarshal(bytes, tok)
-			if err != nil {
-				return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
-			}
-			logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner.Raw).UniqueID())
-
-			verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner.Raw)
-			if err != nil {
-				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
-			}
-			logger.Debugf("signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
-			if err := signatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier); err != nil {
-				return errors.Wrapf(err, "failed signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner.Raw).UniqueID())
-			}
+		err = v.CheckSendersSignatures(inputTokens, i, signatureProvider)
+		if err != nil {
+			return err
 		}
-		if err := v.verifyTransfer(inputTokens, t); err != nil {
+		if err := v.VerifyTransfer(inputTokens, t); err != nil {
 			return errors.Wrapf(err, "failed to verify transfer action")
 		}
 	}
@@ -178,7 +155,7 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	return nil
 }
 
-func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferAction) error {
+func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
 	return nil
 }
 
@@ -237,4 +214,43 @@ func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
 		res[i] = ia
 	}
 	return res, nil
+}
+
+func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIndex int, signatureProvider driver.SignatureProvider) error {
+	for _, tok := range inputTokens {
+		logger.Debugf("check sender [%d][%s]", actionIndex, view.Identity(tok.Owner.Raw).UniqueID())
+		verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner.Raw)
+		if err != nil {
+			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
+		}
+		logger.Debugf("signature verification [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
+		if err := signatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier); err != nil {
+			return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
+		}
+	}
+	return nil
+}
+
+func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) ([]*token2.Token, error) {
+	var inputTokens []*token2.Token
+	inputs, err := t.GetInputs()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to retrieve input IDs")
+	}
+	for _, in := range inputs {
+		bytes, err := ledger.GetState(in)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
+		}
+		if len(bytes) == 0 {
+			return nil, errors.Errorf("input to spend [%s] does not exists", in)
+		}
+		tok := &token2.Token{}
+		err = json.Unmarshal(bytes, tok)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
+		}
+		inputTokens = append(inputTokens, tok)
+	}
+	return inputTokens, nil
 }
