@@ -7,14 +7,15 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
-	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts ...api3.IssueOption) (api3.IssueAction, [][]byte, view.Identity, error) {
+func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
 		if len(owner) == 0 {
 			return nil, nil, nil, errors.Errorf("all recipients should be defined")
@@ -58,7 +59,7 @@ func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 	return issue, infoRaws, fid, err
 }
 
-func (s *service) VerifyIssue(ia api3.IssueAction, tokenInfos [][]byte) error {
+func (s *service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error {
 	action := ia.(*issue.IssueAction)
 
 	return issue.NewVerifier(
@@ -67,7 +68,7 @@ func (s *service) VerifyIssue(ia api3.IssueAction, tokenInfos [][]byte) error {
 		s.PublicParams()).Verify(action.GetProof())
 }
 
-func (s *service) DeserializeIssueAction(raw []byte) (api3.IssueAction, error) {
+func (s *service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &issue.IssueAction{}
 	err := issue.Deserialize(raw)
 	if err != nil {
