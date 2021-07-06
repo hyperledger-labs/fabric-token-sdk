@@ -1,4 +1,4 @@
-name: Go
+name: Token Basics with FabToken Driver
 
 on:
   push:
@@ -29,8 +29,5 @@ jobs:
     - name: Checks
       run: make checks
 
-    - name: Unit Tests
-      run: make unit-tests
-
     - name: Integration Tests
-      run: make integration-tests
+      run: make integration-tests-tcc-fabtoken
