@@ -33,11 +33,15 @@ func NewValidator(validationParameters ValidationParameters, deserializer driver
 	}
 }
 
+func (v *Validator) GetValidationParameters() ValidationParameters {
+	return v.validationParameters
+}
+
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
-	ia, ta, err := unmarshalIssueTransferActions(tr, binding)
+	ia, ta, err := UnmarshalIssueTransferActions(tr, binding)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +203,7 @@ func (b *backend) GetState(key string) ([]byte, error) {
 	return b.getState(key)
 }
 
-func unmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
+func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
 	ia, err := unmarshalIssueActions(tr.Issues)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
