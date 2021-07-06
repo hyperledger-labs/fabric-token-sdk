@@ -14,7 +14,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte) (driver.IssueAction, [][]byte, view.Identity, error) {
+func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts ...driver.IssueOption) (driver.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
 		if len(owner) == 0 {
 			return nil, nil, nil, errors.Errorf("all recipients should be defined")

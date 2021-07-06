@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type Payload struct {
@@ -154,8 +154,8 @@ func (t *Transaction) Bytes() ([]byte, error) {
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
-func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ string, q uint64) error {
-	_, err := t.TokenRequest.Issue(wallet, receiver, typ, q)
+func (t *Transaction) Issue(wallet *token.IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...driver.IssueOption) error {
+	_, err := t.TokenRequest.Issue(wallet, receiver, typ, q, opts...)
 	return err
 }
 

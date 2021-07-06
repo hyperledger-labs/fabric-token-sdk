@@ -103,7 +103,7 @@ func (t *Request) ID() string {
 	return t.TxID
 }
 
-func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64) (*IssueAction, error) {
+func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...api2.IssueOption) (*IssueAction, error) {
 	if receiver.IsNone() {
 		return nil, errors.Errorf("all recipients should be defined")
 	}
