@@ -1,4 +1,4 @@
-name: DLOGChaincode
+name: Token Basics with DLOG Driver
 
 on:
   push:

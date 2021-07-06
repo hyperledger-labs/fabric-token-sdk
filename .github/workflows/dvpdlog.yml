@@ -1,4 +1,4 @@
-name: Fabtoken
+name: DvP with DLOG Driver
 
 on:
   push:
@@ -30,4 +30,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-fabtoken
+      run: make integration-tests-dvp-dlog

@@ -1,4 +1,4 @@
-name: FabtokenCC
+name: Token Basics with FabToken Driver
 
 on:
   push:

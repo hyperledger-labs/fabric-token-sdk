@@ -54,25 +54,21 @@ integration-tests: docker-images dependencies
 	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-
-.PHONY: integration-tests-dlog
-integration-tests-dlog: docker-images dependencies
+.PHONY: integration-tests-dvp-dlog
+integration-tests-dvp-dlog: docker-images dependencies
 	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-
-.PHONY: integration-tests-fabtoken
-integration-tests-fabtoken: docker-images dependencies
+.PHONY: integration-tests-dvp-fabtoken
+integration-tests-dvp-fabtoken: docker-images dependencies
 	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dlog
 integration-tests-tcc-dlog: docker-images dependencies
 	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-
 .PHONY: integration-tests-tcc-fabtoken
 integration-tests-tcc-fabtoken: docker-images dependencies
 	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
-
 
 .PHONY: tidy
 tidy:
