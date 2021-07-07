@@ -33,6 +33,10 @@ func (i *IssueAction) GetProof() []byte {
 	return i.Proof
 }
 
+func (i *IssueAction) GetMetadata() []byte {
+	return nil
+}
+
 func (i *IssueAction) IsAnonymous() bool {
 	return i.Anonymous
 }

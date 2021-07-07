@@ -16,6 +16,7 @@ type IssueAction interface {
 	GetOutputs() []Output
 	IsAnonymous() bool
 	GetIssuer() []byte
+	GetMetadata() []byte
 }
 
 type Output interface {
