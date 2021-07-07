@@ -84,6 +84,10 @@ func (i *IssueAction) GetIssuer() []byte {
 	return i.Issuer
 }
 
+func (i *IssueAction) GetMetadata() []byte {
+	return nil
+}
+
 type TransferAction struct {
 	Sender  view.Identity
 	Inputs  []string
