@@ -243,7 +243,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 	}
 	metadata := issueAction.GetMetadata()
 	key, err := keys.CreateIssueActionMetadataKey(w.TxID)
-	if err!=nil{
+	if err != nil {
 		return err
 	}
 	if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
