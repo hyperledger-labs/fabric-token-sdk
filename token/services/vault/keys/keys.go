@@ -36,6 +36,8 @@ const (
 	TokenRequestKeyPrefix              = "token_request"
 	OwnerSeparator                     = "/"
 	SerialNumber                       = "sn"
+	IssueActionMetadata             = "issue_action_metadata"
+
 )
 
 func GetTokenIdFromKey(key string) (*token2.Id, error) {
@@ -108,6 +110,10 @@ func CreateSetupBundleKey() (string, error) {
 
 func CreateTokenRequestKey(txID string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{TokenRequestKeyPrefix, txID})
+}
+
+func CreateIssueActionMetadataKey(txID string) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, txID})
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

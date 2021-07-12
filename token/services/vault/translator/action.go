@@ -17,6 +17,7 @@ type IssueAction interface {
 	GetSerializedOutputs() ([][]byte, error)
 	IsAnonymous() bool
 	GetIssuer() []byte
+	GetMetadata() []byte
 }
 
 //go:generate counterfeiter -o mock/transfer_action.go -fake-name TransferAction . TransferAction
