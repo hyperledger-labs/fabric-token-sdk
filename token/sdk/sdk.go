@@ -68,7 +68,12 @@ func (p *SDK) Install() error {
 			n := fabric.GetFabricNetworkService(p.registry, network)
 			if err := n.ProcessorManager().AddProcessor(
 				namespace,
-				processor.NewTokenRWSetProcessor(n, namespace, p.registry),
+				processor.NewTokenRWSetProcessor(
+					n,
+					namespace,
+					p.registry,
+					processor.NewOwnershipMultiplexer(&processor.WalletOwnership{}),
+				),
 			); err != nil {
 				return errors.Wrapf(err, "failed adding transaction processors")
 			}

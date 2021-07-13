@@ -43,20 +43,20 @@ type PublicParametersManager interface {
 	AuditorIdentity() view.Identity
 }
 
-type service struct {
-	sp          view2.ServiceProvider
-	channel     Channel
-	namespace   string
-	ppm         PublicParametersManager
-	tokenLoader TokenLoader
-	qe          QueryEngine
+type Service struct {
+	SP          view2.ServiceProvider
+	Channel     Channel
+	Namespace   string
+	PPM         PublicParametersManager
+	TokenLoader TokenLoader
+	QE          QueryEngine
 
-	identityProvider driver.IdentityProvider
-	deserializer     driver.Deserializer
-	ownerWallets     []*ownerWallet
-	issuerWallets    []*issuerWallet
-	auditorWallets   []*auditorWallet
-	walletsLock      sync.Mutex
+	IP             driver.IdentityProvider
+	Deserializer   driver.Deserializer
+	OwnerWallets   []*ownerWallet
+	IssuerWallets  []*issuerWallet
+	AuditorWallets []*auditorWallet
+	WalletsLock    sync.Mutex
 }
 
 func NewService(
@@ -68,28 +68,28 @@ func NewService(
 	qe QueryEngine,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
-) *service {
-	s := &service{
-		sp:               sp,
-		channel:          channel,
-		namespace:        namespace,
-		tokenLoader:      tokenLoader,
-		qe:               qe,
-		ppm:              ppm,
-		identityProvider: identityProvider,
-		deserializer:     deserializer,
+) *Service {
+	s := &Service{
+		SP:           sp,
+		Channel:      channel,
+		Namespace:    namespace,
+		TokenLoader:  tokenLoader,
+		QE:           qe,
+		PPM:          ppm,
+		IP:           identityProvider,
+		Deserializer: deserializer,
 	}
 	return s
 }
 
-func (s *service) IdentityProvider() driver.IdentityProvider {
-	return s.identityProvider
+func (s *Service) IdentityProvider() driver.IdentityProvider {
+	return s.IP
 }
 
-func (s *service) Validator() driver.Validator {
-	return NewValidator(s.ppm, s.deserializer)
+func (s *Service) Validator() driver.Validator {
+	return NewValidator(s.PPM, s.Deserializer)
 }
 
-func (s *service) PublicParamsManager() driver.PublicParamsManager {
-	return s.ppm
+func (s *Service) PublicParamsManager() driver.PublicParamsManager {
+	return s.PPM
 }

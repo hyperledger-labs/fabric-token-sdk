@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package processor
 
 import (
@@ -15,6 +16,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
@@ -23,17 +25,24 @@ type Network interface {
 	Channel(id string) (*fabric.Channel, error)
 }
 
-type RWSetProcessor struct {
-	network Network
-	nss     []string
-	sp      view2.ServiceProvider
+type Ownership interface {
+	IsMine(tms *token.ManagementService, tok *token2.Token) bool
 }
 
-func NewTokenRWSetProcessor(network Network, ns string, sp view2.ServiceProvider) *RWSetProcessor {
+type RWSetProcessor struct {
+	network   Network
+	nss       []string
+	sp        view2.ServiceProvider
+	ownership Ownership
+}
+
+func NewTokenRWSetProcessor(network Network, ns string, sp view2.ServiceProvider, ownership Ownership) *RWSetProcessor {
 	return &RWSetProcessor{
-		network: network,
-		nss:     []string{ns},
-		sp:      sp}
+		network:   network,
+		nss:       []string{ns},
+		sp:        sp,
+		ownership: ownership,
+	}
 }
 
 func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
@@ -177,7 +186,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		}
 
-		if tms.WalletManager().OwnerWalletByIdentity(tok.Owner.Raw) != nil {
+		if r.ownership.IsMine(tms, tok) {
 			logger.Debugf("transaction [%s], found a token and it is mine", txID)
 			// Add a lookup key to identity quickly that this token belongs to this
 			mineTokenID, err := keys.CreateTokenMineKey(components[0], index)

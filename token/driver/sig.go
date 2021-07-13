@@ -5,7 +5,9 @@ SPDX-License-Identifier: Apache-2.0
 */
 package driver
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+)
 
 type SigningIdentity interface {
 	Sign(raw []byte) ([]byte, error)
@@ -26,6 +28,10 @@ type Signer interface {
 }
 
 type SigService interface {
+	// GetVerifier returns the verifier associated to the passed identity
 	GetVerifier(id view.Identity) (Verifier, error)
+	// GetSigner returns the signer associated to the passed identity
 	GetSigner(id view.Identity) (Signer, error)
+	// RegisterSigner associated the passed signer and verifier to the passed identity
+	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
 }

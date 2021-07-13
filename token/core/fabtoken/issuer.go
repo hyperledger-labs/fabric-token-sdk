@@ -14,7 +14,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, [][]byte, view.Identity, error) {
+func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
 		if len(owner) == 0 {
 			return nil, nil, nil, errors.Errorf("all recipients should be defined")
@@ -50,12 +50,12 @@ func (s *service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		nil
 }
 
-func (s *service) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
+func (s *Service) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
 	// TODO:
 	return nil
 }
 
-func (s *service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
+func (s *Service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &IssueAction{}
 	if err := issue.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing issue action")
