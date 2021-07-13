@@ -3,21 +3,46 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttxcc
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
+
+type tms struct {
+	Network   string
+	Channel   string
+	Namespace string
+}
+
+func (t *tms) String() string {
+	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
+}
+
+func compileServiceOptions(opts ...token.ServiceOption) (*tms, error) {
+	txOptions := &token.ServiceOptions{}
+	for _, opt := range opts {
+		if err := opt(txOptions); err != nil {
+			return nil, err
+		}
+	}
+	return &tms{
+		Network:   txOptions.Network,
+		Channel:   txOptions.Channel,
+		Namespace: txOptions.Namespace,
+	}, nil
+}
 
 type RecipientData struct {
 	Identity  view.Identity
@@ -34,7 +59,7 @@ func (r *RecipientData) FromBytes(raw []byte) error {
 }
 
 type ExchangeRecipientRequest struct {
-	Channel       string
+	TMS           *tms
 	WalletID      []byte
 	RecipientData *RecipientData
 }
@@ -48,7 +73,7 @@ func (r *ExchangeRecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RecipientRequest struct {
-	Channel  string
+	TMS      *tms
 	WalletID []byte
 }
 
@@ -61,15 +86,19 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RequestRecipientIdentityView struct {
-	Channel string
-	Other   view.Identity
+	TMS   *tms
+	Other view.Identity
 }
 
 // RequestRecipientIdentity executes the RequestRecipientIdentityView.
 // The sender contacts the recipient's FSC node identified via the passed view identity.
 // The sender gets back the identity the recipient wants to use to assign ownership of tokens.
-func RequestRecipientIdentity(context view.Context, recipient view.Identity) (view.Identity, error) {
-	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{Other: recipient})
+func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, error) {
+	fns, err := compileServiceOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
+	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{TMS: fns, Other: recipient})
 	if err != nil {
 		return nil, err
 	}
@@ -77,10 +106,11 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity) (vi
 }
 
 func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	logger.Debugf("request recipient to [%s] for channel [%s]", f.Other, f.Channel)
-	ts := token.GetManagementService(context, token.WithChannel(f.Channel))
+	logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMS)
 
-	if w := ts.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
+	tms := token.GetManagementService(context, token.WithTMS(f.TMS.Network, f.TMS.Channel, f.TMS.Namespace))
+
+	if w := tms.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
 		recipient, err := w.GetRecipientIdentity()
 		if err != nil {
 			return nil, err
@@ -94,7 +124,7 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 
 		// Ask for identity
 		rr := &RecipientRequest{
-			Channel:  f.Channel,
+			TMS:      f.TMS,
 			WalletID: f.Other,
 		}
 		rrRaw, err := rr.Bytes()
@@ -120,7 +150,7 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 		if err := recipientData.FromBytes(payload); err != nil {
 			return nil, err
 		}
-		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
+		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
 			return nil, err
 		}
 
@@ -143,16 +173,20 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		return nil, err
 	}
 
-	rr := &RecipientRequest{}
-	if err := rr.FromBytes(payload); err != nil {
+	recipientRequest := &RecipientRequest{}
+	if err := recipientRequest.FromBytes(payload); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling recipient request")
 	}
 
 	wallet := s.Wallet
-	if len(wallet) == 0 && len(rr.WalletID) != 0 {
-		wallet = string(rr.WalletID)
+	if len(wallet) == 0 && len(recipientRequest.WalletID) != 0 {
+		wallet = string(recipientRequest.WalletID)
 	}
-	w := GetWalletForChannel(context, rr.Channel, wallet)
+	w := GetWallet(
+		context,
+		wallet,
+		token.WithTMS(recipientRequest.TMS.Network, recipientRequest.TMS.Channel, recipientRequest.TMS.Namespace),
+	)
 	recipientIdentity, err := w.GetRecipientIdentity()
 	if err != nil {
 		return nil, err
@@ -193,7 +227,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 // RespondRequestRecipientIdentity executes the RespondRequestRecipientIdentityView.
 // The recipient sends back the identity to receive ownership of tokens.
-// The identity is taken from the default wallet
+// The identity is taken from the wallet
 func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error) {
 	id, err := context.RunView(&RespondRequestRecipientIdentityView{})
 	if err != nil {
@@ -203,14 +237,13 @@ func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error
 }
 
 type ExchangeRecipientIdentitiesView struct {
-	Network string
-	Channel string
-	Wallet  string
-	Other   view.Identity
+	TMS    *tms
+	Wallet string
+	Other  view.Identity
 }
 
 func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	ts := token.GetManagementService(context, token.WithChannel(f.Channel))
+	ts := token.GetManagementService(context, token.WithTMS(f.TMS.Network, f.TMS.Channel, f.TMS.Namespace))
 
 	if w := ts.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
 		other, err := w.GetRecipientIdentity()
@@ -230,8 +263,6 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		ch := fabric.GetChannel(context, f.Network, f.Channel)
-		ts := token.GetManagementService(context, token.WithChannel(ch.Name()))
 		w := ts.WalletManager().OwnerWallet(f.Wallet)
 		me, err := w.GetRecipientIdentity()
 		if err != nil {
@@ -247,7 +278,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		}
 		// Send request
 		request := &ExchangeRecipientRequest{
-			Channel:  ch.Name(),
+			TMS:      f.TMS,
 			WalletID: f.Other,
 			RecipientData: &RecipientData{
 				Identity:  me,
@@ -295,11 +326,43 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 	}
 }
 
-type respondExchangePseudonymView struct {
+// ExchangeRecipientIdentities executes the ExchangeRecipientIdentitiesView using by passed wallet id to
+// derive the recipient identity to send to the passed recipient.
+// The function returns, the recipient identity of the sender, the recipient identity of the recipient
+func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, view.Identity, error) {
+	tms, err := compileServiceOptions(opts...)
+	if err != nil {
+		return nil, nil, err
+	}
+	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
+		TMS:    tms,
+		Wallet: walletID,
+		Other:  recipient,
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
+}
+
+type RespondExchangeRecipientIdentitiesView struct {
 	Wallet string
 }
 
-func (s *respondExchangePseudonymView) Call(context view.Context) (interface{}, error) {
+// RespondExchangeRecipientIdentities executes the RespondExchangeRecipientIdentitiesView.
+// The recipient sends back the identity to receive ownership of tokens.
+// The identity is taken from the default wallet
+func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, view.Identity, error) {
+	ids, err := context.RunView(&RespondExchangeRecipientIdentitiesView{})
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
+}
+
+func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
 	session, requestRaw, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		return nil, err
@@ -311,7 +374,7 @@ func (s *respondExchangePseudonymView) Call(context view.Context) (interface{}, 
 		return nil, err
 	}
 
-	ts := token.GetManagementService(context, token.WithChannel(request.Channel))
+	ts := token.GetManagementService(context, token.WithTMS(request.TMS.Network, request.TMS.Channel, request.TMS.Namespace))
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(other, request.RecipientData.AuditInfo, request.RecipientData.Metadata); err != nil {
 		return nil, err
@@ -362,29 +425,4 @@ func (s *respondExchangePseudonymView) Call(context view.Context) (interface{}, 
 	}
 
 	return []view.Identity{me, other}, nil
-}
-
-// ExchangeRecipientIdentities executes the ExchangeRecipientIdentitiesView using by passed wallet id to
-// derive the recipient identity to send to the passed recipient.
-// The function returns, the recipient identity of the sender, the recipient identity of the recipient
-func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity) (view.Identity, view.Identity, error) {
-	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
-		Channel: "",
-		Wallet:  walletID,
-		Other:   recipient,
-	})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
-}
-
-func RespondExchangeRecipientIdentities(context view.Context) (view.Identity, view.Identity, error) {
-	ids, err := context.RunView(&respondExchangePseudonymView{})
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return ids.([]view.Identity)[0], ids.([]view.Identity)[1], nil
 }

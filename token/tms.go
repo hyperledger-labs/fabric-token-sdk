@@ -11,6 +11,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -69,6 +70,16 @@ func WithNamespace(namespace string) ServiceOption {
 func WithPublicParameterFetcher(ppFetcher PublicParamsFetcher) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.PublicParamsFetcher = ppFetcher
+		return nil
+	}
+}
+
+// WithTMS filters by network, channel and namespace. Each of them can be empty
+func WithTMS(network, channel, namespace string) ServiceOption {
+	return func(o *ServiceOptions) error {
+		o.Network = network
+		o.Channel = channel
+		o.Namespace = namespace
 		return nil
 	}
 }
