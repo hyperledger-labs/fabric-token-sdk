@@ -18,14 +18,14 @@ type BuyHouseView struct{}
 
 func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	// 1. Respond to transfer request
-	_, other, err := ttx.ExchangeRecipientIdentitiesResponder(context)
+	_, other, err := ttx.RespondExchangeRecipientIdentities(context)
 	assert.NoError(err, "failed getting identity")
 
 	tokenTx, action, err := ttx.ReceiveAction(context)
 	assert.NoError(err, "failed receiving action")
 
 	err = tokenTx.Transfer(
-		ttx.MyWalletForChannel(context, tokenTx.Channel()),
+		ttx.MyWalletFromTx(context, tokenTx),
 		action.Type, []uint64{action.Amount}, []view.Identity{action.Recipient},
 	)
 	assert.NoError(err, "failed appending transfer")

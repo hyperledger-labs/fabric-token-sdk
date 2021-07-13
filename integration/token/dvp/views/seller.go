@@ -70,7 +70,7 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *endorser.Transa
 	assert.NoError(state.GetVault(context).GetState("house", d.HouseID, house), "failed loading house with id %s", d.HouseID)
 
 	// exchange pseudonyms for the token transfer
-	me, other, err := ttx.ExchangeRecipientIdentitiesInitiator(context, d.Wallet, d.Buyer)
+	me, other, err := ttx.ExchangeRecipientIdentities(context, d.Wallet, d.Buyer)
 	assert.NoError(err, "failed exchanging identities")
 
 	// collect token transfer from the buyer
