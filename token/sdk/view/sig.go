@@ -8,12 +8,14 @@ package view
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 type SigService interface {
 	GetVerifier(id view.Identity) (view2.Verifier, error)
 	GetSigner(id view.Identity) (view2.Signer, error)
+	RegisterSigner(identity view.Identity, signer view2.Signer, verifier view2.Verifier) error
 }
 
 type SigServiceWrapper struct {
@@ -30,4 +32,8 @@ func (s *SigServiceWrapper) GetVerifier(id view.Identity) (driver.Verifier, erro
 
 func (s *SigServiceWrapper) GetSigner(id view.Identity) (driver.Signer, error) {
 	return s.s.GetSigner(id)
+}
+
+func (s *SigServiceWrapper) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
+	return s.s.RegisterSigner(identity, signer, verifier)
 }

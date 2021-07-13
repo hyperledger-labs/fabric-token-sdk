@@ -8,7 +8,7 @@ package fabtoken
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
-func (s *service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
+func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
 	// TODO:
 	return nil
 }

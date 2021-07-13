@@ -16,15 +16,15 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *service) ListTokens() (*token2.UnspentTokens, error) {
-	return s.qe.ListUnspentTokens()
+func (s *Service) ListTokens() (*token2.UnspentTokens, error) {
+	return s.QE.ListUnspentTokens()
 }
 
-func (s *service) HistoryIssuedTokens() (*token2.IssuedTokens, error) {
-	return s.qe.ListHistoryIssuedTokens()
+func (s *Service) HistoryIssuedTokens() (*token2.IssuedTokens, error) {
+	return s.QE.ListHistoryIssuedTokens()
 }
 
-func (s *service) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error) {
+func (s *Service) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error) {
 	tok := &token2.Token{}
 	if err := json.Unmarshal(outputRaw, tok); err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token")

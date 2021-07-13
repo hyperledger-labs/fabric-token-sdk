@@ -14,14 +14,14 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.Id, Outputs ...*token2.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.Id, Outputs ...*token2.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
 	id, err := wallet.GetRecipientIdentity()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting sender identity")
 	}
 
 	// select inputs
-	inputIDs, inputTokens, err := s.tokenLoader.GetTokens(ids)
+	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(ids)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed loading input tokens")
 	}
@@ -70,7 +70,7 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	}
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
-		auditInfo, err := s.identityProvider.GetAuditInfo(t.Owner.Raw)
+		auditInfo, err := s.IP.GetAuditInfo(t.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner.Raw).String())
 		}
@@ -78,7 +78,7 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	}
 	var receiverAuditInfos [][]byte
 	for _, output := range outs {
-		auditInfo, err := s.identityProvider.GetAuditInfo(output.Output.Owner.Raw)
+		auditInfo, err := s.IP.GetAuditInfo(output.Output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Output.Owner.Raw).String())
 		}
@@ -91,7 +91,7 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 	receiverIsSender := make([]bool, len(ownerIdentities))
 	for i, receiver := range ownerIdentities {
-		receiverIsSender[i] = s.ownerWallet(receiver) != nil
+		receiverIsSender[i] = s.OwnerWalletByID(receiver) != nil
 	}
 
 	metadata := &driver.TransferMetadata{
@@ -109,12 +109,12 @@ func (s *service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	return transfer, metadata, nil
 }
 
-func (s *service) VerifyTransfer(tr driver.TransferAction, tokenInfos [][]byte) error {
+func (s *Service) VerifyTransfer(tr driver.TransferAction, tokenInfos [][]byte) error {
 	// TODO:
 	return nil
 }
 
-func (s *service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
+func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	t := &TransferAction{}
 	if err := t.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing transfer action")
