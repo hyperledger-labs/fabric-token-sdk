@@ -18,6 +18,16 @@ type IssueAction struct {
 	getIssuerReturnsOnCall map[int]struct {
 		result1 []byte
 	}
+	GetMetadataStub        func() []byte
+	getMetadataMutex       sync.RWMutex
+	getMetadataArgsForCall []struct {
+	}
+	getMetadataReturns struct {
+		result1 []byte
+	}
+	getMetadataReturnsOnCall map[int]struct {
+		result1 []byte
+	}
 	GetSerializedOutputsStub        func() ([][]byte, error)
 	getSerializedOutputsMutex       sync.RWMutex
 	getSerializedOutputsArgsForCall []struct {
@@ -114,6 +124,58 @@ func (fake *IssueAction) GetIssuerReturnsOnCall(i int, result1 []byte) {
 		})
 	}
 	fake.getIssuerReturnsOnCall[i] = struct {
+		result1 []byte
+	}{result1}
+}
+
+func (fake *IssueAction) GetMetadata() []byte {
+	fake.getMetadataMutex.Lock()
+	ret, specificReturn := fake.getMetadataReturnsOnCall[len(fake.getMetadataArgsForCall)]
+	fake.getMetadataArgsForCall = append(fake.getMetadataArgsForCall, struct {
+	}{})
+	fake.recordInvocation("GetMetadata", []interface{}{})
+	fake.getMetadataMutex.Unlock()
+	if fake.GetMetadataStub != nil {
+		return fake.GetMetadataStub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.getMetadataReturns
+	return fakeReturns.result1
+}
+
+func (fake *IssueAction) GetMetadataCallCount() int {
+	fake.getMetadataMutex.RLock()
+	defer fake.getMetadataMutex.RUnlock()
+	return len(fake.getMetadataArgsForCall)
+}
+
+func (fake *IssueAction) GetMetadataCalls(stub func() []byte) {
+	fake.getMetadataMutex.Lock()
+	defer fake.getMetadataMutex.Unlock()
+	fake.GetMetadataStub = stub
+}
+
+func (fake *IssueAction) GetMetadataReturns(result1 []byte) {
+	fake.getMetadataMutex.Lock()
+	defer fake.getMetadataMutex.Unlock()
+	fake.GetMetadataStub = nil
+	fake.getMetadataReturns = struct {
+		result1 []byte
+	}{result1}
+}
+
+func (fake *IssueAction) GetMetadataReturnsOnCall(i int, result1 []byte) {
+	fake.getMetadataMutex.Lock()
+	defer fake.getMetadataMutex.Unlock()
+	fake.GetMetadataStub = nil
+	if fake.getMetadataReturnsOnCall == nil {
+		fake.getMetadataReturnsOnCall = make(map[int]struct {
+			result1 []byte
+		})
+	}
+	fake.getMetadataReturnsOnCall[i] = struct {
 		result1 []byte
 	}{result1}
 }
@@ -337,6 +399,8 @@ func (fake *IssueAction) Invocations() map[string][][]interface{} {
 	defer fake.invocationsMutex.RUnlock()
 	fake.getIssuerMutex.RLock()
 	defer fake.getIssuerMutex.RUnlock()
+	fake.getMetadataMutex.RLock()
+	defer fake.getMetadataMutex.RUnlock()
 	fake.getSerializedOutputsMutex.RLock()
 	defer fake.getSerializedOutputsMutex.RUnlock()
 	fake.isAnonymousMutex.RLock()

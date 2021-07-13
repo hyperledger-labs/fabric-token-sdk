@@ -31,6 +31,10 @@ func (i *IssueAction) GetIssuer() []byte {
 	return i.a.GetIssuer()
 }
 
+func (i *IssueAction) GetMetadata() []byte {
+	return i.a.GetMetadata()
+}
+
 type TransferAction struct {
 	a driver.TransferAction
 }
