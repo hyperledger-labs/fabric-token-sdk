@@ -60,10 +60,10 @@ func (p *SDK) Install() error {
 	}
 	logger.Infof("Token platform enabled, installing...")
 
-	logger.Infof("Set Token Service")
-	fabricNetwork := fabric.GetDefaultFNS(p.registry)
-
-	tmsProvider := core.NewTMSProvider(fabricNetwork, p.registry,
+	logger.Infof("Set TMS Provider")
+	tmsProvider := core.NewTMSProvider(
+		fabric2.NewNetworkProvider(p.registry),
+		p.registry,
 		func(network, channel, namespace string) error {
 			n := fabric.GetFabricNetworkService(p.registry, network)
 			if err := n.ProcessorManager().AddProcessor(
@@ -73,6 +73,7 @@ func (p *SDK) Install() error {
 					namespace,
 					p.registry,
 					processor.NewOwnershipMultiplexer(&processor.WalletOwnership{}),
+					processor.NewIssuedMultiplexer(&processor.WalletIssued{}),
 				),
 			); err != nil {
 				return errors.Wrapf(err, "failed adding transaction processors")

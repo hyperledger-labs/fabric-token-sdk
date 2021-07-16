@@ -8,9 +8,10 @@ package query
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 type Client interface {
@@ -25,12 +26,22 @@ func NewClient(vClient Client) *viewClient {
 	return &viewClient{vClient: vClient}
 }
 
-func (c *viewClient) Balance(typ string) ([]Balance, error) {
-	return c.WalletBalance("", typ)
+func (c *viewClient) Balance(typ string, opts ...token.ServiceOption) ([]Balance, error) {
+	return c.WalletBalance("", typ, opts...)
 }
 
-func (c *viewClient) WalletBalance(wallet, typ string) ([]Balance, error) {
+func (c *viewClient) WalletBalance(wallet, typ string, opts ...token.ServiceOption) ([]Balance, error) {
+	options, err := token.CompileServiceOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
+
 	balance, err := c.vClient.CallView("zkat.balance.query", common.JSONMarshall(&BalanceQuery{
+		TMSID: token.TMSID{
+			Network:   options.Network,
+			Channel:   options.Channel,
+			Namespace: options.Namespace,
+		},
 		Wallet: wallet,
 		Type:   typ,
 	}))
@@ -45,9 +56,20 @@ func (c *viewClient) WalletBalance(wallet, typ string) ([]Balance, error) {
 	return []Balance{bal}, nil
 }
 
-func (c *viewClient) AllMyBalances() ([]Balance, error) {
+func (c *viewClient) AllMyBalances(opts ...token.ServiceOption) ([]Balance, error) {
+	options, err := token.CompileServiceOptions(opts...)
+	if err != nil {
+		return nil, err
+	}
+
 	balances, err := c.vClient.CallView("zkat.all.balance.query",
-		common.JSONMarshall(&AllBalanceQuery{}),
+		common.JSONMarshall(&AllBalanceQuery{
+			TMSID: token.TMSID{
+				Network:   options.Network,
+				Channel:   options.Channel,
+				Namespace: options.Namespace,
+			},
+		}),
 	)
 	if err != nil {
 		return nil, err

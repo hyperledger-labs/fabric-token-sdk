@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttxcc
 
 import (
@@ -44,21 +45,27 @@ func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 }
 
 type RegisterAuditorView struct {
-	Network   string
-	Channel   string
-	Namespace string
+	TMDIS     token.TMSID
 	Id        view.Identity
 	AuditView view.View
 }
 
-func NewRegisterAuditorView(id view.Identity, auditView view.View) *RegisterAuditorView {
-	return &RegisterAuditorView{Id: id, AuditView: auditView}
+func NewRegisterAuditorView(id view.Identity, auditView view.View, opts ...token.ServiceOption) *RegisterAuditorView {
+	options, err := token.CompileServiceOptions(opts...)
+	if err != nil {
+		return nil
+	}
+	return &RegisterAuditorView{
+		Id:        id,
+		AuditView: auditView,
+		TMDIS:     options.TMSID(),
+	}
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{})
 
-	return context.RunView(tcc.NewRegisterAuditorView(r.Network, r.Channel, r.Namespace, r.Id))
+	return context.RunView(tcc.NewRegisterAuditorView(r.TMDIS, r.Id))
 }
 
 type AuditingViewInitiator struct {

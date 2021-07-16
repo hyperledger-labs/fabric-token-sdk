@@ -5,7 +5,11 @@ SPDX-License-Identifier: Apache-2.0
 */
 package ttxcc
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+)
 
 type txOptions struct {
 	auditor   view.Identity
@@ -50,6 +54,26 @@ func WithChannel(channel string) TxOption {
 func WithNamespace(namespace string) TxOption {
 	return func(o *txOptions) error {
 		o.namespace = namespace
+		return nil
+	}
+}
+
+// WithTMS filters by network, channel and namespace. Each of them can be empty
+func WithTMS(network, channel, namespace string) TxOption {
+	return func(o *txOptions) error {
+		o.network = network
+		o.channel = channel
+		o.namespace = namespace
+		return nil
+	}
+}
+
+// WithTMSID filters by TMS identifier
+func WithTMSID(id token.TMSID) TxOption {
+	return func(o *txOptions) error {
+		o.network = id.Network
+		o.channel = id.Channel
+		o.namespace = id.Namespace
 		return nil
 	}
 }

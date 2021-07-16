@@ -32,7 +32,7 @@ func NewPublicParamsFetcher(sp view.ServiceProvider, network string, channel str
 }
 
 func (c *publicParamsFetcher) Fetch() ([]byte, error) {
-	logger.Debugf("retrieve public params for [%s:%s]", c.channel, c.namespace)
+	logger.Debugf("retrieve public params for [%s:%s:%s]", c.network, c.channel, c.namespace)
 
 	ppBoxed, err := view.GetManager(c.sp).InitiateView(
 		chaincode.NewQueryView(
