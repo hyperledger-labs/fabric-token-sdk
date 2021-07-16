@@ -8,7 +8,6 @@ package ttxcc
 
 import (
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/pkg/errors"
@@ -20,28 +19,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-type tms struct {
-	Network   string
-	Channel   string
-	Namespace string
-}
-
-func (t *tms) String() string {
-	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
-}
-
-func compileServiceOptions(opts ...token.ServiceOption) (*tms, error) {
+func compileServiceOptions(opts ...token.ServiceOption) (*token.TMSID, error) {
 	txOptions := &token.ServiceOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
 			return nil, err
 		}
 	}
-	return &tms{
-		Network:   txOptions.Network,
-		Channel:   txOptions.Channel,
-		Namespace: txOptions.Namespace,
-	}, nil
+	id := txOptions.TMSID()
+	return &id, nil
 }
 
 type RecipientData struct {
@@ -59,7 +45,7 @@ func (r *RecipientData) FromBytes(raw []byte) error {
 }
 
 type ExchangeRecipientRequest struct {
-	TMS           *tms
+	TMSID         token.TMSID
 	WalletID      []byte
 	RecipientData *RecipientData
 }
@@ -73,7 +59,7 @@ func (r *ExchangeRecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RecipientRequest struct {
-	TMS      *tms
+	TMSID    token.TMSID
 	WalletID []byte
 }
 
@@ -86,7 +72,7 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RequestRecipientIdentityView struct {
-	TMS   *tms
+	TMSID token.TMSID
 	Other view.Identity
 }
 
@@ -94,11 +80,11 @@ type RequestRecipientIdentityView struct {
 // The sender contacts the recipient's FSC node identified via the passed view identity.
 // The sender gets back the identity the recipient wants to use to assign ownership of tokens.
 func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, error) {
-	fns, err := compileServiceOptions(opts...)
+	tmsID, err := compileServiceOptions(opts...)
 	if err != nil {
 		return nil, err
 	}
-	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{TMS: fns, Other: recipient})
+	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{TMSID: *tmsID, Other: recipient})
 	if err != nil {
 		return nil, err
 	}
@@ -106,9 +92,9 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 }
 
 func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMS)
+	logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
 
-	tms := token.GetManagementService(context, token.WithTMS(f.TMS.Network, f.TMS.Channel, f.TMS.Namespace))
+	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 
 	if w := tms.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
 		recipient, err := w.GetRecipientIdentity()
@@ -124,7 +110,7 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 
 		// Ask for identity
 		rr := &RecipientRequest{
-			TMS:      f.TMS,
+			TMSID:    f.TMSID,
 			WalletID: f.Other,
 		}
 		rrRaw, err := rr.Bytes()
@@ -185,7 +171,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	w := GetWallet(
 		context,
 		wallet,
-		token.WithTMS(recipientRequest.TMS.Network, recipientRequest.TMS.Channel, recipientRequest.TMS.Namespace),
+		token.WithTMSID(recipientRequest.TMSID),
 	)
 	recipientIdentity, err := w.GetRecipientIdentity()
 	if err != nil {
@@ -237,13 +223,13 @@ func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error
 }
 
 type ExchangeRecipientIdentitiesView struct {
-	TMS    *tms
+	TMSID  token.TMSID
 	Wallet string
 	Other  view.Identity
 }
 
 func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
-	ts := token.GetManagementService(context, token.WithTMS(f.TMS.Network, f.TMS.Channel, f.TMS.Namespace))
+	ts := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 
 	if w := ts.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
 		other, err := w.GetRecipientIdentity()
@@ -278,7 +264,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		}
 		// Send request
 		request := &ExchangeRecipientRequest{
-			TMS:      f.TMS,
+			TMSID:    f.TMSID,
 			WalletID: f.Other,
 			RecipientData: &RecipientData{
 				Identity:  me,
@@ -330,12 +316,12 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 // derive the recipient identity to send to the passed recipient.
 // The function returns, the recipient identity of the sender, the recipient identity of the recipient
 func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, view.Identity, error) {
-	tms, err := compileServiceOptions(opts...)
+	tmsID, err := compileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, err
 	}
 	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
-		TMS:    tms,
+		TMSID:  *tmsID,
 		Wallet: walletID,
 		Other:  recipient,
 	})
@@ -374,7 +360,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		return nil, err
 	}
 
-	ts := token.GetManagementService(context, token.WithTMS(request.TMS.Network, request.TMS.Channel, request.TMS.Namespace))
+	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(other, request.RecipientData.AuditInfo, request.RecipientData.Metadata); err != nil {
 		return nil, err

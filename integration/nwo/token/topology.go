@@ -84,7 +84,7 @@ func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *TMS {
 
 	tms := &TMS{
 		Fabric:         fabric,
-		Network:        fabric.TopologyName,
+		Network:        fabric.Name(),
 		Channel:        fabric.Channels[0].Name,
 		Namespace:      "zkat",
 		Driver:         driver,

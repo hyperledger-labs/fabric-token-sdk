@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -61,7 +62,7 @@ func NewManagementServiceProvider(
 }
 
 func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) *ManagementService {
-	opt, err := compileServiceOptions(opts...)
+	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
 		panic(err)
 	}

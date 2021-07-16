@@ -285,8 +285,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210713054710-12682c606677 h1:QvbY+r6g9U3p408BndbmOzLYVJCRYJ+WbqoTAkPdZHU=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210713054710-12682c606677/go.mod h1:fWkzSz/BXHPyIpIDiVNH6liCzCT+alFszD8hP+EZuyI=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210716034317-f57c564a4bb0 h1:T1iJ9b2p7a8dFTIgYCUJcdNDtBXvAFJ3oYwLfvDZna8=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210716034317-f57c564a4bb0/go.mod h1:vSGfRhrlkNMI56iwzcnk3HzXU25KP9YVZVstPJGf2Nc=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20200930182727-344fda602252 h1:lQq/yygTbHWPfjFZ1VgINd1TJY7rOJ/zglcl9nE/s9Q=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20200930182727-344fda602252/go.mod h1:+kicKDn5xa88tOpOY/o6/7iB/RD7oOs2INzwVg2ARmM=
 github.com/hyperledger/fabric-amcl v0.0.0-20200128223036-d1aa2665426a/go.mod h1:X+DIyUsaTmalOpmpQfIvFZjKHQedrURQ5t4YqquX7lE=
@@ -936,8 +936,8 @@ golang.org/x/tools v0.0.0-20200131233409-575de47986ce/go.mod h1:b+2E5dAYhXwXZwtn
 golang.org/x/tools v0.0.0-20201105001634-bc3cf281b174/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
 golang.org/x/tools v0.0.0-20201224043029-2b0845dc783e/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
 golang.org/x/tools v0.1.0/go.mod h1:xkSsbof2nBLbhDlRMhhhyNLN/zl3eTqcnHD5viDpcZ0=
-golang.org/x/tools v0.1.4 h1:cVngSRcfgyZCzys3KYOpCFa+4dqX/Oub9tAq00ttGVs=
-golang.org/x/tools v0.1.4/go.mod h1:o0xws9oXOQQZyjljx8fwUC0k7L1pTE6eaCbjGeHmOkk=
+golang.org/x/tools v0.1.5 h1:ouewzE6p+/VEB31YYnTbEJdi8pFqKp4P4n85vwo3DHA=
+golang.org/x/tools v0.1.5/go.mod h1:o0xws9oXOQQZyjljx8fwUC0k7L1pTE6eaCbjGeHmOkk=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=

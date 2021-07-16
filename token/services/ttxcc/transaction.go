@@ -219,7 +219,7 @@ func (t *Transaction) storeTransient() error {
 		return errors.Wrapf(err, "failed getting channel [%s:%s]", t.Network(), t.Channel())
 	}
 
-	return ch.Vault().StoreTransient(t.ID(), fabric.TransientMap(t.Payload.Transient))
+	return ch.Vault().StoreTransient(t.ID(), t.Payload.Transient)
 }
 
 func (t *Transaction) setEnvelope(envelope *fabric.Envelope) error {
@@ -263,5 +263,10 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 }
 
 func (t *Transaction) TokenService() *token.ManagementService {
-	return token.GetManagementService(t.SP, token.WithChannel(t.Channel()))
+	return token.GetManagementService(
+		t.SP,
+		token.WithNetwork(t.Network()),
+		token.WithChannel(t.Channel()),
+		token.WithNamespace(t.Namespace()),
+	)
 }

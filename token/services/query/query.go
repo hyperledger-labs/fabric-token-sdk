@@ -14,13 +14,14 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
 
 type BalanceQuery struct {
-	Channel string
-	Wallet  string
-	Type    string
+	TMSID  token.TMSID
+	Wallet string
+	Type   string
 }
 
 type Balance struct {
@@ -33,14 +34,16 @@ type BalanceView struct {
 }
 
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
-	wallet := token.GetManagementService(context, token.WithChannel(b.Channel)).WalletManager().OwnerWallet(b.Wallet)
+	wallet := token.GetManagementService(context, token.WithTMSID(b.TMSID)).WalletManager().OwnerWallet(b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
+
 	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
 	if err != nil {
 		return nil, err
 	}
+
 	sum := token2.NewZeroQuantity(keys.Precision)
 	for _, tok := range unspentTokens.Tokens {
 		q, err := token2.ToQuantity(tok.Quantity, keys.Precision)
@@ -49,6 +52,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		}
 		sum = sum.Add(q)
 	}
+
 	return Balance{Quantity: sum.Decimal(), Type: b.Type}, nil
 }
 
@@ -67,8 +71,8 @@ type AllMyBalances struct {
 }
 
 type AllBalanceQuery struct {
-	Channel string
-	Wallet  string
+	TMSID  token.TMSID
+	Wallet string
 }
 
 type AllMyBalanceView struct {
@@ -76,11 +80,12 @@ type AllMyBalanceView struct {
 }
 
 func (b *AllMyBalanceView) Call(context view.Context) (interface{}, error) {
-	balances := make(map[string]token2.Quantity)
-	wallet := token.GetManagementService(context, token.WithChannel(b.Channel)).WalletManager().OwnerWallet(b.Wallet)
+	wallet := token.GetManagementService(context, token.WithTMSID(b.TMSID)).WalletManager().OwnerWallet(b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
+
+	balances := make(map[string]token2.Quantity)
 	unspentTokens, err := wallet.ListUnspentTokens()
 	if err != nil {
 		return nil, err
@@ -101,6 +106,7 @@ func (b *AllMyBalanceView) Call(context view.Context) (interface{}, error) {
 	for k := range balances {
 		mybalance = append(mybalance, Balance{Type: k, Quantity: balances[k].Decimal()})
 	}
+
 	return AllMyBalances{mybalance}, nil
 }
 

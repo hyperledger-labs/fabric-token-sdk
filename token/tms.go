@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -15,6 +16,17 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
+
+// TMSID models a TMS identifier
+type TMSID struct {
+	Network   string
+	Channel   string
+	Namespace string
+}
+
+func (t *TMSID) String() string {
+	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
+}
 
 // ServiceProvider is used to return instances of a given type
 type ServiceProvider interface {
@@ -34,7 +46,15 @@ type ServiceOptions struct {
 	PublicParamsFetcher PublicParamsFetcher
 }
 
-func compileServiceOptions(opts ...ServiceOption) (*ServiceOptions, error) {
+func (o ServiceOptions) TMSID() TMSID {
+	return TMSID{
+		Network:   o.Network,
+		Channel:   o.Channel,
+		Namespace: o.Namespace,
+	}
+}
+
+func CompileServiceOptions(opts ...ServiceOption) (*ServiceOptions, error) {
 	txOptions := &ServiceOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
@@ -80,6 +100,16 @@ func WithTMS(network, channel, namespace string) ServiceOption {
 		o.Network = network
 		o.Channel = channel
 		o.Namespace = namespace
+		return nil
+	}
+}
+
+// WithTMSID filters by TMS identifier
+func WithTMSID(id TMSID) ServiceOption {
+	return func(o *ServiceOptions) error {
+		o.Network = id.Network
+		o.Channel = id.Channel
+		o.Namespace = id.Namespace
 		return nil
 	}
 }
@@ -168,6 +198,14 @@ func (t *ManagementService) SelectorManager() SelectorManager {
 
 func (t *ManagementService) SigService() *SignatureService {
 	return t.signatureService
+}
+
+func (t *ManagementService) ID() TMSID {
+	return TMSID{
+		Network:   t.Network(),
+		Channel:   t.Channel(),
+		Namespace: t.Namespace(),
+	}
 }
 
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {

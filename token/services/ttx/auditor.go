@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
@@ -10,12 +11,14 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
 
 	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
@@ -44,9 +47,7 @@ func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 }
 
 type RegisterAuditorView struct {
-	Network   string
-	Channel   string
-	Namespace string
+	TMSID     token.TMSID
 	Id        view.Identity
 	AuditView view.View
 }
@@ -58,7 +59,7 @@ func NewRegisterAuditorView(id view.Identity, auditView view.View) *RegisterAudi
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{})
 
-	return context.RunView(tcc.NewRegisterAuditorView(r.Network, r.Channel, r.Namespace, r.Id))
+	return context.RunView(tcc.NewRegisterAuditorView(r.TMSID, r.Id))
 }
 
 func NewCollectAuditorEndorsement(tx *Transaction) *AuditingViewInitiator {

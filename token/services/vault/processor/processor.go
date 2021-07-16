@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -22,6 +23,7 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
 type Network interface {
+	Name() string
 	Channel(id string) (*fabric.Channel, error)
 }
 
@@ -29,19 +31,26 @@ type Ownership interface {
 	IsMine(tms *token.ManagementService, tok *token2.Token) bool
 }
 
+type Issued interface {
+	// Issued returns true if the passed issuer issued the passed token
+	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
+}
+
 type RWSetProcessor struct {
 	network   Network
 	nss       []string
 	sp        view2.ServiceProvider
 	ownership Ownership
+	issued    Issued
 }
 
-func NewTokenRWSetProcessor(network Network, ns string, sp view2.ServiceProvider, ownership Ownership) *RWSetProcessor {
+func NewTokenRWSetProcessor(network Network, ns string, sp view2.ServiceProvider, ownership Ownership, issued Issued) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:   network,
 		nss:       []string{ns},
 		sp:        sp,
 		ownership: ownership,
+		issued:    issued,
 	}
 }
 
@@ -55,6 +64,12 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	}
 	if !found {
 		return errors.Errorf("this processor cannot parse namespace [%s]", ns)
+	}
+
+	// Match the network name
+	if tx.Network() != r.network.Name() {
+		logger.Debugf("tx's network [%s]!=[%s]", tx.Network(), r.network.Name())
+		return nil
 	}
 
 	fn, _ := tx.FunctionAndParameters()
@@ -114,6 +129,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(ns),
 	)
+	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	metadata, err := tms.NewMetadataFromBytes(transientMap.Get("zkat"))
 	if err != nil {
 		logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
@@ -209,7 +225,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			}
 		}
 
-		if !issuer.IsNone() && tms.WalletManager().IssuerWalletByIdentity(issuer) != nil {
+		if !issuer.IsNone() && r.issued.Issued(tms, issuer, tok) {
 			logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			if err := r.storeIssuedHistoryToken(ns, txID, index, tok, rws, tokenInfoRaw, issuer); err != nil {
 				return err

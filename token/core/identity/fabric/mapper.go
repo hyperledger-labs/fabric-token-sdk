@@ -7,6 +7,7 @@ package fabric
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -39,13 +40,15 @@ type LocalMembership interface {
 }
 
 type Mapper struct {
+	networkID       string
 	nodeIdentity    view.Identity
 	localMembership LocalMembership
 	mspType         MSPType
 }
 
-func NewMapper(mspType MSPType, nodeIdentity view.Identity, localMembership LocalMembership) *Mapper {
+func NewMapper(networkID string, mspType MSPType, nodeIdentity view.Identity, localMembership LocalMembership) *Mapper {
 	return &Mapper{
+		networkID:       networkID,
 		mspType:         mspType,
 		nodeIdentity:    nodeIdentity,
 		localMembership: localMembership,
@@ -53,6 +56,8 @@ func NewMapper(mspType MSPType, nodeIdentity view.Identity, localMembership Loca
 }
 
 func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
+	logger.Debugf("[%s] getting info for [%s]", i.networkID)
+
 	var mspLabel string
 	switch i.mspType {
 	case X509MSPIdentity:
@@ -74,19 +79,26 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 	defaultID := i.localMembership.DefaultIdentity()
 
-	logger.Debugf("mapping identifier for [%d,%s], default identities [%s:%s,%s]",
+	logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s] [%s]",
+		i.networkID,
 		i.mspType,
 		v,
 		string(defaultID),
 		defaultID.String(),
 		i.nodeIdentity.String(),
+		debug.Stack(),
 	)
 
 	switch i.mspType {
 	case X509MSPIdentity:
 		switch vv := v.(type) {
 		case view.Identity:
-			logger.Debugf("[x509] looking up identifier for identity [%d,%s], default identity [%s]", i.mspType, vv.String(), defaultID.String())
+			logger.Debugf(
+				"[x509] looking up identifier for identity [%d,%s], default identity [%s]",
+				i.mspType,
+				vv.String(),
+				defaultID.String(),
+			)
 			id := vv
 			switch {
 			case id.IsNone():
