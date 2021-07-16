@@ -8,6 +8,8 @@ package translator
 import (
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
@@ -243,7 +245,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 	}
 	metadata := issueAction.GetMetadata()
 	if metadata != nil {
-		key, err := keys.CreateIssueActionMetadataKey(w.TxID)
+		key, err := keys.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
 		if err != nil {
 			return err
 		}
