@@ -7,7 +7,6 @@ package fabric
 
 import (
 	"fmt"
-	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -79,14 +78,13 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 	defaultID := i.localMembership.DefaultIdentity()
 
-	logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s] [%s]",
+	logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
 		i.networkID,
 		i.mspType,
 		v,
 		string(defaultID),
 		defaultID.String(),
 		i.nodeIdentity.String(),
-		debug.Stack(),
 	)
 
 	switch i.mspType {
