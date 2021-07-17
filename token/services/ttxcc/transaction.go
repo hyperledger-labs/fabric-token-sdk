@@ -100,7 +100,13 @@ func NewTransactionFromBytes(sp view.Context, network string, raw []byte) (*Tran
 		return nil, err
 	}
 
-	tx.TokenRequest.SetTokenService(token.GetManagementService(sp, token.WithChannel(tx.Channel())))
+	tx.TokenRequest.SetTokenService(
+		token.GetManagementService(sp,
+			token.WithNetwork(tx.Network()),
+			token.WithChannel(tx.Channel()),
+			token.WithNamespace(tx.Namespace()),
+		),
+	)
 	if tx.ID() != tx.TokenRequest.ID() {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
