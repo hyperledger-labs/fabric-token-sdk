@@ -250,10 +250,10 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 			return err
 		}
 		raw, err := w.RWSet.GetState(w.namespace, key)
-		if err != nil{
+		if err != nil {
 			return err
 		}
-		if raw != nil{
+		if raw != nil {
 			return errors.Errorf("entry with issue metadata key [%s] is already occupied", key)
 		}
 		if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
