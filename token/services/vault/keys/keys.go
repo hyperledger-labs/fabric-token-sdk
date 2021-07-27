@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	minUnicodeRuneValue                = 0            //U+0000
-	MaxUnicodeRuneValue                = utf8.MaxRune //U+10FFFF - maximum (and unallocated) code point
+	minUnicodeRuneValue                = 0            // U+0000
+	MaxUnicodeRuneValue                = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
 	CompositeKeyNamespace              = "\x00"
 	TokenKeyPrefix                     = "ztoken"
 	FabTokenKeyPrefix                  = "token"
@@ -120,12 +120,12 @@ func CreateCompositeKey(objectType string, attributes []string) (string, error) 
 	if err := ValidateCompositeKeyAttribute(objectType); err != nil {
 		return "", err
 	}
-	ck := CompositeKeyNamespace + objectType + string(minUnicodeRuneValue)
+	ck := CompositeKeyNamespace + objectType + string(rune(minUnicodeRuneValue))
 	for _, att := range attributes {
 		if err := ValidateCompositeKeyAttribute(att); err != nil {
 			return "", err
 		}
-		ck += att + string(minUnicodeRuneValue)
+		ck += att + string(rune(minUnicodeRuneValue))
 	}
 	return ck, nil
 }

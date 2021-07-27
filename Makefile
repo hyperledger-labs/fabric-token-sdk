@@ -37,7 +37,7 @@ docker-images:
 	docker image tag hyperledger/fabric-baseos:2.2 hyperledger/fabric-baseos:latest
 	docker pull hyperledger/fabric-ccenv:2.2
 	docker image tag hyperledger/fabric-ccenv:2.2 hyperledger/fabric-ccenv:latest
-	docker pull couchdb:3.1
+	docker pull couchdb:3.1.1
 	docker pull confluentinc/cp-kafka:5.3.1
 	docker pull confluentinc/cp-zookeeper:5.3.1
 
