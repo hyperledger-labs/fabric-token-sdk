@@ -55,7 +55,7 @@ go get github.com/hyperledger-labs/fabric-token-sdk
 
 The above command clones the repo under `$GOPATH/github.com/hyperledger-labs/fabric-token-sdk`.
 
-We recommend to use `go 1.14.13`. We are testing the Token SDK also against more recent versions of the go-sdk to make sure the Token SDK works properly.
+We recommend to use `go 1.16`. We are testing the Token SDK also against more recent versions of the go-sdk to make sure the Token SDK works properly.
 
 ## Makefile
 
