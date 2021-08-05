@@ -17,7 +17,7 @@ require (
 	github.com/golang/protobuf v1.5.0
 	github.com/google/addlicense v0.0.0-20210729153508-ef04bb38a16b // indirect
 	github.com/gordonklaus/ineffassign v0.0.0-20210729092907-69aca2aeecd0 // indirect
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210729224643-9c6c674c1198
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210730122122-fd9860dc98dc
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200424173110-d7076418f212

@@ -472,7 +472,6 @@ github.com/golang/snappy v0.0.1/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEW
 github.com/golang/snappy v0.0.2/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
 github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 h1:ur2rms48b3Ep1dxh7aUV2FZEQ8jEVO2F6ILKx8ofkAg=
 github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3/go.mod h1:/XxbfmMg8lxefKM7IXC3fBNl/7bRcc72aCRzEWrmP2Q=
-github.com/google/addlicense v0.0.0-20210428195630-6d92264d7170/go.mod h1:EMjYTRimagHs1FwlIqKyX3wAM0u3rA+McvlIIWmSamA=
 github.com/google/addlicense v0.0.0-20210729153508-ef04bb38a16b h1:KwI0NOpYd3rzKojfjeRerF7rzjeTwvJARVsgGf5TWmY=
 github.com/google/addlicense v0.0.0-20210729153508-ef04bb38a16b/go.mod h1:EMjYTRimagHs1FwlIqKyX3wAM0u3rA+McvlIIWmSamA=
 github.com/google/btree v0.0.0-20180124185431-e89373fe6b4a/go.mod h1:lNA+9X1NB3Zf8V7Ke586lFgjr2dZNuvo3lPJSGZ5JPQ=
@@ -511,7 +510,6 @@ github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5m
 github.com/googleapis/gnostic v0.4.1/go.mod h1:LRhVm6pbyptWbWbuZ38d1eyptfvIytN3ir6b65WBswg=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 h1:EGx4pi6eqNxGaHF6qqu48+N2wcFQ5qg5FXgOdqsJ5d8=
 github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORRmW1u3UXTncJ5qlYoELFm8eSnnEO6hX4iZ3EWY=
-github.com/gordonklaus/ineffassign v0.0.0-20210522101830-0589229737b2/go.mod h1:M9mZEtGIsR1oDaZagNPNG9iq9n2HrhZ17dsXk73V3Lw=
 github.com/gordonklaus/ineffassign v0.0.0-20210729092907-69aca2aeecd0 h1:n5XJlKUi+uKhMh/b2+sC/kZUy9qu8cgTVxas3YFP+y0=
 github.com/gordonklaus/ineffassign v0.0.0-20210729092907-69aca2aeecd0/go.mod h1:M9mZEtGIsR1oDaZagNPNG9iq9n2HrhZ17dsXk73V3Lw=
 github.com/gorilla/handlers v0.0.0-20150720190736-60c7bfde3e33/go.mod h1:Qkdc/uu4tH4g6mTK6auzZ766c4CA0Ng8+o/OAirnOIQ=
@@ -574,10 +572,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210727161847-dd7e6ce2594b h1:SA4Gi9S/C5NLKZX9WVL90z0YBe7qQMWmcX4aek9zyIc=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210727161847-dd7e6ce2594b/go.mod h1:3PdsCCdvj4u3dNVrhRMaDwla7Djt1A5+1XUIVvCy7pI=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210729224643-9c6c674c1198 h1:edyNFtIXVD1PC4wC4sEfCEv0gYD/caBxb5xuCVfG3Rk=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210729224643-9c6c674c1198/go.mod h1:AdmaenqtnLj0oJugVTGLVV9Idc3sDPofW29oMuS5ojc=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210730122122-fd9860dc98dc h1:JG6/4VDOMScHhac+yXq+25gSUmKbHDEjR9sXGAApN74=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210730122122-fd9860dc98dc/go.mod h1:AdmaenqtnLj0oJugVTGLVV9Idc3sDPofW29oMuS5ojc=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7 h1:LKWVg/yHT1GdNrcmnwp+Fzij8Wlwl7T7l22MP66TVNY=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7/go.mod h1:g/IlXbV5x5GEprnavUFN+YoJZeIjwDocRcmO5ZG4ugc=
 github.com/hyperledger/fabric-amcl v0.0.0-20200128223036-d1aa2665426a/go.mod h1:X+DIyUsaTmalOpmpQfIvFZjKHQedrURQ5t4YqquX7lE=
@@ -859,7 +855,6 @@ github.com/mitchellh/gox v0.4.0/go.mod h1:Sd9lOJ0+aimLBi73mGofS1ycjY8lL3uZM3JPS4
 github.com/mitchellh/iochan v1.0.0/go.mod h1:JwYml1nuB7xOzsp52dPpHFffvOCDupsG0QubkSMEySY=
 github.com/mitchellh/mapstructure v0.0.0-20160808181253-ca63d7c062ee/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
 github.com/mitchellh/mapstructure v1.1.2/go.mod h1:FVVH3fgwuzCH5S8UJGiWEs2h04kUh9fWfEaFds41c1Y=
-github.com/mitchellh/mapstructure v1.2.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/mapstructure v1.3.2 h1:mRS76wmkOn3KkKAyXDu42V+6ebnXWIztFSYGN7GeoRg=
 github.com/mitchellh/mapstructure v1.3.2/go.mod h1:bFUtVrKA4DC2yAKiSyO/QUcy7e+RRV2QTWOzhPopBRo=
 github.com/mitchellh/osext v0.0.0-20151018003038-5e2d6d41470f/go.mod h1:OkQIRizQZAeMln+1tSwduZz7+Af5oFlKirV/MSYes2A=
