@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 
@@ -39,14 +38,6 @@ func RegisterTypeFormatter(t string, stringer ByteStringer) {
 	typeFormatters[t] = stringer
 }
 
-// RawOwner encodes an owner of an identity
-type RawOwner struct {
-	// Type encodes the type of the owner (currently it can only be a SerializedIdentity)
-	Type string `protobuf:"bytes,1,opt,name=type,json=type,proto3" json:"type,omitempty"`
-	// Identity encodes the identity
-	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
-}
-
 func serializedIdentityToBytes(in []byte) string {
 	si := &msp.SerializedIdentity{}
 	err := proto.Unmarshal(in, si)
@@ -71,20 +62,6 @@ func serializedIdentityToBytes(in []byte) string {
 	return fmt.Sprintf("{MSP: '%s', PubKey: '%s'}", si.Mspid, base64.StdEncoding.EncodeToString(pubKeyBytes))
 }
 
-func (r *RawOwner) Reset() {
-	*r = RawOwner{}
-}
-
-func (r *RawOwner) String() string {
-	formatter, exists := typeFormatters[r.Type]
-	if !exists {
-		return fmt.Sprintf("Owner with unknown type %s", r.Type)
-	}
-	return formatter(r.Identity)
-}
-
-func (r *RawOwner) ProtoMessage() {}
-
 // RawOwnerIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
 type RawOwnerIdentityDeserializer struct {
 	*fabric.MSPX509IdentityDeserializer
@@ -97,12 +74,7 @@ func NewRawOwnerIdentityDeserializer() *RawOwnerIdentityDeserializer {
 }
 
 func (deserializer *RawOwnerIdentityDeserializer) GetVerifier(id view.Identity) (driver.Verifier, error) {
-	si := &RawOwner{}
-	err := json.Unmarshal(id, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-	return deserializer.MSPX509IdentityDeserializer.GetVerifier(si.Identity)
+	return deserializer.MSPX509IdentityDeserializer.GetVerifier(id)
 }
 
 func (deserializer *RawOwnerIdentityDeserializer) DeserializeVerifier(raw []byte) (driver2.Verifier, error) {
