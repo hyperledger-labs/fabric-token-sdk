@@ -22,7 +22,6 @@ func (id *Id) String() string {
 
 // Owner holds the identity of a token owner
 type Owner struct {
-	Type string `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"`
 	// Raw is the serialization of the identity
 	Raw []byte `protobuf:"bytes,2,opt,name=raw,proto3" json:"raw,omitempty"`
 }
