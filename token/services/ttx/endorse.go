@@ -32,6 +32,12 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.opts.auditor.String())
 		}
+		// Cleanup
+		session, err := context.GetSession(nil, c.tx.opts.auditor)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed getting auditor's session")
+		}
+		session.Close()
 	}
 	return nil, nil
 }
