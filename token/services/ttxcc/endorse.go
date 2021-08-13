@@ -96,6 +96,15 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 		return nil, err
 	}
 
+	// Cleanup
+	if !c.tx.Opts.auditor.IsNone() {
+		session, err := context.GetSession(nil, c.tx.Opts.auditor)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed getting auditor's session")
+		}
+		session.Close()
+	}
+
 	logger.Debugf("collectEndorsementsView done.")
 	return nil, nil
 }
