@@ -170,16 +170,22 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 }
 
 func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
-	if inputTokens[0] == nil {
-		errors.Errorf("there is no input")
-	}
 	if tr.NumOutputs() == 0 {
 		errors.Errorf("there is no output")
+	}
+	if len(inputTokens) == 0 {
+		errors.Errorf("there is no input")
+	}
+	if inputTokens[0] == nil {
+		errors.Errorf("first input is nil")
 	}
 	typ := inputTokens[0].Type
 	inputSum := token2.NewZeroQuantity(64)
 	outputSum := token2.NewZeroQuantity(64)
-	for _, input := range inputTokens {
+	for i, input := range inputTokens {
+		if input == nil {
+			return errors.Errorf("input %d is nil", i)
+		}
 		q, err := token2.ToQuantity(input.Quantity, 64)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
