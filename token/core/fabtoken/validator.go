@@ -153,7 +153,7 @@ func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*Tra
 
 func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	if issue.NumOutputs() == 0 {
-		errors.Errorf("there is no output")
+		return errors.Errorf("there is no output")
 	}
 	for _, output := range issue.GetOutputs() {
 		out := output.(*TransferOutput).Output
@@ -171,13 +171,13 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 
 func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
 	if tr.NumOutputs() == 0 {
-		errors.Errorf("there is no output")
+		return errors.Errorf("there is no output")
 	}
 	if len(inputTokens) == 0 {
-		errors.Errorf("there is no input")
+		return errors.Errorf("there is no input")
 	}
 	if inputTokens[0] == nil {
-		errors.Errorf("first input is nil")
+		return errors.Errorf("first input is nil")
 	}
 	typ := inputTokens[0].Type
 	inputSum := token2.NewZeroQuantity(64)
