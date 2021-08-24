@@ -15,8 +15,6 @@ require (
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/golang/protobuf v1.5.0
-	github.com/google/addlicense v0.0.0-20210729153508-ef04bb38a16b // indirect
-	github.com/gordonklaus/ineffassign v0.0.0-20210729092907-69aca2aeecd0 // indirect
 	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210729224643-9c6c674c1198
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
