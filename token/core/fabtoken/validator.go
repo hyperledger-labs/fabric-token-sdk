@@ -152,10 +152,63 @@ func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*Tra
 }
 
 func (v *Validator) verifyIssue(issue driver.IssueAction) error {
+	if issue.NumOutputs() == 0 {
+		return errors.Errorf("there is no output")
+	}
+	for _, output := range issue.GetOutputs() {
+		out := output.(*TransferOutput).Output
+		q, err := token2.ToQuantity(out.Quantity, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
+		}
+		zero := token2.NewZeroQuantity(64)
+		if q.Cmp(zero) == 0 {
+			return errors.Errorf("quantity is zero")
+		}
+	}
 	return nil
 }
 
 func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
+	if tr.NumOutputs() == 0 {
+		return errors.Errorf("there is no output")
+	}
+	if len(inputTokens) == 0 {
+		return errors.Errorf("there is no input")
+	}
+	if inputTokens[0] == nil {
+		return errors.Errorf("first input is nil")
+	}
+	typ := inputTokens[0].Type
+	inputSum := token2.NewZeroQuantity(64)
+	outputSum := token2.NewZeroQuantity(64)
+	for i, input := range inputTokens {
+		if input == nil {
+			return errors.Errorf("input %d is nil", i)
+		}
+		q, err := token2.ToQuantity(input.Quantity, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
+		}
+		inputSum.Add(q)
+		if input.Type != typ {
+			return errors.Errorf("input type %s does not match type %s", input.Type, typ)
+		}
+	}
+	for _, output := range tr.GetOutputs() {
+		out := output.(*TransferOutput).Output
+		q, err := token2.ToQuantity(out.Quantity, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
+		}
+		outputSum.Add(q)
+		if out.Type != typ {
+			return errors.Errorf("output type %s does not match type %s", out.Type, typ)
+		}
+	}
+	if inputSum.Cmp(outputSum) != 0 {
+		return errors.Errorf("input sum %v does not match output sum %v", inputSum, outputSum)
+	}
 	return nil
 }
 
