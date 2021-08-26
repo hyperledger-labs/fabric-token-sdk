@@ -20,6 +20,7 @@ require (
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210720123151-f0dc3e2a0871
+	github.com/libp2p/go-libp2p-core v0.3.0 // indirect
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.10.3
 	github.com/pkg/errors v0.9.1
