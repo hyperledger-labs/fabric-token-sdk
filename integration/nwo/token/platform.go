@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/alecthomas/template"
@@ -23,7 +22,6 @@ import (
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
-	"github.com/tedsuo/ifrit"
 	"github.com/tedsuo/ifrit/grouper"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -57,8 +55,6 @@ type PublicParamsGenerator interface {
 type TCC struct {
 	TMS       *TMS
 	Chaincode *topology.ChannelChaincode
-	Port      uint16
-	Processes []ifrit.Process
 }
 
 type Identity struct {
@@ -132,12 +128,11 @@ func (p *Platform) GenerateArtifacts() {
 
 	// Prepare chaincodes
 	for _, tms := range p.Topology.TMSs {
-		chaincode, port := p.PrepareTCC(tms)
-
+		chaincode, _ := p.PrepareTCC(tms)
+		p.Fabric(tms).Topology().Chaincodes = append(p.Fabric(tms).Topology().Chaincodes, chaincode)
 		p.TCCs = append(p.TCCs, &TCC{
 			TMS:       tms,
 			Chaincode: chaincode,
-			Port:      port,
 		})
 	}
 }
@@ -155,11 +150,6 @@ func (p *Platform) PostRun() {
 }
 
 func (p *Platform) Cleanup() {
-	for _, tcc := range p.TCCs {
-		for _, process := range tcc.Processes {
-			process.Signal(syscall.SIGKILL)
-		}
-	}
 }
 
 func (p *Platform) SetPublicParamsGenerator(name string, gen PublicParamsGenerator) {
@@ -213,9 +203,9 @@ func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 }
 
 func (p *Platform) DeployTokenChaincodes() {
-	for _, tcc := range p.TCCs {
-		p.Fabric(tcc.TMS).DeployChaincode(tcc.Chaincode)
-	}
+	// for _, tcc := range p.TCCs {
+	// 	p.Fabric(tcc.TMS).DeployChaincode(tcc.Chaincode)
+	// }
 }
 
 func (p *Platform) TokenGen(command common.Command) (*Session, error) {
