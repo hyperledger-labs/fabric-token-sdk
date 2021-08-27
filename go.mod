@@ -14,11 +14,11 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/dgraph-io/badger/v3 v3.2011.1
-	github.com/golang/protobuf v1.5.0
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210729224643-9c6c674c1198
+	github.com/golang/protobuf v1.5.2
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210826152652-32515a4102ea
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
-	github.com/hyperledger/fabric-chaincode-go v0.0.0-20200424173110-d7076418f212
+	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210720123151-f0dc3e2a0871
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.10.3
