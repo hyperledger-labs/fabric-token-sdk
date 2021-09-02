@@ -76,7 +76,8 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 		opt.PublicParamsFetcher,
 	)
 	if err != nil {
-		panic(err)
+		logger.Errorf("failed getting TMS for [%s]: [%s]", opt.TMSID(), err)
+		return nil
 	}
 
 	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)

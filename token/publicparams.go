@@ -50,3 +50,7 @@ func (c *PublicParametersManager) Bytes() ([]byte, error) {
 func (c *PublicParametersManager) ForceFetch() error {
 	return c.ppm.ForceFetch()
 }
+
+func (c *PublicParametersManager) Identifier() string {
+	return c.ppm.PublicParameters().Identifier()
+}
