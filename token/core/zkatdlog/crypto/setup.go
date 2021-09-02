@@ -27,6 +27,7 @@ type PublicParams struct {
 	IdemixPK         []byte
 	IssuingPolicy    []byte
 	Auditor          []byte
+	Label            string
 }
 
 type RangeProofParams struct {
@@ -36,8 +37,9 @@ type RangeProofParams struct {
 	Exponent     int
 }
 
-func NewPublicParamsFromBytes(raw []byte) (*PublicParams, error) {
+func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 	pp := &PublicParams{}
+	pp.Label = label
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
 	}
@@ -45,11 +47,11 @@ func NewPublicParamsFromBytes(raw []byte) (*PublicParams, error) {
 }
 
 func (pp *PublicParams) Identifier() string {
-	return DLogPublicParameters
+	return pp.Label
 }
 
 func (pp *PublicParams) CertificationDriver() string {
-	return DLogPublicParameters
+	return pp.Label
 }
 
 func (pp *PublicParams) TokenDataHiding() bool {
@@ -74,7 +76,7 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(&driver.SerializedPublicParameters{
-		Identifier: DLogPublicParameters,
+		Identifier: pp.Label,
 		Raw:        raw,
 	})
 }
@@ -84,8 +86,8 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if err := json.Unmarshal(raw, publicParams); err != nil {
 		return err
 	}
-	if publicParams.Identifier != DLogPublicParameters {
-		return errors.Errorf("invalid identifier, expecting 'dlog', got [%s]", publicParams.Identifier)
+	if publicParams.Identifier != pp.Label {
+		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", pp.Label, publicParams.Identifier)
 	}
 	// logger.Debugf("unmarshall zkatdlog public params [%s]", string(publicParams.Raw))
 	return json.Unmarshal(publicParams.Raw, pp)
@@ -167,12 +169,17 @@ func (pp *PublicParams) GetIssuingPolicy() (*IssuingPolicy, error) {
 }
 
 func Setup(base int64, exponent int, nymPK []byte) (*PublicParams, error) {
+	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters)
+}
+
+func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string) (*PublicParams, error) {
 	signer := &pssign.Signer{}
 	err := signer.KeyGen(1)
 	if err != nil {
 		return nil, err
 	}
 	pp := &PublicParams{}
+	pp.Label = label
 	err = pp.GeneratePedersenParameters()
 	if err != nil {
 		return nil, err
