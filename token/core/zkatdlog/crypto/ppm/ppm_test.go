@@ -67,6 +67,7 @@ var _ = Describe("PublicParamsManager", func() {
 				ppbytes, err := engine.SetAuditor(raw)
 				Expect(err).NotTo(HaveOccurred())
 				pp := &crypto.PublicParams{}
+				pp.Label = crypto.DLogPublicParameters
 				err = pp.Deserialize(ppbytes)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(bytes.Equal(pp.Auditor, raw)).To(Equal(true))

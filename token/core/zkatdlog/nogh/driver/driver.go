@@ -24,7 +24,7 @@ type Driver struct {
 }
 
 func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := crypto.NewPublicParamsFromBytes(params)
+	pp, err := crypto.NewPublicParamsFromBytes(params, crypto.DLogPublicParameters)
 	if err != nil {
 		return nil, err
 	}

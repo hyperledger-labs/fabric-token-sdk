@@ -149,6 +149,7 @@ func (s *service) PublicParams() *crypto.PublicParams {
 
 		logger.Debugf("unmarshal public parameters with key [%s], len [%d]", setupKey, len(raw))
 		s.pp = &crypto.PublicParams{}
+		s.pp.Label = crypto.DLogPublicParameters
 		err = s.pp.Deserialize(raw)
 		if err != nil {
 			panic(err)
