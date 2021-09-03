@@ -31,6 +31,7 @@ func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
 		return nil, err
 	}
 	pp := &PublicParams{}
+	pp.Label = v.pp.Label
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, err
 	}
