@@ -21,12 +21,10 @@ const PublicParameters = "fabtoken"
 type PublicParams struct {
 	MTV     uint64
 	Auditor []byte
-	Label   string
 }
 
-func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
+func NewPublicParamsFromBytes(raw []byte) (*PublicParams, error) {
 	pp := &PublicParams{}
-	pp.Label = label
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
 	}
@@ -34,7 +32,7 @@ func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 }
 
 func (pp *PublicParams) Identifier() string {
-	return pp.Label
+	return PublicParameters
 }
 
 func (pp *PublicParams) TokenDataHiding() bool {
@@ -42,7 +40,7 @@ func (pp *PublicParams) TokenDataHiding() bool {
 }
 
 func (pp *PublicParams) CertificationDriver() string {
-	return pp.Label
+	return PublicParameters
 }
 
 func (pp *PublicParams) GraphHiding() bool {
@@ -63,7 +61,7 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 		return nil, err
 	}
 	return json.Marshal(&driver.SerializedPublicParameters{
-		Identifier: pp.Label,
+		Identifier: PublicParameters,
 		Raw:        raw,
 	})
 }
@@ -73,7 +71,7 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if err := json.Unmarshal(raw, publicParams); err != nil {
 		return err
 	}
-	if publicParams.Identifier != pp.Label {
+	if publicParams.Identifier != PublicParameters {
 		return errors.Errorf("invalid identifier, expecting 'fabtoken', got [%s]", publicParams.Identifier)
 	}
 	return json.Unmarshal(publicParams.Raw, pp)
@@ -85,7 +83,6 @@ func (pp *PublicParams) AuditorIdentity() view.Identity {
 
 func Setup() (*PublicParams, error) {
 	return &PublicParams{
-		MTV:   MaxMoney,
-		Label: PublicParameters,
+		MTV: MaxMoney,
 	}, nil
 }

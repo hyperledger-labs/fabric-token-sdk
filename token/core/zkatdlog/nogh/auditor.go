@@ -12,11 +12,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMetadata *api3.TokenRequestMetadata, txID string) error {
+func (s *service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMetadata *api3.TokenRequestMetadata, txID string) error {
 	logger.Debugf("check token request validity...")
 	var inputTokens [][]*token.Token
 	for _, transfer := range tokenRequestMetadata.Transfers {
-		inputs, err := s.TokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
+		inputs, err := s.tokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting token commitments")
 		}

@@ -32,7 +32,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator/mock"
-	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -86,9 +85,7 @@ var _ = Describe("validator", func() {
 		pp.Auditor = araw
 
 		// initialize enginw with pp
-		deserializer, err := zkatdlog.NewDeserializer(pp)
-		Expect(err).NotTo(HaveOccurred())
-		engine = enginedlog.New(pp, deserializer)
+		engine = enginedlog.New(pp)
 
 		// non-anonymous issue
 		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)

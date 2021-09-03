@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -196,7 +195,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 }
 
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	ro := &identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id}
+	ro := &RawOwner{Type: SerializedIdentityType, Identity: id}
 	raw, err := json.Marshal(ro)
 	if err != nil {
 		return nil, err

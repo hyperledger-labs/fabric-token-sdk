@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -27,8 +26,8 @@ type deserializer struct {
 func NewDeserializer() *deserializer {
 	return &deserializer{
 		auditorDeserializer: &fabric.MSPX509IdentityDeserializer{},
-		issuerDeserializer:  identity.NewRawOwnerIdentityDeserializer(&fabric.MSPX509IdentityDeserializer{}),
-		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(&fabric.MSPX509IdentityDeserializer{}),
+		issuerDeserializer:  NewRawOwnerIdentityDeserializer(),
+		ownerDeserializer:   NewRawOwnerIdentityDeserializer(),
 	}
 }
 

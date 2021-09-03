@@ -32,7 +32,7 @@ type Driver struct {
 }
 
 func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
-	pp, err := fabtoken.NewPublicParamsFromBytes(params, fabtoken.PublicParameters)
+	pp, err := fabtoken.NewPublicParamsFromBytes(params)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		if err != nil {
 			panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
 		}
-		dm.(DeserializerManager).AddDeserializer(identity.NewRawOwnerIdentityDeserializer(&fabric.MSPX509IdentityDeserializer{}))
+		dm.(DeserializerManager).AddDeserializer(fabtoken.NewRawOwnerIdentityDeserializer())
 	})
 
 	qe := vault.NewVault(sp, channel, namespace).QueryEngine()
@@ -55,11 +55,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		sp,
 		channel,
 		namespace,
-		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{
-			TokenVault:          qe,
-			PublicParamsFetcher: publicParamsFetcher,
-			PPLabel:             fabtoken.PublicParameters,
-		}),
+		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{TokenVault: qe, PublicParamsFetcher: publicParamsFetcher}),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
 		identity.NewProvider(

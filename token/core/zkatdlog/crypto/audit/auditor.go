@@ -3,7 +3,6 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-
 package audit
 
 import (
@@ -14,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -153,11 +151,7 @@ func (a *Auditor) inspectOutputs(tokens []*AuditableToken) error {
 			return errors.Wrapf(err, "failed inspecting output [%d]", i)
 		}
 		if !t.Token.IsRedeem() { // this is not a redeemed output
-			owner, err := a.rawOwner(t.Token.Owner)
-			if err != nil {
-				return errors.Errorf("output owner at index [%d] cannot be unwrapped", i)
-			}
-			err = t.owner.ownerInfo.Match(owner)
+			err = t.owner.ownerInfo.Match(t.Token.Owner)
 			if err != nil {
 				return errors.Wrapf(err, "output at index [%d] does not match the provided opening", i)
 			}
@@ -188,27 +182,14 @@ func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 		}
 
 		if !input.Token.IsRedeem() {
-			owner, err := a.rawOwner(input.Token.Owner)
-			if err != nil {
-				return errors.Errorf("input owner at index [%d] cannot be unwrapped", i)
-			}
-
 			// this is not a redeem
-			if err := input.owner.ownerInfo.Match(owner); err != nil {
+			err := input.owner.ownerInfo.Match(input.Token.Owner)
+			if err != nil {
 				return errors.Errorf("input at index [%d] does not match the provided opening", i)
 			}
 		}
 	}
 	return nil
-}
-
-func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
-	si := &identity.RawOwner{}
-	err := json.Unmarshal(raw, si)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to identity.RawOwner{}")
-	}
-	return si.Identity, nil
 }
 
 func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {

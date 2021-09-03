@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identity
+package fabtoken
 
 import (
 	"crypto/x509"
@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -84,18 +85,14 @@ func (r *RawOwner) String() string {
 
 func (r *RawOwner) ProtoMessage() {}
 
-type VerifierProvider interface {
-	GetVerifier(id view.Identity) (driver.Verifier, error)
-}
-
 // RawOwnerIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
 type RawOwnerIdentityDeserializer struct {
-	VerifierProvider
+	*fabric.MSPX509IdentityDeserializer
 }
 
-func NewRawOwnerIdentityDeserializer(verifierProvider VerifierProvider) *RawOwnerIdentityDeserializer {
+func NewRawOwnerIdentityDeserializer() *RawOwnerIdentityDeserializer {
 	return &RawOwnerIdentityDeserializer{
-		VerifierProvider: verifierProvider,
+		MSPX509IdentityDeserializer: &fabric.MSPX509IdentityDeserializer{},
 	}
 }
 
@@ -105,7 +102,7 @@ func (deserializer *RawOwnerIdentityDeserializer) GetVerifier(id view.Identity) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
-	return deserializer.VerifierProvider.GetVerifier(si.Identity)
+	return deserializer.MSPX509IdentityDeserializer.GetVerifier(si.Identity)
 }
 
 func (deserializer *RawOwnerIdentityDeserializer) DeserializeVerifier(raw []byte) (driver2.Verifier, error) {
