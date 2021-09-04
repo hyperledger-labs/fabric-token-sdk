@@ -27,7 +27,7 @@ type deserializer struct {
 func NewDeserializer() *deserializer {
 	return &deserializer{
 		auditorDeserializer: &fabric.MSPX509IdentityDeserializer{},
-		issuerDeserializer:  identity.NewRawOwnerIdentityDeserializer(&fabric.MSPX509IdentityDeserializer{}),
+		issuerDeserializer:  &fabric.MSPX509IdentityDeserializer{},
 		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(&fabric.MSPX509IdentityDeserializer{}),
 	}
 }

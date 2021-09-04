@@ -197,10 +197,6 @@ func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
 		if err != nil {
 			panic(err)
 		}
-		id, err = s.wrapWalletIdentity(id)
-		if err != nil {
-			panic(err)
-		}
 		w := newIssuerWallet(s, idInfo.ID, id)
 		s.IssuerWallets = append(s.IssuerWallets, w)
 		logger.Debugf("created issuer wallet [%s:%s]", identity, walletID)

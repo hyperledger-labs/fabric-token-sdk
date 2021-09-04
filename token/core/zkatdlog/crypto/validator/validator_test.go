@@ -21,6 +21,7 @@ import (
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -473,6 +474,11 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 
 	signer, err := p.DeserializeSigningIdentity(id)
 	Expect(err).NotTo(HaveOccurred())
+
+	rawOwner := identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType}
+	id, err = json.Marshal(rawOwner)
+	Expect(err).NotTo(HaveOccurred())
+
 	return id, auditInfo, signer
 }
 

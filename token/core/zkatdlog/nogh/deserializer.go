@@ -40,7 +40,7 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 
 	return &deserializer{
 		auditorDeserializer: &fabric.MSPX509IdentityDeserializer{},
-		issuerDeserializer:  identity.NewRawOwnerIdentityDeserializer(&fabric.MSPX509IdentityDeserializer{}),
+		issuerDeserializer:  &fabric.MSPX509IdentityDeserializer{},
 		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(&idemixDeserializer{provider: idemixDes}),
 	}, nil
 }
