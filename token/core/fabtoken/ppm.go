@@ -22,15 +22,20 @@ func NewPublicParamsManager(publicParamsLoader PublicParamsLoader) *PublicParams
 }
 
 func NewPublicParamsManagerFromParams(pp *PublicParams) *PublicParamsManager {
+	if pp == nil {
+		panic("public parameters must be non-nil")
+	}
 	return &PublicParamsManager{pp: pp}
 }
 
 func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
-	raw, err := v.pp.Serialize()
+	pp := v.PublicParams()
+	raw, err := pp.Serialize()
 	if err != nil {
 		return nil, err
 	}
-	pp := &PublicParams{}
+	pp = &PublicParams{}
+	pp.Label = v.pp.Label
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, err
 	}
@@ -45,7 +50,7 @@ func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
 }
 
 func (v *PublicParamsManager) AddIssuer(bytes []byte) ([]byte, error) {
-	panic("implement me")
+	panic("AddIssuer cannot be called from fabtoken")
 }
 
 func (v *PublicParamsManager) SetCertifier(bytes []byte) ([]byte, error) {
@@ -53,11 +58,11 @@ func (v *PublicParamsManager) SetCertifier(bytes []byte) ([]byte, error) {
 }
 
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
-	return v.pp
+	return v.PublicParams()
 }
 
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
-	panic("not supported")
+	panic("NewCertifierKeyPair cannot be called from fabtoken")
 }
 
 func (v *PublicParamsManager) ForceFetch() error {

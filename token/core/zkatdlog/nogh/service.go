@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
@@ -43,16 +44,20 @@ type QueryEngine interface {
 	ListHistoryIssuedTokens() (*token3.IssuedTokens, error)
 }
 
-type service struct {
-	channel               Channel
-	namespace             string
-	sp                    view2.ServiceProvider
-	pp                    *crypto.PublicParams
-	publicParamsFetcher   api3.PublicParamsFetcher
-	tokenCommitmentLoader TokenCommitmentLoader
-	qe                    QueryEngine
+type DeserializerProvider = func(params *crypto.PublicParams) (api3.Deserializer, error)
 
-	issuers []*struct {
+type Service struct {
+	Channel               Channel
+	Namespace             string
+	SP                    view2.ServiceProvider
+	PP                    *crypto.PublicParams
+	PPLabel               string
+	PublicParamsFetcher   api3.PublicParamsFetcher
+	TokenCommitmentLoader TokenCommitmentLoader
+	QE                    QueryEngine
+	Deserializer          DeserializerProvider
+
+	Issuers []*struct {
 		label string
 		index int
 		sk    *bn256.Zr
@@ -61,10 +66,10 @@ type service struct {
 	}
 
 	identityProvider api3.IdentityProvider
-	ownerWallets     []*wallet
-	issuerWallets    []*issuerWallet
-	auditorWallets   []*auditorWallet
-	walletsLock      sync.Mutex
+	OwnerWallets     []*wallet
+	IssuerWallets    []*issuerWallet
+	AuditorWallets   []*auditorWallet
+	WalletsLock      sync.Mutex
 }
 
 func NewTokenService(
@@ -75,20 +80,24 @@ func NewTokenService(
 	tokenCommitmentLoader TokenCommitmentLoader,
 	queryEngine QueryEngine,
 	identityProvider api3.IdentityProvider,
-) (*service, error) {
-	s := &service{
-		channel:               channel,
-		namespace:             namespace,
-		sp:                    sp,
-		publicParamsFetcher:   publicParamsFetcher,
-		tokenCommitmentLoader: tokenCommitmentLoader,
-		qe:                    queryEngine,
+	deserializer DeserializerProvider,
+	ppLabel string,
+) (*Service, error) {
+	s := &Service{
+		Channel:               channel,
+		Namespace:             namespace,
+		SP:                    sp,
+		PublicParamsFetcher:   publicParamsFetcher,
+		TokenCommitmentLoader: tokenCommitmentLoader,
+		QE:                    queryEngine,
 		identityProvider:      identityProvider,
+		Deserializer:          deserializer,
+		PPLabel:               ppLabel,
 	}
 	return s, nil
 }
 
-func (s *service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, view.Identity, error) {
+func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, view.Identity, error) {
 	output := &token.Token{}
 	if err := output.Deserialize(tok); err != nil {
 		return nil, nil, err
@@ -108,22 +117,29 @@ func (s *service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 	return to, ti.Issuer, nil
 }
 
-func (s *service) IdentityProvider() api3.IdentityProvider {
+func (s *Service) IdentityProvider() api3.IdentityProvider {
 	return s.identityProvider
 }
 
-func (s *service) Validator() api3.Validator {
-	return validator.New(s.PublicParams())
+func (s *Service) Validator() api3.Validator {
+	d, err := s.Deserializer(s.PublicParams())
+	if err != nil {
+		panic(err)
+	}
+	return validator.New(
+		s.PublicParams(),
+		d,
+	)
 }
 
-func (s *service) PublicParamsManager() api3.PublicParamsManager {
+func (s *Service) PublicParamsManager() api3.PublicParamsManager {
 	return ppm.New(s.PublicParams())
 }
 
-func (s *service) PublicParams() *crypto.PublicParams {
-	if s.pp == nil {
+func (s *Service) PublicParams() *crypto.PublicParams {
+	if s.PP == nil {
 		// load
-		qe, err := s.channel.Vault().NewQueryExecutor()
+		qe, err := s.Channel.Vault().NewQueryExecutor()
 		if err != nil {
 			panic(err)
 		}
@@ -134,13 +150,13 @@ func (s *service) PublicParams() *crypto.PublicParams {
 			panic(err)
 		}
 		logger.Debugf("get public parameters with key [%s]", setupKey)
-		raw, err := qe.GetState(s.namespace, setupKey)
+		raw, err := qe.GetState(s.Namespace, setupKey)
 		if err != nil {
 			panic(err)
 		}
 		if len(raw) == 0 {
 			logger.Warnf("public parameters with key [%s] not found, fetch them", setupKey)
-			raw, err = s.publicParamsFetcher.Fetch()
+			raw, err = s.PublicParamsFetcher.Fetch()
 			if err != nil {
 				logger.Errorf("failed retrieving public params [%s]", err)
 				return nil
@@ -148,26 +164,26 @@ func (s *service) PublicParams() *crypto.PublicParams {
 		}
 
 		logger.Debugf("unmarshal public parameters with key [%s], len [%d]", setupKey, len(raw))
-		s.pp = &crypto.PublicParams{}
-		s.pp.Label = crypto.DLogPublicParameters
-		err = s.pp.Deserialize(raw)
+		s.PP = &crypto.PublicParams{}
+		s.PP.Label = s.PPLabel
+		err = s.PP.Deserialize(raw)
 		if err != nil {
 			panic(err)
 		}
 		logger.Debugf("unmarshal public parameters with key [%s] done", setupKey)
 	}
 
-	ip, err := s.pp.GetIssuingPolicy()
+	ip, err := s.PP.GetIssuingPolicy()
 	if err != nil {
 		panic(err)
 	}
-	logger.Debugf("returning public parameters [%d,%d,%d,%d]", len(s.pp.ZKATPedParams), len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
+	logger.Debugf("returning public parameters [%d,%d,%d,%d]", len(s.PP.ZKATPedParams), len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
 
-	return s.pp
+	return s.PP
 }
 
-func (s *service) FetchPublicParams() error {
-	raw, err := s.publicParamsFetcher.Fetch()
+func (s *Service) FetchPublicParams() error {
+	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
 		return errors.WithMessagef(err, "failed fetching public params from fabric")
 	}
@@ -184,6 +200,6 @@ func (s *service) FetchPublicParams() error {
 	}
 	logger.Debugf("fetching public parameters done, issue policy [%d,%d,%d]", len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
 
-	s.pp = pp
+	s.PP = pp
 	return nil
 }

@@ -25,6 +25,7 @@ func (s *VaultTokenLoader) GetTokens(ids []*token.Id) ([]string, []*token.Token,
 type VaultPublicParamsLoader struct {
 	TokenVault          TokenVault
 	PublicParamsFetcher api2.PublicParamsFetcher
+	PPLabel             string
 }
 
 func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
@@ -43,6 +44,7 @@ func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
 
 	logger.Debugf("unmarshal public parameters")
 	pp := &PublicParams{}
+	pp.Label = s.PPLabel
 	err = pp.Deserialize(raw)
 	if err != nil {
 		return nil, err
@@ -61,6 +63,7 @@ func (s *VaultPublicParamsLoader) ForceFetch() (*PublicParams, error) {
 
 	logger.Debugf("unmarshal public parameters")
 	pp := &PublicParams{}
+	pp.Label = s.PPLabel
 	err = pp.Deserialize(raw)
 	if err != nil {
 		return nil, err

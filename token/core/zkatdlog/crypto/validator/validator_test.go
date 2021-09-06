@@ -21,6 +21,7 @@ import (
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -32,6 +33,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator/mock"
+	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -85,7 +87,9 @@ var _ = Describe("validator", func() {
 		pp.Auditor = araw
 
 		// initialize enginw with pp
-		engine = enginedlog.New(pp)
+		deserializer, err := zkatdlog.NewDeserializer(pp)
+		Expect(err).NotTo(HaveOccurred())
+		engine = enginedlog.New(pp, deserializer)
 
 		// non-anonymous issue
 		_, ir, _ = prepareNonAnonymousIssueRequest(pp, auditor)
@@ -470,6 +474,11 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 
 	signer, err := p.DeserializeSigningIdentity(id)
 	Expect(err).NotTo(HaveOccurred())
+
+	rawOwner := identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType}
+	id, err = json.Marshal(rawOwner)
+	Expect(err).NotTo(HaveOccurred())
+
 	return id, auditInfo, signer
 }
 

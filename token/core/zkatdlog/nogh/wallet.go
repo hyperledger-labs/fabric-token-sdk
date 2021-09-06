@@ -3,33 +3,36 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
-	"github.com/pkg/errors"
+	"encoding/json"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *service) IssuerIdentity(label string) (view.Identity, error) {
-	logger.Debugf("searching issuer for [%s] at [%s]", label, s.channel.Name())
+func (s *Service) IssuerIdentity(label string) (view.Identity, error) {
+	logger.Debugf("searching issuer for [%s] at [%s]", label, s.Channel.Name())
 
 	pp := s.PublicParams()
-	for _, issuer := range s.issuers {
-		logger.Debugf("issuer for [%s] at [%s]", issuer.label, s.channel.Name())
+	for _, issuer := range s.Issuers {
+		logger.Debugf("issuer for [%s] at [%s]", issuer.label, s.Channel.Name())
 		if issuer.label == label {
 			if issuer.fID != nil {
 				return issuer.fID, nil
 			}
 
-			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.channel.Name(), issuer.index)
+			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.Channel.Name(), issuer.index)
 
 			witness := anonym.NewWitness(issuer.sk, nil, nil, nil, nil, issuer.index)
 			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams)
@@ -39,11 +42,11 @@ func (s *service) IssuerIdentity(label string) (view.Identity, error) {
 				return nil, errors.Wrapf(err, "failed serializing signer for [%s]", label)
 			}
 
-			if err := view2.GetSigService(s.sp).RegisterSigner(fID, signer, signer); err != nil {
+			if err := view2.GetSigService(s.SP).RegisterSigner(fID, signer, signer); err != nil {
 				return nil, errors.Wrapf(err, "failed registering signer for [%s]", label)
 			}
 
-			if err := view2.GetEndpointService(s.sp).Bind(view2.GetIdentityProvider(s.sp).DefaultIdentity(), fID); err != nil {
+			if err := view2.GetEndpointService(s.SP).Bind(view2.GetIdentityProvider(s.SP).DefaultIdentity(), fID); err != nil {
 				return nil, errors.Wrapf(err, "failed binding to long term identity or [%s]", view.Identity(fID).UniqueID())
 			}
 			issuer.fID = fID
@@ -57,11 +60,11 @@ func (s *service) IssuerIdentity(label string) (view.Identity, error) {
 	return nil, errors.Errorf("identity not found at [%s]", label)
 }
 
-func (s *service) GenerateIssuerKeyPair(tokenType string) (api2.Key, api2.Key, error) {
+func (s *Service) GenerateIssuerKeyPair(tokenType string) (api2.Key, api2.Key, error) {
 	return anonym.GenerateKeyPair(tokenType, s.PublicParams())
 }
 
-func (s *service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
+func (s *Service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
 	if err := s.FetchPublicParams(); err != nil {
 		return errors.WithMessagef(err, "failed fetching public params")
 	}
@@ -76,7 +79,7 @@ func (s *service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
 
 	for index, issuer := range ip.Issuers {
 		if issuer.Equals(_pk) {
-			s.issuers = append(s.issuers, &struct {
+			s.Issuers = append(s.Issuers, &struct {
 				label string
 				index int
 				sk    *bn256.Zr
@@ -84,7 +87,7 @@ func (s *service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
 				fID   view.Identity
 			}{label: label, index: index, sk: sk.(*bn256.Zr), pk: _pk, fID: nil})
 
-			logger.Debugf("registered issuer for [%s] at [%s], fetching public params", label, s.channel.Name())
+			logger.Debugf("registered issuer for [%s] at [%s], fetching public params", label, s.Channel.Name())
 
 			return nil
 		}
@@ -93,36 +96,36 @@ func (s *service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
 	return errors.Errorf("public key not found in public parameters")
 }
 
-func (s *service) GetAuditInfo(id view.Identity) ([]byte, error) {
+func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {
 	return s.identityProvider.GetAuditInfo(id)
 }
 
-func (s *service) GetEnrollmentID(auditInfo []byte) (string, error) {
+func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.identityProvider.GetEnrollmentID(auditInfo)
 }
 
-func (s *service) registerIssuerSigner(signer SigningIdentity) error {
+func (s *Service) registerIssuerSigner(signer SigningIdentity) error {
 	fID, err := signer.Serialize()
 	if err != nil {
 		return errors.Wrapf(err, "failed serializing signer")
 	}
 
-	if err := view2.GetSigService(s.sp).RegisterSigner(fID, signer, signer); err != nil {
+	if err := view2.GetSigService(s.SP).RegisterSigner(fID, signer, signer); err != nil {
 		return errors.Wrapf(err, "failed registering signer for [%s]", view.Identity(fID).UniqueID())
 	}
 
-	if err := view2.GetEndpointService(s.sp).Bind(view2.GetIdentityProvider(s.sp).DefaultIdentity(), fID); err != nil {
+	if err := view2.GetEndpointService(s.SP).Bind(view2.GetIdentityProvider(s.SP).DefaultIdentity(), fID); err != nil {
 		return errors.Wrapf(err, "failed binding to long term identity or [%s]", view.Identity(fID).UniqueID())
 	}
 
 	return nil
 }
 
-func (s *service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
+func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	return s.identityProvider.RegisterRecipientIdentity(id, auditInfo, metadata)
 }
 
-func (s *service) Wallet(identity view.Identity) api2.Wallet {
+func (s *Service) Wallet(identity view.Identity) api2.Wallet {
 	w := s.OwnerWalletByIdentity(identity)
 	if w != nil {
 		return w
@@ -134,21 +137,21 @@ func (s *service) Wallet(identity view.Identity) api2.Wallet {
 	return nil
 }
 
-func (s *service) OwnerWallet(walletID string) api2.OwnerWallet {
-	return s.ownerWallet(walletID)
+func (s *Service) OwnerWallet(walletID string) api2.OwnerWallet {
+	return s.OwnerWalletByID(walletID)
 }
 
-func (s *service) OwnerWalletByIdentity(identity view.Identity) api2.OwnerWallet {
-	return s.ownerWallet(identity)
+func (s *Service) OwnerWalletByIdentity(identity view.Identity) api2.OwnerWallet {
+	return s.OwnerWalletByID(identity)
 }
 
-func (s *service) ownerWallet(id interface{}) api2.OwnerWallet {
-	s.walletsLock.Lock()
-	defer s.walletsLock.Unlock()
+func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
+	s.WalletsLock.Lock()
+	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
 	identity, walletID := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
-	for _, w := range s.ownerWallets {
+	for _, w := range s.OwnerWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found owner wallet [%s:%s]", identity, walletID)
 			return w
@@ -158,7 +161,7 @@ func (s *service) ownerWallet(id interface{}) api2.OwnerWallet {
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID); idInfo != nil {
 		w := newOwnerWallet(s, idInfo.ID, idInfo)
-		s.ownerWallets = append(s.ownerWallets, w)
+		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
 		return w
 	}
@@ -167,21 +170,21 @@ func (s *service) ownerWallet(id interface{}) api2.OwnerWallet {
 	return nil
 }
 
-func (s *service) IssuerWallet(id string) api2.IssuerWallet {
+func (s *Service) IssuerWallet(id string) api2.IssuerWallet {
 	return s.issuerWallet(id)
 }
 
-func (s *service) IssuerWalletByIdentity(id view.Identity) api2.IssuerWallet {
+func (s *Service) IssuerWalletByIdentity(id view.Identity) api2.IssuerWallet {
 	return s.issuerWallet(id)
 }
 
-func (s *service) issuerWallet(id interface{}) api2.IssuerWallet {
-	s.walletsLock.Lock()
-	defer s.walletsLock.Unlock()
+func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
+	s.WalletsLock.Lock()
+	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
 	identity, walletID := s.identityProvider.LookupIdentifier(api2.IssuerRole, id)
-	for _, w := range s.issuerWallets {
+	for _, w := range s.IssuerWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found issuer wallet [%s:%s]", identity, walletID)
 			return w
@@ -195,7 +198,7 @@ func (s *service) issuerWallet(id interface{}) api2.IssuerWallet {
 			panic(err)
 		}
 		w := newIssuerWallet(s, idInfo.ID, id)
-		s.issuerWallets = append(s.issuerWallets, w)
+		s.IssuerWallets = append(s.IssuerWallets, w)
 		logger.Debugf("created issuer wallet [%s:%s]", identity, walletID)
 		return w
 	}
@@ -204,21 +207,21 @@ func (s *service) issuerWallet(id interface{}) api2.IssuerWallet {
 	return nil
 }
 
-func (s *service) AuditorWallet(id string) api2.AuditorWallet {
+func (s *Service) AuditorWallet(id string) api2.AuditorWallet {
 	return s.auditorWallet(id)
 }
 
-func (s *service) AuditorWalletByIdentity(id view.Identity) api2.AuditorWallet {
+func (s *Service) AuditorWalletByIdentity(id view.Identity) api2.AuditorWallet {
 	return s.auditorWallet(id)
 }
 
-func (s *service) auditorWallet(id interface{}) api2.AuditorWallet {
-	s.walletsLock.Lock()
-	defer s.walletsLock.Unlock()
+func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
+	s.WalletsLock.Lock()
+	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
 	identity, walletID := s.identityProvider.LookupIdentifier(api2.AuditorRole, id)
-	for _, w := range s.auditorWallets {
+	for _, w := range s.AuditorWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found auditor wallet [%s:%s]", identity, walletID)
 			return w
@@ -232,7 +235,7 @@ func (s *service) auditorWallet(id interface{}) api2.AuditorWallet {
 			panic(err)
 		}
 		w := newAuditorWallet(s, idInfo.ID, id)
-		s.auditorWallets = append(s.auditorWallets, w)
+		s.AuditorWallets = append(s.AuditorWallets, w)
 		logger.Debugf("created auditor wallet [%s:%s]", identity, walletID)
 		return w
 	}
@@ -241,21 +244,33 @@ func (s *service) auditorWallet(id interface{}) api2.AuditorWallet {
 	return nil
 }
 
-func (s *service) CertifierWallet(id string) api2.CertifierWallet {
+func (s *Service) CertifierWallet(id string) api2.CertifierWallet {
 	return nil
 }
 
-func (s *service) CertifierWalletByIdentity(id view.Identity) api2.CertifierWallet {
+func (s *Service) CertifierWalletByIdentity(id view.Identity) api2.CertifierWallet {
 	return nil
+}
+
+func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
+	ro := &identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id}
+	raw, err := json.Marshal(ro)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.IdentityProvider().Bind(raw, id); err != nil {
+		return nil, err
+	}
+	return raw, nil
 }
 
 type wallet struct {
-	tokenService *service
+	tokenService *Service
 	id           string
 	identityInfo *api2.IdentityInfo
 }
 
-func newOwnerWallet(tokenService *service, id string, identityInfo *api2.IdentityInfo) *wallet {
+func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
 	return &wallet{
 		tokenService: tokenService,
 		id:           id,
@@ -277,6 +292,11 @@ func (w *wallet) GetRecipientIdentity() (view.Identity, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
 	}
+	pseudonym, err = w.tokenService.wrapWalletIdentity(pseudonym)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed wrapping recipient identity from wallet [%s]", w.ID())
+	}
+
 	// Register the pseudonym
 	if err := w.putRecipientIdentity(pseudonym, []byte{}); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
@@ -306,7 +326,7 @@ func (w *wallet) GetSigner(identity view.Identity) (api2.Signer, error) {
 
 func (w *wallet) ListTokens(opts *api2.ListTokensOptions) (*token2.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	source, err := w.tokenService.qe.ListUnspentTokens()
+	source, err := w.tokenService.QE.ListUnspentTokens()
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -335,13 +355,13 @@ func (w *wallet) existsRecipientIdentity(id view.Identity) bool {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"zkatdlog.owner.wallet.recipient.id",
 		[]string{
-			w.tokenService.channel.Name(),
+			w.tokenService.Channel.Name(),
 			w.identityInfo.ID,
 			w.identityInfo.EnrollmentID,
 			id.String(),
 		},
 	)
-	kvss := kvs.GetService(w.tokenService.sp)
+	kvss := kvs.GetService(w.tokenService.SP)
 	return kvss.Exists(k)
 }
 
@@ -349,13 +369,13 @@ func (w *wallet) putRecipientIdentity(id view.Identity, meta []byte) error {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"zkatdlog.owner.wallet.recipient.id",
 		[]string{
-			w.tokenService.channel.Name(),
+			w.tokenService.Channel.Name(),
 			w.identityInfo.ID,
 			w.identityInfo.EnrollmentID,
 			id.String(),
 		},
 	)
-	kvss := kvs.GetService(w.tokenService.sp)
+	kvss := kvs.GetService(w.tokenService.SP)
 	if err := kvss.Put(k, meta); err != nil {
 		return err
 	}
@@ -368,13 +388,13 @@ type IssuerKeyPair struct {
 }
 
 type issuerWallet struct {
-	tokenService *service
+	tokenService *Service
 
 	id       string
 	identity view.Identity
 }
 
-func newIssuerWallet(tokenService *service, id string, identity view.Identity) *issuerWallet {
+func newIssuerWallet(tokenService *Service, id string, identity view.Identity) *issuerWallet {
 	return &issuerWallet{
 		tokenService: tokenService,
 		id:           id,
@@ -407,7 +427,7 @@ func (w *issuerWallet) GetSigner(identity view.Identity) (api2.Signer, error) {
 
 func (w *issuerWallet) HistoryTokens(opts *api2.ListTokensOptions) (*token2.IssuedTokens, error) {
 	logger.Debugf("issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
-	source, err := w.tokenService.qe.ListHistoryIssuedTokens()
+	source, err := w.tokenService.QE.ListHistoryIssuedTokens()
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -433,12 +453,12 @@ func (w *issuerWallet) HistoryTokens(opts *api2.ListTokensOptions) (*token2.Issu
 }
 
 type auditorWallet struct {
-	tokenService *service
+	tokenService *Service
 	id           string
 	identity     view.Identity
 }
 
-func newAuditorWallet(tokenService *service, id string, identity view.Identity) *auditorWallet {
+func newAuditorWallet(tokenService *Service, id string, identity view.Identity) *auditorWallet {
 	return &auditorWallet{
 		tokenService: tokenService,
 		id:           id,

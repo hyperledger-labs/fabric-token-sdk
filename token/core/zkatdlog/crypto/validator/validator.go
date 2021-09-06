@@ -11,11 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -28,11 +26,15 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
 
 type Validator struct {
-	pp *crypto.PublicParams
+	pp           *crypto.PublicParams
+	deserializer driver.Deserializer
 }
 
-func New(pp *crypto.PublicParams) *Validator {
-	return &Validator{pp: pp}
+func New(pp *crypto.PublicParams, deserializer driver.Deserializer) *Validator {
+	return &Validator{
+		pp:           pp,
+		deserializer: deserializer,
+	}
 }
 
 func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
@@ -131,8 +133,7 @@ func (v *Validator) unmarshalIssueActions(raw [][]byte) ([]driver.IssueAction, e
 
 func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
 	if v.pp.Auditor != nil {
-		identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
-		verifier, err := identityDeserializer.GetVerifier(v.pp.Auditor)
+		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.Auditor)
 		if err != nil {
 			return errors.Errorf("failed to deserialize auditor's public key")
 		}
@@ -165,8 +166,7 @@ func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider 
 				return errors.Wrapf(err, "failed verifying signature")
 			}
 		} else {
-			identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
-			verifier, err := identityDeserializer.GetVerifier(a.Issuer)
+			verifier, err := v.deserializer.GetIssuerVerifier(a.Issuer)
 			if err != nil {
 				return errors.Wrapf(err, "failed getting verifier for [%s]", view.Identity(a.Issuer).String())
 			}
@@ -179,11 +179,6 @@ func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider 
 }
 
 func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driver.TransferAction, signatureProvider driver.SignatureProvider) error {
-	identityDeserializer, err := idemix2.NewDeserializer(v.pp.IdemixPK)
-	if err != nil {
-		return errors.Wrap(err, "failed instantiating deserializer")
-	}
-
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {
@@ -208,7 +203,7 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driv
 				return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
 			}
 			logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner).UniqueID())
-			verifier, err := identityDeserializer.DeserializeVerifier(tok.Owner)
+			verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner)
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
 			}
