@@ -169,6 +169,9 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		case keys.SerialNumber:
 			logger.Debugf("expected key without the serial number prefix, skipping")
 			continue
+		case keys.IssueActionMetadata:
+			logger.Debugf("expected key without the issue action metadata, skipping")
+			continue
 		}
 
 		index, err := strconv.Atoi(components[1])

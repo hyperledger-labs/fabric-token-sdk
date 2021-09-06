@@ -36,7 +36,7 @@ const (
 	TokenRequestKeyPrefix              = "token_request"
 	OwnerSeparator                     = "/"
 	SerialNumber                       = "sn"
-	IssueActionMetadata                = "issue_action_metadata"
+	IssueActionMetadata                = "iam"
 )
 
 func GetTokenIdFromKey(key string) (*token2.Id, error) {
