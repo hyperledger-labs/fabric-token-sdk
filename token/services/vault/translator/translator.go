@@ -244,17 +244,17 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		}
 	}
 	metadata := issueAction.GetMetadata()
-	if metadata != nil {
+	if len(metadata) != 0 {
 		key, err := keys.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed constructing metadata key")
 		}
 		raw, err := w.RWSet.GetState(w.namespace, key)
 		if err != nil {
 			return err
 		}
-		if raw != nil {
-			return errors.Errorf("entry with issue metadata key [%s] is already occupied", key)
+		if len(raw) != 0 {
+			return errors.Errorf("entry with issue metadata key [%s] is already occupied by [%s]", key, string(raw))
 		}
 		if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
 			return err
