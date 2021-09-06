@@ -606,7 +606,9 @@ github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210902094254-169b2a31fa
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210902094254-169b2a31fa14/go.mod h1:3gg+xtSFiLMtndZzb+p/XE5WXUDY1YV24MEmycWnnek=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210903191440-ccdbd321d5c1 h1:AEZbFD6ufEBUt4BUmHF3VZg3tdla7pPn95dQbwRutJI=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20210903191440-ccdbd321d5c1/go.mod h1:C6JkCn/CzQwDncgTPQopKYLKZwPMHM9+Gc29DHqP2xs=
+github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 h1:vBvo0PNm82ht7wpBjlYY4ZHxV3YprCfdVd3T4JG9vBw=
 github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1/go.mod h1:POCGO/RK9YDfgdhuyqjoD9tRNtWfK7Rh5AYYmsb1Chc=
+github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c h1:pKr8VnHlduEgdInwLWykYAw+lpUizjQJaJ8I5fVoRUo=
 github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c/go.mod h1:si2XAWZclHXC359OyYMpNHfonf2P7P2nzABdCA8mPqs=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7 h1:LKWVg/yHT1GdNrcmnwp+Fzij8Wlwl7T7l22MP66TVNY=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7/go.mod h1:g/IlXbV5x5GEprnavUFN+YoJZeIjwDocRcmO5ZG4ugc=
