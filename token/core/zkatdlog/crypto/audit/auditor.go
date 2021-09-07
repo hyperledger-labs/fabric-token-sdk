@@ -9,6 +9,12 @@ package audit
 import (
 	"encoding/json"
 
+	idemix2 "github.com/IBM/idemix"
+	csp2 "github.com/IBM/idemix/bccsp"
+	"github.com/IBM/idemix/bccsp/keystore"
+	csp "github.com/IBM/idemix/bccsp/schemes"
+	"github.com/IBM/idemix/bccsp/schemes/dlog/crypto/translator/amcl"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -16,6 +22,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -25,9 +32,13 @@ import (
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
-// signing identity
+// SigningIdentity models a signing identity
 type SigningIdentity interface {
 	driver.SigningIdentity
+}
+
+type cryptoProvider interface {
+	csp.BCCSP
 }
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog.audit")
@@ -38,8 +49,11 @@ type AuditableToken struct {
 	owner *ownerOpening
 }
 
-func NewAuditableToken(token *token.Token, ownerInfo []byte, ttype string, value *bn256.Zr, bf *bn256.Zr) (*AuditableToken, error) {
-	auditInfo := &idemix.AuditInfo{}
+func NewAuditableToken(csp cryptoProvider, ipk csp.Key, token *token.Token, ownerInfo []byte, ttype string, value *bn256.Zr, bf *bn256.Zr) (*AuditableToken, error) {
+	auditInfo := &idemix.AuditInfo{
+		Csp:             csp,
+		IssuerPublicKey: ipk,
+	}
 	if !token.IsRedeem() {
 		// this is not a redeem
 		err := json.Unmarshal(ownerInfo, auditInfo)
@@ -71,17 +85,45 @@ type ownerOpening struct {
 }
 
 type Auditor struct {
-	Signer         SigningIdentity
-	PedersenParams []*bn256.G1
-	NYMParams      []byte
+	Params          *crypto.PublicParams
+	CSP             cryptoProvider
+	IssuerPublicKey csp.Key
+	Signer          SigningIdentity
+	PedersenParams  []*bn256.G1
+	NYMParams       []byte
 }
 
-func NewAuditor(pp []*bn256.G1, nymparams []byte, signer SigningIdentity) *Auditor {
-	return &Auditor{
-		PedersenParams: pp,
-		NYMParams:      nymparams,
-		Signer:         signer,
+func NewAuditor(params *crypto.PublicParams, signer SigningIdentity) (*Auditor, error) {
+	curve := math.Curves[math.FP256BN_AMCL]
+	translator := &amcl.Fp256bn{C: curve}
+	cryptoProvider, err := csp2.New(&keystore.Dummy{}, curve, translator, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting crypto provider")
 	}
+	// Import Issuer Public Key
+	issuerPublicKey, err := cryptoProvider.KeyImport(
+		params.IdemixPK,
+		&csp.IdemixIssuerPublicKeyImportOpts{
+			Temporary: true,
+			AttributeNames: []string{
+				idemix2.AttributeNameOU,
+				idemix2.AttributeNameRole,
+				idemix2.AttributeNameEnrollmentId,
+				idemix2.AttributeNameRevocationHandle,
+			},
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	return &Auditor{
+		Params:          params,
+		CSP:             cryptoProvider,
+		IssuerPublicKey: issuerPublicKey,
+		PedersenParams:  params.ZKATPedParams,
+		NYMParams:       params.IdemixPK,
+		Signer:          signer,
+	}, nil
 }
 
 func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
@@ -96,7 +138,7 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 }
 
 func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
-	outputsFromIssue, err := getAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
+	outputsFromIssue, err := getAuditInfoForIssues(a.CSP, a.IssuerPublicKey, tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues")
 	}
@@ -105,7 +147,7 @@ func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata 
 		return errors.Wrapf(err, "failed checking issues")
 	}
 
-	auditableInputs, outputsFromTransfer, err := getAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	auditableInputs, outputsFromTransfer, err := getAuditInfoForTransfers(a.CSP, a.IssuerPublicKey, tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers")
 	}
@@ -211,7 +253,7 @@ func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
 	return si.Identity, nil
 }
 
-func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
+func getAuditInfoForIssues(csp cryptoProvider, ipk csp.Key, issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
 	if len(issues) != len(metadata) {
 		return nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
@@ -231,7 +273,7 @@ func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if err != nil {
 				return nil, err
 			}
-			ao, err := NewAuditableToken(ia.OutputTokens[i], issue.AuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			ao, err := NewAuditableToken(csp, ipk, ia.OutputTokens[i], issue.AuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, err
 			}
@@ -241,7 +283,7 @@ func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 	return outputs, nil
 }
 
-func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
+func getAuditInfoForTransfers(csp cryptoProvider, ipk csp.Key, transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
@@ -255,7 +297,7 @@ func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders")
 		}
 		for i := 0; i < len(tr.SenderAuditInfos); i++ {
-			ai, err := NewAuditableToken(inputs[k][i], tr.SenderAuditInfos[i], "", nil, nil)
+			ai, err := NewAuditableToken(csp, ipk, inputs[k][i], tr.SenderAuditInfos[i], "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -275,7 +317,7 @@ func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			if err != nil {
 				return nil, nil, err
 			}
-			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.ReceiverAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			ao, err := NewAuditableToken(csp, ipk, ta.OutputTokens[i], tr.ReceiverAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

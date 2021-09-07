@@ -81,7 +81,9 @@ var _ = Describe("validator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		asigner, _ := prepareECDSASigner()
-		auditor = &audit.Auditor{Signer: asigner, PedersenParams: pp.ZKATPedParams, NYMParams: pp.IdemixPK}
+		err = pp.AddIssuer(issuers[1])
+		auditor, err = audit.NewAuditor(pp, asigner)
+		err = pp.AddIssuer(issuers[1])
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -466,7 +468,10 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo := &idemix2.AuditInfo{}
+	auditInfo := &idemix2.AuditInfo{
+		Csp:             p.Csp,
+		IssuerPublicKey: p.IssuerPublicKey,
+	}
 	err = auditInfo.FromBytes(audit)
 	Expect(err).NotTo(HaveOccurred())
 	err = auditInfo.Match(id)

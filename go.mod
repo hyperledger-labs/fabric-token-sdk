@@ -11,6 +11,8 @@ replace (
 )
 
 require (
+	github.com/IBM/idemix v0.0.0-20210903191256-c586b3a13886
+	github.com/IBM/mathlib v0.0.0-20210604113841-9a8b168120be
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/dgraph-io/badger/v3 v3.2011.1

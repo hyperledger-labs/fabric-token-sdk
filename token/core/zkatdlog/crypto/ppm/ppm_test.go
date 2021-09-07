@@ -44,7 +44,8 @@ var _ = Describe("PublicParamsManager", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		asigner, _ := prepareECDSASigner()
-		auditor = &audit.Auditor{Signer: asigner, PedersenParams: pp.ZKATPedParams, NYMParams: pp.IdemixPK}
+		auditor, err = audit.NewAuditor(pp, asigner)
+		Expect(err).NotTo(HaveOccurred())
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw

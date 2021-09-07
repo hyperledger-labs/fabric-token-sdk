@@ -7,6 +7,7 @@ package audit_test
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"time"
 
 	msp2 "github.com/hyperledger/fabric/msp"
@@ -41,10 +42,13 @@ var _ = Describe("Auditor", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		fakeSigningIdentity = &mock.SigningIdentity{}
-		pp, err = crypto.Setup(100, 2, nil)
+		ipk, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(pp.ZKATPedParams, nil, fakeSigningIdentity)
+		fakeSigningIdentity = &mock.SigningIdentity{}
+		pp, err = crypto.Setup(100, 2, ipk)
+		Expect(err).NotTo(HaveOccurred())
+		auditor, err = audit.NewAuditor(pp, fakeSigningIdentity)
+		Expect(err).NotTo(HaveOccurred())
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
@@ -126,7 +130,7 @@ var _ = Describe("Auditor", func() {
 				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("output at index [0] does not match the provided opening"))
-				Expect(err.Error()).To(ContainSubstring("attribute mistmatch"))
+				Expect(err.Error()).To(ContainSubstring(" eid nym does not match"))
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(0))
 			})
 		})
@@ -344,7 +348,10 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo := &idemix2.AuditInfo{}
+	auditInfo := &idemix2.AuditInfo{
+		Csp:             p.Csp,
+		IssuerPublicKey: p.IssuerPublicKey,
+	}
 	err = auditInfo.FromBytes(audit)
 	Expect(err).NotTo(HaveOccurred())
 	err = auditInfo.Match(id)
