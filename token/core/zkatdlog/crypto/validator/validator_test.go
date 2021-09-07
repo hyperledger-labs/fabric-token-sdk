@@ -82,8 +82,11 @@ var _ = Describe("validator", func() {
 
 		asigner, _ := prepareECDSASigner()
 		err = pp.AddIssuer(issuers[1])
+		Expect(err).NotTo(HaveOccurred())
 		auditor, err = audit.NewAuditor(pp, asigner)
+		Expect(err).NotTo(HaveOccurred())
 		err = pp.AddIssuer(issuers[1])
+		Expect(err).NotTo(HaveOccurred())
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
