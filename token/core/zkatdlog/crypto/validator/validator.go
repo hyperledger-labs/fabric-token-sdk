@@ -185,7 +185,7 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driv
 		var inputTokens [][]byte
 		inputs, err := t.GetInputs()
 		if err != nil {
-			errors.Wrapf(err, "failed to retrieve inputs to spend")
+			return errors.Wrapf(err, "failed to retrieve inputs to spend")
 		}
 		for _, in := range inputs {
 			logger.Debugf("load token [%d][%s]", i, in)
