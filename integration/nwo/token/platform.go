@@ -267,7 +267,7 @@ func (p *Platform) FSCCertifierCryptoMaterialDir(tms *TMS, peer *sfcnode.Node) s
 		peer.ID(),
 		"wallets",
 		"certifier",
-		fmt.Sprintf("%s_%s_%s", tms.Channel, tms.Namespace, tms.Driver),
+		fmt.Sprintf("%s_%s_%s_%s", tms.Network, tms.Channel, tms.Namespace, tms.Driver),
 	)
 }
 
@@ -286,7 +286,7 @@ func (p *Platform) PublicParametersFile(tms *TMS) string {
 		"token",
 		"crypto",
 		"pp",
-		fmt.Sprintf("%s_%s_%s.pp", tms.Channel, tms.Namespace, tms.Driver),
+		fmt.Sprintf("%s_%s_%s_%s", tms.Network, tms.Channel, tms.Namespace, tms.Driver),
 	)
 }
 

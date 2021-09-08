@@ -28,6 +28,7 @@ import (
 
 func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
+	fmt.Printf("tcc setup, reading public parameters from [%s]\n", p.PublicParametersFile(tms))
 	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 
@@ -37,6 +38,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 		"token",
 		"chaincodes",
 		"tcc",
+		tms.Network,
 		tms.Channel,
 		tms.Namespace,
 	)
