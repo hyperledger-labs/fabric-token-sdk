@@ -3,15 +3,19 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
 	"time"
 
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/endorser"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 type collectEndorsementsView struct {
@@ -23,7 +27,12 @@ func NewCollectEndorsementsView(tx *Transaction) view.View {
 }
 
 func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
-	_, err := context.RunView(endorser.NewCollectEndorsementsView(c.tx.tx, c.tx.Endorsers()...))
+	cev := endorser.NewCollectEndorsementsView(
+		c.tx.tx,
+		c.tx.Endorsers()...,
+	)
+	cev.SetVerifierProviders([]endorser.VerifierProvider{&verifierProvider{SignatureService: c.tx.Namespace.tokenService().SigService()}})
+	_, err := context.RunView(cev)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting endorsements")
 	}
@@ -65,4 +74,25 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 	case <-time.After(240 * time.Second):
 		return nil, errors.New("timeout reached")
 	}
+}
+
+type verifierProvider struct {
+	*token.SignatureService
+}
+
+func (v *verifierProvider) GetVerifier(identity view.Identity) (view2.Verifier, error) {
+	verifier, err := v.OwnerVerifier(identity)
+	if err == nil {
+		return verifier, nil
+	}
+	verifier, err = v.AuditorVerifier(identity)
+	if err == nil {
+		return verifier, nil
+	}
+	verifier, err = v.IssuerVerifier(identity)
+	if err == nil {
+		return verifier, nil
+	}
+
+	return nil, errors.Errorf("no verifier found for identity [%s]", identity.String())
 }

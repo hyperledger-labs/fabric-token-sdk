@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
@@ -22,6 +23,7 @@ func Wrap(context view.Context, tx *endorser.Transaction, opts ...TxOption) (*Tr
 		return nil, err
 	}
 	context.OnError(namespace.Release)
+	tx.AppendVerifierProvider(&verifierProvider{SignatureService: namespace.tokenService().SigService()})
 
 	return &Transaction{
 		Transaction: tx,

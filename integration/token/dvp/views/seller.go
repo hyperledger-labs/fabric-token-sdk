@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -50,10 +51,10 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	_, err = context.RunView(endorser.NewCollectEndorsementsView(tx, oldOwner, newOwner))
 	assert.NoError(err)
 
-	// Collect signature from zkat auditor signature
-	zkatTx, err := ttx.Wrap(context, tx, ttx.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")))
+	// Collect signature from token-sdk auditor signature
+	tokenTx, err := ttx.Wrap(context, tx, ttx.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")))
 	assert.NoError(err)
-	_, err = context.RunView(ttx.NewCollectAuditorEndorsement(zkatTx))
+	_, err = context.RunView(ttx.NewCollectAuditorEndorsement(tokenTx))
 	assert.NoError(err)
 
 	// Collect signatures from the approvers but without sending metadata
