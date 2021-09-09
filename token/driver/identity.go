@@ -28,8 +28,6 @@ type IdentityInfo struct {
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.
 type IdentityProvider interface {
-	RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error
-
 	LookupIdentifier(usage IdentityUsage, v interface{}) (view.Identity, string)
 
 	// GetIdentityInfo returns the long-term identity info associated to the passed id, nil if not found.

@@ -22,13 +22,15 @@ func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, 
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 
 	// recognize identity and register it
-	_, err := view2.GetSigService(s.SP).GetVerifier(id)
+	v, err := s.Deserializer.GetOwnerVerifier(id)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed getting verifier for [%s]", id)
 	}
-
+	if err := view2.GetSigService(s.SP).RegisterVerifier(id, v); err != nil {
+		return errors.Wrapf(err, "failed registering verifier for [%s]", id)
+	}
 	if err := view2.GetSigService(s.SP).RegisterAuditInfo(id, auditInfo); err != nil {
-		return err
+		return errors.Wrapf(err, "failed registering audit info for [%s]", id)
 	}
 
 	return nil

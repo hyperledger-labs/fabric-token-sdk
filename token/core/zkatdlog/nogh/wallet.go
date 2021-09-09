@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -122,7 +123,25 @@ func (s *Service) registerIssuerSigner(signer SigningIdentity) error {
 }
 
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
-	return s.identityProvider.RegisterRecipientIdentity(id, auditInfo, metadata)
+	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
+
+	// recognize identity and register it
+	d, err := s.Deserializer()
+	if err != nil {
+		return errors.Wrap(err, "failed getting deserializer")
+	}
+	v, err := d.GetOwnerVerifier(id)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting verifier for [%s]", id)
+	}
+	if err := view2.GetSigService(s.SP).RegisterVerifier(id, v); err != nil {
+		return errors.Wrapf(err, "failed registering verifier for [%s]", id)
+	}
+	if err := view2.GetSigService(s.SP).RegisterAuditInfo(id, auditInfo); err != nil {
+		return errors.Wrapf(err, "failed registering audit info for [%s]", id)
+	}
+
+	return nil
 }
 
 func (s *Service) Wallet(identity view.Identity) api2.Wallet {

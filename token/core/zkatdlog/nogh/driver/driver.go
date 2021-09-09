@@ -3,16 +3,12 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
 import (
-	"fmt"
-	"reflect"
-	"sync"
-
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -24,12 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
-
-type DeserializerManager interface {
-	AddDeserializer(deserializer sig2.Deserializer)
-}
-
-var once sync.Once
 
 type Driver struct {
 }
@@ -67,14 +57,6 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	if err != nil {
 		return nil, err
 	}
-	once.Do(func() {
-		// Register deserializers
-		dm, err := sp.GetService(reflect.TypeOf((*DeserializerManager)(nil)))
-		if err != nil {
-			panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
-		}
-		dm.(DeserializerManager).AddDeserializer(&Deserializer{Service: service})
-	})
 
 	return service, err
 }
