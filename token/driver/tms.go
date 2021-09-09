@@ -18,6 +18,7 @@ type TokenManagerService interface {
 	AuditorService
 	WalletService
 	CertificationService
+	Deserializer
 
 	Validator() Validator
 	PublicParamsManager() PublicParamsManager

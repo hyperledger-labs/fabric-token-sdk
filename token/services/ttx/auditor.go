@@ -122,7 +122,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting tx results")
 	}
-	verifier, err := a.tx.tokenService().SigService().GetVerifier(endorser)
+	verifier, err := a.tx.tokenService().SigService().AuditorVerifier(endorser)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting verifier for party %s", auditor.String())
 	}

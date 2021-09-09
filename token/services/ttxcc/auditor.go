@@ -114,7 +114,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 	logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
 
-	v, err := a.tx.TokenService().SigService().GetVerifier(a.tx.Opts.auditor)
+	v, err := a.tx.TokenService().SigService().AuditorVerifier(a.tx.Opts.auditor)
 	if err != nil {
 		return nil, err
 	}

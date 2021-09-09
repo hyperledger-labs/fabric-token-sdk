@@ -38,7 +38,7 @@ type ManagementServiceProvider struct {
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	vaultProvider               VaultProvider
-	sigService                  tokenapi.SigService
+	signerService               tokenapi.SignerService
 }
 
 func NewManagementServiceProvider(
@@ -48,7 +48,7 @@ func NewManagementServiceProvider(
 	vaultProvider VaultProvider,
 	certificationClientProvider CertificationClientProvider,
 	selectorManagerProvider SelectorManagerProvider,
-	sigService tokenapi.SigService,
+	signerService tokenapi.SignerService,
 ) *ManagementServiceProvider {
 	return &ManagementServiceProvider{
 		sp:                          sp,
@@ -57,7 +57,7 @@ func NewManagementServiceProvider(
 		vaultProvider:               vaultProvider,
 		certificationClientProvider: certificationClientProvider,
 		selectorManagerProvider:     selectorManagerProvider,
-		sigService:                  sigService,
+		signerService:               signerService,
 	}
 }
 
@@ -91,7 +91,7 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 		vaultProvider:               p.vaultProvider,
 		certificationClientProvider: p.certificationClientProvider,
 		selectorManagerProvider:     p.selectorManagerProvider,
-		signatureService:            &SignatureService{p.sigService},
+		signatureService:            &SignatureService{deserializer: tokenService, signerService: p.signerService},
 	}
 }
 
