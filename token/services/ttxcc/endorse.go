@@ -168,7 +168,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 
 		sigma := msg.Payload
 
-		verifier, err := c.tx.TokenService().SigService().GetVerifier(party)
+		verifier, err := c.tx.TokenService().SigService().IssuerVerifier(party)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 		}
@@ -256,7 +256,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 
 			sigma := msg.Payload
 
-			verifier, err := c.tx.TokenService().SigService().GetVerifier(party)
+			verifier, err := c.tx.TokenService().SigService().OwnerVerifier(party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
 			}

@@ -27,9 +27,7 @@ type Signer interface {
 	Sign(message []byte) ([]byte, error)
 }
 
-type SigService interface {
-	// GetVerifier returns the verifier associated to the passed identity
-	GetVerifier(id view.Identity) (Verifier, error)
+type SignerService interface {
 	// GetSigner returns the signer associated to the passed identity
 	GetSigner(id view.Identity) (Signer, error)
 	// RegisterSigner associated the passed signer and verifier to the passed identity

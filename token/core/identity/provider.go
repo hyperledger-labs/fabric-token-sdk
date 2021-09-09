@@ -11,7 +11,6 @@ import (
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
@@ -97,24 +96,6 @@ func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 		return nil, err
 	}
 	return signer, err
-}
-
-func (i *Provider) RegisterRecipientIdentity(id view.Identity, auditInfo, metadata []byte) error {
-	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
-
-	// recognize identity and register it
-	_, err := view2.GetSigService(i.sp).GetVerifier(id)
-	if err != nil {
-		return err
-	}
-
-	if err := view2.GetSigService(i.sp).RegisterAuditInfo(id, auditInfo); err != nil {
-		return err
-	}
-
-	// TODO: register metadata
-
-	return nil
 }
 
 func (i *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {

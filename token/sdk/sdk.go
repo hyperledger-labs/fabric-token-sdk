@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -94,7 +95,7 @@ func (p *SDK) Install() error {
 			2*time.Second,
 			(5*time.Minute).Milliseconds(),
 		), 2, 5*time.Second),
-		view.NewSigServiceWrapper(view2.GetSigService(p.registry)),
+		view.NewSignerServiceWrapper(view2.GetSigService(p.registry)),
 	)))
 
 	// AuditDB

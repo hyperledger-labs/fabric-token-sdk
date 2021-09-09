@@ -55,7 +55,7 @@ type Service struct {
 	PublicParamsFetcher   api3.PublicParamsFetcher
 	TokenCommitmentLoader TokenCommitmentLoader
 	QE                    QueryEngine
-	Deserializer          DeserializerProvider
+	DeserializerProvider  DeserializerProvider
 
 	Issuers []*struct {
 		label string
@@ -80,7 +80,7 @@ func NewTokenService(
 	tokenCommitmentLoader TokenCommitmentLoader,
 	queryEngine QueryEngine,
 	identityProvider api3.IdentityProvider,
-	deserializer DeserializerProvider,
+	deserializerProvider DeserializerProvider,
 	ppLabel string,
 ) (*Service, error) {
 	s := &Service{
@@ -91,7 +91,7 @@ func NewTokenService(
 		TokenCommitmentLoader: tokenCommitmentLoader,
 		QE:                    queryEngine,
 		identityProvider:      identityProvider,
-		Deserializer:          deserializer,
+		DeserializerProvider:  deserializerProvider,
 		PPLabel:               ppLabel,
 	}
 	return s, nil
@@ -122,7 +122,7 @@ func (s *Service) IdentityProvider() api3.IdentityProvider {
 }
 
 func (s *Service) Validator() api3.Validator {
-	d, err := s.Deserializer(s.PublicParams())
+	d, err := s.Deserializer()
 	if err != nil {
 		panic(err)
 	}
@@ -202,4 +202,12 @@ func (s *Service) FetchPublicParams() error {
 
 	s.PP = pp
 	return nil
+}
+
+func (s *Service) Deserializer() (api3.Deserializer, error) {
+	d, err := s.DeserializerProvider(s.PublicParams())
+	if err != nil {
+		return nil, err
+	}
+	return d, nil
 }

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -12,17 +13,26 @@ import (
 )
 
 type SignatureService struct {
-	s driver.SigService
+	deserializer  driver.Deserializer
+	signerService driver.SignerService
 }
 
-func (s *SignatureService) GetVerifier(id view.Identity) (Verifier, error) {
-	return s.s.GetVerifier(id)
+func (s *SignatureService) AuditorVerifier(id view.Identity) (Verifier, error) {
+	return s.deserializer.GetAuditorVerifier(id)
+}
+
+func (s *SignatureService) OwnerVerifier(id view.Identity) (Verifier, error) {
+	return s.deserializer.GetOwnerVerifier(id)
+}
+
+func (s *SignatureService) IssuerVerifier(id view.Identity) (Verifier, error) {
+	return s.deserializer.GetIssuerVerifier(id)
 }
 
 func (s *SignatureService) GetSigner(id view.Identity) (Signer, error) {
-	return s.s.GetSigner(id)
+	return s.signerService.GetSigner(id)
 }
 
 func (s *SignatureService) RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error {
-	return s.s.RegisterSigner(identity, signer, verifier)
+	return s.signerService.RegisterSigner(identity, signer, verifier)
 }
