@@ -49,6 +49,8 @@ dependencies:
 
 .PHONY: integration-tests
 integration-tests: docker-images dependencies
+	go mod tidy
+	go mod download
 	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
