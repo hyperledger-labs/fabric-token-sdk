@@ -19,7 +19,8 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
-	packager2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/packager"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 )
 
@@ -131,16 +132,16 @@ func genChaincodePackage(raw []byte) error {
 		return errors.Wrap(err, "failed writing params template")
 	}
 
-	err = packager2.New().PackageChaincode(
+	err = packager.New().PackageChaincode(
 		"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main",
 		"golang",
 		"tcc",
 		filepath.Join(output, "tcc.tar"),
-		func(s string, s2 string) []byte {
+		func(s string, s2 string) (string, []byte) {
 			if strings.HasSuffix(s, "github.com/hyperledger-labs/fabric-token-sdk/token/tcc/params.go") {
-				return paramsFile.Bytes()
+				return "", paramsFile.Bytes()
 			}
-			return nil
+			return "", nil
 		},
 	)
 	if err != nil {

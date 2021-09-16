@@ -20,10 +20,10 @@ import (
 
 	. "github.com/onsi/gomega"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp"
-	packager2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/packager"
 )
 
 func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
@@ -57,15 +57,15 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 	Expect(err).ToNot(HaveOccurred())
 
 	port := p.Context.ReservePort()
-	err = packager2.New().PackageChaincode(
+	err = packager.New().PackageChaincode(
 		cc.Chaincode.Path,
 		cc.Chaincode.Lang,
 		cc.Chaincode.Label,
 		packageFile,
-		func(s string, s2 string) []byte {
+		func(s string, s2 string) (string, []byte) {
 			// Is the public params?
 			if strings.HasSuffix(s, "/token/services/tcc/params.go") {
-				return paramsFile.Bytes()
+				return "", paramsFile.Bytes()
 			}
 
 			// Is connection.json?
@@ -85,9 +85,9 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 				if err != nil {
 					panic("failed to marshal chaincode package connection into JSON")
 				}
-				return raw
+				return "", raw
 			}
-			return nil
+			return "", nil
 		},
 	)
 	Expect(err).ToNot(HaveOccurred())
