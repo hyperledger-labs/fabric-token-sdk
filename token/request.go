@@ -147,6 +147,12 @@ func (t *Request) ID() string {
 }
 
 func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
+	if typ == "" {
+		return nil, errors.Errorf("type is empty")
+	}
+	if q == 0 {
+		return nil, errors.Errorf("q is zero")
+	}
 	if receiver.IsNone() {
 		return nil, errors.Errorf("all recipients should be defined")
 	}
@@ -206,6 +212,12 @@ func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 }
 
 func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) (*TransferAction, error) {
+	for _, v := range values {
+		if v == 0 {
+			return nil, errors.Errorf("value is zero")
+		}
+	}
+
 	tokenIDs, outputTokens, err := t.prepareTransfer(false, wallet, typ, values, owners, opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
@@ -639,6 +651,10 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		if err := t.TokenService.CertificationClient().RequestCertification(tokenIDs...); err != nil {
 			return nil, nil, errors.Wrapf(err, "failed certifiying inputs")
 		}
+	}
+
+	if typ == "" {
+		return nil, nil, errors.Errorf("type is empty")
 	}
 
 	// Compute output tokens
