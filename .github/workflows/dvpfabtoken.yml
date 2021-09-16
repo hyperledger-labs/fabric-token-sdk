@@ -21,6 +21,12 @@ jobs:
       with:
         path: ${{ env.GOPATH }}/src/github.com/hyperledger-labs/fabric-token-sdk
 
+    - name: Checkout Fabric Smart Client
+      uses: actions/checkout@v2
+      with:
+        repository: hyperledger-labs/fabric-smart-client
+        path: ${{ env.GOPATH }}/src/github.com/hyperledger-labs/fabric-smart-client
+
     - name: Set up Go
       uses: actions/setup-go@v2
       with:
