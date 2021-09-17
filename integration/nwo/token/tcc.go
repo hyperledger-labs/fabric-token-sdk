@@ -63,8 +63,10 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 		cc.Chaincode.Label,
 		packageFile,
 		func(s string, s2 string) (string, []byte) {
+			// logger.Infof("replace [%s:%s]?", s, s2)
 			// Is the public params?
 			if strings.HasSuffix(s, "/token/services/tcc/params.go") {
+				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", s, s2)
 				return "", paramsFile.Bytes()
 			}
 
