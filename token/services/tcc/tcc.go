@@ -23,6 +23,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -49,9 +50,9 @@ func (a *SetupAction) GetSetupParameters() ([]byte, error) {
 	return a.SetupParameters, nil
 }
 
-type allIssuersValid struct{}
+type AllIssuersValid struct{}
 
-func (i *allIssuersValid) Validate(creator view2.Identity, tokenType string) error {
+func (i *AllIssuersValid) Validate(creator view2.Identity, tokenType string) error {
 	return nil
 }
 
@@ -81,7 +82,7 @@ type TokenChaincode struct {
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Infof("init token chaincode...")
 
-	params := cc.readParamsFromFile()
+	params := cc.ReadParamsFromFile()
 	if params == "" {
 		if len(Params) == 0 {
 			args := stub.GetArgs()
@@ -104,7 +105,7 @@ func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 		return shim.Error("failed to decode public parameters: " + err.Error())
 	}
 
-	issuingValidator := &allIssuersValid{}
+	issuingValidator := &AllIssuersValid{}
 	rwset := &rwsWrapper{stub: stub}
 	w := translator.New(issuingValidator, "", rwset, "")
 	action := &SetupAction{
@@ -169,7 +170,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	}
 }
 
-func (cc *TokenChaincode) readParamsFromFile() string {
+func (cc *TokenChaincode) ReadParamsFromFile() string {
 	publicParamsPath := os.Getenv(PublicParamsPathVarEnv)
 	if publicParamsPath == "" {
 		fmt.Println("no PUBLIC_PARAMS_FILE_PATH provided")
@@ -206,7 +207,7 @@ func (cc *TokenChaincode) init(stub shim.ChaincodeStubInterface) error {
 	logger.Infof("reading public parameters...")
 
 	rwset := &rwsWrapper{stub: stub}
-	issuingValidator := &allIssuersValid{}
+	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
 	ppRaw, err := w.ReadSetupParameters()
 	if err != nil {
@@ -257,7 +258,7 @@ func (cc *TokenChaincode) invoke(raw []byte, stub shim.ChaincodeStubInterface) p
 
 	// Write
 	rwset := &rwsWrapper{stub: stub}
-	issuingValidator := &allIssuersValid{}
+	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
 	for _, action := range actions {
 		err = w.Write(action)
@@ -274,7 +275,7 @@ func (cc *TokenChaincode) invoke(raw []byte, stub shim.ChaincodeStubInterface) p
 
 func (cc *TokenChaincode) queryPublicParams(stub shim.ChaincodeStubInterface) pb.Response {
 	rwset := &rwsWrapper{stub: stub}
-	issuingValidator := &allIssuersValid{}
+	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
 	raw, err := w.ReadSetupParameters()
 	if err != nil {
@@ -297,7 +298,7 @@ func (cc *TokenChaincode) addIssuer(args [][]byte, stub shim.ChaincodeStubInterf
 		return shim.Error("failed to serialize public parameters")
 	}
 
-	issuingValidator := &allIssuersValid{}
+	issuingValidator := &AllIssuersValid{}
 	rwset := &rwsWrapper{stub: stub}
 	w := translator.New(issuingValidator, "", rwset, "")
 	setupAction := &SetupAction{SetupParameters: raw}
@@ -370,7 +371,7 @@ func (cc *TokenChaincode) queryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 	logger.Debugf("query tokens [%v]...", ids)
 
 	rwset := &rwsWrapper{stub: stub}
-	issuingValidator := &allIssuersValid{}
+	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
 	res, err := w.QueryTokens(ids)
 	if err != nil {
