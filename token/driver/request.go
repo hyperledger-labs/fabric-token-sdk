@@ -15,10 +15,10 @@ import (
 )
 
 type TokenRequest struct {
-	Issues           [][]byte
-	Transfers        [][]byte
-	Signatures       [][]byte
-	AuditorSignature []byte
+	Issues            [][]byte
+	Transfers         [][]byte
+	Signatures        [][]byte
+	AuditorSignatures [][]byte
 }
 
 func (r *TokenRequest) Bytes() ([]byte, error) {

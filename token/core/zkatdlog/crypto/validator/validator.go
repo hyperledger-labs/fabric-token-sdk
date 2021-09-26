@@ -61,7 +61,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	signed := append(bytes, []byte(binding)...)
 	var signatures [][]byte
 	if len(v.pp.Auditor) != 0 {
-		signatures = append(signatures, tr.AuditorSignature)
+		signatures = append(signatures, tr.AuditorSignatures...)
 		signatures = append(signatures, tr.Signatures...)
 	} else {
 		signatures = tr.Signatures

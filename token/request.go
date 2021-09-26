@@ -435,8 +435,8 @@ func (t *Request) MetadataToBytes() ([]byte, error) {
 	return t.Metadata.Bytes()
 }
 
-func (t *Request) SetAuditorSignature(sigma []byte) {
-	t.Actions.AuditorSignature = sigma
+func (t *Request) AddAuditorSignature(sigma []byte) {
+	t.Actions.AuditorSignatures = append(t.Actions.AuditorSignatures, sigma)
 }
 
 func (t *Request) AppendSignature(sigma []byte) {
