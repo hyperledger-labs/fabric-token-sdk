@@ -122,7 +122,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Wrapf(err, "failed verifying auditor signature")
 	}
 
-	a.tx.TokenRequest.SetAuditorSignature(msg.Payload)
+	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
 
 	return nil, nil
 }

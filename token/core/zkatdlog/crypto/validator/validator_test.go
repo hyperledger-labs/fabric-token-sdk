@@ -135,8 +135,9 @@ var _ = Describe("validator", func() {
 		}
 		err = auditor.Check(ar, metadata, tokns, "2")
 		Expect(err).NotTo(HaveOccurred())
-		ar.AuditorSignature, err = auditor.Endorse(ar, "2")
+		sigma, err := auditor.Endorse(ar, "2")
 		Expect(err).NotTo(HaveOccurred())
+		ar.AuditorSignatures = append(ar.AuditorSignatures, sigma)
 
 		ar.Signatures = append(ar.Signatures, signature)
 		ar.Signatures = append(ar.Signatures, signatures...)
@@ -525,8 +526,9 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 	issueMetadata := &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}
 	err = auditor.Check(ir, issueMetadata, nil, "1")
 	Expect(err).NotTo(HaveOccurred())
-	ir.AuditorSignature, err = auditor.Endorse(ir, "1")
+	sigma, err := auditor.Endorse(ir, "1")
 	Expect(err).NotTo(HaveOccurred())
+	ir.AuditorSignatures = append(ir.AuditorSignatures, sigma)
 
 	return ir, issueMetadata
 }
@@ -606,8 +608,9 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	err = auditor.Check(tr, transferMetadata, tokns, "1")
 	Expect(err).NotTo(HaveOccurred())
 
-	tr.AuditorSignature, err = auditor.Endorse(tr, "1")
+	sigma, err := auditor.Endorse(tr, "1")
 	Expect(err).NotTo(HaveOccurred())
+	tr.AuditorSignatures = append(tr.AuditorSignatures, sigma)
 
 	signatures, err := sender.SignTokenActions(raw, "1")
 	Expect(err).NotTo(HaveOccurred())
