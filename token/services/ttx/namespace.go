@@ -82,7 +82,7 @@ func (t *Namespace) Signers() []view.Identity {
 	}
 	for _, transfer := range t.TokenRequest.Transfers() {
 		for _, sender := range transfer.Senders {
-			if t.tokenService().WalletManager().OwnerWalletByIdentity(sender) != nil {
+			if t.TokenService().WalletManager().OwnerWalletByIdentity(sender) != nil {
 				ids = append(ids, sender)
 			}
 		}
@@ -94,14 +94,14 @@ func (t *Namespace) Receivers() []view.Identity {
 	var ids []view.Identity
 	for _, issue := range t.TokenRequest.Issues() {
 		for _, receiver := range issue.Receivers {
-			if t.tokenService().WalletManager().OwnerWalletByIdentity(receiver) != nil {
+			if t.TokenService().WalletManager().OwnerWalletByIdentity(receiver) != nil {
 				ids = append(ids, receiver)
 			}
 		}
 	}
 	for _, transfer := range t.TokenRequest.Transfers() {
 		for _, receiver := range transfer.Receivers {
-			if t.tokenService().WalletManager().OwnerWalletByIdentity(receiver) != nil {
+			if t.TokenService().WalletManager().OwnerWalletByIdentity(receiver) != nil {
 				ids = append(ids, receiver)
 			}
 		}
@@ -127,14 +127,30 @@ func (t *Namespace) Endorsers() []view.Identity {
 }
 
 func (t *Namespace) SetProposal() {
-	t.tx.SetProposal(t.tokenService().Namespace(), "Version-0.0", "")
+	t.tx.SetProposal(t.TokenService().Namespace(), "Version-0.0", "")
 }
 
 func (t *Namespace) Release() {
 	logger.Debugf("releasing resources for tx [%s]", t.tx.ID())
-	if err := t.tokenService().SelectorManager().Unlock(t.tx.ID()); err != nil {
+	if err := t.TokenService().SelectorManager().Unlock(t.tx.ID()); err != nil {
 		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.tx.ID(), err)
 	}
+}
+
+func (t *Namespace) TokenService() *token.ManagementService {
+	return token.GetManagementService(
+		t.tx.ServiceProvider,
+		token.WithNetwork(t.tx.Network()),
+		token.WithChannel(t.tx.Channel()),
+	)
+}
+
+func (t *Namespace) ApplicationMetadata(k string) []byte {
+	return t.TokenRequest.ApplicationMetadata(k)
+}
+
+func (t *Namespace) SetApplicationMetadata(k string, v []byte) {
+	t.TokenRequest.SetApplicationMetadata(k, v)
 }
 
 func (t *Namespace) updateRWSetAndMetadata(action interface{}) error {
@@ -144,7 +160,7 @@ func (t *Namespace) updateRWSetAndMetadata(action interface{}) error {
 	}
 
 	// store token request in the rwset
-	ns := t.tokenService().Namespace()
+	ns := t.TokenService().Namespace()
 	key, err := keys.CreateTokenRequestKey(t.tx.ID())
 	if err != nil {
 		return errors.WithMessagef(err, "failed computing token request key")
@@ -202,12 +218,12 @@ func (t *Namespace) populate() error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed computing token request key")
 	}
-	requestRaw, err := rws.GetState(t.tokenService().Namespace(), key, fabric.FromIntermediate)
+	requestRaw, err := rws.GetState(t.TokenService().Namespace(), key, fabric.FromIntermediate)
 	if err != nil {
 		return errors.WithMessagef(err, "failed computing token request key")
 	}
 	if len(requestRaw) == 0 {
-		t.TokenRequest, err = t.tokenService().NewRequest(t.tx.ID())
+		t.TokenRequest, err = t.TokenService().NewRequest(t.tx.ID())
 		if err != nil {
 			return errors.Wrapf(err, "failed creating new token request for transaction [%s]", t.tx.ID())
 		}
@@ -225,19 +241,11 @@ func (t *Namespace) populate() error {
 	}
 
 	logger.Debugf("Loaded Token Request from RWS [%s][%s]", t.tx.ID(), string(requestRaw))
-	t.TokenRequest, err = t.tokenService().NewRequestFromBytes(t.tx.ID(), requestRaw, metaRaw)
+	t.TokenRequest, err = t.TokenService().NewRequestFromBytes(t.tx.ID(), requestRaw, metaRaw)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling request for transaction [%s]\n[%s]\n[%s]", t.tx.ID(), string(requestRaw), string(metaRaw))
 	}
 	return nil
-}
-
-func (t *Namespace) tokenService() *token.ManagementService {
-	return token.GetManagementService(
-		t.tx.ServiceProvider,
-		token.WithNetwork(t.tx.Network()),
-		token.WithChannel(t.tx.Channel()),
-	)
 }
 
 func (t *Namespace) append(TokenRequest *token.Request, rwsRaw []byte) error {
@@ -251,7 +259,7 @@ func (t *Namespace) append(TokenRequest *token.Request, rwsRaw []byte) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting rwset")
 	}
-	if err := rws.AppendRWSet(rwsRaw, t.tokenService().Namespace()); err != nil {
+	if err := rws.AppendRWSet(rwsRaw, t.TokenService().Namespace()); err != nil {
 		return errors.WithMessagef(err, "failed getting rwset")
 	}
 

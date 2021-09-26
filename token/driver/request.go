@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -50,8 +51,9 @@ type TransferMetadata struct {
 }
 
 type TokenRequestMetadata struct {
-	Issues    []IssueMetadata
-	Transfers []TransferMetadata
+	Issues      []IssueMetadata
+	Transfers   []TransferMetadata
+	Application map[string][]byte
 }
 
 func (m *TokenRequestMetadata) TokenInfos() [][]byte {

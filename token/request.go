@@ -8,13 +8,12 @@ package token
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // IssueOptions models the options that can be passed to the issue command
@@ -51,7 +50,7 @@ type TransferOptions struct {
 	// Selector is the custom token selector to use. If nil, the default will be used.
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
-	TokenIDs []*token2.Id
+	TokenIDs []*token.Id
 }
 
 func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
@@ -76,7 +75,7 @@ func WithTokenSelector(selector Selector) TransferOption {
 }
 
 // WithTokenIDs sets the tokens ids to transfer
-func WithTokenIDs(ids ...*token2.Id) TransferOption {
+func WithTokenIDs(ids ...*token.Id) TransferOption {
 	return func(o *TransferOptions) error {
 		o.TokenIDs = ids
 		return nil
@@ -577,6 +576,20 @@ func (t *Request) AuditOutputs() (*OutputStream, error) {
 	return t.Outputs()
 }
 
+func (t *Request) ApplicationMetadata(k string) []byte {
+	if len(t.Metadata.Application) == 0 {
+		return nil
+	}
+	return t.Metadata.Application[k]
+}
+
+func (t *Request) SetApplicationMetadata(k string, v []byte) {
+	if len(t.Metadata.Application) == 0 {
+		t.Metadata.Application = map[string][]byte{}
+	}
+	t.Metadata.Application[k] = v
+}
+
 func (t *Request) countOutputs() (int, error) {
 	ts := t.TokenService
 	sum := 0
@@ -597,13 +610,13 @@ func (t *Request) countOutputs() (int, error) {
 	return sum, nil
 }
 
-func (t *Request) parseInputIDs(inputs []*token2.Id) ([]*token2.Id, token2.Quantity, string, error) {
+func (t *Request) parseInputIDs(inputs []*token.Id) ([]*token.Id, token.Quantity, string, error) {
 	inputTokens, err := t.TokenService.Vault().NewQueryEngine().GetTokens(inputs...)
 	if err != nil {
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
 	}
 	var typ string
-	sum := token2.NewQuantityFromUInt64(0)
+	sum := token.NewQuantityFromUInt64(0)
 	for _, tok := range inputTokens {
 		if len(typ) == 0 {
 			typ = tok.Type
@@ -611,7 +624,7 @@ func (t *Request) parseInputIDs(inputs []*token2.Id) ([]*token2.Id, token2.Quant
 		if typ != tok.Type {
 			return nil, nil, "", errors.WithMessagef(err, "tokens must have the same type [%s]!=[%s]", typ, tok.Type)
 		}
-		q, err := token2.ToQuantity(tok.Quantity, 65)
+		q, err := token.ToQuantity(tok.Quantity, 65)
 		if err != nil {
 			return nil, nil, "", errors.WithMessagef(err, "failed unmarshalling token quantity [%s]", tok.Quantity)
 		}
@@ -621,7 +634,7 @@ func (t *Request) parseInputIDs(inputs []*token2.Id) ([]*token2.Id, token2.Quant
 	return inputs, sum, typ, nil
 }
 
-func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) ([]*token2.Id, []*token2.Token, error) {
+func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) ([]*token.Id, []*token.Token, error) {
 	// compile options
 	transferOpts, err := compileTransferOptions(opts...)
 	if err != nil {
@@ -639,8 +652,8 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 			}
 		}
 	}
-	var tokenIDs []*token2.Id
-	var inputSum token2.Quantity
+	var tokenIDs []*token.Id
+	var inputSum token.Quantity
 
 	// if inputs have been passed, parse and certify them, if needed
 	if len(transferOpts.TokenIDs) != 0 {
@@ -659,16 +672,16 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 
 	// Compute output tokens
 	outputSum := uint64(0)
-	var outputTokens []*token2.Token
+	var outputTokens []*token.Token
 	for i, value := range values {
 		outputSum += value
-		outputTokens = append(outputTokens, &token2.Token{
-			Owner:    &token2.Owner{Raw: owners[i]},
+		outputTokens = append(outputTokens, &token.Token{
+			Owner:    &token.Owner{Raw: owners[i]},
 			Type:     typ,
-			Quantity: token2.NewQuantityFromUInt64(value).Decimal(),
+			Quantity: token.NewQuantityFromUInt64(value).Decimal(),
 		})
 	}
-	qOutputSum := token2.NewQuantityFromUInt64(outputSum)
+	qOutputSum := token.NewQuantityFromUInt64(outputSum)
 
 	// Select input tokens, if not passed as opt
 	if len(transferOpts.TokenIDs) == 0 {
@@ -680,7 +693,7 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}
 		}
-		tokenIDs, inputSum, err = selector.Select(wallet, token2.NewQuantityFromUInt64(outputSum).Decimal(), typ)
+		tokenIDs, inputSum, err = selector.Select(wallet, token.NewQuantityFromUInt64(outputSum).Decimal(), typ)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed selecting tokens")
 		}
@@ -696,8 +709,8 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 			return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
 		}
 
-		outputTokens = append(outputTokens, &token2.Token{
-			Owner:    &token2.Owner{Raw: pseudonym},
+		outputTokens = append(outputTokens, &token.Token{
+			Owner:    &token.Owner{Raw: pseudonym},
 			Type:     typ,
 			Quantity: diff.Decimal(),
 		})

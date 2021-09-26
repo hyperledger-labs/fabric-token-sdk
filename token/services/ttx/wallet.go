@@ -37,7 +37,7 @@ func MyWalletFromTx(sp view2.ServiceProvider, tx *Transaction) *token.OwnerWalle
 		sp,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
-		token.WithNamespace(tx.tokenService().Namespace()),
+		token.WithNamespace(tx.TokenService().Namespace()),
 	).WalletManager().OwnerWallet("")
 	if w == nil {
 		return nil

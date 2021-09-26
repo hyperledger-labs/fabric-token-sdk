@@ -31,7 +31,7 @@ func (a approver) Validate(tx *Transaction) error {
 		return errors.WithMessage(err, "failed getting rws")
 	}
 
-	ts := tx.tokenService()
+	ts := tx.TokenService()
 	app := approver2.NewTokenRWSetApprover(
 		ts.Validator(),
 		fabric.GetVault(tx.tx.ServiceProvider, tx.Network(), tx.Channel()),

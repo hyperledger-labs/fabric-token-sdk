@@ -23,7 +23,7 @@ func Wrap(context view.Context, tx *endorser.Transaction, opts ...TxOption) (*Tr
 		return nil, err
 	}
 	context.OnError(namespace.Release)
-	tx.AppendVerifierProvider(&verifierProvider{SignatureService: namespace.tokenService().SigService()})
+	tx.AppendVerifierProvider(&verifierProvider{SignatureService: namespace.TokenService().SigService()})
 
 	return &Transaction{
 		Transaction: tx,
