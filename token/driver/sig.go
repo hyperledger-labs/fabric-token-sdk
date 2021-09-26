@@ -28,8 +28,6 @@ type Signer interface {
 }
 
 type SignerService interface {
-	// GetSigner returns the signer associated to the passed identity
-	GetSigner(id view.Identity) (Signer, error)
 	// RegisterSigner associated the passed signer and verifier to the passed identity
 	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
 }

@@ -77,7 +77,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 
 		// Signer
-		si, err := view2.GetSigService(s.SP).GetSigner(token.Owner)
+		si, err := s.identityProvider.GetSigner(token.Owner)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
 		}

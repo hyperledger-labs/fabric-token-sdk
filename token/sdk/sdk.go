@@ -22,7 +22,6 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
@@ -95,7 +94,6 @@ func (p *SDK) Install() error {
 			2*time.Second,
 			(5*time.Minute).Milliseconds(),
 		), 2, 5*time.Second),
-		view.NewSignerServiceWrapper(view2.GetSigService(p.registry)),
 	)))
 
 	// AuditDB
