@@ -152,7 +152,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}
 
-	tokenRequest, err := c.tx.tokenService().NewRequestFromBytes(
+	tokenRequest, err := c.tx.TokenService().NewRequestFromBytes(
 		c.tx.ID(),
 		payload.TokenRequest,
 		payload.TokenRequestMetadata,

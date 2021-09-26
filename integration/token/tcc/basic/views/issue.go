@@ -95,6 +95,8 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
+	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/issue", []byte("issue"))
+	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/meta", []byte("meta"))
 	assert.NoError(err, "failed creating issue transaction")
 
 	// The issuer adds a new issue operation to the transaction following the instruction received

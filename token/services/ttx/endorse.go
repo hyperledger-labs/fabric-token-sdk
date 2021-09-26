@@ -31,7 +31,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 		c.tx.tx,
 		c.tx.Endorsers()...,
 	)
-	cev.SetVerifierProviders([]endorser.VerifierProvider{&verifierProvider{SignatureService: c.tx.Namespace.tokenService().SigService()}})
+	cev.SetVerifierProviders([]endorser.VerifierProvider{&verifierProvider{SignatureService: c.tx.Namespace.TokenService().SigService()}})
 	_, err := context.RunView(cev)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting endorsements")

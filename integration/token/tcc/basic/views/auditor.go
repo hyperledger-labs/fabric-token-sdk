@@ -30,6 +30,14 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	auditor := ttxcc.NewAuditor(context, w)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
+	// Check Metadata
+	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/issue")
+	if len(opRaw) != 0 {
+		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
+		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/meta")
+		assert.Equal([]byte("meta"), metaRaw, "expected 'meta' application metadata")
+	}
+
 	// Check limits
 
 	inputs, outputs, err := auditor.Audit(tx)

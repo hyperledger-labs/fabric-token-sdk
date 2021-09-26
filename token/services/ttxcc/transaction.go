@@ -8,11 +8,10 @@ package ttxcc
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
@@ -209,6 +208,23 @@ func (t *Transaction) Release() {
 	}
 }
 
+func (t *Transaction) TokenService() *token.ManagementService {
+	return token.GetManagementService(
+		t.SP,
+		token.WithNetwork(t.Network()),
+		token.WithChannel(t.Channel()),
+		token.WithNamespace(t.Namespace()),
+	)
+}
+
+func (t *Transaction) ApplicationMetadata(k string) []byte {
+	return t.TokenRequest.ApplicationMetadata(k)
+}
+
+func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
+	t.TokenRequest.SetApplicationMetadata(k, v)
+}
+
 func (t *Transaction) storeTransient() error {
 	logger.Debugf("Storing transient for [%s]", t.ID())
 	raw, err := t.TokenRequest.MetadataToBytes()
@@ -266,13 +282,4 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	//	}
 	//}
 	//return nil
-}
-
-func (t *Transaction) TokenService() *token.ManagementService {
-	return token.GetManagementService(
-		t.SP,
-		token.WithNetwork(t.Network()),
-		token.WithChannel(t.Channel()),
-		token.WithNamespace(t.Namespace()),
-	)
 }
