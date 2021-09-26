@@ -20,6 +20,7 @@ type TokenManagerService interface {
 	CertificationService
 	Deserializer
 
+	IdentityProvider() IdentityProvider
 	Validator() Validator
 	PublicParamsManager() PublicParamsManager
 }

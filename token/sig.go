@@ -13,8 +13,8 @@ import (
 )
 
 type SignatureService struct {
-	deserializer  driver.Deserializer
-	signerService driver.SignerService
+	deserializer driver.Deserializer
+	ip           driver.IdentityProvider
 }
 
 func (s *SignatureService) AuditorVerifier(id view.Identity) (Verifier, error) {
@@ -30,9 +30,9 @@ func (s *SignatureService) IssuerVerifier(id view.Identity) (Verifier, error) {
 }
 
 func (s *SignatureService) GetSigner(id view.Identity) (Signer, error) {
-	return s.signerService.GetSigner(id)
+	return s.ip.GetSigner(id)
 }
 
 func (s *SignatureService) RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error {
-	return s.signerService.RegisterSigner(identity, signer, verifier)
+	return s.ip.RegisterSigner(identity, signer, verifier)
 }

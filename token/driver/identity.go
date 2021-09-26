@@ -39,6 +39,8 @@ type IdentityProvider interface {
 	// GetSigner returns a Signer for passed identity.
 	GetSigner(identity view.Identity) (Signer, error)
 
+	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
+
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	GetIdentityMetadata(identity view.Identity) ([]byte, error)
