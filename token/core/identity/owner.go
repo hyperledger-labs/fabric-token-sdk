@@ -84,6 +84,15 @@ func (r *RawOwner) String() string {
 
 func (r *RawOwner) ProtoMessage() {}
 
+func UnmarshallRawOwner(id view.Identity) (*RawOwner, error) {
+	si := &RawOwner{}
+	err := json.Unmarshal(id, si)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+	}
+	return si, nil
+}
+
 type VerifierProvider interface {
 	GetVerifier(id view.Identity) (driver.Verifier, error)
 }

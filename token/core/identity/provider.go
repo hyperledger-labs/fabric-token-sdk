@@ -90,10 +90,22 @@ func (i *Provider) GetIdentityMetadata(identity view.Identity) ([]byte, error) {
 	panic("implement me")
 }
 
+func (i *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
+	return view2.GetSigService(i.sp).RegisterSigner(identity, signer, verifier)
+}
+
 func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	signer, err := view2.GetSigService(i.sp).GetSigner(identity)
 	if err != nil {
-		return nil, err
+		// give it a second chance
+		ro, err2 := UnmarshallRawOwner(identity)
+		if err2 != nil {
+			return nil, err
+		}
+		signer, err = view2.GetSigService(i.sp).GetSigner(ro.Identity)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return signer, err
 }
