@@ -69,7 +69,7 @@ func (w *Translator) CommitTokenRequest(raw []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
 	}
-	if len(tr) == 0 {
+	if len(tr) != 0 {
 		return errors.Wrapf(errors.New("token request with same ID already exists"), "failed to write token request'%s'", w.TxID)
 	}
 	err = w.RWSet.SetState(w.namespace, key, raw)
