@@ -67,9 +67,9 @@ func (w *Translator) CommitTokenRequest(raw []byte) error {
 	}
 	tr, err := w.RWSet.GetState(w.namespace, key)
 	if err != nil {
-		return errors.Wrapf(err, "failed to write token request'%s'", w.TxID)
+		return errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
 	}
-	if tr != nil {
+	if len(tr) != 0 {
 		return errors.Wrapf(errors.New("token request with same ID already exists"), "failed to write token request'%s'", w.TxID)
 	}
 	err = w.RWSet.SetState(w.namespace, key, raw)
@@ -77,6 +77,18 @@ func (w *Translator) CommitTokenRequest(raw []byte) error {
 		return errors.Wrapf(err, "failed to write token request'%s'", w.TxID)
 	}
 	return nil
+}
+
+func (w *Translator) ReadTokenRequest() ([]byte, error) {
+	key, err := keys.CreateTokenRequestKey(w.TxID)
+	if err != nil {
+		return nil, errors.Errorf("can't create for token request '%s'", w.TxID)
+	}
+	tr, err := w.RWSet.GetState(w.namespace, key)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read token request'%s'", w.TxID)
+	}
+	return tr, nil
 }
 
 func (w *Translator) checkProcess(action interface{}) error {
