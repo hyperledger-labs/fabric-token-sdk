@@ -8,11 +8,10 @@ package sigproof
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // proof of knowledge of a Pointcheval-Sanders Signature
@@ -44,9 +43,10 @@ type POKProver struct {
 }
 
 type POKVerifier struct {
-	PK []*bn256.G2
-	Q  *bn256.G2
-	P  *bn256.G1
+	PK    []*bn256.G2
+	Q     *bn256.G2
+	P     *bn256.G1
+	Curve *bn256.Curve
 }
 
 func (p *POKProver) Prove() ([]byte, error) {
@@ -66,7 +66,7 @@ func (p *POKProver) Prove() ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed to generate proof of knowledge of PS signature")
 	}
 	// generate schnorr proof
-	sprover := &common.SchnorrProver{Witness: common.GetZrArray(p.Witness.Messages, []*bn256.Zr{HashMessages(p.Witness.Messages), p.Witness.BlindingFactor}), Randomness: common.GetZrArray(p.randomness.messages, []*bn256.Zr{p.randomness.hash, p.randomness.blindingFactor}), Challenge: chal}
+	sprover := &common.SchnorrProver{Witness: common.GetZrArray(p.Witness.Messages, []*bn256.Zr{HashMessages(p.Witness.Messages, p.Curve), p.Witness.BlindingFactor}), Randomness: common.GetZrArray(p.randomness.messages, []*bn256.Zr{p.randomness.hash, p.randomness.blindingFactor}), Challenge: chal, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	sp, err := sprover.Prove()
 	if err != nil {
 		return nil, errors.Errorf("failed to compute proof of knowledge of PS signature")
@@ -82,26 +82,26 @@ func (p *POKProver) Prove() ([]byte, error) {
 			BlindingFactor: sp[len(p.Witness.Messages)+1]},
 	)
 }
-func (p *POKProver) computeCommitment() (*bn256.GT, error) {
+func (p *POKProver) computeCommitment() (*bn256.Gt, error) {
 	// Get RNG
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get RNG")
 	}
 	// compute commitment
 	p.randomness = &POKRandomness{}
-	p.randomness.hash = bn256.RandModOrder(rand)
+	p.randomness.hash = p.Curve.NewRandomZr(rand)
 	t := p.PK[len(p.Witness.Messages)+1].Mul(p.randomness.hash)
 	p.randomness.messages = make([]*bn256.Zr, len(p.Witness.Messages))
 	for i := 0; i < len(p.Witness.Messages); i++ {
-		p.randomness.messages[i] = bn256.RandModOrder(rand)
+		p.randomness.messages[i] = p.Curve.NewRandomZr(rand)
 		t.Add(p.PK[i+1].Mul(p.randomness.messages[i]))
 	}
 
-	p.randomness.blindingFactor = bn256.RandModOrder(rand)
-	com := bn256.Pairing(t, p.Witness.Signature.R, p.Q, p.P.Mul(p.randomness.blindingFactor))
+	p.randomness.blindingFactor = p.Curve.NewRandomZr(rand)
+	com := p.Curve.Pairing2(t, p.Witness.Signature.R, p.Q, p.P.Mul(p.randomness.blindingFactor))
 
-	return bn256.FinalExp(com), nil
+	return p.Curve.FExp(com), nil
 }
 
 func (v *POKVerifier) Verify(p []byte) error {
@@ -123,50 +123,51 @@ func (v *POKVerifier) Verify(p []byte) error {
 	}
 
 	// check proof is valid
-	if proof.Challenge.Cmp(chal) != 0 {
+	if !proof.Challenge.Equals(chal) {
 		return errors.Errorf("proof of PS signature is not valid")
 	}
 	return nil
 }
 
-func (v *POKVerifier) RecomputeCommitment(p *POK) (*bn256.GT, error) {
+func (v *POKVerifier) RecomputeCommitment(p *POK) (*bn256.Gt, error) {
 	if len(v.PK) != len(p.Messages)+2 {
 		return nil, errors.Errorf("length of signature public key does not match size of proof")
 	}
-	t := bn256.NewG2()
+	t := v.Curve.NewG2()
 	for i := 0; i < len(p.Messages); i++ {
 		t.Add(v.PK[i+1].Mul(p.Messages[i]))
 	}
 	t.Add(v.PK[len(p.Messages)+1].Mul(p.Hash))
 
-	pk := bn256.NewG2()
+	pk := v.Curve.NewG2()
 	pk.Sub(v.PK[0])
 
-	com := bn256.Pairing(v.Q, p.Signature.S.Mul(p.Challenge), pk, p.Signature.R.Mul(p.Challenge))
+	com := v.Curve.Pairing2(v.Q, p.Signature.S.Mul(p.Challenge), pk, p.Signature.R.Mul(p.Challenge))
 	com.Inverse()
-	com.Mul(bn256.Pairing(t, p.Signature.R, v.Q, v.P.Mul(p.BlindingFactor)))
+	com.Mul(v.Curve.Pairing2(t, p.Signature.R, v.Q, v.P.Mul(p.BlindingFactor)))
 
-	return bn256.FinalExp(com), nil
+	return v.Curve.FExp(com), nil
 }
 
-func HashMessages(m []*bn256.Zr) *bn256.Zr {
+func HashMessages(m []*bn256.Zr, c *bn256.Curve) *bn256.Zr {
 	var bytesToHash []byte
 	for i := 0; i < len(m); i++ {
 		bytes := m[i].Bytes()
 		bytesToHash = append(bytesToHash, bytes...)
 	}
 
-	return bn256.HashModOrder(bytesToHash)
+	return c.HashToZr(bytesToHash)
 }
 
 func (p *POKProver) obfuscateSignature() (*pssign.Signature, error) {
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get RNG")
 	}
 
-	p.Witness.BlindingFactor = bn256.RandModOrder(rand)
-	err = p.Witness.Signature.Randomize()
+	p.Witness.BlindingFactor = p.Curve.NewRandomZr(rand)
+	v := pssign.NewVerifier(nil, nil, p.Curve)
+	err = v.Randomize(p.Witness.Signature)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +178,7 @@ func (p *POKProver) obfuscateSignature() (*pssign.Signature, error) {
 	return sig, nil
 }
 
-func (v *POKVerifier) computeChallenge(com *bn256.GT, signature *pssign.Signature) (*bn256.Zr, error) {
+func (v *POKVerifier) computeChallenge(com *bn256.Gt, signature *pssign.Signature) (*bn256.Zr, error) {
 	// serialize public inputs
 	g2a := common.GetG2Array(v.PK, []*bn256.G2{v.Q})
 	bytes, err := signature.Serialize()
@@ -185,6 +186,6 @@ func (v *POKVerifier) computeChallenge(com *bn256.GT, signature *pssign.Signatur
 		return nil, errors.Wrapf(err, "failed to compute challenge")
 	}
 	// compute challenge
-	return bn256.HashModOrder(common.GetBytesArray(v.P.Bytes(), g2a.Bytes(), bytes, com.Bytes())), nil
+	return v.Curve.HashToZr(common.GetBytesArray(v.P.Bytes(), g2a.Bytes(), bytes, com.Bytes())), nil
 
 }

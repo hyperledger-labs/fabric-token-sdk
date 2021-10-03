@@ -8,10 +8,10 @@ package sigproof
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // membership proof based on ps signature
@@ -46,12 +46,12 @@ func NewMembershipWitness(sig *pssign.Signature, value *bn256.Zr, bf *bn256.Zr) 
 	return &MembershipWitness{signature: sig, value: value, comBlidingFactor: bf}
 }
 
-func NewMembershipProver(witness *MembershipWitness, com, P *bn256.G1, Q *bn256.G2, PK []*bn256.G2, pp []*bn256.G1) *MembershipProver {
-	return &MembershipProver{witness: witness, MembershipVerifier: NewMembershipVerifier(com, P, Q, PK, pp)}
+func NewMembershipProver(witness *MembershipWitness, com, P *bn256.G1, Q *bn256.G2, PK []*bn256.G2, pp []*bn256.G1, curve *bn256.Curve) *MembershipProver {
+	return &MembershipProver{witness: witness, MembershipVerifier: NewMembershipVerifier(com, P, Q, PK, pp, curve)}
 }
 
-func NewMembershipVerifier(com, P *bn256.G1, Q *bn256.G2, PK []*bn256.G2, pp []*bn256.G1) *MembershipVerifier {
-	return &MembershipVerifier{PedersenParams: pp, CommitmentToValue: com, POKVerifier: &POKVerifier{PK: PK, Q: Q, P: P}}
+func NewMembershipVerifier(com, P *bn256.G1, Q *bn256.G2, PK []*bn256.G2, pp []*bn256.G1, curve *bn256.Curve) *MembershipVerifier {
+	return &MembershipVerifier{PedersenParams: pp, CommitmentToValue: com, POKVerifier: &POKVerifier{PK: PK, Q: Q, P: P, Curve: curve}}
 }
 
 // prover
@@ -65,7 +65,7 @@ type MembershipProver struct {
 // MembershipCommitment to randomness in proof
 type MembershipCommitment struct {
 	CommitmentToValue *bn256.G1
-	Signature         *bn256.GT
+	Signature         *bn256.Gt
 }
 
 // MembershipRandomness used in proof
@@ -113,7 +113,7 @@ func (p *MembershipProver) Prove() ([]byte, error) {
 	}
 
 	// generate proof
-	sp := &common.SchnorrProver{Witness: []*bn256.Zr{p.witness.value, p.witness.comBlidingFactor, p.witness.hash, p.witness.sigBlindingFactor}, Randomness: []*bn256.Zr{p.randomness.value, p.randomness.comBlindingFactor, p.randomness.hash, p.randomness.sigBlindingFactor}, Challenge: proof.Challenge}
+	sp := &common.SchnorrProver{Witness: []*bn256.Zr{p.witness.value, p.witness.comBlidingFactor, p.witness.hash, p.witness.sigBlindingFactor}, Randomness: []*bn256.Zr{p.randomness.value, p.randomness.comBlindingFactor, p.randomness.hash, p.randomness.sigBlindingFactor}, Challenge: proof.Challenge, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	proofs, err := sp.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "range proof generation failed")
@@ -149,20 +149,21 @@ func (v *MembershipVerifier) Verify(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	if chal.Cmp(proof.Challenge) != 0 {
+	if !chal.Equals(proof.Challenge) {
 		return errors.Errorf("invalid membership proof")
 	}
 	return nil
 }
 
 func (p *MembershipProver) obfuscateSignature() (*pssign.Signature, error) {
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get RNG")
 	}
 
-	p.witness.sigBlindingFactor = bn256.RandModOrder(rand)
-	err = p.witness.signature.Randomize()
+	p.witness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
+	v := pssign.NewVerifier(nil, nil, p.Curve)
+	err = v.Randomize(p.witness.signature)
 	if err != nil {
 		return nil, err
 	}
@@ -175,24 +176,24 @@ func (p *MembershipProver) obfuscateSignature() (*pssign.Signature, error) {
 
 func (p *MembershipProver) computeCommitment() error {
 	// Get RNG
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
 	// compute commitments
 	p.randomness = &MembershipRandomness{}
-	p.randomness.value = bn256.RandModOrder(rand)
-	p.randomness.hash = bn256.RandModOrder(rand)
-	p.randomness.sigBlindingFactor = bn256.RandModOrder(rand)
+	p.randomness.value = p.Curve.NewRandomZr(rand)
+	p.randomness.hash = p.Curve.NewRandomZr(rand)
+	p.randomness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
 
 	t := p.PK[1].Mul(p.randomness.value)
 	t.Add(p.PK[2].Mul(p.randomness.hash))
 
 	p.Commitment = &MembershipCommitment{}
-	p.Commitment.Signature = bn256.Pairing(t, p.witness.signature.R, p.Q, p.P.Mul(p.randomness.sigBlindingFactor))
-	p.Commitment.Signature = bn256.FinalExp(p.Commitment.Signature)
+	p.Commitment.Signature = p.Curve.Pairing2(t, p.witness.signature.R, p.Q, p.P.Mul(p.randomness.sigBlindingFactor))
+	p.Commitment.Signature = p.Curve.FExp(p.Commitment.Signature)
 
-	p.randomness.comBlindingFactor = bn256.RandModOrder(rand)
+	p.randomness.comBlindingFactor = p.Curve.NewRandomZr(rand)
 	p.Commitment.CommitmentToValue = p.PedersenParams[0].Mul(p.randomness.value)
 	p.Commitment.CommitmentToValue.Add(p.PedersenParams[1].Mul(p.randomness.comBlindingFactor))
 
@@ -209,18 +210,18 @@ func (v *MembershipVerifier) computeChallenge(comToValue *bn256.G1, com *Members
 	}
 	raw = append(raw, bytes...)
 
-	return bn256.HashModOrder(raw), nil
+	return v.Curve.HashToZr(raw), nil
 }
 
 func (p *MembershipProver) computeHash() {
 	bytes := p.witness.value.Bytes()
-	p.witness.hash = bn256.HashModOrder(bytes)
+	p.witness.hash = p.Curve.HashToZr(bytes)
 	return
 }
 
 // recompute commitments for verification
 func (v *MembershipVerifier) recomputeCommitments(p *MembershipProof) (*MembershipCommitment, error) {
-	psv := &POKVerifier{P: v.P, Q: v.Q, PK: v.PK}
+	psv := &POKVerifier{P: v.P, Q: v.Q, PK: v.PK, Curve: v.Curve}
 	c := &MembershipCommitment{}
 
 	psp := &POK{
@@ -235,7 +236,7 @@ func (v *MembershipVerifier) recomputeCommitments(p *MembershipProof) (*Membersh
 	if err != nil {
 		return nil, err
 	}
-	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams}
+	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 	zkp := &common.SchnorrProof{Statement: v.CommitmentToValue, Proof: []*bn256.Zr{p.Value, p.ComBlindingFactor}, Challenge: p.Challenge}
 	c.CommitmentToValue = ver.RecomputeCommitment(zkp)
 

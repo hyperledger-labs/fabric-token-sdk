@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package pssign_test
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("Pointcheval Sanders blind signatures", func() {
@@ -19,22 +19,24 @@ var _ = Describe("Pointcheval Sanders blind signatures", func() {
 		signer    *pssign.BlindSigner
 		messages  []*bn256.Zr
 		pp        []*bn256.G1
+		curve     *bn256.Curve
 	)
 	Describe("Prove", func() {
 		BeforeEach(func() {
-			rand, err := bn256.GetRand()
+			curve = bn256.Curves[1]
+			rand, err := curve.Rand()
 			Expect(err).NotTo(HaveOccurred())
 
-			x := bn256.RandModOrder(rand)
-			messages = getMessages(4)
-			bf := bn256.RandModOrder(rand)
-			pp = getPedersenParameters(5)
+			x := curve.NewRandomZr(rand)
+			messages = getMessages(4, curve)
+			bf := curve.NewRandomZr(rand)
+			pp = getPedersenParameters(5, curve)
 
-			com, err := common.ComputePedersenCommitment(append(messages, bf), pp)
+			com, err := common.ComputePedersenCommitment(append(messages, bf), pp, curve)
 			Expect(err).NotTo(HaveOccurred())
 
-			recipient = pssign.NewRecipient(messages, bf, com, x, bn256.G1Gen(), bn256.G1Gen().Mul(x), pp, nil, nil)
-			signer = &pssign.BlindSigner{Signer: getSigner(4), PedersenParameters: pp}
+			recipient = pssign.NewRecipient(messages, bf, com, x, curve.GenG1, curve.GenG1.Mul(x), pp, nil, nil, curve)
+			signer = &pssign.BlindSigner{Signer: getSigner(4, curve), PedersenParameters: pp}
 
 		})
 		Context("signature request is generated correctly", func() {
@@ -53,18 +55,18 @@ var _ = Describe("Pointcheval Sanders blind signatures", func() {
 	})
 })
 
-func getPedersenParameters(length int) []*bn256.G1 {
-	rand, err := bn256.GetRand()
+func getPedersenParameters(length int, curve *bn256.Curve) []*bn256.G1 {
+	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 	var pp []*bn256.G1
 	for i := 0; i < length; i++ {
-		pp = append(pp, bn256.G1Gen().Mul(bn256.RandModOrder(rand)))
+		pp = append(pp, curve.GenG1.Mul(curve.NewRandomZr(rand)))
 	}
 	return pp
 }
 
-func getSigner(length int) *pssign.Signer {
-	s := &pssign.Signer{}
+func getSigner(length int, curve *bn256.Curve) *pssign.Signer {
+	s := pssign.NewSigner(nil, nil, nil, curve)
 	s.KeyGen(length)
 	return s
 }

@@ -13,13 +13,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 func (s *Service) IssuerIdentity(label string) (view.Identity, error) {
@@ -36,7 +35,7 @@ func (s *Service) IssuerIdentity(label string) (view.Identity, error) {
 			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.Channel.Name(), issuer.index)
 
 			witness := anonym.NewWitness(issuer.sk, nil, nil, nil, nil, issuer.index)
-			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams)
+			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams, bn256.Curves[pp.Curve])
 
 			fID, err := signer.ToUniqueIdentifier()
 			if err != nil {

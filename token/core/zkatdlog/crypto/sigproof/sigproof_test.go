@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package sigproof_test
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("membership", func() {
@@ -34,27 +34,28 @@ var _ = Describe("membership", func() {
 })
 
 func getSignatureProver() *sigproof.SigProver {
-	rand, err := bn256.GetRand()
+	curve := bn256.Curves[1]
+	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	signer := getSigner(4)
+	signer := getSigner(4, curve)
 	var messages []*bn256.Zr
-	messages = append(messages, bn256.RandModOrder(rand), bn256.RandModOrder(rand), bn256.RandModOrder(rand), bn256.RandModOrder(rand))
+	messages = append(messages, curve.NewRandomZr(rand), curve.NewRandomZr(rand), curve.NewRandomZr(rand), curve.NewRandomZr(rand))
 	sig, err := signer.Sign(messages)
 	Expect(err).NotTo(HaveOccurred())
-	hash := sigproof.HashMessages(messages)
+	hash := sigproof.HashMessages(messages, curve)
 	err = signer.SignVerifier.Verify(append(messages, hash), sig)
 	Expect(err).NotTo(HaveOccurred())
 
-	pp := preparePedersenParameters(4)
-	r := bn256.RandModOrder(rand)
-	com, err := common.ComputePedersenCommitment([]*bn256.Zr{messages[0], messages[1], messages[2], r}, pp)
+	pp := preparePedersenParameters(4, curve)
+	r := curve.NewRandomZr(rand)
+	com, err := common.ComputePedersenCommitment([]*bn256.Zr{messages[0], messages[1], messages[2], r}, pp, curve)
 	Expect(err).NotTo(HaveOccurred())
 	hidden := []*bn256.Zr{
 		messages[0],
 		messages[1],
 		messages[2],
 	}
-	P := bn256.NewG1()
+	P := curve.NewG1()
 
-	return sigproof.NewSigProver(hidden, []*bn256.Zr{messages[3]}, sig, hash, r, com, []int{0, 1, 2}, []int{3}, P, signer.Q, signer.PK, pp)
+	return sigproof.NewSigProver(hidden, []*bn256.Zr{messages[3]}, sig, hash, r, com, []int{0, 1, 2}, []int{3}, P, signer.Q, signer.PK, pp, curve)
 }

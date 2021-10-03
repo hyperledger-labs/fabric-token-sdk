@@ -7,13 +7,12 @@ package anonym
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog.issue")
@@ -31,7 +30,7 @@ func (i *Issuer) New(ttype string, signer common.SigningIdentity, pp *crypto.Pub
 }
 
 func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.IssueAction, []*token.TokenInformation, error) {
-	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.ZKATPedParams)
+	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.ZKATPedParams, bn256.Curves[i.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -46,7 +45,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 		tokens[0],
 		tw[0].Value,
 		tw[0].BlindingFactor,
-		bn256.HashModOrder([]byte(i.Type)),
+		bn256.Curves[i.PublicParams.Curve].HashToZr([]byte(i.Type)),
 		i.Signer.(*Signer).Witness.Sk,
 		i.Signer.(*Signer).Witness.Index,
 		i.PublicParams,
@@ -82,14 +81,14 @@ func (i *Issuer) SignTokenActions(raw []byte, txID string) ([]byte, error) {
 }
 
 func CreateSigner(token *bn256.G1, value, tokenBF, ttype, sk *bn256.Zr, index int, pp *crypto.PublicParams) (*Signer, error) {
-	rand, err := bn256.GetRand()
+	rand, err := bn256.Curves[pp.Curve].Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get random generator for issuer's signer")
 	}
 
 	// compute issuer pseudonym
-	tnymbf := bn256.RandModOrder(rand)
-	typeNym, err := common.ComputePedersenCommitment([]*bn256.Zr{sk, ttype, tnymbf}, pp.ZKATPedParams)
+	tnymbf := bn256.Curves[pp.Curve].NewRandomZr(rand)
+	typeNym, err := common.ComputePedersenCommitment([]*bn256.Zr{sk, ttype, tnymbf}, pp.ZKATPedParams, bn256.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create issuer signing pseudonym")
 	}
@@ -106,18 +105,18 @@ func CreateSigner(token *bn256.G1, value, tokenBF, ttype, sk *bn256.Zr, index in
 
 	logger.Debugf("NewIssuerAuthSigner [%d,%d,%d]", len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
 
-	return NewSigner(witness, ip.Issuers, auth, ip.BitLength, pp.ZKATPedParams), nil
+	return NewSigner(witness, ip.Issuers, auth, ip.BitLength, pp.ZKATPedParams, bn256.Curves[pp.Curve]), nil
 }
 
 func GenerateKeyPair(ttype string, pp *crypto.PublicParams) (*bn256.Zr, *bn256.G1, error) {
-	rand, err := bn256.GetRand()
+	rand, err := bn256.Curves[pp.Curve].Rand()
 	if err != nil {
 		return nil, nil, errors.Errorf("failed to generate the secret key of the issuer")
 	}
 
-	sk := bn256.RandModOrder(rand)
+	sk := bn256.Curves[pp.Curve].NewRandomZr(rand)
 
-	pk, err := common.ComputePedersenCommitment([]*bn256.Zr{sk, bn256.HashModOrder([]byte(ttype))}, pp.ZKATPedParams[:2])
+	pk, err := common.ComputePedersenCommitment([]*bn256.Zr{sk, bn256.Curves[pp.Curve].HashToZr([]byte(ttype))}, pp.ZKATPedParams[:2], bn256.Curves[pp.Curve])
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate the public key of the issuer")
 	}

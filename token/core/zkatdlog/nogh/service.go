@@ -8,13 +8,9 @@ package nogh
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -22,6 +18,8 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 const (

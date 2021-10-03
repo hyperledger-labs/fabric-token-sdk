@@ -10,15 +10,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("PublicParamsManager", func() {
@@ -94,7 +93,7 @@ var _ = Describe("PublicParamsManager", func() {
 			)
 			BeforeEach(func() {
 				var err error
-				issuer = bn256.G1Gen()
+				issuer = bn256.Curves[pp.Curve].GenG1
 				raw, err = json.Marshal(issuer)
 				Expect(err).NotTo(HaveOccurred())
 			})

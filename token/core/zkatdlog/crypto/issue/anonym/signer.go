@@ -9,10 +9,9 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/o2omp"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 type Authorization struct {
@@ -67,13 +66,14 @@ type Signer struct {
 }
 
 // NewSigner initializes the prover
-func NewSigner(witness *AuthorizationWitness, issuers []*bn256.G1, auth *Authorization, bitLength int, pp []*bn256.G1) *Signer {
+func NewSigner(witness *AuthorizationWitness, issuers []*bn256.G1, auth *Authorization, bitLength int, pp []*bn256.G1, c *bn256.Curve) *Signer {
 
 	verifier := &Verifier{
 		PedersenParams: pp,
 		Issuers:        issuers,
 		Auth:           auth,
 		BitLength:      bitLength,
+		Curve:          c,
 	}
 	return &Signer{
 		Witness:  witness,
@@ -91,11 +91,11 @@ func (s *Signer) Sign(message []byte) ([]byte, error) {
 	// one out of many proofs
 	commitments := make([]*bn256.G1, len(s.Issuers))
 	for k, i := range s.Issuers {
-		commitments[k] = bn256.NewG1()
-		commitments[k].Copy(s.Auth.Type)
+		commitments[k] = s.Curve.NewG1()
+		commitments[k] = s.Auth.Type.Copy()
 		commitments[k].Sub(i)
 	}
-	o2omp := o2omp.NewProver(commitments, message, []*bn256.G1{s.PedersenParams[0], s.PedersenParams[2]}, s.BitLength, s.Witness.Index, s.Witness.TNymBF)
+	o2omp := o2omp.NewProver(commitments, message, []*bn256.G1{s.PedersenParams[0], s.PedersenParams[2]}, s.BitLength, s.Witness.Index, s.Witness.TNymBF, s.Curve)
 
 	sig := &Signature{}
 	var err error
@@ -106,7 +106,7 @@ func (s *Signer) Sign(message []byte) ([]byte, error) {
 
 	w := NewTypeCorrectnessWitness(s.Witness.Sk, s.Witness.TType, s.Witness.Value, s.Witness.TNymBF, s.Witness.TokenBF)
 
-	tcp := NewTypeCorrectnessProver(w, s.Auth.Type, s.Auth.Token, message, s.PedersenParams)
+	tcp := NewTypeCorrectnessProver(w, s.Auth.Type, s.Auth.Token, message, s.PedersenParams, s.Curve)
 	sig.TypeCorrectness, err = tcp.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compute issuer's signature")
@@ -134,6 +134,7 @@ type Verifier struct {
 	Issuers        []*bn256.G1 // g_0^skg_1^type
 	Auth           *Authorization
 	BitLength      int
+	Curve          *bn256.Curve
 }
 
 func (v *Verifier) Verify(message, rawsig []byte) error {
@@ -148,26 +149,26 @@ func (v *Verifier) Verify(message, rawsig []byte) error {
 	}
 	commitments := make([]*bn256.G1, len(v.Issuers))
 	for k, i := range v.Issuers {
-		commitments[k] = bn256.NewG1()
-		commitments[k].Copy(v.Auth.Type)
+		commitments[k] = v.Curve.NewG1()
+		commitments[k] = v.Auth.Type.Copy()
 		commitments[k].Sub(i)
 	}
 
 	// verify one out of many proof: issuer authorization
-	err = o2omp.NewVerifier(commitments, message, []*bn256.G1{v.PedersenParams[0], v.PedersenParams[2]}, v.BitLength).Verify(sig.AuthorizationCorrectness)
+	err = o2omp.NewVerifier(commitments, message, []*bn256.G1{v.PedersenParams[0], v.PedersenParams[2]}, v.BitLength, v.Curve).Verify(sig.AuthorizationCorrectness)
 	if err != nil {
 		return errors.Wrapf(err, "failed to verify issuer's pseudonym")
 	}
 
 	// verify that type in authorization corresponds to type in token
-	return NewTypeCorrectnessVerifier(v.Auth.Type, v.Auth.Token, message, v.PedersenParams).Verify(sig.TypeCorrectness)
+	return NewTypeCorrectnessVerifier(v.Auth.Type, v.Auth.Token, message, v.PedersenParams, v.Curve).Verify(sig.TypeCorrectness)
 }
 
 func (v *Verifier) Serialize() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn256.G1, raw []byte) error {
+func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn256.G1, raw []byte, curve *bn256.Curve) error {
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
 		return err
@@ -177,5 +178,6 @@ func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn
 	v.BitLength = bitLength
 	v.PedersenParams = pp
 	v.Issuers = issuers
+	v.Curve = curve
 	return nil
 }

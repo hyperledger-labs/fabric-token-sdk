@@ -8,7 +8,7 @@ package crypto
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 type IssuingPolicy struct {

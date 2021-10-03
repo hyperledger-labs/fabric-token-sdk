@@ -7,8 +7,7 @@ package common
 
 import (
 	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // Struct for Schnorr proofs
@@ -20,6 +19,7 @@ type SchnorrProof struct {
 
 type SchnorrVerifier struct {
 	PedParams []*bn256.G1
+	Curve     *bn256.Curve
 }
 
 type SchnorrProver struct {
@@ -30,7 +30,7 @@ type SchnorrProver struct {
 }
 
 func (v *SchnorrVerifier) RecomputeCommitment(zkp *SchnorrProof) *bn256.G1 {
-	com := bn256.NewG1()
+	com := v.Curve.NewG1()
 	for i, p := range zkp.Proof {
 		com.Add(v.PedParams[i].Mul(p))
 	}
@@ -47,9 +47,9 @@ func (v *SchnorrVerifier) RecomputeCommitments(zkps []*SchnorrProof, challenge *
 	return commitments
 }
 
-func ComputeChallenge(pub PublicInput) *bn256.Zr {
+func (v *SchnorrVerifier) ComputeChallenge(pub PublicInput) *bn256.Zr {
 	raw := pub.Bytes()
-	return bn256.HashModOrder(raw)
+	return v.Curve.HashToZr(raw)
 }
 
 func (p *SchnorrProver) Prove() ([]*bn256.Zr, error) {
@@ -58,17 +58,17 @@ func (p *SchnorrProver) Prove() ([]*bn256.Zr, error) {
 	}
 	proof := make([]*bn256.Zr, len(p.Witness))
 	for i := 0; i < len(proof); i++ {
-		proof[i] = bn256.ModMul(p.Challenge, p.Witness[i], bn256.Order)
-		proof[i] = bn256.ModAdd(proof[i], p.Randomness[i], bn256.Order)
+		proof[i] = p.Curve.ModMul(p.Challenge, p.Witness[i], p.Curve.GroupOrder)
+		proof[i] = p.Curve.ModAdd(proof[i], p.Randomness[i], p.Curve.GroupOrder)
 	}
 	return proof, nil
 }
 
-func ComputePedersenCommitment(opening []*bn256.Zr, base []*bn256.G1) (*bn256.G1, error) {
+func ComputePedersenCommitment(opening []*bn256.Zr, base []*bn256.G1, c *bn256.Curve) (*bn256.G1, error) {
 	if len(opening) != len(base) {
 		return nil, errors.Errorf("can't compute Pedersen commitment [%d]!=[%d]", len(opening), len(base))
 	}
-	com := bn256.NewG1()
+	com := c.NewG1()
 	for i := 0; i < len(base); i++ {
 		com.Add(base[i].Mul(opening[i]))
 	}

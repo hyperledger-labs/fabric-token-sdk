@@ -8,8 +8,8 @@ package pssign
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 type Signer struct {
@@ -18,8 +18,9 @@ type Signer struct {
 }
 
 type SignVerifier struct {
-	PK []*bn256.G2
-	Q  *bn256.G2
+	PK    []*bn256.G2
+	Q     *bn256.G2
+	Curve *bn256.Curve
 }
 
 type Signature struct {
@@ -33,29 +34,28 @@ func (sig *Signature) Deserialize(bytes []byte) error {
 
 func (s *Signer) KeyGen(length int) error {
 	s.SK = make([]*bn256.Zr, length+2)
-	s.SignVerifier = &SignVerifier{}
 	s.SignVerifier.PK = make([]*bn256.G2, length+2)
 
-	Q := bn256.G2Gen()
-	rand, err := bn256.GetRand()
+	Q := s.Curve.GenG2
+	rand, err := s.Curve.Rand()
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
-	s.SignVerifier.Q = Q.Mul(bn256.RandModOrder(rand))
+	s.SignVerifier.Q = Q.Mul(s.Curve.NewRandomZr(rand))
 
 	for i := 0; i < length+2; i++ {
-		s.SK[i] = bn256.RandModOrder(rand)
+		s.SK[i] = s.Curve.NewRandomZr(rand)
 		s.SignVerifier.PK[i] = s.SignVerifier.Q.Mul(s.SK[i])
 	}
 	return nil
 }
 
-func NewSigner(SK []*bn256.Zr, PK []*bn256.G2, Q *bn256.G2) *Signer {
-	return &Signer{SK: SK, SignVerifier: NewVerifier(PK, Q)}
+func NewSigner(SK []*bn256.Zr, PK []*bn256.G2, Q *bn256.G2, c *bn256.Curve) *Signer {
+	return &Signer{SK: SK, SignVerifier: NewVerifier(PK, Q, c)}
 }
 
-func NewVerifier(PK []*bn256.G2, Q *bn256.G2) *SignVerifier {
-	return &SignVerifier{PK: PK, Q: Q}
+func NewVerifier(PK []*bn256.G2, Q *bn256.G2, c *bn256.Curve) *SignVerifier {
+	return &SignVerifier{PK: PK, Q: Q, Curve: c}
 }
 
 func (s *Signer) Sign(m []*bn256.Zr) (*Signature, error) {
@@ -65,23 +65,23 @@ func (s *Signer) Sign(m []*bn256.Zr) (*Signature, error) {
 	}
 
 	// get RNG
-	rand, err := bn256.GetRand()
+	rand, err := s.Curve.Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get RNG")
 	}
 
 	// initialize signature
 	sig := &Signature{}
-	sig.R = bn256.G1Gen()
-	sig.R.Mul(bn256.RandModOrder(rand)) // R is a random element in ECP
-	sig.S = bn256.NewG1()
+	sig.R = s.Curve.GenG1
+	sig.R.Mul(s.Curve.NewRandomZr(rand)) // R is a random element in ECP
+	sig.S = s.Curve.NewG1()
 
 	// compute S
 	sig.S.Add(sig.R.Mul(s.SK[0]))
 	for i := 0; i < len(m); i++ {
-		sig.S.Add(sig.R.Mul(bn256.ModMul(s.SK[1+i], m[i], bn256.Order)))
+		sig.S.Add(sig.R.Mul(s.Curve.ModMul(s.SK[1+i], m[i], s.Curve.GroupOrder)))
 	}
-	sig.S.Add(sig.R.Mul(bn256.ModMul(s.SK[len(m)+1], hashMessages(m), bn256.Order)))
+	sig.S.Add(sig.R.Mul(s.Curve.ModMul(s.SK[len(m)+1], hashMessages(m, s.Curve), s.Curve.GroupOrder)))
 
 	return sig, nil
 }
@@ -91,17 +91,17 @@ func (v *SignVerifier) Verify(m []*bn256.Zr, sig *Signature) error {
 		return errors.New("PS signature cannot be verified!\n")
 	}
 
-	H := bn256.NewG2()
+	H := v.Curve.NewG2()
 	for i := 0; i < len(m); i++ {
 		H.Add(v.PK[1+i].Mul(m[i]))
 	}
 	H.Add(v.PK[0])
 
-	T := bn256.NewG1()
+	T := v.Curve.NewG1()
 	T.Sub(sig.S)
 
-	e := bn256.Pairing(v.Q, T, H, sig.R)
-	e = bn256.FinalExp(e)
+	e := v.Curve.Pairing2(v.Q, T, H, sig.R)
+	e = v.Curve.FExp(e)
 
 	if !e.IsUnity() {
 		return errors.Errorf("invalid Pointcheval-Sanders signature")
@@ -109,12 +109,12 @@ func (v *SignVerifier) Verify(m []*bn256.Zr, sig *Signature) error {
 	return nil
 }
 
-func (sig *Signature) Randomize() error {
-	rand, err := bn256.GetRand()
+func (v *SignVerifier) Randomize(sig *Signature) error {
+	rand, err := v.Curve.Rand()
 	if err != nil {
 		return err
 	}
-	r := bn256.RandModOrder(rand)
+	r := v.Curve.NewRandomZr(rand)
 	// randomize signature
 	sig.R = sig.R.Mul(r)
 	sig.S = sig.S.Mul(r)
@@ -123,24 +123,26 @@ func (sig *Signature) Randomize() error {
 }
 
 func (sig *Signature) Copy(sigma *Signature) {
-	sig.S = bn256.NewG1()
-	sig.S.Copy(sigma.S)
-	sig.R = bn256.NewG1()
-	sig.R.Copy(sigma.R)
+	if sigma != nil {
+		if sigma.S != nil && sigma.R != nil {
+			sig.S = sigma.S.Copy()
+			sig.R = sigma.R.Copy()
+		}
+	}
 }
 
 func (sig *Signature) Serialize() ([]byte, error) {
 	return json.Marshal(sig)
 }
 
-func hashMessages(m []*bn256.Zr) *bn256.Zr {
+func hashMessages(m []*bn256.Zr, c *bn256.Curve) *bn256.Zr {
 	var bytesToHash []byte
 	for i := 0; i < len(m); i++ {
 		bytes := m[i].Bytes()
 		bytesToHash = append(bytesToHash, bytes...)
 	}
 
-	return bn256.HashModOrder(bytesToHash)
+	return c.HashToZr(bytesToHash)
 }
 
 func (s *Signer) Serialize() ([]byte, error) {

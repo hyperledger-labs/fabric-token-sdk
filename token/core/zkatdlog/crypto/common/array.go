@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 type G1Array struct {
@@ -18,7 +18,7 @@ type G2Array struct {
 }
 
 type GTArray struct {
-	Elements []*bn256.GT
+	Elements []*bn256.Gt
 }
 
 func (a *G1Array) Bytes() []byte {
@@ -64,7 +64,7 @@ func GetG2Array(elements ...[]*bn256.G2) *G2Array {
 	return array
 }
 
-func GetGTArray(elements ...[]*bn256.GT) *GTArray {
+func GetGTArray(elements ...[]*bn256.Gt) *GTArray {
 	array := &GTArray{}
 	for _, e := range elements {
 		array.Elements = append(array.Elements, e...)
@@ -86,4 +86,12 @@ func GetZrArray(elements ...[]*bn256.Zr) []*bn256.Zr {
 		array = append(array, e...)
 	}
 	return array
+}
+
+func Sum(values []*bn256.Zr, c *bn256.Curve) *bn256.Zr {
+	sum := c.NewZrFromInt(0)
+	for i := 0; i < len(values); i++ {
+		sum = c.ModAdd(sum, values[i], c.GroupOrder)
+	}
+	return sum
 }

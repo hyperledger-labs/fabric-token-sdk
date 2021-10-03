@@ -8,14 +8,13 @@ package issue
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // Issue specifies an issue of one or more tokens
@@ -133,18 +132,19 @@ func (p *Proof) Deserialize(bytes []byte) error {
 }
 
 func NewProver(tw []*token.TokenDataWitness, tokens []*bn256.G1, anonymous bool, pp *crypto.PublicParams) *Prover {
+	c := bn256.Curves[pp.Curve]
 	p := &Prover{}
-	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.ZKATPedParams)
+	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.ZKATPedParams, c)
 
-	p.RangeCorrectness = rp.NewProver(tw, tokens, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q)
+	p.RangeCorrectness = rp.NewProver(tw, tokens, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, bn256.Curves[pp.Curve])
 
 	return p
 }
 
 func NewVerifier(tokens []*bn256.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams)
-	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q)
+	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams, bn256.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, bn256.Curves[pp.Curve])
 	return v
 }
 

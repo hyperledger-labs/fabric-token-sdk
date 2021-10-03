@@ -8,13 +8,11 @@ package token
 import (
 	"encoding/json"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 type Token struct {
@@ -39,7 +37,7 @@ func (t *Token) GetCommitment() *bn256.G1 {
 }
 
 func (t *Token) GetTokenInTheClear(inf *TokenInformation, pp *crypto.PublicParams) (*token2.Token, error) {
-	com, err := common.ComputePedersenCommitment([]*bn256.Zr{bn256.HashModOrder([]byte(inf.Type)), inf.Value, inf.BlindingFactor}, pp.ZKATPedParams)
+	com, err := common.ComputePedersenCommitment([]*bn256.Zr{bn256.Curves[pp.Curve].HashToZr([]byte(inf.Type)), inf.Value, inf.BlindingFactor}, pp.ZKATPedParams, bn256.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to check token data")
 	}
@@ -55,12 +53,12 @@ func (t *Token) GetTokenInTheClear(inf *TokenInformation, pp *crypto.PublicParam
 	}, nil
 }
 
-func computeTokens(tw []*TokenDataWitness, pp []*bn256.G1) ([]*bn256.G1, error) {
+func computeTokens(tw []*TokenDataWitness, pp []*bn256.G1, c *bn256.Curve) ([]*bn256.G1, error) {
 	tokens := make([]*bn256.G1, len(tw))
 	var err error
 	for i := 0; i < len(tw); i++ {
-		typehash := bn256.HashModOrder([]byte(tw[i].Type))
-		tokens[i], err = common.ComputePedersenCommitment([]*bn256.Zr{typehash, tw[i].Value, tw[i].BlindingFactor}, pp)
+		typehash := c.HashToZr([]byte(tw[i].Type))
+		tokens[i], err = common.ComputePedersenCommitment([]*bn256.Zr{typehash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token")
 		}
@@ -69,19 +67,19 @@ func computeTokens(tw []*TokenDataWitness, pp []*bn256.G1) ([]*bn256.G1, error) 
 	return tokens, nil
 }
 
-func GetTokensWithWitness(values []uint64, ttype string, pp []*bn256.G1) ([]*bn256.G1, []*TokenDataWitness, error) {
-	rand, err := bn256.GetRand()
+func GetTokensWithWitness(values []uint64, ttype string, pp []*bn256.G1, c *bn256.Curve) ([]*bn256.G1, []*TokenDataWitness, error) {
+	rand, err := c.Rand()
 	if err != nil {
 		return nil, nil, errors.Errorf("failed to get random number generator")
 	}
 	tw := make([]*TokenDataWitness, len(values))
 	for i, v := range values {
 		tw[i] = &TokenDataWitness{}
-		tw[i].BlindingFactor = bn256.RandModOrder(rand)
-		tw[i].Value = bn256.NewZrInt(0).SetUint64(v)
+		tw[i].BlindingFactor = c.NewRandomZr(rand)
+		tw[i].Value = c.NewZrFromInt(int64(v)) // todo .SetUint64(v)
 		tw[i].Type = ttype
 	}
-	tokens, err := computeTokens(tw, pp)
+	tokens, err := computeTokens(tw, pp, c)
 	if err != nil {
 		return nil, nil, err
 	}

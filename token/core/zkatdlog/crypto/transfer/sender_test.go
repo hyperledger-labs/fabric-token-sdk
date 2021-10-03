@@ -6,17 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("Sender", func() {
@@ -38,6 +36,8 @@ var _ = Describe("Sender", func() {
 	)
 	BeforeEach(func() {
 		var err error
+		pp, err = crypto.Setup(100, 2, nil)
+		Expect(err).NotTo(HaveOccurred())
 		owners = make([][]byte, 2)
 		owners[0] = []byte("bob")
 		owners[1] = []byte("charlie")
@@ -51,16 +51,17 @@ var _ = Describe("Sender", func() {
 		fakeSigningIdentity.SignReturnsOnCall(1, []byte("signer[1]"), nil)
 		fakeSigningIdentity.SignReturnsOnCall(2, []byte("signer[2]"), nil)
 
+		c := bn256.Curves[pp.Curve]
 		invalues = make([]*bn256.Zr, 3)
-		invalues[0] = bn256.NewZrInt(50)
-		invalues[1] = bn256.NewZrInt(20)
-		invalues[2] = bn256.NewZrInt(30)
+		invalues[0] = c.NewZrFromInt(50)
+		invalues[1] = c.NewZrFromInt(20)
+		invalues[2] = c.NewZrFromInt(30)
 
 		inBF = make([]*bn256.Zr, 3)
-		rand, err := bn256.GetRand()
+		rand, err := c.Rand()
 		Expect(err).NotTo(HaveOccurred())
 		for i := 0; i < 3; i++ {
-			inBF[i] = bn256.RandModOrder(rand)
+			inBF[i] = c.NewRandomZr(rand)
 		}
 		outvalues = make([]uint64, 2)
 		outvalues[0] = 65
@@ -71,10 +72,7 @@ var _ = Describe("Sender", func() {
 		ids[1] = "1"
 		ids[2] = "3"
 
-		pp, err = crypto.Setup(100, 2, nil)
-		Expect(err).NotTo(HaveOccurred())
-
-		inputs := PrepareTokens(invalues, inBF, "ABC", pp.ZKATPedParams)
+		inputs := PrepareTokens(invalues, inBF, "ABC", pp.ZKATPedParams, c)
 		tokens = make([]*token.Token, 3)
 
 		tokens[0] = &token.Token{Data: inputs[0], Owner: []byte("alice-1")}
@@ -128,10 +126,10 @@ var _ = Describe("Sender", func() {
 	})
 })
 
-func PrepareTokens(values, bf []*bn256.Zr, ttype string, pp []*bn256.G1) []*bn256.G1 {
+func PrepareTokens(values, bf []*bn256.Zr, ttype string, pp []*bn256.G1, curve *bn256.Curve) []*bn256.G1 {
 	tokens := make([]*bn256.G1, len(values))
 	for i := 0; i < len(values); i++ {
-		tokens[i] = prepareToken(values[i], bf[i], ttype, pp)
+		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}
 	return tokens
 }

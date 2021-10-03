@@ -20,7 +20,7 @@ require (
 	github.com/gordonklaus/ineffassign v0.0.0-20210914165742-4cc7213b9bc8 // indirect
 	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211001080032-1bd8acc7a0fc
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
-	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
+	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210911123859-041d13f0980c
 	github.com/libp2p/go-libp2p-core v0.3.0
@@ -32,6 +32,7 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
+	github.ibm.com/fabric-research/mathlib v0.0.0-20210603140852-fc2b5bf597d6
 	go.uber.org/atomic v1.7.0
 	golang.org/x/sys v0.0.0-20211004093028-2c5d950f24ef // indirect
 	gopkg.in/yaml.v2 v2.4.0

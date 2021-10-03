@@ -12,15 +12,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -74,13 +73,15 @@ type Auditor struct {
 	Signer         SigningIdentity
 	PedersenParams []*bn256.G1
 	NYMParams      []byte
+	Curve          *bn256.Curve
 }
 
-func NewAuditor(pp []*bn256.G1, nymparams []byte, signer SigningIdentity) *Auditor {
+func NewAuditor(pp []*bn256.G1, nymparams []byte, signer SigningIdentity, c *bn256.Curve) *Auditor {
 	return &Auditor{
 		PedersenParams: pp,
 		NYMParams:      nymparams,
 		Signer:         signer,
+		Curve:          c,
 	}
 }
 
@@ -171,7 +172,7 @@ func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
 	}
-	t, err := common.ComputePedersenCommitment([]*bn256.Zr{bn256.HashModOrder([]byte(output.data.ttype)), output.data.value, output.data.bf}, a.PedersenParams)
+	t, err := common.ComputePedersenCommitment([]*bn256.Zr{a.Curve.HashToZr([]byte(output.data.ttype)), output.data.value, output.data.bf}, a.PedersenParams, a.Curve)
 	if err != nil {
 		return err
 	}

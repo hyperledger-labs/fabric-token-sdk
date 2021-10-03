@@ -6,16 +6,15 @@ SPDX-License-Identifier: Apache-2.0
 package rangeproof
 
 import (
-	"crypto/sha256"
 	"encoding/json"
 	"math"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // todo check lengths
@@ -47,7 +46,7 @@ type Prover struct {
 	Commitment               *Commitment
 }
 
-func NewProver(tw []*token.TokenDataWitness, token []*bn256.G1, signatures []*pssign.Signature, exponent int, pp []*bn256.G1, PK []*bn256.G2, P *bn256.G1, Q *bn256.G2) *Prover {
+func NewProver(tw []*token.TokenDataWitness, token []*bn256.G1, signatures []*pssign.Signature, exponent int, pp []*bn256.G1, PK []*bn256.G2, P *bn256.G1, Q *bn256.G2, c *bn256.Curve) *Prover {
 	return &Prover{
 		tokenWitness: tw,
 		Signatures:   signatures,
@@ -59,6 +58,7 @@ func NewProver(tw []*token.TokenDataWitness, token []*bn256.G1, signatures []*ps
 			PK:             PK,
 			P:              P,
 			Q:              Q,
+			Curve:          c,
 		},
 	}
 }
@@ -71,9 +71,10 @@ type Verifier struct {
 	Q              *bn256.G2
 	P              *bn256.G1
 	PK             []*bn256.G2
+	Curve          *bn256.Curve
 }
 
-func NewVerifier(token []*bn256.G1, base uint64, exponent int, pp []*bn256.G1, PK []*bn256.G2, P *bn256.G1, Q *bn256.G2) *Verifier {
+func NewVerifier(token []*bn256.G1, base uint64, exponent int, pp []*bn256.G1, PK []*bn256.G2, P *bn256.G1, Q *bn256.G2, c *bn256.Curve) *Verifier {
 	return &Verifier{
 		Token:          token,
 		Base:           base,
@@ -82,6 +83,7 @@ func NewVerifier(token []*bn256.G1, base uint64, exponent int, pp []*bn256.G1, P
 		PK:             PK,
 		P:              P,
 		Q:              Q,
+		Curve:          c,
 	}
 }
 
@@ -112,7 +114,7 @@ func (p *Prover) Prove() ([]byte, error) {
 		proof.MembershipProofs[k].SignatureProofs = make([][]byte, p.Exponent)
 		for i := 0; i < p.Exponent; i++ {
 			proof.MembershipProofs[k].Commitments[i] = coms[k][i]
-			mp := sigproof.NewMembershipProver(p.membershipWitness[k][i], proof.MembershipProofs[k].Commitments[i], p.P, p.Q, p.PK, p.PedersenParams[:2])
+			mp := sigproof.NewMembershipProver(p.membershipWitness[k][i], proof.MembershipProofs[k].Commitments[i], p.P, p.Q, p.PK, p.PedersenParams[:2], p.Curve)
 			proof.MembershipProofs[k].SignatureProofs[i], err = mp.Prove()
 			if err != nil {
 				return nil, err
@@ -130,7 +132,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	// equality proof
 	proof.EqualityProofs = &EqualityProofs{}
 	for k := 0; k < len(p.Token); k++ {
-		sp := &common.SchnorrProver{Challenge: proof.Challenge, Randomness: []*bn256.Zr{p.randomness.Value[k], p.randomness.TokenBlindingFactor[k], p.randomness.CommitmentBlindingFactor[k]}, Witness: []*bn256.Zr{p.tokenWitness[k].Value, p.tokenWitness[k].BlindingFactor, p.commitmentBlindingFactor[k]}}
+		sp := &common.SchnorrProver{Challenge: proof.Challenge, Randomness: []*bn256.Zr{p.randomness.Value[k], p.randomness.TokenBlindingFactor[k], p.randomness.CommitmentBlindingFactor[k]}, Witness: []*bn256.Zr{p.tokenWitness[k].Value, p.tokenWitness[k].BlindingFactor, p.commitmentBlindingFactor[k]}, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 		proofs, err := sp.Prove()
 		if err != nil {
 			return nil, err
@@ -139,8 +141,8 @@ func (p *Prover) Prove() ([]byte, error) {
 		proof.EqualityProofs.TokenBlindingFactor = append(proof.EqualityProofs.TokenBlindingFactor, proofs[1])
 		proof.EqualityProofs.CommitmentBlindingFactor = append(proof.EqualityProofs.CommitmentBlindingFactor, proofs[2])
 	}
-	proof.EqualityProofs.Type = bn256.ModMul(proof.Challenge, bn256.HashModOrder([]byte(p.tokenWitness[0].Type)), bn256.Order)
-	proof.EqualityProofs.Type = bn256.ModAdd(proof.EqualityProofs.Type, p.randomness.Type, bn256.Order)
+	proof.EqualityProofs.Type = p.Curve.ModMul(proof.Challenge, p.Curve.HashToZr([]byte(p.tokenWitness[0].Type)), p.Curve.GroupOrder)
+	proof.EqualityProofs.Type = p.Curve.ModAdd(proof.EqualityProofs.Type, p.randomness.Type, p.Curve.GroupOrder)
 
 	return json.Marshal(proof)
 }
@@ -161,7 +163,7 @@ func (v *Verifier) Verify(raw []byte) error {
 			return errors.Errorf("failed to verify range proof")
 		}
 		for i := 0; i < len(proof.MembershipProofs[k].Commitments); i++ {
-			mv := sigproof.NewMembershipVerifier(proof.MembershipProofs[k].Commitments[i], v.P, v.Q, v.PK, v.PedersenParams[:2])
+			mv := sigproof.NewMembershipVerifier(proof.MembershipProofs[k].Commitments[i], v.P, v.Q, v.PK, v.PedersenParams[:2], v.Curve)
 			err = mv.Verify(proof.MembershipProofs[k].SignatureProofs[i])
 			if err != nil {
 				return errors.Wrapf(err, "failed to verify range proof")
@@ -178,14 +180,14 @@ func (v *Verifier) Verify(raw []byte) error {
 		}
 	}
 	chal := v.computeChallenge(com, coms)
-	if chal.Cmp(proof.Challenge) != 0 {
+	if !chal.Equals(proof.Challenge) {
 		return errors.Errorf("failed to verify range proof")
 	}
 
 	return nil
 }
 func (p *Prover) computeMembershipWitness() ([][]*bn256.G1, error) {
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +197,10 @@ func (p *Prover) computeMembershipWitness() ([][]*bn256.G1, error) {
 
 	for k := 0; k < len(p.tokenWitness); k++ {
 		values := make([]int, p.Exponent)
-		v := p.tokenWitness[k].Value.Int64()
+		v, err := p.tokenWitness[k].Value.Int()
+		if err != nil {
+			return nil, err
+		}
 		if v >= int64(math.Pow(float64(p.Base), float64(p.Exponent))) {
 			return nil, errors.Errorf("can't compute range proof: value of token outside authorized range")
 		}
@@ -206,35 +211,35 @@ func (p *Prover) computeMembershipWitness() ([][]*bn256.G1, error) {
 		}
 
 		p.membershipWitness[k] = make([]*sigproof.MembershipWitness, p.Exponent)
-		p.commitmentBlindingFactor[k] = bn256.NewZr()
+		p.commitmentBlindingFactor[k] = p.Curve.NewZrFromInt(0)
 		coms[k] = make([]*bn256.G1, p.Exponent)
 		for i := 0; i < p.Exponent; i++ {
-			bf := bn256.RandModOrder(rand)
-			coms[k][i], err = common.ComputePedersenCommitment([]*bn256.Zr{bn256.NewZrInt(values[i]), bf}, p.PedersenParams[:2])
+			bf := p.Curve.NewRandomZr(rand)
+			coms[k][i], err = common.ComputePedersenCommitment([]*bn256.Zr{p.Curve.NewZrFromInt(int64(values[i])), bf}, p.PedersenParams[:2], p.Curve)
 			if err != nil {
 				return nil, err
 			}
 
-			p.membershipWitness[k][i] = sigproof.NewMembershipWitness(p.Signatures[values[i]], bn256.NewZrInt(values[i]), bf)
-			pow := bn256.NewZrInt(int(math.Pow(float64(p.Base), float64(i))))
-			p.commitmentBlindingFactor[k] = bn256.ModAdd(p.commitmentBlindingFactor[k], bn256.ModMul(bf, pow, bn256.Order), bn256.Order)
+			p.membershipWitness[k][i] = sigproof.NewMembershipWitness(p.Signatures[values[i]], p.Curve.NewZrFromInt(int64(values[i])), bf)
+			pow := p.Curve.NewZrFromInt(int64(math.Pow(float64(p.Base), float64(i))))
+			p.commitmentBlindingFactor[k] = p.Curve.ModAdd(p.commitmentBlindingFactor[k], p.Curve.ModMul(bf, pow, p.Curve.GroupOrder), p.Curve.GroupOrder)
 		}
 	}
 	return coms, nil
 }
 
 func (p *Prover) computeCommitment() error {
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return err
 	}
 	// generate randomness
 	p.randomness = &Randomness{}
-	p.randomness.Type = bn256.RandModOrder(rand)
+	p.randomness.Type = p.Curve.NewRandomZr(rand)
 	for i := 0; i < len(p.Token); i++ {
-		p.randomness.Value = append(p.randomness.Value, bn256.RandModOrder(rand))
-		p.randomness.CommitmentBlindingFactor = append(p.randomness.CommitmentBlindingFactor, bn256.RandModOrder(rand))
-		p.randomness.TokenBlindingFactor = append(p.randomness.TokenBlindingFactor, bn256.RandModOrder(rand))
+		p.randomness.Value = append(p.randomness.Value, p.Curve.NewRandomZr(rand))
+		p.randomness.CommitmentBlindingFactor = append(p.randomness.CommitmentBlindingFactor, p.Curve.NewRandomZr(rand))
+		p.randomness.TokenBlindingFactor = append(p.randomness.TokenBlindingFactor, p.Curve.NewRandomZr(rand))
 	}
 
 	// compute commitment
@@ -261,27 +266,26 @@ func (v *Verifier) computeChallenge(commitment *Commitment, comToValue [][]*bn25
 	for i := 0; i < len(comToValue); i++ {
 		bytes = append(bytes, common.GetG1Array(comToValue[i]).Bytes()...)
 	}
-	hash := sha256.Sum256(bytes)
-	return bn256.NewZrFromBytes(hash[:])
+	return v.Curve.HashToZr(bytes)
 }
 
 func (v *Verifier) recomputeCommitments(p *Proof) *Commitment {
 	c := &Commitment{}
 	// recompute commitments for verification
 	for j := 0; j < len(v.Token); j++ {
-		ver := &common.SchnorrVerifier{PedParams: v.PedersenParams}
+		ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 		zkp := &common.SchnorrProof{Statement: v.Token[j], Proof: []*bn256.Zr{p.EqualityProofs.Type, p.EqualityProofs.Value[j], p.EqualityProofs.TokenBlindingFactor[j]}, Challenge: p.Challenge}
 		c.Token = append(c.Token, ver.RecomputeCommitment(zkp))
 	}
 
 	for j := 0; j < len(v.Token); j++ {
-		com := bn256.NewG1()
+		com := v.Curve.NewG1()
 		for i := 0; i < v.Exponent; i++ {
-			pow := bn256.NewZrInt(int(math.Pow(float64(v.Base), float64(i))))
+			pow := v.Curve.NewZrFromInt(int64(math.Pow(float64(v.Base), float64(i))))
 			com.Add(p.MembershipProofs[j].Commitments[i].Mul(pow))
 		}
 
-		ver := &common.SchnorrVerifier{PedParams: v.PedersenParams[:2]}
+		ver := &common.SchnorrVerifier{PedParams: v.PedersenParams[:2], Curve: v.Curve}
 		zkp := &common.SchnorrProof{Statement: com, Proof: []*bn256.Zr{p.EqualityProofs.Value[j], p.EqualityProofs.CommitmentBlindingFactor[j]}, Challenge: p.Challenge}
 		c.CommitmentToValue = append(c.CommitmentToValue, ver.RecomputeCommitment(zkp))
 	}

@@ -8,12 +8,11 @@ package transfer
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -39,7 +38,7 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf
 }
 
 func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.TokenInformation, error) {
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams)
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, bn256.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, err
 	}

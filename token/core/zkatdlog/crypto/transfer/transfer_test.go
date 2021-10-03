@@ -6,12 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("Transfer", func() {
@@ -146,7 +146,8 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) 
 }
 
 func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormednessWitness, []*bn256.G1, []*bn256.G1) {
-	rand, err := bn256.GetRand()
+	c := bn256.Curves[pp.Curve]
+	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
 	inBF := make([]*bn256.Zr, 2)
@@ -154,18 +155,18 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormedne
 	inValues := make([]*bn256.Zr, 2)
 	outValues := make([]*bn256.Zr, 2)
 	for i := 0; i < 2; i++ {
-		inBF[i] = bn256.RandModOrder(rand)
+		inBF[i] = c.NewRandomZr(rand)
 	}
 	for i := 0; i < 2; i++ {
-		outBF[i] = bn256.RandModOrder(rand)
+		outBF[i] = c.NewRandomZr(rand)
 	}
 	ttype := "ABC"
-	inValues[0] = bn256.NewZrInt(90)
-	inValues[1] = bn256.NewZrInt(60)
-	outValues[0] = bn256.NewZrInt(50)
-	outValues[1] = bn256.NewZrInt(100)
+	inValues[0] = c.NewZrFromInt(90)
+	inValues[1] = c.NewZrFromInt(60)
+	outValues[0] = c.NewZrFromInt(50)
+	outValues[1] = c.NewZrFromInt(100)
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.ZKATPedParams)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.ZKATPedParams, c)
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
@@ -180,7 +181,8 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormedne
 }
 
 func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormednessWitness, []*bn256.G1, []*bn256.G1) {
-	rand, err := bn256.GetRand()
+	c := bn256.Curves[pp.Curve]
+	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
 	inBF := make([]*bn256.Zr, 2)
@@ -188,18 +190,18 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellF
 	inValues := make([]*bn256.Zr, 2)
 	outValues := make([]*bn256.Zr, 2)
 	for i := 0; i < 2; i++ {
-		inBF[i] = bn256.RandModOrder(rand)
+		inBF[i] = c.NewRandomZr(rand)
 	}
 	for i := 0; i < 2; i++ {
-		outBF[i] = bn256.RandModOrder(rand)
+		outBF[i] = c.NewRandomZr(rand)
 	}
 	ttype := "ABC"
-	inValues[0] = bn256.NewZrInt(90)
-	inValues[1] = bn256.NewZrInt(60)
-	outValues[0] = bn256.NewZrInt(110)
-	outValues[1] = bn256.NewZrInt(45)
+	inValues[0] = c.NewZrFromInt(90)
+	inValues[1] = c.NewZrFromInt(60)
+	outValues[0] = c.NewZrFromInt(110)
+	outValues[1] = c.NewZrFromInt(45)
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.ZKATPedParams)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.ZKATPedParams, c)
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}

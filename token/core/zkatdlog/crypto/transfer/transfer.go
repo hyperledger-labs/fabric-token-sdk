@@ -8,12 +8,12 @@ package transfer
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rangeproof "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
+	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // zkat proof of transfer correctness
@@ -38,16 +38,16 @@ func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, ou
 
 	p := &Prover{}
 
-	p.RangeCorrectness = rangeproof.NewProver(outputwitness, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q)
+	p.RangeCorrectness = rangeproof.NewProver(outputwitness, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, bn256.Curves[pp.Curve])
 	wfw := NewWellFormednessWitness(inputwitness, outputwitness)
-	p.WellFormedness = NewWellFormednessProver(wfw, pp.ZKATPedParams, inputs, outputs)
+	p.WellFormedness = NewWellFormednessProver(wfw, pp.ZKATPedParams, inputs, outputs, bn256.Curves[pp.Curve])
 	return p
 }
 
 func NewVerifier(inputs, outputs []*bn256.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q)
-	v.WellFormedness = NewWellFormednessVerifier(pp.ZKATPedParams, inputs, outputs)
+	v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, bn256.Curves[pp.Curve])
+	v.WellFormedness = NewWellFormednessVerifier(pp.ZKATPedParams, inputs, outputs, bn256.Curves[pp.Curve])
 
 	return v
 }
