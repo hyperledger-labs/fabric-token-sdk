@@ -11,6 +11,7 @@ replace (
 )
 
 require (
+	github.com/IBM/mathlib v0.0.0-20210928081244-f5486459a290
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/containerd/containerd v1.5.5 // indirect
@@ -32,7 +33,6 @@ require (
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.0
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
-	github.ibm.com/fabric-research/mathlib v0.0.0-20210603140852-fc2b5bf597d6
 	go.uber.org/atomic v1.7.0
 	golang.org/x/sys v0.0.0-20211004093028-2c5d950f24ef // indirect
 	gopkg.in/yaml.v2 v2.4.0

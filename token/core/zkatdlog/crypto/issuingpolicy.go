@@ -8,7 +8,7 @@ package crypto
 import (
 	"encoding/json"
 
-	bn256 "github.ibm.com/fabric-research/mathlib"
+	bn256 "github.com/IBM/mathlib"
 )
 
 type IssuingPolicy struct {

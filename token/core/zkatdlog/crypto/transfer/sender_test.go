@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -14,7 +15,6 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("Sender", func() {

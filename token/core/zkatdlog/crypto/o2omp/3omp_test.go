@@ -8,10 +8,10 @@ package o2omp_test
 import (
 	"io"
 
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/o2omp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("One out of many proof", func() {

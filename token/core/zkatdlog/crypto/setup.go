@@ -9,10 +9,10 @@ import (
 	"encoding/json"
 	math2 "math"
 
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 const (

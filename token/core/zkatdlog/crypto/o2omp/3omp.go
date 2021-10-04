@@ -9,9 +9,9 @@ import (
 	"encoding/json"
 	"strconv"
 
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/pkg/errors"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // prover for the one out of many proofs

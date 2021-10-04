@@ -8,11 +8,11 @@ package sigproof_test
 import (
 	"encoding/json"
 
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("ZK proof of PS signature", func() {

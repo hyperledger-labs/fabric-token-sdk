@@ -8,6 +8,7 @@ package nogh
 import (
 	"strconv"
 
+	bn256 "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -17,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.Id, outputTokens ...*token3.Token) (driver.TransferAction, *driver.TransferMetadata, error) {

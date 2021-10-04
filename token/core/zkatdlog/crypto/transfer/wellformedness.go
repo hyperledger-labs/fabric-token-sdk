@@ -8,10 +8,10 @@ package transfer
 import (
 	"encoding/json"
 
+	bn256 "github.com/IBM/mathlib"
 	crypto "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 // todo inspection function

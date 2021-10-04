@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"time"
 
+	bn256 "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -28,7 +29,6 @@ import (
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("Auditor", func() {

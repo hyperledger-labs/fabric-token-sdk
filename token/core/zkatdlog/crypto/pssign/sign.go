@@ -8,8 +8,8 @@ package pssign
 import (
 	"encoding/json"
 
+	bn256 "github.com/IBM/mathlib"
 	"github.com/pkg/errors"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 type Signer struct {

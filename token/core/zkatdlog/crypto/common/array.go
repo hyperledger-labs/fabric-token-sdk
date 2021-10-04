@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	bn256 "github.ibm.com/fabric-research/mathlib"
+	bn256 "github.com/IBM/mathlib"
 )
 
 type G1Array struct {

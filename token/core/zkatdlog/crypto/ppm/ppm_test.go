@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
@@ -17,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("PublicParamsManager", func() {

@@ -6,11 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
+	bn256 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	bn256 "github.ibm.com/fabric-research/mathlib"
 )
 
 var _ = Describe("Token", func() {
