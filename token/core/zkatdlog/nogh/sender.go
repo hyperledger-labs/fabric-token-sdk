@@ -8,7 +8,7 @@ package nogh
 import (
 	"strconv"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -183,7 +183,7 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]by
 
 	// get commitments from outputs
 	pp := s.PublicParams()
-	com := make([]*bn256.G1, len(tr.OutputTokens))
+	com := make([]*math.G1, len(tr.OutputTokens))
 	for i := 0; i < len(tr.OutputTokens); i++ {
 
 		ti := &token.TokenInformation{}

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package sigproof_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"
@@ -48,9 +48,9 @@ var _ = Describe("membership", func() {
 })
 
 func getMembershipProver() *sigproof.MembershipProver {
-	c := bn256.Curves[1]
+	c := math.Curves[1]
 	signer := getSigner(1, c)
-	sig, err := signer.Sign([]*bn256.Zr{c.NewZrFromInt(120)})
+	sig, err := signer.Sign([]*math.Zr{c.NewZrFromInt(120)})
 	Expect(err).NotTo(HaveOccurred())
 
 	pp := preparePedersenParameters(2, c)
@@ -58,7 +58,7 @@ func getMembershipProver() *sigproof.MembershipProver {
 	Expect(err).NotTo(HaveOccurred())
 
 	r := c.NewRandomZr(rand)
-	com, err := common.ComputePedersenCommitment([]*bn256.Zr{c.NewZrFromInt(120), r}, pp, c)
+	com, err := common.ComputePedersenCommitment([]*math.Zr{c.NewZrFromInt(120), r}, pp, c)
 	Expect(err).NotTo(HaveOccurred())
 
 	witness := sigproof.NewMembershipWitness(sig, c.NewZrFromInt(120), r)
@@ -67,9 +67,9 @@ func getMembershipProver() *sigproof.MembershipProver {
 }
 
 func getBogusProver() *sigproof.MembershipProver {
-	c := bn256.Curves[1]
+	c := math.Curves[1]
 	signer := getSigner(1, c)
-	sig, err := signer.Sign([]*bn256.Zr{c.NewZrFromInt(120)})
+	sig, err := signer.Sign([]*math.Zr{c.NewZrFromInt(120)})
 	Expect(err).NotTo(HaveOccurred())
 
 	pp := preparePedersenParameters(2, c)
@@ -77,21 +77,21 @@ func getBogusProver() *sigproof.MembershipProver {
 	Expect(err).NotTo(HaveOccurred())
 
 	r := c.NewRandomZr(rand)
-	com, err := common.ComputePedersenCommitment([]*bn256.Zr{c.NewZrFromInt(130), r}, pp, c)
+	com, err := common.ComputePedersenCommitment([]*math.Zr{c.NewZrFromInt(130), r}, pp, c)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = signer.SignVerifier.Verify([]*bn256.Zr{c.NewZrFromInt(130), c.HashToZr(c.NewZrFromInt(120).Bytes())}, sig)
+	err = signer.SignVerifier.Verify([]*math.Zr{c.NewZrFromInt(130), c.HashToZr(c.NewZrFromInt(120).Bytes())}, sig)
 	Expect(err).To(HaveOccurred())
 	witness := sigproof.NewMembershipWitness(sig, c.NewZrFromInt(130), r)
 	P := c.NewG1()
 	return sigproof.NewMembershipProver(witness, com, P, signer.Q, signer.PK, pp, c)
 }
 
-func preparePedersenParameters(l int, curve *bn256.Curve) []*bn256.G1 {
+func preparePedersenParameters(l int, curve *math.Curve) []*math.G1 {
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	pp := make([]*bn256.G1, l)
+	pp := make([]*math.G1, l)
 
 	for i := 0; i < l; i++ {
 		pp[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))

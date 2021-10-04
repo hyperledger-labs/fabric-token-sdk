@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -145,15 +145,15 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) 
 	return prover, verifier
 }
 
-func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormednessWitness, []*bn256.G1, []*bn256.G1) {
-	c := bn256.Curves[pp.Curve]
+func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormednessWitness, []*math.G1, []*math.G1) {
+	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	inBF := make([]*bn256.Zr, 2)
-	outBF := make([]*bn256.Zr, 2)
-	inValues := make([]*bn256.Zr, 2)
-	outValues := make([]*bn256.Zr, 2)
+	inBF := make([]*math.Zr, 2)
+	outBF := make([]*math.Zr, 2)
+	inValues := make([]*math.Zr, 2)
+	outValues := make([]*math.Zr, 2)
 	for i := 0; i < 2; i++ {
 		inBF[i] = c.NewRandomZr(rand)
 	}
@@ -180,15 +180,15 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormedne
 	return transfer.NewWellFormednessWitness(intw, outtw), in, out
 }
 
-func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormednessWitness, []*bn256.G1, []*bn256.G1) {
-	c := bn256.Curves[pp.Curve]
+func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormednessWitness, []*math.G1, []*math.G1) {
+	c := math.Curves[pp.Curve]
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	inBF := make([]*bn256.Zr, 2)
-	outBF := make([]*bn256.Zr, 2)
-	inValues := make([]*bn256.Zr, 2)
-	outValues := make([]*bn256.Zr, 2)
+	inBF := make([]*math.Zr, 2)
+	outBF := make([]*math.Zr, 2)
+	inValues := make([]*math.Zr, 2)
+	outValues := make([]*math.Zr, 2)
 	for i := 0; i < 2; i++ {
 		inBF[i] = c.NewRandomZr(rand)
 	}

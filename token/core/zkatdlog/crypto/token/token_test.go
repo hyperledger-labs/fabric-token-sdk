@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	. "github.com/onsi/ginkgo"
@@ -24,7 +24,7 @@ var _ = Describe("Token", func() {
 		var err error
 		pp, err = crypto.Setup(100, 2, nil)
 		Expect(err).NotTo(HaveOccurred())
-		c := bn256.Curves[pp.Curve]
+		c := math.Curves[pp.Curve]
 		rand, err := c.Rand()
 		Expect(err).NotTo(HaveOccurred())
 		inf = &token2.TokenInformation{

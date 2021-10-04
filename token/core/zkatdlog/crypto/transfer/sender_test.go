@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -26,9 +26,9 @@ var _ = Describe("Sender", func() {
 		transfer *transfer2.TransferAction
 		sender   *transfer2.Sender
 
-		invalues  []*bn256.Zr
+		invalues  []*math.Zr
 		outvalues []uint64
-		inBF      []*bn256.Zr
+		inBF      []*math.Zr
 		tokens    []*token.Token
 
 		owners [][]byte
@@ -51,13 +51,13 @@ var _ = Describe("Sender", func() {
 		fakeSigningIdentity.SignReturnsOnCall(1, []byte("signer[1]"), nil)
 		fakeSigningIdentity.SignReturnsOnCall(2, []byte("signer[2]"), nil)
 
-		c := bn256.Curves[pp.Curve]
-		invalues = make([]*bn256.Zr, 3)
+		c := math.Curves[pp.Curve]
+		invalues = make([]*math.Zr, 3)
 		invalues[0] = c.NewZrFromInt(50)
 		invalues[1] = c.NewZrFromInt(20)
 		invalues[2] = c.NewZrFromInt(30)
 
-		inBF = make([]*bn256.Zr, 3)
+		inBF = make([]*math.Zr, 3)
 		rand, err := c.Rand()
 		Expect(err).NotTo(HaveOccurred())
 		for i := 0; i < 3; i++ {
@@ -126,8 +126,8 @@ var _ = Describe("Sender", func() {
 	})
 })
 
-func PrepareTokens(values, bf []*bn256.Zr, ttype string, pp []*bn256.G1, curve *bn256.Curve) []*bn256.G1 {
-	tokens := make([]*bn256.G1, len(values))
+func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
+	tokens := make([]*math.G1, len(values))
 	for i := 0; i < len(values); i++ {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}

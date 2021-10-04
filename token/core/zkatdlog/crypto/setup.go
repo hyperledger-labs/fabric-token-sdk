@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	math2 "math"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -20,8 +20,8 @@ const (
 )
 
 type PublicParams struct {
-	P                *bn256.G1
-	ZKATPedParams    []*bn256.G1
+	P                *math.G1
+	ZKATPedParams    []*math.G1
 	RangeProofParams *RangeProofParams
 	IdemixPK         []byte
 	IssuingPolicy    []byte
@@ -31,9 +31,9 @@ type PublicParams struct {
 }
 
 type RangeProofParams struct {
-	SignPK       []*bn256.G2
+	SignPK       []*math.G2
 	SignedValues []*pssign.Signature
-	Q            *bn256.G2
+	Q            *math.G2
 	Exponent     int
 }
 
@@ -94,13 +94,13 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 }
 
 func (pp *PublicParams) GeneratePedersenParameters() error {
-	curve := bn256.Curves[pp.Curve]
+	curve := math.Curves[pp.Curve]
 	rand, err := curve.Rand()
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
 	pp.P = curve.GenG1.Mul(curve.NewRandomZr(rand))
-	pp.ZKATPedParams = make([]*bn256.G1, 3)
+	pp.ZKATPedParams = make([]*math.G1, 3)
 
 	for i := 0; i < len(pp.ZKATPedParams); i++ {
 		pp.ZKATPedParams[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
@@ -109,13 +109,13 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 }
 
 func (pp *PublicParams) GenerateRangeProofParameters(signer *pssign.Signer, maxValue int64) error {
-	curve := bn256.Curves[pp.Curve]
+	curve := math.Curves[pp.Curve]
 	pp.RangeProofParams = &RangeProofParams{Q: signer.Q, SignPK: signer.PK}
 
 	pp.RangeProofParams.SignedValues = make([]*pssign.Signature, maxValue)
 	for i := 0; i < len(pp.RangeProofParams.SignedValues); i++ {
 		var err error
-		m := make([]*bn256.Zr, 1)
+		m := make([]*math.Zr, 1)
 		m[0] = curve.NewZrFromInt(int64(i))
 		pp.RangeProofParams.SignedValues[i], err = signer.Sign(m)
 		if err != nil {
@@ -126,9 +126,9 @@ func (pp *PublicParams) GenerateRangeProofParameters(signer *pssign.Signer, maxV
 	return nil
 }
 
-func (pp *PublicParams) SetIssuingPolicy(issuers []*bn256.G1) error {
+func (pp *PublicParams) SetIssuingPolicy(issuers []*math.G1) error {
 	ip := &IssuingPolicy{BitLength: int(math2.Ceil(math2.Log2(float64(len(issuers))))), IssuersNumber: len(issuers)}
-	curve := bn256.Curves[pp.Curve]
+	curve := math.Curves[pp.Curve]
 	// pad list of issuers with a dummy commitment
 	if len(issuers) != int(math2.Exp2(math2.Ceil(math2.Log2(float64(len(issuers)))))) {
 
@@ -146,7 +146,7 @@ func (pp *PublicParams) SetIssuingPolicy(issuers []*bn256.G1) error {
 	return nil
 }
 
-func (pp *PublicParams) AddIssuer(issuer *bn256.G1) error {
+func (pp *PublicParams) AddIssuer(issuer *math.G1) error {
 	ip := &IssuingPolicy{}
 
 	err := ip.Deserialize(pp.IssuingPolicy)
@@ -175,7 +175,7 @@ func Setup(base int64, exponent int, nymPK []byte) (*PublicParams, error) {
 }
 
 func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string) (*PublicParams, error) {
-	signer := pssign.NewSigner(nil, nil, nil, bn256.Curves[1])
+	signer := pssign.NewSigner(nil, nil, nil, math.Curves[1])
 	err := signer.KeyGen(1)
 	if err != nil {
 		return nil, err

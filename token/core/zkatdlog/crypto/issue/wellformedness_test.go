@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package issue_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	. "github.com/onsi/ginkgo"
@@ -47,13 +47,13 @@ var _ = Describe("Issued Token Correctness", func() {
 	})
 })
 
-func PrepareTokenWitness(pp []*bn256.G1) ([]*token.TokenDataWitness, []*bn256.G1, []*bn256.Zr) {
-	curve := bn256.Curves[1]
+func PrepareTokenWitness(pp []*math.G1) ([]*token.TokenDataWitness, []*math.G1, []*math.Zr) {
+	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	bF := make([]*bn256.Zr, 2)
-	values := make([]*bn256.Zr, 2)
+	bF := make([]*math.Zr, 2)
+	values := make([]*math.Zr, 2)
 	for i := 0; i < 2; i++ {
 		bF[i] = curve.NewRandomZr(rand)
 	}
@@ -65,9 +65,9 @@ func PrepareTokenWitness(pp []*bn256.G1) ([]*token.TokenDataWitness, []*bn256.G1
 	return issue.NewTokenDataWitness(ttype, values, bF), tokens, bF
 }
 
-func PrepareTokens(values, bf []*bn256.Zr, ttype string, pp []*bn256.G1) []*bn256.G1 {
-	curve := bn256.Curves[1]
-	tokens := make([]*bn256.G1, len(values))
+func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1) []*math.G1 {
+	curve := math.Curves[1]
+	tokens := make([]*math.G1, len(values))
 	for i := 0; i < len(values); i++ {
 		tokens[i] = NewToken(values[i], bf[i], ttype, pp, curve)
 	}
@@ -78,15 +78,15 @@ func GetITCPProver() *issue.WellFormednessProver {
 	pp := preparePedersenParameters()
 	tw, tokens, _ := PrepareTokenWitness(pp)
 
-	return issue.NewWellFormednessProver(tw, tokens, false, pp, bn256.Curves[1])
+	return issue.NewWellFormednessProver(tw, tokens, false, pp, math.Curves[1])
 }
 
-func preparePedersenParameters() []*bn256.G1 {
-	curve := bn256.Curves[1]
+func preparePedersenParameters() []*math.G1 {
+	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	pp := make([]*bn256.G1, 3)
+	pp := make([]*math.G1, 3)
 
 	for i := 0; i < 3; i++ {
 		pp[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
@@ -94,7 +94,7 @@ func preparePedersenParameters() []*bn256.G1 {
 	return pp
 }
 
-func NewToken(value *bn256.Zr, rand *bn256.Zr, ttype string, pp []*bn256.G1, curve *bn256.Curve) *bn256.G1 {
+func NewToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, curve *math.Curve) *math.G1 {
 	token := curve.NewG1()
 	token.Add(pp[0].Mul(curve.HashToZr([]byte(ttype))))
 	token.Add(pp[1].Mul(value))

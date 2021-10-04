@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -25,7 +25,7 @@ func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMeta
 	}
 
 	pp := s.PublicParams()
-	if err := audit.NewAuditor(pp.ZKATPedParams, pp.IdemixPK, nil, bn256.Curves[pp.Curve]).Check(
+	if err := audit.NewAuditor(pp.ZKATPedParams, pp.IdemixPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
 		tokenRequestMetadata,
 		inputTokens,

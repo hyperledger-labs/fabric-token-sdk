@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package issue_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -35,15 +35,15 @@ var _ = Describe("Issue Correctness", func() {
 	})
 })
 
-func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness, []*bn256.G1) {
-	values := make([]*bn256.Zr, 2)
-	values[0] = bn256.Curves[pp.Curve].NewZrFromInt(120)
-	values[1] = bn256.Curves[pp.Curve].NewZrFromInt(190)
+func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness, []*math.G1) {
+	values := make([]*math.Zr, 2)
+	values[0] = math.Curves[pp.Curve].NewZrFromInt(120)
+	values[1] = math.Curves[pp.Curve].NewZrFromInt(190)
 
-	rand, _ := bn256.Curves[pp.Curve].Rand()
-	bF := make([]*bn256.Zr, len(values))
+	rand, _ := math.Curves[pp.Curve].Rand()
+	bF := make([]*math.Zr, len(values))
 	for i := 0; i < len(values); i++ {
-		bF[i] = bn256.Curves[pp.Curve].NewRandomZr(rand)
+		bF[i] = math.Curves[pp.Curve].NewRandomZr(rand)
 	}
 	ttype := "ABC"
 

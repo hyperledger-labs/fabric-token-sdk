@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package pssign_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,12 +16,12 @@ var _ = Describe("Pointcheval Sanders signatures", func() {
 	var (
 		verifier *pssign.SignVerifier
 		signer   *pssign.Signer
-		m        []*bn256.Zr
-		curve    *bn256.Curve
+		m        []*math.Zr
+		curve    *math.Curve
 	)
 	Describe("Sign", func() {
 		BeforeEach(func() {
-			curve = bn256.Curves[1]
+			curve = math.Curves[1]
 		})
 		Context("KeyGen is initialized correctly", func() {
 			It("Succeeds", func() {
@@ -82,17 +82,17 @@ var _ = Describe("Pointcheval Sanders signatures", func() {
 	})
 })
 
-func getMessages(length int, curve *bn256.Curve) []*bn256.Zr {
+func getMessages(length int, curve *math.Curve) []*math.Zr {
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	m := make([]*bn256.Zr, length)
+	m := make([]*math.Zr, length)
 	for i := 0; i < length; i++ {
 		m[i] = curve.NewRandomZr(rand)
 	}
 	return m
 }
 
-func hashMessages(m []*bn256.Zr, curve *bn256.Curve) *bn256.Zr {
+func hashMessages(m []*math.Zr, curve *math.Curve) *math.Zr {
 	var bytesToHash []byte
 	for i := 0; i < len(m); i++ {
 		bytes := m[i].Bytes()

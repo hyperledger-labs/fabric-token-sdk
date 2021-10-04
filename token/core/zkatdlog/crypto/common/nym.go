@@ -8,15 +8,15 @@ package common
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
 
 // this implements signing identity
 type NYMSigner struct {
 	*NYMVerifier
-	SK *bn256.Zr
-	BF *bn256.Zr
+	SK *math.Zr
+	BF *math.Zr
 }
 
 // get verifier
@@ -37,7 +37,7 @@ func (s *NYMSigner) Sign(message []byte) ([]byte, error) {
 	com.Add(s.NYMParams[1].Mul(bfRandomness))
 
 	sig := &NYMSig{}
-	sig.Challenge = s.Curve.HashToZr(append(message, GetG1Array(s.NYMParams, []*bn256.G1{s.NYM, com}).Bytes()...))
+	sig.Challenge = s.Curve.HashToZr(append(message, GetG1Array(s.NYMParams, []*math.G1{s.NYM, com}).Bytes()...))
 	sig.SK = s.Curve.ModMul(sig.Challenge, s.SK, s.Curve.GroupOrder)
 	sig.SK = s.Curve.ModAdd(sig.SK, skRandomness, s.Curve.GroupOrder)
 
@@ -53,9 +53,9 @@ func (s *NYMSigner) Sign(message []byte) ([]byte, error) {
 
 // this implements sig verifier
 type NYMVerifier struct {
-	NYMParams []*bn256.G1
-	NYM       *bn256.G1
-	Curve     *bn256.Curve
+	NYMParams []*math.G1
+	NYM       *math.G1
+	Curve     *math.Curve
 }
 
 // return serialized pseudonym
@@ -79,9 +79,9 @@ func (v *NYMVerifier) Verify(message []byte, signature []byte) error {
 	}
 
 	sv := &SchnorrVerifier{PedParams: v.NYMParams} // todo Curve?
-	sp := &SchnorrProof{Challenge: sig.Challenge, Proof: []*bn256.Zr{sig.SK, sig.BF}, Statement: v.NYM}
+	sp := &SchnorrProof{Challenge: sig.Challenge, Proof: []*math.Zr{sig.SK, sig.BF}, Statement: v.NYM}
 	com := sv.RecomputeCommitment(sp)
-	chal := v.Curve.HashToZr(append(message, GetG1Array(v.NYMParams, []*bn256.G1{v.NYM, com}).Bytes()...))
+	chal := v.Curve.HashToZr(append(message, GetG1Array(v.NYMParams, []*math.G1{v.NYM, com}).Bytes()...))
 	if !chal.Equals(sig.Challenge) {
 		return errors.Errorf("invalid nym signature")
 	}
@@ -90,9 +90,9 @@ func (v *NYMVerifier) Verify(message []byte, signature []byte) error {
 
 // Pseudonyms signature (schnorr)
 type NYMSig struct {
-	SK        *bn256.Zr
-	BF        *bn256.Zr
-	Challenge *bn256.Zr
+	SK        *math.Zr
+	BF        *math.Zr
+	Challenge *math.Zr
 }
 
 // Intermediate struct for serialization and deserialization

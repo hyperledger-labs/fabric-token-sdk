@@ -8,7 +8,7 @@ package nogh
 import (
 	"sync"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -58,8 +58,8 @@ type Service struct {
 	Issuers []*struct {
 		label string
 		index int
-		sk    *bn256.Zr
-		pk    *bn256.G1
+		sk    *math.Zr
+		pk    *math.G1
 		fID   view.Identity
 	}
 

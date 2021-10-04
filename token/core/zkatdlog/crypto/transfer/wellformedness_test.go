@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	. "github.com/onsi/ginkgo"
@@ -16,17 +16,17 @@ import (
 var _ = Describe("Input/Output well formedness", func() {
 	var (
 		iow      *transfer.WellFormednessWitness
-		pp       []*bn256.G1
+		pp       []*math.G1
 		verifier *transfer.WellFormednessVerifier
 		prover   *transfer.WellFormednessProver
-		in       []*bn256.G1
-		out      []*bn256.G1
-		inBF     []*bn256.Zr
-		outBF    []*bn256.Zr
-		c        *bn256.Curve
+		in       []*math.G1
+		out      []*math.G1
+		inBF     []*math.Zr
+		outBF    []*math.Zr
+		c        *math.Curve
 	)
 	BeforeEach(func() {
-		c = bn256.Curves[1]
+		c = math.Curves[1]
 		pp = preparePedersenParameters(c)
 		iow, in, out, inBF, outBF = prepareIOCProver(pp, c)
 		prover = transfer.NewWellFormednessProver(iow, pp, in, out, c)
@@ -129,11 +129,11 @@ var _ = Describe("Input/Output well formedness", func() {
 	})
 })
 
-func preparePedersenParameters(c *bn256.Curve) []*bn256.G1 {
+func preparePedersenParameters(c *math.Curve) []*math.G1 {
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	pp := make([]*bn256.G1, 3)
+	pp := make([]*math.G1, 3)
 
 	for i := 0; i < 3; i++ {
 		pp[i] = c.GenG1.Mul(c.NewRandomZr(rand))
@@ -141,14 +141,14 @@ func preparePedersenParameters(c *bn256.Curve) []*bn256.G1 {
 	return pp
 }
 
-func prepareIOCProver(pp []*bn256.G1, c *bn256.Curve) (*transfer.WellFormednessWitness, []*bn256.G1, []*bn256.G1, []*bn256.Zr, []*bn256.Zr) {
+func prepareIOCProver(pp []*math.G1, c *math.Curve) (*transfer.WellFormednessWitness, []*math.G1, []*math.G1, []*math.Zr, []*math.Zr) {
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	inBF := make([]*bn256.Zr, 2)
-	outBF := make([]*bn256.Zr, 3)
-	inValues := make([]*bn256.Zr, 2)
-	outValues := make([]*bn256.Zr, 3)
+	inBF := make([]*math.Zr, 2)
+	outBF := make([]*math.Zr, 3)
+	inValues := make([]*math.Zr, 2)
+	outValues := make([]*math.Zr, 3)
 	for i := 0; i < 2; i++ {
 		inBF[i] = c.NewRandomZr(rand)
 	}
@@ -176,9 +176,9 @@ func prepareIOCProver(pp []*bn256.G1, c *bn256.Curve) (*transfer.WellFormednessW
 	return transfer.NewWellFormednessWitness(intw, outtw), in, out, inBF, outBF
 }
 
-func prepareInputsOutputs(inValues, outValues, inBF, outBF []*bn256.Zr, ttype string, pp []*bn256.G1, c *bn256.Curve) ([]*bn256.G1, []*bn256.G1) {
-	inputs := make([]*bn256.G1, len(inValues))
-	outputs := make([]*bn256.G1, len(outValues))
+func prepareInputsOutputs(inValues, outValues, inBF, outBF []*math.Zr, ttype string, pp []*math.G1, c *math.Curve) ([]*math.G1, []*math.G1) {
+	inputs := make([]*math.G1, len(inValues))
+	outputs := make([]*math.G1, len(outValues))
 
 	for i := 0; i < len(inputs); i++ {
 		inputs[i] = c.NewG1()
@@ -198,7 +198,7 @@ func prepareInputsOutputs(inValues, outValues, inBF, outBF []*bn256.Zr, ttype st
 	return inputs, outputs
 }
 
-func prepareToken(value *bn256.Zr, rand *bn256.Zr, ttype string, pp []*bn256.G1, c *bn256.Curve) *bn256.G1 {
+func prepareToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, c *math.Curve) *math.G1 {
 	token := c.NewG1()
 	token.Add(pp[0].Mul(c.HashToZr([]byte(ttype))))
 	token.Add(pp[1].Mul(value))

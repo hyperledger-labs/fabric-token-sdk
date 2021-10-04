@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package rangeproof_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -35,11 +35,11 @@ var _ = Describe("range proof", func() {
 })
 
 func getRangeProver() *rp.Prover {
-	c := bn256.Curves[1]
+	c := math.Curves[1]
 	signatures := make([]*pssign.Signature, 2)
 	signer := getSigner(1)
-	signatures[0], _ = signer.Sign([]*bn256.Zr{c.NewZrFromInt(0)})
-	signatures[1], _ = signer.Sign([]*bn256.Zr{c.NewZrFromInt(1)})
+	signatures[0], _ = signer.Sign([]*math.Zr{c.NewZrFromInt(0)})
+	signatures[1], _ = signer.Sign([]*math.Zr{c.NewZrFromInt(1)})
 
 	pp := preparePedersenParameters()
 	rand, err := c.Rand()
@@ -55,23 +55,23 @@ func getRangeProver() *rp.Prover {
 
 	tw := &token.TokenDataWitness{Value: value, Type: "ABC", BlindingFactor: bf}
 
-	prover := rp.NewProver([]*token.TokenDataWitness{tw}, []*bn256.G1{tok}, signatures, 2, pp, signer.PK, c.GenG1, signer.Q, c)
+	prover := rp.NewProver([]*token.TokenDataWitness{tw}, []*math.G1{tok}, signatures, 2, pp, signer.PK, c.GenG1, signer.Q, c)
 
 	return prover
 }
 
 func getSigner(length int) *pssign.Signer {
-	s := pssign.NewSigner(nil, nil, nil, bn256.Curves[1])
+	s := pssign.NewSigner(nil, nil, nil, math.Curves[1])
 	s.KeyGen(length)
 	return s
 }
 
-func preparePedersenParameters() []*bn256.G1 {
-	curve := bn256.Curves[1]
+func preparePedersenParameters() []*math.G1 {
+	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	pp := make([]*bn256.G1, 3)
+	pp := make([]*math.G1, 3)
 
 	for i := 0; i < 3; i++ {
 		pp[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))

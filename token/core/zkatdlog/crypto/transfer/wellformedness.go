@@ -8,7 +8,7 @@ package transfer
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	crypto "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
@@ -18,13 +18,13 @@ import (
 
 // zero knowledge proof for the consistency between inputs and outputs
 type WellFormedness struct {
-	InputBlindingFactors  []*bn256.Zr // blinding factor for inputs
-	OutputBlindingFactors []*bn256.Zr // blinding factor for outputs
-	InputValues           []*bn256.Zr
-	OutputValues          []*bn256.Zr
-	Type                  *bn256.Zr
-	Sum                   *bn256.Zr
-	Challenge             *bn256.Zr
+	InputBlindingFactors  []*math.Zr // blinding factor for inputs
+	OutputBlindingFactors []*math.Zr // blinding factor for outputs
+	InputValues           []*math.Zr
+	OutputValues          []*math.Zr
+	Type                  *math.Zr
+	Sum                   *math.Zr
+	Challenge             *math.Zr
 }
 
 func (wf *WellFormedness) Serialize() ([]byte, error) {
@@ -37,18 +37,18 @@ func (wf *WellFormedness) Deserialize(bytes []byte) error {
 
 // inputs and outputs witness for zkat proof
 type WellFormednessWitness struct {
-	inValues           []*bn256.Zr
-	outValues          []*bn256.Zr
+	inValues           []*math.Zr
+	outValues          []*math.Zr
 	Type               string
-	inBlindingFactors  []*bn256.Zr
-	outBlindingFactors []*bn256.Zr
+	inBlindingFactors  []*math.Zr
+	outBlindingFactors []*math.Zr
 }
 
 func NewWellFormednessWitness(in, out []*token.TokenDataWitness) *WellFormednessWitness {
-	inValues := make([]*bn256.Zr, len(in))
-	outValues := make([]*bn256.Zr, len(out))
-	inBF := make([]*bn256.Zr, len(in))
-	outBF := make([]*bn256.Zr, len(out))
+	inValues := make([]*math.Zr, len(in))
+	outValues := make([]*math.Zr, len(out))
+	inBF := make([]*math.Zr, len(in))
+	outBF := make([]*math.Zr, len(out))
 	for i := 0; i < len(in); i++ {
 		inValues[i] = in[i].Value
 		inBF[i] = in[i].BlindingFactor
@@ -68,38 +68,38 @@ type WellFormednessProver struct {
 	Commitments *WellFormednessCommitments
 }
 
-func NewWellFormednessProver(witness *WellFormednessWitness, pp []*bn256.G1, inputs []*bn256.G1, outputs []*bn256.G1, c *bn256.Curve) *WellFormednessProver {
+func NewWellFormednessProver(witness *WellFormednessWitness, pp []*math.G1, inputs []*math.G1, outputs []*math.G1, c *math.Curve) *WellFormednessProver {
 	verifier := NewWellFormednessVerifier(pp, inputs, outputs, c)
 	return &WellFormednessProver{witness: witness, WellFormednessVerifier: verifier}
 }
 
-func NewWellFormednessVerifier(pp []*bn256.G1, inputs []*bn256.G1, outputs []*bn256.G1, c *bn256.Curve) *WellFormednessVerifier {
+func NewWellFormednessVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1, c *math.Curve) *WellFormednessVerifier {
 	return &WellFormednessVerifier{Inputs: inputs, Outputs: outputs, SchnorrVerifier: &crypto.SchnorrVerifier{PedParams: pp, Curve: c}}
 }
 
 // SchnorrVerifier for input output correctness
 type WellFormednessVerifier struct {
 	*crypto.SchnorrVerifier
-	Inputs  []*bn256.G1
-	Outputs []*bn256.G1
+	Inputs  []*math.G1
+	Outputs []*math.G1
 }
 
 // Randomness used in proof generation
 type WellFormednessRandomness struct {
-	inValues  []*bn256.Zr
-	inBF      []*bn256.Zr
-	outValues []*bn256.Zr
-	outBF     []*bn256.Zr
-	Type      *bn256.Zr
-	sum       *bn256.Zr
+	inValues  []*math.Zr
+	inBF      []*math.Zr
+	outValues []*math.Zr
+	outBF     []*math.Zr
+	Type      *math.Zr
+	sum       *math.Zr
 }
 
 // Commitments to the randomness in the proof
 type WellFormednessCommitments struct {
-	Inputs    []*bn256.G1
-	Outputs   []*bn256.G1
-	InputSum  *bn256.G1
-	OutputSum *bn256.G1
+	Inputs    []*math.G1
+	Outputs   []*math.G1
+	InputSum  *math.G1
+	OutputSum *math.G1
 }
 
 // Prove returns zero-knowledge proof for a token transfer
@@ -112,7 +112,7 @@ func (p *WellFormednessProver) Prove() ([]byte, error) {
 		return nil, err
 	}
 
-	chal := p.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(p.Commitments.Inputs, []*bn256.G1{p.Commitments.InputSum}, p.Commitments.Outputs, []*bn256.G1{p.Commitments.OutputSum},
+	chal := p.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(p.Commitments.Inputs, []*math.G1{p.Commitments.InputSum}, p.Commitments.Outputs, []*math.G1{p.Commitments.OutputSum},
 		p.Inputs, p.Outputs))
 	iop, err := p.computeProof(p.randomness, chal)
 	if err != nil {
@@ -146,7 +146,7 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 	return nil
 }
 
-func (v *WellFormednessVerifier) parseProof(tokens []*bn256.G1, values []*bn256.Zr, randomness []*bn256.Zr, ttype *bn256.Zr, sum *bn256.Zr) ([]*crypto.SchnorrProof, error) {
+func (v *WellFormednessVerifier) parseProof(tokens []*math.G1, values []*math.Zr, randomness []*math.Zr, ttype *math.Zr, sum *math.Zr) ([]*crypto.SchnorrProof, error) {
 	if len(values) != len(tokens) || len(randomness) != len(tokens) {
 		return nil, errors.Errorf("failed to parse proof ")
 	}
@@ -154,7 +154,7 @@ func (v *WellFormednessVerifier) parseProof(tokens []*bn256.G1, values []*bn256.
 	aggregate := v.Curve.NewG1()
 	for i := 0; i < len(tokens); i++ {
 		zkps[i] = &crypto.SchnorrProof{}
-		zkps[i].Proof = make([]*bn256.Zr, 3)
+		zkps[i].Proof = make([]*math.Zr, 3)
 		zkps[i].Proof[0] = ttype
 		zkps[i].Proof[1] = values[i]
 		zkps[i].Proof[2] = randomness[i]
@@ -162,7 +162,7 @@ func (v *WellFormednessVerifier) parseProof(tokens []*bn256.G1, values []*bn256.
 		aggregate.Add(tokens[i])
 	}
 	zkps[len(tokens)] = &crypto.SchnorrProof{}
-	zkps[len(tokens)].Proof = make([]*bn256.Zr, 3)
+	zkps[len(tokens)].Proof = make([]*math.Zr, 3)
 	zkps[len(tokens)].Proof[0] = v.Curve.ModMul(ttype, v.Curve.NewZrFromInt(int64(len(tokens))), v.Curve.GroupOrder)
 	zkps[len(tokens)].Proof[1] = sum
 	zkps[len(tokens)].Proof[2] = crypto.Sum(randomness, v.Curve)
@@ -171,7 +171,7 @@ func (v *WellFormednessVerifier) parseProof(tokens []*bn256.G1, values []*bn256.
 	return zkps, nil
 }
 
-func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness, chal *bn256.Zr) (*WellFormedness, error) {
+func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness, chal *math.Zr) (*WellFormedness, error) {
 	if len(p.witness.inValues) != len(p.witness.inBlindingFactors) || len(p.witness.outValues) != len(p.witness.outBlindingFactors) {
 		return nil, errors.Errorf("proof generation for transfer failed: invalid witness")
 	}
@@ -210,7 +210,7 @@ func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness
 	}
 
 	// generate zkat proof for token type
-	sp = &crypto.SchnorrProver{Witness: []*bn256.Zr{p.Curve.HashToZr([]byte(p.witness.Type))}, Randomness: []*bn256.Zr{randomness.Type}, Challenge: chal, SchnorrVerifier: &crypto.SchnorrVerifier{Curve: p.Curve}}
+	sp = &crypto.SchnorrProver{Witness: []*math.Zr{p.Curve.HashToZr([]byte(p.witness.Type))}, Randomness: []*math.Zr{randomness.Type}, Challenge: chal, SchnorrVerifier: &crypto.SchnorrVerifier{Curve: p.Curve}}
 	typeProof, err := sp.Prove()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compute proof for the type of transferred tokens")
@@ -221,7 +221,7 @@ func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness
 	// generate zkat proof for the sum of input/output Values
 	sum := crypto.Sum(p.witness.inValues, p.Curve)
 
-	sp = &crypto.SchnorrProver{Witness: []*bn256.Zr{sum}, Randomness: []*bn256.Zr{randomness.sum}, Challenge: chal, SchnorrVerifier: &crypto.SchnorrVerifier{Curve: p.Curve}}
+	sp = &crypto.SchnorrProver{Witness: []*math.Zr{sum}, Randomness: []*math.Zr{randomness.sum}, Challenge: chal, SchnorrVerifier: &crypto.SchnorrVerifier{Curve: p.Curve}}
 	sumProof, err := sp.Prove()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compute proof for the sum of transferred tokens")
@@ -246,11 +246,11 @@ func (p *WellFormednessProver) computeCommitments() error {
 	p.randomness.Type = p.Curve.NewRandomZr(rand) // blindingFactors for type
 	Q := p.PedParams[0].Mul(p.randomness.Type)    // commitment to for type
 
-	p.randomness.inValues = make([]*bn256.Zr, len(p.Inputs))
-	p.randomness.inBF = make([]*bn256.Zr, len(p.Inputs))
+	p.randomness.inValues = make([]*math.Zr, len(p.Inputs))
+	p.randomness.inBF = make([]*math.Zr, len(p.Inputs))
 
 	p.Commitments = &WellFormednessCommitments{}
-	p.Commitments.Inputs = make([]*bn256.G1, len(p.Inputs))
+	p.Commitments.Inputs = make([]*math.G1, len(p.Inputs))
 	// commitment to sum of inputs, sum of types and sum of blindingFactors
 	p.Commitments.InputSum = p.Curve.NewG1()
 	for i := 0; i < len(p.Inputs); i++ {
@@ -270,10 +270,10 @@ func (p *WellFormednessProver) computeCommitments() error {
 	p.Commitments.InputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Inputs)))))
 
 	// preparing commitments for outputs
-	p.randomness.outValues = make([]*bn256.Zr, len(p.Outputs))
-	p.randomness.outBF = make([]*bn256.Zr, len(p.Outputs))
+	p.randomness.outValues = make([]*math.Zr, len(p.Outputs))
+	p.randomness.outBF = make([]*math.Zr, len(p.Outputs))
 
-	p.Commitments.Outputs = make([]*bn256.G1, len(p.Outputs))
+	p.Commitments.Outputs = make([]*math.G1, len(p.Outputs))
 	p.Commitments.OutputSum = p.Curve.NewG1()
 	p.Commitments.OutputSum.Add(p.PedParams[1].Mul(p.randomness.sum))
 	p.Commitments.OutputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Outputs)))))

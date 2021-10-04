@@ -9,7 +9,7 @@ package nogh
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -35,7 +35,7 @@ func (s *Service) IssuerIdentity(label string) (view.Identity, error) {
 			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.Channel.Name(), issuer.index)
 
 			witness := anonym.NewWitness(issuer.sk, nil, nil, nil, nil, issuer.index)
-			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams, bn256.Curves[pp.Curve])
+			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams, math.Curves[pp.Curve])
 
 			fID, err := signer.ToUniqueIdentifier()
 			if err != nil {
@@ -75,17 +75,17 @@ func (s *Service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
 		return errors.WithMessagef(err, "failed parsing issuing policy")
 	}
 
-	_pk := pk.(*bn256.G1)
+	_pk := pk.(*math.G1)
 
 	for index, issuer := range ip.Issuers {
 		if issuer.Equals(_pk) {
 			s.Issuers = append(s.Issuers, &struct {
 				label string
 				index int
-				sk    *bn256.Zr
-				pk    *bn256.G1
+				sk    *math.Zr
+				pk    *math.G1
 				fID   view.Identity
-			}{label: label, index: index, sk: sk.(*bn256.Zr), pk: _pk, fID: nil})
+			}{label: label, index: index, sk: sk.(*math.Zr), pk: _pk, fID: nil})
 
 			logger.Debugf("registered issuer for [%s] at [%s], fetching public params", label, s.Channel.Name())
 

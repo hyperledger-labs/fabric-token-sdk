@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"time"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -41,7 +41,7 @@ var _ = Describe("validator", func() {
 	var (
 		engine  *enginedlog.Validator
 		pp      *crypto.PublicParams
-		issuers []*bn256.G1
+		issuers []*math.G1
 
 		inputsForRedeem   []*tokn.Token
 		inputsForTransfer []*tokn.Token
@@ -72,7 +72,7 @@ var _ = Describe("validator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		// there are two issuers whereby issuers[1] has secret key sk and issues tokens of type ttype
-		c := bn256.Curves[pp.Curve]
+		c := math.Curves[pp.Curve]
 		issuers = getIssuers(2, 1, pk, pp.ZKATPedParams, c)
 		err = pp.AddIssuer(issuers[0])
 		Expect(err).NotTo(HaveOccurred())
@@ -335,10 +335,10 @@ func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Aud
 	return issuer, ir, metadata
 }
 
-func prepareAnonymousIssueRequest(sk *bn256.Zr, pp *crypto.PublicParams, auditor *audit.Auditor) (*anonym.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareAnonymousIssueRequest(sk *math.Zr, pp *crypto.PublicParams, auditor *audit.Auditor) (*anonym.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
 	witness := anonym.NewWitness(sk, nil, nil, nil, nil, 1)
 
-	signer := anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, bn256.Curves[pp.Curve])
+	signer := anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, math.Curves[pp.Curve])
 	issuer := &anonym.Issuer{}
 	issuer.New("ABC", signer, pp)
 
@@ -363,10 +363,10 @@ func prepareTransferRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*t
 	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners)
 }
 
-func getIssuers(N, index int, pk *bn256.G1, pp []*bn256.G1, curve *bn256.Curve) []*bn256.G1 {
+func getIssuers(N, index int, pk *math.G1, pp []*math.G1, curve *math.Curve) []*math.G1 {
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	issuers := make([]*bn256.G1, N)
+	issuers := make([]*math.G1, N)
 	issuers[index] = pk
 	for i := 0; i < N; i++ {
 		if i != index {
@@ -381,15 +381,15 @@ func getIssuers(N, index int, pk *bn256.G1, pp []*bn256.G1, curve *bn256.Curve) 
 
 }
 
-func prepareTokens(values, bf []*bn256.Zr, ttype string, pp []*bn256.G1, curve *bn256.Curve) []*bn256.G1 {
-	tokens := make([]*bn256.G1, len(values))
+func prepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1, curve *math.Curve) []*math.G1 {
+	tokens := make([]*math.G1, len(values))
 	for i := 0; i < len(values); i++ {
 		tokens[i] = prepareToken(values[i], bf[i], ttype, pp, curve)
 	}
 	return tokens
 }
 
-func prepareToken(value *bn256.Zr, rand *bn256.Zr, ttype string, pp []*bn256.G1, curve *bn256.Curve) *bn256.G1 {
+func prepareToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, curve *math.Curve) *math.G1 {
 	token := curve.NewG1()
 	token.Add(pp[0].Mul(curve.HashToZr([]byte(ttype))))
 	token.Add(pp[1].Mul(value))
@@ -537,13 +537,13 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
 	signers[1] = signer
-	c := bn256.Curves[pp.Curve]
+	c := math.Curves[pp.Curve]
 
-	invalues := make([]*bn256.Zr, 2)
+	invalues := make([]*math.Zr, 2)
 	invalues[0] = c.NewZrFromInt(70)
 	invalues[1] = c.NewZrFromInt(30)
 
-	inBF := make([]*bn256.Zr, 2)
+	inBF := make([]*math.Zr, 2)
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 	for i := 0; i < 2; i++ {

@@ -8,7 +8,7 @@ package issue
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
@@ -16,15 +16,15 @@ import (
 
 // issued token correctness proof (WellFormedness)
 type WellFormedness struct {
-	Type            *bn256.Zr
-	Values          []*bn256.Zr
-	BlindingFactors []*bn256.Zr
+	Type            *math.Zr
+	Values          []*math.Zr
+	BlindingFactors []*math.Zr
 	TypeInTheClear  string // only when issue is not anonymous
-	Challenge       *bn256.Zr
+	Challenge       *math.Zr
 }
 
 // witness for issue
-func NewTokenDataWitness(ttype string, values, bfs []*bn256.Zr) []*token.TokenDataWitness {
+func NewTokenDataWitness(ttype string, values, bfs []*math.Zr) []*token.TokenDataWitness {
 	witness := make([]*token.TokenDataWitness, len(values))
 	for i, v := range values {
 		witness[i] = &token.TokenDataWitness{Value: v, BlindingFactor: bfs[i]}
@@ -43,15 +43,15 @@ func (wf *WellFormedness) Deserialize(bytes []byte) error {
 
 // randomness used in well-formedness proof
 type WellFormednessRandomness struct {
-	blindingFactors []*bn256.Zr
-	values          []*bn256.Zr
-	ttype           *bn256.Zr
+	blindingFactors []*math.Zr
+	values          []*math.Zr
+	ttype           *math.Zr
 }
 
 // zero knowledge verifier for issue
 type WellFormednessVerifier struct {
 	*common.SchnorrVerifier
-	Tokens    []*bn256.G1
+	Tokens    []*math.G1
 	Anonymous bool
 }
 
@@ -59,17 +59,17 @@ type WellFormednessProver struct {
 	*WellFormednessVerifier
 	witness     []*token.TokenDataWitness
 	randomness  *WellFormednessRandomness
-	Commitments []*bn256.G1
+	Commitments []*math.G1
 }
 
-func NewWellFormednessProver(witness []*token.TokenDataWitness, tokens []*bn256.G1, anonymous bool, pp []*bn256.G1, c *bn256.Curve) *WellFormednessProver {
+func NewWellFormednessProver(witness []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *WellFormednessProver {
 	return &WellFormednessProver{
 		witness:                witness,
 		WellFormednessVerifier: NewWellFormednessVerifier(tokens, anonymous, pp, c),
 	}
 }
 
-func NewWellFormednessVerifier(tokens []*bn256.G1, anonymous bool, pp []*bn256.G1, c *bn256.Curve) *WellFormednessVerifier {
+func NewWellFormednessVerifier(tokens []*math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *WellFormednessVerifier {
 	return &WellFormednessVerifier{
 		Tokens:          tokens,
 		Anonymous:       anonymous,
@@ -122,7 +122,7 @@ func (v *WellFormednessVerifier) parseProof(proof *WellFormedness) []*common.Sch
 	zkps := make([]*common.SchnorrProof, len(v.Tokens))
 	for i := 0; i < len(zkps); i++ {
 		zkps[i] = &common.SchnorrProof{}
-		zkps[i].Proof = make([]*bn256.Zr, 3)
+		zkps[i].Proof = make([]*math.Zr, 3)
 		zkps[i].Proof[0] = proof.Type
 		zkps[i].Proof[1] = proof.Values[i]
 		zkps[i].Proof[2] = proof.BlindingFactors[i]
@@ -144,9 +144,9 @@ func (p *WellFormednessProver) computeCommitments() error {
 	}
 	// randomness for proof
 	p.randomness = &WellFormednessRandomness{}
-	p.Commitments = make([]*bn256.G1, len(p.Tokens))
-	p.randomness.values = make([]*bn256.Zr, len(p.Tokens))
-	p.randomness.blindingFactors = make([]*bn256.Zr, len(p.Tokens))
+	p.Commitments = make([]*math.G1, len(p.Tokens))
+	p.randomness.values = make([]*math.Zr, len(p.Tokens))
+	p.randomness.blindingFactors = make([]*math.Zr, len(p.Tokens))
 
 	Q := p.Curve.NewG1()
 	// if issuer is hidden compute commitment for type randomness
@@ -169,7 +169,7 @@ func (p *WellFormednessProver) computeCommitments() error {
 	return nil
 }
 
-func (p *WellFormednessProver) computeProof(chal *bn256.Zr) (*WellFormedness, error) {
+func (p *WellFormednessProver) computeProof(chal *math.Zr) (*WellFormedness, error) {
 
 	wf := &WellFormedness{}
 	// when issuer is hidden
@@ -182,8 +182,8 @@ func (p *WellFormednessProver) computeProof(chal *bn256.Zr) (*WellFormedness, er
 		wf.TypeInTheClear = p.witness[0].Type
 	}
 
-	var values []*bn256.Zr
-	var bfs []*bn256.Zr
+	var values []*math.Zr
+	var bfs []*math.Zr
 	for _, w := range p.witness {
 		values = append(values, w.Value)
 		bfs = append(bfs, w.BlindingFactor)

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package pssign_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	. "github.com/onsi/ginkgo"
@@ -17,13 +17,13 @@ var _ = Describe("Pointcheval Sanders blind signatures", func() {
 	var (
 		recipient *pssign.Recipient
 		signer    *pssign.BlindSigner
-		messages  []*bn256.Zr
-		pp        []*bn256.G1
-		curve     *bn256.Curve
+		messages  []*math.Zr
+		pp        []*math.G1
+		curve     *math.Curve
 	)
 	Describe("Prove", func() {
 		BeforeEach(func() {
-			curve = bn256.Curves[1]
+			curve = math.Curves[1]
 			rand, err := curve.Rand()
 			Expect(err).NotTo(HaveOccurred())
 
@@ -55,17 +55,17 @@ var _ = Describe("Pointcheval Sanders blind signatures", func() {
 	})
 })
 
-func getPedersenParameters(length int, curve *bn256.Curve) []*bn256.G1 {
+func getPedersenParameters(length int, curve *math.Curve) []*math.G1 {
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	var pp []*bn256.G1
+	var pp []*math.G1
 	for i := 0; i < length; i++ {
 		pp = append(pp, curve.GenG1.Mul(curve.NewRandomZr(rand)))
 	}
 	return pp
 }
 
-func getSigner(length int, curve *bn256.Curve) *pssign.Signer {
+func getSigner(length int, curve *math.Curve) *pssign.Signer {
 	s := pssign.NewSigner(nil, nil, nil, curve)
 	s.KeyGen(length)
 	return s

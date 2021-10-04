@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package nonanonym
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -35,7 +35,7 @@ func (i *Issuer) New(ttype string, signer common.SigningIdentity, pp *crypto.Pub
 }
 
 func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.IssueAction, []*token.TokenInformation, error) {
-	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.ZKATPedParams, bn256.Curves[i.PublicParams.Curve])
+	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.ZKATPedParams, math.Curves[i.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, err
 	}

@@ -8,7 +8,7 @@ package ppm
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -41,7 +41,7 @@ func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
 }
 
 func (v *PublicParamsManager) AddIssuer(bytes []byte) ([]byte, error) {
-	i := &bn256.G1{}
+	i := &math.G1{}
 	err := json.Unmarshal(bytes, i)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to add new AnonymousIssuer")

@@ -8,24 +8,24 @@ package pssign
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
 
 type Signer struct {
 	*SignVerifier
-	SK []*bn256.Zr
+	SK []*math.Zr
 }
 
 type SignVerifier struct {
-	PK    []*bn256.G2
-	Q     *bn256.G2
-	Curve *bn256.Curve
+	PK    []*math.G2
+	Q     *math.G2
+	Curve *math.Curve
 }
 
 type Signature struct {
-	R *bn256.G1
-	S *bn256.G1
+	R *math.G1
+	S *math.G1
 }
 
 func (sig *Signature) Deserialize(bytes []byte) error {
@@ -33,8 +33,8 @@ func (sig *Signature) Deserialize(bytes []byte) error {
 }
 
 func (s *Signer) KeyGen(length int) error {
-	s.SK = make([]*bn256.Zr, length+2)
-	s.SignVerifier.PK = make([]*bn256.G2, length+2)
+	s.SK = make([]*math.Zr, length+2)
+	s.SignVerifier.PK = make([]*math.G2, length+2)
 
 	Q := s.Curve.GenG2
 	rand, err := s.Curve.Rand()
@@ -50,15 +50,15 @@ func (s *Signer) KeyGen(length int) error {
 	return nil
 }
 
-func NewSigner(SK []*bn256.Zr, PK []*bn256.G2, Q *bn256.G2, c *bn256.Curve) *Signer {
+func NewSigner(SK []*math.Zr, PK []*math.G2, Q *math.G2, c *math.Curve) *Signer {
 	return &Signer{SK: SK, SignVerifier: NewVerifier(PK, Q, c)}
 }
 
-func NewVerifier(PK []*bn256.G2, Q *bn256.G2, c *bn256.Curve) *SignVerifier {
+func NewVerifier(PK []*math.G2, Q *math.G2, c *math.Curve) *SignVerifier {
 	return &SignVerifier{PK: PK, Q: Q, Curve: c}
 }
 
-func (s *Signer) Sign(m []*bn256.Zr) (*Signature, error) {
+func (s *Signer) Sign(m []*math.Zr) (*Signature, error) {
 	// check length of the vector to be signed
 	if len(m) != len(s.SK)-2 {
 		return nil, errors.Errorf("provide a message to sign of the right length")
@@ -86,7 +86,7 @@ func (s *Signer) Sign(m []*bn256.Zr) (*Signature, error) {
 	return sig, nil
 }
 
-func (v *SignVerifier) Verify(m []*bn256.Zr, sig *Signature) error {
+func (v *SignVerifier) Verify(m []*math.Zr, sig *Signature) error {
 	if len(m) != len(v.PK)-1 {
 		return errors.New("PS signature cannot be verified!\n")
 	}
@@ -135,7 +135,7 @@ func (sig *Signature) Serialize() ([]byte, error) {
 	return json.Marshal(sig)
 }
 
-func hashMessages(m []*bn256.Zr, c *bn256.Curve) *bn256.Zr {
+func hashMessages(m []*math.Zr, c *math.Curve) *math.Zr {
 	var bytesToHash []byte
 	for i := 0; i < len(m); i++ {
 		bytes := m[i].Bytes()

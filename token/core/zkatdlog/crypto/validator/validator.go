@@ -8,7 +8,7 @@ package validator
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -156,7 +156,7 @@ func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider 
 			if err != nil {
 				return err
 			}
-			err = verifier.Deserialize(ip.BitLength, ip.Issuers, v.pp.ZKATPedParams, a.OutputTokens[0].Data, a.Issuer, bn256.Curves[v.pp.Curve])
+			err = verifier.Deserialize(ip.BitLength, ip.Issuers, v.pp.ZKATPedParams, a.OutputTokens[0].Data, a.Issuer, math.Curves[v.pp.Curve])
 			if err != nil {
 				return err
 			}
@@ -229,7 +229,7 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferAction) error {
 	action := tr.(*transfer.TransferAction)
 
-	in := make([]*bn256.G1, len(inputTokens))
+	in := make([]*math.G1, len(inputTokens))
 	for i, raw := range inputTokens {
 		tok := &token.Token{}
 		if err := tok.Deserialize(raw); err != nil {

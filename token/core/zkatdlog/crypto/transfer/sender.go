@@ -8,7 +8,7 @@ package transfer
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -38,7 +38,7 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf
 }
 
 func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.TokenInformation, error) {
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, bn256.Curves[s.PublicParams.Curve])
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, math.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -87,14 +87,14 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 type TransferAction struct {
 	// Inputs specify the identifiers in the rwset of the tokens to be transferred
 	Inputs           []string
-	InputCommitments []*bn256.G1
+	InputCommitments []*math.G1
 	// OutputTokens are the new tokens resulting from the transfer
 	OutputTokens []*token.Token
 	// ZK Proof
 	Proof []byte
 }
 
-func NewTransfer(inputs []string, inputCommitments []*bn256.G1, outputs []*bn256.G1, owners [][]byte, proof []byte) (*TransferAction, error) {
+func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G1, owners [][]byte, proof []byte) (*TransferAction, error) {
 	if len(outputs) != len(owners) {
 		return nil, errors.Errorf("number of owners does not match number of tokens")
 	}
@@ -157,8 +157,8 @@ func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
-func (t *TransferAction) GetOutputCommitments() []*bn256.G1 {
-	com := make([]*bn256.G1, len(t.OutputTokens))
+func (t *TransferAction) GetOutputCommitments() []*math.G1 {
+	com := make([]*math.G1, len(t.OutputTokens))
 	for i := 0; i < len(com); i++ {
 		com[i] = t.OutputTokens[i].Data
 	}
@@ -169,8 +169,8 @@ func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }
 
-func getTokenData(tokens []*token.Token) []*bn256.G1 {
-	tokenData := make([]*bn256.G1, len(tokens))
+func getTokenData(tokens []*token.Token) []*math.G1 {
+	tokenData := make([]*math.G1, len(tokens))
 	for i := 0; i < len(tokens); i++ {
 		tokenData[i] = tokens[i].Data
 	}

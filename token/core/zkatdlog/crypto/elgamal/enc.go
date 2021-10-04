@@ -6,27 +6,27 @@ SPDX-License-Identifier: Apache-2.0
 package elgamal
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
 
 type PublicKey struct {
-	Gen   *bn256.G1
-	H     *bn256.G1
-	Curve *bn256.Curve
+	Gen   *math.G1
+	H     *math.G1
+	Curve *math.Curve
 }
 
 type Ciphertext struct {
-	C1 *bn256.G1
-	C2 *bn256.G1
+	C1 *math.G1
+	C2 *math.G1
 }
 
 type SecretKey struct {
 	*PublicKey
-	x *bn256.Zr
+	x *math.Zr
 }
 
-func NewSecretKey(sk *bn256.Zr, gen, pk *bn256.G1, c *bn256.Curve) *SecretKey {
+func NewSecretKey(sk *math.Zr, gen, pk *math.G1, c *math.Curve) *SecretKey {
 	return &SecretKey{
 		x: sk,
 		PublicKey: &PublicKey{
@@ -38,7 +38,7 @@ func NewSecretKey(sk *bn256.Zr, gen, pk *bn256.G1, c *bn256.Curve) *SecretKey {
 }
 
 // encrypt using Elgamal encryption
-func (pk *PublicKey) Encrypt(M *bn256.G1) (*Ciphertext, *bn256.Zr, error) {
+func (pk *PublicKey) Encrypt(M *math.G1) (*Ciphertext, *math.Zr, error) {
 	if pk.Gen == nil || pk.H == nil {
 		return nil, nil, errors.Errorf("Provide a non-nil Elgamal public key")
 	}
@@ -56,14 +56,14 @@ func (pk *PublicKey) Encrypt(M *bn256.G1) (*Ciphertext, *bn256.Zr, error) {
 }
 
 // Decrypt using Elgamal secret key
-func (sk *SecretKey) Decrypt(c *Ciphertext) *bn256.G1 {
+func (sk *SecretKey) Decrypt(c *Ciphertext) *math.G1 {
 	c.C2.Sub(c.C1.Mul(sk.x))
 	return c.C2
 
 }
 
 // encrypt message in Zr using Elgamal encryption
-func (pk *PublicKey) EncryptZr(m *bn256.Zr) (*Ciphertext, *bn256.Zr, error) {
+func (pk *PublicKey) EncryptZr(m *math.Zr) (*Ciphertext, *math.Zr, error) {
 	rand, err := pk.Curve.Rand()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to compute Elgamal ciphertext")

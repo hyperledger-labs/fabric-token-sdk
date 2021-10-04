@@ -8,11 +8,11 @@ package crypto
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 )
 
 type IssuingPolicy struct {
-	Issuers       []*bn256.G1
+	Issuers       []*math.G1
 	IssuersNumber int
 	BitLength     int
 }

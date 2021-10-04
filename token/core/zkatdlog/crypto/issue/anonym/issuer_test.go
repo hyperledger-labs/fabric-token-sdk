@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package anonym_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
@@ -21,7 +21,7 @@ var _ = Describe("Issuer", func() {
 		issuer *anonym.Issuer
 		signer *anonym.Signer
 		values []uint64
-		bf     []*bn256.Zr
+		bf     []*math.Zr
 		owners [][]byte
 	)
 	BeforeEach(func() {
@@ -35,22 +35,22 @@ var _ = Describe("Issuer", func() {
 
 		values = []uint64{50, 30, 20}
 
-		bf = make([]*bn256.Zr, 3)
-		rand, err := bn256.Curves[pp.Curve].Rand()
+		bf = make([]*math.Zr, 3)
+		rand, err := math.Curves[pp.Curve].Rand()
 		Expect(err).NotTo(HaveOccurred())
 		for i := 0; i < 3; i++ {
-			bf[i] = bn256.Curves[pp.Curve].NewRandomZr(rand)
+			bf[i] = math.Curves[pp.Curve].NewRandomZr(rand)
 		}
 
 		sk, pk, err := anonym.GenerateKeyPair("ABC", pp)
 		Expect(err).NotTo(HaveOccurred())
 
-		issuers := GetIssuers(2, 1, pk, pp.ZKATPedParams, bn256.Curves[pp.Curve])
+		issuers := GetIssuers(2, 1, pk, pp.ZKATPedParams, math.Curves[pp.Curve])
 		err = pp.SetIssuingPolicy(issuers)
 		Expect(err).NotTo(HaveOccurred())
 
 		witness := anonym.NewWitness(sk, nil, nil, nil, nil, 1)
-		signer = anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, bn256.Curves[pp.Curve])
+		signer = anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, math.Curves[pp.Curve])
 		issuer = &anonym.Issuer{}
 		issuer.New("ABC", signer, pp)
 

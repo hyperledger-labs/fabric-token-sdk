@@ -8,7 +8,7 @@ package pssign
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/elgamal"
 	"github.com/pkg/errors"
@@ -19,21 +19,21 @@ type Recipient struct {
 	*SignVerifier
 	EncSK   *elgamal.SecretKey
 	Witness *EncWitness
-	Curve   *bn256.Curve
+	Curve   *math.Curve
 }
 
 type BlindSigner struct {
 	*Signer
-	PedersenParameters []*bn256.G1
+	PedersenParameters []*math.G1
 }
 
-func NewBlindSigner(SK []*bn256.Zr, PK []*bn256.G2, Q *bn256.G2, pp []*bn256.G1, curve *bn256.Curve) *BlindSigner {
+func NewBlindSigner(SK []*math.Zr, PK []*math.G2, Q *math.G2, pp []*math.G1, curve *math.Curve) *BlindSigner {
 	s := &BlindSigner{PedersenParameters: pp}
 	s.Signer = NewSigner(SK, PK, Q, curve)
 	return s
 }
 
-func NewRecipient(messages []*bn256.Zr, blindingfactor *bn256.Zr, com *bn256.G1, sk *bn256.Zr, gen, pk *bn256.G1, pp []*bn256.G1, PK []*bn256.G2, Q *bn256.G2, curve *bn256.Curve) *Recipient {
+func NewRecipient(messages []*math.Zr, blindingfactor *math.Zr, com *math.G1, sk *math.Zr, gen, pk *math.G1, pp []*math.G1, PK []*math.G2, Q *math.G2, curve *math.Curve) *Recipient {
 
 	return &Recipient{
 		Witness: &EncWitness{
@@ -56,48 +56,48 @@ func NewRecipient(messages []*bn256.Zr, blindingfactor *bn256.Zr, com *bn256.G1,
 }
 
 type EncVerifier struct {
-	PedersenParameters []*bn256.G1           //g_0, g_1, g_2, g_3, h (owner, type, value, sn, randomness)
-	Commitment         *bn256.G1             // commitment to messages
+	PedersenParameters []*math.G1            //g_0, g_1, g_2, g_3, h (owner, type, value, sn, randomness)
+	Commitment         *math.G1              // commitment to messages
 	Ciphertexts        []*elgamal.Ciphertext // encryption of messages
 	EncPK              *elgamal.PublicKey
-	Curve              *bn256.Curve
+	Curve              *math.Curve
 }
 
 type EncWitness struct {
-	messages          []*bn256.Zr // messages
-	encRandomness     []*bn256.Zr // randomness used in encryption
-	comBlindingFactor *bn256.Zr   // randomness used in commitment
+	messages          []*math.Zr // messages
+	encRandomness     []*math.Zr // randomness used in encryption
+	comBlindingFactor *math.Zr   // randomness used in commitment
 }
 
 type EncProof struct {
-	Messages          []*bn256.Zr
-	EncRandomness     []*bn256.Zr
-	ComBlindingFactor *bn256.Zr
-	Challenge         *bn256.Zr
+	Messages          []*math.Zr
+	EncRandomness     []*math.Zr
+	ComBlindingFactor *math.Zr
+	Challenge         *math.Zr
 }
 
 type BlindSignRequest struct {
-	Commitment  *bn256.G1
+	Commitment  *math.G1
 	Ciphertexts []*elgamal.Ciphertext
 	Proof       []byte
 	EncPK       *elgamal.PublicKey
 }
 
 type BlindSignResponse struct {
-	Hash       *bn256.Zr
+	Hash       *math.Zr
 	Ciphertext *elgamal.Ciphertext
 }
 
 type encProofRandomness struct {
-	messages          []*bn256.Zr
-	encRandomness     []*bn256.Zr
-	comBlindingFactor *bn256.Zr
+	messages          []*math.Zr
+	encRandomness     []*math.Zr
+	comBlindingFactor *math.Zr
 }
 
 type EncProofCommitments struct {
-	C1         []*bn256.G1
-	C2         []*bn256.G1
-	Commitment *bn256.G1
+	C1         []*math.G1
+	C2         []*math.G1
+	Commitment *math.G1
 }
 
 func (s *BlindSigner) BlindSign(request *BlindSignRequest) (*BlindSignResponse, error) {
@@ -172,15 +172,15 @@ func (r *Recipient) Prove() ([]byte, error) {
 
 	proof := &EncProof{}
 	// compute challenge
-	var ciphertexts []*bn256.G1
+	var ciphertexts []*math.G1
 	for i := 0; i < len(r.Ciphertexts); i++ {
 		ciphertexts = append(ciphertexts, r.Ciphertexts[i].C1, r.Ciphertexts[i].C2)
 	}
 	sv := &common.SchnorrVerifier{Curve: r.Curve}
-	proof.Challenge = sv.ComputeChallenge(common.GetG1Array(r.PedersenParameters, []*bn256.G1{r.EncSK.PublicKey.Gen, r.EncSK.PublicKey.H}, ciphertexts, []*bn256.G1{r.Commitment}, commitments.C1, commitments.C2, []*bn256.G1{commitments.Commitment}))
+	proof.Challenge = sv.ComputeChallenge(common.GetG1Array(r.PedersenParameters, []*math.G1{r.EncSK.PublicKey.Gen, r.EncSK.PublicKey.H}, ciphertexts, []*math.G1{r.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}))
 
-	proof.Messages = make([]*bn256.Zr, len(r.Witness.messages))
-	proof.EncRandomness = make([]*bn256.Zr, len(r.Witness.messages))
+	proof.Messages = make([]*math.Zr, len(r.Witness.messages))
+	proof.EncRandomness = make([]*math.Zr, len(r.Witness.messages))
 	// generate proof
 	for i, m := range r.Witness.messages {
 		proof.Messages[i] = r.Curve.ModAdd(randomness.messages[i], r.Curve.ModMul(m, proof.Challenge, r.Curve.GroupOrder), r.Curve.GroupOrder)
@@ -194,7 +194,7 @@ func (r *Recipient) Prove() ([]byte, error) {
 
 func (r *Recipient) GenerateBlindSignRequest() (*BlindSignRequest, error) {
 	// encrypt
-	r.Witness.encRandomness = make([]*bn256.Zr, len(r.Witness.messages))
+	r.Witness.encRandomness = make([]*math.Zr, len(r.Witness.messages))
 	r.Ciphertexts = make([]*elgamal.Ciphertext, len(r.Witness.messages))
 	hash := r.Curve.HashToG1(r.Commitment.Bytes())
 	for i, m := range r.Witness.messages {
@@ -238,7 +238,7 @@ func (v *EncVerifier) Verify(proof []byte) error {
 		commitments.Commitment.Add(v.PedersenParameters[i].Mul(p.Messages[i]))
 	}
 
-	var ciphertexts []*bn256.G1
+	var ciphertexts []*math.G1
 	for i := 0; i < len(v.Ciphertexts); i++ {
 		T := v.EncPK.Gen.Mul(p.EncRandomness[i])
 		T.Sub(v.Ciphertexts[i].C1.Mul(p.Challenge))
@@ -251,7 +251,7 @@ func (v *EncVerifier) Verify(proof []byte) error {
 	}
 	sv := &common.SchnorrVerifier{Curve: v.Curve}
 	// compute challenge
-	chal := sv.ComputeChallenge(common.GetG1Array(v.PedersenParameters, []*bn256.G1{v.EncPK.Gen, v.EncPK.H}, ciphertexts, []*bn256.G1{v.Commitment}, commitments.C1, commitments.C2, []*bn256.G1{commitments.Commitment}))
+	chal := sv.ComputeChallenge(common.GetG1Array(v.PedersenParameters, []*math.G1{v.EncPK.Gen, v.EncPK.H}, ciphertexts, []*math.G1{v.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}))
 	// check challenge
 	if !chal.Equals(p.Challenge) {
 		return errors.Errorf("verification of encryption correctness failed")

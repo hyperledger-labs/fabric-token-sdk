@@ -8,7 +8,7 @@ package sigproof_test
 import (
 	"encoding/json"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"
@@ -21,10 +21,10 @@ var _ = Describe("ZK proof of PS signature", func() {
 		prover   *sigproof.POKProver
 		verifier *sigproof.POKVerifier
 		signer   *pssign.Signer
-		curve    *bn256.Curve
+		curve    *math.Curve
 	)
 	BeforeEach(func() {
-		curve = bn256.Curves[1]
+		curve = math.Curves[1]
 		signer = getSigner(3, curve)
 		w = prepareWitness(signer)
 		P := signer.Curve.GenG1
@@ -74,7 +74,7 @@ var _ = Describe("ZK proof of PS signature", func() {
 
 func prepareWitness(s *pssign.Signer) *sigproof.POKWitness {
 	w := &sigproof.POKWitness{}
-	w.Messages = make([]*bn256.Zr, len(s.SK)-2)
+	w.Messages = make([]*math.Zr, len(s.SK)-2)
 	rand, err := s.Curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -87,7 +87,7 @@ func prepareWitness(s *pssign.Signer) *sigproof.POKWitness {
 	return w
 }
 
-func getSigner(length int, curve *bn256.Curve) *pssign.Signer {
+func getSigner(length int, curve *math.Curve) *pssign.Signer {
 	s := &pssign.Signer{SignVerifier: &pssign.SignVerifier{Curve: curve}}
 	s.KeyGen(length)
 	return s

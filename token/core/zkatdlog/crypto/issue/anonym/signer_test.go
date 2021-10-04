@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package anonym_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +17,7 @@ var _ = Describe("Issuer NYM", func() {
 	var (
 		verifier *anonym.Verifier
 		signer   *anonym.Signer
-		pp       []*bn256.G1
+		pp       []*math.G1
 	)
 	BeforeEach(func() {
 		pp = getPedersenParameters(3)
@@ -41,10 +41,10 @@ var _ = Describe("Issuer NYM", func() {
 	})
 })
 
-func GetIssuers(N, index int, pk *bn256.G1, pp []*bn256.G1, c *bn256.Curve) []*bn256.G1 {
+func GetIssuers(N, index int, pk *math.G1, pp []*math.G1, c *math.Curve) []*math.G1 {
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	issuers := make([]*bn256.G1, N)
+	issuers := make([]*math.G1, N)
 	issuers[index] = pk
 	for i := 0; i < N; i++ {
 		if i != index {
@@ -59,12 +59,12 @@ func GetIssuers(N, index int, pk *bn256.G1, pp []*bn256.G1, c *bn256.Curve) []*b
 
 }
 
-func getIssuerSigner(index, N, bitlength int, pp []*bn256.G1) *anonym.Signer {
-	c := bn256.Curves[1]
+func getIssuerSigner(index, N, bitlength int, pp []*math.G1) *anonym.Signer {
+	c := math.Curves[1]
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	r := make([]*bn256.Zr, 3)
-	bf := make([]*bn256.Zr, 2)
+	r := make([]*math.Zr, 3)
+	bf := make([]*math.Zr, 2)
 	for i := 0; i < len(r); i++ {
 		r[i] = c.NewRandomZr(rand)
 	}

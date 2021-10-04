@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package elgamal_test
 
 import (
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/elgamal"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -17,7 +17,7 @@ var _ = Describe("Elgamal encryption", func() {
 	Describe("Encrypt", func() {
 		Context("Encryption performed correctly", func() {
 			It("Succeeds", func() {
-				curve := bn256.Curves[0]
+				curve := math.Curves[0]
 				rand, err := curve.Rand()
 				Expect(err).NotTo(HaveOccurred())
 				x := curve.NewRandomZr(rand)

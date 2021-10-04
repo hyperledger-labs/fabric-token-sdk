@@ -8,7 +8,7 @@ package o2omp_test
 import (
 	"io"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/o2omp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -16,18 +16,18 @@ import (
 
 var _ = Describe("One out of many proof", func() {
 	var (
-		commitments []*bn256.G1
+		commitments []*math.G1
 		index       int
-		randomness  *bn256.Zr
-		pp          []*bn256.G1
+		randomness  *math.Zr
+		pp          []*math.G1
 
 		prover   *o2omp.Prover
 		verifier *o2omp.Verifier
 		rand     io.Reader
-		curve    *bn256.Curve
+		curve    *math.Curve
 	)
 	BeforeEach(func() {
-		curve = bn256.Curves[1]
+		curve = math.Curves[1]
 		pp = getPedersenParameters(2, curve)
 		var err error
 		rand, err = curve.Rand()
@@ -53,7 +53,7 @@ var _ = Describe("One out of many proof", func() {
 		})
 		When("proof is invalid", func() {
 			BeforeEach(func() {
-				coms := []*bn256.G1{commitments[1], commitments[0], commitments[2], commitments[3]}
+				coms := []*math.G1{commitments[1], commitments[0], commitments[2], commitments[3]}
 				prover = o2omp.NewProver(coms, []byte("message to be signed"), pp, 2, index, randomness, curve)
 			})
 			It("fails", func() {
@@ -82,18 +82,18 @@ var _ = Describe("One out of many proof", func() {
 	})
 })
 
-func getPedersenParameters(l int, curve *bn256.Curve) []*bn256.G1 {
+func getPedersenParameters(l int, curve *math.Curve) []*math.G1 {
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	pp := make([]*bn256.G1, l)
+	pp := make([]*math.G1, l)
 	for i := 0; i < l; i++ {
 		pp[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
 	return pp
 }
 
-func computePedersenCommitments(pp []*bn256.G1, index, N int, randomness *bn256.Zr, curve *bn256.Curve) []*bn256.G1 {
-	com := make([]*bn256.G1, N)
+func computePedersenCommitments(pp []*math.G1, index, N int, randomness *math.Zr, curve *math.Curve) []*math.G1 {
+	com := make([]*math.G1, N)
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 	for i := 0; i < N; i++ {

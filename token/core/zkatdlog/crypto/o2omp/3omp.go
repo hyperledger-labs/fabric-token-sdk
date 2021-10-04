@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	bn256 "github.com/IBM/mathlib"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/pkg/errors"
 )
@@ -20,7 +20,7 @@ type Prover struct {
 	witness *Witness
 }
 
-func NewProver(commitments []*bn256.G1, message []byte, pp []*bn256.G1, length int, index int, randomness *bn256.Zr, curve *bn256.Curve) *Prover {
+func NewProver(commitments []*math.G1, message []byte, pp []*math.G1, length int, index int, randomness *math.Zr, curve *math.Curve) *Prover {
 	return &Prover{
 		witness: &Witness{
 			index:         index,
@@ -30,7 +30,7 @@ func NewProver(commitments []*bn256.G1, message []byte, pp []*bn256.G1, length i
 	}
 }
 
-func NewVerifier(commitments []*bn256.G1, message []byte, pp []*bn256.G1, length int, curve *bn256.Curve) *Verifier {
+func NewVerifier(commitments []*math.G1, message []byte, pp []*math.G1, length int, curve *math.Curve) *Verifier {
 	return &Verifier{
 		Commitments:    commitments,
 		Message:        message,
@@ -42,32 +42,32 @@ func NewVerifier(commitments []*bn256.G1, message []byte, pp []*bn256.G1, length
 
 // verifier for the one out of many proofs
 type Verifier struct {
-	Commitments    []*bn256.G1
+	Commitments    []*math.G1
 	Message        []byte
-	PedersenParams []*bn256.G1 // Pedersen commitments parameters
+	PedersenParams []*math.G1 // Pedersen commitments parameters
 	BitLength      int
-	Curve          *bn256.Curve
+	Curve          *math.Curve
 }
 
 // Witness information
 type Witness struct {
 	index         int
-	comRandomness *bn256.Zr
+	comRandomness *math.Zr
 }
 
 //
 type Commitments struct {
-	L []*bn256.G1
-	A []*bn256.G1
-	B []*bn256.G1
-	D []*bn256.G1
+	L []*math.G1
+	A []*math.G1
+	B []*math.G1
+	D []*math.G1
 }
 
 type Values struct {
-	L []*bn256.Zr
-	A []*bn256.Zr
-	B []*bn256.Zr
-	D *bn256.Zr
+	L []*math.Zr
+	A []*math.Zr
+	B []*math.Zr
+	D *math.Zr
 }
 
 type Proof struct {
@@ -96,11 +96,11 @@ func (p *Prover) Prove() ([]byte, error) {
 	}
 
 	// randomness
-	a := make([]*bn256.Zr, p.BitLength)
-	r := make([]*bn256.Zr, p.BitLength)
-	s := make([]*bn256.Zr, p.BitLength)
-	t := make([]*bn256.Zr, p.BitLength)
-	rho := make([]*bn256.Zr, p.BitLength)
+	a := make([]*math.Zr, p.BitLength)
+	r := make([]*math.Zr, p.BitLength)
+	s := make([]*math.Zr, p.BitLength)
+	t := make([]*math.Zr, p.BitLength)
+	rho := make([]*math.Zr, p.BitLength)
 	proof := &Proof{}
 
 	var err error
@@ -120,7 +120,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	return proof.Serialize()
 }
 
-func (p *Prover) SetWitness(index int, randomness *bn256.Zr) {
+func (p *Prover) SetWitness(index int, randomness *math.Zr) {
 	p.witness = &Witness{comRandomness: randomness, index: index}
 }
 
@@ -173,7 +173,7 @@ func (v *Verifier) Verify(p []byte) error {
 		f := v.Curve.NewZrFromInt(1)
 		for i := 0; i < v.BitLength; i++ {
 			b := (1 << uint(i)) & j // ith bit of j
-			var t *bn256.Zr
+			var t *math.Zr
 			if b == 0 {
 				t = v.Curve.ModSub(hash, proof.Values.L[i], v.Curve.GroupOrder)
 			} else {
@@ -197,20 +197,20 @@ func (v *Verifier) Verify(p []byte) error {
 
 // structs for proof
 type monomial struct {
-	alpha *bn256.Zr
-	beta  *bn256.Zr
+	alpha *math.Zr
+	beta  *math.Zr
 }
 
 type polynomial struct {
-	coefficients []*bn256.Zr
+	coefficients []*math.Zr
 }
 
-func (p *Prover) compute3OMPCommitments(a, r, s, t, rho []*bn256.Zr, indexBits []int) (*Commitments, error) {
+func (p *Prover) compute3OMPCommitments(a, r, s, t, rho []*math.Zr, indexBits []int) (*Commitments, error) {
 	commitments := &Commitments{}
-	commitments.L = make([]*bn256.G1, p.BitLength)
-	commitments.A = make([]*bn256.G1, p.BitLength)
-	commitments.B = make([]*bn256.G1, p.BitLength)
-	commitments.D = make([]*bn256.G1, p.BitLength)
+	commitments.L = make([]*math.G1, p.BitLength)
+	commitments.A = make([]*math.G1, p.BitLength)
+	commitments.B = make([]*math.G1, p.BitLength)
+	commitments.D = make([]*math.G1, p.BitLength)
 
 	rand, err := p.Curve.Rand()
 	if err != nil {
@@ -249,11 +249,11 @@ func (p *Prover) compute3OMPCommitments(a, r, s, t, rho []*bn256.Zr, indexBits [
 	return commitments, nil
 }
 
-func (p *Prover) computeO2OMProof(proof *Proof, indexBits []int, chal *bn256.Zr, a, r, s, t, rho []*bn256.Zr) {
+func (p *Prover) computeO2OMProof(proof *Proof, indexBits []int, chal *math.Zr, a, r, s, t, rho []*math.Zr) {
 	proof.Values = &Values{}
-	proof.Values.L = make([]*bn256.Zr, p.BitLength)
-	proof.Values.A = make([]*bn256.Zr, p.BitLength)
-	proof.Values.B = make([]*bn256.Zr, p.BitLength)
+	proof.Values.L = make([]*math.Zr, p.BitLength)
+	proof.Values.A = make([]*math.Zr, p.BitLength)
+	proof.Values.B = make([]*math.Zr, p.BitLength)
 	proof.Values.D = p.Curve.NewZrFromInt(0)
 	for i := 0; i < p.BitLength; i++ {
 		proof.Values.L[i] = a[i]
@@ -276,7 +276,7 @@ func (p *Prover) computeO2OMProof(proof *Proof, indexBits []int, chal *bn256.Zr,
 }
 
 // get monomials for proof
-func (p *Prover) getfMonomials(indexBits []int, a []*bn256.Zr) ([]*monomial, []*monomial) {
+func (p *Prover) getfMonomials(indexBits []int, a []*math.Zr) ([]*monomial, []*monomial) {
 	f0 := make([]*monomial, len(a))
 	f1 := make([]*monomial, len(a))
 	for i, ai := range a {
@@ -307,7 +307,7 @@ func (p *Prover) getPolynomials(N, n int, f0, f1 []*monomial) []*polynomial {
 func (p *Prover) getPolynomialforIndex(j, n int, f0, f1 []*monomial) *polynomial {
 	g := make([]*monomial, n)
 	multiplier := p.Curve.NewZrFromInt(1)
-	var roots []*bn256.Zr
+	var roots []*math.Zr
 	for i := 0; i < n; i++ {
 		b := (1 << uint(i)) & j // i^th bit of j
 		if b > 0 {
@@ -326,7 +326,7 @@ func (p *Prover) getPolynomialforIndex(j, n int, f0, f1 []*monomial) *polynomial
 	coefficients := p.getCoefficientsFromRoots(roots)
 
 	poly := &polynomial{}
-	poly.coefficients = make([]*bn256.Zr, n+1)
+	poly.coefficients = make([]*math.Zr, n+1)
 	for i := 0; i < len(coefficients); i++ {
 		poly.coefficients[i] = p.Curve.ModMul(coefficients[i], multiplier, p.Curve.GroupOrder)
 	}
@@ -336,8 +336,8 @@ func (p *Prover) getPolynomialforIndex(j, n int, f0, f1 []*monomial) *polynomial
 	return &polynomial{coefficients: poly.coefficients[:n]}
 }
 
-func (p *Prover) getCoefficientsFromRoots(roots []*bn256.Zr) []*bn256.Zr {
-	coefficients := make([]*bn256.Zr, len(roots)+1)
+func (p *Prover) getCoefficientsFromRoots(roots []*math.Zr) []*math.Zr {
+	coefficients := make([]*math.Zr, len(roots)+1)
 	if len(roots) == 0 {
 		coefficients[0] = p.Curve.NewZrFromInt(1)
 	} else {
