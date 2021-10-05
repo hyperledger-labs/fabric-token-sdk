@@ -8,10 +8,9 @@ package sigproof_test
 import (
 	"encoding/json"
 
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
-	sigproof "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -22,12 +21,14 @@ var _ = Describe("ZK proof of PS signature", func() {
 		prover   *sigproof.POKProver
 		verifier *sigproof.POKVerifier
 		signer   *pssign.Signer
+		curve    *math.Curve
 	)
 	BeforeEach(func() {
-		signer = getSigner(3)
+		curve = math.Curves[1]
+		signer = getSigner(3, curve)
 		w = prepareWitness(signer)
-		P := bn256.G1Gen()
-		verifier = &sigproof.POKVerifier{PK: signer.PK, Q: signer.Q, P: P}
+		P := signer.Curve.GenG1
+		verifier = &sigproof.POKVerifier{PK: signer.PK, Q: signer.Q, P: P, Curve: signer.Curve}
 		prover = &sigproof.POKProver{Witness: w, POKVerifier: verifier}
 	})
 	Describe("Prove", func() {
@@ -55,10 +56,10 @@ var _ = Describe("ZK proof of PS signature", func() {
 		})
 		When("POK is not valid", func() {
 			It("fails", func() {
-				rand, err := bn256.GetRand()
+				rand, err := prover.Curve.Rand()
 				Expect(err).NotTo(HaveOccurred())
 				// tamper with signed hidden
-				prover.Witness.Messages[1] = bn256.RandModOrder(rand)
+				prover.Witness.Messages[1] = prover.Curve.NewRandomZr(rand)
 				proof, err := prover.Prove()
 				Expect(err).NotTo(HaveOccurred())
 				// proof verification fails
@@ -73,12 +74,12 @@ var _ = Describe("ZK proof of PS signature", func() {
 
 func prepareWitness(s *pssign.Signer) *sigproof.POKWitness {
 	w := &sigproof.POKWitness{}
-	w.Messages = make([]*bn256.Zr, len(s.SK)-2)
-	rand, err := bn256.GetRand()
+	w.Messages = make([]*math.Zr, len(s.SK)-2)
+	rand, err := s.Curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
 	for i := 0; i < len(w.Messages); i++ {
-		w.Messages[i] = bn256.RandModOrder(rand)
+		w.Messages[i] = s.Curve.NewRandomZr(rand)
 	}
 	w.Signature, err = s.Sign(w.Messages)
 	Expect(err).NotTo(HaveOccurred())
@@ -86,8 +87,8 @@ func prepareWitness(s *pssign.Signer) *sigproof.POKWitness {
 	return w
 }
 
-func getSigner(length int) *pssign.Signer {
-	s := &pssign.Signer{}
+func getSigner(length int, curve *math.Curve) *pssign.Signer {
+	s := &pssign.Signer{SignVerifier: &pssign.SignVerifier{Curve: curve}}
 	s.KeyGen(length)
 	return s
 }

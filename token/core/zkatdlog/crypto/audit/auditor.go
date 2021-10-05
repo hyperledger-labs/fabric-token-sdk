@@ -9,18 +9,17 @@ package audit
 import (
 	"encoding/json"
 
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -38,7 +37,7 @@ type AuditableToken struct {
 	owner *ownerOpening
 }
 
-func NewAuditableToken(token *token.Token, ownerInfo []byte, ttype string, value *bn256.Zr, bf *bn256.Zr) (*AuditableToken, error) {
+func NewAuditableToken(token *token.Token, ownerInfo []byte, ttype string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
 	auditInfo := &idemix.AuditInfo{}
 	if !token.IsRedeem() {
 		// this is not a redeem
@@ -62,8 +61,8 @@ func NewAuditableToken(token *token.Token, ownerInfo []byte, ttype string, value
 
 type tokenDataOpening struct {
 	ttype string
-	value *bn256.Zr
-	bf    *bn256.Zr
+	value *math.Zr
+	bf    *math.Zr
 }
 
 type ownerOpening struct {
@@ -72,15 +71,17 @@ type ownerOpening struct {
 
 type Auditor struct {
 	Signer         SigningIdentity
-	PedersenParams []*bn256.G1
+	PedersenParams []*math.G1
 	NYMParams      []byte
+	Curve          *math.Curve
 }
 
-func NewAuditor(pp []*bn256.G1, nymparams []byte, signer SigningIdentity) *Auditor {
+func NewAuditor(pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	return &Auditor{
 		PedersenParams: pp,
 		NYMParams:      nymparams,
 		Signer:         signer,
+		Curve:          c,
 	}
 }
 
@@ -171,7 +172,7 @@ func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
 	}
-	t, err := common.ComputePedersenCommitment([]*bn256.Zr{bn256.HashModOrder([]byte(output.data.ttype)), output.data.value, output.data.bf}, a.PedersenParams)
+	t, err := common.ComputePedersenCommitment([]*math.Zr{a.Curve.HashToZr([]byte(output.data.ttype)), output.data.value, output.data.bf}, a.PedersenParams, a.Curve)
 	if err != nil {
 		return err
 	}

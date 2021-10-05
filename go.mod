@@ -11,16 +11,15 @@ replace (
 )
 
 require (
+	github.com/IBM/mathlib v0.0.0-20210928081244-f5486459a290
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/consensys/gurvy v0.3.9-0.20210209011448-37644c45f955
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/golang/protobuf v1.5.2
-	github.com/google/addlicense v1.0.0 // indirect
-	github.com/gordonklaus/ineffassign v0.0.0-20210914165742-4cc7213b9bc8 // indirect
 	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211001080032-1bd8acc7a0fc
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
-	github.com/hyperledger/fabric-amcl v0.0.0-20200424173818-327c9e2cf77a
+	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210911123859-041d13f0980c
 	github.com/libp2p/go-libp2p-core v0.3.0

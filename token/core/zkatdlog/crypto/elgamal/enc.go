@@ -6,66 +6,73 @@ SPDX-License-Identifier: Apache-2.0
 package elgamal
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
 
 type PublicKey struct {
-	Gen *bn256.G1
-	H   *bn256.G1
+	Gen   *math.G1
+	H     *math.G1
+	Curve *math.Curve
 }
 
 type Ciphertext struct {
-	C1 *bn256.G1
-	C2 *bn256.G1
+	C1 *math.G1
+	C2 *math.G1
 }
 
 type SecretKey struct {
 	*PublicKey
-	x *bn256.Zr
+	x *math.Zr
 }
 
-func NewSecretKey(sk *bn256.Zr, gen, pk *bn256.G1) *SecretKey {
+func NewSecretKey(sk *math.Zr, gen, pk *math.G1, c *math.Curve) *SecretKey {
 	return &SecretKey{
 		x: sk,
 		PublicKey: &PublicKey{
-			Gen: gen,
-			H:   pk,
+			Gen:   gen,
+			H:     pk,
+			Curve: c,
 		},
 	}
 }
 
 // encrypt using Elgamal encryption
-func (pk *PublicKey) Encrypt(M *bn256.G1) (*Ciphertext, *bn256.Zr, error) {
+func (pk *PublicKey) Encrypt(M *math.G1) (*Ciphertext, *math.Zr, error) {
 	if pk.Gen == nil || pk.H == nil {
 		return nil, nil, errors.Errorf("Provide a non-nil Elgamal public key")
 	}
-	rand, err := bn256.GetRand()
+	rand, err := pk.Curve.Rand()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to compute Elgamal ciphertext")
 	}
-	r := bn256.RandModOrder(rand)
-	return &Ciphertext{
+	r := pk.Curve.NewRandomZr(rand)
+	c := &Ciphertext{
 		C1: pk.Gen.Mul(r),
-		C2: pk.H.Mul(r).Add(M),
-	}, r, nil
+	}
+	c.C2 = pk.H.Mul(r)
+	c.C2.Add(M)
+	return c, r, nil
 }
 
 // Decrypt using Elgamal secret key
-func (sk *SecretKey) Decrypt(c *Ciphertext) *bn256.G1 {
-	return c.C2.Sub(c.C1.Mul(sk.x))
+func (sk *SecretKey) Decrypt(c *Ciphertext) *math.G1 {
+	c.C2.Sub(c.C1.Mul(sk.x))
+	return c.C2
 
 }
 
 // encrypt message in Zr using Elgamal encryption
-func (pk *PublicKey) EncryptZr(m *bn256.Zr) (*Ciphertext, *bn256.Zr, error) {
-	rand, err := bn256.GetRand()
+func (pk *PublicKey) EncryptZr(m *math.Zr) (*Ciphertext, *math.Zr, error) {
+	rand, err := pk.Curve.Rand()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to compute Elgamal ciphertext")
 	}
-	r := bn256.RandModOrder(rand)
-	return &Ciphertext{
+	r := pk.Curve.NewRandomZr(rand)
+	c := &Ciphertext{
 		C1: pk.Gen.Mul(r),
-		C2: pk.H.Mul(r).Add(pk.Gen.Mul(m)),
-	}, r, nil
+	}
+	c.C2 = pk.H.Mul(r)
+	c.C2.Add(pk.Gen.Mul(m))
+	return c, r, nil
 }

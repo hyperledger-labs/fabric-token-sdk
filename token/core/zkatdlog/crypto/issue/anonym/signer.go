@@ -8,20 +8,19 @@ package anonym
 import (
 	"encoding/json"
 
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/o2omp"
+	"github.com/pkg/errors"
 )
 
 type Authorization struct {
-	Type  *bn256.G1 // commitment to issuer's secret key and type (g_0^SK*g_1^type*h^r')
-	Token *bn256.G1 // commitment to type and Value of a token (g_0^type*g_1^Value*h^r'')
+	Type  *math.G1 // commitment to issuer's secret key and type (g_0^SK*g_1^type*h^r')
+	Token *math.G1 // commitment to type and Value of a token (g_0^type*g_1^Value*h^r'')
 	// (this corresponds to one of the issued tokens)
 }
 
-func NewAuthorization(typeNym, token *bn256.G1) *Authorization {
+func NewAuthorization(typeNym, token *math.G1) *Authorization {
 	return &Authorization{
 		Type:  typeNym,
 		Token: token,
@@ -29,15 +28,15 @@ func NewAuthorization(typeNym, token *bn256.G1) *Authorization {
 }
 
 type AuthorizationWitness struct {
-	Sk      *bn256.Zr // issuer's secret key
-	TType   *bn256.Zr // type the issuer is authorized to issue
-	TNymBF  *bn256.Zr // randomness in Type
-	Value   *bn256.Zr // Value in token
-	TokenBF *bn256.Zr // randomness in token
-	Index   int       // index of Type
+	Sk      *math.Zr // issuer's secret key
+	TType   *math.Zr // type the issuer is authorized to issue
+	TNymBF  *math.Zr // randomness in Type
+	Value   *math.Zr // Value in token
+	TokenBF *math.Zr // randomness in token
+	Index   int      // index of Type
 }
 
-func NewWitness(sk, ttype, value, tNymBF, tokenBF *bn256.Zr, index int) *AuthorizationWitness {
+func NewWitness(sk, ttype, value, tNymBF, tokenBF *math.Zr, index int) *AuthorizationWitness {
 	return &AuthorizationWitness{
 		Sk:      sk,
 		TType:   ttype,
@@ -67,13 +66,14 @@ type Signer struct {
 }
 
 // NewSigner initializes the prover
-func NewSigner(witness *AuthorizationWitness, issuers []*bn256.G1, auth *Authorization, bitLength int, pp []*bn256.G1) *Signer {
+func NewSigner(witness *AuthorizationWitness, issuers []*math.G1, auth *Authorization, bitLength int, pp []*math.G1, c *math.Curve) *Signer {
 
 	verifier := &Verifier{
 		PedersenParams: pp,
 		Issuers:        issuers,
 		Auth:           auth,
 		BitLength:      bitLength,
+		Curve:          c,
 	}
 	return &Signer{
 		Witness:  witness,
@@ -89,13 +89,13 @@ func (s *Signer) Sign(message []byte) ([]byte, error) {
 	}
 
 	// one out of many proofs
-	commitments := make([]*bn256.G1, len(s.Issuers))
+	commitments := make([]*math.G1, len(s.Issuers))
 	for k, i := range s.Issuers {
-		commitments[k] = bn256.NewG1()
-		commitments[k].Copy(s.Auth.Type)
+		commitments[k] = s.Curve.NewG1()
+		commitments[k] = s.Auth.Type.Copy()
 		commitments[k].Sub(i)
 	}
-	o2omp := o2omp.NewProver(commitments, message, []*bn256.G1{s.PedersenParams[0], s.PedersenParams[2]}, s.BitLength, s.Witness.Index, s.Witness.TNymBF)
+	o2omp := o2omp.NewProver(commitments, message, []*math.G1{s.PedersenParams[0], s.PedersenParams[2]}, s.BitLength, s.Witness.Index, s.Witness.TNymBF, s.Curve)
 
 	sig := &Signature{}
 	var err error
@@ -106,7 +106,7 @@ func (s *Signer) Sign(message []byte) ([]byte, error) {
 
 	w := NewTypeCorrectnessWitness(s.Witness.Sk, s.Witness.TType, s.Witness.Value, s.Witness.TNymBF, s.Witness.TokenBF)
 
-	tcp := NewTypeCorrectnessProver(w, s.Auth.Type, s.Auth.Token, message, s.PedersenParams)
+	tcp := NewTypeCorrectnessProver(w, s.Auth.Type, s.Auth.Token, message, s.PedersenParams, s.Curve)
 	sig.TypeCorrectness, err = tcp.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compute issuer's signature")
@@ -130,10 +130,11 @@ func (s *Signer) ToUniqueIdentifier() ([]byte, error) {
 }
 
 type Verifier struct {
-	PedersenParams []*bn256.G1
-	Issuers        []*bn256.G1 // g_0^skg_1^type
+	PedersenParams []*math.G1
+	Issuers        []*math.G1 // g_0^skg_1^type
 	Auth           *Authorization
 	BitLength      int
+	Curve          *math.Curve
 }
 
 func (v *Verifier) Verify(message, rawsig []byte) error {
@@ -146,28 +147,28 @@ func (v *Verifier) Verify(message, rawsig []byte) error {
 	if err != nil {
 		return errors.Errorf("failed to unmarshal issuer's signature")
 	}
-	commitments := make([]*bn256.G1, len(v.Issuers))
+	commitments := make([]*math.G1, len(v.Issuers))
 	for k, i := range v.Issuers {
-		commitments[k] = bn256.NewG1()
-		commitments[k].Copy(v.Auth.Type)
+		commitments[k] = v.Curve.NewG1()
+		commitments[k] = v.Auth.Type.Copy()
 		commitments[k].Sub(i)
 	}
 
 	// verify one out of many proof: issuer authorization
-	err = o2omp.NewVerifier(commitments, message, []*bn256.G1{v.PedersenParams[0], v.PedersenParams[2]}, v.BitLength).Verify(sig.AuthorizationCorrectness)
+	err = o2omp.NewVerifier(commitments, message, []*math.G1{v.PedersenParams[0], v.PedersenParams[2]}, v.BitLength, v.Curve).Verify(sig.AuthorizationCorrectness)
 	if err != nil {
 		return errors.Wrapf(err, "failed to verify issuer's pseudonym")
 	}
 
 	// verify that type in authorization corresponds to type in token
-	return NewTypeCorrectnessVerifier(v.Auth.Type, v.Auth.Token, message, v.PedersenParams).Verify(sig.TypeCorrectness)
+	return NewTypeCorrectnessVerifier(v.Auth.Type, v.Auth.Token, message, v.PedersenParams, v.Curve).Verify(sig.TypeCorrectness)
 }
 
 func (v *Verifier) Serialize() ([]byte, error) {
 	return json.Marshal(v)
 }
 
-func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn256.G1, raw []byte) error {
+func (v *Verifier) Deserialize(bitLength int, issuers, pp []*math.G1, token *math.G1, raw []byte, curve *math.Curve) error {
 	err := json.Unmarshal(raw, &v)
 	if err != nil {
 		return err
@@ -177,5 +178,6 @@ func (v *Verifier) Deserialize(bitLength int, issuers, pp []*bn256.G1, token *bn
 	v.BitLength = bitLength
 	v.PedersenParams = pp
 	v.Issuers = issuers
+	v.Curve = curve
 	return nil
 }

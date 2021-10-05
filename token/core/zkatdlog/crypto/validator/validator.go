@@ -8,19 +8,17 @@ package validator
 import (
 	"encoding/json"
 
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
@@ -158,7 +156,7 @@ func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider 
 			if err != nil {
 				return err
 			}
-			err = verifier.Deserialize(ip.BitLength, ip.Issuers, v.pp.ZKATPedParams, a.OutputTokens[0].Data, a.Issuer)
+			err = verifier.Deserialize(ip.BitLength, ip.Issuers, v.pp.ZKATPedParams, a.OutputTokens[0].Data, a.Issuer, math.Curves[v.pp.Curve])
 			if err != nil {
 				return err
 			}
@@ -231,7 +229,7 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferAction) error {
 	action := tr.(*transfer.TransferAction)
 
-	in := make([]*bn256.G1, len(inputTokens))
+	in := make([]*math.G1, len(inputTokens))
 	for i, raw := range inputTokens {
 		tok := &token.Token{}
 		if err := tok.Deserialize(raw); err != nil {

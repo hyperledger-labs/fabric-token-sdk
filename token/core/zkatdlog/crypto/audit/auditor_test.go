@@ -9,19 +9,14 @@ import (
 	"encoding/json"
 	"time"
 
-	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
+	"github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit/mock"
@@ -31,6 +26,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	msp2 "github.com/hyperledger/fabric/msp"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Auditor", func() {
@@ -44,7 +42,7 @@ var _ = Describe("Auditor", func() {
 		fakeSigningIdentity = &mock.SigningIdentity{}
 		pp, err = crypto.Setup(100, 2, nil)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(pp.ZKATPedParams, nil, fakeSigningIdentity)
+		auditor = audit.NewAuditor(pp.ZKATPedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
@@ -200,8 +198,9 @@ func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, driver.Issue
 	issue, inf, err := issuer.GenerateZKIssue([]uint64{50, 20}, [][]byte{id, id})
 	Expect(err).NotTo(HaveOccurred())
 
+	c := math.Curves[pp.Curve]
 	// change value
-	inf[0].Value = bn256.NewZrInt(15)
+	inf[0].Value = c.NewZrFromInt(15)
 	marshalledinf := make([][]byte, len(inf))
 	for i := 0; i < len(inf); i++ {
 		marshalledinf[i], err = inf[i].Serialize()
@@ -218,7 +217,7 @@ func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, driver.Issue
 		metadata.AuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
 	}
-	inf[0].Value = bn256.NewZrInt(25)
+	inf[0].Value = c.NewZrFromInt(25)
 
 	return issue, metadata
 }
@@ -227,7 +226,8 @@ func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Transfer
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
 
-	inf[0].Value = bn256.NewZrInt(15)
+	c := math.Curves[pp.Curve]
+	inf[0].Value = c.NewZrFromInt(15)
 	marshalledInfo := make([][]byte, len(inf))
 	var err error
 	for i := 0; i < len(inf); i++ {
@@ -259,15 +259,15 @@ func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Transfer
 	return transfer, metadata, tokns
 }
 
-func getIssuers(N, index int, pk *bn256.G1, pp []*bn256.G1) []*bn256.G1 {
-	rand, err := bn256.GetRand()
+func getIssuers(N, index int, pk *math.G1, pp []*math.G1, curve *math.Curve) []*math.G1 {
+	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	issuers := make([]*bn256.G1, N)
+	issuers := make([]*math.G1, N)
 	issuers[index] = pk
 	for i := 0; i < N; i++ {
 		if i != index {
-			sk := bn256.RandModOrder(rand)
-			t := bn256.RandModOrder(rand)
+			sk := curve.NewRandomZr(rand)
+			t := curve.NewRandomZr(rand)
 			issuers[i] = pp[0].Mul(sk)
 			issuers[i].Add(pp[1].Mul(t))
 		}
@@ -362,15 +362,16 @@ func prepareIssuer(pp *crypto.PublicParams) *anonym.Issuer {
 	sk, pk, err := anonym.GenerateKeyPair("ABC", pp)
 	Expect(err).NotTo(HaveOccurred())
 
+	c := math.Curves[pp.Curve]
 	// there are two issuers whereby issuers[1] has secret key sk and issues tokens of type ttype
-	issuers := getIssuers(2, 1, pk, pp.ZKATPedParams)
+	issuers := getIssuers(2, 1, pk, pp.ZKATPedParams, c)
 	err = pp.AddIssuer(issuers[0])
 	Expect(err).NotTo(HaveOccurred())
 	err = pp.AddIssuer(issuers[1])
 	Expect(err).NotTo(HaveOccurred())
 
 	witness := anonym.NewWitness(sk, nil, nil, nil, nil, 1)
-	signer := anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams)
+	signer := anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, c)
 
 	issuer := &anonym.Issuer{}
 	issuer.New("ABC", signer, pp)
@@ -379,20 +380,21 @@ func prepareIssuer(pp *crypto.PublicParams) *anonym.Issuer {
 }
 
 func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []*token.TokenInformation) {
+	c := math.Curves[pp.Curve]
 	inputs := make([]*token.Token, 2)
 	infos := make([]*token.TokenInformation, 2)
-	values := []*bn256.Zr{bn256.NewZrInt(25), bn256.NewZrInt(35)}
-	rand, err := bn256.GetRand()
+	values := []*math.Zr{c.NewZrFromInt(25), c.NewZrFromInt(35)}
+	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
-	ttype := bn256.HashModOrder([]byte("ABC"))
+	ttype := c.HashToZr([]byte("ABC"))
 
 	for i := 0; i < len(inputs); i++ {
 		infos[i] = &token.TokenInformation{}
-		infos[i].BlindingFactor = bn256.RandModOrder(rand)
+		infos[i].BlindingFactor = c.NewRandomZr(rand)
 		infos[i].Value = values[i]
 		infos[i].Type = "ABC"
 		inputs[i] = &token.Token{}
-		inputs[i].Data, err = common.ComputePedersenCommitment([]*bn256.Zr{ttype, values[i], infos[i].BlindingFactor}, pp.ZKATPedParams)
+		inputs[i].Data, err = common.ComputePedersenCommitment([]*math.Zr{ttype, values[i], infos[i].BlindingFactor}, pp.ZKATPedParams, c)
 		Expect(err).NotTo(HaveOccurred())
 		inputs[i].Owner = id
 	}

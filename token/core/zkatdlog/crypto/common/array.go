@@ -6,19 +6,19 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 )
 
 type G1Array struct {
-	Elements []*bn256.G1
+	Elements []*math.G1
 }
 
 type G2Array struct {
-	Elements []*bn256.G2
+	Elements []*math.G2
 }
 
 type GTArray struct {
-	Elements []*bn256.GT
+	Elements []*math.Gt
 }
 
 func (a *G1Array) Bytes() []byte {
@@ -48,7 +48,7 @@ func (a *GTArray) Bytes() []byte {
 	return raw
 }
 
-func GetG1Array(elements ...[]*bn256.G1) *G1Array {
+func GetG1Array(elements ...[]*math.G1) *G1Array {
 	array := &G1Array{}
 	for _, e := range elements {
 		array.Elements = append(array.Elements, e...)
@@ -56,7 +56,7 @@ func GetG1Array(elements ...[]*bn256.G1) *G1Array {
 	return array
 }
 
-func GetG2Array(elements ...[]*bn256.G2) *G2Array {
+func GetG2Array(elements ...[]*math.G2) *G2Array {
 	array := &G2Array{}
 	for _, e := range elements {
 		array.Elements = append(array.Elements, e...)
@@ -64,7 +64,7 @@ func GetG2Array(elements ...[]*bn256.G2) *G2Array {
 	return array
 }
 
-func GetGTArray(elements ...[]*bn256.GT) *GTArray {
+func GetGTArray(elements ...[]*math.Gt) *GTArray {
 	array := &GTArray{}
 	for _, e := range elements {
 		array.Elements = append(array.Elements, e...)
@@ -80,10 +80,18 @@ func GetBytesArray(bytes ...[]byte) []byte {
 	return array
 }
 
-func GetZrArray(elements ...[]*bn256.Zr) []*bn256.Zr {
-	var array []*bn256.Zr
+func GetZrArray(elements ...[]*math.Zr) []*math.Zr {
+	var array []*math.Zr
 	for _, e := range elements {
 		array = append(array, e...)
 	}
 	return array
+}
+
+func Sum(values []*math.Zr, c *math.Curve) *math.Zr {
+	sum := c.NewZrFromInt(0)
+	for i := 0; i < len(values); i++ {
+		sum = c.ModAdd(sum, values[i], c.GroupOrder)
+	}
+	return sum
 }

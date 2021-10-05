@@ -8,13 +8,10 @@ package nogh
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -22,6 +19,7 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -60,8 +58,8 @@ type Service struct {
 	Issuers []*struct {
 		label string
 		index int
-		sk    *bn256.Zr
-		pk    *bn256.G1
+		sk    *math.Zr
+		pk    *math.G1
 		fID   view.Identity
 	}
 

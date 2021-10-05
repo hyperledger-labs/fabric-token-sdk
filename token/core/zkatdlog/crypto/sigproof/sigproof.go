@@ -6,20 +6,20 @@ SPDX-License-Identifier: Apache-2.0
 package sigproof
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/pkg/errors"
 )
 
 type SigProof struct {
-	Challenge         *bn256.Zr
-	Hidden            []*bn256.Zr
-	Hash              *bn256.Zr
+	Challenge         *math.Zr
+	Hidden            []*math.Zr
+	Hash              *math.Zr
 	Signature         *pssign.Signature
-	SigBlindingFactor *bn256.Zr
-	ComBlindingFactor *bn256.Zr
-	Commitment        *bn256.G1 // for hidden values
+	SigBlindingFactor *math.Zr
+	ComBlindingFactor *math.Zr
+	Commitment        *math.G1 // for hidden values
 }
 
 // commitments how they are computed
@@ -34,20 +34,20 @@ type SigVerifier struct {
 	*POKVerifier
 	HiddenIndices        []int
 	DisclosedIndices     []int
-	Disclosed            []*bn256.Zr
-	PedersenParams       []*bn256.G1
-	CommitmentToMessages *bn256.G1
+	Disclosed            []*math.Zr
+	PedersenParams       []*math.G1
+	CommitmentToMessages *math.G1
 }
 
 type SigWitness struct {
-	hidden            []*bn256.Zr
-	hash              *bn256.Zr
+	hidden            []*math.Zr
+	hash              *math.Zr
 	signature         *pssign.Signature
-	sigBlindingFactor *bn256.Zr
-	comBlindingFactor *bn256.Zr
+	sigBlindingFactor *math.Zr
+	comBlindingFactor *math.Zr
 }
 
-func NewSigWitness(hidden []*bn256.Zr, signature *pssign.Signature, hash, bf *bn256.Zr) *SigWitness {
+func NewSigWitness(hidden []*math.Zr, signature *pssign.Signature, hash, bf *math.Zr) *SigWitness {
 	return &SigWitness{
 		hidden:            hidden,
 		hash:              hash,
@@ -56,19 +56,20 @@ func NewSigWitness(hidden []*bn256.Zr, signature *pssign.Signature, hash, bf *bn
 	}
 }
 
-func NewSigProver(hidden, disclosed []*bn256.Zr, signature *pssign.Signature, hash, bf *bn256.Zr, com *bn256.G1, hiddenindices, disclosedindices []int, P *bn256.G1, Q *bn256.G2, PK []*bn256.G2, pp []*bn256.G1) *SigProver {
+func NewSigProver(hidden, disclosed []*math.Zr, signature *pssign.Signature, hash, bf *math.Zr, com *math.G1, hiddenindices, disclosedindices []int, P *math.G1, Q *math.G2, PK []*math.G2, pp []*math.G1, curve *math.Curve) *SigProver {
 	return &SigProver{
 		witness:     NewSigWitness(hidden, signature, hash, bf),
-		SigVerifier: NewSigVerifier(hiddenindices, disclosedindices, disclosed, com, P, Q, PK, pp),
+		SigVerifier: NewSigVerifier(hiddenindices, disclosedindices, disclosed, com, P, Q, PK, pp, curve),
 	}
 }
 
-func NewSigVerifier(hidden, disclosed []int, disclosedInf []*bn256.Zr, com, P *bn256.G1, Q *bn256.G2, PK []*bn256.G2, pp []*bn256.G1) *SigVerifier {
+func NewSigVerifier(hidden, disclosed []int, disclosedInf []*math.Zr, com, P *math.G1, Q *math.G2, PK []*math.G2, pp []*math.G1, curve *math.Curve) *SigVerifier {
 	return &SigVerifier{
 		POKVerifier: &POKVerifier{
-			P:  P,
-			Q:  Q,
-			PK: PK,
+			P:     P,
+			Q:     Q,
+			PK:    PK,
+			Curve: curve,
 		},
 		HiddenIndices:        hidden,
 		DisclosedIndices:     disclosed,
@@ -79,15 +80,15 @@ func NewSigVerifier(hidden, disclosed []int, disclosedInf []*bn256.Zr, com, P *b
 }
 
 type SigRandomness struct {
-	hidden            []*bn256.Zr
-	hash              *bn256.Zr
-	sigBlindingFactor *bn256.Zr
-	comBlindingFactor *bn256.Zr
+	hidden            []*math.Zr
+	hash              *math.Zr
+	sigBlindingFactor *math.Zr
+	comBlindingFactor *math.Zr
 }
 
 type SigCommitment struct {
-	CommitmentToMessages *bn256.G1
-	Signature            *bn256.GT
+	CommitmentToMessages *math.G1
+	Signature            *math.Gt
 }
 
 func (p *SigProver) Prove() (*SigProof, error) {
@@ -115,7 +116,7 @@ func (p *SigProver) Prove() (*SigProof, error) {
 		return nil, err
 	}
 	// compute proofs
-	sp := &common.SchnorrProver{Witness: append(p.witness.hidden, p.witness.comBlindingFactor, p.witness.sigBlindingFactor, p.witness.hash), Randomness: append(p.randomness.hidden, p.randomness.comBlindingFactor, p.randomness.sigBlindingFactor, p.randomness.hash), Challenge: proof.Challenge}
+	sp := &common.SchnorrProver{Witness: append(p.witness.hidden, p.witness.comBlindingFactor, p.witness.sigBlindingFactor, p.witness.hash), Randomness: append(p.randomness.hidden, p.randomness.comBlindingFactor, p.randomness.sigBlindingFactor, p.randomness.hash), Challenge: proof.Challenge, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	proofs, err := sp.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "signature proof generation failed")
@@ -138,18 +139,18 @@ func (p *SigProver) computeCommitment() error {
 		return errors.Errorf("size of signature public key does not mathc the size of the witness")
 	}
 	// Get RNG
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
 	// generate randomness
 	p.randomness = &SigRandomness{}
 	for i := 0; i < len(p.witness.hidden); i++ {
-		p.randomness.hidden = append(p.randomness.hidden, bn256.RandModOrder(rand))
+		p.randomness.hidden = append(p.randomness.hidden, p.Curve.NewRandomZr(rand))
 	}
-	p.randomness.hash = bn256.RandModOrder(rand)
-	p.randomness.comBlindingFactor = bn256.RandModOrder(rand)
-	p.randomness.sigBlindingFactor = bn256.RandModOrder(rand)
+	p.randomness.hash = p.Curve.NewRandomZr(rand)
+	p.randomness.comBlindingFactor = p.Curve.NewRandomZr(rand)
+	p.randomness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
 
 	// compute commitment
 	p.Commitment = &SigCommitment{}
@@ -163,19 +164,20 @@ func (p *SigProver) computeCommitment() error {
 		t.Add(p.PK[index+1].Mul(p.randomness.hidden[i]))
 	}
 
-	p.Commitment.Signature = bn256.Pairing(t, p.witness.signature.R, p.Q, p.P.Mul(p.randomness.sigBlindingFactor))
-	p.Commitment.Signature = bn256.FinalExp(p.Commitment.Signature)
+	p.Commitment.Signature = p.Curve.Pairing2(t, p.witness.signature.R, p.Q, p.P.Mul(p.randomness.sigBlindingFactor))
+	p.Commitment.Signature = p.Curve.FExp(p.Commitment.Signature)
 	return nil
 }
 
 func (p *SigProver) obfuscateSignature() (*pssign.Signature, error) {
-	rand, err := bn256.GetRand()
+	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get RNG")
 	}
 
-	p.witness.sigBlindingFactor = bn256.RandModOrder(rand)
-	err = p.witness.signature.Randomize()
+	p.witness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
+	v := &pssign.SignVerifier{Curve: p.Curve}
+	err = v.Randomize(p.witness.signature)
 	if err != nil {
 		return nil, err
 	}
@@ -186,10 +188,10 @@ func (p *SigProver) obfuscateSignature() (*pssign.Signature, error) {
 	return sig, nil
 }
 
-func (v *SigVerifier) computeChallenge(comToMessages *bn256.G1, signature *pssign.Signature, com *SigCommitment) (*bn256.Zr, error) {
-	g1array := common.GetG1Array(v.PedersenParams, []*bn256.G1{comToMessages, com.CommitmentToMessages,
+func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign.Signature, com *SigCommitment) (*math.Zr, error) {
+	g1array := common.GetG1Array(v.PedersenParams, []*math.G1{comToMessages, com.CommitmentToMessages,
 		v.P})
-	g2array := common.GetG2Array(v.PK, []*bn256.G2{v.Q})
+	g2array := common.GetG2Array(v.PK, []*math.G2{v.Q})
 	raw := common.GetBytesArray(g1array.Bytes(), g2array.Bytes(), com.Signature.Bytes())
 	bytes, err := signature.Serialize()
 	if err != nil {
@@ -197,7 +199,7 @@ func (v *SigVerifier) computeChallenge(comToMessages *bn256.G1, signature *pssig
 	}
 	raw = append(raw, bytes...)
 
-	return bn256.HashModOrder(raw), nil
+	return v.Curve.HashToZr(raw), nil
 }
 
 // recompute commitments for verification
@@ -207,16 +209,16 @@ func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) 
 	}
 
 	c := &SigCommitment{}
-	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams}
+	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 	zkp := &common.SchnorrProof{Statement: v.CommitmentToMessages, Proof: append(p.Hidden, p.ComBlindingFactor), Challenge: p.Challenge}
 
 	c.CommitmentToMessages = ver.RecomputeCommitment(zkp)
-	proof := make([]*bn256.Zr, len(v.PK)-2)
+	proof := make([]*math.Zr, len(v.PK)-2)
 	for i, index := range v.HiddenIndices {
 		proof[index] = p.Hidden[i]
 	}
 	for i, index := range v.DisclosedIndices {
-		proof[index] = bn256.ModMul(v.Disclosed[i], p.Challenge, bn256.Order)
+		proof[index] = v.Curve.ModMul(v.Disclosed[i], p.Challenge, v.Curve.GroupOrder)
 	}
 
 	sp := &POK{
@@ -227,7 +229,7 @@ func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) 
 		BlindingFactor: p.SigBlindingFactor,
 	}
 
-	sv := &POKVerifier{P: v.P, Q: v.Q, PK: v.PK}
+	sv := &POKVerifier{P: v.P, Q: v.Q, PK: v.PK, Curve: v.Curve}
 	var err error
 	c.Signature, err = sv.RecomputeCommitment(sp)
 	if err != nil {
@@ -248,7 +250,7 @@ func (v *SigVerifier) Verify(p *SigProof) error {
 	if err != nil {
 		return nil
 	}
-	if chal.Cmp(p.Challenge) != 0 {
+	if !chal.Equals(p.Challenge) {
 		return errors.Errorf("invalid signature proof")
 	}
 	return nil

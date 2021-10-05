@@ -6,13 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package anonym_test
 
 import (
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Issuer", func() {
@@ -22,11 +21,13 @@ var _ = Describe("Issuer", func() {
 		issuer *anonym.Issuer
 		signer *anonym.Signer
 		values []uint64
-		bf     []*bn256.Zr
+		bf     []*math.Zr
 		owners [][]byte
 	)
 	BeforeEach(func() {
 		var err error
+		pp, err = crypto.Setup(100, 2, nil)
+		Expect(err).NotTo(HaveOccurred())
 		owners = make([][]byte, 3)
 		owners[0] = []byte("alice")
 		owners[1] = []byte("bob")
@@ -34,25 +35,22 @@ var _ = Describe("Issuer", func() {
 
 		values = []uint64{50, 30, 20}
 
-		bf = make([]*bn256.Zr, 3)
-		rand, err := bn256.GetRand()
+		bf = make([]*math.Zr, 3)
+		rand, err := math.Curves[pp.Curve].Rand()
 		Expect(err).NotTo(HaveOccurred())
 		for i := 0; i < 3; i++ {
-			bf[i] = bn256.RandModOrder(rand)
+			bf[i] = math.Curves[pp.Curve].NewRandomZr(rand)
 		}
-
-		pp, err = crypto.Setup(100, 2, nil)
-		Expect(err).NotTo(HaveOccurred())
 
 		sk, pk, err := anonym.GenerateKeyPair("ABC", pp)
 		Expect(err).NotTo(HaveOccurred())
 
-		issuers := GetIssuers(2, 1, pk, pp.ZKATPedParams)
+		issuers := GetIssuers(2, 1, pk, pp.ZKATPedParams, math.Curves[pp.Curve])
 		err = pp.SetIssuingPolicy(issuers)
 		Expect(err).NotTo(HaveOccurred())
 
 		witness := anonym.NewWitness(sk, nil, nil, nil, nil, 1)
-		signer = anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams)
+		signer = anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, math.Curves[pp.Curve])
 		issuer = &anonym.Issuer{}
 		issuer.New("ABC", signer, pp)
 

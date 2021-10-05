@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package token_test
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	. "github.com/onsi/ginkgo"
@@ -24,18 +24,19 @@ var _ = Describe("Token", func() {
 		var err error
 		pp, err = crypto.Setup(100, 2, nil)
 		Expect(err).NotTo(HaveOccurred())
-		rand, err := bn256.GetRand()
+		c := math.Curves[pp.Curve]
+		rand, err := c.Rand()
 		Expect(err).NotTo(HaveOccurred())
 		inf = &token2.TokenInformation{
-			Value:          bn256.NewZrInt(50),
+			Value:          c.NewZrFromInt(50),
 			Type:           "ABC",
-			BlindingFactor: bn256.RandModOrder(rand),
+			BlindingFactor: c.NewRandomZr(rand),
 		}
 		token = &token2.Token{}
-		token.Data = bn256.NewG1()
+		token.Data = c.NewG1()
 		token.Data.Add(pp.ZKATPedParams[1].Mul(inf.Value))
 		token.Data.Add(pp.ZKATPedParams[2].Mul(inf.BlindingFactor))
-		token.Data.Add(pp.ZKATPedParams[0].Mul(bn256.HashModOrder([]byte("ABC"))))
+		token.Data.Add(pp.ZKATPedParams[0].Mul(c.HashToZr([]byte("ABC"))))
 	})
 	Describe("get token in the clear", func() {
 		When("token is computed correctly", func() {

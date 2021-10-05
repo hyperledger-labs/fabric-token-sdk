@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	. "github.com/onsi/ginkgo"
@@ -16,18 +16,20 @@ import (
 var _ = Describe("Input/Output well formedness", func() {
 	var (
 		iow      *transfer.WellFormednessWitness
-		pp       []*bn256.G1
+		pp       []*math.G1
 		verifier *transfer.WellFormednessVerifier
 		prover   *transfer.WellFormednessProver
-		in       []*bn256.G1
-		out      []*bn256.G1
-		inBF     []*bn256.Zr
-		outBF    []*bn256.Zr
+		in       []*math.G1
+		out      []*math.G1
+		inBF     []*math.Zr
+		outBF    []*math.Zr
+		c        *math.Curve
 	)
 	BeforeEach(func() {
-		pp = preparePedersenParameters()
-		iow, in, out, inBF, outBF = prepareIOCProver(pp)
-		prover = transfer.NewWellFormednessProver(iow, pp, in, out)
+		c = math.Curves[1]
+		pp = preparePedersenParameters(c)
+		iow, in, out, inBF, outBF = prepareIOCProver(pp, c)
+		prover = transfer.NewWellFormednessProver(iow, pp, in, out, c)
 	})
 	Describe("Prove", func() {
 		Context("parameters and witness are initialized correctly", func() {
@@ -50,7 +52,7 @@ var _ = Describe("Input/Output well formedness", func() {
 	})
 	Describe("Verify", func() {
 		BeforeEach(func() {
-			verifier = transfer.NewWellFormednessVerifier(pp, in, out)
+			verifier = transfer.NewWellFormednessVerifier(pp, in, out, c)
 		})
 		Context("The proof is generated honestly", func() {
 			It("Succeeds", func() {
@@ -65,7 +67,7 @@ var _ = Describe("Input/Output well formedness", func() {
 		Context("The proof is not generated correctly: wrong type", func() {
 			It("fails", func() {
 				// change type encoded in the commitments
-				token := prepareToken(bn256.NewZrInt(100), inBF[0], "XYZ", pp)
+				token := prepareToken(c.NewZrFromInt(100), inBF[0], "XYZ", pp, c)
 				verifier.Inputs[0] = token
 				// prover assumed to guess the type (e.g. ABC)
 				prover.WellFormednessVerifier = verifier
@@ -80,7 +82,7 @@ var _ = Describe("Input/Output well formedness", func() {
 		Context("The proof is not generated correctly: wrong Values", func() {
 			It("fails", func() {
 				// change the value encoded in the input commitment
-				token := prepareToken(bn256.NewZrInt(80), inBF[0], "ABC", pp)
+				token := prepareToken(c.NewZrFromInt(80), inBF[0], "ABC", pp, c)
 				verifier.Inputs[0] = token
 
 				// prover guess the value of the committed Values (e.g. 100)
@@ -96,7 +98,7 @@ var _ = Describe("Input/Output well formedness", func() {
 		Context("The proof is not generated correctly: input sum != output sums", func() {
 			It("fails", func() {
 				// prover wants to increase the value of the output out of the blue
-				token := prepareToken(bn256.NewZrInt(90), outBF[0], "ABC", pp)
+				token := prepareToken(c.NewZrFromInt(90), outBF[0], "ABC", pp, c)
 				verifier.Outputs[0] = token
 				// prover generates a proof
 				prover.WellFormednessVerifier = verifier
@@ -111,9 +113,9 @@ var _ = Describe("Input/Output well formedness", func() {
 		Context("The proof is not generated correctly: wrong blindingFactors", func() {
 			It("fails", func() {
 				// prover guess the blindingFactors
-				rand, err := bn256.GetRand()
+				rand, err := c.Rand()
 				Expect(err).NotTo(HaveOccurred())
-				token := prepareToken(bn256.NewZrInt(100), bn256.RandModOrder(rand), "ABC", pp)
+				token := prepareToken(c.NewZrFromInt(100), c.NewRandomZr(rand), "ABC", pp, c)
 				verifier.Inputs[0] = token
 				// prover generate proof
 				proof, err := prover.Prove()
@@ -127,40 +129,40 @@ var _ = Describe("Input/Output well formedness", func() {
 	})
 })
 
-func preparePedersenParameters() []*bn256.G1 {
-	rand, err := bn256.GetRand()
+func preparePedersenParameters(c *math.Curve) []*math.G1 {
+	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	pp := make([]*bn256.G1, 3)
+	pp := make([]*math.G1, 3)
 
 	for i := 0; i < 3; i++ {
-		pp[i] = bn256.G1Gen().Mul(bn256.RandModOrder(rand))
+		pp[i] = c.GenG1.Mul(c.NewRandomZr(rand))
 	}
 	return pp
 }
 
-func prepareIOCProver(pp []*bn256.G1) (*transfer.WellFormednessWitness, []*bn256.G1, []*bn256.G1, []*bn256.Zr, []*bn256.Zr) {
-	rand, err := bn256.GetRand()
+func prepareIOCProver(pp []*math.G1, c *math.Curve) (*transfer.WellFormednessWitness, []*math.G1, []*math.G1, []*math.Zr, []*math.Zr) {
+	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	inBF := make([]*bn256.Zr, 2)
-	outBF := make([]*bn256.Zr, 3)
-	inValues := make([]*bn256.Zr, 2)
-	outValues := make([]*bn256.Zr, 3)
+	inBF := make([]*math.Zr, 2)
+	outBF := make([]*math.Zr, 3)
+	inValues := make([]*math.Zr, 2)
+	outValues := make([]*math.Zr, 3)
 	for i := 0; i < 2; i++ {
-		inBF[i] = bn256.RandModOrder(rand)
+		inBF[i] = c.NewRandomZr(rand)
 	}
 	for i := 0; i < 3; i++ {
-		outBF[i] = bn256.RandModOrder(rand)
+		outBF[i] = c.NewRandomZr(rand)
 	}
 	ttype := "ABC"
-	inValues[0] = bn256.NewZrInt(100)
-	inValues[1] = bn256.NewZrInt(50)
-	outValues[0] = bn256.NewZrInt(75)
-	outValues[1] = bn256.NewZrInt(35)
-	outValues[2] = bn256.NewZrInt(40)
+	inValues[0] = c.NewZrFromInt(100)
+	inValues[1] = c.NewZrFromInt(50)
+	outValues[0] = c.NewZrFromInt(75)
+	outValues[1] = c.NewZrFromInt(35)
+	outValues[2] = c.NewZrFromInt(40)
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp, c)
 
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
@@ -174,21 +176,21 @@ func prepareIOCProver(pp []*bn256.G1) (*transfer.WellFormednessWitness, []*bn256
 	return transfer.NewWellFormednessWitness(intw, outtw), in, out, inBF, outBF
 }
 
-func prepareInputsOutputs(inValues, outValues, inBF, outBF []*bn256.Zr, ttype string, pp []*bn256.G1) ([]*bn256.G1, []*bn256.G1) {
-	inputs := make([]*bn256.G1, len(inValues))
-	outputs := make([]*bn256.G1, len(outValues))
+func prepareInputsOutputs(inValues, outValues, inBF, outBF []*math.Zr, ttype string, pp []*math.G1, c *math.Curve) ([]*math.G1, []*math.G1) {
+	inputs := make([]*math.G1, len(inValues))
+	outputs := make([]*math.G1, len(outValues))
 
 	for i := 0; i < len(inputs); i++ {
-		inputs[i] = bn256.NewG1()
-		inputs[i].Add(pp[0].Mul(bn256.HashModOrder([]byte(ttype))))
+		inputs[i] = c.NewG1()
+		inputs[i].Add(pp[0].Mul(c.HashToZr([]byte(ttype))))
 		inputs[i].Add(pp[1].Mul(inValues[i]))
 		inputs[i].Add(pp[2].Mul(inBF[i]))
 
 	}
 
 	for i := 0; i < len(outputs); i++ {
-		outputs[i] = bn256.NewG1()
-		outputs[i].Add(pp[0].Mul(bn256.HashModOrder([]byte(ttype))))
+		outputs[i] = c.NewG1()
+		outputs[i].Add(pp[0].Mul(c.HashToZr([]byte(ttype))))
 		outputs[i].Add(pp[1].Mul(outValues[i]))
 		outputs[i].Add(pp[2].Mul(outBF[i]))
 
@@ -196,9 +198,9 @@ func prepareInputsOutputs(inValues, outValues, inBF, outBF []*bn256.Zr, ttype st
 	return inputs, outputs
 }
 
-func prepareToken(value *bn256.Zr, rand *bn256.Zr, ttype string, pp []*bn256.G1) *bn256.G1 {
-	token := bn256.NewG1()
-	token.Add(pp[0].Mul(bn256.HashModOrder([]byte(ttype))))
+func prepareToken(value *math.Zr, rand *math.Zr, ttype string, pp []*math.G1, c *math.Curve) *math.G1 {
+	token := c.NewG1()
+	token.Add(pp[0].Mul(c.HashToZr([]byte(ttype))))
 	token.Add(pp[1].Mul(value))
 	token.Add(pp[2].Mul(rand))
 	return token

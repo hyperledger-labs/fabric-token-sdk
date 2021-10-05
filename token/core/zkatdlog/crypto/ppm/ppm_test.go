@@ -10,15 +10,14 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PublicParamsManager", func() {
@@ -89,12 +88,12 @@ var _ = Describe("PublicParamsManager", func() {
 	Describe("Add Issuer", func() {
 		Context("AddIssuer is called correctly to add a new anonymissuer", func() {
 			var (
-				issuer *bn256.G1
+				issuer *math.G1
 				raw    []byte
 			)
 			BeforeEach(func() {
 				var err error
-				issuer = bn256.G1Gen()
+				issuer = math.Curves[pp.Curve].GenG1
 				raw, err = json.Marshal(issuer)
 				Expect(err).NotTo(HaveOccurred())
 			})

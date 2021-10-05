@@ -8,14 +8,13 @@ package issue
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/math/gurvy/bn256"
+	"github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 // Issue specifies an issue of one or more tokens
@@ -77,8 +76,8 @@ func (i *IssueAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, i)
 }
 
-func (i *IssueAction) GetCommitments() []*bn256.G1 {
-	com := make([]*bn256.G1, len(i.OutputTokens))
+func (i *IssueAction) GetCommitments() []*math.G1 {
+	com := make([]*math.G1, len(i.OutputTokens))
 	for j := 0; j < len(com); j++ {
 		com[j] = i.OutputTokens[j].Data
 	}
@@ -86,7 +85,7 @@ func (i *IssueAction) GetCommitments() []*bn256.G1 {
 }
 
 // Initialize Issue
-func NewIssue(issuer []byte, coms []*bn256.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
+func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
 	if len(owners) != len(coms) {
 		return nil, errors.Errorf("number of owners does not match number of tokens")
 	}
@@ -132,19 +131,20 @@ func (p *Proof) Deserialize(bytes []byte) error {
 	return json.Unmarshal(bytes, p)
 }
 
-func NewProver(tw []*token.TokenDataWitness, tokens []*bn256.G1, anonymous bool, pp *crypto.PublicParams) *Prover {
+func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Prover {
+	c := math.Curves[pp.Curve]
 	p := &Prover{}
-	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.ZKATPedParams)
+	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.ZKATPedParams, c)
 
-	p.RangeCorrectness = rp.NewProver(tw, tokens, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q)
+	p.RangeCorrectness = rp.NewProver(tw, tokens, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 
 	return p
 }
 
-func NewVerifier(tokens []*bn256.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
+func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams)
-	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q)
+	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams, math.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 	return v
 }
 
