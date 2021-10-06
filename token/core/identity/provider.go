@@ -118,6 +118,7 @@ func (i *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 }
 
 func (i *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
+	// TODO: replace this with something more abstract.
 	ai := &idemix2.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)

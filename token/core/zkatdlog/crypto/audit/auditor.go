@@ -9,17 +9,17 @@ package audit
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -37,19 +37,11 @@ type AuditableToken struct {
 	owner *ownerOpening
 }
 
-func NewAuditableToken(token *token.Token, ownerInfo []byte, ttype string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
-	auditInfo := &idemix.AuditInfo{}
-	if !token.IsRedeem() {
-		// this is not a redeem
-		err := json.Unmarshal(ownerInfo, auditInfo)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling audit info")
-		}
-	}
+func NewAuditableToken(token *token.Token, matcher driver.Matcher, ttype string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
 	return &AuditableToken{
 		Token: token,
 		owner: &ownerOpening{
-			ownerInfo: auditInfo,
+			ownerInfo: matcher,
 		},
 		data: &tokenDataOpening{
 			ttype: ttype,
@@ -65,19 +57,25 @@ type tokenDataOpening struct {
 	bf    *math.Zr
 }
 
+type Deserializer interface {
+	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
+}
+
 type ownerOpening struct {
-	ownerInfo *idemix.AuditInfo
+	ownerInfo driver.Matcher
 }
 
 type Auditor struct {
+	Des            Deserializer
 	Signer         SigningIdentity
 	PedersenParams []*math.G1
 	NYMParams      []byte
 	Curve          *math.Curve
 }
 
-func NewAuditor(pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	return &Auditor{
+		Des:            des,
 		PedersenParams: pp,
 		NYMParams:      nymparams,
 		Signer:         signer,
@@ -97,7 +95,7 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 }
 
 func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
-	outputsFromIssue, err := getAuditInfoForIssues(tokenRequest.Issues, tokenRequestMetadata.Issues)
+	outputsFromIssue, err := getAuditInfoForIssues(a.Des, tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues")
 	}
@@ -106,7 +104,7 @@ func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata 
 		return errors.Wrapf(err, "failed checking issues")
 	}
 
-	auditableInputs, outputsFromTransfer, err := getAuditInfoForTransfers(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	auditableInputs, outputsFromTransfer, err := getAuditInfoForTransfers(a.Des, tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers")
 	}
@@ -212,7 +210,7 @@ func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
 	return si.Identity, nil
 }
 
-func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
+func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
 	if len(issues) != len(metadata) {
 		return nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
@@ -232,7 +230,14 @@ func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			if err != nil {
 				return nil, err
 			}
-			ao, err := NewAuditableToken(ia.OutputTokens[i], issue.AuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+			matcher, err := des.GetOwnerMatcher(issue.AuditInfos[i])
+			if err != nil {
+				return nil, err
+			}
+			if ia.OutputTokens[i].IsRedeem() {
+				return nil, errors.Errorf("issue cannot redeem tokens")
+			}
+			ao, err := NewAuditableToken(ia.OutputTokens[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, err
 			}
@@ -242,7 +247,7 @@ func getAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 	return outputs, nil
 }
 
-func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
+func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
@@ -256,7 +261,15 @@ func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders")
 		}
 		for i := 0; i < len(tr.SenderAuditInfos); i++ {
-			ai, err := NewAuditableToken(inputs[k][i], tr.SenderAuditInfos[i], "", nil, nil)
+			var matcher driver.Matcher
+			var err error
+			if !inputs[k][i].IsRedeem() {
+				matcher, err = des.GetOwnerMatcher(tr.SenderAuditInfos[i])
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			ai, err := NewAuditableToken(inputs[k][i], matcher, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -276,7 +289,15 @@ func getAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			if err != nil {
 				return nil, nil, err
 			}
-			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.ReceiverAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
+
+			var matcher driver.Matcher
+			if !ta.OutputTokens[i].IsRedeem() {
+				matcher, err = des.GetOwnerMatcher(tr.ReceiverAuditInfos[i])
+				if err != nil {
+					return nil, nil, err
+				}
+			}
+			ao, err := NewAuditableToken(ta.OutputTokens[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

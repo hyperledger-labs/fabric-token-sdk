@@ -7,15 +7,20 @@ package audit_test
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"time"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	msp2 "github.com/hyperledger/fabric/msp"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -26,10 +31,19 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
+
+type idemix interface {
+	DeserializeAuditInfo(raw []byte) (*idemix2.AuditInfo, error)
+}
+
+type deserializer struct {
+	idemix idemix
+}
+
+func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return d.idemix.DeserializeAuditInfo(raw)
+}
 
 var _ = Describe("Auditor", func() {
 	var (
@@ -40,9 +54,13 @@ var _ = Describe("Auditor", func() {
 	BeforeEach(func() {
 		var err error
 		fakeSigningIdentity = &mock.SigningIdentity{}
-		pp, err = crypto.Setup(100, 2, nil)
+		ipk, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(pp.ZKATPedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
+		pp, err = crypto.Setup(100, 2, ipk)
+		Expect(err).NotTo(HaveOccurred())
+		des, err := idemix2.NewDeserializer(pp.IdemixPK)
+		Expect(err).NotTo(HaveOccurred())
+		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.ZKATPedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
@@ -124,7 +142,7 @@ var _ = Describe("Auditor", func() {
 				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("output at index [0] does not match the provided opening"))
-				Expect(err.Error()).To(ContainSubstring("attribute mistmatch"))
+				Expect(err.Error()).To(ContainSubstring("does not match the provided opening"))
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(0))
 			})
 		})
@@ -335,17 +353,16 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix2.NewProvider(config, registry)
+	p, err := idemix2.NewEIDNymProvider(config, registry)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
-	id, audit, err := p.Identity()
+	id, audit, err := p.Identity(nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo := &idemix2.AuditInfo{}
-	err = auditInfo.FromBytes(audit)
+	auditInfo, err := p.DeserializeAuditInfo(audit)
 	Expect(err).NotTo(HaveOccurred())
 	err = auditInfo.Match(id)
 	Expect(err).NotTo(HaveOccurred())

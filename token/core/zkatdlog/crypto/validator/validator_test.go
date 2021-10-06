@@ -10,13 +10,17 @@ import (
 	"io/ioutil"
 	"time"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	msp2 "github.com/hyperledger/fabric/msp"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -30,12 +34,21 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator/mock"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var fakeldger *mock.Ledger
+
+type idemix interface {
+	DeserializeAuditInfo(raw []byte) (*idemix2.AuditInfo, error)
+}
+
+type deserializer struct {
+	idemix idemix
+}
+
+func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return d.idemix.DeserializeAuditInfo(raw)
+}
 
 var _ = Describe("validator", func() {
 	var (
@@ -80,7 +93,9 @@ var _ = Describe("validator", func() {
 		Expect(err).NotTo(HaveOccurred())
 
 		asigner, _ := prepareECDSASigner()
-		auditor = &audit.Auditor{Signer: asigner, PedersenParams: pp.ZKATPedParams, NYMParams: pp.IdemixPK, Curve: c}
+		des, err := idemix2.NewDeserializer(pp.IdemixPK)
+		Expect(err).NotTo(HaveOccurred())
+		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.ZKATPedParams, pp.IdemixPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -457,17 +472,16 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix2.NewProvider(config, registry)
+	p, err := idemix2.NewEIDNymProvider(config, registry)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
-	id, audit, err := p.Identity()
+	id, audit, err := p.Identity(nil)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(id).NotTo(BeNil())
 	Expect(audit).NotTo(BeNil())
 
-	auditInfo := &idemix2.AuditInfo{}
-	err = auditInfo.FromBytes(audit)
+	auditInfo, err := p.DeserializeAuditInfo(audit)
 	Expect(err).NotTo(HaveOccurred())
 	err = auditInfo.Match(id)
 	Expect(err).NotTo(HaveOccurred())

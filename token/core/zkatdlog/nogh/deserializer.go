@@ -26,10 +26,15 @@ type idemixProvider interface {
 	DeserializeVerifier(raw []byte) (driver2.Verifier, error)
 }
 
+type auditInfoDeserializer interface {
+	DeserializeAuditInfo(raw []byte) (*idemix2.AuditInfo, error)
+}
+
 type deserializer struct {
-	auditorDeserializer verifierProvider
-	ownerDeserializer   verifierProvider
-	issuerDeserializer  verifierProvider
+	auditorDeserializer   verifierProvider
+	ownerDeserializer     verifierProvider
+	issuerDeserializer    verifierProvider
+	auditInfoDeserializer auditInfoDeserializer
 }
 
 func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
@@ -39,9 +44,10 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 	}
 
 	return &deserializer{
-		auditorDeserializer: &fabric.MSPX509IdentityDeserializer{},
-		issuerDeserializer:  &fabric.MSPX509IdentityDeserializer{},
-		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(&idemixDeserializer{provider: idemixDes}),
+		auditorDeserializer:   &fabric.MSPX509IdentityDeserializer{},
+		issuerDeserializer:    &fabric.MSPX509IdentityDeserializer{},
+		ownerDeserializer:     identity.NewRawOwnerIdentityDeserializer(&idemixDeserializer{provider: idemixDes}),
+		auditInfoDeserializer: idemixDes,
 	}, nil
 }
 
@@ -55,6 +61,10 @@ func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, err
 
 func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.auditorDeserializer.GetVerifier(id)
+}
+
+func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return d.auditInfoDeserializer.DeserializeAuditInfo(raw)
 }
 
 type idemixDeserializer struct {

@@ -43,3 +43,7 @@ func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, err
 func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.auditorDeserializer.GetVerifier(id)
 }
+
+func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	panic("not supported")
+}
