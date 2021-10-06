@@ -71,6 +71,9 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 		return "", "", nil
 	}
 	return idInfo.ID, idInfo.EnrollmentID, func() (view.Identity, []byte, error) {
+		if mspLabel == IdemixMSP {
+			return idInfo.GetIdentity(fabric.WithIdemixEIDExtension())
+		}
 		return idInfo.GetIdentity()
 	}
 }
