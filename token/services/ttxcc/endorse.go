@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -286,9 +287,19 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*fabric.E
 
 	logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
 
-	env, err := fabric.GetChannel(context, c.tx.Network(), c.tx.Channel()).Chaincode(c.tx.Namespace()).Endorse(
-		"invoke", requestRaw,
-	).WithInvokerIdentity(c.tx.Signer).WithTxID(c.tx.Payload.Id).Call()
+	env, err := chaincode.NewEndorseView(
+		c.tx.Namespace(),
+		"invoke",
+		requestRaw,
+	).WithNetwork(
+		c.tx.Network(),
+	).WithChannel(
+		c.tx.Channel(),
+	).WithSignerIdentity(
+		c.tx.Signer,
+	).WithTxID(
+		c.tx.Payload.Id,
+	).Endorse(context)
 	if err != nil {
 		return nil, err
 	}

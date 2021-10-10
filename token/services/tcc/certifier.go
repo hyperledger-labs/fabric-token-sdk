@@ -55,7 +55,7 @@ func (r *RegisterCertifierView) Call(context view.Context) (interface{}, error) 
 		logger.Debugf("register certifier [%s]", r.Id.String())
 		_, err := context.RunView(chaincode.NewInvokeView(
 			tms.Namespace(), AddCertifierFunction, r.Id.Bytes(),
-		).WithNetwork(tms.Network()).WithChannel(tms.Channel()).WithInvokerIdentity(
+		).WithNetwork(tms.Network()).WithChannel(tms.Channel()).WithSignerIdentity(
 			fabric.GetFabricNetworkService(context, tms.Network()).IdentityProvider().DefaultIdentity(),
 		))
 		if err != nil {
