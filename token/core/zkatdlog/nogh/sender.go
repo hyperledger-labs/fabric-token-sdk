@@ -123,6 +123,21 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		return nil, nil, errors.Wrapf(err, "failed generating zkat proof for txid [%s]", txID)
 	}
 
+
+	var tis [][]byte
+	for _, info := range infos {
+		rawTI, err := info.Serialize()
+		if err != nil {
+			panic(err)
+		}
+		tis = append(tis, rawTI)
+	}
+
+	err = s.VerifyTransfer(transfer, tis)
+	if err != nil {
+		panic(err)
+	}
+
 	// Prepare metadata
 	infoRaws := [][]byte{}
 	for _, information := range infos {

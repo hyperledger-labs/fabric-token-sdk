@@ -197,13 +197,13 @@ func TestAll(network *integration.Infrastructure) {
 	checkBalance(network, "bob", "bob.id1", "EUR", 10)
 
 	// Concurrent transfers
-	concurrentTransfers := make([]chan error, 5)
+	concurrentTransfers := make([]chan error, 50)
 	var sum uint64
 	for i := range concurrentTransfers {
 		concurrentTransfers[i] = make(chan error, 1)
 
 		transfer := concurrentTransfers[i]
-		r, err := rand.Int(rand.Reader, big.NewInt(200))
+		r, err := rand.Int(rand.Reader, big.NewInt(40))
 		Expect(err).ToNot(HaveOccurred())
 		v := r.Uint64() + 1
 		sum += v
