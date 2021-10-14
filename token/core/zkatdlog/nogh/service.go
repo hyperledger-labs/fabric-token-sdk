@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"encoding/base64"
 	"sync"
 
 	"github.com/IBM/mathlib"
@@ -19,7 +20,6 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -45,15 +45,16 @@ type QueryEngine interface {
 type DeserializerProvider = func(params *crypto.PublicParams) (api3.Deserializer, error)
 
 type Service struct {
-	Channel               Channel
-	Namespace             string
-	SP                    view2.ServiceProvider
-	PP                    *crypto.PublicParams
-	PPLabel               string
-	PublicParamsFetcher   api3.PublicParamsFetcher
-	TokenCommitmentLoader TokenCommitmentLoader
-	QE                    QueryEngine
-	DeserializerProvider  DeserializerProvider
+	publicParamInitialization sync.RWMutex
+	Channel                   Channel
+	Namespace                 string
+	SP                        view2.ServiceProvider
+	pp                        *crypto.PublicParams
+	PPLabel                   string
+	PublicParamsFetcher       api3.PublicParamsFetcher
+	TokenCommitmentLoader     TokenCommitmentLoader
+	QE                        QueryEngine
+	DeserializerProvider      DeserializerProvider
 
 	Issuers []*struct {
 		label string
@@ -134,73 +135,71 @@ func (s *Service) PublicParamsManager() api3.PublicParamsManager {
 	return ppm.New(s.PublicParams())
 }
 
-func (s *Service) PublicParams() *crypto.PublicParams {
-	if s.PP == nil {
-		// load
-		qe, err := s.Channel.Vault().NewQueryExecutor()
-		if err != nil {
-			panic(err)
-		}
-		defer qe.Done()
-
-		setupKey, err := keys.CreateSetupKey()
-		if err != nil {
-			panic(err)
-		}
-		logger.Debugf("get public parameters with key [%s]", setupKey)
-		raw, err := qe.GetState(s.Namespace, setupKey)
-		if err != nil {
-			panic(err)
-		}
-		if len(raw) == 0 {
-			logger.Warnf("public parameters with key [%s] not found, fetch them", setupKey)
-			raw, err = s.PublicParamsFetcher.Fetch()
-			if err != nil {
-				logger.Errorf("failed retrieving public params [%s]", err)
-				return nil
-			}
-		}
-
-		logger.Debugf("unmarshal public parameters with key [%s], len [%d]", setupKey, len(raw))
-		s.PP = &crypto.PublicParams{}
-		s.PP.Label = s.PPLabel
-		err = s.PP.Deserialize(raw)
-		if err != nil {
-			panic(err)
-		}
-		logger.Debugf("unmarshal public parameters with key [%s] done", setupKey)
-	}
-
-	ip, err := s.PP.GetIssuingPolicy()
+func (s *Service) initOrSetPublicParams() {
+	// load
+	qe, err := s.Channel.Vault().NewQueryExecutor()
 	if err != nil {
 		panic(err)
 	}
-	logger.Debugf("returning public parameters [%d,%d,%d,%d]", len(s.PP.ZKATPedParams), len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
+	defer qe.Done()
 
-	return s.PP
+	setupKey, err := keys.CreateSetupKey()
+	if err != nil {
+		panic(err)
+	}
+	logger.Debugf("get public parameters with key [%s]", setupKey)
+	raw, err := qe.GetState(s.Namespace, setupKey)
+	if err != nil {
+		logger.Fatalf("Failed fetching %s from namespace %s: %s", setupKey, s.Namespace, err)
+	}
+	if len(raw) == 0 {
+		logger.Warnf("public parameters with key [%s] not found, fetch them", setupKey)
+		raw, err = s.PublicParamsFetcher.Fetch()
+		if err != nil {
+			logger.Fatalf("failed retrieving public params [%s]", err)
+		}
+	}
+
+	logger.Debugf("unmarshal public parameters with key [%s], len [%d]", setupKey, len(raw))
+	s.pp = &crypto.PublicParams{}
+	s.pp.Label = s.PPLabel
+	err = s.pp.Deserialize(raw)
+	if err != nil {
+		logger.Fatalf("Failed deserializing public params from %s: %v", base64.StdEncoding.EncodeToString(raw), err)
+	}
+	logger.Debugf("unmarshal public parameters with key [%s] done", setupKey)
+
+	ip, err := s.pp.GetIssuingPolicy()
+	if err != nil {
+		logger.Fatalf("Failed obtaining issuing policy: %v", err)
+	}
+	logger.Debugf("returning public parameters [%d,%d,%d,%d]", len(s.pp.ZKATPedParams), len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
+}
+
+func (s *Service) PublicParams() *crypto.PublicParams {
+	s.publicParamInitialization.RLock()
+	if s.pp == nil {
+		s.publicParamInitialization.RUnlock()
+
+		s.publicParamInitialization.Lock()
+		defer s.publicParamInitialization.Unlock()
+
+		if s.pp == nil {
+			s.initOrSetPublicParams()
+		}
+		return s.pp
+	}
+
+	defer s.publicParamInitialization.RUnlock()
+
+	return s.pp
 }
 
 func (s *Service) FetchPublicParams() error {
-	raw, err := s.PublicParamsFetcher.Fetch()
-	if err != nil {
-		return errors.WithMessagef(err, "failed fetching public params from fabric")
-	}
-
-	pp := &crypto.PublicParams{}
-	err = pp.Deserialize(raw)
-	if err != nil {
-		return errors.Wrapf(err, "failed deserializing public params")
-	}
-
-	ip, err := pp.GetIssuingPolicy()
-	if err != nil {
-		return errors.Wrapf(err, "failed deserializing issuing policy")
-	}
-	logger.Debugf("fetching public parameters done, issue policy [%d,%d,%d]", len(ip.Issuers), ip.IssuersNumber, ip.BitLength)
-
-	s.PP = pp
+	s.PublicParams()
 	return nil
 }
+
 
 func (s *Service) Deserializer() (api3.Deserializer, error) {
 	d, err := s.DeserializerProvider(s.PublicParams())
