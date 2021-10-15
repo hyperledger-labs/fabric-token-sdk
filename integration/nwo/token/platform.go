@@ -143,7 +143,7 @@ func (p *Platform) GenerateArtifacts() {
 			chaincode = cc
 		} else {
 			chaincode, _ = p.PrepareTCC(tms)
-			p.Fabric(tms).Topology().AppendChaincode(chaincode)
+			p.Fabric(tms).Topology().AddChaincode(chaincode)
 		}
 
 		p.TCCs = append(p.TCCs, &TCC{
