@@ -58,6 +58,10 @@ func (t *TMS) Private(dockerImage string) {
 		Chaincode: topology.Chaincode{
 			Name: t.Namespace,
 		},
+		PrivateChaincode: topology.PrivateChaincode{
+			Image: "",
+		},
+		Channel: t.Channel,
 		Private: true,
 	})
 
