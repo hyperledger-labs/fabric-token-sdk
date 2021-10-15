@@ -131,8 +131,21 @@ func (p *Platform) GenerateArtifacts() {
 
 	// Prepare chaincodes
 	for _, tms := range p.Topology.TMSs {
-		chaincode, _ := p.PrepareTCC(tms)
-		p.Fabric(tms).Topology().Chaincodes = append(p.Fabric(tms).Topology().Chaincodes, chaincode)
+		var chaincode *topology.ChannelChaincode
+
+		if tms.TokenChaincode.Private {
+			cc := p.Fabric(tms).Topology().AddFPC(
+				tms.Namespace,
+				tms.TokenChaincode.DockerImage,
+				tms.TokenChaincode.Orgs...,
+			)
+			cc.Chaincode.Ctor = p.TCCCtor(tms)
+			chaincode = cc
+		} else {
+			chaincode, _ = p.PrepareTCC(tms)
+			p.Fabric(tms).Topology().AddChaincode(chaincode)
+		}
+
 		p.TCCs = append(p.TCCs, &TCC{
 			TMS:       tms,
 			Chaincode: chaincode,
