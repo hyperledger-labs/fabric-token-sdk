@@ -53,6 +53,8 @@ func (t *TMS) SetNamespace(orgs []string, publicParamsGenArgs ...string) {
 }
 
 func (t *TMS) Private(dockerImage string) {
+	t.Fabric.EnableFPC()
+
 	t.TokenChaincode.Private = true
 	t.TokenChaincode.DockerImage = dockerImage
 }
