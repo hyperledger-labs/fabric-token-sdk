@@ -28,7 +28,7 @@ import (
 
 func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
-	fmt.Printf("tcc setup, reading public parameters from [%s]\n", p.PublicParametersFile(tms))
+	logger.Debugf("tcc setup, reading public parameters from [%s]", p.PublicParametersFile(tms))
 	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 
@@ -101,6 +101,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 }
 
 func (p *Platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
+	// Standard Chaincode
 	orgs := tms.TokenChaincode.Orgs
 
 	policy := "AND ("
@@ -136,4 +137,12 @@ func (p *Platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
 		Channel: tms.Channel,
 		Peers:   peers,
 	})
+}
+
+func (p *Platform) TCCCtor(tms *TMS) string {
+	logger.Debugf("tcc setup, reading public parameters for setting up CTOR [%s]", p.PublicParametersFile(tms))
+	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
+	Expect(err).ToNot(HaveOccurred())
+
+	return fmt.Sprintf(`{"Args":["init", "%s"]}`, base64.StdEncoding.EncodeToString(ppRaw))
 }

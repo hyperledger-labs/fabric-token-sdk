@@ -27,6 +27,8 @@ var (
 type Chaincode struct {
 	Orgs                []string
 	PublicParamsGenArgs []string
+	Private             bool
+	DockerImage         string
 }
 
 type TMS struct {
@@ -48,6 +50,11 @@ func (t *TMS) AddCertifier(certifier *fsc.Node) *TMS {
 func (t *TMS) SetNamespace(orgs []string, publicParamsGenArgs ...string) {
 	t.TokenChaincode.Orgs = orgs
 	t.TokenChaincode.PublicParamsGenArgs = publicParamsGenArgs
+}
+
+func (t *TMS) Private(dockerImage string) {
+	t.TokenChaincode.Private = true
+	t.TokenChaincode.DockerImage = dockerImage
 }
 
 type Topology struct {
