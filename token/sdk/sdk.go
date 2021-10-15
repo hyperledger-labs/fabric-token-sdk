@@ -40,10 +40,6 @@ type Registry interface {
 	RegisterService(service interface{}) error
 }
 
-type Network interface {
-	Channel(name string) (*fabric.Channel, error)
-}
-
 type SDK struct {
 	registry Registry
 }
@@ -62,7 +58,6 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Set TMS Provider")
 	tmsProvider := core.NewTMSProvider(
-		fabric2.NewNetworkProvider(p.registry),
 		p.registry,
 		func(network, channel, namespace string) error {
 			n := fabric.GetFabricNetworkService(p.registry, network)

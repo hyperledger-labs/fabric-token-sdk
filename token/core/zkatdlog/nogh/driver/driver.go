@@ -9,6 +9,7 @@ package driver
 import (
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -32,15 +33,24 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, network string, channel driver.Channel, namespace string) (driver.TokenManagerService, error) {
+func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, network string, channel string, namespace string) (driver.TokenManagerService, error) {
+	fns := fabric2.GetFabricNetworkService(sp, network)
+	if fns == nil {
+		return nil, errors.Errorf("fabric network [%s] does not exists", network)
+	}
+	ch, err := fns.Channel(channel)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] does not exists", network, channel)
+	}
+
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	service, err := zkatdlog.NewTokenService(
-		channel,
+		ch,
 		namespace,
 		sp,
 		publicParamsFetcher,
-		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: vault.NewVault(sp, channel, namespace).QueryEngine()},
-		vault.NewVault(sp, channel, namespace).QueryEngine(),
+		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: vault.NewVault(sp, ch, namespace).QueryEngine()},
+		vault.NewVault(sp, ch, namespace).QueryEngine(),
 		identity.NewProvider(
 			sp,
 			map[driver.IdentityUsage]identity.Mapper{
