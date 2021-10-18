@@ -8,7 +8,7 @@ package token
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -108,4 +108,12 @@ type TokenDataWitness struct {
 	Type           string
 	Value          *math.Zr
 	BlindingFactor *math.Zr
+}
+
+func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
+	return &TokenDataWitness{
+		Type:           tdw.Type,
+		Value:          tdw.Value.Copy(),
+		BlindingFactor: tdw.BlindingFactor.Copy(),
+	}
 }

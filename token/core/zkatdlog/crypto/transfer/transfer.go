@@ -8,7 +8,7 @@ package transfer
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rangeproof "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
@@ -35,11 +35,21 @@ type Prover struct {
 }
 
 func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, outputs []*math.G1, pp *crypto.PublicParams) *Prover {
-
 	p := &Prover{}
 
-	p.RangeCorrectness = rangeproof.NewProver(outputwitness, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
-	wfw := NewWellFormednessWitness(inputwitness, outputwitness)
+	inW := make([]*token.TokenDataWitness, len(inputwitness))
+	outW := make([]*token.TokenDataWitness, len(outputwitness))
+
+	for i := 0; i < len(inputwitness); i++ {
+		inW[i] = inputwitness[i].Clone()
+	}
+
+	for i := 0; i < len(outputwitness); i++ {
+		outW[i] = outputwitness[i].Clone()
+	}
+
+	p.RangeCorrectness = rangeproof.NewProver(outW, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	wfw := NewWellFormednessWitness(inW, outW)
 	p.WellFormedness = NewWellFormednessProver(wfw, pp.ZKATPedParams, inputs, outputs, math.Curves[pp.Curve])
 	return p
 }
