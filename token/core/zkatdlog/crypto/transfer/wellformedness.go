@@ -8,7 +8,7 @@ package transfer
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	crypto "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
@@ -63,9 +63,7 @@ func NewWellFormednessWitness(in, out []*token.TokenDataWitness) *WellFormedness
 // Prover for input output correctness
 type WellFormednessProver struct {
 	*WellFormednessVerifier
-	witness     *WellFormednessWitness
-	randomness  *WellFormednessRandomness
-	Commitments *WellFormednessCommitments
+	witness *WellFormednessWitness
 }
 
 func NewWellFormednessProver(witness *WellFormednessWitness, pp []*math.G1, inputs []*math.G1, outputs []*math.G1, c *math.Curve) *WellFormednessProver {
@@ -107,14 +105,14 @@ func (p *WellFormednessProver) Prove() ([]byte, error) {
 	if len(p.witness.inValues) != len(p.Inputs) || len(p.witness.inBlindingFactors) != len(p.Inputs) || len(p.witness.outValues) != len(p.Outputs) || len(p.witness.outBlindingFactors) != len(p.Outputs) {
 		return nil, errors.Errorf("cannot compute transfer proof: malformed witness")
 	}
-	err := p.computeCommitments()
+	commitments, randomness, err := p.computeCommitments()
 	if err != nil {
 		return nil, err
 	}
 
-	chal := p.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(p.Commitments.Inputs, []*math.G1{p.Commitments.InputSum}, p.Commitments.Outputs, []*math.G1{p.Commitments.OutputSum},
+	chal := p.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(commitments.Inputs, []*math.G1{commitments.InputSum}, commitments.Outputs, []*math.G1{commitments.OutputSum},
 		p.Inputs, p.Outputs))
-	iop, err := p.computeProof(p.randomness, chal)
+	iop, err := p.computeProof(randomness, chal)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +212,6 @@ func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness
 	typeProof, err := sp.Prove()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compute proof for the type of transferred tokens")
-
 	}
 	wf.Type = typeProof[0]
 
@@ -232,61 +229,61 @@ func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness
 	return wf, nil
 }
 
-func (p *WellFormednessProver) computeCommitments() error {
+func (p *WellFormednessProver) computeCommitments() (*WellFormednessCommitments, *WellFormednessRandomness, error) {
 	if len(p.PedParams) != 3 {
-		return errors.Errorf("proof generation failed: invalid public parameters")
+		return nil, nil, errors.Errorf("proof generation failed: invalid public parameters")
 	}
 
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return errors.Errorf("proof generation failed: failed to get random generator")
+		return nil, nil, errors.Errorf("proof generation failed: failed to get random generator")
 	}
 
-	p.randomness = &WellFormednessRandomness{}
-	p.randomness.Type = p.Curve.NewRandomZr(rand) // blindingFactors for type
-	Q := p.PedParams[0].Mul(p.randomness.Type)    // commitment to for type
+	randomness := &WellFormednessRandomness{}
+	randomness.Type = p.Curve.NewRandomZr(rand) // blindingFactors for type
+	Q := p.PedParams[0].Mul(randomness.Type)    // commitment to for type
 
-	p.randomness.inValues = make([]*math.Zr, len(p.Inputs))
-	p.randomness.inBF = make([]*math.Zr, len(p.Inputs))
+	randomness.inValues = make([]*math.Zr, len(p.Inputs))
+	randomness.inBF = make([]*math.Zr, len(p.Inputs))
 
-	p.Commitments = &WellFormednessCommitments{}
-	p.Commitments.Inputs = make([]*math.G1, len(p.Inputs))
+	commitments := &WellFormednessCommitments{}
+	commitments.Inputs = make([]*math.G1, len(p.Inputs))
 	// commitment to sum of inputs, sum of types and sum of blindingFactors
-	p.Commitments.InputSum = p.Curve.NewG1()
+	commitments.InputSum = p.Curve.NewG1()
 	for i := 0; i < len(p.Inputs); i++ {
 		// randomness for value
-		p.randomness.inValues[i] = p.Curve.NewRandomZr(rand)
+		randomness.inValues[i] = p.Curve.NewRandomZr(rand)
 		// randomness for blinding factor
-		p.randomness.inBF[i] = p.Curve.NewRandomZr(rand)
+		randomness.inBF[i] = p.Curve.NewRandomZr(rand)
 		// compute corresponding commitments
-		p.Commitments.Inputs[i] = p.PedParams[1].Mul(p.randomness.inValues[i])
-		p.Commitments.Inputs[i].Add(Q)
-		P := p.PedParams[2].Mul(p.randomness.inBF[i])
-		p.Commitments.Inputs[i].Add(P)
-		p.Commitments.InputSum.Add(P)
+		commitments.Inputs[i] = p.PedParams[1].Mul(randomness.inValues[i])
+		commitments.Inputs[i].Add(Q)
+		P := p.PedParams[2].Mul(randomness.inBF[i])
+		commitments.Inputs[i].Add(P)
+		commitments.InputSum.Add(P)
 	}
-	p.randomness.sum = p.Curve.NewRandomZr(rand) // blindingFactors for sum
-	p.Commitments.InputSum.Add(p.PedParams[1].Mul(p.randomness.sum))
-	p.Commitments.InputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Inputs)))))
+	randomness.sum = p.Curve.NewRandomZr(rand) // blindingFactors for sum
+	commitments.InputSum.Add(p.PedParams[1].Mul(randomness.sum))
+	commitments.InputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Inputs)))))
 
 	// preparing commitments for outputs
-	p.randomness.outValues = make([]*math.Zr, len(p.Outputs))
-	p.randomness.outBF = make([]*math.Zr, len(p.Outputs))
+	randomness.outValues = make([]*math.Zr, len(p.Outputs))
+	randomness.outBF = make([]*math.Zr, len(p.Outputs))
 
-	p.Commitments.Outputs = make([]*math.G1, len(p.Outputs))
-	p.Commitments.OutputSum = p.Curve.NewG1()
-	p.Commitments.OutputSum.Add(p.PedParams[1].Mul(p.randomness.sum))
-	p.Commitments.OutputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Outputs)))))
+	commitments.Outputs = make([]*math.G1, len(p.Outputs))
+	commitments.OutputSum = p.Curve.NewG1()
+	commitments.OutputSum.Add(p.PedParams[1].Mul(randomness.sum))
+	commitments.OutputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Outputs)))))
 	for i := 0; i < len(p.Outputs); i++ {
 		// generate randomness
-		p.randomness.outValues[i] = p.Curve.NewRandomZr(rand)
-		p.randomness.outBF[i] = p.Curve.NewRandomZr(rand)
+		randomness.outValues[i] = p.Curve.NewRandomZr(rand)
+		randomness.outBF[i] = p.Curve.NewRandomZr(rand)
 		// compute commitment
-		p.Commitments.Outputs[i] = p.PedParams[1].Mul(p.randomness.outValues[i])
-		p.Commitments.Outputs[i].Add(Q)
-		P := p.PedParams[2].Mul(p.randomness.outBF[i])
-		p.Commitments.Outputs[i].Add(P)
-		p.Commitments.OutputSum.Add(P)
+		commitments.Outputs[i] = p.PedParams[1].Mul(randomness.outValues[i])
+		commitments.Outputs[i].Add(Q)
+		P := p.PedParams[2].Mul(randomness.outBF[i])
+		commitments.Outputs[i].Add(P)
+		commitments.OutputSum.Add(P)
 	}
-	return nil
+	return commitments, randomness, nil
 }

@@ -38,12 +38,8 @@ type MembershipProof struct {
 
 type Prover struct {
 	*Verifier
-	tokenWitness             []*token.TokenDataWitness
-	membershipWitness        [][]*sigproof.MembershipWitness
-	commitmentBlindingFactor []*mathlib.Zr
-	Signatures               []*pssign.Signature
-	randomness               *Randomness
-	Commitment               *Commitment
+	tokenWitness []*token.TokenDataWitness
+	Signatures   []*pssign.Signature
 }
 
 func NewProver(tw []*token.TokenDataWitness, token []*mathlib.G1, signatures []*pssign.Signature, exponent int, pp []*mathlib.G1, PK []*mathlib.G2, P *mathlib.G1, Q *mathlib.G2, c *mathlib.Curve) *Prover {
@@ -99,10 +95,16 @@ type Commitment struct {
 	CommitmentToValue []*mathlib.G1
 }
 
+type commitmentWitnessBlindingFactor struct {
+	commitment     [][]*mathlib.G1
+	witness        [][]*sigproof.MembershipWitness
+	blindingFactor []*mathlib.Zr
+}
+
 func (p *Prover) Prove() ([]byte, error) {
 	proof := &Proof{}
 	var err error
-	coms, err := p.computeMembershipWitness()
+	preProcessed, err := p.preProcess()
 	if err != nil {
 		return nil, err
 	}
@@ -113,8 +115,8 @@ func (p *Prover) Prove() ([]byte, error) {
 		proof.MembershipProofs[k].Commitments = make([]*mathlib.G1, p.Exponent)
 		proof.MembershipProofs[k].SignatureProofs = make([][]byte, p.Exponent)
 		for i := 0; i < p.Exponent; i++ {
-			proof.MembershipProofs[k].Commitments[i] = coms[k][i]
-			mp := sigproof.NewMembershipProver(p.membershipWitness[k][i], proof.MembershipProofs[k].Commitments[i], p.P, p.Q, p.PK, p.PedersenParams[:2], p.Curve)
+			proof.MembershipProofs[k].Commitments[i] = preProcessed.commitment[k][i]
+			mp := sigproof.NewMembershipProver(preProcessed.witness[k][i], proof.MembershipProofs[k].Commitments[i], p.P, p.Q, p.PK, p.PedersenParams[:2], p.Curve)
 			proof.MembershipProofs[k].SignatureProofs[i], err = mp.Prove()
 			if err != nil {
 				return nil, err
@@ -122,17 +124,17 @@ func (p *Prover) Prove() ([]byte, error) {
 		}
 	}
 	// show that value in token = value in the aggregate commitment
-	err = p.computeCommitment()
+	commitment, randomness, err := p.computeCommitment()
 	if err != nil {
 		return nil, err
 	}
 
-	proof.Challenge = p.computeChallenge(p.Commitment, coms)
+	proof.Challenge = p.computeChallenge(commitment, preProcessed.commitment)
 
 	// equality proof
 	proof.EqualityProofs = &EqualityProofs{}
 	for k := 0; k < len(p.Token); k++ {
-		sp := &common.SchnorrProver{Challenge: proof.Challenge, Randomness: []*mathlib.Zr{p.randomness.Value[k], p.randomness.TokenBlindingFactor[k], p.randomness.CommitmentBlindingFactor[k]}, Witness: []*mathlib.Zr{p.tokenWitness[k].Value, p.tokenWitness[k].BlindingFactor, p.commitmentBlindingFactor[k]}, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
+		sp := &common.SchnorrProver{Challenge: proof.Challenge, Randomness: []*mathlib.Zr{randomness.Value[k], randomness.TokenBlindingFactor[k], randomness.CommitmentBlindingFactor[k]}, Witness: []*mathlib.Zr{p.tokenWitness[k].Value, p.tokenWitness[k].BlindingFactor, preProcessed.blindingFactor[k]}, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 		proofs, err := sp.Prove()
 		if err != nil {
 			return nil, err
@@ -142,13 +144,12 @@ func (p *Prover) Prove() ([]byte, error) {
 		proof.EqualityProofs.CommitmentBlindingFactor = append(proof.EqualityProofs.CommitmentBlindingFactor, proofs[2])
 	}
 	proof.EqualityProofs.Type = p.Curve.ModMul(proof.Challenge, p.Curve.HashToZr([]byte(p.tokenWitness[0].Type)), p.Curve.GroupOrder)
-	proof.EqualityProofs.Type = p.Curve.ModAdd(proof.EqualityProofs.Type, p.randomness.Type, p.Curve.GroupOrder)
+	proof.EqualityProofs.Type = p.Curve.ModAdd(proof.EqualityProofs.Type, randomness.Type, p.Curve.GroupOrder)
 
 	return json.Marshal(proof)
 }
 
 func (v *Verifier) Verify(raw []byte) error {
-
 	proof := &Proof{}
 	err := json.Unmarshal(raw, proof)
 	if err != nil {
@@ -186,13 +187,14 @@ func (v *Verifier) Verify(raw []byte) error {
 
 	return nil
 }
-func (p *Prover) computeMembershipWitness() ([][]*mathlib.G1, error) {
+
+func (p *Prover) preProcess() (*commitmentWitnessBlindingFactor, error) {
 	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, err
 	}
-	p.membershipWitness = make([][]*sigproof.MembershipWitness, len(p.tokenWitness))
-	p.commitmentBlindingFactor = make([]*mathlib.Zr, len(p.tokenWitness))
+	membershipWitness := make([][]*sigproof.MembershipWitness, len(p.tokenWitness))
+	commitmentBlindingFactor := make([]*mathlib.Zr, len(p.tokenWitness))
 	coms := make([][]*mathlib.G1, len(p.tokenWitness))
 
 	for k := 0; k < len(p.tokenWitness); k++ {
@@ -210,8 +212,8 @@ func (p *Prover) computeMembershipWitness() ([][]*mathlib.G1, error) {
 			v = v % int64(math.Pow(float64(p.Base), float64(p.Exponent-1-i)))                           // remainder
 		}
 
-		p.membershipWitness[k] = make([]*sigproof.MembershipWitness, p.Exponent)
-		p.commitmentBlindingFactor[k] = p.Curve.NewZrFromInt(0)
+		membershipWitness[k] = make([]*sigproof.MembershipWitness, p.Exponent)
+		commitmentBlindingFactor[k] = p.Curve.NewZrFromInt(0)
 		coms[k] = make([]*mathlib.G1, p.Exponent)
 		for i := 0; i < p.Exponent; i++ {
 			bf := p.Curve.NewRandomZr(rand)
@@ -220,43 +222,46 @@ func (p *Prover) computeMembershipWitness() ([][]*mathlib.G1, error) {
 				return nil, err
 			}
 
-			p.membershipWitness[k][i] = sigproof.NewMembershipWitness(p.Signatures[values[i]], p.Curve.NewZrFromInt(int64(values[i])), bf)
+			membershipWitness[k][i] = sigproof.NewMembershipWitness(p.Signatures[values[i]], p.Curve.NewZrFromInt(int64(values[i])), bf)
 			pow := p.Curve.NewZrFromInt(int64(math.Pow(float64(p.Base), float64(i))))
-			p.commitmentBlindingFactor[k] = p.Curve.ModAdd(p.commitmentBlindingFactor[k], p.Curve.ModMul(bf, pow, p.Curve.GroupOrder), p.Curve.GroupOrder)
+			commitmentBlindingFactor[k] = p.Curve.ModAdd(commitmentBlindingFactor[k], p.Curve.ModMul(bf, pow, p.Curve.GroupOrder), p.Curve.GroupOrder)
 		}
 	}
-	return coms, nil
+	return &commitmentWitnessBlindingFactor{
+		commitment:     coms,
+		blindingFactor: commitmentBlindingFactor,
+		witness:        membershipWitness,
+	}, nil
 }
 
-func (p *Prover) computeCommitment() error {
+func (p *Prover) computeCommitment() (*Commitment, *Randomness, error) {
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	// generate randomness
-	p.randomness = &Randomness{}
-	p.randomness.Type = p.Curve.NewRandomZr(rand)
+	randomness := &Randomness{}
+	randomness.Type = p.Curve.NewRandomZr(rand)
 	for i := 0; i < len(p.Token); i++ {
-		p.randomness.Value = append(p.randomness.Value, p.Curve.NewRandomZr(rand))
-		p.randomness.CommitmentBlindingFactor = append(p.randomness.CommitmentBlindingFactor, p.Curve.NewRandomZr(rand))
-		p.randomness.TokenBlindingFactor = append(p.randomness.TokenBlindingFactor, p.Curve.NewRandomZr(rand))
+		randomness.Value = append(randomness.Value, p.Curve.NewRandomZr(rand))
+		randomness.CommitmentBlindingFactor = append(randomness.CommitmentBlindingFactor, p.Curve.NewRandomZr(rand))
+		randomness.TokenBlindingFactor = append(randomness.TokenBlindingFactor, p.Curve.NewRandomZr(rand))
 	}
 
 	// compute commitment
-	p.Commitment = &Commitment{}
+	commitment := &Commitment{}
 	for i := 0; i < len(p.tokenWitness); i++ {
-		tok := p.PedersenParams[0].Mul(p.randomness.Type)
-		tok.Add(p.PedersenParams[1].Mul(p.randomness.Value[i]))
-		tok.Add(p.PedersenParams[2].Mul(p.randomness.TokenBlindingFactor[i]))
-		p.Commitment.Token = append(p.Commitment.Token, tok)
+		tok := p.PedersenParams[0].Mul(randomness.Type)
+		tok.Add(p.PedersenParams[1].Mul(randomness.Value[i]))
+		tok.Add(p.PedersenParams[2].Mul(randomness.TokenBlindingFactor[i]))
+		commitment.Token = append(commitment.Token, tok)
 
-		com := p.PedersenParams[0].Mul(p.randomness.Value[i])
-		com.Add(p.PedersenParams[1].Mul(p.randomness.CommitmentBlindingFactor[i]))
-		p.Commitment.CommitmentToValue = append(p.Commitment.CommitmentToValue, com)
+		com := p.PedersenParams[0].Mul(randomness.Value[i])
+		com.Add(p.PedersenParams[1].Mul(randomness.CommitmentBlindingFactor[i]))
+		commitment.CommitmentToValue = append(commitment.CommitmentToValue, com)
 	}
 
-	return nil
-
+	return commitment, randomness, nil
 }
 
 func (v *Verifier) computeChallenge(commitment *Commitment, comToValue [][]*mathlib.G1) *mathlib.Zr {
@@ -290,5 +295,4 @@ func (v *Verifier) recomputeCommitments(p *Proof) *Commitment {
 		c.CommitmentToValue = append(c.CommitmentToValue, ver.RecomputeCommitment(zkp))
 	}
 	return c
-
 }

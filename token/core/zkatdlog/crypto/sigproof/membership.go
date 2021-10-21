@@ -8,7 +8,7 @@ package sigproof
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/pkg/errors"
@@ -57,9 +57,7 @@ func NewMembershipVerifier(com, P *math.G1, Q *math.G2, PK []*math.G2, pp []*mat
 // prover
 type MembershipProver struct {
 	*MembershipVerifier
-	witness    *MembershipWitness
-	randomness *MembershipRandomness
-	Commitment *MembershipCommitment
+	witness *MembershipWitness
 }
 
 // MembershipCommitment to randomness in proof
@@ -95,29 +93,30 @@ func (p *MembershipProver) Prove() ([]byte, error) {
 	proof.Commitment = p.CommitmentToValue
 	// obfuscate signature
 	var err error
-	proof.Signature, err = p.obfuscateSignature()
+	obfuscatedSignature, err := p.obfuscateSignature()
 	if err != nil {
 		return nil, err
 	}
 	// compute hash
 	p.computeHash()
 	// compute commitment
-	err = p.computeCommitment()
+	commitment, randomness, err := p.computeCommitment(obfuscatedSignature.randomizedWitnessSignature)
 	if err != nil {
 		return nil, err
 	}
 	// compute challenge
-	proof.Challenge, err = p.computeChallenge(proof.Commitment, p.Commitment, proof.Signature)
+	proof.Challenge, err = p.computeChallenge(proof.Commitment, commitment, obfuscatedSignature.obfuscatedSig)
 	if err != nil {
 		return nil, err
 	}
 
 	// generate proof
-	sp := &common.SchnorrProver{Witness: []*math.Zr{p.witness.value, p.witness.comBlidingFactor, p.witness.hash, p.witness.sigBlindingFactor}, Randomness: []*math.Zr{p.randomness.value, p.randomness.comBlindingFactor, p.randomness.hash, p.randomness.sigBlindingFactor}, Challenge: proof.Challenge, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
+	sp := &common.SchnorrProver{Witness: []*math.Zr{p.witness.value, p.witness.comBlidingFactor, p.witness.hash, obfuscatedSignature.blindingFactor}, Randomness: []*math.Zr{randomness.value, randomness.comBlindingFactor, randomness.hash, randomness.sigBlindingFactor}, Challenge: proof.Challenge, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	proofs, err := sp.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "range proof generation failed")
 	}
+	proof.Signature = obfuscatedSignature.obfuscatedSig
 	proof.Value = proofs[0]
 	proof.ComBlindingFactor = proofs[1]
 	proof.Hash = proofs[2]
@@ -155,49 +154,61 @@ func (v *MembershipVerifier) Verify(raw []byte) error {
 	return nil
 }
 
-func (p *MembershipProver) obfuscateSignature() (*pssign.Signature, error) {
+type obfuscatedSignature struct {
+	blindingFactor             *math.Zr
+	randomizedWitnessSignature *pssign.Signature
+	obfuscatedSig              *pssign.Signature
+}
+
+func (p *MembershipProver) obfuscateSignature() (*obfuscatedSignature, error) {
 	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, errors.Errorf("failed to get RNG")
 	}
 
-	p.witness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
+	blindingFactor := p.Curve.NewRandomZr(rand)
 	v := pssign.NewVerifier(nil, nil, p.Curve)
-	err = v.Randomize(p.witness.signature)
+	randomizedWitnessSignature := &pssign.Signature{}
+	randomizedWitnessSignature.Copy(p.witness.signature)
+	err = v.Randomize(randomizedWitnessSignature)
 	if err != nil {
 		return nil, err
 	}
 	sig := &pssign.Signature{}
-	sig.Copy(p.witness.signature)
-	sig.S.Add(p.P.Mul(p.witness.sigBlindingFactor))
+	sig.Copy(randomizedWitnessSignature)
+	sig.S.Add(p.P.Mul(blindingFactor))
 
-	return sig, nil
+	return &obfuscatedSignature{
+		randomizedWitnessSignature: randomizedWitnessSignature,
+		blindingFactor:             blindingFactor,
+		obfuscatedSig:              sig,
+	}, nil
 }
 
-func (p *MembershipProver) computeCommitment() error {
+func (p *MembershipProver) computeCommitment(obfuscatedSignature *pssign.Signature) (*MembershipCommitment, *MembershipRandomness, error) {
 	// Get RNG
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return errors.Errorf("failed to get RNG")
+		return nil, nil, errors.Errorf("failed to get RNG")
 	}
 	// compute commitments
-	p.randomness = &MembershipRandomness{}
-	p.randomness.value = p.Curve.NewRandomZr(rand)
-	p.randomness.hash = p.Curve.NewRandomZr(rand)
-	p.randomness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
+	randomness := &MembershipRandomness{}
+	randomness.value = p.Curve.NewRandomZr(rand)
+	randomness.hash = p.Curve.NewRandomZr(rand)
+	randomness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
 
-	t := p.PK[1].Mul(p.randomness.value)
-	t.Add(p.PK[2].Mul(p.randomness.hash))
+	t := p.PK[1].Mul(randomness.value)
+	t.Add(p.PK[2].Mul(randomness.hash))
 
-	p.Commitment = &MembershipCommitment{}
-	p.Commitment.Signature = p.Curve.Pairing2(t, p.witness.signature.R, p.Q, p.P.Mul(p.randomness.sigBlindingFactor))
-	p.Commitment.Signature = p.Curve.FExp(p.Commitment.Signature)
+	commitment := &MembershipCommitment{}
+	commitment.Signature = p.Curve.Pairing2(t, obfuscatedSignature.R, p.Q, p.P.Mul(randomness.sigBlindingFactor))
+	commitment.Signature = p.Curve.FExp(commitment.Signature)
 
-	p.randomness.comBlindingFactor = p.Curve.NewRandomZr(rand)
-	p.Commitment.CommitmentToValue = p.PedersenParams[0].Mul(p.randomness.value)
-	p.Commitment.CommitmentToValue.Add(p.PedersenParams[1].Mul(p.randomness.comBlindingFactor))
+	randomness.comBlindingFactor = p.Curve.NewRandomZr(rand)
+	commitment.CommitmentToValue = p.PedersenParams[0].Mul(randomness.value)
+	commitment.CommitmentToValue.Add(p.PedersenParams[1].Mul(randomness.comBlindingFactor))
 
-	return nil
+	return commitment, randomness, nil
 }
 
 func (v *MembershipVerifier) computeChallenge(comToValue *math.G1, com *MembershipCommitment, signature *pssign.Signature) (*math.Zr, error) {

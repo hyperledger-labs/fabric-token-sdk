@@ -6,13 +6,38 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	"github.com/IBM/mathlib"
+	"sync"
+	"testing"
+
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
+
+func TestParallelProveVerify(t *testing.T) {
+	parallelism := 1000
+
+	prover, verifier := prepareZKTransfer()
+
+	var wg sync.WaitGroup
+	wg.Add(parallelism)
+
+	for i := 0; i < parallelism; i++ {
+		go func() {
+			defer wg.Done()
+			proof, err := prover.Prove()
+			Expect(err).NotTo(HaveOccurred())
+			Expect(proof).NotTo(BeNil())
+			err = verifier.Verify(proof)
+			Expect(err).NotTo(HaveOccurred())
+		}()
+	}
+
+	wg.Wait()
+}
 
 var _ = Describe("Transfer", func() {
 	var (
@@ -57,7 +82,6 @@ var _ = Describe("Transfer", func() {
 			})
 		})
 	})
-
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
