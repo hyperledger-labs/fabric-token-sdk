@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
@@ -49,8 +50,8 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		namespace,
 		sp,
 		publicParamsFetcher,
-		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: vault.NewVault(sp, ch, namespace).QueryEngine()},
-		vault.NewVault(sp, ch, namespace).QueryEngine(),
+		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch)).QueryEngine()},
+		vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch)).QueryEngine(),
 		identity.NewProvider(
 			sp,
 			map[driver.IdentityUsage]identity.Mapper{

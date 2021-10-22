@@ -8,9 +8,8 @@ package translator
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"

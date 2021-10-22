@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
@@ -12,6 +13,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
 	approver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/approver"
 )
 
@@ -34,9 +36,9 @@ func (a approver) Validate(tx *Transaction) error {
 	ts := tx.TokenService()
 	app := approver2.NewTokenRWSetApprover(
 		ts.Validator(),
-		fabric.GetVault(tx.tx.ServiceProvider, tx.Network(), tx.Channel()),
+		fabric2.NewVault(fabric.GetChannel(tx.tx.ServiceProvider, tx.Network(), tx.Channel())),
 		tx.ID(),
-		rws,
+		fabric2.NewRWSWrapper(rws),
 		ts.Namespace(),
 	)
 

@@ -12,7 +12,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestZKToken(t *testing.T) {
+func TestTranslator(t *testing.T) {
 	RegisterFailHandler(Fail)
 	RunSpecs(t, "Translator and Approver Suite")
 }

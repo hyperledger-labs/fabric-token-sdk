@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package inmemory
 
 import (
@@ -10,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
@@ -20,8 +20,14 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.selector.inmemory")
 
-type Channel interface {
-	Vault() *fabric.Vault
+const (
+	_       int = iota
+	Valid       // Transaction is valid and committed
+	Invalid     // Transaction is invalid and has been discarded
+)
+
+type Vault interface {
+	Status(id string) (int, error)
 }
 
 type lockEntry struct {
@@ -35,16 +41,16 @@ func (l *lockEntry) String() string {
 }
 
 type locker struct {
-	ch                           Channel
+	vault                        Vault
 	lock                         sync.RWMutex
 	locked                       map[string]*lockEntry
 	sleepTimeout                 time.Duration
 	validTxEvictionTimeoutMillis int64
 }
 
-func NewLocker(ch Channel, timeout time.Duration, validTxEvictionTimeoutMillis int64) selector.Locker {
+func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeoutMillis int64) selector.Locker {
 	r := &locker{
-		ch:                           ch,
+		vault:                        vault,
 		sleepTimeout:                 timeout,
 		lock:                         sync.RWMutex{},
 		locked:                       map[string]*lockEntry{},
@@ -107,13 +113,13 @@ func (d *locker) UnlockByTxID(txID string) {
 	}
 }
 
-func (d *locker) reclaim(id *token2.Id, txID string) (bool, fabric.ValidationCode) {
-	status, _, err := d.ch.Vault().Status(txID)
+func (d *locker) reclaim(id *token2.Id, txID string) (bool, int) {
+	status, err := d.vault.Status(txID)
 	if err != nil {
 		return false, status
 	}
 	switch status {
-	case fabric.Invalid:
+	case Invalid:
 		delete(d.locked, id.String())
 		return true, status
 	default:
@@ -131,20 +137,20 @@ func (d *locker) scan() {
 		var removeList []string
 		d.lock.RLock()
 		for id, entry := range d.locked {
-			status, _, err := d.ch.Vault().Status(entry.TxID)
+			status, err := d.vault.Status(entry.TxID)
 			if err != nil {
 				logger.Warnf("failed getting status for token [%s] locked by [%s], remove", id, entry)
 				removeList = append(removeList, id)
 				continue
 			}
 			switch status {
-			case fabric.Valid:
+			case Valid:
 				// remove only if elapsed enough time from last access, to avoid concurrency issue
 				if time.Now().Sub(entry.LastAccess).Milliseconds() > d.validTxEvictionTimeoutMillis {
 					removeList = append(removeList, id)
 					logger.Debugf("token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, status)
 				}
-			case fabric.Invalid:
+			case Invalid:
 				removeList = append(removeList, id)
 				logger.Debugf("token [%s] locked by [%s] in status [%s], remove", id, entry, status)
 			default:

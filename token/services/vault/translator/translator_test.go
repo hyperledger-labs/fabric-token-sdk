@@ -8,12 +8,13 @@ package translator_test
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	writer2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
-	mock "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator/mock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	writer2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator/mock"
 )
 
 const (
@@ -280,7 +281,7 @@ var _ = Describe("Translator", func() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("already spent"))
 				Expect(fakeRWSet.GetStateCallCount()).To(Equal(3))
-				ns, snkey, _ := fakeRWSet.GetStateArgsForCall(2)
+				ns, snkey := fakeRWSet.GetStateArgsForCall(2)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(snkey).To(Equal(sn[2]))
 			})

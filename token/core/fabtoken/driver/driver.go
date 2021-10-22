@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
@@ -40,11 +41,10 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] does not exists", network, channel)
 	}
 
-	qe := vault.NewVault(sp, ch, namespace).QueryEngine()
+	qe := vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch)).QueryEngine()
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	return fabtoken.NewService(
 		sp,
-		ch,
 		namespace,
 		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{
 			TokenVault:          qe,

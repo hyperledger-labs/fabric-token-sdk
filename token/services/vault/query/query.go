@@ -3,42 +3,37 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package query
 
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.tms.zkat.query")
 
-type Channel interface {
-	Name() string
-	Vault() *fabric.Vault
-}
-
 type Engine struct {
-	channel   Channel
+	Vault     driver.Vault
 	namespace string
 }
 
-func NewEngine(channel Channel, namespace string) *Engine {
+func NewEngine(vault driver.Vault, namespace string) *Engine {
 	return &Engine{
-		channel:   channel,
+		Vault:     vault,
 		namespace: namespace,
 	}
 }
 
 func (e *Engine) IsMine(id *token.Id) (bool, error) {
-	qe, err := e.channel.Vault().NewQueryExecutor()
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return false, err
 	}
@@ -66,7 +61,7 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 	endKey := startKey + string(keys.MaxUnicodeRuneValue)
 
 	logger.Debugf("New query executor")
-	qe, err := e.channel.Vault().NewQueryExecutor()
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +124,7 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 
 func (e *Engine) ListAuditTokens(ids ...*token.Id) ([]*token.Token, error) {
 	logger.Debugf("retrieve inputs for auditing...")
-	qe, err := e.channel.Vault().NewQueryExecutor()
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +162,7 @@ func (e *Engine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	endKey := startKey + string(keys.MaxUnicodeRuneValue)
 
 	logger.Debugf("New query executor")
-	qe, err := e.channel.Vault().NewQueryExecutor()
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +225,7 @@ func (e *Engine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 }
 
 func (e *Engine) PublicParams() ([]byte, error) {
-	qe, err := e.channel.Vault().NewQueryExecutor()
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return nil, err
 	}
@@ -248,8 +243,8 @@ func (e *Engine) PublicParams() ([]byte, error) {
 	return raw, nil
 }
 
-func (e *Engine) GetTokenInfos(ids []*token.Id, callback driver.QueryCallbackFunc) error {
-	qe, err := e.channel.Vault().NewQueryExecutor()
+func (e *Engine) GetTokenInfos(ids []*token.Id, callback driver2.QueryCallbackFunc) error {
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return err
 	}
@@ -259,7 +254,7 @@ func (e *Engine) GetTokenInfos(ids []*token.Id, callback driver.QueryCallbackFun
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
-		meta, _, _, err := qe.GetStateMetadata(e.namespace, outputID)
+		meta, err := qe.GetStateMetadata(e.namespace, outputID)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting metadata for id [%v]", id)
 		}
@@ -271,8 +266,8 @@ func (e *Engine) GetTokenInfos(ids []*token.Id, callback driver.QueryCallbackFun
 	return nil
 }
 
-func (e *Engine) GetTokenCommitments(ids []*token.Id, callback driver.QueryCallbackFunc) error {
-	qe, err := e.channel.Vault().NewQueryExecutor()
+func (e *Engine) GetTokenCommitments(ids []*token.Id, callback driver2.QueryCallbackFunc) error {
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return err
 	}
@@ -296,7 +291,7 @@ func (e *Engine) GetTokenCommitments(ids []*token.Id, callback driver.QueryCallb
 
 func (e *Engine) GetTokens(inputs ...*token.Id) ([]string, []*token.Token, error) {
 	logger.Debugf("retrieve tokens from ids...")
-	qe, err := e.channel.Vault().NewQueryExecutor()
+	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return nil, nil, err
 	}

@@ -3,23 +3,18 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package fabtoken
 
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
-
-type Channel interface {
-	Name() string
-	Vault() *fabric.Vault
-}
 
 type PublicParamsLoader interface {
 	Load() (*PublicParams, error)
@@ -45,7 +40,6 @@ type PublicParametersManager interface {
 
 type Service struct {
 	SP          view2.ServiceProvider
-	Channel     Channel
 	Namespace   string
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
@@ -61,7 +55,6 @@ type Service struct {
 
 func NewService(
 	sp view2.ServiceProvider,
-	channel Channel,
 	namespace string,
 	ppm PublicParametersManager,
 	tokenLoader TokenLoader,
@@ -71,7 +64,6 @@ func NewService(
 ) *Service {
 	s := &Service{
 		SP:           sp,
-		Channel:      channel,
 		Namespace:    namespace,
 		TokenLoader:  tokenLoader,
 		QE:           qe,

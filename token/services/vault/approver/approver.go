@@ -8,20 +8,22 @@ package approver
 import (
 	"crypto/rand"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
-	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token.tms.zkat.approver")
 
 type Vault interface {
-	NewQueryExecutor() (*fabric.QueryExecutor, error)
-	NewRWSet(txid string) (*fabric.RWSet, error)
+	NewQueryExecutor() (driver.Executor, error)
+	NewRWSet(txid string) (driver.RWSet, error)
 }
 
 type Verifier interface {
@@ -38,7 +40,7 @@ type approver struct {
 	namespace string
 }
 
-func NewTokenRWSetApprover(validator translator.Validator, vault Vault, txID string, RWSet translator.RWSet, namespace string) *approver {
+func NewTokenRWSetApprover(validator translator.Validator, vault Vault, txID string, RWSet driver.RWSet, namespace string) *approver {
 	return &approver{
 		vault:     vault,
 		TxID:      txID,
@@ -103,7 +105,7 @@ func (i *allIssuersValid) Validate(creator view.Identity, tokenType string) erro
 }
 
 type backend struct {
-	qe        *fabric.QueryExecutor
+	qe        driver.Executor
 	sp        SignatureProvider
 	namespace string
 }
