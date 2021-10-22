@@ -139,7 +139,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	if tms.PublicParametersManager().GraphHiding() {
 		// Delete inputs
 		for _, id := range metadata.SpentTokenID() {
-			if err := r.deleteFabToken(ns, id.TxId, int(id.Index), rws); err != nil {
+			if err := r.deleteFabToken(ns, id.TxId, id.Index, rws); err != nil {
 				return err
 			}
 		}
@@ -174,7 +174,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		}
 
-		index, err := strconv.Atoi(components[1])
+		index, err := strconv.ParseUint(components[1], 10, 64)
 		if err != nil {
 			logger.Errorf("invalid output index for key [%s]", key)
 			return errors.Wrapf(err, "invalid output index for key [%s]", key)

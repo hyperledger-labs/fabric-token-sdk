@@ -23,7 +23,7 @@ type Output struct {
 
 type Input struct {
 	ActionIndex  int
-	Id           *token2.Id
+	Id           *token2.ID
 	Owner        view.Identity
 	EnrollmentID string
 	Type         string
@@ -31,7 +31,7 @@ type Input struct {
 }
 
 type QueryService interface {
-	IsMine(id *token2.Id) (bool, error)
+	IsMine(id *token2.ID) (bool, error)
 }
 
 type OutputStream struct {
@@ -180,8 +180,8 @@ func (is *InputStream) At(i int) *Input {
 	return is.inputs[i]
 }
 
-func (is *InputStream) IDs() []*token2.Id {
-	var res []*token2.Id
+func (is *InputStream) IDs() []*token2.ID {
+	var res []*token2.ID
 	for _, input := range is.inputs {
 		res = append(res, input.Id)
 	}

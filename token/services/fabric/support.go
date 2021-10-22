@@ -17,7 +17,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index int, rws *fabric.RWSet) error {
+func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rws *fabric.RWSet) error {
 	outputID, err := keys.CreateFabtokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -34,7 +34,7 @@ func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index int, rws *
 	return nil
 }
 
-func (r *RWSetProcessor) storeFabToken(ns string, txID string, index int, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte) error {
+func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte) error {
 	outputID, err := keys.CreateFabtokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -52,15 +52,15 @@ func (r *RWSetProcessor) storeFabToken(ns string, txID string, index int, tok *t
 	return nil
 }
 
-func (r *RWSetProcessor) storeIssuedHistoryToken(ns string, txID string, index int, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte, issuer view.Identity) error {
+func (r *RWSetProcessor) storeIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte, issuer view.Identity) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
 	}
 	issuedToken := &token2.IssuedToken{
-		Id: &token2.Id{
+		Id: &token2.ID{
 			TxId:  txID,
-			Index: uint32(index),
+			Index: index,
 		},
 		Owner:    tok.Owner,
 		Type:     tok.Type,
@@ -91,7 +91,7 @@ func (r *RWSetProcessor) storeIssuedHistoryToken(ns string, txID string, index i
 	return nil
 }
 
-func (r *RWSetProcessor) storeAuditToken(ns string, txID string, index int, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte) error {
+func (r *RWSetProcessor) storeAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte) error {
 	outputID, err := keys.CreateAuditTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)

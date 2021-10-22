@@ -20,11 +20,11 @@ const (
 
 type CertificationClient struct{}
 
-func (c *CertificationClient) IsCertified(id *token2.Id) bool {
+func (c *CertificationClient) IsCertified(id *token2.ID) bool {
 	return true
 }
 
-func (c *CertificationClient) RequestCertification(ids ...*token2.Id) error {
+func (c *CertificationClient) RequestCertification(ids ...*token2.ID) error {
 	return nil
 }
 

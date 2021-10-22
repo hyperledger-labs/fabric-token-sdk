@@ -22,15 +22,15 @@ type PublicParamsLoader interface {
 }
 
 type QueryEngine interface {
-	IsMine(id *token2.Id) (bool, error)
+	IsMine(id *token2.ID) (bool, error)
 	ListUnspentTokens() (*token2.UnspentTokens, error)
-	ListAuditTokens(ids ...*token2.Id) ([]*token2.Token, error)
+	ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error)
 	ListHistoryIssuedTokens() (*token2.IssuedTokens, error)
 	PublicParams() ([]byte, error)
 }
 
 type TokenLoader interface {
-	GetTokens(ids []*token2.Id) ([]string, []*token2.Token, error)
+	GetTokens(ids []*token2.ID) ([]string, []*token2.Token, error)
 }
 
 type PublicParametersManager interface {

@@ -33,13 +33,13 @@ type Channel interface {
 }
 
 type TokenCommitmentLoader interface {
-	GetTokenCommitments(ids []*token3.Id) ([]*token.Token, error)
+	GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error)
 }
 
 type QueryEngine interface {
-	IsMine(id *token3.Id) (bool, error)
+	IsMine(id *token3.ID) (bool, error)
 	ListUnspentTokens() (*token3.UnspentTokens, error)
-	ListAuditTokens(ids ...*token3.Id) ([]*token3.Token, error)
+	ListAuditTokens(ids ...*token3.ID) ([]*token3.Token, error)
 	ListHistoryIssuedTokens() (*token3.IssuedTokens, error)
 }
 

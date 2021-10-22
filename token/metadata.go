@@ -37,8 +37,8 @@ func (m *Metadata) GetToken(raw []byte) (*token2.Token, view.Identity, []byte, e
 	return tok, id, tokenInfoRaw, nil
 }
 
-func (m *Metadata) SpentTokenID() []*token2.Id {
-	var res []*token2.Id
+func (m *Metadata) SpentTokenID() []*token2.ID {
+	var res []*token2.ID
 	for _, transfer := range m.tokenRequestMetadata.Transfers {
 		res = append(res, transfer.TokenIDs...)
 	}

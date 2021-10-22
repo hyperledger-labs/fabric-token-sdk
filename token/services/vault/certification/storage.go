@@ -25,7 +25,7 @@ func NewStorage(sp view.ServiceProvider, channel string, namespace string) *Stor
 	return &Storage{sp: sp, channel: channel, namespace: namespace}
 }
 
-func (v *Storage) Exists(id *token.Id) bool {
+func (v *Storage) Exists(id *token.ID) bool {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"token-sdk.certifier.certification",
 		[]string{
@@ -38,7 +38,7 @@ func (v *Storage) Exists(id *token.Id) bool {
 	return kvs.GetService(v.sp).Exists(k)
 }
 
-func (v *Storage) Store(certifications map[*token.Id][]byte) error {
+func (v *Storage) Store(certifications map[*token.ID][]byte) error {
 	for id, certification := range certifications {
 		k := kvs.CreateCompositeKeyOrPanic(
 			"token-sdk.certifier.certification",
@@ -56,7 +56,7 @@ func (v *Storage) Store(certifications map[*token.Id][]byte) error {
 	return nil
 }
 
-func (v *Storage) Get(ids []*token.Id, callback func(*token.Id, []byte) error) error {
+func (v *Storage) Get(ids []*token.ID, callback func(*token.ID, []byte) error) error {
 	for _, id := range ids {
 		k := kvs.CreateCompositeKeyOrPanic(
 			"token-sdk.certifier.certification",

@@ -11,8 +11,8 @@ import (
 )
 
 type CertificationClient interface {
-	IsCertified(id *token2.Id) bool
-	RequestCertification(ids ...*token2.Id) error
+	IsCertified(id *token2.ID) bool
+	RequestCertification(ids ...*token2.ID) error
 }
 
 type CertificationService interface {

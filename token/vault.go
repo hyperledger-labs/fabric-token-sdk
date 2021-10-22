@@ -14,7 +14,7 @@ type QueryEngine struct {
 	qe driver.QueryEngine
 }
 
-func (q *QueryEngine) IsMine(id *token2.Id) (bool, error) {
+func (q *QueryEngine) IsMine(id *token2.ID) (bool, error) {
 	return q.qe.IsMine(id)
 }
 
@@ -22,7 +22,7 @@ func (q *QueryEngine) ListUnspentTokens() (*token2.UnspentTokens, error) {
 	return q.qe.ListUnspentTokens()
 }
 
-func (q *QueryEngine) ListAuditTokens(ids ...*token2.Id) ([]*token2.Token, error) {
+func (q *QueryEngine) ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error) {
 	return q.qe.ListAuditTokens(ids...)
 }
 
@@ -34,7 +34,7 @@ func (q *QueryEngine) PublicParams() ([]byte, error) {
 	return q.qe.PublicParams()
 }
 
-func (q *QueryEngine) GetTokens(inputs ...*token2.Id) ([]*token2.Token, error) {
+func (q *QueryEngine) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
 	_, tokens, err := q.qe.GetTokens(inputs...)
 	return tokens, err
 }

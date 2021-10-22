@@ -18,7 +18,7 @@ type VaultTokenLoader struct {
 	TokenVault api2.QueryEngine
 }
 
-func (s *VaultTokenLoader) GetTokens(ids []*token.Id) ([]string, []*token.Token, error) {
+func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token, error) {
 	return s.TokenVault.GetTokens(ids...)
 }
 

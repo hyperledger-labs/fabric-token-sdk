@@ -60,7 +60,7 @@ func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeoutMillis 
 	return r
 }
 
-func (d *locker) Lock(id *token2.Id, txID string) (string, error) {
+func (d *locker) Lock(id *token2.ID, txID string) (string, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -82,7 +82,7 @@ func (d *locker) Lock(id *token2.Id, txID string) (string, error) {
 	return "", nil
 }
 
-func (d *locker) UnlockIDs(ids ...*token2.Id) {
+func (d *locker) UnlockIDs(ids ...*token2.ID) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -113,7 +113,7 @@ func (d *locker) UnlockByTxID(txID string) {
 	}
 }
 
-func (d *locker) reclaim(id *token2.Id, txID string) (bool, int) {
+func (d *locker) reclaim(id *token2.ID, txID string) (bool, int) {
 	status, err := d.vault.Status(txID)
 	if err != nil {
 		return false, status

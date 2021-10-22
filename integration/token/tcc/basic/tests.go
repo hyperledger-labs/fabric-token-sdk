@@ -272,8 +272,8 @@ func TestAll(network *integration.Infrastructure) {
 
 	// Transfer by IDs
 	txID := issueCash(network, "", "CHF", 17, "alice")
-	txID = transferCashByIDs(network, "alice", "", []*token2.Id{{TxId: txID, Index: 0}}, 17, "bob")
-	redeemCashByIDs(network, "bob", "", []*token2.Id{{TxId: txID, Index: 0}}, 17)
+	txID = transferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob")
+	redeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17)
 }
 
 /*
@@ -347,7 +347,7 @@ func transferCash(network *integration.Infrastructure, id string, wallet string,
 	}
 }
 
-func transferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.Id, amount uint64, receiver string, errorMsgs ...string) string {
+func transferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, errorMsgs ...string) string {
 	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Wallet:    wallet,
 		Type:      "",
@@ -397,7 +397,7 @@ func redeemCash(network *integration.Infrastructure, id string, wallet string, t
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func redeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.Id, amount uint64) {
+func redeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64) {
 	_, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Wallet:   wallet,
 		Type:     "",

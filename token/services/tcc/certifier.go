@@ -72,10 +72,10 @@ type GetTokenView struct {
 	Network   string
 	Channel   string
 	Namespace string
-	IDs       []*token2.Id
+	IDs       []*token2.ID
 }
 
-func NewGetTokensView(channel string, namespace string, ids ...*token2.Id) *GetTokenView {
+func NewGetTokensView(channel string, namespace string, ids ...*token2.ID) *GetTokenView {
 	if len(ids) == 0 {
 		panic("no ids specified")
 	}

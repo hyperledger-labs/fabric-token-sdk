@@ -50,7 +50,7 @@ type TransferOptions struct {
 	// Selector is the custom token selector to use. If nil, the default will be used.
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
-	TokenIDs []*token.Id
+	TokenIDs []*token.ID
 }
 
 func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
@@ -75,7 +75,7 @@ func WithTokenSelector(selector Selector) TransferOption {
 }
 
 // WithTokenIDs sets the tokens ids to transfer
-func WithTokenIDs(ids ...*token.Id) TransferOption {
+func WithTokenIDs(ids ...*token.ID) TransferOption {
 	return func(o *TransferOptions) error {
 		o.TokenIDs = ids
 		return nil
@@ -610,7 +610,7 @@ func (t *Request) countOutputs() (int, error) {
 	return sum, nil
 }
 
-func (t *Request) parseInputIDs(inputs []*token.Id) ([]*token.Id, token.Quantity, string, error) {
+func (t *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity, string, error) {
 	inputTokens, err := t.TokenService.Vault().NewQueryEngine().GetTokens(inputs...)
 	if err != nil {
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
@@ -634,7 +634,7 @@ func (t *Request) parseInputIDs(inputs []*token.Id) ([]*token.Id, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) ([]*token.Id, []*token.Token, error) {
+func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) ([]*token.ID, []*token.Token, error) {
 	// compile options
 	transferOpts, err := compileTransferOptions(opts...)
 	if err != nil {
@@ -652,7 +652,7 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 			}
 		}
 	}
-	var tokenIDs []*token.Id
+	var tokenIDs []*token.ID
 	var inputSum token.Quantity
 
 	// if inputs have been passed, parse and certify them, if needed

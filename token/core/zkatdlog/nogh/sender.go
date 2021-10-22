@@ -8,19 +8,20 @@ package nogh
 import (
 	"strconv"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
-func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.Id, outputTokens ...*token3.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens ...*token3.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
 
 	var tokens []*token.Token
@@ -38,7 +39,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	pp := s.PublicParams()
 	for _, id := range ids {
 		// Token Info
-		outputID, err := keys.CreateFabtokenKey(id.TxId, int(id.Index))
+		outputID, err := keys.CreateFabtokenKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "error creating output ID: %v", id)
 		}
@@ -53,7 +54,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		}
 
 		// Token and InputID
-		outputID, err = keys.CreateTokenKey(id.TxId, int(id.Index))
+		outputID, err = keys.CreateTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "error creating output ID: %v", id)
 		}
