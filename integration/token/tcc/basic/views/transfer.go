@@ -25,7 +25,7 @@ type Transfer struct {
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
-	TokenIDs []*token.Id
+	TokenIDs []*token.ID
 	// Type of tokens to transfer
 	Type string
 	// Amount to transfer
@@ -139,7 +139,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		// The sender tries to select the requested amount of tokens of the passed type.
 		// If a failure happens, the sender retries up to 5 times, waiting 10 seconds after each failure.
 		// This is just an example, any other policy can be implemented.
-		var ids []*token.Id
+		var ids []*token.ID
 		var sum token.Quantity
 
 		for i := 0; i < 5; i++ {

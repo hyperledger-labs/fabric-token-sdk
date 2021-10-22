@@ -8,7 +8,9 @@ package fabric
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
@@ -21,9 +23,11 @@ func NewVaultProvider(sp view.ServiceProvider) *VaultProvider {
 }
 
 func (v *VaultProvider) Vault(network string, channel string, namespace string) driver.Vault {
-	return vault.NewVault(
+	ch := fabric.GetChannel(v.sp, network, channel)
+	return vault.New(
 		v.sp,
-		fabric.GetChannel(v.sp, network, channel),
+		ch.Name(),
 		namespace,
+		fabric3.NewVault(ch),
 	)
 }

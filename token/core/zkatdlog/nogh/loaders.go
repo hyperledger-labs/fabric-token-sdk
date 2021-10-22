@@ -15,17 +15,17 @@ import (
 
 type TokenVault interface {
 	PublicParams() ([]byte, error)
-	GetTokenInfos(ids []*token3.Id, callback api2.QueryCallbackFunc) error
-	GetTokenCommitments(ids []*token3.Id, callback api2.QueryCallbackFunc) error
+	GetTokenInfos(ids []*token3.ID, callback api2.QueryCallbackFunc) error
+	GetTokenCommitments(ids []*token3.ID, callback api2.QueryCallbackFunc) error
 }
 
 type VaultTokenCommitmentLoader struct {
 	TokenVault TokenVault
 }
 
-func (s *VaultTokenCommitmentLoader) GetTokenCommitments(ids []*token3.Id) ([]*token.Token, error) {
+func (s *VaultTokenCommitmentLoader) GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error) {
 	var tokens []*token.Token
-	if err := s.TokenVault.GetTokenCommitments(ids, func(id *token3.Id, bytes []byte) error {
+	if err := s.TokenVault.GetTokenCommitments(ids, func(id *token3.ID, bytes []byte) error {
 		if len(bytes) == 0 {
 			return errors.Errorf("failed getting state for id [%v], nil value", id)
 		}

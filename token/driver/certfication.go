@@ -8,12 +8,12 @@ package driver
 import token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
 type CertificationClient interface {
-	IsCertified(id *token2.Id) bool
-	RequestCertification(ids ...*token2.Id) error
+	IsCertified(id *token2.ID) bool
+	RequestCertification(ids ...*token2.ID) error
 }
 
 type CertificationService interface {
-	NewCertificationRequest(ids []*token2.Id) ([]byte, error)
-	Certify(wallet CertifierWallet, ids []*token2.Id, tokens [][]byte, request []byte) ([][]byte, error)
-	VerifyCertifications(ids []*token2.Id, certifications [][]byte) error
+	NewCertificationRequest(ids []*token2.ID) ([]byte, error)
+	Certify(wallet CertifierWallet, ids []*token2.ID, tokens [][]byte, request []byte) ([][]byte, error)
+	VerifyCertifications(ids []*token2.ID, certifications [][]byte) error
 }

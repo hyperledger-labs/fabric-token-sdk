@@ -17,6 +17,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
@@ -42,7 +43,7 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, network, chann
 	if !ok {
 		ch := fabric.GetChannel(sp, network, channel)
 		fabricVault := ch.Vault()
-		tokenVault := vault.NewVault(sp, ch, namespace)
+		tokenVault := vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch))
 
 		// Load certifier identities
 		var tmsConfigs []*token.TMS

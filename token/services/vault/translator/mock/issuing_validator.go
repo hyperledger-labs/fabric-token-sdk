@@ -9,11 +9,11 @@ import (
 )
 
 type IssuingValidator struct {
-	ValidateStub        func(view.Identity, string) error
+	ValidateStub        func(creator view.Identity, tokenType string) error
 	validateMutex       sync.RWMutex
 	validateArgsForCall []struct {
-		arg1 view.Identity
-		arg2 string
+		creator   view.Identity
+		tokenType string
 	}
 	validateReturns struct {
 		result1 error
@@ -25,23 +25,22 @@ type IssuingValidator struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *IssuingValidator) Validate(arg1 view.Identity, arg2 string) error {
+func (fake *IssuingValidator) Validate(creator view.Identity, tokenType string) error {
 	fake.validateMutex.Lock()
 	ret, specificReturn := fake.validateReturnsOnCall[len(fake.validateArgsForCall)]
 	fake.validateArgsForCall = append(fake.validateArgsForCall, struct {
-		arg1 view.Identity
-		arg2 string
-	}{arg1, arg2})
-	fake.recordInvocation("Validate", []interface{}{arg1, arg2})
+		creator   view.Identity
+		tokenType string
+	}{creator, tokenType})
+	fake.recordInvocation("Validate", []interface{}{creator, tokenType})
 	fake.validateMutex.Unlock()
 	if fake.ValidateStub != nil {
-		return fake.ValidateStub(arg1, arg2)
+		return fake.ValidateStub(creator, tokenType)
 	}
 	if specificReturn {
 		return ret.result1
 	}
-	fakeReturns := fake.validateReturns
-	return fakeReturns.result1
+	return fake.validateReturns.result1
 }
 
 func (fake *IssuingValidator) ValidateCallCount() int {
@@ -50,22 +49,13 @@ func (fake *IssuingValidator) ValidateCallCount() int {
 	return len(fake.validateArgsForCall)
 }
 
-func (fake *IssuingValidator) ValidateCalls(stub func(view.Identity, string) error) {
-	fake.validateMutex.Lock()
-	defer fake.validateMutex.Unlock()
-	fake.ValidateStub = stub
-}
-
 func (fake *IssuingValidator) ValidateArgsForCall(i int) (view.Identity, string) {
 	fake.validateMutex.RLock()
 	defer fake.validateMutex.RUnlock()
-	argsForCall := fake.validateArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+	return fake.validateArgsForCall[i].creator, fake.validateArgsForCall[i].tokenType
 }
 
 func (fake *IssuingValidator) ValidateReturns(result1 error) {
-	fake.validateMutex.Lock()
-	defer fake.validateMutex.Unlock()
 	fake.ValidateStub = nil
 	fake.validateReturns = struct {
 		result1 error
@@ -73,8 +63,6 @@ func (fake *IssuingValidator) ValidateReturns(result1 error) {
 }
 
 func (fake *IssuingValidator) ValidateReturnsOnCall(i int, result1 error) {
-	fake.validateMutex.Lock()
-	defer fake.validateMutex.Unlock()
 	fake.ValidateStub = nil
 	if fake.validateReturnsOnCall == nil {
 		fake.validateReturnsOnCall = make(map[int]struct {

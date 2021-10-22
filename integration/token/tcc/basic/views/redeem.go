@@ -22,7 +22,7 @@ type Redeem struct {
 	// Wallet is the identifier of the wallet that owns the tokens to redeem
 	Wallet string
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
-	TokenIDs []*token.Id
+	TokenIDs []*token.ID
 	// Type of tokens to redeem
 	Type string
 	// Amount to redeem

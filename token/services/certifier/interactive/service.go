@@ -106,7 +106,7 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 
 type CertificationRequest struct {
 	Network, Channel, Namespace string
-	IDs                         []*token.Id
+	IDs                         []*token.ID
 	Request                     []byte
 }
 
@@ -116,11 +116,11 @@ func (cr *CertificationRequest) String() string {
 
 type CertificationRequestView struct {
 	network, channel, ns string
-	ids                  []*token.Id
+	ids                  []*token.ID
 	certifier            view.Identity
 }
 
-func NewCertificationRequestView(channel, ns string, certifier view.Identity, ids ...*token.Id) *CertificationRequestView {
+func NewCertificationRequestView(channel, ns string, certifier view.Identity, ids ...*token.ID) *CertificationRequestView {
 	return &CertificationRequestView{
 		channel:   channel,
 		certifier: certifier,
@@ -179,7 +179,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	logger.Debugf("certifications of [%v] from [%s] are valid", i.ids, i.certifier)
 
 	// 5. return token certifications in the form of a map
-	result := map[*token.Id][]byte{}
+	result := map[*token.ID][]byte{}
 	for index, id := range i.ids {
 		result[id] = certifications[index]
 	}

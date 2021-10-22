@@ -7,16 +7,16 @@ package token
 
 import "fmt"
 
-// A Id identifies a token as a function of the identifier of the transaction (issue, transfer)
+// ID identifies a token as a function of the identifier of the transaction (issue, transfer)
 // that created it and its index in that transaction
-type Id struct {
+type ID struct {
 	// TxId is the transaction ID of the transaction that created the token
 	TxId string `protobuf:"bytes,1,opt,name=tx_id,json=txId,proto3" json:"tx_id,omitempty"`
 	// Index is the index of the token in the transaction that created it
-	Index uint32 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
+	Index uint64 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
 }
 
-func (id *Id) String() string {
+func (id *ID) String() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
 }
 
@@ -39,7 +39,7 @@ type Token struct {
 
 type IssuedToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id *Id `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id *ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Owner is the token owner
 	Owner *Owner `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token
@@ -85,7 +85,7 @@ func (it *IssuedTokens) Count() int {
 // UnspentToken is used to specify a token returned by ListRequest
 type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id *Id `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id *ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Owner is the token owner
 	Owner *Owner `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
 	// Type is the type of the token

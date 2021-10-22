@@ -362,7 +362,7 @@ func (cc *TokenChaincode) addCertifier(certifier []byte, stub shim.ChaincodeStub
 }
 
 func (cc *TokenChaincode) queryTokens(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
-	var ids []*token2.Id
+	var ids []*token2.ID
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
 		return shim.Error(err.Error())

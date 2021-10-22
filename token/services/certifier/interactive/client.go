@@ -22,8 +22,8 @@ type QueryEngine interface {
 }
 
 type CertificationStorage interface {
-	Exists(id *token2.Id) bool
-	Store(certifications map[*token2.Id][]byte) error
+	Exists(id *token2.ID) bool
+	Store(certifications map[*token2.ID][]byte) error
 }
 
 type Vault interface {
@@ -75,12 +75,12 @@ func NewCertificationClient(
 	}
 }
 
-func (d *CertificationClient) IsCertified(id *token2.Id) bool {
+func (d *CertificationClient) IsCertified(id *token2.ID) bool {
 	return d.certificationStorage.Exists(id)
 }
 
-func (d *CertificationClient) RequestCertification(ids ...*token2.Id) error {
-	var toBeCertified []*token2.Id
+func (d *CertificationClient) RequestCertification(ids ...*token2.ID) error {
+	var toBeCertified []*token2.ID
 	for _, id := range ids {
 		if !d.IsCertified(id) {
 			toBeCertified = append(toBeCertified, id)
@@ -95,9 +95,9 @@ func (d *CertificationClient) RequestCertification(ids ...*token2.Id) error {
 	if err != nil {
 		return err
 	}
-	certifications, ok := resultBoxed.(map[*token2.Id][]byte)
+	certifications, ok := resultBoxed.(map[*token2.ID][]byte)
 	if !ok {
-		panic("invalid type, expected map[token.Id][]byte")
+		panic("invalid type, expected map[token.ID][]byte")
 	}
 	if err := d.certificationStorage.Store(certifications); err != nil {
 		return err
@@ -118,7 +118,7 @@ func (d *CertificationClient) Scan() {
 		if err != nil {
 			break
 		}
-		var toBeCertified []*token2.Id
+		var toBeCertified []*token2.ID
 		for _, token := range tokens.Tokens {
 			// does token have a certification?
 			if !d.certificationStorage.Exists(token.Id) {

@@ -40,7 +40,7 @@ type IssueMetadata struct {
 // TransferMetadata contains the following information:
 // - For each TokenID there is a sender
 type TransferMetadata struct {
-	TokenIDs           []*token2.Id
+	TokenIDs           []*token2.ID
 	Outputs            [][]byte
 	TokenInfo          [][]byte
 	Senders            []view.Identity
@@ -118,8 +118,8 @@ func (m *TokenRequestMetadata) Issuers() [][]byte {
 	return res
 }
 
-func (m *TokenRequestMetadata) Inputs() []*token2.Id {
-	var res []*token2.Id
+func (m *TokenRequestMetadata) Inputs() []*token2.ID {
+	var res []*token2.ID
 	for _, transfer := range m.Transfers {
 		res = append(res, transfer.TokenIDs...)
 	}

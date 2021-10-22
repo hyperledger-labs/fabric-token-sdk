@@ -10,7 +10,7 @@ import (
 )
 
 type TransferService interface {
-	Transfer(txID string, wallet OwnerWallet, ids []*token2.Id, Outputs ...*token2.Token) (TransferAction, *TransferMetadata, error)
+	Transfer(txID string, wallet OwnerWallet, ids []*token2.ID, Outputs ...*token2.Token) (TransferAction, *TransferMetadata, error)
 
 	VerifyTransfer(tr TransferAction, tokenInfos [][]byte) error
 

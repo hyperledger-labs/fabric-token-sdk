@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 )
@@ -194,7 +195,7 @@ func (t *Namespace) updateRWSetAndMetadata(action interface{}) error {
 	// commit action, if any
 	if action != nil {
 		issuingValidator := &allIssuersValid{}
-		w := translator.New(issuingValidator, t.tx.ID(), rws, ns)
+		w := translator.New(issuingValidator, t.tx.ID(), fabric2.NewRWSWrapper(rws), ns)
 		err = w.Write(action)
 		if err != nil {
 			return errors.Wrap(err, "failed to write token action")

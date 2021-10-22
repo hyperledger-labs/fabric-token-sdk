@@ -19,22 +19,22 @@ import (
 
 type QueryService interface {
 	ListUnspentTokens() (*token2.UnspentTokens, error)
-	GetTokens(inputs ...*token2.Id) ([]*token2.Token, error)
+	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
 type CertificationClient interface {
-	IsCertified(id *token2.Id) bool
-	RequestCertification(ids ...*token2.Id) error
+	IsCertified(id *token2.ID) bool
+	RequestCertification(ids ...*token2.ID) error
 }
 
 type CertClient interface {
-	IsCertified(id *token2.Id) bool
-	RequestCertification(ids ...*token2.Id) error
+	IsCertified(id *token2.ID) bool
+	RequestCertification(ids ...*token2.ID) error
 }
 
 type Locker interface {
-	Lock(id *token2.Id, txID string) (string, error)
-	UnlockIDs(id ...*token2.Id)
+	Lock(id *token2.ID, txID string) (string, error)
+	UnlockIDs(id ...*token2.ID)
 	UnlockByTxID(txID string)
 }
 
@@ -64,12 +64,12 @@ func newSelector(txID string, locker Locker, service QueryService, certClient Ce
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
-func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.Id, token2.Quantity, error) {
+func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	if ownerFilter == nil {
 		ownerFilter = &allOwners{}
 	}
 
-	var toBeSpent []*token2.Id
+	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity
 	var potentialSumWithNonCertified token2.Quantity
@@ -92,8 +92,8 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 		potentialSumWithLocked = token2.NewZeroQuantity(s.precision)
 		potentialSumWithNonCertified = token2.NewZeroQuantity(s.precision)
 		toBeSpent = nil
-		var toBeCertified []*token2.Id
-		var locked []*token2.Id
+		var toBeCertified []*token2.ID
+		var locked []*token2.ID
 
 		for _, t := range unspentTokens.Tokens {
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
@@ -232,7 +232,7 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 	}
 }
 
-func (s *selector) concurrencyCheck(ids []*token2.Id) error {
+func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 	_, err := s.queryService.GetTokens(ids...)
 	return err
 }

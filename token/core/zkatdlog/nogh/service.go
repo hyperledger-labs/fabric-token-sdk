@@ -8,10 +8,12 @@ package nogh
 import (
 	"sync"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -19,7 +21,6 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -32,13 +33,13 @@ type Channel interface {
 }
 
 type TokenCommitmentLoader interface {
-	GetTokenCommitments(ids []*token3.Id) ([]*token.Token, error)
+	GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error)
 }
 
 type QueryEngine interface {
-	IsMine(id *token3.Id) (bool, error)
+	IsMine(id *token3.ID) (bool, error)
 	ListUnspentTokens() (*token3.UnspentTokens, error)
-	ListAuditTokens(ids ...*token3.Id) ([]*token3.Token, error)
+	ListAuditTokens(ids ...*token3.ID) ([]*token3.Token, error)
 	ListHistoryIssuedTokens() (*token3.IssuedTokens, error)
 }
 

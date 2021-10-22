@@ -29,10 +29,10 @@ func NewCertificationClient(sp view.ServiceProvider, network, channel, namespace
 	return &CertificationClient{c: c}, nil
 }
 
-func (c *CertificationClient) IsCertified(id *token2.Id) bool {
+func (c *CertificationClient) IsCertified(id *token2.ID) bool {
 	return c.c.IsCertified(id)
 }
 
-func (c *CertificationClient) RequestCertification(ids ...*token2.Id) error {
+func (c *CertificationClient) RequestCertification(ids ...*token2.ID) error {
 	return c.c.RequestCertification(ids...)
 }

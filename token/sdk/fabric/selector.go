@@ -15,7 +15,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/inmemory"
 )
 
-type GetFabricNetworkServiceFunc func(network string) fabric.NetworkService
+type Vault struct {
+	*fabric.Vault
+}
+
+func (v *Vault) Status(id string) (int, error) {
+	r, _, err := v.Vault.Status(id)
+	return int(r), err
+}
 
 type LockerProvider struct {
 	sp                           view.ServiceProvider
@@ -32,5 +39,5 @@ func (s *LockerProvider) New(network string, channel string, namespace string) s
 	if err != nil {
 		panic(err)
 	}
-	return inmemory.NewLocker(ch, s.sleepTimeout, s.validTxEvictionTimeoutMillis)
+	return inmemory.NewLocker(&Vault{Vault: ch.Vault()}, s.sleepTimeout, s.validTxEvictionTimeoutMillis)
 }

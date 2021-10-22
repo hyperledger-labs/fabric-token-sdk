@@ -8,33 +8,28 @@ package certification
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-)
 
-type Channel interface {
-	Name() string
-	Vault() *fabric.Vault
-}
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+)
 
 type Storage struct {
 	sp        view.ServiceProvider
-	channel   Channel
+	channel   string
 	namespace string
 }
 
-func NewStorage(sp view.ServiceProvider, channel Channel, namespace string) *Storage {
+func NewStorage(sp view.ServiceProvider, channel string, namespace string) *Storage {
 	return &Storage{sp: sp, channel: channel, namespace: namespace}
 }
 
-func (v *Storage) Exists(id *token.Id) bool {
+func (v *Storage) Exists(id *token.ID) bool {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"token-sdk.certifier.certification",
 		[]string{
-			v.channel.Name(),
+			v.channel,
 			v.namespace,
 			id.TxId,
 			strconv.FormatUint(uint64(id.Index), 10),
@@ -43,12 +38,12 @@ func (v *Storage) Exists(id *token.Id) bool {
 	return kvs.GetService(v.sp).Exists(k)
 }
 
-func (v *Storage) Store(certifications map[*token.Id][]byte) error {
+func (v *Storage) Store(certifications map[*token.ID][]byte) error {
 	for id, certification := range certifications {
 		k := kvs.CreateCompositeKeyOrPanic(
 			"token-sdk.certifier.certification",
 			[]string{
-				v.channel.Name(),
+				v.channel,
 				v.namespace,
 				id.TxId,
 				strconv.FormatUint(uint64(id.Index), 10),
@@ -61,12 +56,12 @@ func (v *Storage) Store(certifications map[*token.Id][]byte) error {
 	return nil
 }
 
-func (v *Storage) Get(ids []*token.Id, callback func(*token.Id, []byte) error) error {
+func (v *Storage) Get(ids []*token.ID, callback func(*token.ID, []byte) error) error {
 	for _, id := range ids {
 		k := kvs.CreateCompositeKeyOrPanic(
 			"token-sdk.certifier.certification",
 			[]string{
-				v.channel.Name(),
+				v.channel,
 				v.namespace,
 				id.TxId,
 				strconv.FormatUint(uint64(id.Index), 10),

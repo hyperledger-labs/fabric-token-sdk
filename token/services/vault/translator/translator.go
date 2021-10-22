@@ -8,9 +8,8 @@ package translator
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -24,7 +23,7 @@ type Translator struct {
 	IssuingValidator IssuingValidator
 	RWSet            RWSet
 	TxID             string
-	counter          int
+	counter          uint64
 	namespace        string
 }
 
@@ -121,7 +120,7 @@ func (w *Translator) checkIssue(issue IssueAction) error {
 	// check if the keys of issued tokens aren't already used.
 	// check is assigned owners are valid
 	for i := 0; i < issue.NumOutputs(); i++ {
-		err = w.checkTokenDoesNotExist(w.counter+i, w.TxID)
+		err = w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID)
 		if err != nil {
 			return err
 		}
@@ -159,7 +158,7 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	for i := 0; i < t.NumOutputs(); i++ {
 		if !t.IsRedeemAt(i) {
 			// this is not a redeemed output
-			err := w.checkTokenDoesNotExist(w.counter+i, w.TxID)
+			err := w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID)
 			if err != nil {
 				return err
 			}
@@ -169,7 +168,7 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 	return nil
 }
 
-func (w *Translator) checkTokenDoesNotExist(index int, txID string) error {
+func (w *Translator) checkTokenDoesNotExist(index uint64, txID string) error {
 	tokenKey, err := keys.CreateTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID")
@@ -238,7 +237,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		return err
 	}
 	for i, output := range outputs {
-		outputID, err := keys.CreateTokenKey(w.TxID, base+i)
+		outputID, err := keys.CreateTokenKey(w.TxID, base+uint64(i))
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
@@ -272,7 +271,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 			return err
 		}
 	}
-	w.counter = w.counter + len(outputs)
+	w.counter = w.counter + uint64(len(outputs))
 	return nil
 }
 
@@ -282,7 +281,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	base := w.counter
 	for i := 0; i < transferAction.NumOutputs(); i++ {
 		if !transferAction.IsRedeemAt(i) {
-			outputID, err := keys.CreateTokenKey(w.TxID, base+i)
+			outputID, err := keys.CreateTokenKey(w.TxID, base+uint64(i))
 			if err != nil {
 				return errors.Errorf("error creating output ID: %s", err)
 			}
@@ -309,7 +308,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	if err != nil {
 		return err
 	}
-	w.counter = w.counter + transferAction.NumOutputs()
+	w.counter = w.counter + uint64(transferAction.NumOutputs())
 	return nil
 }
 
@@ -353,11 +352,11 @@ func (w *Translator) ReadSetupParameters() ([]byte, error) {
 	return raw, nil
 }
 
-func (w *Translator) QueryTokens(ids []*token2.Id) ([][]byte, error) {
+func (w *Translator) QueryTokens(ids []*token2.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
 	for _, id := range ids {
-		outputID, err := keys.CreateTokenKey(id.TxId, int(id.Index))
+		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
 			continue
