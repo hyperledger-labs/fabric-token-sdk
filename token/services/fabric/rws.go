@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/pkg/errors"
 )
 
 type RWSWrapper struct {
@@ -43,5 +44,12 @@ func (rwset *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[st
 }
 
 func (rwset *RWSWrapper) Equals(r interface{}, namespace string) error {
-	return rwset.r.Equals(r, namespace)
+	switch t := r.(type) {
+	case *RWSWrapper:
+		return rwset.r.Equals(t.r, namespace)
+	case *fabric.RWSet:
+		return rwset.r.Equals(t, namespace)
+	default:
+		return errors.Errorf("invalid type, got [%T]", t)
+	}
 }
