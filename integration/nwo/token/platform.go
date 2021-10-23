@@ -20,6 +20,7 @@ import (
 	"github.com/alecthomas/template"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
@@ -46,6 +47,7 @@ type Builder interface {
 
 type FabricNetwork interface {
 	DeployChaincode(chaincode *topology.ChannelChaincode)
+	InvokeChaincode(cc *topology.ChannelChaincode, method string, args ...[]byte) []byte
 	DefaultIdemixOrgMSPDir() string
 	Topology() *topology.Topology
 	PeerChaincodeAddress(peerName string) string
@@ -161,8 +163,7 @@ func (p *Platform) Members() []grouper.Member {
 }
 
 func (p *Platform) PostRun() {
-	// Install Token Chaincodes
-	p.DeployTokenChaincodes()
+	p.SetupTokenChaincodes()
 }
 
 func (p *Platform) Cleanup() {
@@ -218,10 +219,20 @@ func (p *Platform) GenerateCryptoMaterial(node *sfcnode.Node) {
 	}
 }
 
-func (p *Platform) DeployTokenChaincodes() {
-	// for _, tcc := range p.TCCs {
-	// 	p.Fabric(tcc.TMS).DeployChaincode(tcc.Chaincode)
-	// }
+func (p *Platform) SetupTokenChaincodes() {
+	// For FPCs, we need to initialize the public parameters explicitly
+	for _, cc := range p.TCCs {
+		if cc.Chaincode.Private {
+			pp := p.PublicParameters(cc.TMS)
+			logger.Infof("Init FPC Token Chaincode [%s:%s:%s][%s]",
+				cc.TMS.Network, cc.TMS.Channel, cc.TMS.Namespace, hash.Hashable(pp).String())
+			p.Fabric(cc.TMS).InvokeChaincode(
+				cc.Chaincode,
+				"init",
+				pp,
+			)
+		}
+	}
 }
 
 func (p *Platform) TokenGen(command common.Command) (*Session, error) {
@@ -304,6 +315,12 @@ func (p *Platform) PublicParametersFile(tms *TMS) string {
 		"pp",
 		fmt.Sprintf("%s_%s_%s_%s", tms.Network, tms.Channel, tms.Namespace, tms.Driver),
 	)
+}
+
+func (p *Platform) PublicParameters(tms *TMS) []byte {
+	raw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
+	Expect(err).ToNot(HaveOccurred())
+	return raw
 }
 
 func (p *Platform) nextColor() string {
