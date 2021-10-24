@@ -13,7 +13,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	approver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/approver"
 )
 
@@ -36,9 +36,9 @@ func (a approver) Validate(tx *Transaction) error {
 	ts := tx.TokenService()
 	app := approver2.NewTokenRWSetApprover(
 		ts.Validator(),
-		fabric2.NewVault(fabric.GetChannel(tx.tx.ServiceProvider, tx.Network(), tx.Channel())),
+		fabric3.NewVault(fabric.GetChannel(tx.tx.ServiceProvider, tx.Network(), tx.Channel())),
 		tx.ID(),
-		fabric2.NewRWSWrapper(rws),
+		fabric3.NewRWSWrapper(rws),
 		ts.Namespace(),
 	)
 

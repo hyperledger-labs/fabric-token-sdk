@@ -206,10 +206,12 @@ func (n *Network) ComputeTxID(id *TxID) string {
 
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
 	n := fabric.GetFabricNetworkService(sp, network)
+	if n == nil {
+		return nil
+	}
 	ch, err := n.Channel(channel)
 	if err != nil {
-		// TODO: print error
-		return nil
+		panic(fmt.Sprintf("cannot find channel [%s] for network [%s]", channel, network))
 	}
 
 	return &Network{n: n, ch: ch}

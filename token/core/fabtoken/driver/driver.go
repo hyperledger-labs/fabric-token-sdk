@@ -16,7 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 

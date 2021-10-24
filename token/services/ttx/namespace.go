@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 )
