@@ -16,6 +16,13 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+)
+
+const (
+	InvokeFunction    = "invoke"
+	AddIssuerFunction = "addIssuer"
 )
 
 type TxID struct {
@@ -124,6 +131,14 @@ type Network struct {
 	ch *fabric.Channel
 }
 
+func (n *Network) Name() string {
+	return n.n.Name()
+}
+
+func (n *Network) Channel() string {
+	return n.ch.Name()
+}
+
 func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
 	rws, err := n.ch.Vault().GetRWSet(id, results)
 	if err != nil {
@@ -168,7 +183,7 @@ func (n *Network) StoreTransient(id string, transient TransientMap) error {
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
 	env, err := chaincode.NewEndorseView(
 		namespace,
-		"invoke",
+		InvokeFunction,
 		requestRaw,
 	).WithNetwork(
 		n.n.Name(),
@@ -202,6 +217,27 @@ func (n *Network) ComputeTxID(id *TxID) string {
 	id.Nonce = temp.Nonce
 	id.Creator = temp.Creator
 	return res
+}
+
+func (n *Network) AddIssuer(context view.Context, pk []byte) error {
+	ts := token.GetManagementService(
+		context,
+		token.WithNetwork(n.Name()),
+		token.WithChannel(n.Channel()),
+	)
+
+	_, err := context.RunView(
+		chaincode.NewInvokeView(
+			ts.Namespace(),
+			AddIssuerFunction,
+			pk,
+		).WithNetwork(
+			n.Name(),
+		).WithChannel(
+			n.Channel(),
+		),
+	)
+	return err
 }
 
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
