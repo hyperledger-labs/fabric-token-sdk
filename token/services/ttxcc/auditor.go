@@ -11,7 +11,6 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -19,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
 )
 
@@ -198,7 +198,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 
 	// Processes
 	logger.Debugf("Processes Fabric Envelope...")
-	env := tx.Payload.FabricEnvelope
+	env := tx.Payload.Envelope
 	if env == nil {
 		return errors.Errorf("expected fabric envelope")
 	}
@@ -208,8 +208,8 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 		return errors.Wrapf(err, "failed storing transient")
 	}
 
-	ch := fabric.GetChannel(context, tx.Network(), tx.Channel())
-	rws, err := ch.Vault().GetRWSet(tx.ID(), env.Results())
+	ch := network.GetInstance(context, tx.Network(), tx.Channel())
+	rws, err := ch.GetRWSet(tx.ID(), env.Results())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
 	}
@@ -219,7 +219,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
 	}
-	if err := ch.Vault().StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
