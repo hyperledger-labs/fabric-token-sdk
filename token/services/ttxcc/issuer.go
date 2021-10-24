@@ -9,11 +9,10 @@ package ttxcc
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type registerIssuerIdentityView struct {
@@ -23,10 +22,12 @@ type registerIssuerIdentityView struct {
 }
 
 func (r *registerIssuerIdentityView) Call(context view.Context) (interface{}, error) {
+	n := network.GetInstance(context, r.Network, r.Channel)
+
 	ts := token.GetManagementService(
 		context,
-		token.WithNetwork(r.Network),
-		token.WithChannel(fabric.GetChannel(context, r.Network, r.Channel).Name()),
+		token.WithNetwork(n.Name()),
+		token.WithChannel(n.Channel()),
 	)
 	sk, pk, err := ts.WalletManager().GenerateIssuerKeyPair(r.tokenType)
 	if err != nil {
@@ -48,18 +49,7 @@ func (r *registerIssuerIdentityView) Call(context view.Context) (interface{}, er
 }
 
 func (r *registerIssuerIdentityView) registerKey(context view.Context, pk []byte) error {
-	_, err := context.RunView(
-		chaincode.NewInvokeView(
-			"zkat",
-			"addIssuer",
-			pk,
-		).WithNetwork(r.Network).WithChannel(fabric.GetChannel(context, r.Network, r.Channel).Name()),
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return network.GetInstance(context, r.Network, r.Channel).AddIssuer(context, pk)
 }
 
 func NewRegisterIssuerIdentityView(tokenType string) *registerIssuerIdentityView {

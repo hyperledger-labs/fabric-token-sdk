@@ -27,7 +27,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/fabric"
+	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 )
@@ -63,12 +63,12 @@ func (p *SDK) Install() error {
 			n := fabric.GetFabricNetworkService(p.registry, network)
 			if err := n.ProcessorManager().AddProcessor(
 				namespace,
-				fabric3.NewTokenRWSetProcessor(
+				fabric4.NewTokenRWSetProcessor(
 					n,
 					namespace,
 					p.registry,
-					fabric3.NewOwnershipMultiplexer(&fabric3.WalletOwnership{}),
-					fabric3.NewIssuedMultiplexer(&fabric3.WalletIssued{}),
+					fabric4.NewOwnershipMultiplexer(&fabric4.WalletOwnership{}),
+					fabric4.NewIssuedMultiplexer(&fabric4.WalletIssued{}),
 				),
 			); err != nil {
 				return errors.Wrapf(err, "failed adding transaction processors")
