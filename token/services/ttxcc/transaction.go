@@ -3,30 +3,31 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttxcc
 
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type Payload struct {
-	Id        fabric.TxID
+	Id        network.TxID
 	Network   string
 	Channel   string
 	Namespace string
 	Signer    view.Identity
-	Transient fabric.TransientMap
+	Transient network.TransientMap
 
 	TokenRequest *token.Request
 
-	FabricEnvelope *fabric.Envelope
+	Envelope *network.Envelope
 }
 
 type Transaction struct {
@@ -43,7 +44,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 	}
 	return NewTransaction(
 		sp,
-		fabric.GetFabricNetworkService(sp, txOpts.network).LocalMembership().AnonymousIdentity(),
+		network.GetInstance(sp, txOpts.network, txOpts.channel).AnonymousIdentity(),
 		opts...,
 	)
 }
@@ -61,22 +62,22 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 		token.WithNamespace(txOpts.namespace),
 	)
 
-	id := &fabric.TxID{Creator: signer}
-	tr, err := tms.NewRequest(fabric.GetFabricNetworkService(sp, tms.Network()).TransactionManager().ComputeTxID(id))
+	id := &network.TxID{Creator: signer}
+	tr, err := tms.NewRequest(network.GetInstance(sp, tms.Network(), tms.Channel()).ComputeTxID(id))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
 	}
 
 	tx := &Transaction{
 		Payload: &Payload{
-			Signer:         signer,
-			TokenRequest:   tr,
-			FabricEnvelope: nil,
-			Id:             *id,
-			Network:        tms.Network(),
-			Channel:        tms.Channel(),
-			Namespace:      tms.Namespace(),
-			Transient:      map[string][]byte{},
+			Signer:       signer,
+			TokenRequest: tr,
+			Envelope:     nil,
+			Id:           *id,
+			Network:      tms.Network(),
+			Channel:      tms.Channel(),
+			Namespace:    tms.Namespace(),
+			Transient:    map[string][]byte{},
 		},
 		SP:   sp,
 		Opts: txOpts,
@@ -85,12 +86,12 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 	return tx, nil
 }
 
-func NewTransactionFromBytes(sp view.Context, network string, raw []byte) (*Transaction, error) {
+func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []byte) (*Transaction, error) {
 	// TODO: remove the need of network by introducing custom Pyaload unmarshalling
 	tx := &Transaction{
 		Payload: &Payload{
-			FabricEnvelope: fabric.GetFabricNetworkService(sp, network).TransactionManager().NewEnvelope(),
-			Transient:      map[string][]byte{},
+			Envelope:  network.GetInstance(sp, nw, channel).NewEnvelope(),
+			Transient: map[string][]byte{},
 		},
 		SP: sp,
 	}
@@ -98,6 +99,8 @@ func NewTransactionFromBytes(sp view.Context, network string, raw []byte) (*Tran
 	if err != nil {
 		return nil, err
 	}
+
+	logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.Id.String())
 
 	tx.TokenRequest.SetTokenService(
 		token.GetManagementService(sp,
@@ -110,8 +113,8 @@ func NewTransactionFromBytes(sp view.Context, network string, raw []byte) (*Tran
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
 
-	if tx.FabricEnvelope != nil {
-		err = tx.setEnvelope(tx.FabricEnvelope)
+	if tx.Envelope != nil {
+		err = tx.setEnvelope(tx.Envelope)
 		if err != nil {
 			return nil, err
 		}
@@ -139,7 +142,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 
 // ID returns the ID of this transaction. It is equal to the underlying Fabric transaction's ID.
 func (t *Transaction) ID() string {
-	return fabric.GetFabricNetworkService(t.SP, t.Network()).TransactionManager().ComputeTxID(&t.Payload.Id)
+	return network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(&t.Payload.Id)
 }
 
 func (t *Transaction) Network() string {
@@ -155,6 +158,7 @@ func (t *Transaction) Namespace() string {
 }
 
 func (t *Transaction) Bytes() ([]byte, error) {
+	logger.Debugf("marshalling tx, id [%s]", t.Payload.Id.String())
 	return json.Marshal(t.Payload)
 }
 
@@ -236,18 +240,13 @@ func (t *Transaction) storeTransient() error {
 		return err
 	}
 
-	ch, err := fabric.GetFabricNetworkService(t.SP, t.Network()).Channel(t.Channel())
-	if err != nil {
-		return errors.Wrapf(err, "failed getting channel [%s:%s]", t.Network(), t.Channel())
-	}
-
-	return ch.Vault().StoreTransient(t.ID(), t.Payload.Transient)
+	return network.GetInstance(t.SP, t.Network(), t.Channel()).StoreTransient(t.ID(), t.Payload.Transient)
 }
 
-func (t *Transaction) setEnvelope(envelope *fabric.Envelope) error {
+func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
 	t.Payload.Id.Nonce = envelope.Nonce()
 	t.Payload.Id.Creator = envelope.Creator()
-	t.FabricEnvelope = envelope
+	t.Envelope = envelope
 
 	return nil
 }

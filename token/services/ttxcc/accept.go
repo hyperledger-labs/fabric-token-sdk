@@ -8,8 +8,9 @@ package ttxcc
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type acceptView struct {
@@ -19,7 +20,7 @@ type acceptView struct {
 
 func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	// Processes
-	env := s.tx.Payload.FabricEnvelope
+	env := s.tx.Payload.Envelope
 	if env == nil {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
@@ -29,8 +30,8 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	}
 
 	logger.Debugf("parse rws for id [%s]", s.tx.ID())
-	ch := fabric.GetChannel(context, s.tx.Network(), s.tx.Channel())
-	rws, err := ch.Vault().GetRWSet(s.tx.ID(), env.Results())
+	ch := network.GetInstance(context, s.tx.Network(), s.tx.Channel())
+	rws, err := ch.GetRWSet(s.tx.ID(), env.Results())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", s.tx.ID())
 	}
@@ -41,7 +42,7 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", s.tx.ID())
 	}
 
-	if err := ch.Vault().StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", s.tx.ID())
 	}
 

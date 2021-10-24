@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttxcc
 
 import (
@@ -10,15 +11,14 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type signatureRequest struct {
@@ -279,7 +279,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	return distributionList, nil
 }
 
-func (c *collectEndorsementsView) callChaincode(context view.Context) (*fabric.Envelope, error) {
+func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.Envelope, error) {
 	requestRaw, err := c.tx.TokenRequest.RequestToBytes()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling request")
@@ -287,19 +287,13 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*fabric.E
 
 	logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
 
-	env, err := chaincode.NewEndorseView(
+	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
+		context,
 		c.tx.Namespace(),
-		"invoke",
 		requestRaw,
-	).WithNetwork(
-		c.tx.Network(),
-	).WithChannel(
-		c.tx.Channel(),
-	).WithSignerIdentity(
 		c.tx.Signer,
-	).WithTxID(
 		c.tx.Payload.Id,
-	).Endorse(context)
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -312,7 +306,7 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*fabric.E
 	return env, nil
 }
 
-func (c *collectEndorsementsView) distributeEnv(context view.Context, env *fabric.Envelope, distributionList []view.Identity) error {
+func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity) error {
 	if env == nil {
 		return errors.New("fabric transaction envelope is empty")
 	}
@@ -376,8 +370,8 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *fabri
 			logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
 
 			// Inform the vault about the transaction
-			ch := fabric.GetChannel(context, c.tx.Network(), c.tx.Channel())
-			rws, err := ch.Vault().GetRWSet(c.tx.ID(), env.Results())
+			ch := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
+			rws, err := ch.GetRWSet(c.tx.ID(), env.Results())
 			if err != nil {
 				return errors.WithMessagef(err, "failed getting rwset for tx [%s]", c.tx.ID())
 			}
@@ -387,7 +381,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *fabri
 			if err != nil {
 				return errors.WithMessagef(err, "failed marshalling tx env [%s]", c.tx.ID())
 			}
-			if err := ch.Vault().StoreEnvelope(env.TxID(), rawEnv); err != nil {
+			if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 				return errors.WithMessagef(err, "failed storing tx env [%s]", c.tx.ID())
 			}
 
@@ -433,6 +427,7 @@ func (c *collectEndorsementsView) requestBytes() ([]byte, error) {
 
 type receiveTransactionView struct {
 	network string
+	channel string
 }
 
 func NewReceiveTransactionView(network string) *receiveTransactionView {
@@ -448,7 +443,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
-		tx, err := NewTransactionFromBytes(context, f.network, msg.Payload)
+		tx, err := NewTransactionFromBytes(context, f.network, f.channel, msg.Payload)
 		if err != nil {
 			return nil, err
 		}
@@ -508,7 +503,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling signature request")
 		}
-		if !fabric.GetFabricNetworkService(context, s.tx.Network()).LocalMembership().IsMe(signatureRequest.Signer) {
+		if !network.GetInstance(context, s.tx.Network(), s.tx.Channel()).IsMe(signatureRequest.Signer) {
 			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
 		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)
@@ -536,7 +531,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 
 	// Process Fabric Envelope
 	logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
-	env := tx.Payload.FabricEnvelope
+	env := tx.Payload.Envelope
 	if env == nil {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
@@ -546,8 +541,8 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
-	ch := fabric.GetChannel(context, tx.Network(), tx.Channel())
-	rws, err := ch.Vault().GetRWSet(tx.ID(), env.Results())
+	ch := network.GetInstance(context, tx.Network(), tx.Channel())
+	rws, err := ch.GetRWSet(tx.ID(), env.Results())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
 	}
@@ -558,7 +553,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
 	}
-	if err := ch.Vault().StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
