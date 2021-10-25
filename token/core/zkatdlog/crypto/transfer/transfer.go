@@ -7,6 +7,7 @@ package transfer
 
 import (
 	"encoding/json"
+	"sync"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -71,21 +72,34 @@ func (p *Proof) Deserialize(bytes []byte) error {
 }
 
 func (p *Prover) Prove() ([]byte, error) {
-	wf, err := p.WellFormedness.Prove()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate transfer proof")
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var wfProof, rangeProof []byte
+	var wfErr, rangeErr error
+
+	go func() {
+		defer wg.Done()
+		rangeProof, rangeErr = p.RangeCorrectness.Prove()
+	}()
+
+	wfProof, wfErr = p.WellFormedness.Prove()
+
+	wg.Wait()
+
+	if wfErr != nil {
+		return nil, errors.Wrapf(wfErr, "failed to generate transfer proof")
 	}
 
-	// add range proof
-	rc, err := p.RangeCorrectness.Prove()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate range proof for transfer")
+	if rangeErr != nil {
+		return nil, errors.Wrapf(rangeErr, "failed to generate range proof for transfer")
 	}
 
 	proof := &Proof{
-		WellFormedness:   wf,
-		RangeCorrectness: rc,
+		WellFormedness:   wfProof,
+		RangeCorrectness: rangeProof,
 	}
+
 	return proof.Serialize()
 }
 
@@ -95,13 +109,28 @@ func (v *Verifier) Verify(proof []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof: cannot parse proof")
 	}
-	// verifiy well-formedness of inputs and outputs
-	err = v.WellFormedness.Verify(tp.WellFormedness)
-	if err != nil {
-		return err
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	var wfErr, rangeErr error
+
+	// verify well-formedness of inputs and outputs
+	wfErr = v.WellFormedness.Verify(tp.WellFormedness)
+
+	go func() {
+		defer wg.Done()
+		// verify range proof
+		rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
+	}()
+
+	wg.Wait()
+
+	if wfErr != nil {
+		return wfErr
 	}
-	// verify range proof
-	return v.RangeCorrectness.Verify(tp.RangeCorrectness)
+
+	return rangeErr
 }
 
 func (w *WellFormednessWitness) GetInValues() []*math.Zr {

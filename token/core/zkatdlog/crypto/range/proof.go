@@ -8,6 +8,8 @@ package rangeproof
 import (
 	"encoding/json"
 	"math"
+	"sync"
+	"sync/atomic"
 
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
@@ -109,6 +111,11 @@ func (p *Prover) Prove() ([]byte, error) {
 		return nil, err
 	}
 
+	var wg sync.WaitGroup
+	wg.Add(len(p.Token) * p.Exponent)
+
+	parallelErr := &atomic.Value{}
+
 	proof.MembershipProofs = make([]*MembershipProof, len(p.Token))
 	for k := 0; k < len(proof.MembershipProofs); k++ {
 		proof.MembershipProofs[k] = &MembershipProof{}
@@ -117,12 +124,23 @@ func (p *Prover) Prove() ([]byte, error) {
 		for i := 0; i < p.Exponent; i++ {
 			proof.MembershipProofs[k].Commitments[i] = preProcessed.commitment[k][i]
 			mp := sigproof.NewMembershipProver(preProcessed.witness[k][i], proof.MembershipProofs[k].Commitments[i], p.P, p.Q, p.PK, p.PedersenParams[:2], p.Curve)
-			proof.MembershipProofs[k].SignatureProofs[i], err = mp.Prove()
-			if err != nil {
-				return nil, err
-			}
+
+			go func(k, i int) {
+				defer wg.Done()
+				proof.MembershipProofs[k].SignatureProofs[i], err = mp.Prove()
+				if err != nil {
+					parallelErr.Store(err)
+				}
+			}(k, i)
 		}
 	}
+
+	wg.Wait()
+
+	if parallelErr.Load() != nil {
+		return nil, parallelErr.Load().(error)
+	}
+
 	// show that value in token = value in the aggregate commitment
 	commitment, randomness, err := p.computeCommitment()
 	if err != nil {
@@ -158,6 +176,10 @@ func (v *Verifier) Verify(raw []byte) error {
 	if len(proof.MembershipProofs) != len(v.Token) {
 		return errors.Errorf("failed to verify range proofz")
 	}
+
+	var verifications []func()
+	parallelErr := &atomic.Value{}
+
 	//  verify membership
 	for k := 0; k < len(v.Token); k++ {
 		if len(proof.MembershipProofs[k].Commitments) != len(proof.MembershipProofs[k].SignatureProofs) {
@@ -165,11 +187,30 @@ func (v *Verifier) Verify(raw []byte) error {
 		}
 		for i := 0; i < len(proof.MembershipProofs[k].Commitments); i++ {
 			mv := sigproof.NewMembershipVerifier(proof.MembershipProofs[k].Commitments[i], v.P, v.Q, v.PK, v.PedersenParams[:2], v.Curve)
-			err = mv.Verify(proof.MembershipProofs[k].SignatureProofs[i])
-			if err != nil {
-				return errors.Wrapf(err, "failed to verify range proof")
-			}
+			proofToVerify := proof.MembershipProofs[k].SignatureProofs[i]
+			verifications = append(verifications, func() {
+				err = mv.Verify(proofToVerify)
+				if err != nil {
+					parallelErr.Store(errors.Wrapf(err, "failed to verify range proof"))
+				}
+			})
 		}
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(len(verifications))
+
+	for _, verification := range verifications {
+		go func(f func()) {
+			defer wg.Done()
+			f()
+		}(verification)
+	}
+
+	wg.Wait()
+
+	if parallelErr.Load() != nil {
+		return parallelErr.Load().(error)
 	}
 
 	//  verify equality
