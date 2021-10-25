@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package transfer_test
 
 import (
-	"github.com/IBM/mathlib"
+	"sync"
+
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	. "github.com/onsi/ginkgo"
@@ -15,15 +17,16 @@ import (
 
 var _ = Describe("Input/Output well formedness", func() {
 	var (
-		iow      *transfer.WellFormednessWitness
-		pp       []*math.G1
-		verifier *transfer.WellFormednessVerifier
-		prover   *transfer.WellFormednessProver
-		in       []*math.G1
-		out      []*math.G1
-		inBF     []*math.Zr
-		outBF    []*math.Zr
-		c        *math.Curve
+		iow         *transfer.WellFormednessWitness
+		pp          []*math.G1
+		verifier    *transfer.WellFormednessVerifier
+		prover      *transfer.WellFormednessProver
+		in          []*math.G1
+		out         []*math.G1
+		inBF        []*math.Zr
+		outBF       []*math.Zr
+		c           *math.Curve
+		parallelism = 1000
 	)
 	BeforeEach(func() {
 		c = math.Curves[1]
@@ -61,6 +64,26 @@ var _ = Describe("Input/Output well formedness", func() {
 				// verify
 				err = verifier.Verify(proof)
 				Expect(err).NotTo(HaveOccurred())
+			})
+		})
+		Context("The proof is generated and verified in parallel", func() {
+			It("Succeeds", func() {
+				var wg sync.WaitGroup
+				wg.Add(parallelism)
+
+				for i := 0; i < parallelism; i++ {
+					go func() {
+						defer wg.Done()
+						proof, err := prover.Prove()
+						Expect(err).NotTo(HaveOccurred())
+
+						// verify
+						err = verifier.Verify(proof)
+						Expect(err).NotTo(HaveOccurred())
+					}()
+				}
+
+				wg.Wait()
 			})
 		})
 
