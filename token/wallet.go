@@ -31,6 +31,11 @@ type WalletManager struct {
 	ts api2.TokenManagerService
 }
 
+func (t *WalletManager) IsMe(id view.Identity) bool {
+	s, err := t.ts.IdentityProvider().GetSigner(id)
+	return err == nil && s != nil
+}
+
 func (t *WalletManager) GenerateIssuerKeyPair(tokenType string) (api2.Key, api2.Key, error) {
 	return t.ts.GenerateIssuerKeyPair(tokenType)
 }
