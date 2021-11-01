@@ -11,11 +11,11 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type RegisterAuditorView struct {
@@ -43,11 +43,15 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	}
 
 	if !set {
-		_, err := context.RunView(chaincode.NewInvokeView(
+		err := network.GetInstance(
+			context,
+			tms.Network(),
+			tms.Channel(),
+		).RegisterAuditor(
+			context,
 			tms.Namespace(),
-			AddAuditorFunction,
-			r.Id.Bytes(),
-		).WithNetwork(tms.Network()).WithChannel(tms.Channel()))
+			r.Id,
+		)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed auditor registration")
 		}

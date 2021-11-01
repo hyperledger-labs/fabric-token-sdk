@@ -16,8 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type Driver struct {
@@ -31,17 +30,16 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, network string, channel string, namespace string) (driver.TokenManagerService, error) {
-	fns := fabric2.GetFabricNetworkService(sp, network)
-	if fns == nil {
-		return nil, errors.Errorf("fabric network [%s] does not exists", network)
+func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
+	n := network.GetInstance(sp, networkID, channel)
+	if n == nil {
+		return nil, errors.Errorf("network [%s] does not exists", networkID)
 	}
-	ch, err := fns.Channel(channel)
+	v, err := n.Vault(namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] does not exists", network, channel)
+		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
-
-	qe := vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch)).QueryEngine()
+	qe := v.TokenVault().QueryEngine()
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	return fabtoken.NewService(
 		sp,
@@ -56,9 +54,9 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		identity.NewProvider(
 			sp,
 			map[driver.IdentityUsage]identity.Mapper{
-				driver.IssuerRole:  fabric.NewMapper(network, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
-				driver.AuditorRole: fabric.NewMapper(network, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
-				driver.OwnerRole:   fabric.NewMapper(network, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
+				driver.IssuerRole:  fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, networkID).LocalMembership()),
+				driver.AuditorRole: fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, networkID).LocalMembership()),
+				driver.OwnerRole:   fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, networkID).LocalMembership()),
 			},
 		),
 		fabtoken.NewDeserializer(),
