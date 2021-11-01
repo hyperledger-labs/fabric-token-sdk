@@ -298,7 +298,7 @@ func (n *Network) RegisterAuditor(context view.Context, namespace string, id vie
 	_, err := context.RunView(chaincode.NewInvokeView(
 		namespace,
 		AddAuditorFunction,
-		id,
+		id.Bytes(),
 	).WithNetwork(n.Name()).WithChannel(n.Channel()))
 	return err
 }
@@ -307,7 +307,7 @@ func (n *Network) RegisterCertifier(context view.Context, namespace string, id v
 	_, err := context.RunView(chaincode.NewInvokeView(
 		namespace,
 		AddCertifierFunction,
-		id,
+		id.Bytes(),
 	).WithNetwork(n.Name()).WithChannel(n.Channel()).WithSignerIdentity(
 		fabric.GetFabricNetworkService(context, n.Name()).IdentityProvider().DefaultIdentity(),
 	))
