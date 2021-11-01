@@ -6,16 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 package tcc
 
 import (
-	"encoding/json"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -53,11 +50,8 @@ func (r *RegisterCertifierView) Call(context view.Context) (interface{}, error) 
 
 	if !set {
 		logger.Debugf("register certifier [%s]", r.Id.String())
-		_, err := context.RunView(chaincode.NewInvokeView(
-			tms.Namespace(), AddCertifierFunction, r.Id.Bytes(),
-		).WithNetwork(tms.Network()).WithChannel(tms.Channel()).WithSignerIdentity(
-			fabric.GetFabricNetworkService(context, tms.Network()).IdentityProvider().DefaultIdentity(),
-		))
+
+		err := network.GetInstance(context, tms.Network(), tms.Channel()).RegisterCertifier(context, tms.Namespace(), r.Id)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed certifier registration")
 		}
@@ -76,41 +70,22 @@ type GetTokenView struct {
 }
 
 func NewGetTokensView(channel string, namespace string, ids ...*token2.ID) *GetTokenView {
-	if len(ids) == 0 {
-		panic("no ids specified")
-	}
 	return &GetTokenView{Channel: channel, Namespace: namespace, IDs: ids}
 }
 
 func (r *GetTokenView) Call(context view.Context) (interface{}, error) {
-	idsRaw, err := json.Marshal(r.IDs)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling ids")
+	if len(r.IDs) == 0 {
+		return nil, errors.Errorf("no token ids provided")
 	}
-
 	tms := token.GetManagementService(
 		context,
 		token.WithNetwork(r.Network),
 		token.WithChannel(r.Channel),
 		token.WithNamespace(r.Namespace),
 	)
-	payloadBoxed, err := context.RunView(chaincode.NewQueryView(
-		tms.Namespace(),
-		QueryTokensFunctions,
-		idsRaw,
-	).WithNetwork(tms.Network()).WithChannel(tms.Channel()))
+	tokens, err := network.GetInstance(context, tms.Network(), tms.Channel()).QueryTokens(context, tms.Namespace(), r.IDs)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed quering tokens")
-	}
-
-	// Unbox
-	raw, ok := payloadBoxed.([]byte)
-	if !ok {
-		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
-	}
-	var tokens [][]byte
-	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling response")
+		return nil, errors.Wrapf(err, "failed querying tokens")
 	}
 	return tokens, nil
 }

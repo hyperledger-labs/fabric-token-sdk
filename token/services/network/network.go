@@ -18,11 +18,18 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 const (
-	InvokeFunction    = "invoke"
-	AddIssuerFunction = "addIssuer"
+	InvokeFunction            = "invoke"
+	AddIssuerFunction         = "addIssuer"
+	QueryPublicParamsFunction = "queryPublicParams"
+	AddAuditorFunction        = "addAuditor"
+	AddCertifierFunction      = "addCertifier"
+	QueryTokensFunctions      = "queryTokens"
 )
 
 type TxID struct {
@@ -126,9 +133,35 @@ func (s *RWSet) Done() {
 	s.rws.Done()
 }
 
+type Vault struct {
+	v          *fabric.Vault
+	tokenVault *vault.Vault
+}
+
+func (v *Vault) GetLastTxID() (string, error) {
+	return v.v.GetLastTxID()
+}
+
+func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {
+	return v.tokenVault.QueryEngine().ListUnspentTokens()
+}
+
+func (v *Vault) Exists(id *token2.ID) bool {
+	return v.tokenVault.CertificationStorage().Exists(id)
+}
+
+func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
+	return v.tokenVault.CertificationStorage().Store(certifications)
+}
+
+func (v *Vault) TokenVault() *vault.Vault {
+	return v.tokenVault
+}
+
 type Network struct {
 	n  *fabric.NetworkService
 	ch *fabric.Channel
+	sp view2.ServiceProvider
 }
 
 func (n *Network) Name() string {
@@ -137,6 +170,14 @@ func (n *Network) Name() string {
 
 func (n *Network) Channel() string {
 	return n.ch.Name()
+}
+
+func (n *Network) Vault(namespace string) (*Vault, error) {
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, fabric3.NewVault(n.ch))
+	return &Vault{
+		v:          n.ch.Vault(),
+		tokenVault: tokenVault,
+	}, nil
 }
 
 func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
@@ -240,6 +281,67 @@ func (n *Network) AddIssuer(context view.Context, pk []byte) error {
 	return err
 }
 
+func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
+	ppBoxed, err := view2.GetManager(n.sp).InitiateView(
+		chaincode.NewQueryView(
+			namespace,
+			QueryPublicParamsFunction,
+		).WithNetwork(n.Name()).WithChannel(n.Channel()),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return ppBoxed.([]byte), nil
+}
+
+func (n *Network) RegisterAuditor(context view.Context, namespace string, id view.Identity) error {
+	_, err := context.RunView(chaincode.NewInvokeView(
+		namespace,
+		AddAuditorFunction,
+		id,
+	).WithNetwork(n.Name()).WithChannel(n.Channel()))
+	return err
+}
+
+func (n *Network) RegisterCertifier(context view.Context, namespace string, id view.Identity) error {
+	_, err := context.RunView(chaincode.NewInvokeView(
+		namespace,
+		AddCertifierFunction,
+		id,
+	).WithNetwork(n.Name()).WithChannel(n.Channel()).WithSignerIdentity(
+		fabric.GetFabricNetworkService(context, n.Name()).IdentityProvider().DefaultIdentity(),
+	))
+	return err
+}
+
+func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+	idsRaw, err := json.Marshal(IDs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling ids")
+	}
+
+	payloadBoxed, err := context.RunView(chaincode.NewQueryView(
+		namespace,
+		QueryTokensFunctions,
+		idsRaw,
+	).WithNetwork(n.Name()).WithChannel(n.Channel()))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed quering tokens")
+	}
+
+	// Unbox
+	raw, ok := payloadBoxed.([]byte)
+	if !ok {
+		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
+	}
+	var tokens [][]byte
+	if err := json.Unmarshal(raw, &tokens); err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling response")
+	}
+
+	return tokens, nil
+}
+
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
 	n := fabric.GetFabricNetworkService(sp, network)
 	if n == nil {
@@ -250,5 +352,9 @@ func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
 		panic(fmt.Sprintf("cannot find channel [%s] for network [%s]", channel, network))
 	}
 
-	return &Network{n: n, ch: ch}
+	return &Network{
+		n:  n,
+		ch: ch,
+		sp: sp,
+	}
 }
