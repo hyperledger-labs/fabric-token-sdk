@@ -10,14 +10,15 @@ import (
 	"encoding/json"
 	"io/ioutil"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("PublicParamsManager", func() {
@@ -49,7 +50,7 @@ var _ = Describe("PublicParamsManager", func() {
 		pp.Auditor = araw
 
 		// initialize enginw with pp
-		engine = ppm.New(pp)
+		engine = ppm.NewFromParams(pp)
 	})
 
 	Describe("Add Auditor", func() {

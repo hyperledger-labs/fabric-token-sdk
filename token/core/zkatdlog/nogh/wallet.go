@@ -9,30 +9,31 @@ package nogh
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 func (s *Service) IssuerIdentity(label string) (view.Identity, error) {
-	logger.Debugf("searching issuer for [%s] at [%s]", label, s.Channel.Name())
+	logger.Debugf("searching issuer for [%s] at [%s]", label, s.Channel)
 
 	pp := s.PublicParams()
 	for _, issuer := range s.Issuers {
-		logger.Debugf("issuer for [%s] at [%s]", issuer.label, s.Channel.Name())
+		logger.Debugf("issuer for [%s] at [%s]", issuer.label, s.Channel)
 		if issuer.label == label {
 			if issuer.fID != nil {
 				return issuer.fID, nil
 			}
 
-			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.Channel.Name(), issuer.index)
+			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.Channel, issuer.index)
 
 			witness := anonym.NewWitness(issuer.sk, nil, nil, nil, nil, issuer.index)
 			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams, math.Curves[pp.Curve])
@@ -87,7 +88,7 @@ func (s *Service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
 				fID   view.Identity
 			}{label: label, index: index, sk: sk.(*math.Zr), pk: _pk, fID: nil})
 
-			logger.Debugf("registered issuer for [%s] at [%s], fetching public params", label, s.Channel.Name())
+			logger.Debugf("registered issuer for [%s] at [%s], fetching public params", label, s.Channel)
 
 			return nil
 		}
@@ -373,7 +374,7 @@ func (w *wallet) existsRecipientIdentity(id view.Identity) bool {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"zkatdlog.owner.wallet.recipient.id",
 		[]string{
-			w.tokenService.Channel.Name(),
+			w.tokenService.Channel,
 			w.identityInfo.ID,
 			w.identityInfo.EnrollmentID,
 			id.String(),
@@ -387,7 +388,7 @@ func (w *wallet) putRecipientIdentity(id view.Identity, meta []byte) error {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"zkatdlog.owner.wallet.recipient.id",
 		[]string{
-			w.tokenService.Channel.Name(),
+			w.tokenService.Channel,
 			w.identityInfo.ID,
 			w.identityInfo.EnrollmentID,
 			id.String(),

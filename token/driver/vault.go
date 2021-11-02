@@ -11,6 +11,8 @@ import (
 
 type QueryCallbackFunc func(*token.ID, []byte) error
 
+type QueryCallback2Func func(*token.ID, string, []byte, []byte) error
+
 type Vault interface {
 	QueryEngine() QueryEngine
 }
@@ -37,6 +39,8 @@ type QueryEngine interface {
 	// GetTokenCommitments retrieves the token commitments for the passed ids.
 	// For each id, the callback is invoked to unmarshal the token commitment
 	GetTokenCommitments(ids []*token.ID, callback QueryCallbackFunc) error
+
+	GetTokenInfoAndCommitments(ids []*token.ID, callback QueryCallback2Func) error
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
 }

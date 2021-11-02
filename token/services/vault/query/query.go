@@ -289,6 +289,35 @@ func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCall
 	return nil
 }
 
+func (e *Engine) GetTokenInfoAndCommitments(ids []*token.ID, callback driver2.QueryCallback2Func) error {
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return err
+	}
+	defer qe.Done()
+	for _, id := range ids {
+		outputID, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		if err != nil {
+			return errors.Wrapf(err, "error creating output ID: %v", id)
+		}
+
+		val, err := qe.GetState(e.namespace, outputID)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting state for id [%v]", id)
+		}
+
+		meta, err := qe.GetStateMetadata(e.namespace, outputID)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting metadata for id [%v]", id)
+		}
+
+		if err := callback(id, outputID, val, meta[keys.Info]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error) {
 	logger.Debugf("retrieve tokens from ids...")
 	qe, err := e.Vault.NewQueryExecutor()
