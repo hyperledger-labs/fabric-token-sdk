@@ -300,15 +300,18 @@ func (e *Engine) GetTokenInfoAndCommitments(ids []*token.ID, callback driver2.Qu
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
-
-		val, err := qe.GetState(e.namespace, outputID)
-		if err != nil {
-			return errors.Wrapf(err, "failed getting state for id [%v]", id)
-		}
-
 		meta, err := qe.GetStateMetadata(e.namespace, outputID)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting metadata for id [%v]", id)
+		}
+
+		outputID, err = keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return errors.Wrapf(err, "error creating output ID: %v", id)
+		}
+		val, err := qe.GetState(e.namespace, outputID)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting state for id [%v]", id)
 		}
 
 		if err := callback(id, outputID, val, meta[keys.Info]); err != nil {
