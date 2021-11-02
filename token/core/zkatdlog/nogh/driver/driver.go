@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/pkg/errors"
 
@@ -19,8 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type Driver struct {
@@ -29,35 +27,42 @@ type Driver struct {
 func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
 	pp, err := crypto.NewPublicParamsFromBytes(params, crypto.DLogPublicParameters)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to unmarshal public parameters")
 	}
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, network string, channel string, namespace string) (driver.TokenManagerService, error) {
-	fns := fabric2.GetFabricNetworkService(sp, network)
-	if fns == nil {
-		return nil, errors.Errorf("fabric network [%s] does not exists", network)
+func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
+	n := network.GetInstance(sp, networkID, channel)
+	if n == nil {
+		return nil, errors.Errorf("network [%s] does not exists", networkID)
 	}
-	ch, err := fns.Channel(channel)
+	lm := n.LocalMembership()
+	v, err := n.Vault(namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] does not exists", network, channel)
+		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
+	qe := v.TokenVault().QueryEngine()
 
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	service, err := zkatdlog.NewTokenService(
-		ch,
+		channel,
 		namespace,
 		sp,
-		publicParamsFetcher,
-		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch)).QueryEngine()},
-		vault.New(sp, ch.Name(), namespace, fabric3.NewVault(ch)).QueryEngine(),
+		ppm.New(&zkatdlog.VaultPublicParamsLoader{
+			TokenVault:          qe,
+			PublicParamsFetcher: publicParamsFetcher,
+			PPLabel:             crypto.DLogPublicParameters,
+		}),
+		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
+		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
+		v.TokenVault().QueryEngine(),
 		identity.NewProvider(
 			sp,
 			map[driver.IdentityUsage]identity.Mapper{
-				driver.IssuerRole:  fabric.NewMapper(network, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
-				driver.AuditorRole: fabric.NewMapper(network, fabric.X509MSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
-				driver.OwnerRole:   fabric.NewMapper(network, fabric.IdemixMSPIdentity, nodeIdentity, fabric2.GetFabricNetworkService(sp, network).LocalMembership()),
+				driver.IssuerRole:  fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, lm),
+				driver.AuditorRole: fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, lm),
+				driver.OwnerRole:   fabric.NewMapper(networkID, fabric.IdemixMSPIdentity, nodeIdentity, lm),
 			},
 		),
 		func(params *crypto.PublicParams) (driver.Deserializer, error) {
@@ -73,7 +78,10 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 }
 
 func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
-	pp := params.(*crypto.PublicParams)
+	pp, ok := params.(*crypto.PublicParams)
+	if !ok {
+		return nil, errors.Errorf("invalid public parameters type [%T]", params)
+	}
 	deserializer, err := zkatdlog.NewDeserializer(pp)
 	if err != nil {
 		return nil, err
@@ -82,7 +90,11 @@ func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator,
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
-	return ppm.New(params.(*crypto.PublicParams)), nil
+	pp, ok := params.(*crypto.PublicParams)
+	if !ok {
+		return nil, errors.Errorf("invalid public parameters type [%T]", params)
+	}
+	return ppm.NewFromParams(pp), nil
 }
 
 func init() {

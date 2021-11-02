@@ -158,6 +158,26 @@ func (v *Vault) TokenVault() *vault.Vault {
 	return v.tokenVault
 }
 
+type LocalMembership struct {
+	lm *fabric.LocalMembership
+}
+
+func (l *LocalMembership) DefaultIdentity() view.Identity {
+	return l.lm.DefaultIdentity()
+}
+
+func (l *LocalMembership) IsMe(id view.Identity) bool {
+	return l.lm.IsMe(id)
+}
+
+func (l *LocalMembership) GetIdentityInfoByLabel(mspType string, label string) *fabric.IdentityInfo {
+	return l.lm.GetIdentityInfoByLabel(mspType, label)
+}
+
+func (l *LocalMembership) GetIdentityInfoByIdentity(mspType string, id view.Identity) *fabric.IdentityInfo {
+	return l.lm.GetIdentityInfoByIdentity(mspType, id)
+}
+
 type Network struct {
 	n  *fabric.NetworkService
 	ch *fabric.Channel
@@ -340,6 +360,10 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	}
 
 	return tokens, nil
+}
+
+func (n *Network) LocalMembership() *LocalMembership {
+	return &LocalMembership{lm: n.n.LocalMembership()}
 }
 
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
