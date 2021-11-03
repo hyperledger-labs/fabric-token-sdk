@@ -275,11 +275,10 @@ func (cc *TokenChaincode) invoke(raw []byte, stub shim.ChaincodeStubInterface) p
 			return shim.Error("failed to write token action: " + err.Error())
 		}
 	}
-	// TODO: add an option to commit the token request
-	// err = w.CommitTokenRequest(raw)
-	// if err != nil {
-	// 	return shim.Error("failed to write token request:" + err.Error())
-	// }
+	err = w.CommitTokenRequest(raw)
+	if err != nil {
+		return shim.Error("failed to write token request:" + err.Error())
+	}
 	return shim.Success(nil)
 }
 
