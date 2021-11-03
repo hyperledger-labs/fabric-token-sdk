@@ -138,10 +138,19 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 		logger.Infof("running function [%s]", string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
-			if len(args) != 2 {
+			if len(args) != 1 {
 				return shim.Error("empty token request")
 			}
-			return cc.invoke(args[1], stub)
+			// extract token request from transient
+			t, err := stub.GetTransient()
+			if err != nil {
+				return shim.Error("failed getting transient")
+			}
+			tokenRequest, ok := t["token_request"]
+			if !ok {
+				return shim.Error("failed getting token request, entry not found")
+			}
+			return cc.invoke(tokenRequest, stub)
 		case QueryPublicParamsFunction:
 			return cc.queryPublicParams(stub)
 		case AddAuditorFunction:

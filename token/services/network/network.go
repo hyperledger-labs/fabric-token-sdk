@@ -245,13 +245,14 @@ func (n *Network) RequestApproval(context view.Context, namespace string, reques
 	env, err := chaincode.NewEndorseView(
 		namespace,
 		InvokeFunction,
-		requestRaw,
 	).WithNetwork(
 		n.n.Name(),
 	).WithChannel(
 		n.ch.Name(),
 	).WithSignerIdentity(
 		signer,
+	).WithTransientEntry(
+		"token_request", requestRaw,
 	).WithTxID(
 		fabric.TxID{
 			Nonce:   txID.Nonce,

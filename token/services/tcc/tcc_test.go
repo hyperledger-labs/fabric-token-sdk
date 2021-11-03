@@ -8,11 +8,12 @@ package tcc_test
 import (
 	"encoding/base64"
 
-	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/mock"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
+
+	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/mock"
 )
 
 var _ = Describe("ccvalidator", func() {
@@ -157,11 +158,11 @@ var _ = Describe("ccvalidator", func() {
 		Context("Invoke is called correctly with a token request", func() {
 			BeforeEach(func() {
 				var err error
-				args := make([][]byte, 2)
+				args := make([][]byte, 1)
 				args[0] = []byte("invoke")
-				args[1] = []byte("token request")
 				Expect(err).NotTo(HaveOccurred())
 				fakestub.GetArgsReturns(args)
+				fakestub.GetTransientReturns(map[string][]byte{"token_request": []byte("token request")}, nil)
 				fakeValidator.UnmarshallAndVerifyReturns([]interface{}{}, nil)
 			})
 			It("succeeds", func() {
@@ -174,11 +175,11 @@ var _ = Describe("ccvalidator", func() {
 		Context("When VerifyTokenRequest fails", func() {
 			BeforeEach(func() {
 				var err error
-				args := make([][]byte, 2)
+				args := make([][]byte, 1)
 				args[0] = []byte("invoke")
-				args[1] = []byte("token request")
 				Expect(err).NotTo(HaveOccurred())
 				fakestub.GetArgsReturns(args)
+				fakestub.GetTransientReturns(map[string][]byte{"token_request": []byte("token request")}, nil)
 				fakeValidator.UnmarshallAndVerifyReturns(nil, errors.Errorf("flying monkeys"))
 			})
 			It("fails", func() {

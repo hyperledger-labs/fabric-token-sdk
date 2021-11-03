@@ -9,6 +9,7 @@ package ttxcc
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
@@ -57,7 +58,18 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 	if nw == nil {
 		return nil, errors.Errorf("network [%s] not found", o.tx.Network())
 	}
-	if err := nw.Broadcast(o.tx.Payload.Envelope); err != nil {
+	logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
+	env := o.tx.Payload.Envelope
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		rawEnv, err := env.Bytes()
+		if err != nil {
+			return nil, err
+		}
+		logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
+	}
+
+	if err := nw.Broadcast(env); err != nil {
 		return nil, err
 	}
 
