@@ -21,6 +21,10 @@ var logger = flogging.MustGetLogger("token-sdk.driver.identity.fabric")
 
 type GetFunc func() (view.Identity, []byte, error)
 
+type Deserializer interface {
+	DeserializeSigner(raw []byte) (driver.Signer, error)
+}
+
 type Mapper interface {
 	Info(id string) (string, string, GetFunc)
 	Map(v interface{}) (view.Identity, string)
@@ -29,13 +33,15 @@ type Mapper interface {
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers map[driver.IdentityUsage]Mapper
+	mappers       map[driver.IdentityUsage]Mapper
+	deserializers []Deserializer
 }
 
 func NewProvider(sp view2.ServiceProvider, mappers map[driver.IdentityUsage]Mapper) *Provider {
 	return &Provider{
-		sp:      sp,
-		mappers: mappers,
+		sp:            sp,
+		mappers:       mappers,
+		deserializers: []Deserializer{},
 	}
 }
 
@@ -104,6 +110,14 @@ func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 		}
 		signer, err = view2.GetSigService(i.sp).GetSigner(ro.Identity)
 		if err != nil {
+			// give it a third chance
+			// deserializer using the provider's deserializers
+			for _, d := range i.deserializers {
+				signer, err = d.DeserializeSigner(ro.Identity)
+				if err == nil {
+					return signer, nil
+				}
+			}
 			return nil, err
 		}
 	}
@@ -126,29 +140,45 @@ func (i *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return ai.EnrollmentID(), nil
 }
 
+func (i *Provider) AddDeserializer(d Deserializer) {
+	i.deserializers = append(i.deserializers, d)
+}
+
 // Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 // identity is associated to id.
 func (i *Provider) Bind(id view.Identity, to view.Identity) error {
 	sigService := view2.GetSigService(i.sp)
+
+	setSV := true
 	signer, err := sigService.GetSigner(to)
 	if err != nil {
-		return err
+		logger.Warn("failed getting signer for [%s][%s]", to, err)
+		setSV = false
 	}
 	verifier, err := sigService.GetVerifier(to)
 	if err != nil {
-		return err
-	}
-	auditInfo, err := sigService.GetAuditInfo(to)
-	if err != nil {
-		return err
+		logger.Warn("failed getting verifier for [%s][%s]", to, err)
+		setSV = false
 	}
 
-	if err := sigService.RegisterSigner(id, signer, verifier); err != nil {
-		return err
+	setAI := true
+	auditInfo, err := sigService.GetAuditInfo(to)
+	if err != nil {
+		logger.Warn("failed getting audit info for [%s][%s]", to, err)
+		setAI = false
 	}
-	if err := sigService.RegisterAuditInfo(id, auditInfo); err != nil {
-		return err
+
+	if setSV {
+		if err := sigService.RegisterSigner(id, signer, verifier); err != nil {
+			return err
+		}
 	}
+	if setAI {
+		if err := sigService.RegisterAuditInfo(id, auditInfo); err != nil {
+			return err
+		}
+	}
+
 	if err := view2.GetEndpointService(i.sp).Bind(to, id); err != nil {
 		return err
 	}

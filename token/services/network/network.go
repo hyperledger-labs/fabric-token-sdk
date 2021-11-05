@@ -265,10 +265,6 @@ func (n *Network) RequestApproval(context view.Context, namespace string, reques
 	return &Envelope{e: env}, nil
 }
 
-func (n *Network) IsMe(signer view.Identity) bool {
-	return n.n.LocalMembership().IsMe(signer)
-}
-
 func (n *Network) ComputeTxID(id *TxID) string {
 	logger.Debugf("compute tx id for [%s]", id.String())
 	temp := &fabric.TxID{

@@ -503,7 +503,12 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling signature request")
 		}
-		if !network.GetInstance(context, s.tx.Network(), s.tx.Channel()).IsMe(signatureRequest.Signer) {
+
+		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
+		if tms == nil {
+			return nil, errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
+		}
+		if !tms.WalletManager().IsMe(signatureRequest.Signer) {
 			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
 		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)
