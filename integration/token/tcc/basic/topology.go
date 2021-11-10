@@ -12,17 +12,23 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views/workload"
 )
 
-func Topology(tokenSDKDriver string) []api.Topology {
+func Topology(tokenSDKDriver string, monitoring bool) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
 	fabricTopology.AddOrganizationsByName("Org1", "Org2")
 	fabricTopology.SetNamespaceApproverOrgs("Org1")
+	if monitoring {
+		fabricTopology.EnableHyperledgerExplorer()
+		fabricTopology.EnableMonitoring()
+	}
 
 	// FSC
 	fscTopology := fsc.NewTopology()
+	// fscTopology.SetLogging("grpc=error:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -37,12 +43,14 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
 	issuer.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("issueWorkload", &workload.IssueWorkloadViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("workloadRegister", &workload.RegisterAuditorViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -52,6 +60,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	alice.RegisterResponder(&workload.AcceptCashView{}, &workload.TransferWorkloadView{})
+	alice.RegisterResponder(&workload.AcceptCashView{}, &workload.IssueView{})
 	alice.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	alice.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	alice.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
@@ -66,12 +76,15 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&workload.AcceptCashView{}, &workload.TransferWorkloadView{})
+	bob.RegisterResponder(&workload.AcceptCashView{}, &workload.IssueView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	bob.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	bob.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	bob.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
 	bob.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("transferWorkload", &workload.TransferWorkloadViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -80,6 +93,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	charlie.RegisterResponder(&workload.AcceptCashView{}, &workload.TransferWorkloadView{})
+	charlie.RegisterResponder(&workload.AcceptCashView{}, &workload.IssueView{})
 	charlie.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	charlie.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	charlie.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
@@ -96,6 +111,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	)
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
+	manager.RegisterResponder(&workload.AcceptCashView{}, &workload.TransferWorkloadView{})
+	manager.RegisterResponder(&workload.AcceptCashView{}, &workload.IssueView{})
 	manager.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	manager.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	manager.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})

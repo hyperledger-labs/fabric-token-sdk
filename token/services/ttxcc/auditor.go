@@ -69,14 +69,16 @@ func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 }
 
 type AuditingViewInitiator struct {
-	tx *Transaction
+	tx      *Transaction
+	timeout time.Duration
 }
 
-func newAuditingViewInitiator(tx *Transaction) *AuditingViewInitiator {
-	return &AuditingViewInitiator{tx: tx}
+func newAuditingViewInitiator(tx *Transaction, timeout time.Duration) *AuditingViewInitiator {
+	return &AuditingViewInitiator{tx: tx, timeout: timeout}
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
+	logger.Infof("AuditingViewInitiator: [%s][%s]", context.ID(), a.tx.TokenRequest.ID())
 	session, err := context.GetSession(a, a.tx.Opts.auditor)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
@@ -98,7 +100,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	select {
 	case msg = <-ch:
 		logger.Debug("reply received from %s", a.tx.Opts.auditor)
-	case <-time.After(60 * time.Second):
+	case <-time.After(a.timeout):
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.auditor)
 	}
 	if msg.Status == view.ERROR {

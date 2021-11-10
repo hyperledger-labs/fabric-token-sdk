@@ -28,7 +28,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("ZKAT-DLog", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", basic.Topology("dlog")...)
+			network, err = integration.New(StartPortDlog(), "./testdata", basic.Topology("dlog", false)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -36,7 +36,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			basic.TestAll(network)
+			basic.TestWorkload(network)
 		})
 	})
 

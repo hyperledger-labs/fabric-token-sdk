@@ -19,15 +19,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-func compileServiceOptions(opts ...token.ServiceOption) (*token.TMSID, error) {
+func compileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, error) {
 	txOptions := &token.ServiceOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
 			return nil, err
 		}
 	}
-	id := txOptions.TMSID()
-	return &id, nil
+	return txOptions, nil
 }
 
 type RecipientData struct {
@@ -72,19 +71,23 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RequestRecipientIdentityView struct {
-	TMSID token.TMSID
-	Other view.Identity
+	TMSID   token.TMSID
+	Other   view.Identity
+	Timeout time.Duration
 }
 
 // RequestRecipientIdentity executes the RequestRecipientIdentityView.
 // The sender contacts the recipient's FSC node identified via the passed view identity.
 // The sender gets back the identity the recipient wants to use to assign ownership of tokens.
 func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, error) {
-	tmsID, err := compileServiceOptions(opts...)
+	o, err := compileServiceOptions(opts...)
 	if err != nil {
 		return nil, err
 	}
-	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{TMSID: *tmsID, Other: recipient})
+	if o.Timeout == 0 {
+		o.Timeout = time.Minute * 10
+	}
+	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{TMSID: o.TMSID(), Other: recipient, Timeout: o.Timeout})
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +131,7 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 		select {
 		case msg := <-ch:
 			payload = msg.Payload
-		case <-time.After(60 * time.Second):
+		case <-time.After(f.Timeout):
 			return nil, errors.New("time out reached")
 		}
 
@@ -316,12 +319,12 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 // derive the recipient identity to send to the passed recipient.
 // The function returns, the recipient identity of the sender, the recipient identity of the recipient
 func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, view.Identity, error) {
-	tmsID, err := compileServiceOptions(opts...)
+	o, err := compileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, err
 	}
 	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
-		TMSID:  *tmsID,
+		TMSID:  o.TMSID(),
 		Wallet: walletID,
 		Other:  recipient,
 	})

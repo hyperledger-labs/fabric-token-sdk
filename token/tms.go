@@ -8,6 +8,7 @@ package token
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -44,6 +45,7 @@ type ServiceOptions struct {
 	Channel             string
 	Namespace           string
 	PublicParamsFetcher PublicParamsFetcher
+	Timeout             time.Duration
 }
 
 func (o ServiceOptions) TMSID() TMSID {
@@ -110,6 +112,14 @@ func WithTMSID(id TMSID) ServiceOption {
 		o.Network = id.Network
 		o.Channel = id.Channel
 		o.Namespace = id.Namespace
+		return nil
+	}
+}
+
+// WithTimeout sets the timeout for the operation to be performed
+func WithTimeout(timeout time.Duration) ServiceOption {
+	return func(o *ServiceOptions) error {
+		o.Timeout = timeout
 		return nil
 	}
 }

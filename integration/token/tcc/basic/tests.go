@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views/workload"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -276,6 +277,14 @@ func TestAll(network *integration.Infrastructure) {
 	redeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17)
 }
 
+func TestWorkload(network *integration.Infrastructure) {
+	registerWorkloadAuditor(network)
+
+	issueWorkload(network, "", "EUR", 1, "bob")
+	// checkBalance(network, "bob", "", "EUR", 3000)
+	transferWorkload(network, "bob", "", "EUR", 1, "alice")
+}
+
 /*
 func registerIssuers(network *integration.Infrastructure) {
 	_, err := network.Client("issuer").CallView("register", common.JSONMarshall(&views.RegisterIssuer{
@@ -286,6 +295,11 @@ func registerIssuers(network *integration.Infrastructure) {
 
 func registerAuditor(network *integration.Infrastructure) {
 	_, err := network.Client("auditor").CallView("register", nil)
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func registerWorkloadAuditor(network *integration.Infrastructure) {
+	_, err := network.Client("auditor").CallView("workloadRegister", nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -328,8 +342,40 @@ func issueCashFail(network *integration.Infrastructure, typ string, amount uint6
 	Expect(err).To(HaveOccurred())
 }
 
+func transferWorkload(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, errorMsgs ...string) {
+	_, err := network.Client(id).CallView("transferWorkload", common.JSONMarshall(&workload.TransferWorkload{
+		Wallet:     wallet,
+		Type:       typ,
+		Amount:     amount,
+		Recipient:  network.Identity(receiver),
+		NumBatches: 20,
+		BatchSize:  50,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func issueWorkload(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) {
+	_, err := network.Client("issuer").CallView("issueWorkload", common.JSONMarshall(&workload.IssueWorkload{
+		IssuerWallet: wallet,
+		TokenType:    typ,
+		Quantity:     amount,
+		Recipient:    network.Identity(receiver),
+		NumBatches:   20,
+		BatchSize:    50,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func transferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, errorMsgs ...string) {
-	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
+	_, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Wallet:    wallet,
 		Type:      typ,
 		Amount:    amount,
@@ -337,7 +383,6 @@ func transferCash(network *integration.Infrastructure, id string, wallet string,
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {

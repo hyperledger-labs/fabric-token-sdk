@@ -32,7 +32,8 @@ func (sr *signatureRequest) MessageToSign() []byte {
 }
 
 type collectEndorsementsView struct {
-	tx *Transaction
+	tx      *Transaction
+	timeout time.Duration
 }
 
 // NewCollectEndorsementsView returns an instance of the collectEndorsementsView struct.
@@ -43,8 +44,16 @@ type collectEndorsementsView struct {
 // 3. Before completing, all recipients receive the approved Fabric transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
-func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
-	return &collectEndorsementsView{tx: tx}
+func NewCollectEndorsementsView(tx *Transaction, opts ...token.ServiceOption) *collectEndorsementsView {
+	o, err := compileServiceOptions(opts...)
+	if err != nil {
+		panic(err)
+	}
+	if o.Timeout == 0 {
+		o.Timeout = time.Minute * 10
+	}
+
+	return &collectEndorsementsView{tx: tx, timeout: o.Timeout}
 }
 
 // Call executes the view.
@@ -79,7 +88,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 
 	// 2. Audit
 	if !c.tx.Opts.auditor.IsNone() {
-		_, err := context.RunView(newAuditingViewInitiator(c.tx))
+		_, err := context.RunView(newAuditingViewInitiator(c.tx, 10*time.Minute))
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.auditor.String())
 		}
@@ -160,7 +169,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 		select {
 		case msg = <-ch:
 			logger.Debugf("collect signatures on issue: reply received from [%s]", party)
-		case <-time.After(60 * time.Second):
+		case <-time.After(c.timeout):
 			return nil, errors.Errorf("Timeout from party %s", party)
 		}
 		if msg.Status == view.ERROR {
@@ -248,7 +257,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 			select {
 			case msg = <-ch:
 				logger.Debugf("collect signatures on transfer: reply received from [%s]", party)
-			case <-time.After(60 * time.Second):
+			case <-time.After(c.timeout):
 				return nil, errors.Errorf("Timeout from party %s", party)
 			}
 			if msg.Status == view.ERROR {
@@ -407,7 +416,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		select {
 		case msg = <-ch:
 			logger.Debugf("collect ack on distributed env: reply received from [%s]", entry.ID)
-		case <-time.After(240 * time.Second):
+		case <-time.After(c.timeout):
 			return errors.Errorf("Timeout from party %s", entry.ID)
 		}
 		if msg.Status == view.ERROR {
@@ -428,10 +437,11 @@ func (c *collectEndorsementsView) requestBytes() ([]byte, error) {
 type receiveTransactionView struct {
 	network string
 	channel string
+	timeout time.Duration
 }
 
 func NewReceiveTransactionView(network string) *receiveTransactionView {
-	return &receiveTransactionView{network: network}
+	return &receiveTransactionView{network: network, timeout: 10 * time.Minute}
 }
 
 func (f *receiveTransactionView) Call(context view.Context) (interface{}, error) {
@@ -448,13 +458,14 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 			return nil, err
 		}
 		return tx, nil
-	case <-time.After(240 * time.Second):
+	case <-time.After(f.timeout):
 		return nil, errors.New("timeout reached")
 	}
 }
 
 type endorseView struct {
-	tx *Transaction
+	tx      *Transaction
+	timeout time.Duration
 }
 
 // NewEndorseView returns an instance of the endorseView.
@@ -465,7 +476,7 @@ type endorseView struct {
 // to be processed at time of committing.
 // 4. It sends back an ack.
 func NewEndorseView(tx *Transaction) *endorseView {
-	return &endorseView{tx: tx}
+	return &endorseView{tx: tx, timeout: 120 * time.Second}
 }
 
 // Call executes the view.
@@ -490,7 +501,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		select {
 		case msg = <-sessionChannel:
 			logger.Debug("message received from %s", session.Info().Caller)
-		case <-time.After(60 * time.Second):
+		case <-time.After(s.timeout):
 			return nil, errors.Errorf("Timeout from party %s", session.Info().Caller)
 		}
 		if msg.Status == view.ERROR {

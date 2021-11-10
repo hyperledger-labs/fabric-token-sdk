@@ -78,9 +78,13 @@ tidy:
 clean:
 	docker network prune -f
 	docker container prune -f
+	rm -rf ./testdata/
 	rm -rf ./integration/token/dvp/dlog/cmd
 	rm -rf ./integration/token/dvp/fabtoken/cmd
 	rm -rf ./integration/token/tcc/basic/dlog/cmd/
+	rm -rf ./integration/token/tcc/basic/dlog/testdata/
+	rm -rf ./integration/token/tcc/basic/dlog/workload/testdata/
+	rm -rf ./integration/token/tcc/basic/dlog/workload/cmd/
 	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
 
 .PHONY: tokengen

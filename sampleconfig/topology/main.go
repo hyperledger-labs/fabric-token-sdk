@@ -20,8 +20,8 @@ func main() {
 	gomega.RegisterFailHandler(ginkgo.Fail)
 	topologies := map[string][]api.Topology{}
 
-	topologies["tcc_basic_fabtoken.yaml"] = basic.Topology("fabtoken")
-	topologies["tcc_basic_dlog.yaml"] = basic.Topology("dlog")
+	topologies["tcc_basic_fabtoken.yaml"] = basic.Topology("fabtoken", false)
+	topologies["tcc_basic_dlog.yaml"] = basic.Topology("dlog", false)
 	topologies["dvp_fabtoken.yaml"] = dvp.Topology("fabtoken")
 	topologies["dvp_dlog.yaml"] = dvp.Topology("dlog")
 
