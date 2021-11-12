@@ -565,8 +565,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211105084428-8e4800c71922 h1:MXwxVTx9nGl4vFlQ9lAd0+sCrz1A3P63TXL/0UThnQ0=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211105084428-8e4800c71922/go.mod h1:xtcfqwi1G0p+oRq6TUUXLyMP6LRvV1B9LWaIn2I6ULI=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211112083932-0339f7dcae22 h1:TpIEDabZbAQfzadoROJIOg+XS9C4stI9cXzTqHbiuYU=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211112083932-0339f7dcae22/go.mod h1:FErdltJ6CGivbdGFr5JZDmVr1Fg/Bqo93u3sW0MESDA=
 github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 h1:vBvo0PNm82ht7wpBjlYY4ZHxV3YprCfdVd3T4JG9vBw=
 github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1/go.mod h1:POCGO/RK9YDfgdhuyqjoD9tRNtWfK7Rh5AYYmsb1Chc=
 github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c h1:pKr8VnHlduEgdInwLWykYAw+lpUizjQJaJ8I5fVoRUo=
@@ -1466,8 +1466,8 @@ golang.org/x/sys v0.0.0-20210426230700-d19ff857e887/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20210616094352-59db8d763f22/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20210630005230-0f9fa26af87c/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/sys v0.0.0-20210809222454-d867a43fc93e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/sys v0.0.0-20211102192858-4dd72447c267 h1:7zYaz3tjChtpayGDzu6H0hDAUM5zIGA2XW7kRNgQ0jc=
-golang.org/x/sys v0.0.0-20211102192858-4dd72447c267/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/sys v0.0.0-20211111213525-f221eed1c01e h1:zeJt6jBtVDK23XK9QXcmG0FvO0elikp0dYZQZOeL1y0=
+golang.org/x/sys v0.0.0-20211111213525-f221eed1c01e/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1 h1:v+OssWQX+hTHEmOBgwxdZxK4zHq3yOs8F9J7mk0PY8E=
 golang.org/x/term v0.0.0-20201126162022-7de9c90e9dd1/go.mod h1:bj7SfCRtBDWHUb9snDiAeCFNEtKQo2Wmx5Cou7ajbmo=
 golang.org/x/text v0.0.0-20170915032832-14c0d48ead0c/go.mod h1:NqM8EUOU14njkJ3fqMW+pc6Ldnwhi/IjpwHt7yyuwOQ=

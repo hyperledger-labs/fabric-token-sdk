@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/fpc"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -242,27 +243,51 @@ func (n *Network) StoreTransient(id string, transient TransientMap) error {
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
-	env, err := chaincode.NewEndorseView(
-		namespace,
-		InvokeFunction,
-	).WithNetwork(
-		n.n.Name(),
-	).WithChannel(
-		n.ch.Name(),
-	).WithSignerIdentity(
-		signer,
-	).WithTransientEntry(
-		"token_request", requestRaw,
-	).WithTxID(
-		fabric.TxID{
-			Nonce:   txID.Nonce,
-			Creator: txID.Creator,
-		},
-	).Endorse(context)
-	if err != nil {
-		return nil, err
+	if exist, err := fpc.GetChannel(context, n.n.Name(), n.ch.Name()).EnclaveRegistry().IsPrivate(namespace); err == nil && exist {
+		// TODO: FPC does not support transient yet
+		env, err := chaincode.NewEndorseView(
+			namespace,
+			InvokeFunction,
+			requestRaw,
+		).WithNetwork(
+			n.n.Name(),
+		).WithChannel(
+			n.ch.Name(),
+		).WithSignerIdentity(
+			signer,
+		).WithTxID(
+			fabric.TxID{
+				Nonce:   txID.Nonce,
+				Creator: txID.Creator,
+			},
+		).Endorse(context)
+		if err != nil {
+			return nil, err
+		}
+		return &Envelope{e: env}, nil
+	} else {
+		env, err := chaincode.NewEndorseView(
+			namespace,
+			InvokeFunction,
+		).WithNetwork(
+			n.n.Name(),
+		).WithChannel(
+			n.ch.Name(),
+		).WithSignerIdentity(
+			signer,
+		).WithTransientEntry(
+			"token_request", requestRaw,
+		).WithTxID(
+			fabric.TxID{
+				Nonce:   txID.Nonce,
+				Creator: txID.Creator,
+			},
+		).Endorse(context)
+		if err != nil {
+			return nil, err
+		}
+		return &Envelope{e: env}, nil
 	}
-	return &Envelope{e: env}, nil
 }
 
 func (n *Network) ComputeTxID(id *TxID) string {
