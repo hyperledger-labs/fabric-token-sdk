@@ -10,6 +10,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -24,8 +25,8 @@ type Metadata struct {
 	tokenRequestMetadata *api2.TokenRequestMetadata
 }
 
-func (m *Metadata) GetToken(raw []byte) (*token2.Token, view.Identity, []byte, error) {
-	tokenInfoRaw := m.tokenRequestMetadata.GetTokenInfo(raw)
+func (m *Metadata) GetToken(raw []byte, index uint64) (*token2.Token, view.Identity, []byte, error) {
+	tokenInfoRaw := m.tokenRequestMetadata.GetTokenInfo(raw, index)
 	if len(tokenInfoRaw) == 0 {
 		logger.Debugf("metadata for [%s] not found", hash.Hashable(raw).String())
 		return nil, nil, nil, errors.Errorf("metadata for [%s] not found", hash.Hashable(raw).String())

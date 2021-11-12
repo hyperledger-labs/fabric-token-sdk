@@ -195,7 +195,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		logger.Debugf("transaction [%s], found a token...", txID)
 
 		// get token in the clear
-		tok, issuer, tokenInfoRaw, err := metadata.GetToken(val)
+		tok, issuer, tokenInfoRaw, err := metadata.GetToken(val, index)
 		if err != nil {
 			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
 			continue

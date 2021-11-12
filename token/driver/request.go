@@ -67,22 +67,36 @@ func (m *TokenRequestMetadata) TokenInfos() [][]byte {
 	return res
 }
 
-func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
+func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte, index uint64) []byte {
+	var infoAtIndex []byte
+	var counter uint64 = 0
+
 	for _, issue := range m.Issues {
 		for i, output := range issue.Outputs {
+			if counter == index {
+				infoAtIndex = issue.TokenInfo[i]
+			}
 			if bytes.Equal(output, tokenRaw) {
 				return issue.TokenInfo[i]
 			}
+
+			counter++
 		}
 	}
 	for _, transfer := range m.Transfers {
 		for i, output := range transfer.Outputs {
+			if counter == index {
+				infoAtIndex = transfer.TokenInfo[i]
+			}
 			if bytes.Equal(output, tokenRaw) {
 				return transfer.TokenInfo[i]
 			}
+
+			counter++
 		}
 	}
-	return nil
+	// in the worst case returns what found at index
+	return infoAtIndex
 }
 
 func (m *TokenRequestMetadata) Recipients() [][]byte {
