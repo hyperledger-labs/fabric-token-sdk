@@ -51,7 +51,7 @@ func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Id
 }
 
 func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
-	logger.Debugf("[%s] getting info for [%s]", i.networkID)
+	logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
 
 	switch i.identityType {
 	case LongTermIdentity:
@@ -61,7 +61,8 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 			return "", "", nil
 		}
 		return id, eID, func() (view.Identity, []byte, error) {
-			return longTermID, nil, nil
+			logger.Debugf("[%s] return [%s][%s][%s]", i.networkID, id, longTermID, eID)
+			return longTermID, []byte(eID), nil
 		}
 	case AnonymousIdentity:
 		id, eID, getFunc, err := i.localMembership.GetAnonymousIdentity(id)
