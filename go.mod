@@ -11,6 +11,7 @@ replace (
 )
 
 require (
+	github.com/IBM/idemix v0.0.0-20211105080215-fc2a3b9789c3
 	github.com/IBM/mathlib v0.0.0-20210928081244-f5486459a290
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/containerd/containerd v1.5.5 // indirect
@@ -32,5 +33,6 @@ require (
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/sys v0.0.0-20211113001501-0c823b97ae02 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )

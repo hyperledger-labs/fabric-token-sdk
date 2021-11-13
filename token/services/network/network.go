@@ -10,27 +10,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-const (
-	InvokeFunction            = "invoke"
-	AddIssuerFunction         = "addIssuer"
-	QueryPublicParamsFunction = "queryPublicParams"
-	AddAuditorFunction        = "addAuditor"
-	AddCertifierFunction      = "addCertifier"
-	QueryTokensFunctions      = "queryTokens"
-)
+type GetFunc func() (view.Identity, []byte, error)
 
 type TxID struct {
 	Nonce   []byte
@@ -85,7 +76,7 @@ func (m TransientMap) GetState(key string, state interface{}) error {
 }
 
 type Envelope struct {
-	e *fabric.Envelope
+	e driver.Envelope
 }
 
 func (e *Envelope) Results() []byte {
@@ -126,7 +117,7 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 }
 
 type RWSet struct {
-	rws *fabric.RWSet
+	rws driver.RWSet
 }
 
 func (s *RWSet) Done() {
@@ -134,8 +125,7 @@ func (s *RWSet) Done() {
 }
 
 type Vault struct {
-	v          *fabric.Vault
-	tokenVault *vault.Vault
+	v driver.Vault
 }
 
 func (v *Vault) GetLastTxID() (string, error) {
@@ -143,45 +133,59 @@ func (v *Vault) GetLastTxID() (string, error) {
 }
 
 func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {
-	return v.tokenVault.QueryEngine().ListUnspentTokens()
+	return v.v.ListUnspentTokens()
 }
 
 func (v *Vault) Exists(id *token2.ID) bool {
-	return v.tokenVault.CertificationStorage().Exists(id)
+	return v.v.Exists(id)
 }
 
 func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
-	return v.tokenVault.CertificationStorage().Store(certifications)
+	return v.v.Store(certifications)
 }
 
 func (v *Vault) TokenVault() *vault.Vault {
-	return v.tokenVault
+	return v.v.TokenVault()
 }
 
 type LocalMembership struct {
-	lm *fabric.LocalMembership
+	lm driver.LocalMembership
 }
 
 func (l *LocalMembership) DefaultIdentity() view.Identity {
 	return l.lm.DefaultIdentity()
 }
 
+func (l *LocalMembership) AnonymousIdentity() view.Identity {
+	return l.lm.AnonymousIdentity()
+}
+
 func (l *LocalMembership) IsMe(id view.Identity) bool {
 	return l.lm.IsMe(id)
 }
 
-func (l *LocalMembership) GetIdentityInfoByLabel(mspType string, label string) *fabric.IdentityInfo {
-	return l.lm.GetIdentityInfoByLabel(mspType, label)
+func (l *LocalMembership) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
+	return l.lm.GetLongTermIdentity(label)
 }
 
-func (l *LocalMembership) GetIdentityInfoByIdentity(mspType string, id view.Identity) *fabric.IdentityInfo {
-	return l.lm.GetIdentityInfoByIdentity(mspType, id)
+func (l *LocalMembership) GetLongTermIdentifier(id view.Identity) (string, error) {
+	return l.lm.GetLongTermIdentifier(id)
+}
+
+func (l *LocalMembership) GetAnonymousIdentity(label string) (string, string, GetFunc, error) {
+	id, eID, getFunc, err := l.lm.GetAnonymousIdentity(label)
+	if err != nil {
+		return "", "", nil, err
+	}
+	return id, eID, GetFunc(getFunc), nil
+}
+
+func (l *LocalMembership) GetAnonymousIdentifier(label string) (string, error) {
+	return l.lm.GetAnonymousIdentifier(label)
 }
 
 type Network struct {
-	n  *fabric.NetworkService
-	ch *fabric.Channel
-	sp view2.ServiceProvider
+	n driver.Network
 }
 
 func (n *Network) Name() string {
@@ -189,19 +193,19 @@ func (n *Network) Name() string {
 }
 
 func (n *Network) Channel() string {
-	return n.ch.Name()
+	return n.n.Channel()
 }
 
 func (n *Network) Vault(namespace string) (*Vault, error) {
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, fabric3.NewVault(n.ch))
-	return &Vault{
-		v:          n.ch.Vault(),
-		tokenVault: tokenVault,
-	}, nil
+	v, err := n.n.Vault(namespace)
+	if err != nil {
+		return nil, err
+	}
+	return &Vault{v: v}, nil
 }
 
 func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
-	rws, err := n.ch.Vault().GetRWSet(id, results)
+	rws, err := n.n.GetRWSet(id, results)
 	if err != nil {
 		return nil, err
 	}
@@ -209,24 +213,24 @@ func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
 }
 
 func (n *Network) StoreEnvelope(id string, env []byte) error {
-	return n.ch.Vault().StoreEnvelope(id, env)
+	return n.n.StoreEnvelope(id, env)
 }
 
 func (n *Network) Broadcast(blob interface{}) error {
 	switch b := blob.(type) {
 	case *Envelope:
-		return n.n.Ordering().Broadcast(b.e)
+		return n.n.Broadcast(b.e)
 	default:
-		return n.n.Ordering().Broadcast(b)
+		return n.n.Broadcast(b)
 	}
 }
 
 func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
-	return n.ch.Finality().IsFinalForParties(id, endpoints...)
+	return n.n.IsFinalForParties(id, endpoints...)
 }
 
 func (n *Network) IsFinal(id string) error {
-	return n.ch.Finality().IsFinal(id)
+	return n.n.IsFinal(id)
 }
 
 func (n *Network) AnonymousIdentity() view.Identity {
@@ -234,31 +238,18 @@ func (n *Network) AnonymousIdentity() view.Identity {
 }
 
 func (n *Network) NewEnvelope() *Envelope {
-	return &Envelope{e: n.n.TransactionManager().NewEnvelope()}
+	return &Envelope{e: n.n.NewEnvelope()}
 }
 
 func (n *Network) StoreTransient(id string, transient TransientMap) error {
-	return n.ch.Vault().StoreTransient(id, fabric.TransientMap(transient))
+	return n.n.StoreTransient(id, driver.TransientMap(transient))
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
-	env, err := chaincode.NewEndorseView(
-		namespace,
-		InvokeFunction,
-	).WithNetwork(
-		n.n.Name(),
-	).WithChannel(
-		n.ch.Name(),
-	).WithSignerIdentity(
-		signer,
-	).WithTransientEntry(
-		"token_request", requestRaw,
-	).WithTxID(
-		fabric.TxID{
-			Nonce:   txID.Nonce,
-			Creator: txID.Creator,
-		},
-	).Endorse(context)
+	env, err := n.n.RequestApproval(context, namespace, requestRaw, signer, driver.TxID{
+		Nonce:   txID.Nonce,
+		Creator: txID.Creator,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -266,116 +257,101 @@ func (n *Network) RequestApproval(context view.Context, namespace string, reques
 }
 
 func (n *Network) ComputeTxID(id *TxID) string {
-	logger.Debugf("compute tx id for [%s]", id.String())
-	temp := &fabric.TxID{
+	temp := &driver.TxID{
 		Nonce:   id.Nonce,
 		Creator: id.Creator,
 	}
-	res := n.n.TransactionManager().ComputeTxID(temp)
+	txID := n.n.ComputeTxID(temp)
 	id.Nonce = temp.Nonce
 	id.Creator = temp.Creator
-	return res
+	return txID
 }
 
 func (n *Network) AddIssuer(context view.Context, pk []byte) error {
-	ts := token.GetManagementService(
-		context,
-		token.WithNetwork(n.Name()),
-		token.WithChannel(n.Channel()),
-	)
-
-	_, err := context.RunView(
-		chaincode.NewInvokeView(
-			ts.Namespace(),
-			AddIssuerFunction,
-			pk,
-		).WithNetwork(
-			n.Name(),
-		).WithChannel(
-			n.Channel(),
-		),
-	)
-	return err
+	return n.n.AddIssuer(context, pk)
 }
 
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	ppBoxed, err := view2.GetManager(n.sp).InitiateView(
-		chaincode.NewQueryView(
-			namespace,
-			QueryPublicParamsFunction,
-		).WithNetwork(n.Name()).WithChannel(n.Channel()),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return ppBoxed.([]byte), nil
+	return n.n.FetchPublicParameters(namespace)
 }
 
 func (n *Network) RegisterAuditor(context view.Context, namespace string, id view.Identity) error {
-	_, err := context.RunView(chaincode.NewInvokeView(
-		namespace,
-		AddAuditorFunction,
-		id.Bytes(),
-	).WithNetwork(n.Name()).WithChannel(n.Channel()))
-	return err
+	return n.n.RegisterAuditor(context, namespace, id)
 }
 
 func (n *Network) RegisterCertifier(context view.Context, namespace string, id view.Identity) error {
-	_, err := context.RunView(chaincode.NewInvokeView(
-		namespace,
-		AddCertifierFunction,
-		id.Bytes(),
-	).WithNetwork(n.Name()).WithChannel(n.Channel()).WithSignerIdentity(
-		fabric.GetFabricNetworkService(context, n.Name()).IdentityProvider().DefaultIdentity(),
-	))
-	return err
+	return n.n.RegisterCertifier(context, namespace, id)
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
-	idsRaw, err := json.Marshal(IDs)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling ids")
-	}
-
-	payloadBoxed, err := context.RunView(chaincode.NewQueryView(
-		namespace,
-		QueryTokensFunctions,
-		idsRaw,
-	).WithNetwork(n.Name()).WithChannel(n.Channel()))
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed quering tokens")
-	}
-
-	// Unbox
-	raw, ok := payloadBoxed.([]byte)
-	if !ok {
-		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
-	}
-	var tokens [][]byte
-	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling response")
-	}
-
-	return tokens, nil
+	return n.n.QueryTokens(context, namespace, IDs)
 }
 
 func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
 }
 
+func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
+	return n.n.GetEnrollmentID(raw)
+}
+
+type Provider struct {
+	sp view2.ServiceProvider
+
+	lock     sync.Mutex
+	networks map[string]*Network
+}
+
+func NewProvider(sp view2.ServiceProvider) *Provider {
+	ms := &Provider{
+		sp:       sp,
+		networks: map[string]*Network{},
+	}
+	return ms
+}
+
+func (np *Provider) GetNetwork(network string, channel string) (*Network, error) {
+	np.lock.Lock()
+	defer np.lock.Unlock()
+
+	logger.Debugf("GetNetwork: [%s:%s]", network, channel)
+
+	key := network + channel
+	service, ok := np.networks[key]
+	if !ok {
+		var err error
+		service, err = np.newNetwork(network, channel)
+		if err != nil {
+			logger.Errorf("Failed to get network: [%s:%s] %s", network, channel, err)
+			return nil, err
+		}
+		np.networks[key] = service
+	}
+	return service, nil
+}
+
+func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
+	for _, d := range drivers {
+		nw, err := d.New(np.sp, network, channel)
+		if err != nil {
+			logger.Errorf("Failed to create network [%s:%s]: %s", network, channel, err)
+		}
+		if nw != nil {
+			return &Network{n: nw}, nil
+		}
+	}
+	return nil, errors.Errorf("no network driver found for [%s:%s]", network, channel)
+}
+
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
-	n := fabric.GetFabricNetworkService(sp, network)
-	if n == nil {
+	s, err := sp.GetService(&Provider{})
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get service: %s", err))
+	}
+	n, err := s.(*Provider).GetNetwork(network, channel)
+	if err != nil {
+		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
 		return nil
 	}
-	ch, err := n.Channel(channel)
-	if err != nil {
-		panic(fmt.Sprintf("cannot find channel [%s] for network [%s]", channel, network))
-	}
-
-	return &Network{
-		n:  n,
-		ch: ch,
-		sp: sp,
-	}
+	return n
 }

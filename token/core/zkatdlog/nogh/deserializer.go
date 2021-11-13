@@ -7,70 +7,57 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-type verifierProvider interface {
-	GetVerifier(id view.Identity) (driver.Verifier, error)
+type VerifierDES interface {
+	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
 }
 
-type idemixProvider interface {
-	DeserializeVerifier(raw []byte) (driver2.Verifier, error)
-}
-
-type auditInfoDeserializer interface {
-	DeserializeAuditInfo(raw []byte) (*idemix2.AuditInfo, error)
+type AuditDES interface {
+	DeserializeAuditInfo(raw []byte) (driver.Matcher, error)
 }
 
 type deserializer struct {
-	auditorDeserializer   verifierProvider
-	ownerDeserializer     verifierProvider
-	issuerDeserializer    verifierProvider
-	auditInfoDeserializer auditInfoDeserializer
+	auditorDeserializer VerifierDES
+	ownerDeserializer   VerifierDES
+	issuerDeserializer  VerifierDES
+	auditDeserializer   AuditDES
 }
 
 func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
-	idemixDes, err := idemix2.NewDeserializer(pp.IdemixPK)
+	idemixDes, err := idemix.NewDeserializer(pp.IdemixPK)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params")
 	}
 
 	return &deserializer{
-		auditorDeserializer:   &fabric.MSPX509IdentityDeserializer{},
-		issuerDeserializer:    &fabric.MSPX509IdentityDeserializer{},
-		ownerDeserializer:     identity.NewRawOwnerIdentityDeserializer(&idemixDeserializer{provider: idemixDes}),
-		auditInfoDeserializer: idemixDes,
+		auditorDeserializer: &x509.MSPIdentityDeserializer{},
+		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
+		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(idemixDes),
+		auditDeserializer:   idemixDes,
 	}, nil
 }
 
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.ownerDeserializer.GetVerifier(id)
+	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.issuerDeserializer.GetVerifier(id)
+	return d.issuerDeserializer.DeserializeVerifier(id)
 }
 
 func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.auditorDeserializer.GetVerifier(id)
+	return d.auditorDeserializer.DeserializeVerifier(id)
 }
 
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.auditInfoDeserializer.DeserializeAuditInfo(raw)
-}
-
-type idemixDeserializer struct {
-	provider idemixProvider
-}
-
-func (i *idemixDeserializer) GetVerifier(id view.Identity) (driver.Verifier, error) {
-	return i.provider.DeserializeVerifier(id)
+	return d.auditDeserializer.DeserializeAuditInfo(raw)
 }

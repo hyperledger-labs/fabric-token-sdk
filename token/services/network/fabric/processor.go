@@ -22,7 +22,7 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
-type Network interface {
+type net interface {
 	Name() string
 	Channel(id string) (*fabric.Channel, error)
 }
@@ -37,14 +37,14 @@ type Issued interface {
 }
 
 type RWSetProcessor struct {
-	network   Network
+	network   net
 	nss       []string
 	sp        view2.ServiceProvider
 	ownership Ownership
 	issued    Issued
 }
 
-func NewTokenRWSetProcessor(network Network, ns string, sp view2.ServiceProvider, ownership Ownership, issued Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership Ownership, issued Issued) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:   network,
 		nss:       []string{ns},

@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -41,8 +41,8 @@ func NewFromParams(pp *crypto.PublicParams) *PublicParamsManager {
 }
 
 func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
-	identityDeserializer := &fabric.MSPX509IdentityDeserializer{}
-	_, err := identityDeserializer.GetVerifier(auditor)
+	identityDeserializer := &x509.MSPIdentityDeserializer{}
+	_, err := identityDeserializer.DeserializeVerifier(auditor)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve auditor's identity")
 	}
