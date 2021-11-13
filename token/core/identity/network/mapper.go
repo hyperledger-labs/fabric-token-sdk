@@ -3,78 +3,76 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package fabric
+
+package network
 
 import (
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.driver.identity.fabric")
+var logger = flogging.MustGetLogger("token-sdk.driver.identity.network")
 
-type MSPType int
+type IdentityType int
 
 const (
-	X509MSPIdentity MSPType = iota
-	IdemixMSPIdentity
+	LongTermIdentity IdentityType = iota
+	AnonymousIdentity
 )
-
-const (
-	IdemixMSP = "idemix"
-	BccspMSP  = "bccsp"
-)
-
-//go:generate counterfeiter -o mock/local_membership.go -fake-name LocalMembership . LocalMembership
 
 type LocalMembership interface {
 	DefaultIdentity() view.Identity
 	IsMe(id view.Identity) bool
-	GetIdentityInfoByLabel(mspType string, label string) *fabric.IdentityInfo
-	GetIdentityInfoByIdentity(mspType string, id view.Identity) *fabric.IdentityInfo
+	GetAnonymousIdentity(label string) (string, string, network.GetFunc, error)
+	GetLongTermIdentity(label string) (string, string, view.Identity, error)
+	GetLongTermIdentifier(id view.Identity) (string, error)
+	GetAnonymousIdentifier(label string) (string, error)
 }
 
 type Mapper struct {
 	networkID       string
 	nodeIdentity    view.Identity
 	localMembership LocalMembership
-	mspType         MSPType
+	identityType    IdentityType
 }
 
-func NewMapper(networkID string, mspType MSPType, nodeIdentity view.Identity, localMembership LocalMembership) *Mapper {
+func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Identity, localMembership LocalMembership) *Mapper {
 	return &Mapper{
 		networkID:       networkID,
-		mspType:         mspType,
+		identityType:    identityType,
 		nodeIdentity:    nodeIdentity,
 		localMembership: localMembership,
 	}
 }
 
 func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
-	logger.Debugf("[%s] getting info for [%s]", i.networkID)
+	logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
 
-	var mspLabel string
-	switch i.mspType {
-	case X509MSPIdentity:
-		mspLabel = BccspMSP
-	case IdemixMSPIdentity:
-		mspLabel = IdemixMSP
-	default:
-		panic(fmt.Sprintf("type not recognized [%d]", i.mspType))
-	}
-	idInfo := i.localMembership.GetIdentityInfoByLabel(mspLabel, id)
-	if idInfo == nil {
-		return "", "", nil
-	}
-	return idInfo.ID, idInfo.EnrollmentID, func() (view.Identity, []byte, error) {
-		if mspLabel == IdemixMSP {
-			return idInfo.GetIdentity(fabric.WithIdemixEIDExtension())
+	switch i.identityType {
+	case LongTermIdentity:
+		id, eID, longTermID, err := i.localMembership.GetLongTermIdentity(id)
+		if err != nil {
+			logger.Errorf("[%s] failed to get long term identity for [%s]: %s", i.networkID, id, err)
+			return "", "", nil
 		}
-		return idInfo.GetIdentity()
+		return id, eID, func() (view.Identity, []byte, error) {
+			logger.Debugf("[%s] return [%s][%s][%s]", i.networkID, id, longTermID, eID)
+			return longTermID, []byte(eID), nil
+		}
+	case AnonymousIdentity:
+		id, eID, getFunc, err := i.localMembership.GetAnonymousIdentity(id)
+		if err != nil {
+			logger.Errorf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
+			return "", "", nil
+		}
+		return id, eID, identity.GetFunc(getFunc)
+	default:
+		panic(fmt.Sprintf("type not recognized [%d]", i.identityType))
 	}
 }
 
@@ -83,20 +81,20 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 
 	logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
 		i.networkID,
-		i.mspType,
+		i.identityType,
 		v,
 		string(defaultID),
 		defaultID.String(),
 		i.nodeIdentity.String(),
 	)
 
-	switch i.mspType {
-	case X509MSPIdentity:
+	switch i.identityType {
+	case LongTermIdentity:
 		switch vv := v.(type) {
 		case view.Identity:
 			logger.Debugf(
 				"[x509] looking up identifier for identity [%d,%s], default identity [%s]",
-				i.mspType,
+				i.identityType,
 				vv.String(),
 				defaultID.String(),
 			)
@@ -109,33 +107,28 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 			case id.Equal(i.nodeIdentity):
 				return defaultID, "default"
 			case i.localMembership.IsMe(id):
-				info := i.localMembership.GetIdentityInfoByIdentity(BccspMSP, id)
-				if info != nil {
-					return id, info.ID
+				if idIdentifier, err := i.localMembership.GetLongTermIdentifier(id); err == nil {
+					return id, idIdentifier
 				}
-				logger.Debugf("failed getting identity info for [%s:%s], returning the identity", BccspMSP, id)
+				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 				return id, ""
 			case string(id) == "default":
 				return defaultID, "default"
 			}
 
 			label := string(id)
-			if idInfo := i.localMembership.GetIdentityInfoByLabel(BccspMSP, label); idInfo != nil {
-				id, _, err := idInfo.GetIdentity()
-				if err != nil {
-					panic(fmt.Sprintf("failed getting identity [%s:%s] [%s]", BccspMSP, label, err))
-				}
-				return id, label
+			if _, _, longTermID, err := i.localMembership.GetLongTermIdentity(label); err == nil {
+				return longTermID, label
 			}
-			if idInfo := i.localMembership.GetIdentityInfoByIdentity(BccspMSP, id); idInfo != nil {
-				return id, idInfo.ID
+			if idIdentifier, err := i.localMembership.GetLongTermIdentifier(id); err == nil {
+				return id, idIdentifier
 			}
 			logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
 
 			return id, ""
 		case string:
 			label := vv
-			logger.Debugf("[x509] looking up identifier for label [%d,%s]", i.mspType, vv)
+			logger.Debugf("[x509] looking up identifier for label [%d,%s]", i.identityType, vv)
 			switch {
 			case len(label) == 0:
 				return defaultID, "default"
@@ -151,30 +144,25 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return defaultID, "default"
 			case i.localMembership.IsMe(view.Identity(label)):
 				id := view.Identity(label)
-				info := i.localMembership.GetIdentityInfoByIdentity(BccspMSP, id)
-				if info != nil {
-					return id, info.ID
+				if idIdentifier, err := i.localMembership.GetLongTermIdentifier(id); err == nil {
+					return id, idIdentifier
 				}
-				logger.Debugf("failed getting identity info for [%s:%s], returning the identity", BccspMSP, id)
+				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 				return id, ""
 			}
 
-			if idInfo := i.localMembership.GetIdentityInfoByLabel(BccspMSP, label); idInfo != nil {
-				id, _, err := idInfo.GetIdentity()
-				if err != nil {
-					panic(fmt.Sprintf("failed getting identity [%s:%s] [%s]", BccspMSP, label, err))
-				}
-				return id, label
+			if _, _, longTermID, err := i.localMembership.GetLongTermIdentity(label); err == nil {
+				return longTermID, label
 			}
 			logger.Debugf("cannot match string [%s] to identifier", vv)
 			return nil, label
 		default:
 			panic(fmt.Sprintf("identifier not recognised, expected []byte or view.Identity"))
 		}
-	case IdemixMSPIdentity:
+	case AnonymousIdentity:
 		switch vv := v.(type) {
 		case view.Identity:
-			logger.Debugf("[idemix] looking up identifier for identity [%d,%s]", i.mspType, vv.String())
+			logger.Debugf("[idemix] looking up identifier for identity [%d,%s]", i.identityType, vv.String())
 			id := vv
 			switch {
 			case id.IsNone():
@@ -194,19 +182,16 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return id, ""
 			}
 			label := string(id)
-			logger.Debugf("[idemix] looking up identifier for identity as label [%d,%s]", i.mspType, label)
+			logger.Debugf("[idemix] looking up identifier for identity as label [%d,%s]", i.identityType, label)
 
-			if idInfo := i.localMembership.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
-				return nil, idInfo.ID
+			if idIdentifier, err := i.localMembership.GetAnonymousIdentifier(label); err == nil {
+				return nil, idIdentifier
 			}
-			// if idInfo := i.localMembership.GetIdentityInfoByIdentity(IdemixMSP, id); idInfo != nil {
-			// 	return id, idInfo.ID
-			// }
 			logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
 			return id, string(id)
 		case string:
 			label := vv
-			logger.Debugf("[idemix] looking up identifier for label [%d,%s]", i.mspType, vv)
+			logger.Debugf("[idemix] looking up identifier for label [%d,%s]", i.identityType, vv)
 			switch {
 			case len(label) == 0:
 				return nil, "idemix"
@@ -224,8 +209,8 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return nil, "idemix"
 			}
 
-			if idInfo := i.localMembership.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
-				return nil, idInfo.ID
+			if idIdentifier, err := i.localMembership.GetAnonymousIdentifier(label); err == nil {
+				return nil, idIdentifier
 			}
 			logger.Debugf("cannot match string [%s] to identifier", vv)
 			return nil, label
@@ -233,6 +218,6 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 			panic(fmt.Sprintf("identifier not recognised, expected []byte or view.Identity"))
 		}
 	default:
-		panic(fmt.Sprintf("msp type [%d] not supported", i.mspType))
+		panic(fmt.Sprintf("msp type [%d] not supported", i.identityType))
 	}
 }

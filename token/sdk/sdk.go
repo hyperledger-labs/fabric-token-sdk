@@ -27,6 +27,8 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
@@ -90,6 +92,9 @@ func (p *SDK) Install() error {
 			(5*time.Minute).Milliseconds(),
 		), 2, 5*time.Second),
 	)))
+
+	// Network provider
+	assert.NoError(p.registry.RegisterService(network.NewProvider(p.registry)))
 
 	// AuditDB
 	driverName := view2.GetConfigService(p.registry).GetString("token.auditor.auditdb.persistence.type")

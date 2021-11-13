@@ -8,7 +8,6 @@ package identity
 import (
 	"fmt"
 
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -25,6 +24,10 @@ type Deserializer interface {
 	DeserializeSigner(raw []byte) (driver.Signer, error)
 }
 
+type EnrollmentIDUnmarshaler interface {
+	GetEnrollmentID(auditInfo []byte) (string, error)
+}
+
 type Mapper interface {
 	Info(id string) (string, string, GetFunc)
 	Map(v interface{}) (view.Identity, string)
@@ -33,15 +36,17 @@ type Mapper interface {
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers       map[driver.IdentityUsage]Mapper
-	deserializers []Deserializer
+	mappers                 map[driver.IdentityUsage]Mapper
+	deserializers           []Deserializer
+	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 }
 
-func NewProvider(sp view2.ServiceProvider, mappers map[driver.IdentityUsage]Mapper) *Provider {
+func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers map[driver.IdentityUsage]Mapper) *Provider {
 	return &Provider{
-		sp:            sp,
-		mappers:       mappers,
-		deserializers: []Deserializer{},
+		sp:                      sp,
+		mappers:                 mappers,
+		deserializers:           []Deserializer{},
+		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 	}
 }
 
@@ -132,12 +137,7 @@ func (i *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 }
 
 func (i *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
-	// TODO: replace this with something more abstract.
-	ai := &idemix2.AuditInfo{}
-	if err := ai.FromBytes(auditInfo); err != nil {
-		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
-	}
-	return ai.EnrollmentID(), nil
+	return i.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
 }
 
 func (i *Provider) AddDeserializer(d Deserializer) {

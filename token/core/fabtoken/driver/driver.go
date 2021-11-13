@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric"
+	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
@@ -54,10 +54,11 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		qe,
 		identity.NewProvider(
 			sp,
+			n,
 			map[driver.IdentityUsage]identity.Mapper{
-				driver.IssuerRole:  fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, lm),
-				driver.AuditorRole: fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, lm),
-				driver.OwnerRole:   fabric.NewMapper(networkID, fabric.X509MSPIdentity, nodeIdentity, lm),
+				driver.IssuerRole:  network2.NewMapper(networkID, network2.LongTermIdentity, nodeIdentity, lm),
+				driver.AuditorRole: network2.NewMapper(networkID, network2.LongTermIdentity, nodeIdentity, lm),
+				driver.OwnerRole:   network2.NewMapper(networkID, network2.LongTermIdentity, nodeIdentity, lm),
 			},
 		),
 		fabtoken.NewDeserializer(),

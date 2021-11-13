@@ -9,6 +9,10 @@ SPDX-License-Identifier: Apache-2.0
 package tools
 
 import (
+	_ "github.com/IBM/idemix/bccsp"
+	_ "github.com/IBM/idemix/bccsp/keystore"
+	_ "github.com/IBM/idemix/bccsp/schemes"
+	_ "github.com/IBM/idemix/bccsp/schemes/dlog/crypto/translator/amcl"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/weaver/relay/fabric"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm"
 	_ "github.com/hyperledger/fabric/cmd/idemixgen"

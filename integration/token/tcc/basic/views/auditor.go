@@ -51,6 +51,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	tokenTypes := inputs.TokenTypes()
 	fmt.Printf("Limits on inputs [%v][%v]\n", eIDs, tokenTypes)
 	for _, eID := range eIDs {
+		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
 			// compute the payment done in the transaction
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
@@ -70,6 +71,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	// R2: Default cumulative payment limit is set to 2000.
 	for _, eID := range eIDs {
+		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
 			// compute the payment done in the transaction
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
@@ -98,6 +100,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	eIDs = outputs.EnrollmentIDs()
 	tokenTypes = outputs.TokenTypes()
 	for _, eID := range eIDs {
+		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
 			// compute the amount received
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
