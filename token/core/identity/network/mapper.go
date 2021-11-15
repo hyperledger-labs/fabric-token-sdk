@@ -28,7 +28,7 @@ const (
 type LocalMembership interface {
 	DefaultIdentity() view.Identity
 	IsMe(id view.Identity) bool
-	GetAnonymousIdentity(label string) (string, string, network.GetFunc, error)
+	GetAnonymousIdentity(label string, auditInfo []byte) (string, string, network.GetFunc, error)
 	GetLongTermIdentity(label string) (string, string, view.Identity, error)
 	GetLongTermIdentifier(id view.Identity) (string, error)
 	GetAnonymousIdentifier(label string) (string, error)
@@ -65,7 +65,7 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 			return longTermID, []byte(eID), nil
 		}
 	case AnonymousIdentity:
-		id, eID, getFunc, err := i.localMembership.GetAnonymousIdentity(id)
+		id, eID, getFunc, err := i.localMembership.GetAnonymousIdentity(id, nil)
 		if err != nil {
 			logger.Errorf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
 			return "", "", nil

@@ -17,7 +17,7 @@ type LocalMembership interface {
 	AnonymousIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetAnonymousIdentifier(label string) (string, error)
-	GetAnonymousIdentity(label string) (string, string, GetFunc, error)
+	GetAnonymousIdentity(label string, auditInfo []byte) (string, string, GetFunc, error)
 	GetLongTermIdentifier(id view.Identity) (string, error)
 	GetLongTermIdentity(label string) (string, string, view.Identity, error)
 }
