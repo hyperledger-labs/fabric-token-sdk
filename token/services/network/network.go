@@ -172,8 +172,8 @@ func (l *LocalMembership) GetLongTermIdentifier(id view.Identity) (string, error
 	return l.lm.GetLongTermIdentifier(id)
 }
 
-func (l *LocalMembership) GetAnonymousIdentity(label string) (string, string, GetFunc, error) {
-	id, eID, getFunc, err := l.lm.GetAnonymousIdentity(label)
+func (l *LocalMembership) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, GetFunc, error) {
+	id, eID, getFunc, err := l.lm.GetAnonymousIdentity(label, auditInfo)
 	if err != nil {
 		return "", "", nil, err
 	}

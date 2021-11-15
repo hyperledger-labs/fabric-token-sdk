@@ -52,10 +52,15 @@ func (n *lm) IsMe(id view.Identity) bool {
 	return n.lm.IsMe(id)
 }
 
-func (n *lm) GetAnonymousIdentity(label string) (string, string, driver.GetFunc, error) {
+func (n *lm) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, driver.GetFunc, error) {
 	if idInfo := n.lm.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
+		ai := auditInfo
 		return idInfo.ID, idInfo.EnrollmentID, func() (view.Identity, []byte, error) {
-			return idInfo.GetIdentity(fabric.WithIdemixEIDExtension())
+			opts := []fabric.IdentityOption{fabric.WithIdemixEIDExtension()}
+			if len(auditInfo) != 0 {
+				opts = append(opts, fabric.WithAuditInfo(ai))
+			}
+			return idInfo.GetIdentity(opts...)
 		}, nil
 	}
 	return "", "", nil, errors.New("not found")
