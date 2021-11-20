@@ -16,6 +16,7 @@ import (
 	"strings"
 	"text/template"
 
+	math3 "github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -102,7 +103,8 @@ func dlogGen(args []string) ([]byte, error) {
 	}
 
 	// Setup
-	pp, err := crypto.Setup(base, exponent, ipkBytes)
+	// TODO: update the curve here
+	pp, err := crypto.Setup(base, exponent, ipkBytes, math3.BN254)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

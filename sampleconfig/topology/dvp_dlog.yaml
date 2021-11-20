@@ -134,19 +134,21 @@ topologies:
     channel: testchannel
     peers:
     - HouseOrg_peer_0
-  chaincodemode: net
 - name: token
+  type: token
   tmss:
   - network: default
     channel: testchannel
     namespace: zkat
     driver: dlog
+    publicparamsgenargs:
+    - "100"
+    - "1"
     tokenchaincode:
       orgs:
       - TokenOrg
-      publicparamsgenargs:
-      - "100"
-      - "1"
+      private: false
+      dockerimage: ""
     certifiers: []
 - name: fsc
   type: fsc
@@ -232,6 +234,9 @@ topologies:
             Organization:
             - Network: ""
               Org: TokenOrg
+        token:
+          mapping:
+            Auditor: true
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -258,6 +263,12 @@ topologies:
             Organization:
             - Network: ""
               Org: TokenOrg
+            X509Identities:
+            - cash_issuer
+        token:
+          mapping:
+            Issuers:
+            - cash_issuer
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -310,9 +321,15 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
+            IdemixIdentities:
+            - seller.id1
             Organization:
             - Network: ""
               Org: Org1
+        token:
+          mapping:
+            Owners:
+            - seller.id1
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views:
@@ -338,10 +355,16 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
+            IdemixIdentities:
+            - buyer.id1
             Organization:
             - Network: ""
               Org: Org1
+        token:
+          mapping:
+            Owners:
+            - buyer.id1
   logging:
-    spec: grpc=error:debug
+    spec: grpc=error:info
     format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
       -> %{level:.4s} %{id:03x}%{color:reset} %{message}'''

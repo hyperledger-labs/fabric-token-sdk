@@ -16,7 +16,29 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.driver.identity.fabric")
+var logger = flogging.MustGetLogger("token-sdk.driver.identity")
+
+type Mappers map[driver.IdentityUsage]mapper
+
+func NewMappers() Mappers {
+	return make(Mappers)
+}
+
+func (m Mappers) Put(usage driver.IdentityUsage, mapper mapper) {
+	m[usage] = mapper
+}
+
+func (m Mappers) SetIssuerRole(mapper mapper) {
+	m[driver.IssuerRole] = mapper
+}
+
+func (m Mappers) SetAuditorRole(mapper mapper) {
+	m[driver.AuditorRole] = mapper
+}
+
+func (m Mappers) SetOwnerRole(mapper mapper) {
+	m[driver.OwnerRole] = mapper
+}
 
 type GetFunc func() (view.Identity, []byte, error)
 
@@ -28,7 +50,7 @@ type EnrollmentIDUnmarshaler interface {
 	GetEnrollmentID(auditInfo []byte) (string, error)
 }
 
-type Mapper interface {
+type mapper interface {
 	Info(id string) (string, string, GetFunc)
 	Map(v interface{}) (view.Identity, string)
 }
@@ -36,12 +58,12 @@ type Mapper interface {
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers                 map[driver.IdentityUsage]Mapper
+	mappers                 map[driver.IdentityUsage]mapper
 	deserializers           []Deserializer
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 }
 
-func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers map[driver.IdentityUsage]Mapper) *Provider {
+func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers map[driver.IdentityUsage]mapper) *Provider {
 	return &Provider{
 		sp:                      sp,
 		mappers:                 mappers,

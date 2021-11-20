@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/weaver"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 
@@ -24,7 +25,7 @@ import (
 )
 
 type Topology struct {
-	Name string `yaml:"name,omitempty"`
+	Type string `yaml:"type,omitempty"`
 }
 
 type Topologies struct {
@@ -84,7 +85,7 @@ func gen(args []string) error {
 	}
 	t2 := []api.Topology{}
 	for i, topology := range names.Topologies {
-		switch topology.Name {
+		switch topology.Type {
 		case fabric.TopologyName:
 			top := fabric.NewDefaultTopology()
 			r, err := yaml.Marshal(t.Topologies[i])
@@ -97,6 +98,16 @@ func gen(args []string) error {
 			t2 = append(t2, top)
 		case fsc.TopologyName:
 			top := fsc.NewTopology()
+			r, err := yaml.Marshal(t.Topologies[i])
+			if err != nil {
+				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)
+			}
+			if err := yaml.Unmarshal(r, top); err != nil {
+				return errors.Wrapf(err, "failed unmarshalling topology file [%s]", topologyFile)
+			}
+			t2 = append(t2, top)
+		case weaver.TopologyName:
+			top := weaver.NewTopology()
 			r, err := yaml.Marshal(t.Topologies[i])
 			if err != nil {
 				return errors.Wrapf(err, "failed remarshalling topology configuration [%s]", topologyFile)

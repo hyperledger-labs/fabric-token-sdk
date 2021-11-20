@@ -53,6 +53,7 @@ type Service struct {
 	TokenCommitmentLoader TokenCommitmentLoader
 	QE                    QueryEngine
 	DeserializerProvider  DeserializerProvider
+	CM                    api3.ConfigManager
 
 	Issuers []*struct {
 		label string
@@ -80,6 +81,7 @@ func NewTokenService(
 	identityProvider api3.IdentityProvider,
 	deserializerProvider DeserializerProvider,
 	ppLabel string,
+	cm api3.ConfigManager,
 ) (*Service, error) {
 	s := &Service{
 		Channel:               channel,
@@ -92,6 +94,7 @@ func NewTokenService(
 		identityProvider:      identityProvider,
 		DeserializerProvider:  deserializerProvider,
 		PPLabel:               ppLabel,
+		CM:                    cm,
 	}
 	return s, nil
 }
@@ -133,6 +136,10 @@ func (s *Service) Validator() api3.Validator {
 
 func (s *Service) PublicParamsManager() api3.PublicParamsManager {
 	return s.PPM
+}
+
+func (s *Service) ConfigManager() api3.ConfigManager {
+	return s.CM
 }
 
 func (s *Service) PublicParams() *crypto.PublicParams {

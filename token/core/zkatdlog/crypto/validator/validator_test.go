@@ -76,10 +76,10 @@ var _ = Describe("validator", func() {
 		// prepare public parameters
 		ipk, err = ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(100, 2, ipk)
+		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 
-		//prepare issuers' public keys
+		// prepare issuers' public keys
 		sk, pk, err := anonym.GenerateKeyPair("ABC", pp)
 		Expect(sk).NotTo(BeNil())
 		Expect(err).NotTo(HaveOccurred())

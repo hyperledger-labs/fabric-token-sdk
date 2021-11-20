@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
@@ -33,7 +34,7 @@ type deserializer struct {
 }
 
 func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
-	idemixDes, err := idemix.NewDeserializer(pp.IdemixPK)
+	idemixDes, err := idemix.NewDeserializer(pp.IdemixPK, pp.IdemixCurve)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params")
 	}
@@ -60,4 +61,19 @@ func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.auditDeserializer.DeserializeAuditInfo(raw)
+}
+
+type enrollmentService struct {
+}
+
+func NewEnrollmentIDDeserializer() *enrollmentService {
+	return &enrollmentService{}
+}
+
+func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+	ai := &idemix2.AuditInfo{}
+	if err := ai.FromBytes(auditInfo); err != nil {
+		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+	}
+	return ai.EnrollmentID(), nil
 }

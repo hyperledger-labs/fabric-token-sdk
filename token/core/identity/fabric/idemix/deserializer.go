@@ -13,6 +13,7 @@ import (
 	"github.com/IBM/idemix/bccsp/keystore"
 	bccsp "github.com/IBM/idemix/bccsp/schemes"
 	csp "github.com/IBM/idemix/bccsp/schemes"
+	idemix2 "github.com/IBM/idemix/bccsp/schemes/dlog/crypto"
 	"github.com/IBM/idemix/bccsp/schemes/dlog/crypto/translator/amcl"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -31,11 +32,23 @@ type deserializer struct {
 	*common
 }
 
-func newDeserializer(ipk []byte, verType bccsp.VerificationType, nymEID []byte) (*deserializer, error) {
+func newDeserializer(ipk []byte, verType bccsp.VerificationType, nymEID []byte, curveID math.CurveID) (*deserializer, error) {
 	logger.Debugf("Setting up Idemix-based MSP instance")
 
-	curve := math.Curves[math.FP256BN_AMCL]
-	cryptoProvider, err := idemix.New(&keystore.Dummy{}, curve, &amcl.Fp256bn{C: curve}, true)
+	curve := math.Curves[curveID]
+	var tr idemix2.Translator
+	switch curveID {
+	case math.BN254:
+		tr = &amcl.Gurvy{C: curve}
+	case math.FP256BN_AMCL:
+		tr = &amcl.Fp256bn{C: curve}
+	case math.FP256BN_AMCL_MIRACL:
+		tr = &amcl.Fp256bnMiracl{C: curve}
+	default:
+		return nil, errors.Errorf("unsupported curve ID: %d", curveID)
+	}
+
+	cryptoProvider, err := idemix.New(&keystore.Dummy{}, curve, tr, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting crypto provider")
 	}
@@ -71,12 +84,8 @@ func newDeserializer(ipk []byte, verType bccsp.VerificationType, nymEID []byte) 
 }
 
 // NewDeserializer returns a new deserializer for the best effort strategy
-func NewDeserializer(ipk []byte) (*deserializer, error) {
-	return newDeserializer(ipk, bccsp.BestEffort, nil)
-}
-
-func NewDeserializerForNymEID(ipk []byte, nymEID []byte) (*deserializer, error) {
-	return newDeserializer(ipk, bccsp.BestEffort, nymEID)
+func NewDeserializer(ipk []byte, curveID math.CurveID) (*deserializer, error) {
+	return newDeserializer(ipk, bccsp.BestEffort, nil, curveID)
 }
 
 func (i *deserializer) DeserializeVerifier(raw view.Identity) (driver.Verifier, error) {

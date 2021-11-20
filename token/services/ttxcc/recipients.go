@@ -97,12 +97,14 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 
 	if w := tms.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
+		logger.Debugf("request recipient [%s] is already registered", f.Other)
 		recipient, err := w.GetRecipientIdentity()
 		if err != nil {
 			return nil, err
 		}
 		return recipient, nil
 	} else {
+		logger.Debugf("request recipient [%s] is not registered", f.Other)
 		session, err := context.GetSession(context.Initiator(), f.Other)
 		if err != nil {
 			return nil, err
@@ -134,14 +136,18 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 
 		recipientData := &RecipientData{}
 		if err := recipientData.FromBytes(payload); err != nil {
+			logger.Errorf("failed unmarshalling recipient data: %s", err)
 			return nil, err
 		}
 		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
+			logger.Errorf("failed registering recipient identity: %s", err)
 			return nil, err
 		}
 
 		// Update the Endpoint Resolver
+		logger.Debugf("update endpoint resolver for [%s], bind to [%]", recipientData.Identity, f.Other)
 		if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
+			logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
 			return nil, err
 		}
 
@@ -173,6 +179,9 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		wallet,
 		token.WithTMSID(recipientRequest.TMSID),
 	)
+	if w == nil {
+		return nil, errors.Errorf("wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
+	}
 	recipientIdentity, err := w.GetRecipientIdentity()
 	if err != nil {
 		return nil, err
@@ -203,6 +212,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
+	logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
 	err = resolver.Bind(context.Me(), recipientIdentity)
 	if err != nil {
 		return nil, err

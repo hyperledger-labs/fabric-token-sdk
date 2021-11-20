@@ -47,3 +47,14 @@ func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	panic("not supported")
 }
+
+type enrollmentService struct {
+}
+
+func NewEnrollmentIDDeserializer() *enrollmentService {
+	return &enrollmentService{}
+}
+
+func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+	return string(auditInfo), nil
+}

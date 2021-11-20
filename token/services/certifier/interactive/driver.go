@@ -50,20 +50,14 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 		}
 
 		// Load certifier identities
-		var tmsConfigs []*token.TMS
-		if err := view2.GetConfigService(sp).UnmarshalKey("token.tms", &tmsConfigs); err != nil {
-			return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
+		tms := token.GetManagementService(sp, token.WithTMS(networkID, channel, namespace))
+		if tms == nil {
+			return nil, errors.Errorf("failed to get token management service for network [%s:%s:%s]", networkID, channel, namespace)
 		}
 		var certifiers []view.Identity
-		for _, tms := range tmsConfigs {
-			if tms.Channel == channel && tms.Namespace == namespace {
-				var err error
-				certifiers, err = view2.GetEndpointService(sp).ResolveIdentities(tms.Certification.Interactive.IDs...)
-				if err != nil {
-					return nil, errors.WithMessagef(err, "cannot resolve certifier identities")
-				}
-				break
-			}
+		certifiers, err = view2.GetEndpointService(sp).ResolveIdentities(tms.ConfigManager().Certifiers()...)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "cannot resolve certifier identities")
 		}
 		if len(certifiers) == 0 {
 			return nil, errors.Errorf("no certifier id configured")

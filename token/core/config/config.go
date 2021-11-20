@@ -3,36 +3,49 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package config
 
-type InteractiveCertification struct {
-	IDs []string `yaml:"ids,omitempty"`
+import (
+	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+)
+
+type configProvider interface {
+	UnmarshalKey(key string, rawVal interface{}) error
+	TranslatePath(path string) string
 }
 
-type Certification struct {
-	Interactive *InteractiveCertification `yaml:"interactive,omitempty"`
+type Manager struct {
+	cp    configProvider
+	tms   *driver.TMS
+	index int
 }
 
-type Identity struct {
-	ID      string `yaml:"id"`
-	MSPType string `yaml:"mspType"`
-	MSPID   string `yaml:"mspID"`
-	Path    string `yaml:"path"`
+func NewManager(cp configProvider, network, channel, namespace string) (*Manager, error) {
+	var tmsConfigs []*driver.TMS
+	if err := cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
+		return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
+	}
+
+	for i, config := range tmsConfigs {
+		if config.Network == network && config.Channel == channel && config.Namespace == namespace {
+			return &Manager{
+				tms:   config,
+				index: i,
+				cp:    cp,
+			}, nil
+		}
+	}
+
+	return nil, errors.Errorf("no token-sdk configuration for network %s, channel %s, namespace %s", network, channel, namespace)
 }
 
-type Wallets struct {
-	Certifiers []*Identity `yaml:"certifiers,omitempty"`
+func (m *Manager) TMS() *driver.TMS {
+	return m.tms
 }
 
-type TMS struct {
-	Network       string         `yaml:"network,omitempty"`
-	Channel       string         `yaml:"channel,omitempty"`
-	Namespace     string         `yaml:"namespace,omitempty"`
-	Certification *Certification `yaml:"certification,omitempty"`
-	Wallets       *Wallets       `yaml:"wallets,omitempty"`
-}
-
-type Token struct {
-	Enabled bool   `yaml:"enabled,omitempty"`
-	TMS     []*TMS `yaml:"tms,omitempty"`
+func (m *Manager) TranslatePath(path string) string {
+	return m.cp.TranslatePath(path)
 }

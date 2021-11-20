@@ -63,6 +63,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 		}
 	}
 	if !found {
+		logger.Debugf("this processor cannot parse namespace [%s]", ns)
 		return errors.Errorf("this processor cannot parse namespace [%s]", ns)
 	}
 

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package token
+package fabric
 
 import (
 	"bytes"
@@ -18,23 +18,29 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	. "github.com/onsi/gomega"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 
+	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp"
 )
 
-func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
+type TCC struct {
+	Chaincode *topology.ChannelChaincode
+}
+
+func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
-	logger.Debugf("tcc setup, reading public parameters from [%s]", p.PublicParametersFile(tms))
-	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
+	logger.Debugf("tcc setup, reading public parameters from [%s]", p.TokenPlatform.PublicParametersFile(tms))
+	ppRaw, err := ioutil.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 
 	// produce chaincode package
 	packageDir := filepath.Join(
-		p.Context.RootDir(),
+		p.TokenPlatform.GetContext().RootDir(),
 		"token",
 		"chaincodes",
 		"tcc",
@@ -56,7 +62,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 	err = t.Execute(io.MultiWriter(paramsFile), nil)
 	Expect(err).ToNot(HaveOccurred())
 
-	port := p.Context.ReservePort()
+	port := p.TokenPlatform.GetContext().ReservePort()
 	err = packager.New().PackageChaincode(
 		cc.Chaincode.Path,
 		cc.Chaincode.Lang,
@@ -100,7 +106,7 @@ func (p *Platform) tccSetup(tms *TMS, cc *topology.ChannelChaincode) (*topology.
 	return cc, port
 }
 
-func (p *Platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
+func (p *NetworkHandler) PrepareTCC(tms *topology3.TMS) (*topology.ChannelChaincode, uint16) {
 	// Standard Chaincode
 	orgs := tms.TokenChaincode.Orgs
 
@@ -139,10 +145,29 @@ func (p *Platform) PrepareTCC(tms *TMS) (*topology.ChannelChaincode, uint16) {
 	})
 }
 
-func (p *Platform) TCCCtor(tms *TMS) string {
-	logger.Debugf("tcc setup, reading public parameters for setting up CTOR [%s]", p.PublicParametersFile(tms))
-	ppRaw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
+func (p *NetworkHandler) TCCCtor(tms *topology3.TMS) string {
+	logger.Debugf("tcc setup, reading public parameters for setting up CTOR [%s]", p.TokenPlatform.PublicParametersFile(tms))
+	ppRaw, err := ioutil.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 
 	return fmt.Sprintf(`{"Args":["init", "%s"]}`, base64.StdEncoding.EncodeToString(ppRaw))
+}
+
+func (p *NetworkHandler) TokenChaincodeServerAddr(port uint16) string {
+	return fmt.Sprintf("127.0.0.1:%d", port)
+}
+
+func (p *NetworkHandler) setupTokenChaincodes(tms *topology3.TMS) {
+	// For FPCs, we need to initialize the public parameters explicitly
+	cc := p.GetEntry(tms).TCC
+	if cc.Chaincode.Private {
+		pp := p.TokenPlatform.PublicParameters(tms)
+		logger.Infof("Init FPC Token Chaincode [%s:%s:%s][%s]",
+			tms.Network, tms.Channel, tms.Namespace, hash.Hashable(pp).String())
+		p.Fabric(tms).InvokeChaincode(
+			cc.Chaincode,
+			"init",
+			pp,
+		)
+	}
 }
