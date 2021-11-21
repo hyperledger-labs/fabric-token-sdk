@@ -127,6 +127,7 @@ func (p *Prover) Prove() ([]byte, error) {
 
 			go func(k, i int) {
 				defer wg.Done()
+				var err error
 				proof.MembershipProofs[k].SignatureProofs[i], err = mp.Prove()
 				if err != nil {
 					parallelErr.Store(err)
@@ -189,7 +190,7 @@ func (v *Verifier) Verify(raw []byte) error {
 			mv := sigproof.NewMembershipVerifier(proof.MembershipProofs[k].Commitments[i], v.P, v.Q, v.PK, v.PedersenParams[:2], v.Curve)
 			proofToVerify := proof.MembershipProofs[k].SignatureProofs[i]
 			verifications = append(verifications, func() {
-				err = mv.Verify(proofToVerify)
+				err := mv.Verify(proofToVerify)
 				if err != nil {
 					parallelErr.Store(errors.Wrapf(err, "failed to verify range proof"))
 				}
