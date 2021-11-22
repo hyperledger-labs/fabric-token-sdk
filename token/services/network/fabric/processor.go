@@ -172,6 +172,9 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		case keys.IssueActionMetadata:
 			logger.Debugf("expected key without the issue action metadata, skipping")
 			continue
+		case keys.SignaturePrefix:
+			logger.Debugf("expected key without the sig metadata, skipping")
+			continue
 		}
 
 		index, err := strconv.ParseUint(components[1], 10, 64)

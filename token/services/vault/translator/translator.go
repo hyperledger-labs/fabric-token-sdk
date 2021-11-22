@@ -25,6 +25,7 @@ type Translator struct {
 	RWSet            RWSet
 	TxID             string
 	counter          uint64
+	sigCounter       uint64
 	namespace        string
 }
 
@@ -34,6 +35,7 @@ func New(issuingValidator IssuingValidator, txID string, rwSet RWSet, namespace 
 		RWSet:            rwSet,
 		TxID:             txID,
 		counter:          0,
+		sigCounter:       0,
 		namespace:        namespace,
 	}
 
@@ -116,6 +118,8 @@ func (w *Translator) checkAction(tokenAction interface{}) error {
 	case TransferAction:
 		return w.checkTransfer(action)
 	case SetupAction:
+		return nil
+	case Signature:
 		return nil
 	default:
 		return errors.Errorf("unknown token action: %T", action)
@@ -221,6 +225,8 @@ func (w *Translator) commitAction(tokenAction interface{}) (err error) {
 		err = w.commitTransferAction(action)
 	case SetupAction:
 		err = w.commitSetupAction(action)
+	case Signature:
+		err = w.commitSignature(action)
 	}
 	return
 }
@@ -321,6 +327,21 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 		return err
 	}
 	w.counter = w.counter + uint64(transferAction.NumOutputs())
+	return nil
+}
+
+func (w *Translator) commitSignature(sig Signature) error {
+	for k, value := range sig.Metadata() {
+		key, err := keys.CreateSigMetadataKey(w.TxID, w.sigCounter, k)
+		if err != nil {
+			return errors.Errorf("error creating output ID: %s", err)
+		}
+		err = w.RWSet.SetState(w.namespace, key, value)
+		if err != nil {
+			return errors.Wrapf(err, "error setting state for key [%s]", key)
+		}
+	}
+	w.sigCounter++
 	return nil
 }
 

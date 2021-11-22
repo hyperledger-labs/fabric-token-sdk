@@ -20,6 +20,7 @@ const (
 	MaxUnicodeRuneValue                = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
 	CompositeKeyNamespace              = "\x00"
 	TokenKeyPrefix                     = "ztoken"
+	SignaturePrefix                    = "sig"
 	FabTokenKeyPrefix                  = "token"
 	AuditTokenKeyPrefix                = "audittoken"
 	TokenMineKeyPrefix                 = "mine"
@@ -80,6 +81,10 @@ func SplitCompositeKey(compositeKey string) (string, []string, error) {
 // TODO: move index to uint32 of uint64
 func CreateTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
+}
+
+func CreateSigMetadataKey(txID string, index uint64, subKey string) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10), subKey})
 }
 
 func CreateSNKey(sn string) (string, error) {
