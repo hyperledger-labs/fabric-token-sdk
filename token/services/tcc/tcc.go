@@ -150,29 +150,29 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 			if !ok {
 				return shim.Error("failed getting token request, entry not found")
 			}
-			return cc.invoke(tokenRequest, stub)
+			return cc.ProcessRequest(tokenRequest, stub)
 		case QueryPublicParamsFunction:
-			return cc.queryPublicParams(stub)
+			return cc.QueryPublicParams(stub)
 		case AddAuditorFunction:
 			if len(args) != 2 {
 				return shim.Error("invalid add auditor request")
 			}
-			return cc.addAuditor(args[1], stub)
+			return cc.AddAuditor(args[1], stub)
 		case AddIssuerFunction:
 			if len(args) != 2 {
 				return shim.Error("request to add issuer is empty")
 			}
-			return cc.addIssuer(args, stub)
+			return cc.AddIssuer(args, stub)
 		case AddCertifierFunction:
 			if len(args) != 2 {
 				return shim.Error("request to add certifier is empty")
 			}
-			return cc.addCertifier(args[1], stub)
+			return cc.AddCertifier(args[1], stub)
 		case QueryTokensFunctions:
 			if len(args) != 2 {
 				return shim.Error("request to retrieve tokens is empty")
 			}
-			return cc.queryTokens(args[1], stub)
+			return cc.QueryTokens(args[1], stub)
 		default:
 			return shim.Error(fmt.Sprintf("function not [%s] recognized", f))
 		}
@@ -198,21 +198,21 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	return base64.StdEncoding.EncodeToString(paramsAsBytes)
 }
 
-func (cc *TokenChaincode) publicParametersManager(stub shim.ChaincodeStubInterface) (PublicParametersManager, error) {
-	if err := cc.init(stub); err != nil {
+func (cc *TokenChaincode) GetPublicParametersManager(stub shim.ChaincodeStubInterface) (PublicParametersManager, error) {
+	if err := cc.Initialize(stub); err != nil {
 		return nil, err
 	}
 	return cc.PublicParametersManager, nil
 }
 
-func (cc *TokenChaincode) validator(stub shim.ChaincodeStubInterface) (Validator, error) {
-	if err := cc.init(stub); err != nil {
+func (cc *TokenChaincode) GetValidator(stub shim.ChaincodeStubInterface) (Validator, error) {
+	if err := cc.Initialize(stub); err != nil {
 		return nil, err
 	}
 	return cc.Validator, nil
 }
 
-func (cc *TokenChaincode) init(stub shim.ChaincodeStubInterface) error {
+func (cc *TokenChaincode) Initialize(stub shim.ChaincodeStubInterface) error {
 	logger.Infof("reading public parameters...")
 
 	rwset := &rwsWrapper{stub: stub}
@@ -253,8 +253,8 @@ func (cc *TokenChaincode) init(stub shim.ChaincodeStubInterface) error {
 	return nil
 }
 
-func (cc *TokenChaincode) invoke(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
-	validator, err := cc.validator(stub)
+func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	validator, err := cc.GetValidator(stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -275,14 +275,14 @@ func (cc *TokenChaincode) invoke(raw []byte, stub shim.ChaincodeStubInterface) p
 			return shim.Error("failed to write token action: " + err.Error())
 		}
 	}
-	err = w.CommitTokenRequest(raw)
+	err = w.CommitTokenRequest(raw, false)
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())
 	}
 	return shim.Success(nil)
 }
 
-func (cc *TokenChaincode) queryPublicParams(stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb.Response {
 	rwset := &rwsWrapper{stub: stub}
 	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
@@ -296,8 +296,8 @@ func (cc *TokenChaincode) queryPublicParams(stub shim.ChaincodeStubInterface) pb
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) addIssuer(args [][]byte, stub shim.ChaincodeStubInterface) pb.Response {
-	ppm, err := cc.publicParametersManager(stub)
+func (cc *TokenChaincode) AddIssuer(args [][]byte, stub shim.ChaincodeStubInterface) pb.Response {
+	ppm, err := cc.GetPublicParametersManager(stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -318,14 +318,14 @@ func (cc *TokenChaincode) addIssuer(args [][]byte, stub shim.ChaincodeStubInterf
 	return shim.Success(nil)
 }
 
-func (cc *TokenChaincode) addAuditor(auditor []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) AddAuditor(auditor []byte, stub shim.ChaincodeStubInterface) pb.Response {
 	// todo authenticate creator of addAuditor request
 	// todo only admins are allowed to add auditors
 
 	logger.Infof("add auditor [%s]", hash.Hashable(auditor))
 
 	logger.Infof("load public parameters manager...")
-	ppm, err := cc.publicParametersManager(stub)
+	ppm, err := cc.GetPublicParametersManager(stub)
 	if err != nil {
 		logger.Errorf("failed loading public parameters manager [%s]", err)
 		return shim.Error(err.Error())
@@ -349,11 +349,11 @@ func (cc *TokenChaincode) addAuditor(auditor []byte, stub shim.ChaincodeStubInte
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) addCertifier(certifier []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) AddCertifier(certifier []byte, stub shim.ChaincodeStubInterface) pb.Response {
 	// todo authenticate creator of addCertifier request
 	// todo only admins are allowed to add certifier
 
-	ppm, err := cc.publicParametersManager(stub)
+	ppm, err := cc.GetPublicParametersManager(stub)
 	if err != nil {
 		return shim.Error(err.Error())
 	}
@@ -370,7 +370,7 @@ func (cc *TokenChaincode) addCertifier(certifier []byte, stub shim.ChaincodeStub
 	return shim.Success(raw)
 }
 
-func (cc *TokenChaincode) queryTokens(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
 	var ids []*token2.ID
 	if err := json.Unmarshal(idsRaw, &ids); err != nil {
 		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)

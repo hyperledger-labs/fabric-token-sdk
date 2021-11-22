@@ -85,7 +85,7 @@ func (v *approver) Validate(sp SignatureProvider, tokenRequest *token.Request) e
 	if err != nil {
 		return errors.Wrap(err, "failed serializing token request")
 	}
-	err = translator.CommitTokenRequest(tokenRequestRaw)
+	err = translator.CommitTokenRequest(tokenRequestRaw, false)
 	if err != nil {
 		return errors.Wrap(err, "failed writing token request")
 	}

@@ -303,7 +303,7 @@ var _ = Describe("Translator", func() {
 	Describe("Commit Token Request", func() {
 		When("set state succeeds", func() {
 			It("succeeds", func() {
-				err := writer.CommitTokenRequest([]byte("token request"))
+				err := writer.CommitTokenRequest([]byte("token request"), false)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(1))
 
@@ -320,7 +320,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.SetStateReturns(errors.New("space monkeys"))
 			})
 			It("commit token request fails", func() {
-				err := writer.CommitTokenRequest([]byte("token request"))
+				err := writer.CommitTokenRequest([]byte("token request"), false)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("space monkeys"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(1))
@@ -332,7 +332,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.GetStateReturns(nil, errors.New("space cheetah"))
 			})
 			It("commit token request fails", func() {
-				err := writer.CommitTokenRequest([]byte("token request"))
+				err := writer.CommitTokenRequest([]byte("token request"), false)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("space cheetah"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(0))
@@ -344,7 +344,7 @@ var _ = Describe("Translator", func() {
 				fakeRWSet.GetStateReturns([]byte("occupied"), nil)
 			})
 			It("commit token request fails", func() {
-				err := writer.CommitTokenRequest([]byte("token request"))
+				err := writer.CommitTokenRequest([]byte("token request"), false)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("token request with same ID already exists"))
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(0))
