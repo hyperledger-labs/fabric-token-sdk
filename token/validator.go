@@ -7,6 +7,7 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -60,6 +61,10 @@ type signatureProvider struct {
 
 func (s *signatureProvider) HasBeenSignedBy(id view.Identity, v tokenapi.Verifier) error {
 	return s.sp.HasBeenSignedBy(id, &verifier{v: v})
+}
+
+func (s *signatureProvider) Signatures() [][]byte {
+	return s.Signatures()
 }
 
 type verifier struct {

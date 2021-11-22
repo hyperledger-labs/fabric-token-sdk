@@ -31,3 +31,7 @@ type TransferAction interface {
 	GetInputs() ([]string, error)
 	IsGraphHiding() bool
 }
+
+type Signature interface {
+	Metadata() map[string][]byte
+}

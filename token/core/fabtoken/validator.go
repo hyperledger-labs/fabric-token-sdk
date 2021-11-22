@@ -233,6 +233,10 @@ func (b *backend) GetState(key string) ([]byte, error) {
 	return b.getState(key)
 }
 
+func (b *backend) Signatures() [][]byte {
+	return b.signatures
+}
+
 func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
 	ia, err := unmarshalIssueActions(tr.Issues)
 	if err != nil {
