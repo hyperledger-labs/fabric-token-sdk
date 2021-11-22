@@ -84,7 +84,7 @@ func CreateTokenKey(txID string, index uint64) (string, error) {
 }
 
 func CreateSigMetadataKey(txID string, index uint64, subKey string) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10), subKey})
+	return CreateCompositeKey(SignaturePrefix, []string{txID, strconv.FormatUint(index, 10), subKey})
 }
 
 func CreateSNKey(sn string) (string, error) {

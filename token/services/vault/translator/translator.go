@@ -104,6 +104,56 @@ func (w *Translator) ReadTokenRequest() ([]byte, error) {
 	return tr, nil
 }
 
+func (w *Translator) ReadSetupParameters() ([]byte, error) {
+	setupKey, err := keys.CreateSetupKey()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create setup key")
+	}
+	raw, err := w.RWSet.GetState(w.namespace, setupKey)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get setup parameters")
+	}
+	return raw, nil
+}
+
+func (w *Translator) QueryTokens(ids []*token2.ID) ([][]byte, error) {
+	var res [][]byte
+	var errs []error
+	for _, id := range ids {
+		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
+			continue
+			// return nil, errors.Errorf("error creating output ID: %s", err)
+		}
+		logger.Debugf("query state [%s:%s]", id, outputID)
+		bytes, err := w.RWSet.GetState(w.namespace, outputID)
+		if err != nil {
+			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
+			// return nil, errors.Wrapf(err, "failed getting output for [%s]", outputID)
+			continue
+		}
+		if len(bytes) == 0 {
+			errs = append(errs, errors.Errorf("output for key [%s] does not exist", outputID))
+			// return nil, errors.Errorf("output for key [%s] does not exist", outputID)
+			continue
+		}
+		res = append(res, bytes)
+	}
+	if len(errs) != 0 {
+		return nil, errors.Errorf("failed quering tokens [%v] with errs [%d][%v]", ids, len(errs), errs)
+	}
+	return res, nil
+}
+
+func (w *Translator) IsSigMetadataKey(k string) (bool, error) {
+	prefix, _, err := keys.SplitCompositeKey(k)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
+	}
+	return prefix == keys.SignaturePrefix, nil
+}
+
 func (w *Translator) checkProcess(action interface{}) error {
 	if err := w.checkAction(action); err != nil {
 		return err
@@ -371,46 +421,4 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 	}
 
 	return nil
-}
-
-func (w *Translator) ReadSetupParameters() ([]byte, error) {
-	setupKey, err := keys.CreateSetupKey()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create setup key")
-	}
-	raw, err := w.RWSet.GetState(w.namespace, setupKey)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get setup parameters")
-	}
-	return raw, nil
-}
-
-func (w *Translator) QueryTokens(ids []*token2.ID) ([][]byte, error) {
-	var res [][]byte
-	var errs []error
-	for _, id := range ids {
-		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
-		if err != nil {
-			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
-			continue
-			// return nil, errors.Errorf("error creating output ID: %s", err)
-		}
-		logger.Debugf("query state [%s:%s]", id, outputID)
-		bytes, err := w.RWSet.GetState(w.namespace, outputID)
-		if err != nil {
-			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
-			// return nil, errors.Wrapf(err, "failed getting output for [%s]", outputID)
-			continue
-		}
-		if len(bytes) == 0 {
-			errs = append(errs, errors.Errorf("output for key [%s] does not exist", outputID))
-			// return nil, errors.Errorf("output for key [%s] does not exist", outputID)
-			continue
-		}
-		res = append(res, bytes)
-	}
-	if len(errs) != 0 {
-		return nil, errors.Errorf("failed quering tokens [%v] with errs [%d][%v]", ids, len(errs), errs)
-	}
-	return res, nil
 }
