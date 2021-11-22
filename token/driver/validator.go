@@ -15,6 +15,8 @@ type Ledger interface {
 
 type SignatureProvider interface {
 	HasBeenSignedBy(id view.Identity, verifier Verifier) error
+	// Signatures returns the signatures inside this provider
+	Signatures() [][]byte
 }
 
 type Validator interface {
