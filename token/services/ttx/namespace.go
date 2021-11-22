@@ -200,7 +200,7 @@ func (t *Namespace) updateRWSetAndMetadata(action interface{}) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to write token action")
 		}
-		err = w.CommitTokenRequest(tokenRequestRaw)
+		err = w.CommitTokenRequest(tokenRequestRaw, false)
 		if err != nil {
 			return errors.Wrap(err, "failed to write token request")
 		}
