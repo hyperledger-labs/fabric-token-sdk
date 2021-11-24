@@ -57,7 +57,7 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 	case LongTermIdentity:
 		id, eID, longTermID, err := i.localMembership.GetLongTermIdentity(id)
 		if err != nil {
-			logger.Errorf("[%s] failed to get long term identity for [%s]: %s", i.networkID, id, err)
+			logger.Debugf("[%s] failed to get long term identity for [%s]: %s", i.networkID, id, err)
 			return "", "", nil
 		}
 		return id, eID, func() (view.Identity, []byte, error) {
@@ -67,7 +67,7 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 	case AnonymousIdentity:
 		id, eID, getFunc, err := i.localMembership.GetAnonymousIdentity(id, nil)
 		if err != nil {
-			logger.Errorf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
+			logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
 			return "", "", nil
 		}
 		return id, eID, identity.GetFunc(getFunc)
