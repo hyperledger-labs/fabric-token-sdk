@@ -48,8 +48,9 @@ func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, ou
 	for i := 0; i < len(outputwitness); i++ {
 		outW[i] = outputwitness[i].Clone()
 	}
-
-	p.RangeCorrectness = rangeproof.NewProver(outW, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	if len(inputwitness) != 1 || len(outputwitness) != 1 {
+		p.RangeCorrectness = rangeproof.NewProver(outW, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	}
 	wfw := NewWellFormednessWitness(inW, outW)
 	p.WellFormedness = NewWellFormednessProver(wfw, pp.ZKATPedParams, inputs, outputs, math.Curves[pp.Curve])
 	return p
@@ -57,7 +58,9 @@ func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, ou
 
 func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	if len(inputs) != 1 || len(outputs) != 1 {
+		v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	}
 	v.WellFormedness = NewWellFormednessVerifier(pp.ZKATPedParams, inputs, outputs, math.Curves[pp.Curve])
 
 	return v
@@ -80,7 +83,9 @@ func (p *Prover) Prove() ([]byte, error) {
 
 	go func() {
 		defer wg.Done()
-		rangeProof, rangeErr = p.RangeCorrectness.Prove()
+		if p.RangeCorrectness != nil {
+			rangeProof, rangeErr = p.RangeCorrectness.Prove()
+		}
 	}()
 
 	wfProof, wfErr = p.WellFormedness.Prove()
@@ -121,7 +126,9 @@ func (v *Verifier) Verify(proof []byte) error {
 	go func() {
 		defer wg.Done()
 		// verify range proof
-		rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
+		if v.RangeCorrectness != nil {
+			rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
+		}
 	}()
 
 	wg.Wait()
