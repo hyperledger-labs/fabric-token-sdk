@@ -16,27 +16,22 @@ require (
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgraph-io/badger/v3 v3.2011.1
-	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
 	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20211124105947-a3f9939975a5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210911123859-041d13f0980c
-	github.com/jbenet/go-context v0.0.0-20150711004518-d14ea06fba99 // indirect
 	github.com/libp2p/go-libp2p-core v0.3.0
-	github.com/miracl/conflate v1.2.1 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/onsi/ginkgo v1.16.5
 	github.com/onsi/gomega v1.16.0
 	github.com/pkg/errors v0.9.1
-	github.com/spf13/afero v1.3.1 // indirect
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/viper v1.7.0
 	github.com/stretchr/testify v1.7.1-0.20210116013205-6990a05d54c2
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.16.0
-	google.golang.org/grpc v1.39.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
