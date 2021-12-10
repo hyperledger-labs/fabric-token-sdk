@@ -14,6 +14,7 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime/debug"
+	"sync"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
@@ -71,6 +72,7 @@ type PublicParametersManager interface {
 }
 
 type TokenChaincode struct {
+	initOnce                sync.Once
 	LogLevel                string
 	Validator               Validator
 	PublicParametersManager PublicParametersManager
@@ -206,8 +208,15 @@ func (cc *TokenChaincode) GetPublicParametersManager(stub shim.ChaincodeStubInte
 }
 
 func (cc *TokenChaincode) GetValidator(stub shim.ChaincodeStubInterface) (Validator, error) {
-	if err := cc.Initialize(stub); err != nil {
-		return nil, err
+	var firstInitError error
+	cc.initOnce.Do(func() {
+		if err := cc.Initialize(stub); err != nil {
+			firstInitError = err
+		}
+	})
+
+	if firstInitError != nil {
+		return nil, firstInitError
 	}
 	return cc.Validator, nil
 }
