@@ -88,6 +88,10 @@ func NewDeserializer(ipk []byte, curveID math.CurveID) (*deserializer, error) {
 	return newDeserializer(ipk, bccsp.BestEffort, nil, curveID)
 }
 
+func NewDeserializerForNymEID(ipk []byte, nymEID []byte, curveID math.CurveID) (*deserializer, error) {
+	return newDeserializer(ipk, bccsp.BestEffort, nymEID, curveID)
+}
+
 func (i *deserializer) DeserializeVerifier(raw view.Identity) (driver.Verifier, error) {
 	r, err := i.Deserialize(raw, false)
 	if err != nil {

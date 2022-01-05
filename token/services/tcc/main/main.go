@@ -18,17 +18,25 @@ import (
 )
 
 type serverConfig struct {
-	CCID      string
-	CCaddress string
-	LogLevel  string
+	CCID          string
+	CCaddress     string
+	LogLevel      string
+	MetricsServer string
 }
 
 func main() {
 	config := serverConfig{
-		CCID:      os.Getenv("CHAINCODE_ID"),
-		CCaddress: os.Getenv("CHAINCODE_SERVER_ADDRESS"),
-		LogLevel:  os.Getenv("CHAINCODE_LOG_LEVEL"),
+		CCID:          os.Getenv("CHAINCODE_ID"),
+		CCaddress:     os.Getenv("CHAINCODE_SERVER_ADDRESS"),
+		LogLevel:      os.Getenv("CHAINCODE_LOG_LEVEL"),
+		MetricsServer: os.Getenv("CHAINCODE_METRICS_SERVER"),
 	}
+
+	if len(config.MetricsServer) == 0 {
+		config.MetricsServer = "localhost:8125"
+	}
+
+	fmt.Printf("metrics server at [%s]", config.MetricsServer)
 
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
@@ -40,6 +48,7 @@ func main() {
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
 					return token.NewServicesFromPublicParams(bytes)
 				},
+				MetricsServer: config.MetricsServer,
 			},
 		)
 		if err != nil {
@@ -57,7 +66,8 @@ func main() {
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
 					return token.NewServicesFromPublicParams(bytes)
 				},
-				LogLevel: config.LogLevel,
+				LogLevel:      config.LogLevel,
+				MetricsServer: config.MetricsServer,
 			},
 			TLSProps: shim.TLSProperties{
 				// TODO : enable TLS

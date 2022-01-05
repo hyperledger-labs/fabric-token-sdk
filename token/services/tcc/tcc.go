@@ -16,6 +16,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
@@ -79,6 +80,7 @@ type TokenChaincode struct {
 
 	PPDigest             []byte
 	TokenServicesFactory func([]byte) (PublicParametersManager, Validator, error)
+	MetricsServer        string
 }
 
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -137,6 +139,16 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	case 0:
 		return shim.Error("missing parameters")
 	default:
+		agent, err := metrics.NewStatsdAgent(
+			metrics.Host(args[0]),
+			metrics.StatsDSink(cc.MetricsServer),
+		)
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		agent.EmitKey(0, "tcc", "start", "TokenChaincodeInvoke"+string(args[0]), stub.GetTxID())
+		defer agent.EmitKey(0, "tcc", "end", "TokenChaincodeInvoke"+string(args[0]), stub.GetTxID())
+
 		logger.Infof("running function [%s]", string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
@@ -263,18 +275,31 @@ func (cc *TokenChaincode) Initialize(stub shim.ChaincodeStubInterface) error {
 }
 
 func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	agent, err := metrics.NewStatsdAgent(
+		"ProcessRequest",
+		metrics.StatsDSink(cc.MetricsServer),
+	)
+	if err != nil {
+		return shim.Error(fmt.Sprintf("failed to create statsd agent: %s", err))
+	}
+
+	agent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	validator, err := cc.GetValidator(stub)
+	agent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	// Verify
+	agent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 	actions, err := validator.UnmarshallAndVerify(stub, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
+	agent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 
 	// Write
+	agent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestWrite", stub.GetTxID())
 	rwset := &rwsWrapper{stub: stub}
 	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
@@ -288,6 +313,8 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())
 	}
+	agent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequest", stub.GetTxID())
+
 	return shim.Success(nil)
 }
 

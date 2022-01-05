@@ -161,38 +161,72 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	// Issuer identities
 	issuers := opts.Issuers()
 	if len(issuers) != 0 {
-		issuers = append(issuers, node.ID())
+		var index int
+		found := false
+		for i, owner := range issuers {
+			if owner == node.ID() || owner == "_default_" {
+				index = i
+				found = true
+				issuers[i] = node.ID()
+				break
+			}
+		}
+		if !found {
+			issuers = append(issuers, node.ID())
+			index = len(issuers) - 1
+		}
+
 		ids := cmGenerator.GenerateIssuerIdentities(tms, node, issuers...)
 		for _, id := range ids {
 			wallet.Issuers = append(wallet.Issuers, Identity(id))
 		}
-		wallet.Issuers[len(wallet.Issuers)-1].Default = true
+		wallet.Issuers[index].Default = true
 	}
 
 	// Owner identities
 	owners := opts.Owners()
 	if len(owners) != 0 {
-		// TODO: this should be removed
-		owners = append(owners, node.ID())
+		var index int
+		found := false
+		for i, owner := range owners {
+			if owner == node.ID() || owner == "_default_" {
+				index = i
+				found = true
+				owners[i] = node.ID()
+				break
+			}
+		}
+		if !found {
+			owners = append(owners, node.ID())
+			index = len(owners) - 1
+		}
 		ids := cmGenerator.GenerateOwnerIdentities(tms, node, owners...)
 		for _, id := range ids {
 			wallet.Owners = append(wallet.Owners, Identity(id))
 		}
-		wallet.Owners[len(wallet.Owners)-1].Default = true
+		wallet.Owners[index].Default = true
 	}
 
 	// Auditor identity
 	if opts.Auditor() {
 		ids := cmGenerator.GenerateAuditorIdentities(tms, node, node.Name)
-		wallet.Auditors = append(wallet.Auditors, Identity(ids[0]))
-		wallet.Auditors[0].Default = true
+		if len(ids) > 0 {
+			for _, id := range ids {
+				wallet.Auditors = append(wallet.Auditors, Identity(id))
+			}
+			wallet.Auditors[len(wallet.Auditors)-1].Default = true
+		}
 	}
 
 	// Certifier identities
 	if opts.Certifier() {
 		ids := cmGenerator.GenerateCertifierIdentities(tms, node, node.Name)
-		wallet.Certifiers = append(wallet.Certifiers, Identity(ids[0]))
-		wallet.Certifiers[0].Default = true
+		if len(ids) > 0 {
+			for _, id := range ids {
+				wallet.Certifiers = append(wallet.Certifiers, Identity(id))
+			}
+			wallet.Certifiers[len(wallet.Certifiers)-1].Default = true
+		}
 	}
 }
 

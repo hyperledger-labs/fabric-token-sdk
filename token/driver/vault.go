@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
 import (
@@ -12,6 +13,11 @@ import (
 type QueryCallbackFunc func(*token.ID, []byte) error
 
 type QueryCallback2Func func(*token.ID, string, []byte, []byte) error
+
+type UnspentTokensIterator interface {
+	Close()
+	Next() (*token.UnspentToken, error)
+}
 
 type Vault interface {
 	QueryEngine() QueryEngine
@@ -25,6 +31,8 @@ type CertificationStorage interface {
 type QueryEngine interface {
 	// IsMine returns true if the passed id is owned by any known wallet
 	IsMine(id *token.ID) (bool, error)
+	// UnspentTokensIterator returns an iterator over all unspent tokens
+	UnspentTokensIterator() (UnspentTokensIterator, error)
 	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
 	// ListAuditTokens returns the audited tokens associated to the passed ids

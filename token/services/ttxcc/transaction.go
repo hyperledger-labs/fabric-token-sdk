@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -95,8 +97,9 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 		},
 		SP: sp,
 	}
-	err := json.Unmarshal(raw, tx.Payload)
-	if err != nil {
+
+	var json = jsoniter.ConfigCompatibleWithStandardLibrary
+	if err := json.Unmarshal(raw, tx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -114,13 +117,12 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 	}
 
 	if tx.Envelope != nil {
-		err = tx.setEnvelope(tx.Envelope)
-		if err != nil {
+		if err := tx.setEnvelope(tx.Envelope); err != nil {
 			return nil, err
 		}
 	}
 	sp.OnError(tx.Release)
-	return tx, err
+	return tx, nil
 }
 
 func ReceiveTransaction(context view.Context) (*Transaction, error) {
@@ -136,6 +138,9 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
 	logger.Debugf("received transaction with id [%s]", cctx.ID())
+
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "received", "tx", cctx.ID())
 
 	return cctx, nil
 }
@@ -257,28 +262,28 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	t.Payload.Transient = payload.Transient
 	return nil
 
-	//for _, bytes := range payload.Request.Issues {
+	// for _, bytes := range payload.Request.Issues {
 	//	t.Payload.Request.Issues = append(t.Payload.Request.Issues, bytes)
-	//}
-	//for _, bytes := range payload.Request.Transfers {
+	// }
+	// for _, bytes := range payload.Request.Transfers {
 	//	t.Payload.Request.Transfers = append(t.Payload.Request.Transfers, bytes)
-	//}
-	//for _, info := range payload.TokenInfos {
+	// }
+	// for _, info := range payload.TokenInfos {
 	//	t.Payload.TokenInfos = append(t.Payload.TokenInfos, info)
-	//}
-	//for _, issueMetadata := range payload.Metadata.Issues {
+	// }
+	// for _, issueMetadata := range payload.Metadata.Issues {
 	//	t.Payload.Metadata.Issues = append(t.Payload.Metadata.Issues, issueMetadata)
-	//}
-	//for _, transferMetadata := range payload.Metadata.Transfers {
+	// }
+	// for _, transferMetadata := range payload.Metadata.Transfers {
 	//	t.Payload.Metadata.Transfers = append(t.Payload.Metadata.Transfers, transferMetadata)
-	//}
+	// }
 	//
-	//for key, value := range payload.Transient {
+	// for key, value := range payload.Transient {
 	//	for _, v := range value {
 	//		if err := t.Set(key, v); err != nil {
 	//			return err
 	//		}
 	//	}
-	//}
-	//return nil
+	// }
+	// return nil
 }

@@ -36,3 +36,7 @@ func (s *SignatureService) GetSigner(id view.Identity) (Signer, error) {
 func (s *SignatureService) RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error {
 	return s.ip.RegisterSigner(identity, signer, verifier)
 }
+
+func (s *SignatureService) IsMe(party view.Identity) bool {
+	return s.ip.IsMe(party)
+}

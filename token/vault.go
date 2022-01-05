@@ -18,6 +18,14 @@ func (q *QueryEngine) IsMine(id *token2.ID) (bool, error) {
 	return q.qe.IsMine(id)
 }
 
+func (q *QueryEngine) UnspentTokensIterator() (*UnspentTokensIterator, error) {
+	it, err := q.qe.UnspentTokensIterator()
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
+}
+
 func (q *QueryEngine) ListUnspentTokens() (*token2.UnspentTokens, error) {
 	return q.qe.ListUnspentTokens()
 }
@@ -47,4 +55,8 @@ func (v *Vault) NewQueryEngine() *QueryEngine {
 	return &QueryEngine{
 		qe: v.v.QueryEngine(),
 	}
+}
+
+type UnspentTokensIterator struct {
+	driver.UnspentTokensIterator
 }

@@ -29,6 +29,14 @@ func WithIssuerIdentity(label string) fsc.Option {
 	}
 }
 
+func WithDefaultIssuerIdentity() fsc.Option {
+	return WithIssuerIdentity("_default_")
+}
+
+func WithDefaultOwnerIdentity(driver string) fsc.Option {
+	return WithOwnerIdentity(driver, "_default_")
+}
+
 func WithOwnerIdentity(driver string, label string) fsc.Option {
 	return func(o *fsc.Options) error {
 		to := topology.ToOptions(o)

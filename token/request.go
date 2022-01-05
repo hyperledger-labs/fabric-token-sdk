@@ -11,6 +11,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -231,9 +232,11 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
-	// double check
-	if err := ts.VerifyTransfer(transfer, transferMetadata.TokenInfo); err != nil {
-		return nil, errors.Wrap(err, "failed checking generated proof")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		// double check
+		if err := ts.VerifyTransfer(transfer, transferMetadata.TokenInfo); err != nil {
+			return nil, errors.Wrap(err, "failed checking generated proof")
+		}
 	}
 
 	// Append

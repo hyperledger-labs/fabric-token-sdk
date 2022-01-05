@@ -52,6 +52,29 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	return len(val) == 1 && val[0] == 1, nil
 }
 
+func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) {
+	logger.Debugf("List token iterator...")
+	startKey, err := keys.CreateCompositeKey(keys.FabTokenKeyPrefix, nil)
+	if err != nil {
+		return nil, err
+	}
+	endKey := startKey + string(keys.MaxUnicodeRuneValue)
+
+	logger.Debugf("New query executor")
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return nil, err
+	}
+	defer qe.Done()
+
+	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
+	iterator, err := qe.GetStateRangeScanIterator(e.namespace, startKey, endKey)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{it: iterator}, nil
+}
+
 func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 	logger.Debugf("List token...")
 	startKey, err := keys.CreateCompositeKey(keys.FabTokenKeyPrefix, nil)
@@ -357,4 +380,52 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	}
 	logger.Debugf("retrieve tokens from ids done")
 	return resKeys, res, nil
+}
+
+type UnspentTokensIterator struct {
+	it driver.Iterator
+}
+
+func (u *UnspentTokensIterator) Close() {
+	u.it.Close()
+}
+
+func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
+	for {
+		next, err := u.it.Next()
+		if err != nil {
+			return nil, err
+		}
+		if next == nil {
+			return nil, nil
+		}
+		if len(next.Raw) == 0 {
+			// TODO: remove this keys from the vault
+			// logger.Debugf("nil content for key [%s]", next.Key)
+			continue
+		}
+
+		output, err := UnmarshallFabtoken(next.Raw)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s][%s", next.Key, string(next.Raw))
+		}
+
+		// show only tokens which are owned by transactor
+		logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.Key)
+		id, err := keys.GetTokenIdFromKey(next.Key)
+		if err != nil {
+			return nil, err
+		}
+		// Convert quantity to decimal
+		q, err := token.ToQuantity(output.Quantity, keys.Precision)
+		if err != nil {
+			return nil, err
+		}
+		return &token.UnspentToken{
+			Owner:    output.Owner,
+			Type:     output.Type,
+			Quantity: q.Decimal(),
+			Id:       id,
+		}, nil
+	}
 }

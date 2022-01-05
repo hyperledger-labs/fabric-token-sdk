@@ -8,6 +8,7 @@ package nogh
 
 import (
 	"encoding/json"
+	"strings"
 
 	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -171,7 +172,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 	// check if there is already a wallet
 	identity, walletID := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
 	for _, w := range s.OwnerWallets {
-		if w.Contains(identity) || w.ID() == walletID {
+		if w.ID() == walletID || (len(identity) != 0 && w.Contains(identity)) {
 			logger.Debugf("found owner wallet [%s:%s]", identity, walletID)
 			return w
 		}
@@ -311,6 +312,7 @@ func (w *wallet) GetRecipientIdentity() (view.Identity, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
 	}
+
 	pseudonym, err = w.tokenService.wrapWalletIdentity(pseudonym)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed wrapping recipient identity from wallet [%s]", w.ID())
@@ -371,13 +373,16 @@ func (w *wallet) ListTokens(opts *api2.ListTokensOptions) (*token2.UnspentTokens
 }
 
 func (w *wallet) existsRecipientIdentity(id view.Identity) bool {
+	var sb strings.Builder
+	sb.WriteString(w.tokenService.Channel)
+	sb.WriteString(w.identityInfo.ID)
+	sb.WriteString(w.identityInfo.EnrollmentID)
+	sb.WriteString(id.UniqueID())
+
 	k := kvs.CreateCompositeKeyOrPanic(
-		"zkatdlog.owner.wallet.recipient.id",
+		"zkatdlog.o.w.r.id",
 		[]string{
-			w.tokenService.Channel,
-			w.identityInfo.ID,
-			w.identityInfo.EnrollmentID,
-			id.String(),
+			sb.String(),
 		},
 	)
 	kvss := kvs.GetService(w.tokenService.SP)
@@ -385,13 +390,16 @@ func (w *wallet) existsRecipientIdentity(id view.Identity) bool {
 }
 
 func (w *wallet) putRecipientIdentity(id view.Identity, meta []byte) error {
+	var sb strings.Builder
+	sb.WriteString(w.tokenService.Channel)
+	sb.WriteString(w.identityInfo.ID)
+	sb.WriteString(w.identityInfo.EnrollmentID)
+	sb.WriteString(id.UniqueID())
+
 	k := kvs.CreateCompositeKeyOrPanic(
-		"zkatdlog.owner.wallet.recipient.id",
+		"zkatdlog.o.w.r.id",
 		[]string{
-			w.tokenService.Channel,
-			w.identityInfo.ID,
-			w.identityInfo.EnrollmentID,
-			id.String(),
+			sb.String(),
 		},
 	)
 	kvss := kvs.GetService(w.tokenService.SP)

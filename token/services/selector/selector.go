@@ -3,12 +3,14 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package selector
 
 import (
 	"time"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -18,7 +20,7 @@ import (
 )
 
 type QueryService interface {
-	ListUnspentTokens() (*token2.UnspentTokens, error)
+	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -81,11 +83,12 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 	i := 0
 	for {
 		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
-		unspentTokens, err := s.queryService.ListUnspentTokens()
+		unspentTokens, err := s.queryService.UnspentTokensIterator()
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}
-		logger.Debugf("select token for a quantity of [%s] of type [%s] from [%d] unspent tokens", q, tokenType, len(unspentTokens.Tokens))
+		defer unspentTokens.Close()
+		logger.Debugf("select token for a quantity of [%s] of type [%s]", q, tokenType)
 
 		// First select only certified
 		sum = token2.NewZeroQuantity(s.precision)
@@ -95,7 +98,15 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 		var toBeCertified []*token2.ID
 		var locked []*token2.ID
 
-		for _, t := range unspentTokens.Tokens {
+		for {
+			t, err := unspentTokens.Next()
+			if err != nil {
+				return nil, nil, errors.Wrap(err, "token selection failed")
+			}
+			if t == nil {
+				break
+			}
+
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				s.locker.UnlockIDs(toBeSpent...)
@@ -103,16 +114,20 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 				return nil, nil, errors.Wrap(err, "failed to convert quantity")
 			}
 
-			logger.Debugf("select token [%s,%s,%v]?", q, tokenType, ownerFilter.Contains(t.Owner.Raw))
-
 			// check type and ownership
 			if t.Type != tokenType {
-				logger.Debugf("token [%s,%s,%v] type does not match", q, tokenType, ownerFilter.Contains(t.Owner.Raw))
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("token [%s,%s] type does not match", q, tokenType)
+				}
 				continue
 			}
 
-			if !ownerFilter.Contains(t.Owner.Raw) {
-				logger.Debugf("token [%s,%s,%v] owner does not belong to the passed wallet", q, tokenType, ownerFilter.Contains(t.Owner.Raw))
+			rightOwner := ownerFilter.Contains(t.Owner.Raw)
+
+			if !rightOwner {
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("token [%s,%s,%v] owner does not belong to the passed wallet", q, tokenType, rightOwner)
+				}
 				continue
 			}
 
@@ -121,7 +136,9 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 				locked = append(locked, t.Id)
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
-				logger.Debugf("token [%s,%s,%v] cannot be locked [%s]", q, tokenType, ownerFilter.Contains(t.Owner.Raw), err)
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("token [%s,%s,%v] cannot be locked [%s]", q, tokenType, rightOwner, err)
+				}
 				continue
 			}
 
@@ -130,7 +147,10 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 				toBeCertified = append(toBeCertified, t.Id)
 				potentialSumWithNonCertified = potentialSumWithNonCertified.Add(q)
 
-				logger.Debugf("token [%s,%s,%v] is not certified, skipping", q, tokenType, ownerFilter.Contains(t.Owner.Raw))
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+
+					logger.Debugf("token [%s,%s,%v] is not certified, skipping", q, tokenType, rightOwner)
+				}
 				continue
 			}
 

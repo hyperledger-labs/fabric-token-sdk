@@ -6,18 +6,46 @@ SPDX-License-Identifier: Apache-2.0
 package query
 
 import (
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/json"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+var (
+	cache = newSecondChanceCache(10000)
+)
+
+func hash(v []byte) string {
+	if len(v) == 0 {
+		return ""
+	}
+	hash := sha256.New()
+	n, err := hash.Write(v)
+	if n != len(v) {
+		panic("hash failure")
+	}
+	if err != nil {
+		panic(err)
+	}
+	digest := hash.Sum(nil)
+	return base64.StdEncoding.EncodeToString(digest)
+}
+
 func UnmarshallFabtoken(raw []byte) (*token2.Token, error) {
-	t := &token2.Token{}
-	err := json.Unmarshal(raw, t)
+	k := hash(raw)
+	if v, ok := cache.get(k); ok {
+		return v.(*token2.Token), nil
+	}
+	v := &token2.Token{}
+	err := json.Unmarshal(raw, v)
 	if err != nil {
 		return nil, err
 	}
-	return t, nil
+	cache.add(k, v)
+
+	return v, nil
 }
 
 func UnmarshallIssuedToken(raw []byte) (*token2.IssuedToken, error) {

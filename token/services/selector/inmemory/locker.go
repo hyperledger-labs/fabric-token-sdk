@@ -13,12 +13,16 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.selector.inmemory")
+var (
+	logger             = flogging.MustGetLogger("token-sdk.selector.inmemory")
+	AlreadyLockedError = errors.New("already locked")
+)
 
 const (
 	_       int = iota
@@ -72,7 +76,10 @@ func (d *locker) Lock(id *token2.ID, txID string) (string, error) {
 		reclaimed, status := d.reclaim(id, e.TxID)
 		if !reclaimed {
 			logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, status)
-			return e.TxID, errors.Errorf("already locked by [%s]", e)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				return e.TxID, errors.Errorf("already locked by [%s]", e)
+			}
+			return e.TxID, AlreadyLockedError
 		}
 		logger.Debugf("[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, status)
 	}

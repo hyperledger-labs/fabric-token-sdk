@@ -41,6 +41,9 @@ type IdentityProvider interface {
 
 	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
 
+	// IsMe returns true if a signer was ever registered for the passed identity
+	IsMe(party view.Identity) bool
+
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	GetIdentityMetadata(identity view.Identity) ([]byte, error)
@@ -48,4 +51,7 @@ type IdentityProvider interface {
 	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id.
 	Bind(id view.Identity, longTerm view.Identity) error
+
+	// RegisterRecipientIdentity mark the passed identity as a recipient identity.
+	RegisterRecipientIdentity(id view.Identity) error
 }

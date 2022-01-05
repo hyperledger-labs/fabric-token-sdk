@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -91,7 +92,11 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 	return pseudonymBoxed.(view.Identity), nil
 }
 
-func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "RequestRecipientIdentityView", context.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "RequestRecipientIdentityView", context.ID())
+
 	logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
 
 	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
@@ -123,6 +128,7 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 		if err != nil {
 			return nil, err
 		}
+		agent.EmitKey(0, "ttxcc", "sent", "requestRecipientIdentity", session.Info().ID)
 
 		// Wait to receive a view identity
 		ch := session.Receive()
@@ -130,6 +136,7 @@ func (f RequestRecipientIdentityView) Call(context view.Context) (interface{}, e
 		select {
 		case msg := <-ch:
 			payload = msg.Payload
+			agent.EmitKey(0, "ttxcc", "received", "responseRecipientIdentity", session.Info().ID)
 		case <-time.After(60 * time.Second):
 			return nil, errors.New("time out reached")
 		}
@@ -159,11 +166,27 @@ type RespondRequestRecipientIdentityView struct {
 	Wallet string
 }
 
+// RespondRequestRecipientIdentity executes the RespondRequestRecipientIdentityView.
+// The recipient sends back the identity to receive ownership of tokens.
+// The identity is taken from the wallet
+func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error) {
+	id, err := context.RunView(&RespondRequestRecipientIdentityView{})
+	if err != nil {
+		return nil, err
+	}
+	return id.(view.Identity), nil
+}
+
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "RespondRequestRecipientIdentityView", context.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "RespondRequestRecipientIdentityView", context.ID())
+
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		return nil, err
 	}
+	agent.EmitKey(0, "ttxcc", "received", "requestRecipientIdentity", session.Info().ID)
 
 	recipientRequest := &RecipientRequest{}
 	if err := recipientRequest.FromBytes(payload); err != nil {
@@ -209,6 +232,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	if err != nil {
 		return nil, err
 	}
+	agent.EmitKey(0, "ttxcc", "sent", "responseRecipientIdentity", session.Info().ID)
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
@@ -219,17 +243,6 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 
 	return recipientIdentity, nil
-}
-
-// RespondRequestRecipientIdentity executes the RespondRequestRecipientIdentityView.
-// The recipient sends back the identity to receive ownership of tokens.
-// The identity is taken from the wallet
-func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error) {
-	id, err := context.RunView(&RespondRequestRecipientIdentityView{})
-	if err != nil {
-		return nil, err
-	}
-	return id.(view.Identity), nil
 }
 
 type ExchangeRecipientIdentitiesView struct {

@@ -347,7 +347,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	err = registry.RegisterService(kvss)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig2.NewSignService(registry, nil)
+	sigService := sig2.NewSignService(registry, nil, kvss)
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")

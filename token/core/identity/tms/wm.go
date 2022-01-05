@@ -314,8 +314,7 @@ func (lm *LocalMembership) DefaultIdentity() view.Identity {
 }
 
 func (lm *LocalMembership) IsMe(id view.Identity) bool {
-	_, err := sig2.GetSigner(lm.sp, id)
-	return err == nil
+	return view2.GetSigService(lm.sp).IsMe(id)
 }
 
 func (lm *LocalMembership) GetAnonymousIdentifier(label string) (string, error) {

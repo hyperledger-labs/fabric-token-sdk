@@ -39,7 +39,7 @@ type PublicParametersManager interface {
 	PublicParams() *crypto.PublicParams
 }
 
-type DeserializerProvider = func(params *crypto.PublicParams) (api3.Deserializer, error)
+type DeserializerProviderFunc = func(params *crypto.PublicParams) (api3.Deserializer, error)
 
 type Service struct {
 	Channel               string
@@ -52,7 +52,7 @@ type Service struct {
 	TokenLoader           TokenLoader
 	TokenCommitmentLoader TokenCommitmentLoader
 	QE                    QueryEngine
-	DeserializerProvider  DeserializerProvider
+	DeserializerProvider  DeserializerProviderFunc
 	CM                    api3.ConfigManager
 
 	Issuers []*struct {
@@ -79,7 +79,7 @@ func NewTokenService(
 	tokenCommitmentLoader TokenCommitmentLoader,
 	queryEngine QueryEngine,
 	identityProvider api3.IdentityProvider,
-	deserializerProvider DeserializerProvider,
+	deserializerProvider DeserializerProviderFunc,
 	ppLabel string,
 	cm api3.ConfigManager,
 ) (*Service, error) {

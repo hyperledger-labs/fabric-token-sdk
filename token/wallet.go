@@ -45,6 +45,9 @@ func (t *WalletManager) RegisterIssuer(label string, sk api2.Key, pk api2.Key) e
 }
 
 func (t *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
+	if err := t.ts.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
+		return err
+	}
 	return t.ts.RegisterRecipientIdentity(id, auditInfo, metadata)
 }
 

@@ -184,7 +184,7 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return nil, idIdentifier
 			}
 			logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
-			return id, string(id)
+			return nil, string(id)
 		case string:
 			label := vv
 			logger.Debugf("[idemix] looking up identifier for label [%d,%s]", i.identityType, vv)

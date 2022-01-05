@@ -102,7 +102,7 @@ func (d *DLogFabricCryptoMaterialGenerator) Setup(tms *topology.TMS) (string, er
 }
 
 func (d *DLogFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, certifiers ...string) []Identity {
-	panic("not supported")
+	return nil
 }
 
 func (d *DLogFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {

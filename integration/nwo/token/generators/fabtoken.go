@@ -41,7 +41,7 @@ func (d *FabTokenFabricCryptoMaterialGenerator) Setup(tms *topology.TMS) (string
 }
 
 func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, name ...string) []Identity {
-	panic("not supported")
+	return nil
 }
 
 func (d *FabTokenFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {

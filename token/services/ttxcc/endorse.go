@@ -9,8 +9,10 @@ package ttxcc
 import (
 	"encoding/base64"
 	"encoding/json"
+	"strconv"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -56,6 +58,10 @@ func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
 func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "collectEndorsements", c.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "collectEndorsements", c.tx.ID())
+
 	// Store transient
 	err := c.tx.storeTransient()
 	if err != nil {
@@ -111,13 +117,25 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 }
 
 func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context) ([]view.Identity, error) {
+
+	issues := c.tx.TokenRequest.Issues()
+	logger.Debugf("collecting signature on [%d] request issue", len(issues))
+
+	if len(issues) == 0 {
+		return nil, nil
+	}
+
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "requestSignaturesOnIssues", c.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "requestSignaturesOnIssues", c.tx.ID())
+
 	requestRaw, err := c.requestBytes()
 	if err != nil {
 		return nil, err
 	}
 
 	var distributionList []view.Identity
-	for _, issue := range c.tx.TokenRequest.Issues() {
+	for _, issue := range issues {
 		distributionList = append(distributionList, issue.Issuer)
 		distributionList = append(distributionList, issue.Receivers...)
 
@@ -185,13 +203,21 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 }
 
 func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Context) ([]view.Identity, error) {
+	transfers := c.tx.TokenRequest.Transfers()
+	logger.Debugf("collecting signature on [%d] request transfer", len(transfers))
+
+	if len(transfers) == 0 {
+		return nil, nil
+	}
+
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "requestSignaturesOnTransfers", c.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "requestSignaturesOnTransfers", c.tx.ID())
+
 	requestRaw, err := c.requestBytes()
 	if err != nil {
 		return nil, err
 	}
-
-	transfers := c.tx.TokenRequest.Transfers()
-	logger.Debugf("collecting signature on [%d] request transfer", len(transfers))
 
 	var distributionList []view.Identity
 	for i, transfer := range transfers {
@@ -280,13 +306,19 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 }
 
 func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.Envelope, error) {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "callChaincode", c.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "callChaincode", c.tx.ID())
+
 	requestRaw, err := c.tx.TokenRequest.RequestToBytes()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling request")
 	}
+	agent.EmitKey(0, "ttxcc", "size", "callChaincodeSize", c.tx.ID(), strconv.Itoa(len(requestRaw)))
 
 	logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
 
+	agent.EmitKey(0, "ttxcc", "start", "callChaincodeRequest", c.tx.ID())
 	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
 		context,
 		c.tx.Namespace(),
@@ -294,6 +326,7 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.
 		c.tx.Signer,
 		c.tx.Payload.Id,
 	)
+	agent.EmitKey(0, "ttxcc", "end", "callChaincodeRequest", c.tx.ID())
 	if err != nil {
 		return nil, err
 	}
@@ -307,19 +340,24 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.
 }
 
 func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity) error {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "distributeEnv", c.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "distributeEnv", c.tx.ID())
+
 	if env == nil {
 		return errors.New("fabric transaction envelope is empty")
 	}
 
 	// double check that the transaction is valid
-	if err := c.tx.Verify(); err != nil {
-		return errors.Wrap(err, "failed verifying transaction content before distributing it")
-	}
+	// if err := c.tx.Verify(); err != nil {
+	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
+	// }
 
 	txRaw, err := c.tx.Bytes()
 	if err != nil {
 		return errors.Wrap(err, "failed marshalling transaction content")
 	}
+	agent.EmitKey(0, "ttxcc", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
 
 	// Compress distributionList
 	type distributionListEntry struct {
@@ -334,10 +372,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			continue
 		}
 		logger.Debugf("distribute env to [%s]?", party.UniqueID())
-		isMe := false
-		if _, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
-			isMe = true
-		}
+		isMe := c.tx.TokenService().SigService().IsMe(party)
 		logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
 		longTermIdentity, _, _, err := view2.GetEndpointService(context).Resolve(party)
 		if err != nil {
@@ -362,6 +397,8 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			logger.Debugf("skip adding [%s] to distribution list, already added", party)
 		}
 	}
+
+	logger.Info("distributed env of size [%d] to num parties", len(txRaw), len(distributionListCompressed))
 
 	for _, entry := range distributionListCompressed {
 		logger.Debugf("distribute fabric transaction enveloper to [%s]", entry.ID.UniqueID())
@@ -402,6 +439,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if err != nil {
 			return errors.Wrap(err, "failed sending transaction content")
 		}
+		agent.EmitKey(0, "ttxcc", "sent", "tx", c.tx.ID())
 
 		var msg *view.Message
 		select {
@@ -414,6 +452,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			return errors.New(string(msg.Payload))
 		}
 		// TODO: Check ack
+		agent.EmitKey(0, "ttxcc", "received", "txAck", c.tx.ID())
 
 		logger.Debugf("collectEndorsementsView: collected signature from %s", entry.ID)
 	}
@@ -533,6 +572,8 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "received", "env", tx.ID())
 
 	// Process Fabric Envelope
 	logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
@@ -568,6 +609,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	agent.EmitKey(0, "ttxcc", "sent", "txAck", tx.ID())
 
 	return tx, nil
 }

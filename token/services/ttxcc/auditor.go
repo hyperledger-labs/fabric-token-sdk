@@ -9,6 +9,7 @@ package ttxcc
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -91,12 +92,15 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "sent", "auditing", a.tx.ID())
 
 	// Receive signature
 	ch := session.Receive()
 	var msg *view.Message
 	select {
 	case msg = <-ch:
+		agent.EmitKey(0, "ttxcc", "received", "auditingAck", a.tx.ID())
 		logger.Debug("reply received from %s", a.tx.Opts.auditor)
 	case <-time.After(60 * time.Second):
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.auditor)
@@ -183,6 +187,8 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err := session.Send(sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "sent", "auditingAck", a.tx.ID())
 
 	if err := a.waitFabricEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
@@ -229,6 +235,8 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	if err != nil {
 		return err
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "sent", "txAck", tx.ID())
 
 	return nil
 }
