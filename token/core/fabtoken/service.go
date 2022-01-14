@@ -44,6 +44,7 @@ type Service struct {
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
 	QE          QueryEngine
+	CM          driver.ConfigManager
 
 	IP             driver.IdentityProvider
 	Deserializer   driver.Deserializer
@@ -61,6 +62,7 @@ func NewService(
 	qe QueryEngine,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
+	cm driver.ConfigManager,
 ) *Service {
 	s := &Service{
 		SP:           sp,
@@ -70,6 +72,7 @@ func NewService(
 		PPM:          ppm,
 		IP:           identityProvider,
 		Deserializer: deserializer,
+		CM:           cm,
 	}
 	return s
 }
@@ -84,4 +87,8 @@ func (s *Service) Validator() driver.Validator {
 
 func (s *Service) PublicParamsManager() driver.PublicParamsManager {
 	return s.PPM
+}
+
+func (s *Service) ConfigManager() driver.ConfigManager {
+	return s.CM
 }

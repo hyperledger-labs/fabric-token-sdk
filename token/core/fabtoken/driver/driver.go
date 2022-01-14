@@ -11,9 +11,10 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
@@ -39,8 +40,34 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
 	qe := v.TokenVault().QueryEngine()
-	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	lm := n.LocalMembership()
+
+	cm, err := config.NewManager(view2.GetConfigService(sp), networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create config manager")
+	}
+
+	// if the tms comes equipped with wallets, then use those wallets.
+	// Otherwise, resort to network local membership
+	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
+	mappers := identity.NewMappers()
+	tmsWalletManager := tms.NewWalletManager(sp, cm, lm.DefaultIdentity(), tms.NewSigService(view2.GetSigService(sp)), view2.GetEndpointService(sp))
+	if err := tmsWalletManager.Load(); err != nil {
+		return nil, errors.WithMessage(err, "failed to load wallet")
+	}
+	eidDeserializer := fabtoken.NewEnrollmentIDDeserializer()
+
+	if tmsWalletManager.IsEmpty() {
+		// use network local membership
+		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
+		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
+		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
+	} else {
+		// use tms local membership
+		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Issuers()))
+		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Auditors()))
+		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Owners()))
+	}
 
 	return fabtoken.NewService(
 		sp,
@@ -52,16 +79,9 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		}),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
-		identity.NewProvider(
-			sp,
-			n,
-			map[driver.IdentityUsage]identity.Mapper{
-				driver.IssuerRole:  network2.NewMapper(networkID, network2.LongTermIdentity, nodeIdentity, lm),
-				driver.AuditorRole: network2.NewMapper(networkID, network2.LongTermIdentity, nodeIdentity, lm),
-				driver.OwnerRole:   network2.NewMapper(networkID, network2.LongTermIdentity, nodeIdentity, lm),
-			},
-		),
+		identity.NewProvider(sp, eidDeserializer, mappers),
 		fabtoken.NewDeserializer(),
+		cm,
 	), nil
 }
 

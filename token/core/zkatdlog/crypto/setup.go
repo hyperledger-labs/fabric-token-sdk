@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	math2 "math"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -23,6 +24,7 @@ type PublicParams struct {
 	P                *math.G1
 	ZKATPedParams    []*math.G1
 	RangeProofParams *RangeProofParams
+	IdemixCurve      math.CurveID
 	IdemixPK         []byte
 	IssuingPolicy    []byte
 	Auditor          []byte
@@ -170,11 +172,11 @@ func (pp *PublicParams) GetIssuingPolicy() (*IssuingPolicy, error) {
 	return ip, nil
 }
 
-func Setup(base int64, exponent int, nymPK []byte) (*PublicParams, error) {
-	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters)
+func Setup(base int64, exponent int, nymPK []byte, curveID math.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters, curveID)
 }
 
-func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string) (*PublicParams, error) {
+func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, curveID math.CurveID) (*PublicParams, error) {
 	signer := pssign.NewSigner(nil, nil, nil, math.Curves[1])
 	err := signer.KeyGen(1)
 	if err != nil {
@@ -197,6 +199,7 @@ func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string) 
 		return nil, err
 	}
 	pp.IdemixPK = nymPK
+	pp.IdemixCurve = curveID
 	pp.RangeProofParams.Exponent = exponent
 	// max value of any given token is max = base^exponent - 1
 	return pp, nil

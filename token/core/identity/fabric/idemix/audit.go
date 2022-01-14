@@ -63,7 +63,7 @@ func (a *AuditInfo) Match(id []byte) error {
 		},
 	)
 	if err != nil {
-		return errors.Wrap(err, "error while verifying the nym eid")
+		return errors.Wrapf(err, "error while verifying the nym eid for [%s]", a.EnrollmentID())
 	}
 
 	if !valid {

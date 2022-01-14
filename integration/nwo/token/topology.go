@@ -9,10 +9,10 @@ package token
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	fsc2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	fsc "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	. "github.com/onsi/gomega"
 
+	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	token "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
@@ -24,60 +24,18 @@ var (
 	Drivers = []string{"dlog", "fabtoken"}
 )
 
-type Chaincode struct {
-	Orgs                []string
-	PublicParamsGenArgs []string
-	Private             bool
-	DockerImage         string
-}
-
-type TMS struct {
-	Fabric *topology.Topology `yaml:"-"`
-
-	Network        string
-	Channel        string
-	Namespace      string
-	Driver         string
-	TokenChaincode Chaincode
-	Certifiers     []string
-}
-
-func (t *TMS) AddCertifier(certifier *fsc.Node) *TMS {
-	t.Certifiers = append(t.Certifiers, certifier.Name)
-	return t
-}
-
-func (t *TMS) SetNamespace(orgs []string, publicParamsGenArgs ...string) {
-	t.TokenChaincode.Orgs = orgs
-	t.TokenChaincode.PublicParamsGenArgs = publicParamsGenArgs
-}
-
-func (t *TMS) Private(dockerImage string) {
-	t.Fabric.EnableFPC()
-	t.Fabric.AddChaincode(&topology.ChannelChaincode{
-		Chaincode: topology.Chaincode{
-			Name: t.Namespace,
-		},
-		PrivateChaincode: topology.PrivateChaincode{
-			Image: "",
-		},
-		Channel: t.Channel,
-		Private: true,
-	})
-
-	t.TokenChaincode.Private = true
-	t.TokenChaincode.DockerImage = dockerImage
-}
-
 type Topology struct {
 	TopologyName string `yaml:"name,omitempty"`
-	TMSs         []*TMS
+	TopologyType string `yaml:"type,omitempty"`
+
+	TMSs []*topology2.TMS
 }
 
 func NewTopology() *Topology {
 	return &Topology{
 		TopologyName: TopologyName,
-		TMSs:         []*TMS{},
+		TopologyType: TopologyName,
+		TMSs:         []*topology2.TMS{},
 	}
 }
 
@@ -86,10 +44,10 @@ func (t *Topology) Name() string {
 }
 
 func (t *Topology) Type() string {
-	return t.TopologyName
+	return t.TopologyType
 }
 
-func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *TMS {
+func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *topology2.TMS {
 	found := false
 	for _, s := range Drivers {
 		if driver == s {
@@ -101,14 +59,14 @@ func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *TMS {
 		Expect(found).To(BeTrue(), "Driver [%s] not recognized", driver)
 	}
 
-	tms := &TMS{
-		Fabric:         fabric,
-		Network:        fabric.Name(),
-		Channel:        fabric.Channels[0].Name,
-		Namespace:      "zkat",
-		Driver:         driver,
-		Certifiers:     []string{},
-		TokenChaincode: Chaincode{},
+	tms := &topology2.TMS{
+		TargetNetworkTopology: fabric,
+		Network:               fabric.Name(),
+		Channel:               fabric.Channels[0].Name,
+		Namespace:             "zkat",
+		Driver:                driver,
+		Certifiers:            []string{},
+		TokenChaincode:        topology2.Chaincode{},
 	}
 	t.TMSs = append(t.TMSs, tms)
 	return tms

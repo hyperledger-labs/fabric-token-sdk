@@ -85,4 +85,4 @@ clean:
 
 .PHONY: tokengen
 tokengen:
-	@go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
+	@go install ./cmd/tokengen

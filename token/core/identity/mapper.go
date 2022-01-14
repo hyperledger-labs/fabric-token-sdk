@@ -4,19 +4,15 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package network
+package identity
 
 import (
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.driver.identity.network")
 
 type IdentityType int
 
@@ -29,9 +25,9 @@ type LocalMembership interface {
 	DefaultIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetAnonymousIdentity(label string, auditInfo []byte) (string, string, network.GetFunc, error)
+	GetAnonymousIdentifier(label string) (string, error)
 	GetLongTermIdentity(label string) (string, string, view.Identity, error)
 	GetLongTermIdentifier(id view.Identity) (string, error)
-	GetAnonymousIdentifier(label string) (string, error)
 }
 
 type Mapper struct {
@@ -50,7 +46,7 @@ func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Id
 	}
 }
 
-func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
+func (i *Mapper) Info(id string) (string, string, GetFunc) {
 	logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
 
 	switch i.identityType {
@@ -70,7 +66,7 @@ func (i *Mapper) Info(id string) (string, string, identity.GetFunc) {
 			logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
 			return "", "", nil
 		}
-		return id, eID, identity.GetFunc(getFunc)
+		return id, eID, GetFunc(getFunc)
 	default:
 		panic(fmt.Sprintf("type not recognized [%d]", i.identityType))
 	}

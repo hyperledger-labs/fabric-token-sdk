@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package issue_test
 
 import (
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -52,7 +52,7 @@ func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness
 }
 
 func prepareZKIssue() (*issue.Prover, *issue.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil)
+	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	tw, tokens := prepareInputsForZKIssue(pp)

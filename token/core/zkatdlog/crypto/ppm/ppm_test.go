@@ -35,7 +35,7 @@ var _ = Describe("PublicParamsManager", func() {
 		// prepare public parameters
 		ipk, err = ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(100, 2, ipk)
+		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 
 		//prepare issuers' public keys

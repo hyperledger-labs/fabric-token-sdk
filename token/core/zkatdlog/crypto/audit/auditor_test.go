@@ -56,7 +56,7 @@ var _ = Describe("Auditor", func() {
 		fakeSigningIdentity = &mock.SigningIdentity{}
 		ipk, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(100, 2, ipk)
+		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		des, err := idemix2.NewDeserializer(pp.IdemixPK)
 		Expect(err).NotTo(HaveOccurred())

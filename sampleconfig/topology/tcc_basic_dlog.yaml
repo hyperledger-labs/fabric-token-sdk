@@ -96,19 +96,21 @@ topologies:
     - name: Endorsement
       type: ImplicitMeta
       rule: ANY Endorsement
-  chaincodemode: net
 - name: token
+  type: token
   tmss:
   - network: default
     channel: testchannel
     namespace: zkat
     driver: dlog
+    publicparamsgenargs:
+    - "100"
+    - "2"
     tokenchaincode:
       orgs:
       - Org1
-      publicparamsgenargs:
-      - "100"
-      - "2"
+      private: false
+      dockerimage: ""
     certifiers: []
 - name: fsc
   type: fsc
@@ -156,6 +158,12 @@ topologies:
               Org: Org1
             X509Identities:
             - issuer.id1
+        token:
+          mapping:
+            Issuers:
+            - issuer.id1
+            Owners:
+            - issuer.owner
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -182,6 +190,9 @@ topologies:
             Organization:
             - Network: ""
               Org: Org1
+        token:
+          mapping:
+            Auditor: true
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -225,6 +236,10 @@ topologies:
             Organization:
             - Network: ""
               Org: Org2
+        token:
+          mapping:
+            Owners:
+            - alice.id1
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -270,6 +285,10 @@ topologies:
             Organization:
             - Network: ""
               Org: Org2
+        token:
+          mapping:
+            Owners:
+            - bob.id1
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -310,9 +329,15 @@ topologies:
         fabric:
           mapping:
             AnonymousIdentity: true
+            IdemixIdentities:
+            - charlie.id1
             Organization:
             - Network: ""
               Org: Org2
+        token:
+          mapping:
+            Owners:
+            - charlie.id1
   - NodeSynthesizer:
       Aliases:
         github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views:
@@ -358,7 +383,13 @@ topologies:
             Organization:
             - Network: ""
               Org: Org2
+        token:
+          mapping:
+            Owners:
+            - manager.id1
+            - manager.id2
+            - manager.id3
   logging:
-    spec: grpc=error:debug
+    spec: grpc=error:view-sdk.endpoint=info:view-sdk.kvs=info:debug
     format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
       -> %{level:.4s} %{id:03x}%{color:reset} %{message}'''

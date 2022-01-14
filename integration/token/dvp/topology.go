@@ -35,22 +35,20 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	approver.RegisterResponder(&views.HouseApproveView{}, &views.SellHouseView{})
 
 	// auditor
-	auditor := fscTopology.AddNodeByName("auditor").AddOptions(fabric.WithOrganization("TokenOrg"), fabric.WithAnonymousIdentity())
+	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
+		fabric.WithOrganization("TokenOrg"),
+		fabric.WithAnonymousIdentity(),
+		token.WithAuditorIdentity(),
+	)
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
-
-	// // certifier
-	// certifier := fscTopology.AddNodeByName("certifier").AddOptions(
-	// 	fabric.WithOrganization("Org1"),
-	// 	fabric.WithAnonymousIdentity(),
-	// 	token.WithCertifierIdentity(),
-	// )
-	// certifier.RegisterViewFactory("register", &views.RegisterCertifierViewFactory{})
 
 	// issuers
 	fscTopology.AddNodeByName("cash_issuer").AddOptions(
 		fabric.WithOrganization("TokenOrg"),
 		fabric.WithAnonymousIdentity(),
+		token.WithIssuerIdentity("cash_issuer"),
 	).RegisterViewFactory("issue_cash", &views.IssueCashViewFactory{})
+
 	fscTopology.AddNodeByName("house_issuer").AddOptions(
 		fabric.WithOrganization("HouseOrg"),
 		fabric.WithAnonymousIdentity(),
@@ -60,6 +58,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	seller := fscTopology.AddNodeByName("seller").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity(tokenSDKDriver, "seller.id1"),
 	)
 	seller.RegisterResponder(&views.AcceptHouseView{}, &views.IssueHouseView{})
 	seller.RegisterViewFactory("sell", &views.SellHouseViewFactory{})
@@ -67,6 +66,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	buyer := fscTopology.AddNodeByName("buyer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity(tokenSDKDriver, "buyer.id1"),
 	)
 	buyer.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	buyer.RegisterResponder(&views.BuyHouseView{}, &views.SellHouseView{})
@@ -75,7 +75,6 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"TokenOrg"}, "100", "1")
-	// tms.AddCertifier(certifier)
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }

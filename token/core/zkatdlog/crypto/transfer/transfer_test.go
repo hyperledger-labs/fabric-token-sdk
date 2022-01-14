@@ -10,11 +10,12 @@ import (
 	"testing"
 
 	math "github.com/IBM/mathlib"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
 )
 
 func TestParallelProveVerify(t *testing.T) {
@@ -85,7 +86,7 @@ var _ = Describe("Transfer", func() {
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil)
+	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInputsForZKTransfer(pp)
@@ -113,7 +114,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil)
+	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInvalidInputsForZKTransfer(pp)
@@ -142,7 +143,7 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(10, 2, nil)
+	pp, err := crypto.Setup(10, 2, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInputsForZKTransfer(pp)
@@ -264,7 +265,7 @@ func prepareInputsForOwnershipTransfer(pp *crypto.PublicParams) (*transfer.WellF
 }
 
 func prepareOwnershipTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil)
+	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInputsForOwnershipTransfer(pp)

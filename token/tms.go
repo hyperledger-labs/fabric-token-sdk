@@ -208,6 +208,10 @@ func (t *ManagementService) ID() TMSID {
 	}
 }
 
+func (t *ManagementService) ConfigManager() *ConfigManager {
+	return &ConfigManager{cm: t.tms.ConfigManager()}
+}
+
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
 	return GetManagementServiceProvider(sp).GetManagementService(opts...)
 }
