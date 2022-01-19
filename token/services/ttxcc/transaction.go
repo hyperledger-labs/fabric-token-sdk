@@ -7,13 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package ttxcc
 
 import (
-	"encoding/json"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	jsoniter "github.com/json-iterator/go"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -98,12 +96,13 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 		SP: sp,
 	}
 
-	var json = jsoniter.ConfigCompatibleWithStandardLibrary
-	if err := json.Unmarshal(raw, tx.Payload); err != nil {
+	if err := Unmarshal(raw, tx.Payload); err != nil {
 		return nil, err
 	}
 
-	logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.Id.String())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.Id.String())
+	}
 
 	tx.TokenRequest.SetTokenService(
 		token.GetManagementService(sp,
@@ -126,7 +125,9 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 }
 
 func ReceiveTransaction(context view.Context) (*Transaction, error) {
-	logger.Debugf("receive a new transaction...")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("receive a new transaction...")
+	}
 
 	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
 	if err != nil {
@@ -137,7 +138,9 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}
-	logger.Debugf("received transaction with id [%s]", cctx.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("received transaction with id [%s]", cctx.ID())
+	}
 
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttxcc", "received", "tx", cctx.ID())
@@ -163,8 +166,10 @@ func (t *Transaction) Namespace() string {
 }
 
 func (t *Transaction) Bytes() ([]byte, error) {
-	logger.Debugf("marshalling tx, id [%s]", t.Payload.Id.String())
-	return json.Marshal(t.Payload)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("marshalling tx, id [%s]", t.Payload.Id.String())
+	}
+	return Marshal(t.Payload)
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
@@ -211,7 +216,9 @@ func (t *Transaction) Selector() (token.Selector, error) {
 }
 
 func (t *Transaction) Release() {
-	logger.Debugf("releasing resources for tx [%s]", t.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("releasing resources for tx [%s]", t.ID())
+	}
 	if err := t.TokenService().SelectorManager().Unlock(t.ID()); err != nil {
 		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
 	}
@@ -235,7 +242,9 @@ func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
 }
 
 func (t *Transaction) storeTransient() error {
-	logger.Debugf("Storing transient for [%s]", t.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Storing transient for [%s]", t.ID())
+	}
 	raw, err := t.TokenRequest.MetadataToBytes()
 	if err != nil {
 		return err

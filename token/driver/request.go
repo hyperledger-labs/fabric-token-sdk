@@ -8,7 +8,6 @@ package driver
 
 import (
 	"bytes"
-	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -23,11 +22,11 @@ type TokenRequest struct {
 }
 
 func (r *TokenRequest) Bytes() ([]byte, error) {
-	return json.Marshal(r)
+	return Marshal(r)
 }
 
 func (r *TokenRequest) FromBytes(raw []byte) error {
-	return json.Unmarshal(raw, r)
+	return Unmarshal(raw, r)
 }
 
 type IssueMetadata struct {
@@ -128,9 +127,9 @@ func (m *TokenRequestMetadata) Inputs() []*token2.ID {
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
-	return json.Marshal(m)
+	return Marshal(m)
 }
 
 func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
-	return json.Unmarshal(raw, m)
+	return Unmarshal(raw, m)
 }

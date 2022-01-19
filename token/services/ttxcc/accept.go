@@ -10,6 +10,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -40,7 +41,9 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	agent.EmitKey(0, "ttxcc", "end", "acceptViewStoreTransient", s.tx.ID())
 
 	agent.EmitKey(0, "ttxcc", "start", "acceptViewParseRWS", s.tx.ID())
-	logger.Debugf("parse rws for id [%s]", s.tx.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("parse rws for id [%s]", s.tx.ID())
+	}
 	ch := network.GetInstance(context, s.tx.Network(), s.tx.Channel())
 	rws, err := ch.GetRWSet(s.tx.ID(), env.Results())
 	if err != nil {
@@ -62,7 +65,9 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 
 	agent.EmitKey(0, "ttxcc", "size", "acceptViewEnvelopeSize", s.tx.ID(), strconv.Itoa(len(rawEnv)))
 
-	logger.Debugf("send back ack")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("send back ack")
+	}
 	// Ack for distribution
 	session := context.Session()
 	// Send the proposal response back

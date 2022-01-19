@@ -6,9 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 package ttxcc
 
 import (
-	"encoding/json"
 	"fmt"
 	"time"
+
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
@@ -72,7 +73,9 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 
 func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *ActionTransfer, w *token.OwnerWallet) error {
 	party := actionTransfer.From
-	logger.Debugf("collect local from [%s]", party)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("collect local from [%s]", party)
+	}
 
 	err := c.tx.Transfer(w, actionTransfer.Type, []uint64{actionTransfer.Amount}, []view.Identity{actionTransfer.Recipient})
 	if err != nil {
@@ -89,7 +92,9 @@ func (c *collectActionsView) collectLocal(context view.Context, actionTransfer *
 
 func (c *collectActionsView) collectRemote(context view.Context, actionTransfer *ActionTransfer) error {
 	party := actionTransfer.From
-	logger.Debugf("collect remote from [%s]", party)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("collect remote from [%s]", party)
+	}
 
 	session, err := context.GetSession(context.Initiator(), party)
 	if err != nil {
@@ -108,7 +113,9 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	var msg *view.Message
 	select {
 	case msg = <-ch:
-		logger.Debugf("collect actions: reply received from [%s]", party)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("collect actions: reply received from [%s]", party)
+		}
 	case <-time.After(60 * time.Second):
 		return errors.Errorf("Timeout from party %s", party)
 	}
@@ -119,7 +126,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	txPayload := &Payload{
 		Transient: map[string][]byte{},
 	}
-	err = json.Unmarshal(msg.Payload, txPayload)
+	err = Unmarshal(msg.Payload, txPayload)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}
@@ -209,7 +216,7 @@ func (s *collectActionsResponderView) Call(context view.Context) (interface{}, e
 }
 
 func marshalOrPanic(state interface{}) []byte {
-	raw, err := json.Marshal(state)
+	raw, err := Marshal(state)
 	if err != nil {
 		panic(fmt.Sprintf("failed marshalling state [%s]", err))
 	}
@@ -217,7 +224,7 @@ func marshalOrPanic(state interface{}) []byte {
 }
 
 func unmarshalOrPanic(raw []byte, state interface{}) {
-	err := json.Unmarshal(raw, state)
+	err := Unmarshal(raw, state)
 	if err != nil {
 		panic(fmt.Sprintf("failed unmarshalling state [%s]", err))
 	}

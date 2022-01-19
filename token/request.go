@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"encoding/json"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -415,7 +413,7 @@ func (t *Request) IsValid() error {
 }
 
 func (t *Request) MarshallToAudit() ([]byte, error) {
-	bytes, err := json.Marshal(&driver.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
+	bytes, err := Marshal(&driver.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
 	if err != nil {
 		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", t.TxID)
 	}
@@ -427,7 +425,7 @@ func (t *Request) MarshallToSign() ([]byte, error) {
 		Issues:    t.Actions.Issues,
 		Transfers: t.Actions.Transfers,
 	}
-	return json.Marshal(req)
+	return Marshal(req)
 }
 
 func (t *Request) RequestToBytes() ([]byte, error) {

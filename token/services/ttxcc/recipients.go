@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package ttxcc
 
 import (
-	"encoding/json"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -38,11 +38,11 @@ type RecipientData struct {
 }
 
 func (r *RecipientData) Bytes() ([]byte, error) {
-	return json.Marshal(r)
+	return Marshal(r)
 }
 
 func (r *RecipientData) FromBytes(raw []byte) error {
-	return json.Unmarshal(raw, r)
+	return Unmarshal(raw, r)
 }
 
 type ExchangeRecipientRequest struct {
@@ -52,11 +52,11 @@ type ExchangeRecipientRequest struct {
 }
 
 func (r *ExchangeRecipientRequest) Bytes() ([]byte, error) {
-	return json.Marshal(r)
+	return Marshal(r)
 }
 
 func (r *ExchangeRecipientRequest) FromBytes(raw []byte) error {
-	return json.Unmarshal(raw, r)
+	return Unmarshal(raw, r)
 }
 
 type RecipientRequest struct {
@@ -65,11 +65,11 @@ type RecipientRequest struct {
 }
 
 func (r *RecipientRequest) Bytes() ([]byte, error) {
-	return json.Marshal(r)
+	return Marshal(r)
 }
 
 func (r *RecipientRequest) FromBytes(raw []byte) error {
-	return json.Unmarshal(raw, r)
+	return Unmarshal(raw, r)
 }
 
 type RequestRecipientIdentityView struct {
@@ -97,19 +97,25 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 	agent.EmitKey(0, "ttxcc", "start", "RequestRecipientIdentityView", context.ID())
 	defer agent.EmitKey(0, "ttxcc", "end", "RequestRecipientIdentityView", context.ID())
 
-	logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
+	}
 
 	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 
 	if w := tms.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
-		logger.Debugf("request recipient [%s] is already registered", f.Other)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("request recipient [%s] is already registered", f.Other)
+		}
 		recipient, err := w.GetRecipientIdentity()
 		if err != nil {
 			return nil, err
 		}
 		return recipient, nil
 	} else {
-		logger.Debugf("request recipient [%s] is not registered", f.Other)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("request recipient [%s] is not registered", f.Other)
+		}
 		session, err := context.GetSession(context.Initiator(), f.Other)
 		if err != nil {
 			return nil, err
@@ -152,9 +158,13 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		}
 
 		// Update the Endpoint Resolver
-		logger.Debugf("update endpoint resolver for [%s], bind to [%]", recipientData.Identity, f.Other)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("update endpoint resolver for [%s], bind to [%]", recipientData.Identity, f.Other)
+		}
 		if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
-			logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
+			}
 			return nil, err
 		}
 
@@ -236,7 +246,9 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
-	logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("bind me [%s] to [%s]", context.Me(), recipientData)
+	}
 	err = resolver.Bind(context.Me(), recipientIdentity)
 	if err != nil {
 		return nil, err
@@ -318,14 +330,18 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		}
 
 		// Update the Endpoint Resolver
-		logger.Debugf("bind [%s] to other [%s]", recipientData.Identity, f.Other)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("bind [%s] to other [%s]", recipientData.Identity, f.Other)
+		}
 		resolver := view2.GetEndpointService(context)
 		err = resolver.Bind(f.Other, recipientData.Identity)
 		if err != nil {
 			return nil, err
 		}
 
-		logger.Debugf("bind me [%s] to [%s]", me, context.Me())
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("bind me [%s] to [%s]", me, context.Me())
+		}
 		err = resolver.Bind(context.Me(), me)
 		if err != nil {
 			return nil, err

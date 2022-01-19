@@ -67,7 +67,9 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 	if nw == nil {
 		return nil, errors.Errorf("network [%s] not found", o.tx.Network())
 	}
-	logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
+	}
 	env := o.tx.Payload.Envelope
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -75,7 +77,9 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 		if err != nil {
 			return nil, err
 		}
-		logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
+		}
 	}
 
 	if err := nw.Broadcast(env); err != nil {
