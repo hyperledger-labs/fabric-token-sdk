@@ -47,7 +47,10 @@ func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms 
 func (d *FabTokenFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {
 	fp := d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 	peer := fp.PeersByID(n.ID())
-	Expect(peer).NotTo(BeNil())
+	if peer == nil {
+		// This peer is not in that fabric network
+		return nil
+	}
 
 	var res []Identity
 	for _, owner := range owners {
@@ -70,7 +73,10 @@ func (d *FabTokenFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *top
 func (d *FabTokenFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []Identity {
 	fp := d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 	peer := fp.PeersByID(n.ID())
-	Expect(peer).NotTo(BeNil())
+	if peer == nil {
+		// This peer is not in that fabric network
+		return nil
+	}
 
 	var res []Identity
 	for _, issuer := range issuers {
@@ -93,7 +99,10 @@ func (d *FabTokenFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *to
 func (d *FabTokenFabricCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []Identity {
 	fp := d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 	peer := fp.PeersByID(n.ID())
-	Expect(peer).NotTo(BeNil())
+	if peer == nil {
+		// This peer is not in that fabric network
+		return nil
+	}
 
 	var res []Identity
 	for _, auditor := range auditors {
