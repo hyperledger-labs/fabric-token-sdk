@@ -180,7 +180,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID); idInfo != nil {
-		w := newOwnerWallet(s, idInfo.ID, idInfo)
+		w := newOwnerWallet(s, walletID, idInfo)
 		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
 		return w
@@ -217,7 +217,7 @@ func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
 		if err != nil {
 			panic(err)
 		}
-		w := newIssuerWallet(s, idInfo.ID, id)
+		w := newIssuerWallet(s, walletID, id)
 		s.IssuerWallets = append(s.IssuerWallets, w)
 		logger.Debugf("created issuer wallet [%s:%s]", identity, walletID)
 		return w
@@ -254,7 +254,7 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 		if err != nil {
 			panic(err)
 		}
-		w := newAuditorWallet(s, idInfo.ID, id)
+		w := newAuditorWallet(s, walletID, id)
 		s.AuditorWallets = append(s.AuditorWallets, w)
 		logger.Debugf("created auditor wallet [%s:%s]", identity, walletID)
 		return w

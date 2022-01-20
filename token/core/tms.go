@@ -10,10 +10,13 @@ import (
 	"sync"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.core")
 
 type CallbackFunc func(network, channel, namespace string) error
 
@@ -54,6 +57,7 @@ func (m *tmsProvider) GetTokenManagerService(network string, channel string, nam
 	key := network + channel + namespace
 	service, ok := m.services[key]
 	if !ok {
+		logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", network, channel, namespace)
 		var err error
 		service, err = m.newTMS(network, channel, namespace, publicParamsFetcher)
 		if err != nil {
