@@ -17,7 +17,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2011.1
 	github.com/golang/protobuf v1.5.2
 	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220118072853-a9a237936509
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220120100023-d01e0b75c6d3
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210911123859-041d13f0980c

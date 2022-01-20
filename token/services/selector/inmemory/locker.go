@@ -120,6 +120,14 @@ func (d *locker) UnlockByTxID(txID string) {
 	}
 }
 
+func (d *locker) IsLocked(id *token2.ID) bool {
+	d.lock.Lock()
+	defer d.lock.Unlock()
+
+	_, ok := d.locked[id.String()]
+	return ok
+}
+
 func (d *locker) reclaim(id *token2.ID, txID string) (bool, int) {
 	status, err := d.vault.Status(txID)
 	if err != nil {

@@ -38,6 +38,7 @@ type Locker interface {
 	Lock(id *token2.ID, txID string) (string, error)
 	UnlockIDs(id ...*token2.ID)
 	UnlockByTxID(txID string)
+	IsLocked(id *token2.ID) bool
 }
 
 type selector struct {

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package selector
 
 import (
@@ -11,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -41,6 +43,7 @@ type selectorService struct {
 	lock           sync.Mutex
 	lockerProvider LockerProvider
 	lockers        map[string]Locker
+	managers       map[string]token.SelectorManager
 }
 
 func NewProvider(sp view.ServiceProvider, lockerProvider LockerProvider, numRetry int, timeout time.Duration) *selectorService {
@@ -48,6 +51,7 @@ func NewProvider(sp view.ServiceProvider, lockerProvider LockerProvider, numRetr
 		sp:                   sp,
 		lockerProvider:       lockerProvider,
 		lockers:              map[string]Locker{},
+		managers:             map[string]token.SelectorManager{},
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: true,
@@ -66,6 +70,12 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 	defer s.lock.Unlock()
 
 	key := tms.Network() + tms.Channel() + tms.Namespace()
+	manager, ok := s.managers[key]
+	if ok {
+		return manager
+	}
+
+	// instantiate a new manager
 	locker, ok := s.lockers[key]
 	if !ok {
 		logger.Debugf("new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
@@ -74,17 +84,22 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 	} else {
 		logger.Debugf("in-memory selector for [%s:%s:%s] exists", tms.Network(), tms.Channel(), tms.Namespace())
 	}
-
-	return newManager(
+	qe := newQueryService(
+		tms.Vault().NewQueryEngine(),
+		locker,
+	)
+	manager = newManager(
 		locker,
 		func() QueryService {
-			return tms.Vault().NewQueryEngine()
+			return qe
 		},
 		tms.CertificationClient(),
 		s.numRetry,
 		s.timeout,
 		s.requestCertification,
 	)
+	s.managers[key] = manager
+	return manager
 }
 
 func (s *selectorService) SetNumRetries(n uint) {
@@ -97,4 +112,29 @@ func (s *selectorService) SetRetryTimeout(t time.Duration) {
 
 func (s *selectorService) SetRequestCertification(v bool) {
 	s.requestCertification = v
+}
+
+type Cache interface {
+	Get(key string) (interface{}, bool)
+	Add(key string, value interface{})
+}
+
+type queryService struct {
+	qe     QueryService
+	locker Locker
+}
+
+func newQueryService(qe QueryService, locker Locker) *queryService {
+	return &queryService{
+		qe:     qe,
+		locker: locker,
+	}
+}
+
+func (q *queryService) UnspentTokensIterator() (*token.UnspentTokensIterator, error) {
+	return q.qe.UnspentTokensIterator()
+}
+
+func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
+	return q.qe.GetTokens(inputs...)
 }

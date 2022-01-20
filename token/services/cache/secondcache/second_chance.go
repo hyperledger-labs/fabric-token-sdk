@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package query
+package secondcache
 
 import (
 	"sync"
@@ -16,7 +16,7 @@ import (
 
 // secondChanceCache holds key-value items with a limited size.
 // When the number cached items exceeds the limit, victims are selected based on the
-// Second-Chance Algorithm and get purged
+// Second-Chance Algorithm and Get purged
 type secondChanceCache struct {
 	// manages mapping between keys and items
 	table map[string]*cacheItem
@@ -27,18 +27,18 @@ type secondChanceCache struct {
 	// indicates the next candidate of a victim in the items list
 	position int
 
-	// read lock for get, and write lock for add
+	// read lock for Get, and write lock for Add
 	rwlock sync.RWMutex
 }
 
 type cacheItem struct {
 	key   string
 	value interface{}
-	// set to 1 when get() is called. set to 0 when victim scan
+	// set to 1 when Get() is called. set to 0 when victim scan
 	referenced int32
 }
 
-func newSecondChanceCache(cacheSize int) *secondChanceCache {
+func New(cacheSize int) *secondChanceCache {
 	var cache secondChanceCache
 	cache.position = 0
 	cache.items = make([]*cacheItem, cacheSize)
@@ -54,7 +54,7 @@ func (cache *secondChanceCache) len() int {
 	return len(cache.table)
 }
 
-func (cache *secondChanceCache) get(key string) (interface{}, bool) {
+func (cache *secondChanceCache) Get(key string) (interface{}, bool) {
 	cache.rwlock.RLock()
 	defer cache.rwlock.RUnlock()
 
@@ -69,7 +69,7 @@ func (cache *secondChanceCache) get(key string) (interface{}, bool) {
 	return item.value, true
 }
 
-func (cache *secondChanceCache) add(key string, value interface{}) {
+func (cache *secondChanceCache) Add(key string, value interface{}) {
 	cache.rwlock.Lock()
 	defer cache.rwlock.Unlock()
 
@@ -105,7 +105,7 @@ func (cache *secondChanceCache) add(key string, value interface{}) {
 			return
 		}
 
-		// referenced bit is set to false so that this item will be get purged
+		// referenced bit is set to false so that this item will be Get purged
 		// unless it is accessed until a next victim scan
 		atomic.StoreInt32(&victim.referenced, 0)
 		cache.position = (cache.position + 1) % size

@@ -10,11 +10,12 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/cache/secondcache"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var (
-	cache = newSecondChanceCache(10000)
+	cache = secondcache.New(10000)
 )
 
 func hash(v []byte) string {
@@ -35,7 +36,7 @@ func hash(v []byte) string {
 
 func UnmarshallFabtoken(raw []byte) (*token2.Token, error) {
 	k := hash(raw)
-	if v, ok := cache.get(k); ok {
+	if v, ok := cache.Get(k); ok {
 		return v.(*token2.Token), nil
 	}
 	v := &token2.Token{}
@@ -43,7 +44,7 @@ func UnmarshallFabtoken(raw []byte) (*token2.Token, error) {
 	if err != nil {
 		return nil, err
 	}
-	cache.add(k, v)
+	cache.Add(k, v)
 
 	return v, nil
 }
