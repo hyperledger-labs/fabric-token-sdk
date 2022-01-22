@@ -56,6 +56,14 @@ func (e *Executor) GetStateRangeScanIterator(namespace string, start string, end
 	return &Iterator{it: it}, nil
 }
 
+func (e *Executor) GetCachedStateRangeScanIterator(namespace string, start string, end string) (driver.Iterator, error) {
+	it, err := e.qe.GetCachedStateRangeScanIterator(namespace, start, end)
+	if err != nil {
+		return nil, err
+	}
+	return &Iterator{it: it}, nil
+}
+
 func (e *Executor) GetStateMetadata(namespace string, id string) (map[string][]byte, error) {
 	r, _, _, err := e.qe.GetStateMetadata(namespace, id)
 	return r, err
