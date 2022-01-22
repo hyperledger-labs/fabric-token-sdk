@@ -20,15 +20,23 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.tms.zkat.query")
 
+type cache interface {
+	Get(key string) (interface{}, bool)
+	Add(key string, value interface{})
+}
+
 type Engine struct {
 	Vault     driver.Vault
 	namespace string
+
+	unspentTokensCache cache
 }
 
-func NewEngine(vault driver.Vault, namespace string) *Engine {
+func NewEngine(vault driver.Vault, namespace string, cache cache) *Engine {
 	return &Engine{
-		Vault:     vault,
-		namespace: namespace,
+		Vault:              vault,
+		namespace:          namespace,
+		unspentTokensCache: cache,
 	}
 }
 
@@ -382,7 +390,43 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	return resKeys, res, nil
 }
 
+func (e *Engine) unmarshalUnspentToken(key string, raw []byte) (*token.UnspentToken, error) {
+	// lookup cache first
+	if tok, ok := e.unspentTokensCache.Get(key); ok {
+		return tok.(*token.UnspentToken), nil
+	}
+
+	// unmarshal
+	output := &token.Token{}
+	if err := json.Unmarshal(raw, output); err != nil {
+		logger.Errorf("failed unmarshalling token for key [%v]", key)
+		return nil, err
+	}
+	// show only tokens which are owned by transactor
+	logger.Debugf("adding token with ID [%s] to list of unspent tokens", key)
+	id, err := keys.GetTokenIdFromKey(key)
+	if err != nil {
+		return nil, err
+	}
+	// Convert quantity to decimal
+	q, err := token.ToQuantity(output.Quantity, keys.Precision)
+	if err != nil {
+		return nil, err
+	}
+	ut := &token.UnspentToken{
+		Owner:    output.Owner,
+		Type:     output.Type,
+		Quantity: q.Decimal(),
+		Id:       id,
+	}
+
+	// store in cache and return
+	e.unspentTokensCache.Add(key, ut)
+	return ut, nil
+}
+
 type UnspentTokensIterator struct {
+	e  *Engine
 	it driver.Iterator
 }
 
@@ -405,27 +449,10 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 			continue
 		}
 
-		output, err := UnmarshallFabtoken(next.Raw)
+		output, err := u.e.unmarshalUnspentToken(next.Key, next.Raw)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s][%s", next.Key, string(next.Raw))
 		}
-
-		// show only tokens which are owned by transactor
-		logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.Key)
-		id, err := keys.GetTokenIdFromKey(next.Key)
-		if err != nil {
-			return nil, err
-		}
-		// Convert quantity to decimal
-		q, err := token.ToQuantity(output.Quantity, keys.Precision)
-		if err != nil {
-			return nil, err
-		}
-		return &token.UnspentToken{
-			Owner:    output.Owner,
-			Type:     output.Type,
-			Quantity: q.Decimal(),
-			Id:       id,
-		}, nil
+		return output, nil
 	}
 }

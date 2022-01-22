@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"encoding/json"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -120,10 +121,13 @@ type Network struct {
 	n  *fabric.NetworkService
 	ch *fabric.Channel
 	sp view2.ServiceProvider
+
+	vaultCacheLock sync.RWMutex
+	vaultCache     map[string]driver.Vault
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel) *Network {
-	return &Network{n: n, ch: ch, sp: sp}
+	return &Network{n: n, ch: ch, sp: sp, vaultCache: map[string]driver.Vault{}}
 }
 
 func (n *Network) Name() string {
@@ -135,12 +139,33 @@ func (n *Network) Channel() string {
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch))
+	// check cache
+	n.vaultCacheLock.RLock()
+	v, ok := n.vaultCache[namespace]
+	n.vaultCacheLock.RUnlock()
+	if ok {
+		return v, nil
+	}
 
-	return &nv{
+	// lock
+	n.vaultCacheLock.Lock()
+	defer n.vaultCacheLock.Unlock()
+
+	// check cache again
+	v, ok = n.vaultCache[namespace]
+	if ok {
+		return v, nil
+	}
+
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch))
+	nv := &nv{
 		v:          n.ch.Vault(),
 		tokenVault: tokenVault,
-	}, nil
+	}
+	// store in cache
+	n.vaultCache[namespace] = nv
+
+	return nv, nil
 }
 
 func (n *Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
