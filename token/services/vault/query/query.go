@@ -80,7 +80,7 @@ func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) 
 	if err != nil {
 		return nil, err
 	}
-	return &UnspentTokensIterator{it: iterator}, nil
+	return &UnspentTokensIterator{it: iterator, e: e}, nil
 }
 
 func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
