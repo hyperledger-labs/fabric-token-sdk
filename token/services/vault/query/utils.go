@@ -10,7 +10,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/cache/secondcache"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
