@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/json"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -195,8 +193,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 }
 
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	ro := &identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id}
-	raw, err := json.Marshal(ro)
+	raw, err := identity.MarshallRawOwner(&identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id})
 	if err != nil {
 		return nil, err
 	}

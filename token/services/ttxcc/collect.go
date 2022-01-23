@@ -11,9 +11,9 @@ import (
 
 	"go.uber.org/zap/zapcore"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	"github.com/pkg/errors"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -124,9 +124,10 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	}
 
 	txPayload := &Payload{
-		Transient: map[string][]byte{},
+		Transient:    map[string][]byte{},
+		TokenRequest: token.NewRequest(nil, ""),
 	}
-	err = Unmarshal(msg.Payload, txPayload)
+	err = unmarshal(nil, txPayload, msg.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}

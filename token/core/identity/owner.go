@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
-	"encoding/json"
+	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -29,11 +29,19 @@ type RawOwner struct {
 
 func UnmarshallRawOwner(id view.Identity) (*RawOwner, error) {
 	si := &RawOwner{}
-	err := json.Unmarshal(id, si)
+	_, err := asn1.Unmarshal(id, si)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to RawOwner")
 	}
 	return si, nil
+}
+
+func MarshallRawOwner(o *RawOwner) (view.Identity, error) {
+	raw, err := asn1.Marshal(*o)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal to RawOwner")
+	}
+	return raw, nil
 }
 
 type DeserializeVerifierProvider interface {
@@ -52,8 +60,7 @@ func NewRawOwnerIdentityDeserializer(dvp DeserializeVerifierProvider) *RawOwnerI
 }
 
 func (deserializer *RawOwnerIdentityDeserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si := &RawOwner{}
-	err := json.Unmarshal(id, si)
+	si, err := UnmarshallRawOwner(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to RawOwner")
 	}

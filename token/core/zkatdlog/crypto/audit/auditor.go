@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package audit
 
 import (
+	"encoding/asn1"
 	"encoding/json"
 
 	math "github.com/IBM/mathlib"
@@ -85,7 +86,7 @@ func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer Signin
 
 func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
 	// Prepare signature
-	bytes, err := json.Marshal(&driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
+	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
 	if err != nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
 	}
@@ -202,8 +203,7 @@ func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 }
 
 func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
-	si := &identity.RawOwner{}
-	err := json.Unmarshal(raw, si)
+	si, err := identity.UnmarshallRawOwner(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to identity.RawOwner{}")
 	}

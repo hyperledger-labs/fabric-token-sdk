@@ -367,8 +367,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	err = auditInfo.Match(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	rawOwner := identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType}
-	id, err = json.Marshal(rawOwner)
+	id, err = identity.MarshallRawOwner(&identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType})
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo

@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package ttxcc
 
 import (
+	"encoding/asn1"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -93,13 +96,14 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 	// TODO: remove the need of network by introducing custom Pyaload unmarshalling
 	tx := &Transaction{
 		Payload: &Payload{
-			Envelope:  network.GetInstance(sp, nw, channel).NewEnvelope(),
-			Transient: map[string][]byte{},
+			Envelope:     network.GetInstance(sp, nw, channel).NewEnvelope(),
+			Transient:    map[string][]byte{},
+			TokenRequest: token.NewRequest(nil, ""),
 		},
 		SP: sp,
 	}
 
-	if err := Unmarshal(raw, tx.Payload); err != nil {
+	if err := unmarshal(tx, tx.Payload, raw); err != nil {
 		return nil, err
 	}
 
@@ -118,11 +122,11 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
 
-	if tx.Envelope != nil {
-		if err := tx.setEnvelope(tx.Envelope); err != nil {
-			return nil, err
-		}
-	}
+	// if tx.Envelope != nil {
+	// 	if err := tx.setEnvelope(tx.Envelope); err != nil {
+	// 		return nil, err
+	// 	}
+	// }
 	sp.OnError(tx.Release)
 	return tx, nil
 }
@@ -172,7 +176,7 @@ func (t *Transaction) Bytes() ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("marshalling tx, id [%s]", t.Payload.TxID.String())
 	}
-	return Marshal(t.Payload)
+	return marshal(t)
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
@@ -199,7 +203,7 @@ func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs()
 }
 
-// Verify checks that the transaction is well formed.
+// Verify checks that the transaction is well-formed.
 // This means checking that the embedded TokenRequest is valid.
 func (t *Transaction) Verify() error {
 	return t.TokenRequest.Verify()
@@ -299,4 +303,95 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	//	}
 	// }
 	// return nil
+}
+
+type TransactionSer struct {
+	Nonce        []byte
+	Creator      []byte
+	ID           string
+	Network      string
+	Channel      string
+	Namespace    string
+	Signer       []byte
+	Transient    []byte
+	TokenRequest []byte
+	Envelope     []byte
+}
+
+func marshal(t *Transaction) ([]byte, error) {
+	var err error
+
+	var transientRaw []byte
+	if len(t.Payload.Transient) != 0 {
+		transientRaw, err = Marshal(t.Payload.Transient)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var tokenRequestRaw []byte
+	if t.Payload.TokenRequest != nil {
+		tokenRequestRaw, err = t.Payload.TokenRequest.Bytes()
+		if err != nil {
+			return nil, err
+		}
+		logger.Infof("marshal token request: [%s][%s]", t.ID(), hash.Hashable(tokenRequestRaw))
+	}
+
+	var envRaw []byte
+	if t.Payload.Envelope != nil {
+		envRaw, err = t.Envelope.Bytes()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return asn1.Marshal(TransactionSer{
+		Nonce:        t.Payload.TxID.Nonce,
+		Creator:      t.Payload.TxID.Creator,
+		ID:           t.Payload.ID,
+		Network:      t.Payload.Network,
+		Channel:      t.Payload.Channel,
+		Namespace:    t.Payload.Namespace,
+		Signer:       t.Payload.Signer,
+		Transient:    transientRaw,
+		TokenRequest: tokenRequestRaw,
+		Envelope:     envRaw,
+	})
+}
+
+func unmarshal(t *Transaction, p *Payload, raw []byte) error {
+	var ser TransactionSer
+	if _, err := asn1.Unmarshal(raw, &ser); err != nil {
+		return errors.Wrap(err, "failed unmarshalling transaction")
+	}
+
+	p.TxID.Nonce = ser.Nonce
+	p.TxID.Creator = ser.Creator
+	p.ID = ser.ID
+	p.Network = ser.Network
+	p.Channel = ser.Channel
+	p.Namespace = ser.Namespace
+	p.Signer = ser.Signer
+	p.Transient = make(map[string][]byte)
+	if len(ser.Transient) != 0 {
+		if err := Unmarshal(ser.Transient, &p.Transient); err != nil {
+			return errors.Wrap(err, "failed unmarshalling transient")
+		}
+	}
+	if len(ser.TokenRequest) != 0 {
+		logger.Infof("unmarshal token request: [%s][%s]", p.ID, hash.Hashable(ser.TokenRequest))
+		if err := p.TokenRequest.FromBytes(ser.TokenRequest); err != nil {
+			return errors.Wrap(err, "failed unmarshalling token request")
+		}
+	}
+	if len(ser.Envelope) != 0 {
+		if err := p.Envelope.FromBytes(ser.Envelope); err != nil {
+			return errors.Wrap(err, "failed unmarshalling envelope")
+		}
+		// if err := t.setEnvelope(t.Envelope); err != nil {
+		// 	return errors.Wrap(err, "failed setting envelope")
+		// }
+	}
+	return nil
 }

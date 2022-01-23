@@ -126,7 +126,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, err
 	}
 	if err := v.Verify(signed, msg.Payload); err != nil {
-		return nil, errors.Wrapf(err, "failed verifying auditor signature")
+		return nil, errors.Wrapf(err, "failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
 	}
 
 	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
@@ -188,8 +188,10 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.Wrapf(err, "failed marshalling tx [%s] to audit", a.tx.ID())
 	}
 
+	logger.Infof("Audit Approve [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.TokenRequest.TxID)
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Endorse [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.ID())
+		logger.Debugf("Audit Approve [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.TokenRequest.TxID)
 	}
 	sigma, err := signer.Sign(raw)
 	if err != nil {

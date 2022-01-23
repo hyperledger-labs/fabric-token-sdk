@@ -8,6 +8,7 @@ package driver
 
 import (
 	"bytes"
+	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -22,11 +23,12 @@ type TokenRequest struct {
 }
 
 func (r *TokenRequest) Bytes() ([]byte, error) {
-	return Marshal(r)
+	return asn1.Marshal(*r)
 }
 
 func (r *TokenRequest) FromBytes(raw []byte) error {
-	return Unmarshal(raw, r)
+	_, err := asn1.Unmarshal(raw, r)
+	return err
 }
 
 type IssueMetadata struct {

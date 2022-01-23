@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -86,7 +87,9 @@ func (i *Provider) GetIdentityInfo(usage driver.IdentityUsage, id string) *drive
 	if getIdentity == nil {
 		return nil
 	}
-	logger.Debugf("info for [%v] is [%s,%s]", id, id, eid)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("info for [%v] is [%s,%s]", id, id, eid)
+	}
 	return &driver.IdentityInfo{
 		ID:           id,
 		EnrollmentID: eid,
@@ -112,7 +115,9 @@ func (i *Provider) LookupIdentifier(usage driver.IdentityUsage, v interface{}) (
 		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
 	}
 	id, label := mapper.Map(v)
-	logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
+	}
 	return id, label
 }
 
@@ -146,7 +151,9 @@ func (i *Provider) IsMe(identity view.Identity) bool {
 		// try to get the signer
 		signer, err := i.GetSigner(identity)
 		if err != nil {
-			logger.Debugf("failed to get signer for identity [%s]", identity.String())
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("failed to get signer for identity [%s]", identity.String())
+			}
 			return false
 		}
 		return signer != nil

@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
@@ -47,23 +48,31 @@ func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Id
 }
 
 func (i *Mapper) Info(id string) (string, string, GetFunc) {
-	logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
+	}
 
 	switch i.identityType {
 	case LongTermIdentity:
 		id, eID, longTermID, err := i.localMembership.GetLongTermIdentity(id)
 		if err != nil {
-			logger.Debugf("[%s] failed to get long term identity for [%s]: %s", i.networkID, id, err)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[%s] failed to get long term identity for [%s]: %s", i.networkID, id, err)
+			}
 			return "", "", nil
 		}
 		return id, eID, func() (view.Identity, []byte, error) {
-			logger.Debugf("[%s] return [%s][%s][%s]", i.networkID, id, longTermID, eID)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[%s] return [%s][%s][%s]", i.networkID, id, longTermID, eID)
+			}
 			return longTermID, []byte(eID), nil
 		}
 	case AnonymousIdentity:
 		id, eID, getFunc, err := i.localMembership.GetAnonymousIdentity(id, nil)
 		if err != nil {
-			logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
+			}
 			return "", "", nil
 		}
 		return id, eID, GetFunc(getFunc)
@@ -75,25 +84,29 @@ func (i *Mapper) Info(id string) (string, string, GetFunc) {
 func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 	defaultID := i.localMembership.DefaultIdentity()
 
-	logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
-		i.networkID,
-		i.identityType,
-		v,
-		string(defaultID),
-		defaultID.String(),
-		i.nodeIdentity.String(),
-	)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
+			i.networkID,
+			i.identityType,
+			v,
+			string(defaultID),
+			defaultID.String(),
+			i.nodeIdentity.String(),
+		)
+	}
 
 	switch i.identityType {
 	case LongTermIdentity:
 		switch vv := v.(type) {
 		case view.Identity:
-			logger.Debugf(
-				"[x509] looking up identifier for identity [%d,%s], default identity [%s]",
-				i.identityType,
-				vv.String(),
-				defaultID.String(),
-			)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf(
+					"[x509] looking up identifier for identity [%d,%s], default identity [%s]",
+					i.identityType,
+					vv.String(),
+					defaultID.String(),
+				)
+			}
 			id := vv
 			switch {
 			case id.IsNone():
@@ -106,7 +119,9 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				if idIdentifier, err := i.localMembership.GetLongTermIdentifier(id); err == nil {
 					return id, idIdentifier
 				}
-				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+				}
 				return id, ""
 			case string(id) == "default":
 				return defaultID, "default"
@@ -119,12 +134,16 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 			if idIdentifier, err := i.localMembership.GetLongTermIdentifier(id); err == nil {
 				return id, idIdentifier
 			}
-			logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
+			}
 
 			return id, ""
 		case string:
 			label := vv
-			logger.Debugf("[x509] looking up identifier for label [%d,%s]", i.identityType, vv)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[x509] looking up identifier for label [%d,%s]", i.identityType, vv)
+			}
 			switch {
 			case len(label) == 0:
 				return defaultID, "default"
@@ -143,14 +162,18 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				if idIdentifier, err := i.localMembership.GetLongTermIdentifier(id); err == nil {
 					return id, idIdentifier
 				}
-				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+				}
 				return id, ""
 			}
 
 			if _, _, longTermID, err := i.localMembership.GetLongTermIdentity(label); err == nil {
 				return longTermID, label
 			}
-			logger.Debugf("cannot match string [%s] to identifier", vv)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("cannot match string [%s] to identifier", vv)
+			}
 			return nil, label
 		default:
 			panic(fmt.Sprintf("identifier not recognised, expected []byte or view.Identity"))
@@ -158,36 +181,54 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 	case AnonymousIdentity:
 		switch vv := v.(type) {
 		case view.Identity:
-			logger.Debugf("[idemix] looking up identifier for identity [%d,%s]", i.identityType, vv.String())
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[idemix] looking up identifier for identity [%d,%s]", i.identityType, vv.String())
+			}
 			id := vv
 			switch {
 			case id.IsNone():
-				logger.Debugf("passed empty identity")
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("passed empty identity")
+				}
 				return nil, "idemix"
 			case id.Equal(defaultID):
-				logger.Debugf("passed default identity")
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("passed default identity")
+				}
 				return nil, "idemix"
 			case string(id) == "idemix":
-				logger.Debugf("passed 'idemix' identity")
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("passed 'idemix' identity")
+				}
 				return nil, "idemix"
 			case id.Equal(i.nodeIdentity):
-				logger.Debugf("passed identity is the node identity (same bytes)")
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("passed identity is the node identity (same bytes)")
+				}
 				return nil, "idemix"
 			case i.localMembership.IsMe(id):
-				logger.Debugf("passed identity is me")
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("passed identity is me")
+				}
 				return id, ""
 			}
 			label := string(id)
-			logger.Debugf("[idemix] looking up identifier for identity as label [%d,%s]", i.identityType, label)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[idemix] looking up identifier for identity as label [%d,%s]", i.identityType, label)
+			}
 
 			if idIdentifier, err := i.localMembership.GetAnonymousIdentifier(label); err == nil {
 				return nil, idIdentifier
 			}
-			logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("cannot match view.Identity string [%s] to identifier", vv)
+			}
 			return nil, string(id)
 		case string:
 			label := vv
-			logger.Debugf("[idemix] looking up identifier for label [%d,%s]", i.identityType, vv)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[idemix] looking up identifier for label [%d,%s]", i.identityType, vv)
+			}
 			switch {
 			case len(label) == 0:
 				return nil, "idemix"
@@ -208,7 +249,9 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 			if idIdentifier, err := i.localMembership.GetAnonymousIdentifier(label); err == nil {
 				return nil, idIdentifier
 			}
-			logger.Debugf("cannot match string [%s] to identifier", vv)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("cannot match string [%s] to identifier", vv)
+			}
 			return nil, label
 		default:
 			panic(fmt.Sprintf("identifier not recognised, expected []byte or view.Identity"))

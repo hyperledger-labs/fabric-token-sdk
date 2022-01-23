@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"encoding/json"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -41,7 +39,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 		return nil, errors.New("empty token request")
 	}
 	tr := &driver.TokenRequest{}
-	err := json.Unmarshal(raw, tr)
+	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
@@ -51,9 +49,9 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	req := &driver.TokenRequest{}
 	req.Transfers = tr.Transfers
 	req.Issues = tr.Issues
-	bytes, err := json.Marshal(req)
+	bytes, err := req.Bytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal signed token request"+err.Error())
+		return nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
 
 	logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(bytes).String(), binding)

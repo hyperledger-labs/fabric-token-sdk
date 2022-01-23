@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator_test
 
 import (
+	"encoding/asn1"
 	"encoding/json"
 	"io/ioutil"
 	"time"
@@ -127,7 +128,7 @@ var _ = Describe("validator", func() {
 
 		// atomic action request
 		ar = &driver.TokenRequest{Issues: air.Issues, Transfers: tr.Transfers}
-		raw, err := json.Marshal(ar)
+		raw, err := asn1.Marshal(*ar)
 		Expect(err).NotTo(HaveOccurred())
 
 		// anonymissuer signs request
@@ -163,7 +164,7 @@ var _ = Describe("validator", func() {
 				err error
 			)
 			BeforeEach(func() {
-				raw, err = json.Marshal(air)
+				raw, err = asn1.Marshal(*air)
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
@@ -179,7 +180,7 @@ var _ = Describe("validator", func() {
 				raw []byte
 			)
 			BeforeEach(func() {
-				raw, err = json.Marshal(ir)
+				raw, err = asn1.Marshal(*ir)
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
@@ -214,7 +215,7 @@ var _ = Describe("validator", func() {
 				fakeldger.GetStateReturnsOnCall(4, nil, nil)
 				fakeldger.GetStateReturnsOnCall(5, nil, nil)
 
-				raw, err = json.Marshal(tr)
+				raw, err = asn1.Marshal(*tr)
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
@@ -248,7 +249,7 @@ var _ = Describe("validator", func() {
 
 				fakeldger.GetStateReturnsOnCall(4, nil, nil)
 
-				raw, err = json.Marshal(rr)
+				raw, err = asn1.Marshal(*rr)
 				Expect(err).NotTo(HaveOccurred())
 
 			})
@@ -285,7 +286,7 @@ var _ = Describe("validator", func() {
 				fakeldger.GetStateReturnsOnCall(5, nil, nil)
 				fakeldger.GetStateReturnsOnCall(6, nil, nil)
 
-				raw, err = json.Marshal(ar)
+				raw, err = asn1.Marshal(*ar)
 				Expect(err).NotTo(HaveOccurred())
 
 			})
@@ -298,10 +299,10 @@ var _ = Describe("validator", func() {
 			Context("When the anonymissuer's signature is not valid: wrong txID", func() {
 				BeforeEach(func() {
 					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
-					raw, err = json.Marshal(request)
+					raw, err = asn1.Marshal(*request)
 					Expect(err).NotTo(HaveOccurred())
 					ar.Signatures[0], err = anonymissuer.SignTokenActions(raw, "3")
-					raw, err = json.Marshal(ar)
+					raw, err = asn1.Marshal(*ar)
 					Expect(err).NotTo(HaveOccurred())
 				})
 				It("fails", func() {
@@ -312,14 +313,14 @@ var _ = Describe("validator", func() {
 			Context("when the sender's signature is not valid: wrong txID", func() {
 				BeforeEach(func() {
 					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
-					raw, err = json.Marshal(request)
+					raw, err = asn1.Marshal(*request)
 					Expect(err).NotTo(HaveOccurred())
 
 					signatures, err := sender.SignTokenActions(raw, "3")
 					Expect(err).NotTo(HaveOccurred())
 					ar.Signatures[1] = signatures[0]
 
-					raw, err = json.Marshal(ar)
+					raw, err = asn1.Marshal(*ar)
 					Expect(err).NotTo(HaveOccurred())
 
 				})
@@ -489,8 +490,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	signer, err := p.DeserializeSigningIdentity(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	rawOwner := identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType}
-	id, err = json.Marshal(rawOwner)
+	id, err = identity.MarshallRawOwner(&identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType})
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo, signer
@@ -529,7 +529,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 
 	// sign token request
 	ir = &driver.TokenRequest{Issues: [][]byte{raw}}
-	raw, err = json.Marshal(ir)
+	raw, err = asn1.Marshal(*ir)
 	Expect(err).NotTo(HaveOccurred())
 
 	sig, err := issuer.SignTokenActions(raw, "1")
@@ -589,7 +589,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	Expect(err).NotTo(HaveOccurred())
 
 	tr := &driver.TokenRequest{Transfers: [][]byte{raw}}
-	raw, err = json.Marshal(tr)
+	raw, err = asn1.Marshal(*tr)
 	Expect(err).NotTo(HaveOccurred())
 
 	marshalledInfo := make([][]byte, len(inf))

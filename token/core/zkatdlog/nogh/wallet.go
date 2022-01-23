@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"encoding/json"
 	"strings"
 
 	math "github.com/IBM/mathlib"
@@ -273,8 +272,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) api2.CertifierWall
 }
 
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	ro := &identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id}
-	raw, err := json.Marshal(ro)
+	raw, err := identity.MarshallRawOwner(&identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id})
 	if err != nil {
 		return nil, err
 	}

@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"encoding/asn1"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -413,7 +415,7 @@ func (t *Request) IsValid() error {
 }
 
 func (t *Request) MarshallToAudit() ([]byte, error) {
-	bytes, err := Marshal(&driver.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
+	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
 	if err != nil {
 		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", t.TxID)
 	}
@@ -425,7 +427,7 @@ func (t *Request) MarshallToSign() ([]byte, error) {
 		Issues:    t.Actions.Issues,
 		Transfers: t.Actions.Transfers,
 	}
-	return Marshal(req)
+	return req.Bytes()
 }
 
 func (t *Request) RequestToBytes() ([]byte, error) {
@@ -434,6 +436,42 @@ func (t *Request) RequestToBytes() ([]byte, error) {
 
 func (t *Request) MetadataToBytes() ([]byte, error) {
 	return t.Metadata.Bytes()
+}
+
+func (t *Request) Bytes() ([]byte, error) {
+	req, err := t.RequestToBytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling request to bytes")
+	}
+	meta, err := t.MetadataToBytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling metadata to bytes")
+	}
+	return asn1.Marshal(requestSer{
+		TxID:     t.TxID,
+		Actions:  req,
+		Metadata: meta,
+	})
+}
+
+func (t *Request) FromBytes(request []byte) error {
+	var req requestSer
+	_, err := asn1.Unmarshal(request, &req)
+	if err != nil {
+		return errors.Wrapf(err, "failed unmarshalling request")
+	}
+	t.TxID = req.TxID
+	if len(req.Actions) > 0 {
+		if err := t.Actions.FromBytes(req.Actions); err != nil {
+			return errors.Wrapf(err, "failed unmarshalling actions")
+		}
+	}
+	if len(req.Metadata) > 0 {
+		if err := t.Metadata.FromBytes(req.Metadata); err != nil {
+			return errors.Wrapf(err, "failed unmarshalling metadata")
+		}
+	}
+	return nil
 }
 
 func (t *Request) AddAuditorSignature(sigma []byte) {
@@ -718,4 +756,10 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 	}
 
 	return tokenIDs, outputTokens, nil
+}
+
+type requestSer struct {
+	TxID     string
+	Actions  []byte
+	Metadata []byte
 }
