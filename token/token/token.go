@@ -85,14 +85,15 @@ func (it *IssuedTokens) Count() int {
 // UnspentToken is used to specify a token returned by ListRequest
 type UnspentToken struct {
 	// Id is used to uniquely identify the token in the ledger
-	Id *ID `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	Id *ID
 	// Owner is the token owner
-	Owner *Owner `protobuf:"bytes,1,opt,name=owner,proto3" json:"owner,omitempty"`
+	Owner *Owner
 	// Type is the type of the token
-	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
+	Type        string
+	QuantityStr string
 	// Quantity represents the number of units of Type that this unspent token holds.
 	// It is formatted in decimal representation
-	Quantity string `protobuf:"bytes,3,opt,name=quantity,proto3" json:"quantity,omitempty"`
+	Quantity Quantity
 }
 
 // UnspentTokens is used to hold the output of ListRequest
@@ -108,7 +109,7 @@ func (it *UnspentTokens) Count() int {
 func (it *UnspentTokens) Sum(precision uint64) Quantity {
 	sum := NewZeroQuantity(precision)
 	for _, token := range it.Tokens {
-		q, err := ToQuantity(token.Quantity, precision)
+		q, err := ToQuantity(token.QuantityStr, precision)
 		if err != nil {
 			panic(err)
 		}

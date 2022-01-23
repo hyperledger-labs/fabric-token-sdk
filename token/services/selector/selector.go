@@ -108,7 +108,7 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 				break
 			}
 
-			q, err := token2.ToQuantity(t.Quantity, s.precision)
+			q := t.Quantity
 			if err != nil {
 				s.locker.UnlockIDs(toBeSpent...)
 				s.locker.UnlockIDs(toBeCertified...)

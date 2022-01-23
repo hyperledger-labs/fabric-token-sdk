@@ -81,6 +81,7 @@ func (m *tmsProvider) newTMS(networkID string, channel string, namespace string,
 	if !ok {
 		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", pp.Identifier)
 	}
+	logger.Debugf("instantiating token service for network [%s], channel [%s], namespace [%s], with driver identifier [%s]", networkID, channel, namespace, pp.Identifier)
 
 	ts, err := d.NewTokenService(m.sp, publicParamsFetcher, networkID, channel, namespace)
 	if err != nil {

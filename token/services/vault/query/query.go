@@ -144,10 +144,11 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 			}
 			tokens = append(tokens,
 				&token.UnspentToken{
-					Owner:    output.Owner,
-					Type:     output.Type,
-					Quantity: q.Decimal(),
-					Id:       id,
+					Owner:       output.Owner,
+					Type:        output.Type,
+					QuantityStr: output.Quantity,
+					Quantity:    q,
+					Id:          id,
 				})
 		}
 	}
@@ -414,10 +415,11 @@ func (e *Engine) unmarshalUnspentToken(key string, raw []byte) (*token.UnspentTo
 		return nil, err
 	}
 	ut := &token.UnspentToken{
-		Owner:    output.Owner,
-		Type:     output.Type,
-		Quantity: q.Decimal(),
-		Id:       id,
+		Owner:       output.Owner,
+		Type:        output.Type,
+		QuantityStr: output.Quantity,
+		Quantity:    q,
+		Id:          id,
 	}
 
 	// store in cache and return

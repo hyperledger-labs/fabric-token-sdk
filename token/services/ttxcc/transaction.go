@@ -18,7 +18,8 @@ import (
 )
 
 type Payload struct {
-	Id        network.TxID
+	TxID      network.TxID
+	ID        string
 	Network   string
 	Channel   string
 	Namespace string
@@ -62,8 +63,9 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 		token.WithNamespace(txOpts.namespace),
 	)
 
-	id := &network.TxID{Creator: signer}
-	tr, err := tms.NewRequest(network.GetInstance(sp, tms.Network(), tms.Channel()).ComputeTxID(id))
+	txID := &network.TxID{Creator: signer}
+	id := network.GetInstance(sp, tms.Network(), tms.Channel()).ComputeTxID(txID)
+	tr, err := tms.NewRequest(id)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
 	}
@@ -73,7 +75,8 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 			Signer:       signer,
 			TokenRequest: tr,
 			Envelope:     nil,
-			Id:           *id,
+			TxID:         *txID,
+			ID:           id,
 			Network:      tms.Network(),
 			Channel:      tms.Channel(),
 			Namespace:    tms.Namespace(),
@@ -101,7 +104,7 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.Id.String())
+		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
 	}
 
 	tx.TokenRequest.SetTokenService(
@@ -150,7 +153,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 
 // ID returns the ID of this transaction. It is equal to the underlying Fabric transaction's ID.
 func (t *Transaction) ID() string {
-	return network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(&t.Payload.Id)
+	return t.Payload.ID
 }
 
 func (t *Transaction) Network() string {
@@ -167,7 +170,7 @@ func (t *Transaction) Namespace() string {
 
 func (t *Transaction) Bytes() ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("marshalling tx, id [%s]", t.Payload.Id.String())
+		logger.Debugf("marshalling tx, id [%s]", t.Payload.TxID.String())
 	}
 	return Marshal(t.Payload)
 }
@@ -258,8 +261,9 @@ func (t *Transaction) storeTransient() error {
 }
 
 func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
-	t.Payload.Id.Nonce = envelope.Nonce()
-	t.Payload.Id.Creator = envelope.Creator()
+	t.Payload.TxID.Nonce = envelope.Nonce()
+	t.Payload.TxID.Creator = envelope.Creator()
+	t.Payload.ID = network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(&t.Payload.TxID)
 	t.Envelope = envelope
 
 	return nil

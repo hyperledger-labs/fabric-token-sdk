@@ -153,7 +153,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 				logger.Debugf("signing [%s][%s]", hash.Hashable(requestRaw).String(), c.tx.ID())
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
+				logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
 			}
 			sigma, err := signer.Sign(append(requestRaw, []byte(c.tx.ID())...))
 			if err != nil {
@@ -257,7 +257,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 			if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("collecting signature on request (transfer) from [%s], it is me!", party.UniqueID())
-					logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
+					logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
 				}
 				sigma, err := signer.Sign(signatureRequest.MessageToSign())
 				if err != nil {
@@ -345,7 +345,7 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.
 	agent.EmitKey(0, "ttxcc", "size", "callChaincodeSize", c.tx.ID(), strconv.Itoa(len(requestRaw)))
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.Id.Nonce))
+		logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
 	}
 
 	agent.EmitKey(0, "ttxcc", "start", "callChaincodeRequest", c.tx.ID())
@@ -354,7 +354,7 @@ func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.
 		c.tx.Namespace(),
 		requestRaw,
 		c.tx.Signer,
-		c.tx.Payload.Id,
+		c.tx.Payload.TxID,
 	)
 	agent.EmitKey(0, "ttxcc", "end", "callChaincodeRequest", c.tx.ID())
 	if err != nil {
