@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"fmt"
 	"strings"
 
 	math "github.com/IBM/mathlib"
@@ -286,6 +287,7 @@ type wallet struct {
 	tokenService *Service
 	id           string
 	identityInfo *api2.IdentityInfo
+	prefix       string
 }
 
 func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
@@ -293,6 +295,7 @@ func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.Identit
 		tokenService: tokenService,
 		id:           id,
 		identityInfo: identityInfo,
+		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
 	}
 }
 
@@ -372,34 +375,18 @@ func (w *wallet) ListTokens(opts *api2.ListTokensOptions) (*token2.UnspentTokens
 
 func (w *wallet) existsRecipientIdentity(id view.Identity) bool {
 	var sb strings.Builder
-	sb.WriteString(w.tokenService.Channel)
-	sb.WriteString(w.identityInfo.ID)
-	sb.WriteString(w.identityInfo.EnrollmentID)
-	sb.WriteString(id.UniqueID())
-
-	k := kvs.CreateCompositeKeyOrPanic(
-		"zkatdlog.o.w.r.id",
-		[]string{
-			sb.String(),
-		},
-	)
+	sb.WriteString(w.prefix)
+	sb.WriteString(id.Hash())
+	k := sb.String()
 	kvss := kvs.GetService(w.tokenService.SP)
 	return kvss.Exists(k)
 }
 
 func (w *wallet) putRecipientIdentity(id view.Identity, meta []byte) error {
 	var sb strings.Builder
-	sb.WriteString(w.tokenService.Channel)
-	sb.WriteString(w.identityInfo.ID)
-	sb.WriteString(w.identityInfo.EnrollmentID)
-	sb.WriteString(id.UniqueID())
-
-	k := kvs.CreateCompositeKeyOrPanic(
-		"zkatdlog.o.w.r.id",
-		[]string{
-			sb.String(),
-		},
-	)
+	sb.WriteString(w.prefix)
+	sb.WriteString(id.Hash())
+	k := sb.String()
 	kvss := kvs.GetService(w.tokenService.SP)
 	if err := kvss.Put(k, meta); err != nil {
 		return err
