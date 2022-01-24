@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -180,7 +181,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID); idInfo != nil {
-		w := newOwnerWallet(s, walletID, idInfo)
+		w := newOwnerWallet(s, walletID, idInfo, secondcache.New(1000))
 		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
 		return w
@@ -283,19 +284,27 @@ func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 	return raw, nil
 }
 
+type cache interface {
+	Get(key token2.ID) (interface{}, bool)
+	Add(key token2.ID, value interface{})
+}
+
 type wallet struct {
 	tokenService *Service
 	id           string
 	identityInfo *api2.IdentityInfo
 	prefix       string
+
+	cache cache
 }
 
-func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
+func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo, cache cache) *wallet {
 	return &wallet{
 		tokenService: tokenService,
 		id:           id,
 		identityInfo: identityInfo,
 		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
+		cache:        cache,
 	}
 }
 
@@ -305,6 +314,17 @@ func (w *wallet) ID() string {
 
 func (w *wallet) Contains(identity view.Identity) bool {
 	return w.existsRecipientIdentity(identity)
+}
+
+func (w *wallet) ContainsToken(token *token2.UnspentToken) bool {
+	v, ok := w.cache.Get(*token.Id)
+	if ok {
+		return v.(bool)
+	}
+
+	res := w.Contains(token.Owner.Raw)
+	w.cache.Add(*token.Id, res)
+	return res
 }
 
 func (w *wallet) GetRecipientIdentity() (view.Identity, error) {
@@ -422,6 +442,10 @@ func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
 
+func (w *issuerWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
+}
+
 func (w *issuerWallet) GetIssuerIdentity(tokenType string) (view.Identity, error) {
 	return w.identity, nil
 }
@@ -484,6 +508,10 @@ func (w *auditorWallet) ID() string {
 
 func (w *auditorWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
+}
+
+func (w *auditorWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *auditorWallet) GetAuditorIdentity() (view.Identity, error) {

@@ -12,8 +12,6 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -123,7 +121,7 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 				continue
 			}
 
-			rightOwner := ownerFilter.Contains(t.Owner.Raw)
+			rightOwner := ownerFilter.ContainsToken(t)
 
 			if !rightOwner {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -260,6 +258,6 @@ func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 
 type allOwners struct{}
 
-func (a *allOwners) Contains(identity view.Identity) bool {
+func (a *allOwners) ContainsToken(token *token2.UnspentToken) bool {
 	return true
 }

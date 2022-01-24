@@ -8,8 +8,6 @@ package token
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -29,8 +27,8 @@ var (
 
 // OwnerFilter tells if a passed identity is recognized
 type OwnerFilter interface {
-	// Contains returns true if the passed identity is recognized, false otherwise.
-	Contains(identity view.Identity) bool
+	// ContainsToken returns true if the passed token is recognized, false otherwise.
+	ContainsToken(token *token2.UnspentToken) bool
 }
 
 // Selector is the interface of token selectors

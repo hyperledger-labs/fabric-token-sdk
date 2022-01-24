@@ -227,6 +227,10 @@ func (w *ownerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity) || w.wrappedID.Equal(identity)
 }
 
+func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
+}
+
 func (w *ownerWallet) GetRecipientIdentity() (view.Identity, error) {
 	return w.wrappedID, nil
 }
@@ -300,6 +304,10 @@ func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
 
+func (w *issuerWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
+}
+
 func (w *issuerWallet) GetIssuerIdentity(tokenType string) (view.Identity, error) {
 	return w.identity, nil
 }
@@ -362,6 +370,10 @@ func (w *auditorWallet) ID() string {
 
 func (w *auditorWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
+}
+
+func (w *auditorWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *auditorWallet) GetAuditorIdentity() (view.Identity, error) {

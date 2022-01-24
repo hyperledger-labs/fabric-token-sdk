@@ -26,6 +26,8 @@ type Wallet interface {
 	// Contains returns true if the passed identity belongs to this wallet
 	Contains(identity view.Identity) bool
 
+	ContainsToken(token *token2.UnspentToken) bool
+
 	// GetSigner returns the Signer bound to the passed identity
 	GetSigner(identity view.Identity) (Signer, error)
 }
