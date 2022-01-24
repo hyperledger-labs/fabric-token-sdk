@@ -188,8 +188,6 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.Wrapf(err, "failed marshalling tx [%s] to audit", a.tx.ID())
 	}
 
-	logger.Infof("Audit Approve [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.TokenRequest.TxID)
-
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Audit Approve [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.TokenRequest.TxID)
 	}

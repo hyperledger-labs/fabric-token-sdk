@@ -10,7 +10,6 @@ import (
 	"encoding/asn1"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -323,7 +322,7 @@ func marshal(t *Transaction) ([]byte, error) {
 
 	var transientRaw []byte
 	if len(t.Payload.Transient) != 0 {
-		transientRaw, err = Marshal(t.Payload.Transient)
+		transientRaw, err = MarshalMeta(t.Payload.Transient)
 		if err != nil {
 			return nil, err
 		}
@@ -335,7 +334,6 @@ func marshal(t *Transaction) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		logger.Infof("marshal token request: [%s][%s]", t.ID(), hash.Hashable(tokenRequestRaw))
 	}
 
 	var envRaw []byte
@@ -375,12 +373,13 @@ func unmarshal(t *Transaction, p *Payload, raw []byte) error {
 	p.Signer = ser.Signer
 	p.Transient = make(map[string][]byte)
 	if len(ser.Transient) != 0 {
-		if err := Unmarshal(ser.Transient, &p.Transient); err != nil {
+		meta, err := UnmarshalMeta(ser.Transient)
+		if err != nil {
 			return errors.Wrap(err, "failed unmarshalling transient")
 		}
+		p.Transient = meta
 	}
 	if len(ser.TokenRequest) != 0 {
-		logger.Infof("unmarshal token request: [%s][%s]", p.ID, hash.Hashable(ser.TokenRequest))
 		if err := p.TokenRequest.FromBytes(ser.TokenRequest); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token request")
 		}

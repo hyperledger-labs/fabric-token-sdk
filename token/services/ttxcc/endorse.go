@@ -438,7 +438,9 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 	}
 
-	logger.Info("distributed env of size [%d] to num parties", len(txRaw), len(distributionListCompressed))
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("distributed env of size [%d] to num parties", len(txRaw), len(distributionListCompressed))
+	}
 
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {

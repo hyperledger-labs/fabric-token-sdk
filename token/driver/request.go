@@ -129,9 +129,90 @@ func (m *TokenRequestMetadata) Inputs() []*token2.ID {
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
-	return Marshal(m)
+	meta, err := MarshalMeta(m.Application)
+	if err != nil {
+		return nil, err
+	}
+
+	transfers := make([]TransferMetadataSer, len(m.Transfers))
+	for i, transfer := range m.Transfers {
+		TokenIDs := make([]TokenIDSer, len(transfer.TokenIDs))
+		for j, tokenID := range transfer.TokenIDs {
+			TokenIDs[j].TxId = tokenID.TxId
+			TokenIDs[j].Index = int(tokenID.Index)
+		}
+		transfers[i] = TransferMetadataSer{
+			TokenIDs:           TokenIDs,
+			Outputs:            transfer.Outputs,
+			TokenInfo:          transfer.TokenInfo,
+			Senders:            transfer.Senders,
+			SenderAuditInfos:   transfer.SenderAuditInfos,
+			Receivers:          transfer.Receivers,
+			ReceiverIsSender:   transfer.ReceiverIsSender,
+			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
+		}
+	}
+	ser := tokenRequestMetadataSer{
+		Issues:      m.Issues,
+		Transfers:   transfers,
+		Application: meta,
+	}
+	return asn1.Marshal(ser)
 }
 
 func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
-	return Unmarshal(raw, m)
+	ser := &tokenRequestMetadataSer{}
+	_, err := asn1.Unmarshal(raw, ser)
+	if err != nil {
+		return err
+	}
+
+	m.Issues = ser.Issues
+	m.Transfers = make([]TransferMetadata, len(ser.Transfers))
+	for i, transfer := range ser.Transfers {
+		TokenIDs := make([]*token2.ID, len(transfer.TokenIDs))
+		for j, tokenID := range transfer.TokenIDs {
+			TokenIDs[j] = &token2.ID{
+				TxId:  tokenID.TxId,
+				Index: uint64(tokenID.Index),
+			}
+		}
+		m.Transfers[i] = TransferMetadata{
+			TokenIDs:           TokenIDs,
+			Outputs:            transfer.Outputs,
+			TokenInfo:          transfer.TokenInfo,
+			Senders:            transfer.Senders,
+			SenderAuditInfos:   transfer.SenderAuditInfos,
+			Receivers:          transfer.Receivers,
+			ReceiverIsSender:   transfer.ReceiverIsSender,
+			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
+		}
+	}
+	m.Application, err = UnmarshalMeta(ser.Application)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type TokenIDSer struct {
+	TxId  string
+	Index int
+}
+
+type TransferMetadataSer struct {
+	TokenIDs           []TokenIDSer
+	Outputs            [][]byte
+	TokenInfo          [][]byte
+	Senders            []view.Identity
+	SenderAuditInfos   [][]byte
+	Receivers          []view.Identity
+	ReceiverIsSender   []bool
+	ReceiverAuditInfos [][]byte
+}
+
+type tokenRequestMetadataSer struct {
+	Issues      []IssueMetadata
+	Transfers   []TransferMetadataSer
+	Application []byte
 }
