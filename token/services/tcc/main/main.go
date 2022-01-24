@@ -29,7 +29,7 @@ type serverConfig struct {
 func main() {
 	metricsEnabledEnv := os.Getenv("CHAINCODE_METRICS_ENABLED")
 	metricsEnabled := false
-	if len(metricsEnabledEnv) >= 0 {
+	if len(metricsEnabledEnv) > 0 {
 		var err error
 		metricsEnabled, err = strconv.ParseBool(metricsEnabledEnv)
 		if err != nil {
