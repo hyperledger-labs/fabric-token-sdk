@@ -230,19 +230,25 @@ func (i *Provider) Bind(id view.Identity, to view.Identity) error {
 	setSV := true
 	signer, err := i.GetSigner(to)
 	if err != nil {
-		logger.Warnf("failed getting signer for [%s][%s][%s]", to, err, debug.Stack())
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting signer for [%s][%s][%s]", to, err, debug.Stack())
+		}
 		setSV = false
 	}
 	verifier, err := sigService.GetVerifier(to)
 	if err != nil {
-		logger.Warnf("failed getting verifier for [%s][%s][%s]", to, err, debug.Stack())
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting verifier for [%s][%s][%s]", to, err, debug.Stack())
+		}
 		verifier = nil
 	}
 
 	setAI := true
 	auditInfo, err := sigService.GetAuditInfo(to)
 	if err != nil {
-		logger.Warnf("failed getting audit info for [%s][%s]", to, err)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting audit info for [%s][%s]", to, err)
+		}
 		setAI = false
 	}
 
