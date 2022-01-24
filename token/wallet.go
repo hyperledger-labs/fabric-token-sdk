@@ -133,7 +133,7 @@ func (w *Wallet) Contains(identity view.Identity) bool {
 }
 
 func (w *Wallet) ContainsToken(token *token2.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+	return w.ContainsToken(token)
 }
 
 type AuditorWallet struct {
@@ -148,8 +148,8 @@ func (a *AuditorWallet) Contains(identity view.Identity) bool {
 	return a.w.Contains(identity)
 }
 
-func (w *AuditorWallet) ContainsToken(token *token2.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+func (a *AuditorWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return a.w.ContainsToken(token)
 }
 
 func (a *AuditorWallet) GetAuditorIdentity() (view.Identity, error) {
@@ -172,8 +172,8 @@ func (a *CertifierWallet) Contains(identity view.Identity) bool {
 	return a.w.Contains(identity)
 }
 
-func (w *CertifierWallet) ContainsToken(token *token2.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+func (a *CertifierWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return a.w.ContainsToken(token)
 }
 
 func (a *CertifierWallet) GetCertifierIdentity() (view.Identity, error) {
@@ -196,8 +196,8 @@ func (o *OwnerWallet) Contains(identity view.Identity) bool {
 	return o.w.Contains(identity)
 }
 
-func (w *OwnerWallet) ContainsToken(token *token2.UnspentToken) bool {
-	return w.Contains(token.Owner.Raw)
+func (o *OwnerWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return o.w.Contains(token.Owner.Raw)
 }
 
 func (o *OwnerWallet) GetRecipientIdentity() (view.Identity, error) {
