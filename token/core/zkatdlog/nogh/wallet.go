@@ -8,7 +8,6 @@ package nogh
 
 import (
 	"fmt"
-	"strings"
 
 	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -394,21 +393,13 @@ func (w *wallet) ListTokens(opts *api2.ListTokensOptions) (*token2.UnspentTokens
 }
 
 func (w *wallet) existsRecipientIdentity(id view.Identity) bool {
-	var sb strings.Builder
-	sb.WriteString(w.prefix)
-	sb.WriteString(id.Hash())
-	k := sb.String()
 	kvss := kvs.GetService(w.tokenService.SP)
-	return kvss.Exists(k)
+	return kvss.Exists(w.prefix + id.Hash())
 }
 
 func (w *wallet) putRecipientIdentity(id view.Identity, meta []byte) error {
-	var sb strings.Builder
-	sb.WriteString(w.prefix)
-	sb.WriteString(id.Hash())
-	k := sb.String()
 	kvss := kvs.GetService(w.tokenService.SP)
-	if err := kvss.Put(k, meta); err != nil {
+	if err := kvss.Put(w.prefix+id.Hash(), meta); err != nil {
 		return err
 	}
 	return nil
