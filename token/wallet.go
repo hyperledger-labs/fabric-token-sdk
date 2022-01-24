@@ -197,7 +197,7 @@ func (o *OwnerWallet) Contains(identity view.Identity) bool {
 }
 
 func (o *OwnerWallet) ContainsToken(token *token2.UnspentToken) bool {
-	return o.w.Contains(token.Owner.Raw)
+	return o.w.ContainsToken(token)
 }
 
 func (o *OwnerWallet) GetRecipientIdentity() (view.Identity, error) {
