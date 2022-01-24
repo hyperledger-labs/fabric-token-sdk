@@ -44,6 +44,10 @@ const (
 	PublicParamsPathVarEnv = "PUBLIC_PARAMS_FILE_PATH"
 )
 
+type Agent interface {
+	EmitKey(val float32, event ...string)
+}
+
 type SetupAction struct {
 	SetupParameters []byte
 }
@@ -80,7 +84,11 @@ type TokenChaincode struct {
 
 	PPDigest             []byte
 	TokenServicesFactory func([]byte) (PublicParametersManager, Validator, error)
-	MetricsServer        string
+
+	MetricsEnabled bool
+	MetricsServer  string
+	MetricsLock    sync.Mutex
+	MetricsAgent   Agent
 }
 
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -139,10 +147,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	case 0:
 		return shim.Error("missing parameters")
 	default:
-		agent, err := metrics.NewStatsdAgent(
-			metrics.Host(args[0]),
-			metrics.StatsDSink(cc.MetricsServer),
-		)
+		agent, err := cc.NewMetricsAgent(string(args[0]))
 		if err != nil {
 			return shim.Error(err.Error())
 		}
@@ -275,31 +280,23 @@ func (cc *TokenChaincode) Initialize(stub shim.ChaincodeStubInterface) error {
 }
 
 func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
-	agent, err := metrics.NewStatsdAgent(
-		"ProcessRequest",
-		metrics.StatsDSink(cc.MetricsServer),
-	)
-	if err != nil {
-		return shim.Error(fmt.Sprintf("failed to create statsd agent: %s", err))
-	}
-
-	agent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
+	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	validator, err := cc.GetValidator(stub)
-	agent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
+	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	// Verify
-	agent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
+	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 	actions, err := validator.UnmarshallAndVerify(stub, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
-	agent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
+	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 
 	// Write
-	agent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestWrite", stub.GetTxID())
+	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestWrite", stub.GetTxID())
 	rwset := &rwsWrapper{stub: stub}
 	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
@@ -313,7 +310,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())
 	}
-	agent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequest", stub.GetTxID())
+	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequest", stub.GetTxID())
 
 	return shim.Success(nil)
 }
@@ -429,4 +426,25 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 		return shim.Error(fmt.Sprintf("failed marshalling tokens: [%s]", err))
 	}
 	return shim.Success(raw)
+}
+
+func (cc *TokenChaincode) NewMetricsAgent(id string) (Agent, error) {
+	cc.MetricsLock.Lock()
+	defer cc.MetricsLock.Unlock()
+	if cc.MetricsAgent != nil {
+		return cc.MetricsAgent, nil
+	}
+
+	if cc.MetricsEnabled {
+		cc.MetricsAgent = metrics.NewNullAgent()
+	}
+	var err error
+	cc.MetricsAgent, err = metrics.NewStatsdAgent(
+		metrics.Host(id),
+		metrics.StatsDSink(cc.MetricsServer),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return cc.MetricsAgent, nil
 }
