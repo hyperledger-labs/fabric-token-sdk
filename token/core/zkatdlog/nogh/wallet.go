@@ -316,14 +316,15 @@ func (w *wallet) Contains(identity view.Identity) bool {
 }
 
 func (w *wallet) ContainsToken(token *token2.UnspentToken) bool {
-	v, ok := w.cache.Get(*token.Id)
-	if ok {
-		return v.(bool)
-	}
-
-	res := w.Contains(token.Owner.Raw)
-	w.cache.Add(*token.Id, res)
-	return res
+	// v, ok := w.cache.Get(*token.Id)
+	// if ok {
+	// 	return v.(bool)
+	// }
+	//
+	// res := w.Contains(token.Owner.Raw)
+	// w.cache.Add(*token.Id, res)
+	// return res
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *wallet) GetRecipientIdentity() (view.Identity, error) {
