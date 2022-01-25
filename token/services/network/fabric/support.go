@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -22,7 +23,9 @@ func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rw
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	logger.Debugf("delete key [%s]", outputID)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("delete key [%s]", outputID)
+	}
 	err = rws.DeleteState(ns, outputID)
 	if err != nil {
 		return err
@@ -41,8 +44,9 @@ func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok
 	}
 	raw := MarshalOrPanic(tok)
 
-	logger.Debugf("transaction [%s], append fabtoken output [%s,%v]", txID, outputID, string(raw))
-
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s], append fabtoken output [%s,%s,%v]", txID, outputID, view.Identity(tok.Owner.Raw), string(raw))
+	}
 	if err := rws.SetState(ns, outputID, raw); err != nil {
 		return err
 	}
@@ -76,11 +80,13 @@ func (r *RWSetProcessor) storeIssuedHistoryToken(ns string, txID string, index u
 		return errors.Wrapf(err, "invalid quantity [%s]", tok.Quantity)
 	}
 
-	logger.Debugf("transaction [%s], append issued history token [%s,%s][%s,%v]",
-		txID,
-		tok.Type, q.Decimal(),
-		outputID, string(raw),
-	)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s], append issued history token [%s,%s][%s,%v]",
+			txID,
+			tok.Type, q.Decimal(),
+			outputID, string(raw),
+		)
+	}
 
 	if err := rws.SetState(ns, outputID, raw); err != nil {
 		return err
@@ -98,7 +104,9 @@ func (r *RWSetProcessor) storeAuditToken(ns string, txID string, index uint64, t
 	}
 	raw := MarshalOrPanic(tok)
 
-	logger.Debugf("transaction [%s], append audit token output [%s,%v]", txID, outputID, string(raw))
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s], append audit token output [%s,%v]", txID, outputID, string(raw))
+	}
 
 	if err := rws.SetState(ns, outputID, raw); err != nil {
 		return err

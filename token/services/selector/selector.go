@@ -9,6 +9,7 @@ package selector
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 
@@ -125,7 +126,7 @@ func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([
 
 			if !rightOwner {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("token [%s,%s,%v] owner does not belong to the passed wallet", q, tokenType, rightOwner)
+					logger.Debugf("token [%s,%s,%s,%v] owner does not belong to the passed wallet", view.Identity(t.Owner.Raw), q, tokenType, rightOwner)
 				}
 				continue
 			}

@@ -8,6 +8,7 @@ package nogh
 
 import (
 	"fmt"
+	"runtime/debug"
 
 	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -173,7 +174,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 	identity, walletID := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
 	for _, w := range s.OwnerWallets {
 		if w.ID() == walletID || (len(identity) != 0 && w.Contains(identity)) {
-			logger.Debugf("found owner wallet [%s:%s]", identity, walletID)
+			logger.Debugf("found owner wallet [%s:%s:%s]", identity, walletID, w.ID())
 			return w
 		}
 	}
@@ -186,7 +187,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 		return w
 	}
 
-	logger.Debugf("no owner wallet found for [%s:%s]", identity, walletID)
+	logger.Debugf("no owner wallet found for [%s:%s:%s] [%s]", id, identity, walletID, debug.Stack())
 	return nil
 }
 
@@ -316,15 +317,15 @@ func (w *wallet) Contains(identity view.Identity) bool {
 }
 
 func (w *wallet) ContainsToken(token *token2.UnspentToken) bool {
-	// v, ok := w.cache.Get(*token.Id)
-	// if ok {
-	// 	return v.(bool)
-	// }
-	//
-	// res := w.Contains(token.Owner.Raw)
-	// w.cache.Add(*token.Id, res)
-	// return res
-	return w.Contains(token.Owner.Raw)
+	v, ok := w.cache.Get(*token.Id)
+	if ok {
+		return v.(bool)
+	}
+
+	res := w.Contains(token.Owner.Raw)
+	w.cache.Add(*token.Id, res)
+	return res
+	// return w.Contains(token.Owner.Raw)
 }
 
 func (w *wallet) GetRecipientIdentity() (view.Identity, error) {

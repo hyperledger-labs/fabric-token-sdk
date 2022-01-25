@@ -329,6 +329,9 @@ func (lm *LocalMembership) GetAnonymousIdentifier(label string) (string, error) 
 		}
 		return "", errors.New("not found")
 	}
+	if r.Default {
+		return "idemix", nil
+	}
 	return r.Name, nil
 }
 
@@ -361,6 +364,9 @@ func (lm *LocalMembership) GetLongTermIdentifier(id view.Identity) (string, erro
 			logger.Debugf("identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
 		}
 		return "", errors.New("not found")
+	}
+	if r.Default {
+		return "default", nil
 	}
 	return r.Name, nil
 }
