@@ -83,8 +83,9 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 
 	// check if there is already a wallet
 	identity, walletID := s.IP.LookupIdentifier(driver.OwnerRole, id)
+	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
-		if w.Contains(identity) || w.ID() == walletID {
+		if w.Contains(identity) || w.ID() == wID {
 			logger.Debugf("found owner wallet [%s]", identity.String())
 			return w
 		}
@@ -101,7 +102,7 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 			panic(err)
 		}
 
-		w := newOwnerWallet(s, id, wrappedID, walletID)
+		w := newOwnerWallet(s, id, wrappedID, wID)
 		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, walletID)
 		return w
@@ -201,6 +202,10 @@ func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 		return nil, err
 	}
 	return raw, nil
+}
+
+func (s *Service) walletID(id string) string {
+	return s.Channel + s.Namespace + id
 }
 
 type ownerWallet struct {

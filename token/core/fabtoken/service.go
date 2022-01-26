@@ -40,6 +40,7 @@ type PublicParametersManager interface {
 
 type Service struct {
 	SP          view2.ServiceProvider
+	Channel     string
 	Namespace   string
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
@@ -56,6 +57,7 @@ type Service struct {
 
 func NewService(
 	sp view2.ServiceProvider,
+	channel string,
 	namespace string,
 	ppm PublicParametersManager,
 	tokenLoader TokenLoader,
@@ -67,6 +69,7 @@ func NewService(
 	s := &Service{
 		SP:           sp,
 		Namespace:    namespace,
+		Channel:      channel,
 		TokenLoader:  tokenLoader,
 		QE:           qe,
 		PPM:          ppm,

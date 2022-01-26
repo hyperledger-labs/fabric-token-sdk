@@ -171,8 +171,9 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 
 	// check if there is already a wallet
 	identity, walletID := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
+	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
-		if w.ID() == walletID || (len(identity) != 0 && w.Contains(identity)) {
+		if w.ID() == wID || (len(identity) != 0 && w.Contains(identity)) {
 			logger.Debugf("found owner wallet [%s:%s:%s]", identity, walletID, w.ID())
 			return w
 		}
@@ -180,7 +181,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID); idInfo != nil {
-		w := newOwnerWallet(s, walletID, idInfo)
+		w := newOwnerWallet(s, wID, idInfo)
 		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
 		return w
@@ -281,6 +282,10 @@ func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 		return nil, err
 	}
 	return raw, nil
+}
+
+func (s *Service) walletID(id string) string {
+	return s.Channel + s.Namespace + id
 }
 
 type cache interface {
