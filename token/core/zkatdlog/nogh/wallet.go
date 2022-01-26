@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -181,7 +180,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID); idInfo != nil {
-		w := newOwnerWallet(s, walletID, idInfo, secondcache.New(1000))
+		w := newOwnerWallet(s, walletID, idInfo)
 		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
 		return w
@@ -294,17 +293,14 @@ type wallet struct {
 	id           string
 	identityInfo *api2.IdentityInfo
 	prefix       string
-
-	cache cache
 }
 
-func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo, cache cache) *wallet {
+func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
 	return &wallet{
 		tokenService: tokenService,
 		id:           id,
 		identityInfo: identityInfo,
 		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
-		cache:        cache,
 	}
 }
 
@@ -317,15 +313,7 @@ func (w *wallet) Contains(identity view.Identity) bool {
 }
 
 func (w *wallet) ContainsToken(token *token2.UnspentToken) bool {
-	v, ok := w.cache.Get(*token.Id)
-	if ok {
-		return v.(bool)
-	}
-
-	res := w.Contains(token.Owner.Raw)
-	w.cache.Add(*token.Id, res)
-	return res
-	// return w.Contains(token.Owner.Raw)
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *wallet) GetRecipientIdentity() (view.Identity, error) {

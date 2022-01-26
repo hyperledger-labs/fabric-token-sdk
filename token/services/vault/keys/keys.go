@@ -22,6 +22,7 @@ const (
 	TokenKeyPrefix                     = "ztoken"
 	SignaturePrefix                    = "sig"
 	FabTokenKeyPrefix                  = "token"
+	FabTokenExtendedKeyPrefix          = "etoken"
 	AuditTokenKeyPrefix                = "audittoken"
 	TokenMineKeyPrefix                 = "mine"
 	TokenSetupKeyPrefix                = "setup"
@@ -29,11 +30,13 @@ const (
 	TokenAuditorKeyPrefix              = "auditor"
 	TokenNameSpace                     = "zkat"
 	numComponentsInKey                 = 2 // 2 components: txid, index, excluding TokenKeyPrefix
+	numComponentsInExtendedKey         = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
 	Action                             = "action"
 	ActionIssue                        = "issue"
 	ActionTransfer                     = "transfer"
 	Precision                   uint64 = 64
 	Info                               = "info"
+	IDs                                = "ids"
 	TokenRequestKeyPrefix              = "token_request"
 	OwnerSeparator                     = "/"
 	SerialNumber                       = "sn"
@@ -48,7 +51,7 @@ func GetTokenIdFromKey(key string) (*token2.ID, error) {
 
 	// 4 components in key: ownerType, ownerRaw, txid, index
 	if len(components) != numComponentsInKey {
-		return nil, errors.New(fmt.Sprintf("not enough components in output ID composite key; expected 3, received '%s'", components))
+		return nil, errors.New(fmt.Sprintf("not enough components in output ID composite key; expected 2, received '%s'", components))
 	}
 
 	// txid and index are the last 2 components
@@ -56,6 +59,26 @@ func GetTokenIdFromKey(key string) (*token2.ID, error) {
 	index, err := strconv.ParseUint(components[numComponentsInKey-1], 10, 64)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInKey-1], err))
+	}
+	return &token2.ID{TxId: txID, Index: index}, nil
+}
+
+func GetTokenIdFromExtendedKey(key string) (*token2.ID, error) {
+	_, components, err := SplitCompositeKey(key)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
+	}
+
+	// 4 components in key: ownerType, ownerRaw, txid, index
+	if len(components) != numComponentsInExtendedKey {
+		return nil, errors.New(fmt.Sprintf("not enough components in output ID composite key; expected 4, received '%s'", components))
+	}
+
+	// txid and index are the last 2 components
+	txID := components[numComponentsInExtendedKey-2]
+	index, err := strconv.ParseUint(components[numComponentsInExtendedKey-1], 10, 64)
+	if err != nil {
+		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInExtendedKey-1], err))
 	}
 	return &token2.ID{TxId: txID, Index: index}, nil
 }
@@ -91,9 +114,12 @@ func CreateSNKey(sn string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{SerialNumber, sn})
 }
 
-// TODO: move index to uint32 of uint64
-func CreateFabtokenKey(txID string, index uint64) (string, error) {
+func CreateFabTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(FabTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
+}
+
+func CreateExtendedFabTokenKey(id string, typ string, txID string, index uint64) (string, error) {
+	return CreateCompositeKey(FabTokenExtendedKeyPrefix, []string{id, typ, txID, strconv.FormatUint(index, 10)})
 }
 
 func CreateAuditTokenKey(txID string, index uint64) (string, error) {

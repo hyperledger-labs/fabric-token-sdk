@@ -60,6 +60,29 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	return len(val) == 1 && val[0] == 1, nil
 }
 
+func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensIterator, error) {
+	logger.Debugf("List token iterator [%s,%s]...", id, typ)
+	startKey, err := keys.CreateCompositeKey(keys.FabTokenExtendedKeyPrefix, []string{id, typ})
+	if err != nil {
+		return nil, err
+	}
+	endKey := startKey + string(keys.MaxUnicodeRuneValue)
+
+	logger.Debugf("New query executor")
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return nil, err
+	}
+	defer qe.Done()
+
+	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
+	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{it: iterator, e: e, extended: true}, nil
+}
+
 func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) {
 	logger.Debugf("List token iterator...")
 	startKey, err := keys.CreateCompositeKey(keys.FabTokenKeyPrefix, nil)
@@ -282,7 +305,7 @@ func (e *Engine) GetTokenInfos(ids []*token.ID, callback driver2.QueryCallbackFu
 	}
 	defer qe.Done()
 	for _, id := range ids {
-		outputID, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		outputID, err := keys.CreateFabTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
@@ -328,7 +351,7 @@ func (e *Engine) GetTokenInfoAndCommitments(ids []*token.ID, callback driver2.Qu
 	}
 	defer qe.Done()
 	for _, id := range ids {
-		outputID, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		outputID, err := keys.CreateFabTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
@@ -364,7 +387,7 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	var res []*token.Token
 	var resKeys []string
 	for _, id := range inputs {
-		idKey, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		idKey, err := keys.CreateFabTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed generating id key [%v]", id)
 		}
@@ -391,7 +414,7 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	return resKeys, res, nil
 }
 
-func (e *Engine) unmarshalUnspentToken(key string, raw []byte) (*token.UnspentToken, error) {
+func (e *Engine) unmarshalUnspentToken(key string, raw []byte, extended bool) (*token.UnspentToken, error) {
 	// lookup cache first
 	if tok, ok := e.unspentTokensCache.Get(key); ok {
 		return tok.(*token.UnspentToken), nil
@@ -405,9 +428,15 @@ func (e *Engine) unmarshalUnspentToken(key string, raw []byte) (*token.UnspentTo
 	}
 	// show only tokens which are owned by transactor
 	logger.Debugf("adding token with ID [%s] to list of unspent tokens", key)
-	id, err := keys.GetTokenIdFromKey(key)
+	var id *token.ID
+	var err error
+	if extended {
+		id, err = keys.GetTokenIdFromExtendedKey(key)
+	} else {
+		id, err = keys.GetTokenIdFromKey(key)
+	}
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed getting token ID from key [%v]", key)
 	}
 	// Convert quantity to decimal
 	q, err := token.ToQuantity(output.Quantity, keys.Precision)
@@ -428,8 +457,9 @@ func (e *Engine) unmarshalUnspentToken(key string, raw []byte) (*token.UnspentTo
 }
 
 type UnspentTokensIterator struct {
-	e  *Engine
-	it driver.Iterator
+	e        *Engine
+	it       driver.Iterator
+	extended bool
 }
 
 func (u *UnspentTokensIterator) Close() {
@@ -451,7 +481,7 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 			continue
 		}
 
-		output, err := u.e.unmarshalUnspentToken(next.Key, next.Raw)
+		output, err := u.e.unmarshalUnspentToken(next.Key, next.Raw, u.extended)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s][%s", next.Key, string(next.Raw))
 		}

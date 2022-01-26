@@ -135,6 +135,10 @@ func (q *queryService) UnspentTokensIterator() (*token.UnspentTokensIterator, er
 	return q.qe.UnspentTokensIterator()
 }
 
+func (q *queryService) UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error) {
+	return q.qe.UnspentTokensIteratorBy(id, typ)
+}
+
 func (q *queryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
 	return q.qe.GetTokens(inputs...)
 }

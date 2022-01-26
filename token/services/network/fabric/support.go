@@ -19,26 +19,57 @@ import (
 )
 
 func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rws *fabric.RWSet) error {
-	outputID, err := keys.CreateFabtokenKey(txID, index)
+	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("delete key [%s]", outputID)
 	}
+
+	meta, err := rws.GetStateMetadata(ns, outputID, fabric.FromStorage)
+	if err != nil {
+		return errors.Wrapf(err, "error getting metadata for key [%s]", outputID)
+	}
+	idsRaw, ok := meta[keys.IDs]
+	if ok && len(idsRaw) > 0 {
+		// unmarshall ids
+		ids := make([]string, 0)
+		if err := json.Unmarshal(idsRaw, &ids); err != nil {
+			return errors.Wrapf(err, "error unmarshalling IDs for key [%s]", outputID)
+		}
+		// delete extended tokens as well
+		tokenRaw, err := rws.GetState(ns, outputID, fabric.FromStorage)
+		if err != nil {
+			return errors.Wrapf(err, "error getting token for key [%s]", outputID)
+		}
+		token := token2.Token{}
+		UnmarshalOrPanic(tokenRaw, &token)
+		for _, id := range ids {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("delete extended key [%s]", id)
+			}
+			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
+			err = rws.DeleteState(ns, outputID)
+			if err != nil {
+				return errors.Wrapf(err, "error deleting extended key [%s]", outputID)
+			}
+		}
+	}
+
 	err = rws.DeleteState(ns, outputID)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error deleting key [%s]", outputID)
 	}
 	err = rws.SetStateMetadata(ns, outputID, nil)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "error deleting metadata for key [%s]", outputID)
 	}
 	return nil
 }
 
-func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte) error {
-	outputID, err := keys.CreateFabtokenKey(txID, index)
+func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte, ids []string) error {
+	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
@@ -50,8 +81,34 @@ func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok
 	if err := rws.SetState(ns, outputID, raw); err != nil {
 		return err
 	}
-	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+
+	meta := map[string][]byte{}
+	meta[keys.Info] = infoRaw
+	if len(ids) > 0 {
+		meta[keys.IDs] = MarshalOrPanic(ids)
+	}
+	if err := rws.SetStateMetadata(ns, outputID, meta); err != nil {
 		return err
+	}
+
+	// store extended fabtoken, if needed
+	for _, id := range ids {
+		if len(id) == 0 {
+			continue
+		}
+		outputID, err := keys.CreateExtendedFabTokenKey(id, tok.Type, txID, index)
+		if err != nil {
+			return errors.Wrapf(err, "error creating output ID: %s", err)
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], append extended fabtoken output [%s, %s,%s,%v]", txID, outputID, view.Identity(tok.Owner.Raw), id, string(raw))
+		}
+		if err := rws.SetState(ns, outputID, raw); err != nil {
+			return err
+		}
+		if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -123,4 +180,11 @@ func MarshalOrPanic(o interface{}) []byte {
 		panic(err)
 	}
 	return data
+}
+
+func UnmarshalOrPanic(raw []byte, o interface{}) {
+	err := json.Unmarshal(raw, o)
+	if err != nil {
+		panic(err)
+	}
 }

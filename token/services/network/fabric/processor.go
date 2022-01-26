@@ -29,7 +29,7 @@ type net interface {
 }
 
 type Ownership interface {
-	IsMine(tms *token.ManagementService, tok *token2.Token) bool
+	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
 }
 
 type Issued interface {
@@ -238,7 +238,8 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		}
 
-		if r.ownership.IsMine(tms, tok) {
+		ids, mine := r.ownership.IsMine(tms, tok)
+		if mine {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
 			}
@@ -253,7 +254,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			}
 
 			// Store Fabtoken-like entry
-			if err := r.storeFabToken(ns, txID, index, tok, rws, tokenInfoRaw); err != nil {
+			if err := r.storeFabToken(ns, txID, index, tok, rws, tokenInfoRaw, ids); err != nil {
 				return err
 			}
 		} else {

@@ -26,6 +26,14 @@ func (q *QueryEngine) UnspentTokensIterator() (*UnspentTokensIterator, error) {
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
+func (q *QueryEngine) UnspentTokensIteratorBy(id, typ string) (*UnspentTokensIterator, error) {
+	it, err := q.qe.UnspentTokensIteratorBy(id, typ)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
+}
+
 func (q *QueryEngine) ListUnspentTokens() (*token2.UnspentTokens, error) {
 	return q.qe.ListUnspentTokens()
 }

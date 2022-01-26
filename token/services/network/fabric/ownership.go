@@ -15,8 +15,12 @@ import (
 type WalletOwnership struct{}
 
 // IsMine returns true it there exists an owner wallet for the token's owner
-func (w *WalletOwnership) IsMine(tms *token.ManagementService, tok *token2.Token) bool {
-	return tms.WalletManager().OwnerWalletByIdentity(tok.Owner.Raw) != nil
+func (w *WalletOwnership) IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool) {
+	wallet := tms.WalletManager().OwnerWalletByIdentity(tok.Owner.Raw)
+	if wallet == nil {
+		return nil, false
+	}
+	return []string{wallet.ID()}, true
 }
 
 // OwnershipMultiplexer iterates over multiple ownership checker
@@ -30,11 +34,12 @@ func NewOwnershipMultiplexer(ownerships ...Ownership) *OwnershipMultiplexer {
 }
 
 // IsMine returns true it there exists an ownership checker that returns true
-func (o *OwnershipMultiplexer) IsMine(tms *token.ManagementService, tok *token2.Token) bool {
+func (o *OwnershipMultiplexer) IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool) {
 	for _, ownership := range o.ownerships {
-		if ownership.IsMine(tms, tok) {
-			return true
+		ids, mine := ownership.IsMine(tms, tok)
+		if mine {
+			return ids, true
 		}
 	}
-	return false
+	return nil, false
 }
