@@ -431,13 +431,16 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 func (cc *TokenChaincode) NewMetricsAgent(id string) (Agent, error) {
 	cc.MetricsLock.Lock()
 	defer cc.MetricsLock.Unlock()
+
 	if cc.MetricsAgent != nil {
 		return cc.MetricsAgent, nil
 	}
 
-	if cc.MetricsEnabled {
+	if !cc.MetricsEnabled {
 		cc.MetricsAgent = metrics.NewNullAgent()
+		return cc.MetricsAgent, nil
 	}
+
 	var err error
 	cc.MetricsAgent, err = metrics.NewStatsdAgent(
 		metrics.Host(id),
