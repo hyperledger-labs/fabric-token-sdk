@@ -47,6 +47,9 @@ type BigQuantity struct {
 // Argument q is supposed to be formatted following big.Int#scan specification.
 // The precision is expressed in bits.
 func ToQuantity(q string, precision uint64) (Quantity, error) {
+	if precision == 0 {
+		return nil, errors.New("precision be larger than 0")
+	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
 		return nil, errors.Errorf("invalid input [%s,%d]", q, precision)
@@ -54,8 +57,28 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if v.Cmp(big.NewInt(0)) < 0 {
 		return nil, errors.New("quantity must be larger than 0")
 	}
+	if v.BitLen() > int(precision) {
+		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
+	}
+
+	switch precision {
+	case 64:
+		return &UInt64Quantity{Value: v.Uint64()}, nil
+	default:
+		return &BigQuantity{Int: v, Precision: precision}, nil
+	}
+}
+
+func ToBigQuantity(q string, precision uint64) (Quantity, error) {
 	if precision == 0 {
 		return nil, errors.New("precision be larger than 0")
+	}
+	v, success := big.NewInt(0).SetString(q, 0)
+	if !success {
+		return nil, errors.Errorf("invalid input [%s,%d]", q, precision)
+	}
+	if v.Cmp(big.NewInt(0)) < 0 {
+		return nil, errors.New("quantity must be larger than 0")
 	}
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
@@ -67,20 +90,23 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 // NewZeroQuantity returns to zero quantity at the passed precision/
 // The precision is expressed in bits.
 func NewZeroQuantity(precision uint64) Quantity {
-	b := BigQuantity{Int: big.NewInt(0), Precision: precision}
-	return &b
+	switch precision {
+	case 64:
+		return &UInt64Quantity{Value: 0}
+	default:
+		return &BigQuantity{Int: big.NewInt(0), Precision: precision}
+	}
 }
 
 func NewQuantityFromUInt64(q uint64) Quantity {
-	v, _ := big.NewInt(0).SetString(strconv.FormatUint(q, 10), 10)
-	return &BigQuantity{Int: v, Precision: 64}
+	return &UInt64Quantity{Value: q}
 }
 
 func NewQuantityFromBig64(q *big.Int) Quantity {
 	if q.BitLen() > 64 {
 		panic(fmt.Sprintf("invalid precision, expected at most 64 bits"))
 	}
-	return &BigQuantity{Int: q, Precision: 64}
+	return &UInt64Quantity{Value: q.Uint64()}
 }
 
 func (q *BigQuantity) Add(b Quantity) Quantity {
@@ -141,4 +167,66 @@ func (q *BigQuantity) String() string {
 
 func (q *BigQuantity) ToBigInt() *big.Int {
 	return (&big.Int{}).Set(q.Int)
+}
+
+type UInt64Quantity struct {
+	Value uint64
+}
+
+func (q *UInt64Quantity) Add(b Quantity) Quantity {
+	bq, ok := b.(*UInt64Quantity)
+	if !ok {
+		panic(fmt.Sprintf("expected UInt64Quantity, got '%t", b))
+	}
+
+	// Check overflow
+	var sum uint64
+	sum = q.Value + bq.Value
+
+	if sum < q.Value {
+		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
+	}
+
+	return &UInt64Quantity{Value: sum}
+}
+
+func (q *UInt64Quantity) Sub(b Quantity) Quantity {
+	bq, ok := b.(*UInt64Quantity)
+	if !ok {
+		panic(fmt.Sprintf("expected UInt64Quantity, got '%t", b))
+	}
+
+	// Check overflow
+	if bq.Value > q.Value {
+		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
+	}
+	diff := q.Value - bq.Value
+
+	return &UInt64Quantity{Value: diff}
+}
+
+func (q *UInt64Quantity) Cmp(b Quantity) int {
+	bq, ok := b.(*UInt64Quantity)
+	if !ok {
+		panic(fmt.Sprintf("expected UInt64Quantity, got '%t", b))
+	}
+
+	if q.Value < bq.Value {
+		return -1
+	} else if q.Value > bq.Value {
+		return 1
+	}
+	return 0
+}
+
+func (q *UInt64Quantity) Hex() string {
+	return "0x" + strconv.FormatUint(q.Value, 16)
+}
+
+func (q *UInt64Quantity) Decimal() string {
+	return strconv.FormatUint(q.Value, 10)
+}
+
+func (q *UInt64Quantity) ToBigInt() *big.Int {
+	return big.NewInt(0).SetUint64(q.Value)
 }
