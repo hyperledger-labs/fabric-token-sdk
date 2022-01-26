@@ -663,7 +663,7 @@ func (t *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 		if typ != tok.Type {
 			return nil, nil, "", errors.WithMessagef(err, "tokens must have the same type [%s]!=[%s]", typ, tok.Type)
 		}
-		q, err := token.ToQuantity(tok.Quantity, 65)
+		q, err := token.ToQuantity(tok.Quantity, 64)
 		if err != nil {
 			return nil, nil, "", errors.WithMessagef(err, "failed unmarshalling token quantity [%s]", tok.Quantity)
 		}
