@@ -50,6 +50,9 @@ func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rw
 				logger.Debugf("delete extended key [%s]", id)
 			}
 			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
+			if err != nil {
+				return errors.Wrapf(err, "error creating extendend output ID: %s", err)
+			}
 			err = rws.DeleteState(ns, outputID)
 			if err != nil {
 				return errors.Wrapf(err, "error deleting extended key [%s]", outputID)

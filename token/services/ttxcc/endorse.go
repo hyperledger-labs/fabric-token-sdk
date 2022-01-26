@@ -452,6 +452,8 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
 			}
 
+			logger.Debugf("This is me [%s], endorse locally", c.tx.ID())
+
 			// Inform the vault about the transaction
 			ch := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
 			rws, err := ch.GetRWSet(c.tx.ID(), env.Results())
