@@ -113,7 +113,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 		var toBeCertified []*token2.ID
 		var locked []*token2.ID
 
-		reclaim := i > 0 || s.numRetry > 1
+		reclaim := s.numRetry == 1 || i > 0
 		for {
 			t, err := unspentTokens.Next()
 			if err != nil {
@@ -279,7 +279,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 		var toBeCertified []*token2.ID
 		var locked []*token2.ID
 
-		reclaim := i > 0 || s.numRetry > 1
+		reclaim := s.numRetry == 1 || i > 0
 		for {
 			t, err := unspentTokens.Next()
 			if err != nil {

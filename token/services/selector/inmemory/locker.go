@@ -65,11 +65,20 @@ func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeoutMillis 
 }
 
 func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) {
-	d.lock.Lock()
-	defer d.lock.Unlock()
-
 	k := *id
 
+	// check quickly if the token is locked
+	d.lock.RLock()
+	if _, ok := d.locked[k]; ok && !reclaim {
+		// return immediately
+		d.lock.RUnlock()
+		return "", AlreadyLockedError
+	}
+	d.lock.RUnlock()
+
+	// it is either not locked or we are reclaiming
+	d.lock.Lock()
+	defer d.lock.Unlock()
 	e, ok := d.locked[k]
 	if ok {
 		e.LastAccess = time.Now()
