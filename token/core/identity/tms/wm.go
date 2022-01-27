@@ -221,7 +221,13 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 				return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", lm.cm.TranslatePath(identityConfig.Path))
 			}
 			dm.AddDeserializer(provider)
-			lm.addResolver(identityConfig.ID, IdemixMSP, provider.EnrollmentID(), identityConfig.Default, provider.Identity)
+			lm.addResolver(
+				identityConfig.ID,
+				IdemixMSP,
+				provider.EnrollmentID(),
+				identityConfig.Default,
+				NewCacheIdentity(provider.Identity, 200).Identity,
+			)
 		case BccspMSP:
 			provider, err := x509.NewProvider(lm.cm.TranslatePath(identityConfig.Path), typeAndMspID[1], lm.signerService)
 			if err != nil {
@@ -261,7 +267,13 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 				}
 				logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
 				dm.AddDeserializer(provider)
-				lm.addResolver(id, IdemixMSP, provider.EnrollmentID(), false, provider.Identity)
+				lm.addResolver(
+					id,
+					IdemixMSP,
+					provider.EnrollmentID(),
+					false,
+					NewCacheIdentity(provider.Identity, 200).Identity,
+				)
 			}
 		case BccspMSPFolder:
 			entries, err := ioutil.ReadDir(lm.cm.TranslatePath(identityConfig.Path))
