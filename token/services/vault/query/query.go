@@ -142,21 +142,21 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 			// nil response from iterator indicates end of query results
 			return &token.UnspentTokens{Tokens: tokens}, nil
 
-		case len(next.Raw) == 0:
-			// logger.Debugf("nil content for key [%s]", next.Key)
+		case len(next.V()) == 0:
+			// logger.Debugf("nil content for key [%s]", next.K())
 			continue
 
 		default:
-			logger.Debugf("parse token for key [%s]", next.Key)
+			logger.Debugf("parse token for key [%s]", next.K())
 
-			output, err := UnmarshallFabtoken(next.Raw)
+			output, err := UnmarshallFabtoken(next.V())
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.Key)
+				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.K())
 			}
 
 			// show only tokens which are owned by transactor
-			logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.Key)
-			id, err := keys.GetTokenIdFromKey(next.Key)
+			logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.K())
+			id, err := keys.GetTokenIdFromKey(next.K())
 			if err != nil {
 				return nil, err
 			}
@@ -244,21 +244,21 @@ func (e *Engine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 			// nil response from iterator indicates end of query results
 			return &token.IssuedTokens{Tokens: tokens}, nil
 
-		case len(next.Raw) == 0:
-			logger.Debugf("nil content for key [%s]", next.Key)
+		case len(next.V()) == 0:
+			logger.Debugf("nil content for key [%s]", next.K())
 			continue
 
 		default:
-			logger.Debugf("parse token for key [%s]", next.Key)
+			logger.Debugf("parse token for key [%s]", next.K())
 
-			output, err := UnmarshallIssuedToken(next.Raw)
+			output, err := UnmarshallIssuedToken(next.V())
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.Key)
+				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.K())
 			}
 
 			// show only tokens which are owned by transactor
-			logger.Debugf("adding token with ID '%s' to list of history issued tokens", next.Key)
-			id, err := keys.GetTokenIdFromKey(next.Key)
+			logger.Debugf("adding token with ID '%s' to list of history issued tokens", next.K())
+			id, err := keys.GetTokenIdFromKey(next.K())
 			if err != nil {
 				return nil, err
 			}
@@ -475,15 +475,15 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 		if next == nil {
 			return nil, nil
 		}
-		if len(next.Raw) == 0 {
+		if len(next.V()) == 0 {
 			// TODO: remove this keys from the vault
-			// logger.Debugf("nil content for key [%s]", next.Key)
+			// logger.Debugf("nil content for key [%s]", next.K())
 			continue
 		}
 
-		output, err := u.e.unmarshalUnspentToken(next.Key, next.Raw, u.extended)
+		output, err := u.e.unmarshalUnspentToken(next.K(), next.V(), u.extended)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s][%s", next.Key, string(next.Raw))
+			return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s][%s", next.K(), string(next.V()))
 		}
 		return output, nil
 	}

@@ -77,7 +77,7 @@ func (i *Iterator) Close() {
 	i.it.Close()
 }
 
-func (i *Iterator) Next() (*driver.Entry, error) {
+func (i *Iterator) Next() (driver.Entry, error) {
 	r, err := i.it.Next()
 	if err != nil {
 		return nil, err
@@ -85,8 +85,5 @@ func (i *Iterator) Next() (*driver.Entry, error) {
 	if r == nil {
 		return nil, nil
 	}
-	return &driver.Entry{
-		Key: r.Key,
-		Raw: r.Raw,
-	}, nil
+	return r, nil
 }
