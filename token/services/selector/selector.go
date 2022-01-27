@@ -35,7 +35,7 @@ type CertClient interface {
 }
 
 type Locker interface {
-	Lock(id *token2.ID, txID string) (string, error)
+	Lock(id *token2.ID, txID string, reclaim bool) (string, error)
 	UnlockIDs(id ...*token2.ID)
 	UnlockByTxID(txID string)
 	IsLocked(id *token2.ID) bool
@@ -113,6 +113,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 		var toBeCertified []*token2.ID
 		var locked []*token2.ID
 
+		reclaim := i > 0 || s.numRetry > 1
 		for {
 			t, err := unspentTokens.Next()
 			if err != nil {
@@ -130,7 +131,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			}
 
 			// lock the token
-			if _, err := s.locker.Lock(t.Id, s.txID); err != nil {
+			if _, err := s.locker.Lock(t.Id, s.txID, reclaim); err != nil {
 				locked = append(locked, t.Id)
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
@@ -278,6 +279,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 		var toBeCertified []*token2.ID
 		var locked []*token2.ID
 
+		reclaim := i > 0 || s.numRetry > 1
 		for {
 			t, err := unspentTokens.Next()
 			if err != nil {
@@ -312,7 +314,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 			}
 
 			// lock the token
-			if _, err := s.locker.Lock(t.Id, s.txID); err != nil {
+			if _, err := s.locker.Lock(t.Id, s.txID, reclaim); err != nil {
 				locked = append(locked, t.Id)
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 

@@ -17,15 +17,15 @@ import (
 // Quantity models an immutable token quantity and its basic operations.
 type Quantity interface {
 
-	// Add returns this + b without modify this.
+	// Add returns this + b modifying this.
 	// If an overflow occurs, it returns an error.
 	Add(b Quantity) Quantity
 
-	// Add returns this - b without modify this.
+	// Sub returns this - b modifying this.
 	// If an overflow occurs, it returns an error.
 	Sub(b Quantity) Quantity
 
-	// Cmd compare this with b
+	// Cmp compare this with b
 	Cmp(b Quantity) int
 
 	// Hex returns the hexadecimal representation of this quantity
@@ -123,8 +123,8 @@ func (q *BigQuantity) Add(b Quantity) Quantity {
 		panic(fmt.Sprintf("%s < %s", q.Text(10), b.Decimal()))
 	}
 
-	sumq := BigQuantity{Int: sum, Precision: q.Precision}
-	return &sumq
+	q.Int = sum
+	return q
 }
 
 func (q *BigQuantity) Sub(b Quantity) Quantity {
@@ -140,8 +140,8 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 	diff := big.NewInt(0)
 	diff.Sub(q.Int, b.(*BigQuantity).Int)
 
-	diffq := BigQuantity{Int: diff, Precision: q.Precision}
-	return &diffq
+	q.Int = diff
+	return q
 }
 
 func (q *BigQuantity) Cmp(b Quantity) int {
@@ -187,7 +187,8 @@ func (q *UInt64Quantity) Add(b Quantity) Quantity {
 		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
 	}
 
-	return &UInt64Quantity{Value: sum}
+	q.Value = sum
+	return q
 }
 
 func (q *UInt64Quantity) Sub(b Quantity) Quantity {
@@ -202,7 +203,8 @@ func (q *UInt64Quantity) Sub(b Quantity) Quantity {
 	}
 	diff := q.Value - bq.Value
 
-	return &UInt64Quantity{Value: diff}
+	q.Value = diff
+	return q
 }
 
 func (q *UInt64Quantity) Cmp(b Quantity) int {

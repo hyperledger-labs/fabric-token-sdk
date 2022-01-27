@@ -64,7 +64,7 @@ func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeoutMillis 
 	return r
 }
 
-func (d *locker) Lock(id *token2.ID, txID string) (string, error) {
+func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
@@ -73,22 +73,33 @@ func (d *locker) Lock(id *token2.ID, txID string) (string, error) {
 	e, ok := d.locked[k]
 	if ok {
 		e.LastAccess = time.Now()
-		// Second chance
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] already locked by [%s], try to reclaim...", id, e)
-		}
-		reclaimed, status := d.reclaim(id, e.TxID)
-		if !reclaimed {
+
+		if reclaim {
+			// Second chance
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, status)
+				logger.Debugf("[%s] already locked by [%s], try to reclaim...", id, e)
+			}
+			reclaimed, status := d.reclaim(id, e.TxID)
+			if !reclaimed {
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("[%s] already locked by [%s], reclaim failed, tx status [%s]", id, e, status)
+				}
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					return e.TxID, errors.Errorf("already locked by [%s]", e)
+				}
+				return e.TxID, AlreadyLockedError
+			}
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, status)
+			}
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[%s] already locked by [%s], no reclaim", id, e)
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				return e.TxID, errors.Errorf("already locked by [%s]", e)
 			}
 			return e.TxID, AlreadyLockedError
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] already locked by [%s], reclaimed successful, tx status [%s]", id, e, status)
 		}
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
