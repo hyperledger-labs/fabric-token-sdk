@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -97,6 +98,7 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		s.numRetry,
 		s.timeout,
 		s.requestCertification,
+		metrics.Get(s.sp),
 	)
 	s.managers[key] = manager
 	return manager

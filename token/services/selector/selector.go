@@ -9,6 +9,7 @@ package selector
 import (
 	"time"
 
+	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -41,6 +42,10 @@ type Locker interface {
 	IsLocked(id *token2.ID) bool
 }
 
+type MetricsAgent interface {
+	EmitKey(val float32, event ...string)
+}
+
 type selector struct {
 	txID         string
 	locker       Locker
@@ -51,9 +56,20 @@ type selector struct {
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
+
+	metricsAgent MetricsAgent
 }
 
-func newSelector(txID string, locker Locker, service QueryService, certClient CertClient, numRetry int, timeout time.Duration, requestCertification bool) *selector {
+func newSelector(
+	txID string,
+	locker Locker,
+	service QueryService,
+	certClient CertClient,
+	numRetry int,
+	timeout time.Duration,
+	requestCertification bool,
+	metricsAgent MetricsAgent,
+) *selector {
 	return &selector{
 		txID:                 txID,
 		locker:               locker,
@@ -63,6 +79,7 @@ func newSelector(txID string, locker Locker, service QueryService, certClient Ce
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: requestCertification,
+		metricsAgent:         metricsAgent,
 	}
 }
 
@@ -85,6 +102,13 @@ func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 }
 
 func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+	uuid, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "failed to generate UUID")
+	}
+	s.metricsAgent.EmitKey(0, "selector", "start", "selectByID", uuid)
+	defer s.metricsAgent.EmitKey(0, "selector", "end", "selectByID", uuid)
+
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity
