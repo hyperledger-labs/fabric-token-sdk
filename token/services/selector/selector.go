@@ -192,7 +192,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			}
 		}
 
-		s.metricsAgent.EmitKey(0, "selector", "count", "selectByIDNumNext", uuid+strconv.Itoa(i))
+		s.metricsAgent.EmitKey(0, "selector", "count", "selectByIDNumNext", uuid+strconv.Itoa(i), strconv.Itoa(numNext))
 
 		concurrencyIssue := false
 		if target.Cmp(sum) <= 0 {
