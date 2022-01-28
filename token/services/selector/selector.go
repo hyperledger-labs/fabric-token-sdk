@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -138,8 +139,10 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 		var locked []*token2.ID
 
 		reclaim := s.numRetry == 1 || i > 0
+		numNext := 0
 		for {
 			t, err := unspentTokens.Next()
+			numNext++
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "token selection failed")
 			}
@@ -188,6 +191,8 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				break
 			}
 		}
+
+		s.metricsAgent.EmitKey(0, "selector", "count", "selectByIDNumNext", uuid+strconv.Itoa(i))
 
 		concurrencyIssue := false
 		if target.Cmp(sum) <= 0 {
