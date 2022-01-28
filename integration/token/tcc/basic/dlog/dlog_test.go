@@ -22,14 +22,13 @@ var _ = Describe("EndToEnd", func() {
 	)
 
 	AfterEach(func() {
-		network.DeleteOnStop = false
 		network.Stop()
 	})
 
 	Describe("ZKAT-DLog", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "./testdata", basic.Topology("dlog")...)
+			network, err = integration.New(StartPortDlog(), "", basic.Topology("dlog")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

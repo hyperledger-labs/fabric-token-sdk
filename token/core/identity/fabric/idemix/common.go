@@ -9,30 +9,35 @@ package idemix
 import (
 	bccsp "github.com/IBM/idemix/bccsp/schemes"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
-type deserialized struct {
-	id           *identity
+type Deserialized struct {
+	id           *Identity
 	NymPublicKey bccsp.Key
 	si           *m.SerializedIdentity
 	ou           *m.OrganizationUnit
 	role         *m.MSPRole
 }
 
-type common struct {
-	name            string
-	Ipk             []byte
-	Csp             bccsp.BCCSP
+type Common struct {
+	Name            string
+	IPK             []byte
+	CSP             bccsp.BCCSP
 	IssuerPublicKey bccsp.Key
-	revocationPK    bccsp.Key
-	epoch           int
+	RevocationPK    bccsp.Key
+	Epoch           int
 	VerType         bccsp.VerificationType
 	NymEID          []byte
 }
 
-func (s *common) Deserialize(raw []byte, checkValidity bool) (*deserialized, error) {
+func (c *Common) Deserialize(raw []byte, checkValidity bool) (*Deserialized, error) {
+	return c.DeserializeWithNymEID(raw, checkValidity, nil)
+}
+
+func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, nymEID []byte) (*Deserialized, error) {
 	si := &m.SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
@@ -52,7 +57,7 @@ func (s *common) Deserialize(raw []byte, checkValidity bool) (*deserialized, err
 	var rawNymPublicKey []byte
 	rawNymPublicKey = append(rawNymPublicKey, serialized.NymX...)
 	rawNymPublicKey = append(rawNymPublicKey, serialized.NymY...)
-	NymPublicKey, err := s.Csp.KeyImport(
+	NymPublicKey, err := c.CSP.KeyImport(
 		rawNymPublicKey,
 		&bccsp.IdemixNymPublicKeyImportOpts{Temporary: true},
 	)
@@ -74,14 +79,35 @@ func (s *common) Deserialize(raw []byte, checkValidity bool) (*deserialized, err
 		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
 	}
 
-	id := newIdentityWithVerType(s, NymPublicKey, role, ou, serialized.Proof, s.VerType)
+	idCommon := c
+	if len(nymEID) != 0 {
+		idCommon = &Common{
+			Name:            c.Name,
+			IPK:             c.IPK,
+			CSP:             c.CSP,
+			IssuerPublicKey: c.IssuerPublicKey,
+			RevocationPK:    c.RevocationPK,
+			Epoch:           c.Epoch,
+			VerType:         c.VerType,
+			NymEID:          nymEID,
+		}
+	}
+
+	id := NewIdentityWithVerType(
+		idCommon,
+		NymPublicKey,
+		role,
+		ou,
+		serialized.Proof,
+		c.VerType,
+	)
 	if checkValidity {
 		if err := id.Validate(); err != nil {
 			return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
 		}
 	}
 
-	return &deserialized{
+	return &Deserialized{
 		id:           id,
 		NymPublicKey: NymPublicKey,
 		si:           si,
@@ -90,13 +116,12 @@ func (s *common) Deserialize(raw []byte, checkValidity bool) (*deserialized, err
 	}, nil
 }
 
-func (s *common) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
-	ai := &AuditInfo{
-		Csp:             s.Csp,
-		IssuerPublicKey: s.IssuerPublicKey,
+func (c *Common) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+	ai, err := DeserializeAuditInfo(raw)
+	if err != nil {
+		return nil, err
 	}
-	if err := ai.FromBytes(raw); err != nil {
-		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
-	}
+	ai.Csp = c.CSP
+	ai.IssuerPublicKey = c.IssuerPublicKey
 	return ai, nil
 }
