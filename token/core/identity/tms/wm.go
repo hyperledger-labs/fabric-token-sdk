@@ -226,7 +226,7 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 				IdemixMSP,
 				provider.EnrollmentID(),
 				identityConfig.Default,
-				NewCacheIdentity(provider.Identity, 500).Identity,
+				NewIdentityCache(provider.Identity, 500).Identity,
 			)
 		case BccspMSP:
 			provider, err := x509.NewProvider(lm.cm.TranslatePath(identityConfig.Path), typeAndMspID[1], lm.signerService)
@@ -272,7 +272,7 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 					IdemixMSP,
 					provider.EnrollmentID(),
 					false,
-					NewCacheIdentity(provider.Identity, 500).Identity,
+					NewIdentityCache(provider.Identity, 500).Identity,
 				)
 			}
 		case BccspMSPFolder:

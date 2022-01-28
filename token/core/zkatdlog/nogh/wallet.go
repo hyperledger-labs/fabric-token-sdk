@@ -18,6 +18,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -288,25 +289,24 @@ func (s *Service) walletID(id string) string {
 	return s.Channel + s.Namespace + id
 }
 
-type cache interface {
-	Get(key token2.ID) (interface{}, bool)
-	Add(key token2.ID, value interface{})
-}
-
 type wallet struct {
 	tokenService *Service
 	id           string
 	identityInfo *api2.IdentityInfo
 	prefix       string
+	cache        *tms.WalletIdentityCache
 }
 
 func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
-	return &wallet{
+	w := &wallet{
 		tokenService: tokenService,
 		id:           id,
 		identityInfo: identityInfo,
 		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
 	}
+	w.cache = tms.NewWalletIdentityCache(w.getRecipientIdentity, 200)
+
+	return w
 }
 
 func (w *wallet) ID() string {
@@ -322,6 +322,10 @@ func (w *wallet) ContainsToken(token *token2.UnspentToken) bool {
 }
 
 func (w *wallet) GetRecipientIdentity() (view.Identity, error) {
+	return w.cache.Identity()
+}
+
+func (w *wallet) getRecipientIdentity() (view.Identity, error) {
 	// Get a new pseudonym
 	pseudonym, err := w.identityInfo.GetIdentity()
 	if err != nil {
