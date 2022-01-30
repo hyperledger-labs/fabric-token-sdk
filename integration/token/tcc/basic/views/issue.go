@@ -127,6 +127,10 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
+	vc, _, err = ch.Committer().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+
 	// Last but not least, the issuer sends the transaction for ordering and waits for transaction finality.
 	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit issue transaction")
@@ -136,6 +140,9 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	vc, _, err = ch.Vault().Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	vc, _, err = ch.Committer().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	return tx.ID(), nil
 }

@@ -97,6 +97,9 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	vc, _, err := ch.Vault().Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	vc, _, err = ch.Committer().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Send to the ordering service and wait for finality
 	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
@@ -107,6 +110,9 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	vc, _, err = ch.Vault().Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	vc, _, err = ch.Committer().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	return tx.ID(), nil
 }
@@ -243,6 +249,9 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	vc, _, err := ch.Vault().Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	vc, _, err = ch.Committer().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	if !t.Retry {
 		// Introduce a delay that will keep the tokens locked by the selector
@@ -258,6 +267,9 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	vc, _, err = ch.Vault().Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	vc, _, err = ch.Committer().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	return tx.ID(), nil
 }
