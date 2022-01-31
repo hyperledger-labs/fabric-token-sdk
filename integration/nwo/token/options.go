@@ -26,7 +26,6 @@ func WithIssuerIdentity(label string) fsc.Option {
 
 		fo := fabric.Options(o)
 		fo.SetX509Identities(append(fo.X509Identities(), label))
-
 		return nil
 	}
 }
