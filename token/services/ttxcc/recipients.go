@@ -149,11 +149,11 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 
 		recipientData := &RecipientData{}
 		if err := recipientData.FromBytes(payload); err != nil {
-			logger.Errorf("failed unmarshalling recipient data: %s", err)
+			logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
 			return nil, err
 		}
 		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
-			logger.Errorf("failed registering recipient identity: %s", err)
+			logger.Errorf("failed to register recipient identity: [%s]", err)
 			return nil, err
 		}
 
@@ -194,13 +194,15 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed to read first message: [%s]", err)
+		return nil, errors.Wrapf(err, "failed to read first message")
 	}
 	agent.EmitKey(0, "ttxcc", "received", "requestRecipientIdentity", session.Info().ID)
 
 	recipientRequest := &RecipientRequest{}
 	if err := recipientRequest.FromBytes(payload); err != nil {
-		return nil, errors.Wrapf(err, "failed unmarshalling recipient request")
+		logger.Errorf("failed to unmarshal recipient request: [%s][%s]", payload, err)
+		return nil, errors.Wrapf(err, "failed to umarshal recipient request")
 	}
 
 	wallet := s.Wallet
@@ -213,19 +215,23 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		token.WithTMSID(recipientRequest.TMSID),
 	)
 	if w == nil {
+		logger.Errorf("failed to get wallet [%s]", wallet)
 		return nil, errors.Errorf("wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
 	}
 	recipientIdentity, err := w.GetRecipientIdentity()
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed to get recipient identity: [%s]", err)
+		return nil, errors.Wrapf(err, "failed to get recipient identity")
 	}
 	auditInfo, err := w.GetAuditInfo(recipientIdentity)
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed to get audit info: [%s]", err)
+		return nil, errors.Wrapf(err, "failed to get audit info")
 	}
 	metadata, err := w.GetTokenMetadata(recipientIdentity)
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed to get token metadata: [%s]", err)
+		return nil, errors.Wrapf(err, "failed to get token metadata")
 	}
 	recipientData := &RecipientData{
 		Identity:  recipientIdentity,
@@ -234,13 +240,15 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 	recipientDataRaw, err := recipientData.Bytes()
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed to marshal recipient data: [%s]", err)
+		return nil, errors.Wrapf(err, "failed marshalling recipient data")
 	}
 
 	// Step 3: send the public key back to the invoker
 	err = session.Send(recipientDataRaw)
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed to send recipient data: [%s]", err)
+		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
 	agent.EmitKey(0, "ttxcc", "sent", "responseRecipientIdentity", session.Info().ID)
 
@@ -251,7 +259,8 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	}
 	err = resolver.Bind(context.Me(), recipientIdentity)
 	if err != nil {
-		return nil, err
+		logger.Errorf("failed binding [%s] to [%s]", context.Me(), recipientData)
+		return nil, errors.Wrapf(err, "failed to bind me to recipient identity")
 	}
 
 	return recipientIdentity, nil
