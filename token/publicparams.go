@@ -11,6 +11,8 @@ type PublicParamsFetcher interface {
 	Fetch() ([]byte, error)
 }
 
+// PublicParametersManager exposes methods to manage the public parameters
+// TODO: add precision
 type PublicParametersManager struct {
 	ppm tokenapi.PublicParamsManager
 }

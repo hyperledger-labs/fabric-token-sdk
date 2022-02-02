@@ -45,6 +45,9 @@ func (t *WalletManager) RegisterIssuer(label string, sk api2.Key, pk api2.Key) e
 }
 
 func (t *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
+	if err := t.ts.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
+		return err
+	}
 	return t.ts.RegisterRecipientIdentity(id, auditInfo, metadata)
 }
 
@@ -129,6 +132,10 @@ func (w *Wallet) Contains(identity view.Identity) bool {
 	return w.w.Contains(identity)
 }
 
+func (w *Wallet) ContainsToken(token *token2.UnspentToken) bool {
+	return w.ContainsToken(token)
+}
+
 type AuditorWallet struct {
 	w api2.AuditorWallet
 }
@@ -139,6 +146,10 @@ func (a *AuditorWallet) ID() string {
 
 func (a *AuditorWallet) Contains(identity view.Identity) bool {
 	return a.w.Contains(identity)
+}
+
+func (a *AuditorWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return a.w.ContainsToken(token)
 }
 
 func (a *AuditorWallet) GetAuditorIdentity() (view.Identity, error) {
@@ -161,6 +172,10 @@ func (a *CertifierWallet) Contains(identity view.Identity) bool {
 	return a.w.Contains(identity)
 }
 
+func (a *CertifierWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return a.w.ContainsToken(token)
+}
+
 func (a *CertifierWallet) GetCertifierIdentity() (view.Identity, error) {
 	return a.w.GetCertifierIdentity()
 }
@@ -179,6 +194,10 @@ func (o *OwnerWallet) ID() string {
 
 func (o *OwnerWallet) Contains(identity view.Identity) bool {
 	return o.w.Contains(identity)
+}
+
+func (o *OwnerWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return o.w.ContainsToken(token)
 }
 
 func (o *OwnerWallet) GetRecipientIdentity() (view.Identity, error) {
@@ -216,6 +235,10 @@ func (i *IssuerWallet) ID() string {
 
 func (i *IssuerWallet) Contains(identity view.Identity) bool {
 	return i.w.Contains(identity)
+}
+
+func (w *IssuerWallet) ContainsToken(token *token2.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
 }
 
 func (i *IssuerWallet) GetIssuerIdentity(tokenType string) (view.Identity, error) {

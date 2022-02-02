@@ -9,7 +9,9 @@ package ttxcc
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -91,12 +93,15 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "sent", "auditing", a.tx.ID())
 
 	// Receive signature
 	ch := session.Receive()
 	var msg *view.Message
 	select {
 	case msg = <-ch:
+		agent.EmitKey(0, "ttxcc", "received", "auditingAck", a.tx.ID())
 		logger.Debug("reply received from %s", a.tx.Opts.auditor)
 	case <-time.After(60 * time.Second):
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.auditor)
@@ -112,14 +117,16 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling message to sign")
 	}
-	logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
+	}
 
 	v, err := a.tx.TokenService().SigService().AuditorVerifier(a.tx.Opts.auditor)
 	if err != nil {
 		return nil, err
 	}
 	if err := v.Verify(signed, msg.Payload); err != nil {
-		return nil, errors.Wrapf(err, "failed verifying auditor signature")
+		return nil, errors.Wrapf(err, "failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
 	}
 
 	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
@@ -138,7 +145,9 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	// Append audit records
-	logger.Debugf("store audit records...")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("store audit records...")
+	}
 	auditRecord, err := a.tx.TokenRequest.AuditRecord()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting audit records for tx [%s]", a.tx.ID())
@@ -146,14 +155,20 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	if err := auditdb.GetAuditDB(context, a.w).Append(auditRecord); err != nil {
 		return nil, errors.WithMessagef(err, "failed appening audit records for tx [%s]", a.tx.ID())
 	}
-	logger.Debugf("store audit records...done")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("store audit records...done")
+	}
 
-	logger.Debugf("sign and send back")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("sign and send back")
+	}
 	if err := a.signAndSendBack(context); err != nil {
 		return nil, err
 	}
 
-	logger.Debugf("audit approve done")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("audit approve done")
+	}
 	return nil, nil
 }
 
@@ -173,7 +188,9 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.Wrapf(err, "failed marshalling tx [%s] to audit", a.tx.ID())
 	}
 
-	logger.Debugf("Endorse [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Audit Approve [%s][%s][%s]", aid.UniqueID(), hash.Hashable(raw).String(), a.tx.TokenRequest.TxID)
+	}
 	sigma, err := signer.Sign(raw)
 	if err != nil {
 		return errors.Wrapf(err, "failed sign audit message for tx [%s]", a.tx.ID())
@@ -183,6 +200,8 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err := session.Send(sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "sent", "auditingAck", a.tx.ID())
 
 	if err := a.waitFabricEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
@@ -197,7 +216,9 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	}
 
 	// Processes
-	logger.Debugf("Processes Fabric Envelope...")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Processes Fabric Envelope...")
+	}
 	env := tx.Payload.Envelope
 	if env == nil {
 		return errors.Errorf("expected fabric envelope")
@@ -224,11 +245,15 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	}
 
 	// Send the proposal response back
-	logger.Debugf("Send the ack")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Send the ack")
+	}
 	err = context.Session().Send([]byte("ack"))
 	if err != nil {
 		return err
 	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "sent", "txAck", tx.ID())
 
 	return nil
 }

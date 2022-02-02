@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -220,7 +221,13 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 				return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", lm.cm.TranslatePath(identityConfig.Path))
 			}
 			dm.AddDeserializer(provider)
-			lm.addResolver(identityConfig.ID, IdemixMSP, provider.EnrollmentID(), identityConfig.Default, provider.Identity)
+			lm.addResolver(
+				identityConfig.ID,
+				IdemixMSP,
+				provider.EnrollmentID(),
+				identityConfig.Default,
+				NewIdentityCache(provider.Identity, 500).Identity,
+			)
 		case BccspMSP:
 			provider, err := x509.NewProvider(lm.cm.TranslatePath(identityConfig.Path), typeAndMspID[1], lm.signerService)
 			if err != nil {
@@ -260,7 +267,13 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 				}
 				logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
 				dm.AddDeserializer(provider)
-				lm.addResolver(id, IdemixMSP, provider.EnrollmentID(), false, provider.Identity)
+				lm.addResolver(
+					id,
+					IdemixMSP,
+					provider.EnrollmentID(),
+					false,
+					NewIdentityCache(provider.Identity, 500).Identity,
+				)
 			}
 		case BccspMSPFolder:
 			entries, err := ioutil.ReadDir(lm.cm.TranslatePath(identityConfig.Path))
@@ -314,22 +327,30 @@ func (lm *LocalMembership) DefaultIdentity() view.Identity {
 }
 
 func (lm *LocalMembership) IsMe(id view.Identity) bool {
-	_, err := sig2.GetSigner(lm.sp, id)
-	return err == nil
+	return view2.GetSigService(lm.sp).IsMe(id)
 }
 
 func (lm *LocalMembership) GetAnonymousIdentifier(label string) (string, error) {
-	logger.Debugf("get anonymous identity info by label [%s]", label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("get anonymous identity info by label [%s]", label)
+	}
 	r := lm.getAnonymousResolver(label)
 	if r == nil {
-		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+		}
 		return "", errors.New("not found")
+	}
+	if r.Default {
+		return "idemix", nil
 	}
 	return r.Name, nil
 }
 
 func (lm *LocalMembership) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, network.GetFunc, error) {
-	logger.Debugf("get anonymous identity info by label [%s]", label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("get anonymous identity info by label [%s]", label)
+	}
 	r := lm.getAnonymousResolver(label)
 	if r == nil {
 		return "", "", nil, errors.Errorf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
@@ -346,17 +367,26 @@ func (lm *LocalMembership) GetAnonymousIdentity(label string, auditInfo []byte) 
 
 func (lm *LocalMembership) GetLongTermIdentifier(id view.Identity) (string, error) {
 	label := id.String()
-	logger.Debugf("get identity info by label [%s]", label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("get identity info by label [%s]", label)
+	}
 	r := lm.getLongTermResolver(label)
 	if r == nil {
-		logger.Debugf("identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+		}
 		return "", errors.New("not found")
+	}
+	if r.Default {
+		return "default", nil
 	}
 	return r.Name, nil
 }
 
 func (lm *LocalMembership) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
-	logger.Debugf("get identity info by label [%s]", label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("get identity info by label [%s]", label)
+	}
 	r := lm.getLongTermResolver(label)
 	if r == nil {
 		return "", "", nil, errors.Errorf("identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
@@ -408,7 +438,9 @@ func (lm *LocalMembership) getAnonymousResolver(label string) *Resolver {
 	lm.resolversMutex.RLock()
 	defer lm.resolversMutex.RUnlock()
 
-	logger.Debugf("get anonymous identity info by label [%s]", label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("get anonymous identity info by label [%s]", label)
+	}
 	r, ok := lm.resolversByTypeAndName[IdemixMSP+label]
 	if ok {
 		return r
@@ -422,7 +454,9 @@ func (lm *LocalMembership) getAnonymousResolver(label string) *Resolver {
 		}
 	}
 
-	logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+	}
 	return nil
 }
 
@@ -452,7 +486,9 @@ func (lm *LocalMembership) getLongTermResolver(label string) *Resolver {
 			}
 		}
 	}
-	logger.Debugf("identity info not found for label [%s][%v]", label, lm.bccspResolversByIdentity)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("identity info not found for label [%s][%v]", label, lm.bccspResolversByIdentity)
+	}
 	return nil
 }
 

@@ -86,11 +86,15 @@ func (p *SDK) Install() error {
 		fabric2.NewNormalizer(p.registry),
 		fabric2.NewVaultProvider(p.registry),
 		fabric2.NewCertificationClientProvider(p.registry),
-		selector.NewProvider(p.registry, fabric2.NewLockerProvider(
+		selector.NewProvider(
 			p.registry,
-			2*time.Second,
-			(5*time.Minute).Milliseconds(),
-		), 2, 5*time.Second),
+			fabric2.NewLockerProvider(
+				p.registry,
+				2*time.Second,
+				(5*time.Minute).Milliseconds(),
+			),
+			2,
+			5*time.Second),
 	)))
 
 	// Network provider

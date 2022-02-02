@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttxcc
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -29,6 +30,10 @@ func NewOrderingView(tx *Transaction) *orderingView {
 // The view does the following:
 // 1. It broadcasts the token token transaction to the proper Fabric ordering service.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "orderingView", o.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "orderingView", o.tx.ID())
+
 	if err := network.GetInstance(context, o.tx.Network(), "").Broadcast(o.tx.Payload.Envelope); err != nil {
 		return nil, err
 	}
@@ -54,11 +59,17 @@ func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
 // 2. It waits for finality of the token transaction by listening to delivery events from one of the
 // Fabric peer nodes trusted by the FSC node.
 func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error) {
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttxcc", "start", "orderingAndFinalityView", o.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "orderingAndFinalityView", o.tx.ID())
+
 	nw := network.GetInstance(context, o.tx.Network(), o.tx.Channel())
 	if nw == nil {
 		return nil, errors.Errorf("network [%s] not found", o.tx.Network())
 	}
-	logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
+	}
 	env := o.tx.Payload.Envelope
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -66,7 +77,9 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 		if err != nil {
 			return nil, err
 		}
-		logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
+		}
 	}
 
 	if err := nw.Broadcast(env); err != nil {

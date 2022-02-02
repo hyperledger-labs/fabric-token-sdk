@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package query
 
 import (
@@ -12,12 +13,12 @@ import (
 )
 
 func UnmarshallFabtoken(raw []byte) (*token2.Token, error) {
-	t := &token2.Token{}
-	err := json.Unmarshal(raw, t)
+	v := &token2.Token{}
+	err := json.Unmarshal(raw, v)
 	if err != nil {
 		return nil, err
 	}
-	return t, nil
+	return v, nil
 }
 
 func UnmarshallIssuedToken(raw []byte) (*token2.IssuedToken, error) {

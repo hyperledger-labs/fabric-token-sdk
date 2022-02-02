@@ -20,9 +20,18 @@ type manager struct {
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
+	metricsAgent         MetricsAgent
 }
 
-func newManager(locker Locker, newQueryEngine NewQueryEngineFunc, certClient CertClient, numRetry int, timeout time.Duration, requestCertification bool) *manager {
+func newManager(
+	locker Locker,
+	newQueryEngine NewQueryEngineFunc,
+	certClient CertClient,
+	numRetry int,
+	timeout time.Duration,
+	requestCertification bool,
+	metricsAgent MetricsAgent,
+) *manager {
 	return &manager{
 		locker:               locker,
 		newQueryEngine:       newQueryEngine,
@@ -30,11 +39,21 @@ func newManager(locker Locker, newQueryEngine NewQueryEngineFunc, certClient Cer
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: requestCertification,
+		metricsAgent:         metricsAgent,
 	}
 }
 
 func (m *manager) NewSelector(id string) (token.Selector, error) {
-	return newSelector(id, m.locker, m.newQueryEngine(), m.certClient, m.numRetry, m.timeout, m.requestCertification), nil
+	return newSelector(
+		id,
+		m.locker,
+		m.newQueryEngine(),
+		m.certClient,
+		m.numRetry,
+		m.timeout,
+		m.requestCertification,
+		m.metricsAgent,
+	), nil
 }
 
 func (m *manager) Unlock(txID string) error {

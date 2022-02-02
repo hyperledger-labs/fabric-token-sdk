@@ -27,6 +27,15 @@ type AuditInfo struct {
 	IssuerPublicKey csp.Key   `json:"-"`
 }
 
+func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+	auditInfo := &AuditInfo{}
+	err := auditInfo.FromBytes(raw)
+	if err != nil {
+		return nil, err
+	}
+	return auditInfo, nil
+}
+
 func (a *AuditInfo) Bytes() ([]byte, error) {
 	return json.Marshal(a)
 }
@@ -71,13 +80,4 @@ func (a *AuditInfo) Match(id []byte) error {
 	}
 
 	return nil
-}
-
-func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
-	auditInfo := &AuditInfo{}
-	err := auditInfo.FromBytes(raw)
-	if err != nil {
-		return nil, err
-	}
-	return auditInfo, nil
 }

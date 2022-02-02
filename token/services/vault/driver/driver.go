@@ -15,20 +15,21 @@ type RWSet interface {
 	Equals(rwset interface{}, namespace string) error
 }
 
-type Entry struct {
-	Key string
-	Raw []byte
+type Entry interface {
+	K() string
+	V() []byte
 }
 
 type Iterator interface {
 	Close()
-	Next() (*Entry, error)
+	Next() (Entry, error)
 }
 
 type Executor interface {
 	Done()
 	GetState(namespace string, key string) ([]byte, error)
 	GetStateRangeScanIterator(namespace string, s string, e string) (Iterator, error)
+	GetCachedStateRangeScanIterator(namespace string, s string, e string) (Iterator, error)
 	GetStateMetadata(namespace string, id string) (map[string][]byte, error)
 }
 

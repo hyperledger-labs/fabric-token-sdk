@@ -7,10 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+	"bytes"
+	"sync"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
+	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/x509"
@@ -61,6 +64,34 @@ func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.auditDeserializer.DeserializeAuditInfo(raw)
+}
+
+type DeserializerProvider struct {
+	oldHash []byte
+	des     *deserializer
+	mux     sync.Mutex
+}
+
+func NewDeserializerProvider() *DeserializerProvider {
+	return &DeserializerProvider{}
+}
+
+func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.Deserializer, error) {
+	d.mux.Lock()
+	defer d.mux.Unlock()
+
+	logger.Infof("Deserialize: [%s][%s]", params.Hash, d.oldHash)
+	if bytes.Equal(d.oldHash, params.Hash) {
+		return d.des, nil
+	}
+
+	des, err := NewDeserializer(params)
+	if err != nil {
+		return nil, err
+	}
+	d.des = des
+	d.oldHash = params.Hash
+	return des, nil
 }
 
 type enrollmentService struct {

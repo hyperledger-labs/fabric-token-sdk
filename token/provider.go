@@ -10,6 +10,10 @@ import (
 	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+var (
+	managementServiceProviderIndex = &ManagementServiceProvider{}
+)
+
 type Normalizer interface {
 	Normalize(opt *ServiceOptions) *ServiceOptions
 }
@@ -96,7 +100,7 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 }
 
 func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
-	s, err := sp.GetService(&ManagementServiceProvider{})
+	s, err := sp.GetService(managementServiceProviderIndex)
 	if err != nil {
 		panic(err)
 	}

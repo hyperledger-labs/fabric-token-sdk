@@ -8,6 +8,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
 
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 
@@ -18,17 +19,37 @@ import (
 )
 
 type serverConfig struct {
-	CCID      string
-	CCaddress string
-	LogLevel  string
+	CCID           string
+	CCaddress      string
+	LogLevel       string
+	MetricsEnabled bool
+	MetricsServer  string
 }
 
 func main() {
-	config := serverConfig{
-		CCID:      os.Getenv("CHAINCODE_ID"),
-		CCaddress: os.Getenv("CHAINCODE_SERVER_ADDRESS"),
-		LogLevel:  os.Getenv("CHAINCODE_LOG_LEVEL"),
+	metricsEnabledEnv := os.Getenv("CHAINCODE_METRICS_ENABLED")
+	metricsEnabled := false
+	if len(metricsEnabledEnv) > 0 {
+		var err error
+		metricsEnabled, err = strconv.ParseBool(metricsEnabledEnv)
+		if err != nil {
+			fmt.Printf("Error parsing CHAINCODE_METRICS_ENABLED: %s\n", err)
+			os.Exit(1)
+		}
 	}
+
+	config := serverConfig{
+		CCID:           os.Getenv("CHAINCODE_ID"),
+		CCaddress:      os.Getenv("CHAINCODE_SERVER_ADDRESS"),
+		LogLevel:       os.Getenv("CHAINCODE_LOG_LEVEL"),
+		MetricsEnabled: metricsEnabled,
+		MetricsServer:  os.Getenv("CHAINCODE_METRICS_SERVER"),
+	}
+	if len(config.MetricsServer) == 0 {
+		config.MetricsServer = "localhost:8125"
+	}
+
+	fmt.Printf("metrics server at [%s], enabled [%v]", config.MetricsServer, config.MetricsEnabled)
 
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
@@ -40,6 +61,8 @@ func main() {
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
 					return token.NewServicesFromPublicParams(bytes)
 				},
+				MetricsEnabled: config.MetricsEnabled,
+				MetricsServer:  config.MetricsServer,
 			},
 		)
 		if err != nil {
@@ -57,7 +80,9 @@ func main() {
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
 					return token.NewServicesFromPublicParams(bytes)
 				},
-				LogLevel: config.LogLevel,
+				LogLevel:       config.LogLevel,
+				MetricsEnabled: config.MetricsEnabled,
+				MetricsServer:  config.MetricsServer,
 			},
 			TLSProps: shim.TLSProperties{
 				// TODO : enable TLS

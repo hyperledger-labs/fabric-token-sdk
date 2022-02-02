@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -70,7 +71,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 		return nil, errors.New("empty token request")
 	}
 	tr := &driver.TokenRequest{}
-	err := json.Unmarshal(raw, tr)
+	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
@@ -80,12 +81,14 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	req := &driver.TokenRequest{}
 	req.Transfers = tr.Transfers
 	req.Issues = tr.Issues
-	bytes, err := json.Marshal(req)
+	bytes, err := req.Bytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal signed token request"+err.Error())
 	}
 
-	logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(bytes).String(), binding)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(bytes).String(), binding)
+	}
 	signed := append(bytes, []byte(binding)...)
 	var signatures [][]byte
 	if len(v.validationParameters.AuditorIdentity()) != 0 {

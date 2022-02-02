@@ -87,6 +87,10 @@ func (e *Envelope) Bytes() ([]byte, error) {
 	return e.e.Bytes()
 }
 
+func (e *Envelope) FromBytes(raw []byte) error {
+	return e.e.FromBytes(raw)
+}
+
 func (e *Envelope) TxID() string {
 	return e.e.TxID()
 }

@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"encoding/json"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -85,8 +83,9 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 
 	// check if there is already a wallet
 	identity, walletID := s.IP.LookupIdentifier(driver.OwnerRole, id)
+	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
-		if w.Contains(identity) || w.ID() == walletID {
+		if w.Contains(identity) || w.ID() == wID {
 			logger.Debugf("found owner wallet [%s]", identity.String())
 			return w
 		}
@@ -98,13 +97,14 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 		if err != nil {
 			panic(err)
 		}
-		id, err = s.wrapWalletIdentity(id)
+		wrappedID, err := s.wrapWalletIdentity(id)
 		if err != nil {
 			panic(err)
 		}
-		w := newOwnerWallet(s, idInfo.ID, id)
+
+		w := newOwnerWallet(s, id, wrappedID, wID)
 		s.OwnerWallets = append(s.OwnerWallets, w)
-		logger.Debugf("created owner wallet [%s]", walletID)
+		logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, walletID)
 		return w
 	}
 
@@ -138,7 +138,7 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 		if err != nil {
 			panic(err)
 		}
-		w := newIssuerWallet(s, idInfo.ID, id)
+		w := newIssuerWallet(s, walletID, id)
 		s.IssuerWallets = append(s.IssuerWallets, w)
 		logger.Debugf("created issuer wallet [%s]", identity.String())
 		return w
@@ -175,7 +175,7 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 		if err != nil {
 			panic(err)
 		}
-		w := newAuditorWallet(s, idInfo.ID, id)
+		w := newAuditorWallet(s, walletID, id)
 		s.AuditorWallets = append(s.AuditorWallets, w)
 		logger.Debugf("created auditor wallet [%s]", identity.String())
 		return w
@@ -194,8 +194,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 }
 
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	ro := &identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id}
-	raw, err := json.Marshal(ro)
+	raw, err := identity.MarshallRawOwner(&identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id})
 	if err != nil {
 		return nil, err
 	}
@@ -205,17 +204,23 @@ func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 	return raw, nil
 }
 
+func (s *Service) walletID(id string) string {
+	return s.Channel + s.Namespace + id
+}
+
 type ownerWallet struct {
 	tokenService *Service
 	id           string
 	identity     view.Identity
+	wrappedID    view.Identity
 }
 
-func newOwnerWallet(tokenService *Service, id string, identity view.Identity) *ownerWallet {
+func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string) *ownerWallet {
 	return &ownerWallet{
 		tokenService: tokenService,
 		id:           id,
 		identity:     identity,
+		wrappedID:    wrappedID,
 	}
 }
 
@@ -224,11 +229,15 @@ func (w *ownerWallet) ID() string {
 }
 
 func (w *ownerWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity)
+	return w.identity.Equal(identity) || w.wrappedID.Equal(identity)
+}
+
+func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *ownerWallet) GetRecipientIdentity() (view.Identity, error) {
-	return w.identity, nil
+	return w.wrappedID, nil
 }
 
 func (w *ownerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
@@ -240,11 +249,11 @@ func (w *ownerWallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
 }
 
 func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
-	if !w.identity.Equal(identity) {
+	if !w.wrappedID.Equal(identity) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
 	}
 
-	si, err := w.tokenService.IP.GetSigner(w.identity)
+	si, err := w.tokenService.IP.GetSigner(w.wrappedID)
 	if err != nil {
 		return nil, err
 	}
@@ -298,6 +307,10 @@ func (w *issuerWallet) ID() string {
 
 func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
+}
+
+func (w *issuerWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *issuerWallet) GetIssuerIdentity(tokenType string) (view.Identity, error) {
@@ -362,6 +375,10 @@ func (w *auditorWallet) ID() string {
 
 func (w *auditorWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
+}
+
+func (w *auditorWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
 }
 
 func (w *auditorWallet) GetAuditorIdentity() (view.Identity, error) {

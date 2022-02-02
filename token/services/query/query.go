@@ -46,7 +46,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 
 	sum := token2.NewZeroQuantity(keys.Precision)
 	for _, tok := range unspentTokens.Tokens {
-		q, err := token2.ToQuantity(tok.Quantity, keys.Precision)
+		q, err := token2.ToQuantity(tok.DecimalQuantity, keys.Precision)
 		if err != nil {
 			return nil, err
 		}
@@ -96,7 +96,7 @@ func (b *AllMyBalanceView) Call(context view.Context) (interface{}, error) {
 		if !exists {
 			balances[tok.Type] = token2.NewZeroQuantity(keys.Precision)
 		}
-		q, err := token2.ToQuantity(tok.Quantity, keys.Precision)
+		q, err := token2.ToQuantity(tok.DecimalQuantity, keys.Precision)
 		if err != nil {
 			return nil, err
 		}

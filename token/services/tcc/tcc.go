@@ -16,6 +16,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
@@ -42,6 +43,10 @@ const (
 
 	PublicParamsPathVarEnv = "PUBLIC_PARAMS_FILE_PATH"
 )
+
+type Agent interface {
+	EmitKey(val float32, event ...string)
+}
 
 type SetupAction struct {
 	SetupParameters []byte
@@ -79,6 +84,11 @@ type TokenChaincode struct {
 
 	PPDigest             []byte
 	TokenServicesFactory func([]byte) (PublicParametersManager, Validator, error)
+
+	MetricsEnabled bool
+	MetricsServer  string
+	MetricsLock    sync.Mutex
+	MetricsAgent   Agent
 }
 
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -137,6 +147,13 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	case 0:
 		return shim.Error("missing parameters")
 	default:
+		agent, err := cc.NewMetricsAgent(string(args[0]))
+		if err != nil {
+			return shim.Error(err.Error())
+		}
+		agent.EmitKey(0, "tcc", "start", "TokenChaincodeInvoke"+string(args[0]), stub.GetTxID())
+		defer agent.EmitKey(0, "tcc", "end", "TokenChaincodeInvoke"+string(args[0]), stub.GetTxID())
+
 		logger.Infof("running function [%s]", string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
@@ -263,18 +280,23 @@ func (cc *TokenChaincode) Initialize(stub shim.ChaincodeStubInterface) error {
 }
 
 func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	validator, err := cc.GetValidator(stub)
+	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	// Verify
+	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 	actions, err := validator.UnmarshallAndVerify(stub, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
+	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 
 	// Write
+	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestWrite", stub.GetTxID())
 	rwset := &rwsWrapper{stub: stub}
 	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
@@ -288,6 +310,8 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())
 	}
+	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequest", stub.GetTxID())
+
 	return shim.Success(nil)
 }
 
@@ -402,4 +426,28 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 		return shim.Error(fmt.Sprintf("failed marshalling tokens: [%s]", err))
 	}
 	return shim.Success(raw)
+}
+
+func (cc *TokenChaincode) NewMetricsAgent(id string) (Agent, error) {
+	cc.MetricsLock.Lock()
+	defer cc.MetricsLock.Unlock()
+
+	if cc.MetricsAgent != nil {
+		return cc.MetricsAgent, nil
+	}
+
+	if !cc.MetricsEnabled {
+		cc.MetricsAgent = metrics.NewNullAgent()
+		return cc.MetricsAgent, nil
+	}
+
+	var err error
+	cc.MetricsAgent, err = metrics.NewStatsdAgent(
+		metrics.Host(id),
+		metrics.StatsDSink(cc.MetricsServer),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return cc.MetricsAgent, nil
 }

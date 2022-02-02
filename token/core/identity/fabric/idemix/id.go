@@ -21,65 +21,65 @@ import (
 	"github.com/pkg/errors"
 )
 
-type identity struct {
+type Identity struct {
 	NymPublicKey bccsp.Key
-	common       *common
-	id           *msp.IdentityIdentifier
+	Common       *Common
+	ID           *msp.IdentityIdentifier
 	Role         *m.MSPRole
 	OU           *m.OrganizationUnit
-	// associationProof contains cryptographic proof that this identity
+	// AssociationProof contains cryptographic proof that this identity
 	// belongs to the MSP id.provider, i.e., it proves that the pseudonym
 	// is constructed from a secret key on which the CA issued a credential.
-	associationProof []byte
+	AssociationProof []byte
 	VerificationType bccsp.VerificationType
 }
 
-func newIdentity(provider *common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte) *identity {
-	return newIdentityWithVerType(provider, NymPublicKey, role, ou, proof, bccsp.ExpectEidNym)
+func NewIdentity(provider *Common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte) *Identity {
+	return NewIdentityWithVerType(provider, NymPublicKey, role, ou, proof, bccsp.ExpectEidNym)
 }
 
-func newIdentityWithVerType(common *common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) *identity {
-	id := &identity{}
-	id.common = common
+func NewIdentityWithVerType(common *Common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) *Identity {
+	id := &Identity{}
+	id.Common = common
 	id.NymPublicKey = NymPublicKey
 	id.Role = role
 	id.OU = ou
-	id.associationProof = proof
+	id.AssociationProof = proof
 	id.VerificationType = verificationType
 
 	raw, err := NymPublicKey.Bytes()
 	if err != nil {
 		panic(fmt.Sprintf("unexpected condition, failed marshalling nym public key [%s]", err))
 	}
-	id.id = &msp.IdentityIdentifier{
-		Mspid: common.name,
+	id.ID = &msp.IdentityIdentifier{
+		Mspid: common.Name,
 		Id:    bytes.NewBuffer(raw).String(),
 	}
 
 	return id
 }
 
-func (id *identity) Anonymous() bool {
+func (id *Identity) Anonymous() bool {
 	return true
 }
 
-func (id *identity) ExpiresAt() time.Time {
+func (id *Identity) ExpiresAt() time.Time {
 	// Idemix MSP currently does not use expiration dates or revocation,
 	// so we return the zero time to indicate this.
 	return time.Time{}
 }
 
-func (id *identity) GetIdentifier() *msp.IdentityIdentifier {
-	return id.id
+func (id *Identity) GetIdentifier() *msp.IdentityIdentifier {
+	return id.ID
 }
 
-func (id *identity) GetMSPIdentifier() string {
-	return id.common.name
+func (id *Identity) GetMSPIdentifier() string {
+	return id.Common.Name
 }
 
-func (id *identity) GetOrganizationalUnits() []*msp.OUIdentifier {
+func (id *Identity) GetOrganizationalUnits() []*msp.OUIdentifier {
 	// we use the (serialized) public key of this MSP as the CertifiersIdentifier
-	certifiersIdentifier, err := id.common.IssuerPublicKey.Bytes()
+	certifiersIdentifier, err := id.Common.IssuerPublicKey.Bytes()
 	if err != nil {
 		logger.Errorf("Failed to marshal ipk in GetOrganizationalUnits: %s", err)
 		return nil
@@ -88,36 +88,36 @@ func (id *identity) GetOrganizationalUnits() []*msp.OUIdentifier {
 	return []*msp.OUIdentifier{{CertifiersIdentifier: certifiersIdentifier, OrganizationalUnitIdentifier: id.OU.OrganizationalUnitIdentifier}}
 }
 
-func (id *identity) Validate() error {
+func (id *Identity) Validate() error {
 	// logger.Debugf("Validating identity %+v", id)
-	if id.GetMSPIdentifier() != id.common.name {
+	if id.GetMSPIdentifier() != id.Common.Name {
 		return errors.Errorf("the supplied identity does not belong to this msp")
 	}
 	return id.verifyProof()
 }
 
-func (id *identity) Verify(msg []byte, sig []byte) error {
-	_, err := id.common.Csp.Verify(
+func (id *Identity) Verify(msg []byte, sig []byte) error {
+	_, err := id.Common.CSP.Verify(
 		id.NymPublicKey,
 		sig,
 		msg,
 		&csp.IdemixNymSignerOpts{
-			IssuerPK: id.common.IssuerPublicKey,
+			IssuerPK: id.Common.IssuerPublicKey,
 		},
 	)
 	return err
 }
 
-func (id *identity) SatisfiesPrincipal(principal *m.MSPPrincipal) error {
+func (id *Identity) SatisfiesPrincipal(principal *m.MSPPrincipal) error {
 	panic("not implemented yet")
 }
 
-func (id *identity) Serialize() ([]byte, error) {
+func (id *Identity) Serialize() ([]byte, error) {
 	serialized := &m.SerializedIdemixIdentity{}
 
 	raw, err := id.NymPublicKey.Bytes()
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not serialize nym of identity %s", id.id)
+		return nil, errors.Wrapf(err, "could not serialize nym of identity %s", id.ID)
 	}
 	// This is an assumption on how the underlying idemix implementation work.
 	// TODO: change this in future version
@@ -125,17 +125,17 @@ func (id *identity) Serialize() ([]byte, error) {
 	serialized.NymY = raw[len(raw)/2:]
 	ouBytes, err := proto.Marshal(id.OU)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal OU of identity %s", id.id)
+		return nil, errors.Wrapf(err, "could not marshal OU of identity %s", id.ID)
 	}
 
 	roleBytes, err := proto.Marshal(id.Role)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal role of identity %s", id.id)
+		return nil, errors.Wrapf(err, "could not marshal role of identity %s", id.ID)
 	}
 
 	serialized.Ou = ouBytes
 	serialized.Role = roleBytes
-	serialized.Proof = id.associationProof
+	serialized.Proof = id.AssociationProof
 
 	idemixIDBytes, err := proto.Marshal(serialized)
 	if err != nil {
@@ -145,27 +145,27 @@ func (id *identity) Serialize() ([]byte, error) {
 	sID := &m.SerializedIdentity{Mspid: id.GetMSPIdentifier(), IdBytes: idemixIDBytes}
 	idBytes, err := proto.Marshal(sID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "could not marshal a SerializedIdentity structure for identity %s", id.id)
+		return nil, errors.Wrapf(err, "could not marshal a SerializedIdentity structure for identity %s", id.ID)
 	}
 
 	return idBytes, nil
 }
 
-func (id *identity) verifyProof() error {
+func (id *Identity) verifyProof() error {
 	// Verify signature
 	var metadata *csp.IdemixSignerMetadata
-	if len(id.common.NymEID) != 0 {
+	if len(id.Common.NymEID) != 0 {
 		metadata = &csp.IdemixSignerMetadata{
-			NymEID: id.common.NymEID,
+			NymEID: id.Common.NymEID,
 		}
 	}
 
-	valid, err := id.common.Csp.Verify(
-		id.common.IssuerPublicKey,
-		id.associationProof,
+	valid, err := id.Common.CSP.Verify(
+		id.Common.IssuerPublicKey,
+		id.AssociationProof,
 		nil,
 		&csp.IdemixSignerOpts{
-			RevocationPublicKey: id.common.revocationPK,
+			RevocationPublicKey: id.Common.RevocationPK,
 			Attributes: []csp.IdemixAttribute{
 				{Type: csp.IdemixBytesAttribute, Value: []byte(id.OU.OrganizationalUnitIdentifier)},
 				{Type: csp.IdemixIntAttribute, Value: getIdemixRoleFromMSPRole(id.Role)},
@@ -174,7 +174,7 @@ func (id *identity) verifyProof() error {
 			},
 			RhIndex:          RHIndex,
 			EidIndex:         EIDIndex,
-			Epoch:            id.common.epoch,
+			Epoch:            id.Common.Epoch,
 			VerificationType: id.VerificationType,
 			Metadata:         metadata,
 		},
@@ -186,23 +186,23 @@ func (id *identity) verifyProof() error {
 	return err
 }
 
-type signingIdentity struct {
-	*identity
+type SigningIdentity struct {
+	*Identity
 	Cred         []byte
 	UserKey      bccsp.Key
 	NymKey       bccsp.Key
-	enrollmentId string
+	EnrollmentId string
 }
 
-func (id *signingIdentity) Sign(msg []byte) ([]byte, error) {
+func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	// logger.Debugf("Idemix identity %s is signing", id.GetIdentifier())
 
-	sig, err := id.common.Csp.Sign(
+	sig, err := id.Common.CSP.Sign(
 		id.UserKey,
 		msg,
 		&csp.IdemixNymSignerOpts{
 			Nym:      id.NymKey,
-			IssuerPK: id.common.IssuerPublicKey,
+			IssuerPK: id.Common.IssuerPublicKey,
 		},
 	)
 	if err != nil {
@@ -211,6 +211,6 @@ func (id *signingIdentity) Sign(msg []byte) ([]byte, error) {
 	return sig, nil
 }
 
-func (id *signingIdentity) GetPublicVersion() driver.Identity {
-	return id.identity
+func (id *SigningIdentity) GetPublicVersion() driver.Identity {
+	return id.Identity
 }

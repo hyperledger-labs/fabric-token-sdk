@@ -20,13 +20,22 @@ func WithIssuerIdentity(label string) fsc.Option {
 		to := topology.ToOptions(o)
 		to.SetIssuers(append(to.Issuers(), label))
 
-		o.AddAlias(label)
+		if label != "_default_" {
+			o.AddAlias(label)
+		}
 
 		fo := fabric.Options(o)
 		fo.SetX509Identities(append(fo.X509Identities(), label))
-
 		return nil
 	}
+}
+
+func WithDefaultIssuerIdentity() fsc.Option {
+	return WithIssuerIdentity("_default_")
+}
+
+func WithDefaultOwnerIdentity(driver string) fsc.Option {
+	return WithOwnerIdentity(driver, "_default_")
 }
 
 func WithOwnerIdentity(driver string, label string) fsc.Option {
@@ -34,7 +43,9 @@ func WithOwnerIdentity(driver string, label string) fsc.Option {
 		to := topology.ToOptions(o)
 		to.SetOwners(append(to.Owners(), label))
 
-		o.AddAlias(label)
+		if label != "_default_" {
+			o.AddAlias(label)
+		}
 
 		fo := fabric.Options(o)
 		switch driver {

@@ -8,6 +8,7 @@ package driver
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -18,6 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.driver.fabtoken")
 
 type Driver struct {
 }
@@ -59,11 +62,13 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 
 	if tmsWalletManager.IsEmpty() {
 		// use network local membership
+		logger.Debugf("using network local membership")
 		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
 		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
 		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
 	} else {
 		// use tms local membership
+		logger.Debugf("using tms local membership")
 		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Issuers()))
 		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Auditors()))
 		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Owners()))
@@ -71,6 +76,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 
 	return fabtoken.NewService(
 		sp,
+		channel,
 		namespace,
 		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{
 			TokenVault:          qe,

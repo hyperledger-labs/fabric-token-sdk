@@ -14,13 +14,15 @@ require (
 	github.com/IBM/idemix v0.0.0-20220113150823-80dd4cb2d74e
 	github.com/IBM/mathlib v0.0.0-20220112091634-0a7378db6912
 	github.com/containerd/containerd v1.5.5 // indirect
-	github.com/dgraph-io/badger/v3 v3.2011.1
+	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/golang/protobuf v1.5.2
-	github.com/golang/snappy v0.0.3-0.20201103224600-674baa8c7fc3 // indirect
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220114074831-de46c9e1e565
+	github.com/hashicorp/go-uuid v1.0.2
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220201132235-fe5e2005adb8
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210911123859-041d13f0980c
+	github.com/json-iterator/go v1.1.10
 	github.com/libp2p/go-libp2p-core v0.3.0
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/onsi/ginkgo v1.16.5
@@ -32,6 +34,5 @@ require (
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.16.0
-	golang.org/x/sys v0.0.0-20220111092808-5a964db01320 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )

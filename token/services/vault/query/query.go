@@ -20,15 +20,23 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.tms.zkat.query")
 
+type cache interface {
+	Get(key string) (interface{}, bool)
+	Add(key string, value interface{})
+}
+
 type Engine struct {
 	Vault     driver.Vault
 	namespace string
+
+	unspentTokensCache cache
 }
 
-func NewEngine(vault driver.Vault, namespace string) *Engine {
+func NewEngine(vault driver.Vault, namespace string, cache cache) *Engine {
 	return &Engine{
-		Vault:     vault,
-		namespace: namespace,
+		Vault:              vault,
+		namespace:          namespace,
+		unspentTokensCache: cache,
 	}
 }
 
@@ -52,6 +60,52 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	return len(val) == 1 && val[0] == 1, nil
 }
 
+func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensIterator, error) {
+	logger.Debugf("List token iterator [%s,%s]...", id, typ)
+	startKey, err := keys.CreateCompositeKey(keys.FabTokenExtendedKeyPrefix, []string{id, typ})
+	if err != nil {
+		return nil, err
+	}
+	endKey := startKey + string(keys.MaxUnicodeRuneValue)
+
+	logger.Debugf("New query executor")
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return nil, err
+	}
+	defer qe.Done()
+
+	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
+	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{it: iterator, e: e, extended: true}, nil
+}
+
+func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) {
+	logger.Debugf("List token iterator...")
+	startKey, err := keys.CreateCompositeKey(keys.FabTokenKeyPrefix, nil)
+	if err != nil {
+		return nil, err
+	}
+	endKey := startKey + string(keys.MaxUnicodeRuneValue)
+
+	logger.Debugf("New query executor")
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return nil, err
+	}
+	defer qe.Done()
+
+	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
+	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{it: iterator, e: e}, nil
+}
+
 func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 	logger.Debugf("List token...")
 	startKey, err := keys.CreateCompositeKey(keys.FabTokenKeyPrefix, nil)
@@ -68,7 +122,7 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 	defer qe.Done()
 
 	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
-	iterator, err := qe.GetStateRangeScanIterator(e.namespace, startKey, endKey)
+	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
 	if err != nil {
 		return nil, err
 	}
@@ -88,21 +142,21 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 			// nil response from iterator indicates end of query results
 			return &token.UnspentTokens{Tokens: tokens}, nil
 
-		case len(next.Raw) == 0:
-			// logger.Debugf("nil content for key [%s]", next.Key)
+		case len(next.V()) == 0:
+			// logger.Debugf("nil content for key [%s]", next.K())
 			continue
 
 		default:
-			logger.Debugf("parse token for key [%s]", next.Key)
+			logger.Debugf("parse token for key [%s]", next.K())
 
-			output, err := UnmarshallFabtoken(next.Raw)
+			output, err := UnmarshallFabtoken(next.V())
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.Key)
+				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.K())
 			}
 
 			// show only tokens which are owned by transactor
-			logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.Key)
-			id, err := keys.GetTokenIdFromKey(next.Key)
+			logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.K())
+			id, err := keys.GetTokenIdFromKey(next.K())
 			if err != nil {
 				return nil, err
 			}
@@ -113,10 +167,11 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 			}
 			tokens = append(tokens,
 				&token.UnspentToken{
-					Owner:    output.Owner,
-					Type:     output.Type,
-					Quantity: q.Decimal(),
-					Id:       id,
+					Owner:           output.Owner,
+					Type:            output.Type,
+					DecimalQuantity: q.Decimal(),
+					Quantity:        q,
+					Id:              id,
 				})
 		}
 	}
@@ -189,21 +244,21 @@ func (e *Engine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 			// nil response from iterator indicates end of query results
 			return &token.IssuedTokens{Tokens: tokens}, nil
 
-		case len(next.Raw) == 0:
-			logger.Debugf("nil content for key [%s]", next.Key)
+		case len(next.V()) == 0:
+			logger.Debugf("nil content for key [%s]", next.K())
 			continue
 
 		default:
-			logger.Debugf("parse token for key [%s]", next.Key)
+			logger.Debugf("parse token for key [%s]", next.K())
 
-			output, err := UnmarshallIssuedToken(next.Raw)
+			output, err := UnmarshallIssuedToken(next.V())
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.Key)
+				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.K())
 			}
 
 			// show only tokens which are owned by transactor
-			logger.Debugf("adding token with ID '%s' to list of history issued tokens", next.Key)
-			id, err := keys.GetTokenIdFromKey(next.Key)
+			logger.Debugf("adding token with ID '%s' to list of history issued tokens", next.K())
+			id, err := keys.GetTokenIdFromKey(next.K())
 			if err != nil {
 				return nil, err
 			}
@@ -250,7 +305,7 @@ func (e *Engine) GetTokenInfos(ids []*token.ID, callback driver2.QueryCallbackFu
 	}
 	defer qe.Done()
 	for _, id := range ids {
-		outputID, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		outputID, err := keys.CreateFabTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
@@ -296,7 +351,7 @@ func (e *Engine) GetTokenInfoAndCommitments(ids []*token.ID, callback driver2.Qu
 	}
 	defer qe.Done()
 	for _, id := range ids {
-		outputID, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		outputID, err := keys.CreateFabTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
@@ -332,7 +387,7 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	var res []*token.Token
 	var resKeys []string
 	for _, id := range inputs {
-		idKey, err := keys.CreateFabtokenKey(id.TxId, id.Index)
+		idKey, err := keys.CreateFabTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed generating id key [%v]", id)
 		}
@@ -357,4 +412,79 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	}
 	logger.Debugf("retrieve tokens from ids done")
 	return resKeys, res, nil
+}
+
+func (e *Engine) unmarshalUnspentToken(key string, raw []byte, extended bool) (*token.UnspentToken, error) {
+	// lookup cache first
+	if tok, ok := e.unspentTokensCache.Get(key); ok {
+		return tok.(*token.UnspentToken), nil
+	}
+
+	// unmarshal
+	output := &token.Token{}
+	if err := json.Unmarshal(raw, output); err != nil {
+		logger.Errorf("failed unmarshalling token for key [%v]", key)
+		return nil, err
+	}
+	// show only tokens which are owned by transactor
+	logger.Debugf("adding token with ID [%s] to list of unspent tokens", key)
+	var id *token.ID
+	var err error
+	if extended {
+		id, err = keys.GetTokenIdFromExtendedKey(key)
+	} else {
+		id, err = keys.GetTokenIdFromKey(key)
+	}
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting token ID from key [%v]", key)
+	}
+	// Convert quantity to decimal
+	q, err := token.ToQuantity(output.Quantity, keys.Precision)
+	if err != nil {
+		return nil, err
+	}
+	ut := &token.UnspentToken{
+		Owner:           output.Owner,
+		Type:            output.Type,
+		DecimalQuantity: q.Decimal(),
+		Quantity:        q,
+		Id:              id,
+	}
+
+	// store in cache and return
+	e.unspentTokensCache.Add(key, ut)
+	return ut, nil
+}
+
+type UnspentTokensIterator struct {
+	e        *Engine
+	it       driver.Iterator
+	extended bool
+}
+
+func (u *UnspentTokensIterator) Close() {
+	u.it.Close()
+}
+
+func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
+	for {
+		next, err := u.it.Next()
+		if err != nil {
+			return nil, err
+		}
+		if next == nil {
+			return nil, nil
+		}
+		if len(next.V()) == 0 {
+			// TODO: remove this keys from the vault
+			// logger.Debugf("nil content for key [%s]", next.K())
+			continue
+		}
+
+		output, err := u.e.unmarshalUnspentToken(next.K(), next.V(), u.extended)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s][%s", next.K(), string(next.V()))
+		}
+		return output, nil
+	}
 }

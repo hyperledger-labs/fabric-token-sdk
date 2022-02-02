@@ -102,13 +102,16 @@ func (d *DLogFabricCryptoMaterialGenerator) Setup(tms *topology.TMS) (string, er
 }
 
 func (d *DLogFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, certifiers ...string) []Identity {
-	panic("not supported")
+	return nil
 }
 
 func (d *DLogFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {
 	fp := d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 	peer := fp.PeersByID(n.ID())
-	Expect(peer).NotTo(BeNil())
+	if peer == nil {
+		// This peer is not in that fabric network
+		return nil
+	}
 
 	var res []Identity
 	for _, owner := range owners {
@@ -137,7 +140,10 @@ func (d *DLogFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topolog
 func (d *DLogFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []Identity {
 	fp := d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 	peer := fp.PeersByID(n.ID())
-	Expect(peer).NotTo(BeNil())
+	if peer == nil {
+		// This peer is not in that fabric network
+		return nil
+	}
 
 	var res []Identity
 	for _, issuer := range issuers {
@@ -160,7 +166,10 @@ func (d *DLogFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topolo
 func (d *DLogFabricCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []Identity {
 	fp := d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
 	peer := fp.PeersByID(n.ID())
-	Expect(peer).NotTo(BeNil())
+	if peer == nil {
+		// This peer is not in that fabric network
+		return nil
+	}
 
 	var res []Identity
 	for _, auditor := range auditors {

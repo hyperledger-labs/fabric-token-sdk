@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -28,7 +29,7 @@ type net interface {
 }
 
 type Ownership interface {
-	IsMine(tms *token.ManagementService, tok *token2.Token) bool
+	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
 }
 
 type Issued interface {
@@ -108,19 +109,27 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		return errors.Wrapf(err, "failed getting channel [%s]", tx.Channel())
 	}
 	if !ch.MetadataService().Exists(txID) {
-		logger.Debugf("transaction [%s] is not known to this node, no need to extract tokens", txID)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s] is not known to this node, no need to extract tokens", txID)
+		}
 		return nil
 	}
 
-	logger.Debugf("transaction [%s] is known, extract tokens", txID)
-	logger.Debugf("transaction [%s], parsing writes [%d]", txID, rws.NumWrites(ns))
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s] is known, extract tokens", txID)
+		logger.Debugf("transaction [%s], parsing writes [%d]", txID, rws.NumWrites(ns))
+	}
 	transientMap, err := ch.MetadataService().LoadTransient(txID)
 	if err != nil {
-		logger.Debugf("transaction [%s], failed getting transient map", txID)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], failed getting transient map", txID)
+		}
 		return err
 	}
 	if !transientMap.Exists("zkat") {
-		logger.Debugf("transaction [%s], no transient map found", txID)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], no transient map found", txID)
+		}
 		return nil
 	}
 
@@ -130,10 +139,14 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(ns),
 	)
-	logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
+	}
 	metadata, err := tms.NewMetadataFromBytes(transientMap.Get("zkat"))
 	if err != nil {
-		logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
+		}
 		return err
 	}
 
@@ -151,30 +164,44 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		if err != nil {
 			return err
 		}
-		logger.Debugf("Parsing write key [%s]", key)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("Parsing write key [%s]", key)
+		}
 		prefix, components, err := keys.SplitCompositeKey(key)
 		if err != nil {
 			panic(err)
 		}
 		if prefix != keys.TokenKeyPrefix {
-			logger.Debugf("expected prefix [%s], got [%s], skipping", keys.TokenKeyPrefix, prefix)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("expected prefix [%s], got [%s], skipping", keys.TokenKeyPrefix, prefix)
+			}
 			continue
 		}
 		switch components[0] {
 		case keys.TokenMineKeyPrefix:
-			logger.Debugf("expected key without the mine prefix, skipping")
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("expected key without the mine prefix, skipping")
+			}
 			continue
 		case keys.TokenRequestKeyPrefix:
-			logger.Debugf("expected key without the token request prefix, skipping")
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("expected key without the token request prefix, skipping")
+			}
 			continue
 		case keys.SerialNumber:
-			logger.Debugf("expected key without the serial number prefix, skipping")
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("expected key without the serial number prefix, skipping")
+			}
 			continue
 		case keys.IssueActionMetadata:
-			logger.Debugf("expected key without the issue action metadata, skipping")
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("expected key without the issue action metadata, skipping")
+			}
 			continue
 		case keys.SignaturePrefix:
-			logger.Debugf("expected key without the sig metadata, skipping")
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("expected key without the sig metadata, skipping")
+			}
 			continue
 		}
 
@@ -196,7 +223,9 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			logger.Errorf("invalid output, must refer to tx id [%s], got [%s]", txID, components[0])
 			return errors.Errorf("invalid output, must refer to tx id [%s], got [%s]", txID, components[0])
 		}
-		logger.Debugf("transaction [%s], found a token...", txID)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], found a token...", txID)
+		}
 
 		// get token in the clear
 		tok, issuer, tokenInfoRaw, err := metadata.GetToken(val)
@@ -209,8 +238,11 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		}
 
-		if r.ownership.IsMine(tms, tok) {
-			logger.Debugf("transaction [%s], found a token and it is mine", txID)
+		ids, mine := r.ownership.IsMine(tms, tok)
+		if mine {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], found a token and it is mine", txID)
+			}
 			// Add a lookup key to identity quickly that this token belongs to this
 			mineTokenID, err := keys.CreateTokenMineKey(components[0], index)
 			if err != nil {
@@ -222,26 +254,34 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			}
 
 			// Store Fabtoken-like entry
-			if err := r.storeFabToken(ns, txID, index, tok, rws, tokenInfoRaw); err != nil {
+			if err := r.storeFabToken(ns, txID, index, tok, rws, tokenInfoRaw, ids); err != nil {
 				return err
 			}
 		} else {
-			logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
+			}
 			if err := r.storeAuditToken(ns, txID, index, tok, rws, tokenInfoRaw); err != nil {
 				return err
 			}
 		}
 
 		if !issuer.IsNone() && r.issued.Issued(tms, issuer, tok) {
-			logger.Debugf("transaction [%s], found a token and I have issued it", txID)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
+			}
 			if err := r.storeIssuedHistoryToken(ns, txID, index, tok, rws, tokenInfoRaw, issuer); err != nil {
 				return err
 			}
 		}
 
-		logger.Debugf("Done parsing write key [%s]", key)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("Done parsing write key [%s]", key)
+		}
 	}
-	logger.Debugf("transaction [%s] is known, extract tokens, done!", txID)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s] is known, extract tokens, done!", txID)
+	}
 
 	return nil
 }

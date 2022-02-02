@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -53,9 +54,22 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	_, err = context.RunView(ttxcc.NewAcceptView(tx))
 	assert.NoError(err, "failed to accept new tokens")
 
+	// Sanity checks:
+	// - the transaction is in busy state in the vault
+	fns := fabric.GetFabricNetworkService(context, tx.Network())
+	ch, err := fns.Channel(tx.Channel())
+	assert.NoError(err, "failed to retrieve channel [%s]", tx.Channel())
+	vc, _, err := ch.Vault().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+
 	// Before completing, the recipient waits for finality of the transaction
 	_, err = context.RunView(ttxcc.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
+
+	vc, _, err = ch.Vault().Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	return nil, nil
 }

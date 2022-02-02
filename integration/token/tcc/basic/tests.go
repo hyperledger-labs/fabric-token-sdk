@@ -21,7 +21,7 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure) {
-	//registerIssuers(network)
+	// registerIssuers(network)
 	// registerCertifier(network)
 	registerAuditor(network)
 
@@ -30,6 +30,7 @@ func TestAll(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "USD", 110)
 	issueCash(network, "", "USD", 10, "alice")
 	checkBalance(network, "alice", "", "USD", 120)
+	checkBalance(network, "alice", "alice", "USD", 120)
 
 	h := listIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -77,6 +78,7 @@ func TestAll(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "USD", 10)
 	checkBalance(network, "alice", "", "EUR", 0)
 	checkBalance(network, "bob", "", "EUR", 30)
+	checkBalance(network, "bob", "bob", "EUR", 30)
 	checkBalance(network, "bob", "", "USD", 110)
 
 	swapCash(network, "alice", "", "USD", 10, "EUR", 10, "bob")
@@ -161,7 +163,7 @@ func TestAll(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "USD", 0)
 	checkBalance(network, "alice", "", "EUR", 10)
 
-	//limits
+	// limits
 	checkBalance(network, "alice", "", "USD", 0)
 	checkBalance(network, "alice", "", "EUR", 10)
 	checkBalance(network, "bob", "", "EUR", 20)

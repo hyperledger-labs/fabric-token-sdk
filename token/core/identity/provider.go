@@ -7,11 +7,14 @@ package identity
 
 import (
 	"fmt"
+	"runtime/debug"
+	"sync"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -61,6 +64,8 @@ type Provider struct {
 	mappers                 map[driver.IdentityUsage]mapper
 	deserializers           []Deserializer
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
+	isMeCacheLock           sync.RWMutex
+	isMeCache               map[string]bool
 }
 
 func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers map[driver.IdentityUsage]mapper) *Provider {
@@ -69,6 +74,7 @@ func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDU
 		mappers:                 mappers,
 		deserializers:           []Deserializer{},
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
+		isMeCache:               make(map[string]bool),
 	}
 }
 
@@ -81,7 +87,9 @@ func (i *Provider) GetIdentityInfo(usage driver.IdentityUsage, id string) *drive
 	if getIdentity == nil {
 		return nil
 	}
-	logger.Debugf("info for [%v] is [%s,%s]", id, id, eid)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("info for [%v] is [%s,%s]", id, id, eid)
+	}
 	return &driver.IdentityInfo{
 		ID:           id,
 		EnrollmentID: eid,
@@ -107,7 +115,9 @@ func (i *Provider) LookupIdentifier(usage driver.IdentityUsage, v interface{}) (
 		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
 	}
 	id, label := mapper.Map(v)
-	logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
+	}
 	return id, label
 }
 
@@ -127,28 +137,74 @@ func (i *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, 
 	return view2.GetSigService(i.sp).RegisterSigner(identity, signer, verifier)
 }
 
-func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
-	signer, err := view2.GetSigService(i.sp).GetSigner(identity)
-	if err != nil {
-		// give it a second chance
-		ro, err2 := UnmarshallRawOwner(identity)
-		if err2 != nil {
-			return nil, err
+func (i *Provider) IsMe(identity view.Identity) bool {
+	isMe := view2.GetSigService(i.sp).IsMe(identity)
+	if !isMe {
+		// check cache
+		i.isMeCacheLock.RLock()
+		isMe, ok := i.isMeCache[identity.String()]
+		i.isMeCacheLock.RUnlock()
+		if ok {
+			return isMe
 		}
-		signer, err = view2.GetSigService(i.sp).GetSigner(ro.Identity)
+
+		// try to get the signer
+		signer, err := i.GetSigner(identity)
 		if err != nil {
-			// give it a third chance
-			// deserializer using the provider's deserializers
-			for _, d := range i.deserializers {
-				signer, err = d.DeserializeSigner(ro.Identity)
-				if err == nil {
-					return signer, nil
-				}
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("failed to get signer for identity [%s]", identity.String())
 			}
-			return nil, err
+			return false
+		}
+		return signer != nil
+	}
+	return true
+}
+
+func (i *Provider) RegisterRecipientIdentity(id view.Identity) error {
+	i.isMeCacheLock.Lock()
+	i.isMeCache[id.String()] = false
+	i.isMeCacheLock.Unlock()
+	return nil
+}
+
+func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
+	found := false
+	defer func() {
+		i.isMeCacheLock.Lock()
+		i.isMeCache[identity.String()] = found
+		i.isMeCacheLock.Unlock()
+	}()
+	signer, err := view2.GetSigService(i.sp).GetSigner(identity)
+	if err == nil {
+		found = true
+		return signer, nil
+	}
+
+	// give it a second chance
+	ro, err2 := UnmarshallRawOwner(identity)
+	if err2 != nil {
+		found = false
+		return nil, errors.Wrapf(err, "failed to unmarshal raw owner for identity [%s]", identity.String())
+	}
+
+	signer, err = view2.GetSigService(i.sp).GetSigner(ro.Identity)
+	if err == nil {
+		found = true
+		return signer, nil
+	}
+
+	// give it a third chance
+	// deserializer using the provider's deserializers
+	for _, d := range i.deserializers {
+		signer, err = d.DeserializeSigner(ro.Identity)
+		if err == nil {
+			found = true
+			return signer, nil
 		}
 	}
-	return signer, err
+
+	return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 }
 
 func (i *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
@@ -172,21 +228,27 @@ func (i *Provider) Bind(id view.Identity, to view.Identity) error {
 	sigService := view2.GetSigService(i.sp)
 
 	setSV := true
-	signer, err := sigService.GetSigner(to)
+	signer, err := i.GetSigner(to)
 	if err != nil {
-		logger.Warn("failed getting signer for [%s][%s]", to, err)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting signer for [%s][%s][%s]", to, err, debug.Stack())
+		}
 		setSV = false
 	}
 	verifier, err := sigService.GetVerifier(to)
 	if err != nil {
-		logger.Warn("failed getting verifier for [%s][%s]", to, err)
-		setSV = false
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting verifier for [%s][%s][%s]", to, err, debug.Stack())
+		}
+		verifier = nil
 	}
 
 	setAI := true
 	auditInfo, err := sigService.GetAuditInfo(to)
 	if err != nil {
-		logger.Warn("failed getting audit info for [%s][%s]", to, err)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting audit info for [%s][%s]", to, err)
+		}
 		setAI = false
 	}
 

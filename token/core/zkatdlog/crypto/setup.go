@@ -3,9 +3,11 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package crypto
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	math2 "math"
 
@@ -30,6 +32,8 @@ type PublicParams struct {
 	Auditor          []byte
 	Label            string
 	Curve            int
+
+	Hash []byte
 }
 
 type RangeProofParams struct {
@@ -44,6 +48,9 @@ func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 	pp.Label = label
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
+	}
+	if err := pp.ComputeHash(raw); err != nil {
+		return nil, errors.Wrap(err, "failed computing hash")
 	}
 	return pp, nil
 }
@@ -92,7 +99,13 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", pp.Label, publicParams.Identifier)
 	}
 	// logger.Debugf("unmarshall zkatdlog public params [%s]", string(publicParams.Raw))
-	return json.Unmarshal(publicParams.Raw, pp)
+	if err := json.Unmarshal(publicParams.Raw, pp); err != nil {
+		return errors.Wrapf(err, "failed unmarshalling public parameters")
+	}
+	if err := pp.ComputeHash(raw); err != nil {
+		return errors.Wrap(err, "failed computing hash")
+	}
+	return nil
 }
 
 func (pp *PublicParams) GeneratePedersenParameters() error {
@@ -170,6 +183,19 @@ func (pp *PublicParams) GetIssuingPolicy() (*IssuingPolicy, error) {
 		return nil, errors.Wrapf(err, "failed deserializing issuing policy")
 	}
 	return ip, nil
+}
+
+func (pp *PublicParams) ComputeHash(raw []byte) error {
+	hash := sha256.New()
+	n, err := hash.Write(raw)
+	if n != len(raw) {
+		return errors.New("failed to hash public parameters")
+	}
+	if err != nil {
+		return errors.Wrap(err, "failed to hash public parameters")
+	}
+	pp.Hash = hash.Sum(nil)
+	return nil
 }
 
 func Setup(base int64, exponent int, nymPK []byte, curveID math.CurveID) (*PublicParams, error) {

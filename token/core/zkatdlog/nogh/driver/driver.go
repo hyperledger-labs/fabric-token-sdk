@@ -77,6 +77,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.AnonymousIdentity, nodeIdentity, tmsWalletManager.Owners()))
 	}
 
+	desProvider := zkatdlog.NewDeserializerProvider()
 	service, err := zkatdlog.NewTokenService(
 		channel,
 		namespace,
@@ -90,9 +91,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
 		v.TokenVault().QueryEngine(),
 		identity.NewProvider(sp, eidDeserializer, mappers),
-		func(params *crypto.PublicParams) (driver.Deserializer, error) {
-			return zkatdlog.NewDeserializer(params)
-		},
+		desProvider.Deserialize,
 		crypto.DLogPublicParameters,
 		cm,
 	)

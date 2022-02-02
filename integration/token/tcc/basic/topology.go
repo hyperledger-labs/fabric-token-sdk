@@ -23,7 +23,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("grpc=debug:debug", "")
+	// fscTopology.SetLogging("grpc=error:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -38,6 +38,20 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
 	issuer.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
+
+	issuer2 := fscTopology.AddNodeByName("issuer2").AddOptions(
+		fabric.WithOrganization("Org1"),
+		fabric.WithAnonymousIdentity(),
+		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+	)
+	issuer2.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
+	issuer2.RegisterViewFactory("register", &views.RegisterIssuerViewFactory{})
+	issuer2.RegisterViewFactory("transfer", &views.TransferViewFactory{})
+	issuer2.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
+	issuer2.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
+	issuer2.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
+	issuer2.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),

@@ -8,6 +8,7 @@ package vault
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
@@ -23,7 +24,11 @@ type Vault struct {
 
 func New(sp view.ServiceProvider, channel string, namespace string, vault driver.Vault) *Vault {
 	return &Vault{
-		queryEngine:          query.NewEngine(vault, namespace),
+		queryEngine: query.NewEngine(
+			vault,
+			namespace,
+			secondcache.New(20000),
+		),
 		certificationStorage: certification.NewStorage(sp, channel, namespace),
 	}
 }
