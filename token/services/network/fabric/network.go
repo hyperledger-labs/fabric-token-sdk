@@ -192,10 +192,6 @@ func (n *Network) IsFinal(id string) error {
 	return n.ch.Finality().IsFinal(id)
 }
 
-func (n *Network) AnonymousIdentity() view.Identity {
-	return n.n.LocalMembership().AnonymousIdentity()
-}
-
 func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
 }
