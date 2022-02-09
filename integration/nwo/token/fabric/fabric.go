@@ -141,8 +141,10 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	return ext.String()
 }
 
-func (p *NetworkHandler) PostRun(tms *topology2.TMS) {
-	p.setupTokenChaincodes(tms)
+func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
+	if !load {
+		p.setupTokenChaincodes(tms)
+	}
 }
 
 func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMaterialGenerator, tms *topology2.TMS, node *sfcnode.Node) {

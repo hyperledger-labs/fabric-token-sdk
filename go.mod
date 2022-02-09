@@ -18,7 +18,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220201132235-fe5e2005adb8
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220209135448-df217bd4769d
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-chaincode-go v0.0.0-20210718160520-38d29fabecb9
 	github.com/hyperledger/fabric-protos-go v0.0.0-20210911123859-041d13f0980c
@@ -34,5 +34,6 @@ require (
 	github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.16.0
+	golang.org/x/sys v0.0.0-20220207234003-57398862261d // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
