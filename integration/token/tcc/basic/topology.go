@@ -29,6 +29,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
@@ -43,6 +44,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 	)
 	issuer2.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
@@ -77,6 +79,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
 	)
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
@@ -92,6 +95,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
 	)
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
@@ -107,6 +111,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "manager.id1"),
 		token.WithOwnerIdentity(tokenSDKDriver, "manager.id2"),
 		token.WithOwnerIdentity(tokenSDKDriver, "manager.id3"),

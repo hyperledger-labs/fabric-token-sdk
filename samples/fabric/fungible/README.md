@@ -8,16 +8,18 @@ We will consider the following business parties:
 - `Alice`, `Bob`, and `Charlie`: Each of these parties is a `fungible token` holder.
 - `Auditor`: The entity that is auditing the token transactions.
 
+Each party is running a Smart Fabric Client node with the Token SDK enabled.
+The parties are connected in a peer-to-peer network that is established and manteined by the nodes.
+
 Let us then describe each token operation with examples:
 
 ## Issuance
 
 Issuance is a business interactive protocol among two parties: an `issuer` of a given token type
 and a `recipient` that will become the owner of the freshly created token.
-We assume that both issuer and recipient are running a `Fabric Smart Client` node with Fabric Token SDK stack installed.
 
 Here is an example of a `view` representing the issuer's operations in the `issuance process`:  
-This view is executed by the issuer's FSC node.
+This view is executed by the Issuer's FSC node.
 
 ```go
 // IssueCash contains the input information to issue a token
@@ -162,7 +164,6 @@ Once the transaction is final, this is what the vault of each party will contain
 ## Transfer
 
 Transfer is a business interactive protocol among at least two parties: a `sender` and one or more `recipients`.
-We assume that both issuer and recipient are running a `Fabric Smart Client` node with Fabric Token SDK stack installed.
 
 Here is an example of a `view` representing the sender's operations in the `transfer process`:  
 This view is execute by the sender's FSC node.
@@ -261,8 +262,7 @@ Once the transaction is final, the is what the vault of each party will contain:
 
 Depending on the driver used, a sender can redeem tokens directly or by requesting redeem to an authorized redeemer.
 In the following, we assume that the sender redeems directly.
-Moreover, we assume that the sender is running a `Fabric Smart Client` node.
-This view is execute by the sender's FSC node.
+This view is execute by the Sender's FSC node.
 
 ```go
 // Redeem contains the input information for a redeem operation
@@ -295,7 +295,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	senderWallet := ttxcc.GetWallet(context, t.Wallet)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
-	// The senders adds a new redeem operation to the transaction following the instruction received.
+	// The sender adds a new redeem operation to the transaction following the instruction received.
 	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Redeem
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
 	// Token selection happens internally by invoking the default token selector:
@@ -332,10 +332,8 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 
 ## Swap
 
-Let us now consider a more comple scenario. Alice and Bob are two business parties that want to swap some of their assets/tokens.
-For example, Alice sends 100 USD to Bob in exchange for 95 EUR. The swap of these assets must happen automatically.
-Let us now present how such an operation can be orchestrated using the `Fabric Smart Client` and the `Fabric Token SDK`.
-We assume that bob Alice and Bob running a `Fabric Smart Client` node, and Alice is the initiator of the swap.
+Let us now consider a more complex scenario. Alice and Bob are two business parties that want to swap some of their assets/tokens.
+For example, Alice sends 1 TOK to Bob in exchange for 1 KOT. The swap of these assets must happen automatically.
 
 This view is execute by Alice's FSC node to initiate the swap.
 
@@ -534,7 +532,7 @@ func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
 
 ## Testing
 
-To run the `Fungible Tokens` sample, one needs first to deploy the `Fabric Smart Client nodes` and the `Fabric network`.
+To run the `Fungible Tokens` sample, one needs first to deploy the `Fabric Smart Client` and the `Fabric` networks.
 Once these networks are deployed, one can invoke views on the smart client nodes to test the `Fungible Tokens` sample.
 
 So, first step is to describe the topology of the networks we need.
@@ -544,20 +542,101 @@ So, first step is to describe the topology of the networks we need.
 To test the above views, we have to first clarify the topology of the networks we need.
 Namely, Fabric and FSC networks.
 
-For Fabric, we can define a topology with the following characteristics:
-1. Three organization: Org1, Org2, and Org3;
+For Fabric, we will use a simple topology with:
+1. Two organization: Org1 and Org2;
 2. Single channel;
-2. A namespace `iou` whose changes can be endorsed by endorsers from Org1.
+2. Org1 runs/endorse the Token Chaincode.
 
-For the FSC network, we have a topology with:
-1. 3 FCS nodes. One for the approver, one for the borrower, and one for the lender.
-2. The approver's FSC node has an additional Fabric identity belonging to Org1.
-   Therefore, the approver is an endorser of the Fabric namespace we defined above.
+For the FSC network, we have a topology with a node for each business party.
+1. Issuer and Auditor have an Org1 Fabric Identity;
+2. Alice, Bob, and Charlie have an Org2 Fabric Identity.
 
 We can describe the network topology programmatically as follows:
 
 ```go
+func Topology(tokenSDKDriver string) []api.Topology {
+	// Fabric
+	fabricTopology := fabric.NewDefaultTopology()
+	fabricTopology.EnableIdemix()
+	fabricTopology.AddOrganizationsByName("Org1", "Org2")
+	fabricTopology.SetNamespaceApproverOrgs("Org1")
+
+	// FSC
+	fscTopology := fsc.NewTopology()
+	// fscTopology.SetLogging("grpc=error:debug", "")
+
+	// issuer
+	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
+		fabric.WithOrganization("Org1"),
+		fabric.WithAnonymousIdentity(),
+		token.WithDefaultIssuerIdentity(),
+		token.WithIssuerIdentity("issuer.id1"),
+	)
+	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
+	issuer.RegisterViewFactory("issued", &views.ListIssuedTokensViewFactory{})
+
+	// auditor
+	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
+		fabric.WithOrganization("Org1"),
+		fabric.WithAnonymousIdentity(),
+		token.WithAuditorIdentity(),
+	)
+	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+
+	// alice
+	alice := fscTopology.AddNodeByName("alice").AddOptions(
+		fabric.WithOrganization("Org2"),
+		fabric.WithAnonymousIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+	)
+	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
+	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
+	alice.RegisterViewFactory("transfer", &views.TransferViewFactory{})
+	alice.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
+	alice.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
+	alice.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
+
+	// bob
+	bob := fscTopology.AddNodeByName("bob").AddOptions(
+		fabric.WithOrganization("Org2"),
+		fabric.WithAnonymousIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+	)
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
+	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
+	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
+	bob.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
+	bob.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
+	bob.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
+
+	// charlie
+	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
+		fabric.WithOrganization("Org2"),
+		fabric.WithAnonymousIdentity(),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
+	)
+	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
+	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
+	charlie.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
+	charlie.RegisterViewFactory("transfer", &views.TransferViewFactory{})
+	charlie.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
+	charlie.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
+	charlie.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
+
+	tokenTopology := token.NewTopology()
+	tokenTopology.SetDefaultSDK(fscTopology)
+	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
+	tms.SetNamespace([]string{"Org1"}, "100", "2")
+
+	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
+}
 ```
+
+The above topology takes in input the token driver name.
 
 ### Boostrap the networks
 
@@ -671,9 +750,13 @@ The above is the transaction id of the transaction that transferred the tokens.
 
 Now, we check again Alice and Bob's wallets to see if they are up-to-date.
 
+Alice:
+
 ```shell
 ./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
 ```
+
+You can expect to see an output like this (beautified):
 
 ```shell
 {
@@ -693,9 +776,13 @@ Now, we check again Alice and Bob's wallets to see if they are up-to-date.
 }
 ```
 
+Then, Bob:
+
 ```shell
 ./fungible view -c ~/testdata/fsc/nodes/bob/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
 ```
+
+You can expect to see an output like this (beautified):
 
 ```shell
 {
@@ -714,19 +801,29 @@ Now, we check again Alice and Bob's wallets to see if they are up-to-date.
 }
 ```
 
-Let us try something more complex: A swap.
+Let us try something more complex: A swap. 
+Let us consider the following scenario: Alice wants to swap 1 unit of TOK tokes with 1 unit of KOT tokens owned by Charlie.
 
+Because KOT tokens don't exist yet, let us issue them first.
+The following command instructs the issuer to issue KOT tokens to Charlie.
 
 ```shell
 ./fungible view -c ~/testdata/fsc/nodes/issuer/client-config.yaml -f issue -i "{\"TokenType\":\"KOT\", \"Quantity\":10, \"Recipient\":\"charlie\"}"
 ```
+
+This is transaction id of the transaction that issues KOT tokens
 ```shell
 "ca195ab8072f12d6e0ed78d977404668e0523dbd45b72991cb2cd853de58e5e8"
 ```
 
+Let us query Charlie's wallet
+
 ````shell
 ./fungible view -c ~/testdata/fsc/nodes/charlie/client-config.yaml -f unspent -i "{\"TokenType\":\"KOT\"}"
 ````
+
+You can expect to see an output like this (beautified):
+
 
 ```shell
 {
@@ -745,18 +842,30 @@ Let us try something more complex: A swap.
 }
 ```
 
+Now, we are ready to orchestrate the swap.
+The above command instructs Alice's node to start the swap we described above whose business process was described in the
+previous sections.
+
 ```shell
 ./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f swap -i "{\"FromType\":\"TOK\", \"FromQuantity\":1,\"ToType\":\"KOT\", \"ToQuantity\":1, \"To\":\"charlie\"}"
 ```
+
+If everything is successfully, you can expect to see the transaction id of the transaction that performed the swap.
 
 ```shell
 "790098ae67dc5157c7d679b8def39983adb6e9d7070209f5ab12938d45e1630d"
 ```
 
+We can now query the wallets of Alice and Charlie to confirm the swap happened.
+
+Alice:
+
 ```shell
 ./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"\"}"
 ```
  
+You can expect to see that Alice has 3 units of TOK tokens, and 1 unit of KOT tokens.
+
 ```shell
 {
   "tokens": [
@@ -786,9 +895,13 @@ Let us try something more complex: A swap.
 }
 ```
 
+Charlie:
+
 ```shell
 ./fungible view -c ~/testdata/fsc/nodes/charlie/client-config.yaml -f unspent -i "{\"TokenType\":\"\"}"
 ```
+
+You can expect to see that Charlie has 1 unit of TOK tokens and still 9 units of KOT tokens.
 
 ```shell
 {

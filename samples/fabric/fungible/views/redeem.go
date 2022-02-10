@@ -48,7 +48,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	senderWallet := ttxcc.GetWallet(context, t.Wallet)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
-	// The senders adds a new redeem operation to the transaction following the instruction received.
+	// the sender adds a new redeem operation to the transaction following the instruction received.
 	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Redeem
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
 	// Token selection happens internally by invoking the default token selector:
