@@ -56,7 +56,7 @@ type FabricNetwork interface {
 type NetworkHandler interface {
 	GenerateArtifacts(tms *topology2.TMS)
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
-	PostRun(tms *topology2.TMS)
+	PostRun(load bool, tms *topology2.TMS)
 }
 
 type TCC struct {
@@ -157,13 +157,13 @@ func (p *Platform) Members() []grouper.Member {
 	return nil
 }
 
-func (p *Platform) PostRun() {
+func (p *Platform) PostRun(load bool) {
 	// loop over TMS and generate artifacts
 	for _, tms := range p.Topology.TMSs {
 		// get the network handler for this TMS
 		targetNetwork := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
 		// generate artifacts
-		targetNetwork.PostRun(tms)
+		targetNetwork.PostRun(load, tms)
 	}
 }
 
@@ -240,7 +240,7 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
 }
 
 func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.Context.RootDir(), "fsc", "fscnodes", peer.ID(), "kvs")
+	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "kvs")
 }
 
 func (p *Platform) TokenDir() string {

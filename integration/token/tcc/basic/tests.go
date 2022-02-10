@@ -340,6 +340,7 @@ func transferCash(network *integration.Infrastructure, id string, wallet string,
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
@@ -360,6 +361,7 @@ func transferCashByIDs(network *integration.Infrastructure, id string, wallet st
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 		return common.JSONUnmarshalString(txid)
 	} else {
 		Expect(err).To(HaveOccurred())
@@ -381,6 +383,7 @@ func transferCashWithSelector(network *integration.Infrastructure, id string, wa
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {

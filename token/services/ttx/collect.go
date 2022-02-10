@@ -46,7 +46,7 @@ type Actions struct {
 
 func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) {
 	// transaction
-	txBoxed, err := context.RunView(NewReceiveTransactionView())
+	txBoxed, err := context.RunView(NewReceiveTransactionView(), view.WithSameContext())
 	if err != nil {
 		return nil, nil, err
 	}

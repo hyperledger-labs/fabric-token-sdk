@@ -171,7 +171,7 @@ func ReceiveAction(context view.Context) (*Transaction, *ActionTransfer, error) 
 
 func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	// transaction
-	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
+	txBoxed, err := context.RunView(NewReceiveTransactionView(""), view.WithSameContext())
 	if err != nil {
 		return nil, err
 	}
