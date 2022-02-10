@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"fmt"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -41,7 +42,7 @@ var cc bool
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
-	flags.StringVarP(&driver, "driver", "d", "dlog", "driver (dlog)")
+	flags.StringVarP(&driver, "driver", "d", "dlog", "driver (dlog, zkatdlog or fabtoken)")
 	flags.StringVarP(&idemixMSPDir, "idemix", "i", "", "idemix msp dir")
 	flags.StringVarP(&output, "output", "o", ".", "output folder")
 	flags.Int64VarP(&base, "base", "b", 100, "max token quantity")
@@ -71,10 +72,12 @@ func gen(args []string) error {
 	var err error
 	fmt.Printf("Generate public parameters for [%s]...\n", driver)
 	switch driver {
-	case "dlog":
-		raw, err = dlogGen(args)
+	case "dlog", "zkatdlog":
+		raw, err = zkatDLogGen(args)
+	case "fabtoken":
+		raw, err = fabTokenGen(args)
 	default:
-		errors.Errorf("Invalid crypto type, expected 'dlog', got [%s]", driver)
+		errors.Errorf("Invalid crypto type, expected 'dlog, zkatdlog, or fabtoken', got [%s]", driver)
 	}
 	if err != nil {
 		return err
@@ -91,7 +94,7 @@ func gen(args []string) error {
 	return nil
 }
 
-func dlogGen(args []string) ([]byte, error) {
+func zkatDLogGen(args []string) ([]byte, error) {
 	// Load Idemix Issuer Public Key
 	if len(idemixMSPDir) == 0 {
 		return nil, errors.New("identity mixer msp dir is required")
@@ -113,7 +116,25 @@ func dlogGen(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path = filepath.Join(output, "zkatpp.json")
+	path = filepath.Join(output, "zkatdlog_pp.json")
+	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
+		return nil, errors.Wrap(err, "failed writing public parameters to file")
+	}
+
+	return raw, nil
+}
+
+func fabTokenGen(args []string) ([]byte, error) {
+	pp, err := fabtoken.Setup()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed setting up public parameters")
+	}
+	// Store Public Params
+	raw, err := pp.Serialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed serializing public parameters")
+	}
+	path := filepath.Join(output, "fabtoken_pp.json")
 	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
