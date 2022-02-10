@@ -271,7 +271,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			logger.Debugf("token selection: it is time to fail but how, insufficient funds")
 			return nil, nil, errors.WithMessagef(
 				token.SelectorInsufficientFunds,
-				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum, tokenType,
+				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
 			)
 		}
 

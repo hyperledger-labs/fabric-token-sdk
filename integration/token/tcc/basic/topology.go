@@ -23,11 +23,12 @@ func Topology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	// fscTopology.SetLogging("grpc=error:debug", "")
+	//fscTopology.SetLogging("grpc=error:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
+		token.WithDefaultIssuerIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),

@@ -240,7 +240,7 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
 }
 
 func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.Context.RootDir(), "fsc", "fscnodes", peer.ID(), "kvs")
+	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "kvs")
 }
 
 func (p *Platform) TokenDir() string {
