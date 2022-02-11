@@ -10,7 +10,7 @@ token-based distributed application on Hyperledger Fabric.
 # Useful Links
 
 - [`Documentation`](./docs/design.md): Discover the design principles of the Fabric Token SDK.
-- [`Samples`](./samples/README.md): A collection of sample applications that demonstrate the use of the Fabric Smart Client.
+- [`Samples`](./samples/README.md): A collection of sample applications that demonstrate the use of the Fabric Token SDK.
 - `Feedback`: Your help is the key to the success of the Fabric Token SDK. 
   - Submit your issues [`here`][`fabric-token-sdk` Issues]. 
   - If you have any questions, queries or comments, find us on [GitHub discussions].
