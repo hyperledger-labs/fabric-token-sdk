@@ -106,10 +106,12 @@ type AuditDB struct {
 	// * an exclusive lock is held when Commit is called.
 	db        driver.AuditDB
 	storeLock sync.RWMutex
+
+	eIDsLocks sync.Map
 }
 
 func newAuditDB(p driver.AuditDB) *AuditDB {
-	return &AuditDB{db: p}
+	return &AuditDB{db: p, eIDsLocks: sync.Map{}}
 }
 
 func (db *AuditDB) Append(record *token.AuditRecord) error {
@@ -221,18 +223,37 @@ func (db *AuditDB) SetStatus(txID string, status Status) error {
 	return nil
 }
 
+func (db *AuditDB) AcquireLocks(eIDs ...string) error {
+	for _, id := range deduplicate(eIDs) {
+		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
+		lock.(*sync.RWMutex).Lock()
+	}
+	return nil
+}
+
+func (db *AuditDB) Unlock(eIDs ...string) {
+	for _, id := range deduplicate(eIDs) {
+		lock, ok := db.eIDsLocks.Load(id)
+		if !ok {
+			logger.Warnf("unlock for enrollment id [%s] not possible, lock never acquired", id)
+			continue
+		}
+		lock.(*sync.RWMutex).Unlock()
+	}
+}
+
 type Manager struct {
-	sp         view2.ServiceProvider
-	driver     string
-	mutex      sync.Mutex
-	committers map[string]*AuditDB
+	sp     view2.ServiceProvider
+	driver string
+	mutex  sync.Mutex
+	dbs    map[string]*AuditDB
 }
 
 func NewManager(sp view2.ServiceProvider, driver string) *Manager {
 	return &Manager{
-		sp:         sp,
-		driver:     driver,
-		committers: map[string]*AuditDB{},
+		sp:     sp,
+		driver: driver,
+		dbs:    map[string]*AuditDB{},
 	}
 }
 
@@ -241,14 +262,14 @@ func (cm *Manager) AuditDB(w *token.AuditorWallet) (*AuditDB, error) {
 	defer cm.mutex.Unlock()
 
 	id := w.ID()
-	c, ok := cm.committers[id]
+	c, ok := cm.dbs[id]
 	if !ok {
 		driver, err := drivers[cm.driver].Open(cm.sp, "")
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating audit db driver")
 		}
 		c = newAuditDB(driver)
-		cm.committers[id] = c
+		cm.dbs[id] = c
 	}
 	return c, nil
 }
@@ -263,4 +284,16 @@ func GetAuditDB(sp view2.ServiceProvider, w *token.AuditorWallet) *AuditDB {
 		panic(err)
 	}
 	return c
+}
+
+func deduplicate(source []string) []string {
+	support := make(map[string]bool)
+	var res []string
+	for _, item := range source {
+		if _, value := support[item]; !value {
+			support[item] = true
+			res = append(res, item)
+		}
+	}
+	return res
 }

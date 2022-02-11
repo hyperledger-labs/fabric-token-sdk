@@ -25,11 +25,15 @@ import (
 )
 
 type txAuditor struct {
+	sp      view2.ServiceProvider
+	w       *token.AuditorWallet
 	auditor *auditor.Auditor
 }
 
 func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *txAuditor {
 	return &txAuditor{
+		sp:      sp,
+		w:       w,
 		auditor: auditor.New(sp, w),
 	}
 }
@@ -44,6 +48,14 @@ func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStr
 
 func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
+}
+
+func (a *txAuditor) AcquireLocks(eIDs ...string) error {
+	return auditdb.GetAuditDB(a.sp, a.w).AcquireLocks(eIDs...)
+}
+
+func (a *txAuditor) Unlock(eIDs []string) {
+	auditdb.GetAuditDB(a.sp, a.w).Unlock(eIDs...)
 }
 
 type RegisterAuditorView struct {
