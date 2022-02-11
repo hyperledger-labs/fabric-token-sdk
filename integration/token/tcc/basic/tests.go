@@ -394,22 +394,24 @@ func transferCashWithSelector(network *integration.Infrastructure, id string, wa
 }
 
 func redeemCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64) {
-	_, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
+	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Wallet: wallet,
 		Type:   typ,
 		Amount: amount,
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
 func redeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64) {
-	_, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
+	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Wallet:   wallet,
 		Type:     "",
 		TokenIDs: ids,
 		Amount:   amount,
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
 func swapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string) {
@@ -423,6 +425,7 @@ func swapCash(network *integration.Infrastructure, id string, wallet string, typ
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
 func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
