@@ -8,7 +8,6 @@ package nogh
 import (
 	"sync"
 
-	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -54,14 +53,6 @@ type Service struct {
 	QE                    QueryEngine
 	DeserializerProvider  DeserializerProviderFunc
 	CM                    api3.ConfigManager
-
-	Issuers []*struct {
-		label string
-		index int
-		sk    *math.Zr
-		pk    *math.G1
-		fID   view.Identity
-	}
 
 	identityProvider api3.IdentityProvider
 	OwnerWallets     []*wallet

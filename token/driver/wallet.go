@@ -88,10 +88,6 @@ type WalletService interface {
 	// GetAuditInfo retrieves the audit information for the passed identity
 	GetAuditInfo(id view.Identity) ([]byte, error)
 
-	GenerateIssuerKeyPair(tokenType string) (Key, Key, error)
-
-	RegisterIssuer(label string, sk Key, pk Key) error
-
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available

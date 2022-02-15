@@ -34,19 +34,11 @@ func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, 
 	return nil
 }
 
-func (s *Service) GenerateIssuerKeyPair(tokenType string) (driver.Key, driver.Key, error) {
-	panic("implement me")
-}
-
 func (s *Service) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 	if err := view2.GetSigService(s.SP).RegisterAuditInfo(id, auditInfo); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (s *Service) RegisterIssuer(label string, sk driver.Key, pk driver.Key) error {
-	panic("implement me")
 }
 
 func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {

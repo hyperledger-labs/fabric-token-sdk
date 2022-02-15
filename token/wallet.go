@@ -36,14 +36,6 @@ func (t *WalletManager) IsMe(id view.Identity) bool {
 	return err == nil && s != nil
 }
 
-func (t *WalletManager) GenerateIssuerKeyPair(tokenType string) (api2.Key, api2.Key, error) {
-	return t.ts.GenerateIssuerKeyPair(tokenType)
-}
-
-func (t *WalletManager) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
-	return t.ts.RegisterIssuer(label, sk, pk)
-}
-
 func (t *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	if err := t.ts.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
 		return err
