@@ -113,10 +113,10 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	var chaincode *topology.ChannelChaincode
 
 	if tms.TokenChaincode.Private {
-		cc := p.Fabric(tms).Topology().AddFPC(
+		cc := p.Fabric(tms).Topology().AddFPCAtOrgs(
 			tms.Namespace,
 			tms.TokenChaincode.DockerImage,
-			tms.TokenChaincode.Orgs...,
+			tms.TokenChaincode.Orgs,
 		)
 		cc.Chaincode.Ctor = p.TCCCtor(tms)
 		chaincode = cc
