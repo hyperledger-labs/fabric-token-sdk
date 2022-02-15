@@ -189,7 +189,7 @@ func (l *LocalMembership) GetAnonymousIdentifier(label string) (string, error) {
 }
 
 func (l *LocalMembership) RegisterIdentity(id string, typ string, path string) error {
-	panic("implement me")
+	return l.lm.RegisterIdentity(id, typ, path)
 }
 
 type Network struct {

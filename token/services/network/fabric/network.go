@@ -8,6 +8,7 @@ package fabric
 
 import (
 	"encoding/json"
+	"strings"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -90,6 +91,23 @@ func (n *lm) GetLongTermIdentifier(id view.Identity) (string, error) {
 		return idInfo.ID, nil
 	}
 	return "", errors.New("not found")
+}
+
+func (n *lm) RegisterIdentity(id string, typ string, path string) error {
+	// split type in type and msp id
+	typeAndMspID := strings.Split(typ, ":")
+	if len(typeAndMspID) < 2 {
+		return errors.Errorf("invalid identity type '%s'", typ)
+	}
+
+	switch typeAndMspID[0] {
+	case IdemixMSP:
+		return n.lm.RegisterIdemixMSP(id, path, typeAndMspID[1])
+	case BccspMSP:
+		return n.lm.RegisterX509MSP(id, path, typeAndMspID[1])
+	default:
+		return errors.Errorf("invalid identity type '%s'", typ)
+	}
 }
 
 type nv struct {
