@@ -88,10 +88,14 @@ type WalletService interface {
 	// GetAuditInfo retrieves the audit information for the passed identity
 	GetAuditInfo(id view.Identity) ([]byte, error)
 
+	// GetEnrollmentID extracts the enrollment id from the passed audit information
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(identity view.Identity) Wallet
+
+	// RegisterOwnerWallet registers the passed wallet as the wallet of the passed recipient identity
+	RegisterOwnerWallet(id string, typ string, path string) error
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.

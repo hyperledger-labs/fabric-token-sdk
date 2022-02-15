@@ -30,6 +30,7 @@ type LocalMembership interface {
 	GetAnonymousIdentifier(label string) (string, error)
 	GetLongTermIdentity(label string) (string, string, view.Identity, error)
 	GetLongTermIdentifier(id view.Identity) (string, error)
+	RegisterIdentity(id string, typ string, path string) error
 }
 
 type Mapper struct {
@@ -260,4 +261,8 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 	default:
 		panic(fmt.Sprintf("msp type [%d] not supported", i.identityType))
 	}
+}
+
+func (i *Mapper) RegisterIdentity(id string, typ string, path string) error {
+	return i.localMembership.RegisterIdentity(id, typ, path)
 }

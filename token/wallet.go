@@ -36,6 +36,10 @@ func (t *WalletManager) IsMe(id view.Identity) bool {
 	return err == nil && s != nil
 }
 
+func (t *WalletManager) RegisterOwnerWallet(id string, typ string, path string) error {
+	return t.ts.RegisterOwnerWallet(id, typ, path)
+}
+
 func (t *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	if err := t.ts.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
 		return err

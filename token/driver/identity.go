@@ -54,4 +54,7 @@ type IdentityProvider interface {
 
 	// RegisterRecipientIdentity mark the passed identity as a recipient identity.
 	RegisterRecipientIdentity(id view.Identity) error
+
+	// RegisterOwnerWallet registers the passed wallet as the owner wallet of the passed identity.
+	RegisterOwnerWallet(id string, typ string, path string) error
 }

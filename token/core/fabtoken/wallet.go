@@ -16,6 +16,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+func (s *Service) RegisterOwnerWallet(id string, typ string, path string) error {
+	return s.IP.RegisterOwnerWallet(id, typ, path)
+}
+
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 
