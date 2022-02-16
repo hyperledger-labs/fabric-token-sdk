@@ -16,6 +16,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+func (s *Service) RegisterOwnerWallet(id string, typ string, path string) error {
+	return s.IP.RegisterOwnerWallet(id, typ, path)
+}
+
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 
@@ -34,19 +38,11 @@ func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, 
 	return nil
 }
 
-func (s *Service) GenerateIssuerKeyPair(tokenType string) (driver.Key, driver.Key, error) {
-	panic("implement me")
-}
-
 func (s *Service) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 	if err := view2.GetSigService(s.SP).RegisterAuditInfo(id, auditInfo); err != nil {
 		return err
 	}
 	return nil
-}
-
-func (s *Service) RegisterIssuer(label string, sk driver.Key, pk driver.Key) error {
-	panic("implement me")
 }
 
 func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {

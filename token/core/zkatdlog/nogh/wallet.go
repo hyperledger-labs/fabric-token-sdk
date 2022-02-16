@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -19,84 +18,12 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *Service) IssuerIdentity(label string) (view.Identity, error) {
-	logger.Debugf("searching issuer for [%s] at [%s]", label, s.Channel)
-
-	pp := s.PublicParams()
-	for _, issuer := range s.Issuers {
-		logger.Debugf("issuer for [%s] at [%s]", issuer.label, s.Channel)
-		if issuer.label == label {
-			if issuer.fID != nil {
-				return issuer.fID, nil
-			}
-
-			logger.Debugf("issuer for [%s] at [%s] found (index %d)", issuer.label, s.Channel, issuer.index)
-
-			witness := anonym.NewWitness(issuer.sk, nil, nil, nil, nil, issuer.index)
-			signer := anonym.NewSigner(witness, nil, nil, 0, pp.ZKATPedParams, math.Curves[pp.Curve])
-
-			fID, err := signer.ToUniqueIdentifier()
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed serializing signer for [%s]", label)
-			}
-
-			if err := view2.GetSigService(s.SP).RegisterSigner(fID, signer, signer); err != nil {
-				return nil, errors.Wrapf(err, "failed registering signer for [%s]", label)
-			}
-
-			if err := view2.GetEndpointService(s.SP).Bind(view2.GetIdentityProvider(s.SP).DefaultIdentity(), fID); err != nil {
-				return nil, errors.Wrapf(err, "failed binding to long term identity or [%s]", view.Identity(fID).UniqueID())
-			}
-			issuer.fID = fID
-
-			return fID, nil
-		}
-	}
-
-	// Fetch from vault if not found
-
-	return nil, errors.Errorf("identity not found at [%s]", label)
-}
-
-func (s *Service) GenerateIssuerKeyPair(tokenType string) (api2.Key, api2.Key, error) {
-	return anonym.GenerateKeyPair(tokenType, s.PublicParams())
-}
-
-func (s *Service) RegisterIssuer(label string, sk api2.Key, pk api2.Key) error {
-	if err := s.FetchPublicParams(); err != nil {
-		return errors.WithMessagef(err, "failed fetching public params")
-	}
-
-	// search for pk
-	ip, err := s.PublicParams().GetIssuingPolicy()
-	if err != nil {
-		return errors.WithMessagef(err, "failed parsing issuing policy")
-	}
-
-	_pk := pk.(*math.G1)
-
-	for index, issuer := range ip.Issuers {
-		if issuer.Equals(_pk) {
-			s.Issuers = append(s.Issuers, &struct {
-				label string
-				index int
-				sk    *math.Zr
-				pk    *math.G1
-				fID   view.Identity
-			}{label: label, index: index, sk: sk.(*math.Zr), pk: _pk, fID: nil})
-
-			logger.Debugf("registered issuer for [%s] at [%s], fetching public params", label, s.Channel)
-
-			return nil
-		}
-	}
-
-	return errors.Errorf("public key not found in public parameters")
+func (s *Service) RegisterOwnerWallet(id string, typ string, path string) error {
+	return s.identityProvider.RegisterOwnerWallet(id, typ, path)
 }
 
 func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {

@@ -192,131 +192,10 @@ func (lm *LocalMembership) Load(identities []*driver.Identity) error {
 		Info(raw []byte, auditInfo []byte) (string, error)
 	}
 
-	dm := lm.deserializerManager()
 	for _, identityConfig := range identities {
 		logger.Debugf("loadWallet: %+v", identityConfig)
-		// split type in type and msp id
-		typeAndMspID := strings.Split(identityConfig.Type, ":")
-		if len(typeAndMspID) < 2 {
-			return errors.Errorf("invalid identity type '%s'", identityConfig.Type)
-		}
-
-		switch typeAndMspID[0] {
-		case IdemixMSP:
-			conf, err := msp.GetLocalMspConfigWithType(
-				lm.cm.TranslatePath(identityConfig.Path),
-				nil,
-				typeAndMspID[1],
-				IdemixMSP,
-			)
-			if err != nil {
-				return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", lm.cm.TranslatePath(identityConfig.Path))
-			}
-			curveID, err := StringToCurveID(typeAndMspID[2])
-			if err != nil {
-				return errors.Errorf("invalid curve ID '%s'", identityConfig.Type)
-			}
-			provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
-			if err != nil {
-				return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", lm.cm.TranslatePath(identityConfig.Path))
-			}
-			dm.AddDeserializer(provider)
-			lm.addResolver(
-				identityConfig.ID,
-				IdemixMSP,
-				provider.EnrollmentID(),
-				identityConfig.Default,
-				NewIdentityCache(provider.Identity, 500).Identity,
-			)
-		case BccspMSP:
-			provider, err := x509.NewProvider(lm.cm.TranslatePath(identityConfig.Path), typeAndMspID[1], lm.signerService)
-			if err != nil {
-				return errors.Wrapf(err, "failed instantiating x509 msp provider from [%s]", lm.cm.TranslatePath(identityConfig.Path))
-			}
-			dm.AddDeserializer(provider)
-			lm.addResolver(identityConfig.ID, BccspMSP, provider.EnrollmentID(), identityConfig.Default, provider.Identity)
-		case IdemixMSPFolder:
-			entries, err := ioutil.ReadDir(lm.cm.TranslatePath(identityConfig.Path))
-			if err != nil {
-				logger.Warnf("failed reading from [%s]: [%s]", lm.cm.TranslatePath(identityConfig.Path), err)
-				continue
-			}
-			for _, entry := range entries {
-				if !entry.IsDir() {
-					continue
-				}
-				id := entry.Name()
-				conf, err := msp.GetLocalMspConfigWithType(
-					filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id),
-					nil,
-					typeAndMspID[1],
-					IdemixMSP,
-				)
-				if err != nil {
-					logger.Warnf("failed reading idemix msp configuration from [%s]: [%s]", filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id), err)
-					continue
-				}
-				curveID, err := StringToCurveID(typeAndMspID[2])
-				if err != nil {
-					return errors.Errorf("invalid curve ID '%s'", identityConfig.Type)
-				}
-				provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
-				if err != nil {
-					logger.Warnf("failed instantiating idemix msp configuration from [%s]: [%s]", filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id), err)
-					continue
-				}
-				logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
-				dm.AddDeserializer(provider)
-				lm.addResolver(
-					id,
-					IdemixMSP,
-					provider.EnrollmentID(),
-					false,
-					NewIdentityCache(provider.Identity, 500).Identity,
-				)
-			}
-		case BccspMSPFolder:
-			entries, err := ioutil.ReadDir(lm.cm.TranslatePath(identityConfig.Path))
-			if err != nil {
-				logger.Warnf("failed reading from [%s]: [%s]", lm.cm.TranslatePath(identityConfig.Path), err)
-				continue
-			}
-			for _, entry := range entries {
-				if !entry.IsDir() {
-					continue
-				}
-				id := entry.Name()
-
-				// Try without "msp"
-				provider, err := x509.NewProvider(
-					filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id),
-					typeAndMspID[1],
-					lm.signerService,
-				)
-				if err != nil {
-					logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id), err)
-					// Try with "msp"
-					provider, err = x509.NewProvider(
-						filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id, "msp"),
-						typeAndMspID[1],
-						lm.signerService,
-					)
-					if err != nil {
-						logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
-							filepath.Join(lm.cm.TranslatePath(identityConfig.Path),
-								filepath.Join(lm.cm.TranslatePath(identityConfig.Path), id, "msp")), err,
-						)
-						continue
-					}
-				}
-
-				logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
-				dm.AddDeserializer(provider)
-				lm.addResolver(id, BccspMSP, provider.EnrollmentID(), false, provider.Identity)
-			}
-		default:
-			logger.Warnf("msp type [%s] not recognized, skipping", typeAndMspID[0])
-			continue
+		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Type, identityConfig.Path, identityConfig.Default); err != nil {
+			return errors.WithMessage(err, "failed to load identity")
 		}
 	}
 	return nil
@@ -396,6 +275,139 @@ func (lm *LocalMembership) GetLongTermIdentity(label string) (string, string, vi
 		return "", "", nil, err
 	}
 	return r.Name, r.EnrollmentID, id, nil
+}
+
+func (lm *LocalMembership) RegisterIdentity(id string, typ string, path string) error {
+	return lm.registerIdentity(id, typ, path, false)
+}
+
+func (lm *LocalMembership) registerIdentity(id string, typ string, path string, setDefault bool) error {
+	dm := lm.deserializerManager()
+
+	// split type in type and msp id
+	typeAndMspID := strings.Split(typ, ":")
+	if len(typeAndMspID) < 2 {
+		return errors.Errorf("invalid identity type '%s'", typ)
+	}
+
+	switch typeAndMspID[0] {
+	case IdemixMSP:
+		conf, err := msp.GetLocalMspConfigWithType(
+			lm.cm.TranslatePath(path),
+			nil,
+			typeAndMspID[1],
+			IdemixMSP,
+		)
+		if err != nil {
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", lm.cm.TranslatePath(path))
+		}
+		curveID, err := StringToCurveID(typeAndMspID[2])
+		if err != nil {
+			return errors.Errorf("invalid curve ID '%s'", typ)
+		}
+		provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
+		if err != nil {
+			return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", lm.cm.TranslatePath(path))
+		}
+		dm.AddDeserializer(provider)
+		lm.addResolver(
+			id,
+			IdemixMSP,
+			provider.EnrollmentID(),
+			setDefault,
+			NewIdentityCache(provider.Identity, 500).Identity,
+		)
+	case BccspMSP:
+		provider, err := x509.NewProvider(lm.cm.TranslatePath(path), typeAndMspID[1], lm.signerService)
+		if err != nil {
+			return errors.Wrapf(err, "failed instantiating x509 msp provider from [%s]", lm.cm.TranslatePath(path))
+		}
+		dm.AddDeserializer(provider)
+		lm.addResolver(id, BccspMSP, provider.EnrollmentID(), setDefault, provider.Identity)
+	case IdemixMSPFolder:
+		entries, err := ioutil.ReadDir(lm.cm.TranslatePath(path))
+		if err != nil {
+			logger.Warnf("failed reading from [%s]: [%s]", lm.cm.TranslatePath(path), err)
+			return nil
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			id := entry.Name()
+			conf, err := msp.GetLocalMspConfigWithType(
+				filepath.Join(lm.cm.TranslatePath(path), id),
+				nil,
+				typeAndMspID[1],
+				IdemixMSP,
+			)
+			if err != nil {
+				logger.Warnf("failed reading idemix msp configuration from [%s]: [%s]", filepath.Join(lm.cm.TranslatePath(path), id), err)
+				continue
+			}
+			curveID, err := StringToCurveID(typeAndMspID[2])
+			if err != nil {
+				return errors.Errorf("invalid curve ID '%s'", typ)
+			}
+			provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
+			if err != nil {
+				logger.Warnf("failed instantiating idemix msp configuration from [%s]: [%s]", filepath.Join(lm.cm.TranslatePath(path), id), err)
+				continue
+			}
+			logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
+			dm.AddDeserializer(provider)
+			lm.addResolver(
+				id,
+				IdemixMSP,
+				provider.EnrollmentID(),
+				false,
+				NewIdentityCache(provider.Identity, 500).Identity,
+			)
+		}
+	case BccspMSPFolder:
+		entries, err := ioutil.ReadDir(lm.cm.TranslatePath(path))
+		if err != nil {
+			logger.Warnf("failed reading from [%s]: [%s]", lm.cm.TranslatePath(path), err)
+			return nil
+		}
+		for _, entry := range entries {
+			if !entry.IsDir() {
+				continue
+			}
+			id := entry.Name()
+
+			// Try without "msp"
+			provider, err := x509.NewProvider(
+				filepath.Join(lm.cm.TranslatePath(path), id),
+				typeAndMspID[1],
+				lm.signerService,
+			)
+			if err != nil {
+				logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(lm.cm.TranslatePath(path), id), err)
+				// Try with "msp"
+				provider, err = x509.NewProvider(
+					filepath.Join(lm.cm.TranslatePath(path), id, "msp"),
+					typeAndMspID[1],
+					lm.signerService,
+				)
+				if err != nil {
+					logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
+						filepath.Join(lm.cm.TranslatePath(path),
+							filepath.Join(lm.cm.TranslatePath(path), id, "msp")), err,
+					)
+					continue
+				}
+			}
+
+			logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
+			dm.AddDeserializer(provider)
+			lm.addResolver(id, BccspMSP, provider.EnrollmentID(), false, provider.Identity)
+		}
+	default:
+		logger.Warnf("msp type [%s] not recognized, skipping", typeAndMspID[0])
+	}
+
+	return nil
 }
 
 func (lm *LocalMembership) addResolver(Name string, Type string, EnrollmentID string, defaultID bool, IdentityGetter GetIdentityFunc) {

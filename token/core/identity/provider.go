@@ -56,6 +56,7 @@ type EnrollmentIDUnmarshaler interface {
 type mapper interface {
 	Info(id string) (string, string, GetFunc)
 	Map(v interface{}) (view.Identity, string)
+	RegisterIdentity(id string, typ string, path string) error
 }
 
 type Provider struct {
@@ -216,6 +217,10 @@ func (i *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 
 func (i *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return i.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
+}
+
+func (i *Provider) RegisterOwnerWallet(id string, typ string, path string) error {
+	return i.mappers[driver.OwnerRole].RegisterIdentity(id, typ, path)
 }
 
 func (i *Provider) AddDeserializer(d Deserializer) {

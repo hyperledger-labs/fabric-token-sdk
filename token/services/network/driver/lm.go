@@ -30,4 +30,6 @@ type LocalMembership interface {
 	GetLongTermIdentifier(id view.Identity) (string, error)
 
 	GetLongTermIdentity(label string) (string, string, view.Identity, error)
+
+	RegisterIdentity(id string, typ string, path string) error
 }

@@ -19,33 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 )
 
-type RegisterIssuer struct {
-	TokenTypes []string
-}
-
-type RegisterIssuerView struct {
-	*RegisterIssuer
-}
-
-func (r *RegisterIssuerView) Call(context view.Context) (interface{}, error) {
-	for _, tokenType := range r.TokenTypes {
-		_, err := context.RunView(ttxcc.NewRegisterIssuerIdentityView(tokenType))
-		assert.NoError(err, "failed registering issuer identity for token type [%s]", tokenType)
-	}
-
-	return nil, nil
-}
-
-type RegisterIssuerViewFactory struct{}
-
-func (p *RegisterIssuerViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RegisterIssuerView{RegisterIssuer: &RegisterIssuer{}}
-	err := json.Unmarshal(in, f.RegisterIssuer)
-	assert.NoError(err, "failed unmarshalling input")
-
-	return f, nil
-}
-
 // IssueCash contains the input information to issue a token
 type IssueCash struct {
 	// IssuerWallet is the issuer's wallet to use

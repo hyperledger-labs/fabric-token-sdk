@@ -34,7 +34,6 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
-	issuer.RegisterViewFactory("register", &views.RegisterIssuerViewFactory{})
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})

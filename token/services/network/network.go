@@ -188,6 +188,10 @@ func (l *LocalMembership) GetAnonymousIdentifier(label string) (string, error) {
 	return l.lm.GetAnonymousIdentifier(label)
 }
 
+func (l *LocalMembership) RegisterIdentity(id string, typ string, path string) error {
+	return l.lm.RegisterIdentity(id, typ, path)
+}
+
 type Network struct {
 	n driver.Network
 }
