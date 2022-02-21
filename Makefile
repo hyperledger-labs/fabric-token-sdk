@@ -82,6 +82,7 @@ clean:
 	rm -rf ./integration/token/dvp/fabtoken/cmd
 	rm -rf ./integration/token/tcc/basic/dlog/cmd/
 	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
+	rm -rf ./samples/fabric/fungible/cmd
 
 .PHONY: tokengen
 tokengen:

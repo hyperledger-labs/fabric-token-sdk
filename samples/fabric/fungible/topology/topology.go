@@ -21,10 +21,16 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	fabricTopology.EnableIdemix()
 	fabricTopology.AddOrganizationsByName("Org1", "Org2")
 	fabricTopology.SetNamespaceApproverOrgs("Org1")
+	fabricTopology.EnableGRPCLogging()
+	fabricTopology.EnableLogPeersToFile()
+	fabricTopology.EnableLogOrderersToFile()
+	fabricTopology.SetLogging("info", "")
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	// fscTopology.SetLogging("grpc=error:debug", "")
+	fscTopology.SetLogging("debug", "")
+	fscTopology.EnableLogToFile()
+	fscTopology.EnablePrometheusMetrics()
 
 	// issuer
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
@@ -93,5 +99,15 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
 
-	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
+	// Monitoring
+	//monitoringTopology := monitoring.NewTopology()
+	//monitoringTopology.EnableHyperledgerExplorer()
+	//monitoringTopology.EnablePrometheusGrafana()
+
+	return []api.Topology{
+		fabricTopology,
+		tokenTopology,
+		fscTopology,
+		//monitoringTopology,
+	}
 }

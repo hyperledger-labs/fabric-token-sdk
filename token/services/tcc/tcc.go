@@ -11,6 +11,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"io/ioutil"
 	"os"
 	"runtime/debug"
@@ -443,8 +444,8 @@ func (cc *TokenChaincode) NewMetricsAgent(id string) (Agent, error) {
 
 	var err error
 	cc.MetricsAgent, err = metrics.NewStatsdAgent(
-		metrics.Host(id),
-		metrics.StatsDSink(cc.MetricsServer),
+		tracing.Host(id),
+		tracing.StatsDSink(cc.MetricsServer),
 	)
 	if err != nil {
 		return nil, err
