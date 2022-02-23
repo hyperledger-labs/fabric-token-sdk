@@ -24,6 +24,11 @@ token-based distributed application on Hyperledger Fabric.
 The project will be subject to rapid changes to complete the open-sourcing process, and
 the list of features.
 
+# Getting Help
+
+Found a bug? Need help to fix an issue? You have a great idea for a new feature? Talk to us! You can reach us on
+[Discord](https://discord.gg/hyperledger) in #fabric-token-sdk.
+
 # Motivation
 
 [Hyperledger Fabric]('https://www.hyperledger.org/use/fabric') is a permissioned, modular, and extensible open-source DLT platform. Fabric architecture follows a novel `execute-order-validate` paradigm that supports distributed execution of untrusted code in an untrusted environment. Indeed, Fabric-based distributed applications can be written in any general-purpose programming language.  
