@@ -4,9 +4,10 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package generators
+package fabric
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric/mock"
 	"os"
 	"testing"
 
@@ -15,7 +16,6 @@ import (
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 )
 

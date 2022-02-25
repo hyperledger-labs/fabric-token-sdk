@@ -67,17 +67,6 @@ type Network interface {
 	// ComputeTxID computes the network transaction id from the passed abstract transaction id
 	ComputeTxID(id *TxID) string
 
-	// AddIssuer registers a new issuer
-	AddIssuer(context view.Context, pk []byte) error
-
-	// RegisterAuditor registers the passed auditor for the given namespace.
-	// If namespace is not supported, the argument is ignored.
-	RegisterAuditor(context view.Context, namespace string, id view.Identity) error
-
-	// RegisterCertifier registers the passed certifier for the given namespace.
-	// If namespace is not supported, the argument is ignored.
-	RegisterCertifier(context view.Context, namespace string, id view.Identity) error
-
 	// FetchPublicParameters returns the public parameters for the network.
 	// If namespace is not supported, the argument is ignored.
 	FetchPublicParameters(namespace string) ([]byte, error)

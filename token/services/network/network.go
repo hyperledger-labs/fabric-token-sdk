@@ -275,20 +275,8 @@ func (n *Network) ComputeTxID(id *TxID) string {
 	return txID
 }
 
-func (n *Network) AddIssuer(context view.Context, pk []byte) error {
-	return n.n.AddIssuer(context, pk)
-}
-
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.n.FetchPublicParameters(namespace)
-}
-
-func (n *Network) RegisterAuditor(context view.Context, namespace string, id view.Identity) error {
-	return n.n.RegisterAuditor(context, namespace, id)
-}
-
-func (n *Network) RegisterCertifier(context view.Context, namespace string, id view.Identity) error {
-	return n.n.RegisterCertifier(context, namespace, id)
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {

@@ -21,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
 )
 
 type txAuditor struct {
@@ -59,27 +58,25 @@ func (a *txAuditor) Unlock(eIDs []string) {
 }
 
 type RegisterAuditorView struct {
-	TMDIS     token.TMSID
-	Id        view.Identity
+	TMSID     token.TMSID
 	AuditView view.View
 }
 
-func NewRegisterAuditorView(id view.Identity, auditView view.View, opts ...token.ServiceOption) *RegisterAuditorView {
+func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *RegisterAuditorView {
 	options, err := token.CompileServiceOptions(opts...)
 	if err != nil {
 		return nil
 	}
 	return &RegisterAuditorView{
-		Id:        id,
 		AuditView: auditView,
-		TMDIS:     options.TMSID(),
+		TMSID:     options.TMSID(),
 	}
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{})
 
-	return context.RunView(tcc.NewRegisterAuditorView(r.TMDIS, r.Id))
+	return nil, nil
 }
 
 type AuditingViewInitiator struct {

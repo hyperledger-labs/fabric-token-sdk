@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package generators
 
 type Identity struct {
 	ID      string
@@ -13,7 +13,7 @@ type Identity struct {
 	Default bool
 }
 
-type Wallet struct {
+type Wallets struct {
 	Certifiers []Identity
 	Issuers    []Identity
 	Owners     []Identity

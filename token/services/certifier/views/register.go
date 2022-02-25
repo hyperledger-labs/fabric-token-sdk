@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package certifier
 
 import (
@@ -12,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.certifier")
@@ -39,23 +39,6 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 	if !tms.PublicParametersManager().GraphHiding() {
 		logger.Warnf("the token management system for [%s:%s] does not support graph hiding, skipping certifier registration", r.Channel, r.Namespace)
 		return nil, nil
-	}
-
-	// Register certifier at the Token Chaincode
-	w := tms.WalletManager().CertifierWallet(r.Wallet)
-	if w == nil {
-		return nil, errors.Errorf("failed getting wallet [%s][%s]", tms, r.Wallet)
-	}
-	id, err := w.GetCertifierIdentity()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting certfier identity [%s][%s]", tms, r.Wallet)
-	}
-	if _, err := context.RunView(tcc.NewRegisterCertifierView(r.Network, r.Channel, r.Namespace, id)); err != nil {
-		return nil, errors.WithMessagef(err, "failed registering certifier [%s][%s]", tms, r.Wallet)
-	}
-
-	if err := tms.PublicParametersManager().ForceFetch(); err != nil {
-		return nil, errors.WithMessagef(err, "failed registering certifier [%s][%s]", tms, r.Wallet)
 	}
 
 	// Start Certifier

@@ -12,15 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 )
 
-type Identity struct {
-	ID      string
-	Type    string
-	Path    string
-	Default bool
-}
-
 type PublicParamsGenerator interface {
-	Generate(tms *topology.TMS, args ...interface{}) ([]byte, error)
+	Generate(tms *topology.TMS, wallets *Wallets, args ...interface{}) ([]byte, error)
 }
 
 type CryptoMaterialGenerator interface {

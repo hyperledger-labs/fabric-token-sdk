@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -134,7 +133,6 @@ type RegisterAuditorView struct{}
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(ttxcc.NewRegisterAuditorView(
-		fabric.GetDefaultIdentityProvider(context).DefaultIdentity(),
 		&AuditView{},
 	))
 }

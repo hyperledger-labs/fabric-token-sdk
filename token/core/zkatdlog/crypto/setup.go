@@ -9,6 +9,7 @@ package crypto
 import (
 	"crypto/sha256"
 	"encoding/json"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	math2 "math"
 
 	math "github.com/IBM/mathlib"
@@ -196,6 +197,10 @@ func (pp *PublicParams) ComputeHash(raw []byte) error {
 	}
 	pp.Hash = hash.Sum(nil)
 	return nil
+}
+
+func (pp *PublicParams) AddAuditor(auditor view.Identity) {
+	pp.Auditor = auditor
 }
 
 func Setup(base int64, exponent int, nymPK []byte, curveID math.CurveID) (*PublicParams, error) {
