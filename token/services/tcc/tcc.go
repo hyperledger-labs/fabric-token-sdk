@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package tcc
 
 import (
@@ -11,25 +12,21 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"io/ioutil"
 	"os"
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
-	"github.com/hyperledger/fabric-chaincode-go/shim"
-	pb "github.com/hyperledger/fabric-protos-go/peer"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
+	pb "github.com/hyperledger/fabric-protos-go/peer"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.tcc")
@@ -37,8 +34,6 @@ var logger = flogging.MustGetLogger("token-sdk.tcc")
 const (
 	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
-	AddAuditorFunction        = "addAuditor"
-	AddIssuerFunction         = "addIssuer"
 	AddCertifierFunction      = "addCertifier"
 	QueryTokensFunctions      = "queryTokens"
 
@@ -72,9 +67,6 @@ type Validator interface {
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
 
 type PublicParametersManager interface {
-	AddIssuer(issuer []byte) ([]byte, error)
-	SetAuditor(auditor []byte) ([]byte, error)
-	SetCertifier(certifier []byte) ([]byte, error)
 }
 
 type TokenChaincode struct {
@@ -173,21 +165,6 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 			return cc.ProcessRequest(tokenRequest, stub)
 		case QueryPublicParamsFunction:
 			return cc.QueryPublicParams(stub)
-		case AddAuditorFunction:
-			if len(args) != 2 {
-				return shim.Error("invalid add auditor request")
-			}
-			return cc.AddAuditor(args[1], stub)
-		case AddIssuerFunction:
-			if len(args) != 2 {
-				return shim.Error("request to add issuer is empty")
-			}
-			return cc.AddIssuer(args, stub)
-		case AddCertifierFunction:
-			if len(args) != 2 {
-				return shim.Error("request to add certifier is empty")
-			}
-			return cc.AddCertifier(args[1], stub)
 		case QueryTokensFunctions:
 			if len(args) != 2 {
 				return shim.Error("request to retrieve tokens is empty")
@@ -326,80 +303,6 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 	}
 	if len(raw) == 0 {
 		return shim.Error("need to initialize public parameters")
-	}
-	return shim.Success(raw)
-}
-
-func (cc *TokenChaincode) AddIssuer(args [][]byte, stub shim.ChaincodeStubInterface) pb.Response {
-	ppm, err := cc.GetPublicParametersManager(stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	raw, err := ppm.AddIssuer(args[1])
-	if err != nil {
-		return shim.Error("failed to serialize public parameters")
-	}
-
-	issuingValidator := &AllIssuersValid{}
-	rwset := &rwsWrapper{stub: stub}
-	w := translator.New(issuingValidator, "", rwset, "")
-	setupAction := &SetupAction{SetupParameters: raw}
-	if err := w.Write(setupAction); err != nil {
-		return shim.Error("failed to update issuing policy: " + err.Error())
-	}
-
-	return shim.Success(nil)
-}
-
-func (cc *TokenChaincode) AddAuditor(auditor []byte, stub shim.ChaincodeStubInterface) pb.Response {
-	// todo authenticate creator of addAuditor request
-	// todo only admins are allowed to add auditors
-
-	logger.Infof("add auditor [%s]", hash.Hashable(auditor))
-
-	logger.Infof("load public parameters manager...")
-	ppm, err := cc.GetPublicParametersManager(stub)
-	if err != nil {
-		logger.Errorf("failed loading public parameters manager [%s]", err)
-		return shim.Error(err.Error())
-	}
-	logger.Infof("set auditor...")
-	raw, err := ppm.SetAuditor(auditor)
-	if err != nil {
-		logger.Errorf("failed setting auditor [%s]", err)
-		return shim.Error(err.Error())
-	}
-	logger.Infof("new public params created [%d]", len(raw))
-
-	// TODO: seems redundant
-	logger.Infof("translate...")
-	w := &translator.Translator{RWSet: &rwsWrapper{stub: stub}}
-	setupAction := &SetupAction{SetupParameters: raw}
-	if err := w.Write(setupAction); err != nil {
-		return shim.Error("failed to write auditor key")
-	}
-	logger.Infof("translate...done.")
-	return shim.Success(raw)
-}
-
-func (cc *TokenChaincode) AddCertifier(certifier []byte, stub shim.ChaincodeStubInterface) pb.Response {
-	// todo authenticate creator of addCertifier request
-	// todo only admins are allowed to add certifier
-
-	ppm, err := cc.GetPublicParametersManager(stub)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-	raw, err := ppm.SetCertifier(certifier)
-	if err != nil {
-		return shim.Error(err.Error())
-	}
-
-	w := &translator.Translator{RWSet: &rwsWrapper{stub: stub}}
-	setupAction := &SetupAction{SetupParameters: raw}
-	if err := w.Write(setupAction); err != nil {
-		return shim.Error("failed to write auditor key")
 	}
 	return shim.Success(raw)
 }

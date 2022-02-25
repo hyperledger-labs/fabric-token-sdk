@@ -6,13 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package ppm
 
 import (
-	"encoding/json"
-
-	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -40,54 +36,8 @@ func NewFromParams(pp *crypto.PublicParams) *PublicParamsManager {
 	return &PublicParamsManager{pp: pp}
 }
 
-func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
-	identityDeserializer := &x509.MSPIdentityDeserializer{}
-	_, err := identityDeserializer.DeserializeVerifier(auditor)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve auditor's identity")
-	}
-
-	pp := v.PublicParams()
-	raw, err := pp.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	pp = &crypto.PublicParams{}
-	pp.Label = v.pp.Label
-	if err := pp.Deserialize(raw); err != nil {
-		return nil, err
-	}
-	pp.Auditor = auditor
-
-	raw, err = pp.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	v.pp = pp
-	return raw, nil
-}
-
-func (v *PublicParamsManager) AddIssuer(bytes []byte) ([]byte, error) {
-	i := &math.G1{}
-	err := json.Unmarshal(bytes, i)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to add new AnonymousIssuer")
-	}
-
-	raw, err := v.PublicParams().Serialize()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to serialize public parameters")
-	}
-
-	return raw, nil
-}
-
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.PublicParams()
-}
-
-func (v *PublicParamsManager) SetCertifier(bytes []byte) ([]byte, error) {
-	panic("SetCertifier cannot be called from zkatdlog without graph hiding")
 }
 
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {

@@ -31,13 +31,7 @@ type PublicParameters interface {
 }
 
 type PublicParamsManager interface {
-	SetAuditor(auditor []byte) ([]byte, error)
-
-	AddIssuer(bytes []byte) ([]byte, error)
-
 	PublicParameters() PublicParameters
-
-	SetCertifier(certifier []byte) ([]byte, error)
 
 	NewCertifierKeyPair() ([]byte, []byte, error)
 

@@ -28,35 +28,6 @@ func NewPublicParamsManagerFromParams(pp *PublicParams) *PublicParamsManager {
 	return &PublicParamsManager{pp: pp}
 }
 
-func (v *PublicParamsManager) SetAuditor(auditor []byte) ([]byte, error) {
-	pp := v.PublicParams()
-	raw, err := pp.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	pp = &PublicParams{}
-	pp.Label = v.pp.Label
-	if err := pp.Deserialize(raw); err != nil {
-		return nil, err
-	}
-	pp.Auditor = auditor
-
-	raw, err = pp.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	v.pp = pp
-	return raw, nil
-}
-
-func (v *PublicParamsManager) AddIssuer(bytes []byte) ([]byte, error) {
-	panic("AddIssuer cannot be called from fabtoken")
-}
-
-func (v *PublicParamsManager) SetCertifier(bytes []byte) ([]byte, error) {
-	panic("SetCertifier cannot be called from fabtoken")
-}
-
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.PublicParams()
 }

@@ -26,13 +26,25 @@ type TMS struct {
 	Driver              string
 	PublicParamsGenArgs []string
 	TokenChaincode      Chaincode
+	Auditors            []string
 	Certifiers          []string
+	Issuers             []string
 
 	TargetNetworkTopology *topology.Topology `yaml:"-"`
 }
 
+func (t *TMS) AddAuditor(auditor *node.Node) *TMS {
+	t.Auditors = append(t.Auditors, auditor.Name)
+	return t
+}
+
 func (t *TMS) AddCertifier(certifier *node.Node) *TMS {
 	t.Certifiers = append(t.Certifiers, certifier.Name)
+	return t
+}
+
+func (t *TMS) AddIssuer(issuer *node.Node) *TMS {
+	t.Issuers = append(t.Issuers, issuer.Name)
 	return t
 }
 

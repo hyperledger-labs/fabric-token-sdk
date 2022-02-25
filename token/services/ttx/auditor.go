@@ -12,8 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
-
 	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -48,18 +46,17 @@ func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 
 type RegisterAuditorView struct {
 	TMSID     token.TMSID
-	Id        view.Identity
 	AuditView view.View
 }
 
-func NewRegisterAuditorView(id view.Identity, auditView view.View) *RegisterAuditorView {
-	return &RegisterAuditorView{Id: id, AuditView: auditView}
+func NewRegisterAuditorView(auditView view.View) *RegisterAuditorView {
+	return &RegisterAuditorView{AuditView: auditView}
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{})
 
-	return context.RunView(tcc.NewRegisterAuditorView(r.TMSID, r.Id))
+	return nil, nil
 }
 
 func NewCollectAuditorEndorsement(tx *Transaction) *AuditingViewInitiator {

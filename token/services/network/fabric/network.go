@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -29,10 +28,7 @@ const (
 	BccspMSP  = "bccsp"
 
 	InvokeFunction            = "invoke"
-	AddIssuerFunction         = "addIssuer"
 	QueryPublicParamsFunction = "queryPublicParams"
-	AddAuditorFunction        = "addAuditor"
-	AddCertifierFunction      = "addCertifier"
 	QueryTokensFunctions      = "queryTokens"
 )
 
@@ -254,27 +250,6 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 	return res
 }
 
-func (n *Network) AddIssuer(context view.Context, pk []byte) error {
-	ts := token.GetManagementService(
-		context,
-		token.WithNetwork(n.Name()),
-		token.WithChannel(n.Channel()),
-	)
-
-	_, err := context.RunView(
-		chaincode.NewInvokeView(
-			ts.Namespace(),
-			AddIssuerFunction,
-			pk,
-		).WithNetwork(
-			n.Name(),
-		).WithChannel(
-			n.Channel(),
-		),
-	)
-	return err
-}
-
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	ppBoxed, err := view2.GetManager(n.sp).InitiateView(
 		chaincode.NewQueryView(
@@ -286,26 +261,6 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 		return nil, err
 	}
 	return ppBoxed.([]byte), nil
-}
-
-func (n *Network) RegisterAuditor(context view.Context, namespace string, id view.Identity) error {
-	_, err := context.RunView(chaincode.NewInvokeView(
-		namespace,
-		AddAuditorFunction,
-		id.Bytes(),
-	).WithNetwork(n.Name()).WithChannel(n.Channel()))
-	return err
-}
-
-func (n *Network) RegisterCertifier(context view.Context, namespace string, id view.Identity) error {
-	_, err := context.RunView(chaincode.NewInvokeView(
-		namespace,
-		AddCertifierFunction,
-		id.Bytes(),
-	).WithNetwork(n.Name()).WithChannel(n.Channel()).WithSignerIdentity(
-		fabric.GetFabricNetworkService(context, n.Name()).IdentityProvider().DefaultIdentity(),
-	))
-	return err
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {

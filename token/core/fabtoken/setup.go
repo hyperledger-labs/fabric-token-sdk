@@ -7,7 +7,6 @@ package fabtoken
 
 import (
 	"encoding/json"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
@@ -81,6 +80,10 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 
 func (pp *PublicParams) AuditorIdentity() view.Identity {
 	return pp.Auditor
+}
+
+func (pp *PublicParams) AddAuditor(auditor view.Identity) {
+	pp.Auditor = auditor
 }
 
 func Setup() (*PublicParams, error) {

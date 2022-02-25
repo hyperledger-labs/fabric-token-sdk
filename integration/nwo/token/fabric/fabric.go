@@ -9,6 +9,7 @@ package fabric
 import (
 	"bytes"
 	"fmt"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"io"
 	"io/ioutil"
 	"os"
@@ -41,6 +42,7 @@ type fabricPlatform interface {
 	DefaultIdemixOrgMSPDir() string
 	Topology() *topology.Topology
 	PeerChaincodeAddress(peerName string) string
+	PeersByID(id string) *fabric.Peer
 }
 
 type tokenPlatform interface {
@@ -52,12 +54,13 @@ type tokenPlatform interface {
 	GetCryptoMaterialGenerator(driver string) generators.CryptoMaterialGenerator
 	PublicParametersDir() string
 	GetBuilder() api2.Builder
+	TokenDir() string
 }
 
 type Entry struct {
 	TMS     *topology2.TMS
 	TCC     *TCC
-	Wallets map[string]*Wallet
+	Wallets map[string]*generators.Wallets
 }
 
 type NetworkHandler struct {
@@ -101,8 +104,15 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	for _, arg := range tms.PublicParamsGenArgs {
 		args = append(args, arg)
 	}
+
 	logger.Debugf("Generating public parameters for [%s:%s] with args [%+v]", tms.ID(), args)
-	ppRaw, err = ppGenerator.Generate(tms, args...)
+	wallets := &generators.Wallets{}
+	for _, w := range entry.Wallets {
+		wallets.Issuers = append(wallets.Issuers, w.Issuers...)
+		wallets.Auditors = append(wallets.Auditors, w.Auditors...)
+		wallets.Certifiers = append(wallets.Certifiers, w.Certifiers...)
+	}
+	ppRaw, err = ppGenerator.Generate(tms, wallets, args...)
 	Expect(err).ToNot(HaveOccurred())
 
 	// - Store pp
@@ -130,7 +140,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMS":     func() *topology2.TMS { return tms },
-		"Wallets": func() *Wallet { return p.GetEntry(tms).Wallets[node.Name] },
+		"Wallets": func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -152,11 +162,11 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	o := node.PlatformOpts()
 	opts := topology2.ToOptions(o)
 
-	wallet := &Wallet{
-		Certifiers: []Identity{},
-		Issuers:    []Identity{},
-		Owners:     []Identity{},
-		Auditors:   []Identity{},
+	wallet := &generators.Wallets{
+		Certifiers: []generators.Identity{},
+		Issuers:    []generators.Identity{},
+		Owners:     []generators.Identity{},
+		Auditors:   []generators.Identity{},
 	}
 	entry.Wallets[node.Name] = wallet
 
@@ -181,7 +191,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 		ids := cmGenerator.GenerateIssuerIdentities(tms, node, issuers...)
 		if len(ids) > 0 {
 			for _, id := range ids {
-				wallet.Issuers = append(wallet.Issuers, Identity(id))
+				wallet.Issuers = append(wallet.Issuers, generators.Identity(id))
 			}
 			wallet.Issuers[index].Default = true
 		}
@@ -207,7 +217,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 		ids := cmGenerator.GenerateOwnerIdentities(tms, node, owners...)
 		if len(ids) > 0 {
 			for _, id := range ids {
-				wallet.Owners = append(wallet.Owners, Identity(id))
+				wallet.Owners = append(wallet.Owners, generators.Identity(id))
 			}
 			wallet.Owners[index].Default = true
 		}
@@ -218,7 +228,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 		ids := cmGenerator.GenerateAuditorIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
 			for _, id := range ids {
-				wallet.Auditors = append(wallet.Auditors, Identity(id))
+				wallet.Auditors = append(wallet.Auditors, generators.Identity(id))
 			}
 			wallet.Auditors[len(wallet.Auditors)-1].Default = true
 		}
@@ -229,7 +239,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 		ids := cmGenerator.GenerateCertifierIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
 			for _, id := range ids {
-				wallet.Certifiers = append(wallet.Certifiers, Identity(id))
+				wallet.Certifiers = append(wallet.Certifiers, generators.Identity(id))
 			}
 			wallet.Certifiers[len(wallet.Certifiers)-1].Default = true
 		}
@@ -257,7 +267,7 @@ func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 	if !ok {
 		entry = &Entry{
 			TMS:     tms,
-			Wallets: map[string]*Wallet{},
+			Wallets: map[string]*generators.Wallets{},
 		}
 		p.Entries[tms.Network+tms.Channel+tms.Namespace] = entry
 	}

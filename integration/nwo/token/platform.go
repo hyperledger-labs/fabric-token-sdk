@@ -9,6 +9,7 @@ package token
 import (
 	"bytes"
 	"fmt"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -83,7 +84,6 @@ type Platform struct {
 	PublicParamsGenerators map[string]generators.PublicParamsGenerator
 	NetworkHandlers        map[string]NetworkHandler
 
-	Wallets                  map[string]*Wallet
 	TCCs                     []*TCC
 	TokenChaincodePath       string
 	TokenGenPath             string
@@ -94,23 +94,21 @@ type Platform struct {
 func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
 	curveID := math3.BN254
 	p := &Platform{
-		Context:           ctx,
-		Topology:          t.(*Topology),
-		Builder:           builder,
-		EventuallyTimeout: 10 * time.Minute,
-		Wallets:           map[string]*Wallet{},
-		TCCs:              []*TCC{},
-		PublicParamsGenerators: map[string]generators.PublicParamsGenerator{
-			"fabtoken": &generators.FabTokenPublicParamsGenerator{},
-			"dlog":     generators.NewDLogPublicParamsGenerator(curveID),
-		},
+		Context:                  ctx,
+		Topology:                 t.(*Topology),
+		Builder:                  builder,
+		EventuallyTimeout:        10 * time.Minute,
+		TCCs:                     []*TCC{},
+		PublicParamsGenerators:   map[string]generators.PublicParamsGenerator{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{},
 		TokenChaincodePath:       DefaultTokenChaincode,
 		TokenGenPath:             DefaultTokenGenPath,
 		NetworkHandlers:          map[string]NetworkHandler{},
 	}
-	p.CryptoMaterialGenerators["fabtoken"] = generators.NewFabTokenFabricCryptoMaterialGenerator(p)
-	p.CryptoMaterialGenerators["dlog"] = generators.NewDLogCustomCryptoMaterialGenerator(p, curveID)
+	p.PublicParamsGenerators["fabtoken"] = fabric.NewFabTokenPublicParamsGenerator()
+	p.PublicParamsGenerators["dlog"] = fabric.NewDLogPublicParamsGenerator(curveID)
+	p.CryptoMaterialGenerators["fabtoken"] = fabric.NewFabTokenFabricCryptoMaterialGenerator(p)
+	p.CryptoMaterialGenerators["dlog"] = fabric.NewDLogCustomCryptoMaterialGenerator(p, curveID)
 
 	return p
 }

@@ -3,64 +3,18 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package tcc
 
 import (
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
-
-type RegisterCertifierView struct {
-	Network   string
-	Channel   string
-	Namespace string
-	Id        view.Identity
-}
-
-func NewRegisterCertifierView(network string, channel string, namespace string, id view.Identity) *RegisterCertifierView {
-	return &RegisterCertifierView{Network: network, Channel: channel, Namespace: namespace, Id: id}
-}
-
-func (r *RegisterCertifierView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(
-		context,
-		token.WithNetwork(r.Network),
-		token.WithChannel(r.Channel),
-		token.WithNamespace(r.Namespace),
-	)
-	if !tms.PublicParametersManager().GraphHiding() {
-		logger.Warnf("the token management system for [%s:%s] does not support graph hiding, skipping certifier registration at the token chaincode", r.Channel, r.Namespace)
-		return nil, nil
-	}
-
-	var set bool
-	key := "token-sdk.tcc.certifier.registered"
-	if kvs.GetService(context).Exists(key) {
-		if err := kvs.GetService(context).Get(key, &set); err != nil {
-			logger.Errorf("failed checking certifier has been registered [%s]", err)
-			set = false
-		}
-	}
-
-	if !set {
-		logger.Debugf("register certifier [%s]", r.Id.String())
-
-		err := network.GetInstance(context, tms.Network(), tms.Channel()).RegisterCertifier(context, tms.Namespace(), r.Id)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed certifier registration")
-		}
-		if err := kvs.GetService(context).Put(key, true); err != nil {
-			logger.Errorf("failed recording auditor has been registered to the chaincode [%s]", err)
-		}
-	}
-	return nil, nil
-}
 
 type GetTokenView struct {
 	Network   string
