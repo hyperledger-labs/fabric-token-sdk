@@ -4,12 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package network
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+type Ownership interface {
+	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
+}
 
 // WalletOwnership is an owner wallet-based ownership checker
 type WalletOwnership struct{}

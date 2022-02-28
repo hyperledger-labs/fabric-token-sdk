@@ -10,18 +10,16 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/fabric"
+	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
@@ -32,6 +30,7 @@ import (
 	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -69,8 +68,8 @@ func (p *SDK) Install() error {
 					n,
 					namespace,
 					p.registry,
-					fabric4.NewOwnershipMultiplexer(&fabric4.WalletOwnership{}),
-					fabric4.NewIssuedMultiplexer(&fabric4.WalletIssued{}),
+					network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}),
+					network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 				),
 			); err != nil {
 				return errors.Wrapf(err, "failed adding transaction processors")

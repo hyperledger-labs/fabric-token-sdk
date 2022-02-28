@@ -4,14 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package network
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+type Issued interface {
+	// Issued returns true if the passed issuer issued the passed token
+	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
+}
 
 // WalletIssued is an owner wallet-based Issued checker
 type WalletIssued struct{}

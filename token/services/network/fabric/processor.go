@@ -12,13 +12,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
@@ -28,24 +26,15 @@ type net interface {
 	Channel(id string) (*fabric.Channel, error)
 }
 
-type Ownership interface {
-	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
-}
-
-type Issued interface {
-	// Issued returns true if the passed issuer issued the passed token
-	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
-}
-
 type RWSetProcessor struct {
 	network   net
 	nss       []string
 	sp        view2.ServiceProvider
-	ownership Ownership
-	issued    Issued
+	ownership network.Ownership
+	issued    network.Issued
 }
 
-func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership Ownership, issued Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Ownership, issued network.Issued) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:   network,
 		nss:       []string{ns},
