@@ -36,7 +36,7 @@ type Payload struct {
 type Transaction struct {
 	*Payload
 	SP   view2.ServiceProvider
-	Opts *txOptions
+	Opts *TxOptions
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -47,7 +47,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 	}
 	return NewTransaction(
 		sp,
-		network.GetInstance(sp, txOpts.network, txOpts.channel).AnonymousIdentity(),
+		network.GetInstance(sp, txOpts.Network, txOpts.Channel).AnonymousIdentity(),
 		opts...,
 	)
 }
@@ -60,9 +60,9 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 
 	tms := token.GetManagementService(
 		sp,
-		token.WithNetwork(txOpts.network),
-		token.WithChannel(txOpts.channel),
-		token.WithNamespace(txOpts.namespace),
+		token.WithNetwork(txOpts.Network),
+		token.WithChannel(txOpts.Channel),
+		token.WithNamespace(txOpts.Namespace),
 	)
 
 	txID := &network.TxID{Creator: signer}

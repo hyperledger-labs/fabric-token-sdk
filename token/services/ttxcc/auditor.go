@@ -88,7 +88,7 @@ func newAuditingViewInitiator(tx *Transaction) *AuditingViewInitiator {
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
-	session, err := context.GetSession(a, a.tx.Opts.auditor)
+	session, err := context.GetSession(a, a.tx.Opts.Auditor)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting session")
 	}
@@ -111,9 +111,9 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	select {
 	case msg = <-ch:
 		agent.EmitKey(0, "ttxcc", "received", "auditingAck", a.tx.ID())
-		logger.Debug("reply received from %s", a.tx.Opts.auditor)
+		logger.Debug("reply received from %s", a.tx.Opts.Auditor)
 	case <-time.After(60 * time.Second):
-		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.auditor)
+		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.Auditor)
 	}
 	if msg.Status == view.ERROR {
 		return nil, errors.New(string(msg.Payload))
@@ -127,10 +127,10 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Wrapf(err, "failed marshalling message to sign")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
+		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
 	}
 
-	v, err := a.tx.TokenService().SigService().AuditorVerifier(a.tx.Opts.auditor)
+	v, err := a.tx.TokenService().SigService().AuditorVerifier(a.tx.Opts.Auditor)
 	if err != nil {
 		return nil, err
 	}
