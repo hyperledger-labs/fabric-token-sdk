@@ -18,3 +18,11 @@ func NewCollectEndorsementsView(tx *Transaction) view.View {
 func NewOrderingAndFinalityView(tx *Transaction) view.View {
 	return ttxcc.NewOrderingAndFinalityView(tx.Transaction)
 }
+
+func NewFinalityView(tx *Transaction) view.View {
+	return ttxcc.NewFinalityView(tx.Transaction)
+}
+
+func NewAcceptView(tx *Transaction) view.View {
+	return ttxcc.NewAcceptView(tx.Transaction)
+}

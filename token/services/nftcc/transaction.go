@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.nftcc")
@@ -47,6 +48,27 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 
 func Wrap(tx *ttxcc.Transaction) *Transaction {
 	return &Transaction{Transaction: tx}
+}
+
+func ReceiveTransaction(context view.Context) (*Transaction, error) {
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("receive a new transaction...")
+	}
+
+	txBoxed, err := context.RunView(ttxcc.NewReceiveTransactionView(""), view.WithSameContext())
+	if err != nil {
+		return nil, err
+	}
+
+	cctx, ok := txBoxed.(*ttxcc.Transaction)
+	if !ok {
+		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("received transaction with id [%s]", cctx.ID())
+	}
+
+	return &Transaction{Transaction: cctx}, nil
 }
 
 func (t Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recipient view.Identity) error {

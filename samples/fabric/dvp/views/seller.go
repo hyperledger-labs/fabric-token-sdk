@@ -29,7 +29,10 @@ type SellHouseView struct {
 }
 
 func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
-	// prepare a new fabric transaction
+	// Prepare a new token transaction.
+	// It will contain two legs:
+	// 1. The first leg will be used to transfer the house to the buyer.
+	// 2. The second leg will be used to transfer the cash to the seller.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
 		ttxcc.WithAuditor(
@@ -57,7 +60,10 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transaction) (*ttxcc.Transaction, *house.House, error) {
 	// we need house's valuation, let's load the state from the world state
 	house := &house.House{}
-	assert.NoError(nftcc.GetVault(context).GetState("house", d.HouseID, house), "failed loading house with id %s", d.HouseID)
+	assert.NoError(
+		nftcc.GetVault(context).GetState("house", d.HouseID, house),
+		"failed loading house with id %s", d.HouseID,
+	)
 
 	// exchange pseudonyms for the token transfer
 	me, other, err := ttxcc.ExchangeRecipientIdentities(context, d.Wallet, d.Buyer)
@@ -77,11 +83,10 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transacti
 }
 
 func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Transaction, house *house.House) (*ttxcc.Transaction, error) {
-	// let's use the state package to hide the complexity of the rws management
-	// with a state-oriented programming
+	// let's prepare the NFT transfer
 	nfttx := nftcc.Wrap(tx)
 
-	buyer, err := ttxcc.RequestRecipientIdentity(context, d.Buyer)
+	buyer, err := nftcc.RequestRecipientIdentity(context, d.Buyer)
 	assert.NoError(err, "failed getting buyer identity")
 
 	// Transfer ownership of the house to the buyer

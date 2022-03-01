@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 )
 
 // IssuerHouse contains the input information to issue a token
@@ -34,7 +33,7 @@ func (p *IssuerHouseView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttxcc.RequestRecipientIdentity(context, view.Identity(p.Recipient))
+	recipient, err := nftcc.RequestRecipientIdentity(context, view.Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// At this point, the issuer is ready to prepare the token transaction.
