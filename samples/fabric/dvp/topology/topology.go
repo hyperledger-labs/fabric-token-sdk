@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/approvers/dvp/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/dvp/views/cash"
 )
 
