@@ -3,14 +3,13 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package fabric
+package network
 
 import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/inmemory"
 )
@@ -35,9 +34,14 @@ func NewLockerProvider(sp view.ServiceProvider, sleepTimeout time.Duration, vali
 }
 
 func (s *LockerProvider) New(network string, channel string, namespace string) selector.Locker {
+	ns := fabric.GetFabricNetworkService(s.sp, network)
+	if ns == nil {
+		panic("Failed to get Fabric Network Service")
+	}
 	ch, err := fabric.GetFabricNetworkService(s.sp, network).Channel(channel)
 	if err != nil {
 		panic(err)
 	}
+
 	return inmemory.NewLocker(&Vault{Vault: ch.Vault()}, s.sleepTimeout, s.validTxEvictionTimeoutMillis)
 }

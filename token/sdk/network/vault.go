@@ -3,16 +3,15 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package fabric
+package network
 
 import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
@@ -48,13 +47,15 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 	}
 
 	// Create new vault
-	ch := fabric.GetChannel(v.sp, network, channel)
-	res = vault.New(
-		v.sp,
-		ch.Name(),
-		namespace,
-		fabric3.NewVault(ch),
-	)
+	if fabric.GetFabricNetworkService(v.sp, network) != nil {
+		ch := fabric.GetChannel(v.sp, network, channel)
+		res = vault.New(
+			v.sp,
+			ch.Name(),
+			namespace,
+			fabric2.NewVault(ch),
+		)
+	}
 
 	// update cache
 	v.vaultCache[k] = res

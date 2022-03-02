@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/fabric"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger"
@@ -82,12 +81,12 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
 		p.registry,
 		tmsProvider,
-		fabric2.NewNormalizer(p.registry),
-		fabric2.NewVaultProvider(p.registry),
-		fabric2.NewCertificationClientProvider(p.registry),
+		network2.NewNormalizer(p.registry),
+		network2.NewVaultProvider(p.registry),
+		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(
 			p.registry,
-			fabric2.NewLockerProvider(
+			network2.NewLockerProvider(
 				p.registry,
 				2*time.Second,
 				(5*time.Minute).Milliseconds(),
