@@ -19,6 +19,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
@@ -82,7 +83,7 @@ func (p *SDK) Install() error {
 		p.registry,
 		tmsProvider,
 		network2.NewNormalizer(p.registry),
-		network2.NewVaultProvider(p.registry),
+		vault.NewVaultProvider(p.registry),
 		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(
 			p.registry,
