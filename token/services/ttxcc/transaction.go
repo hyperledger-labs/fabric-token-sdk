@@ -361,7 +361,7 @@ func marshal(t *Transaction) ([]byte, error) {
 func unmarshal(t *Transaction, p *Payload, raw []byte) error {
 	var ser TransactionSer
 	if _, err := asn1.Unmarshal(raw, &ser); err != nil {
-		return errors.Wrap(err, "failed unmarshalling transaction")
+		return errors.Wrapf(err, "failed unmarshalling transaction [%s]", string(raw))
 	}
 
 	p.TxID.Nonce = ser.Nonce

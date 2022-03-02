@@ -19,7 +19,7 @@ import (
 type Sell struct {
 	Wallet  string
 	HouseID string
-	Buyer   view.Identity
+	Buyer   string
 }
 
 type SellHouseView struct {
@@ -39,13 +39,13 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	)
 	assert.NoError(err, "failed to create a new token transaction")
 
-	// Prepare Payment
-	tx, house, err := d.preparePayment(context, tx)
-	assert.NoError(err, "failed to prepare payment")
-
 	// Prepare House Transfer
-	tx, err = d.prepareHouseTransfer(context, tx, house)
+	tx, house, err := d.prepareHouseTransfer(context, tx)
 	assert.NoError(err, "failed to prepare house transfer")
+
+	// Prepare Payment
+	tx, err = d.preparePayment(context, tx, house)
+	assert.NoError(err, "failed to prepare payment")
 
 	// Collect signature from the parties
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
@@ -55,18 +55,13 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
 }
 
-func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transaction) (*ttxcc.Transaction, *house.House, error) {
+func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transaction, house *house.House) (*ttxcc.Transaction, error) {
 	// we need the house's valuation
 	wallet := nftcc.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
 
-	house := &house.House{}
-	qe, err := nftcc.Wrap(tx).QueryExecutor()
-	assert.NoError(err, "failed to create selector")
-	assert.NoError(qe.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
-
 	// exchange pseudonyms for the token transfer
-	me, other, err := ttxcc.ExchangeRecipientIdentities(context, d.Wallet, d.Buyer)
+	me, other, err := ttxcc.ExchangeRecipientIdentities(context, d.Wallet, view.Identity(d.Buyer))
 	assert.NoError(err, "failed exchanging identities")
 
 	// collect token transfer from the buyer
@@ -79,14 +74,19 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transacti
 		}))
 	assert.NoError(err, "failed collecting token action")
 
-	return tx, house, nil
+	return tx, nil
 }
 
-func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Transaction, house *house.House) (*ttxcc.Transaction, error) {
+func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Transaction) (*ttxcc.Transaction, *house.House, error) {
 	// let's prepare the NFT transfer
 	nfttx := nftcc.Wrap(tx)
 
-	buyer, err := nftcc.RequestRecipientIdentity(context, d.Buyer)
+	house := &house.House{}
+	qe, err := nftcc.Wrap(tx).QueryExecutor()
+	assert.NoError(err, "failed to create selector")
+	assert.NoError(qe.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
+
+	buyer, err := nftcc.RequestRecipientIdentity(context, view.Identity(d.Buyer))
 	assert.NoError(err, "failed getting buyer identity")
 
 	wallet := nftcc.MyWallet(context)
@@ -95,7 +95,7 @@ func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Tra
 	// Transfer ownership of the house to the buyer
 	assert.NoError(nfttx.Transfer(wallet, house, buyer), "failed transferring house")
 
-	return tx, nil
+	return tx, house, nil
 }
 
 type SellHouseViewFactory struct{}

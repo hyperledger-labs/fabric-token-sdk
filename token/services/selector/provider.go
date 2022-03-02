@@ -27,10 +27,6 @@ type Transaction interface {
 	Namespace() string
 }
 
-type Repository interface {
-	Next(typ string, of token.OwnerFilter) (*token2.UnspentToken, error)
-}
-
 type LockerProvider interface {
 	New(network, channel, namespace string) Locker
 }

@@ -7,9 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package nftcc
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
@@ -71,7 +73,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	return &Transaction{Transaction: cctx}, nil
 }
 
-func (t Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recipient view.Identity) error {
+func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recipient view.Identity, opts ...token.IssueOption) error {
 	// set state id first
 	_, err := t.setStateID(state)
 	if err != nil {
@@ -82,14 +84,40 @@ func (t Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recipi
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal state")
 	}
-	stateJSONStr := string(stateJSON)
+	stateJSONStr := base64.StdEncoding.EncodeToString(stateJSON)
 
 	// Issue
-	return t.Transaction.Issue(wallet, recipient, stateJSONStr, 1)
+	return t.Transaction.Issue(wallet, recipient, stateJSONStr, 1, opts...)
 }
 
-func (t Transaction) Transfer(state interface{}, recipient view.Identity) error {
-	panic("implement me")
+func (t *Transaction) Transfer(wallet *token.OwnerWallet, state interface{}, recipient view.Identity, opts ...token.TransferOption) error {
+	// marshal state to json
+	stateJSON, err := json.Marshal(state)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal state")
+	}
+	stateJSONStr := base64.StdEncoding.EncodeToString(stateJSON)
+
+	return t.Transaction.Transfer(wallet, stateJSONStr, []uint64{1}, []view.Identity{recipient}, opts...)
+}
+
+func (t *Transaction) Outputs() (*OutputStream, error) {
+	os, err := t.Transaction.Outputs()
+	if err != nil {
+		return nil, err
+	}
+	return &OutputStream{OutputStream: os}, nil
+}
+
+func (t *Transaction) QueryExecutor() (*QueryExecutor, error) {
+	qe := t.TokenService().Vault().NewQueryEngine()
+	return &QueryExecutor{
+		selector: NewFilter(
+			qe,
+			metrics.Get(t.Transaction.SP),
+		),
+		vault: qe,
+	}, nil
 }
 
 func (t *Transaction) setStateID(s interface{}) (string, error) {
@@ -109,6 +137,7 @@ func (t *Transaction) setStateID(s interface{}) (string, error) {
 		key = state.GenerateUUID()
 		key = d.SetLinearID(key)
 	default:
+		// TODO: should we return an error here?
 		return "", nil
 	}
 	return key, nil

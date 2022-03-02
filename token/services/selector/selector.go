@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"strconv"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 
@@ -85,16 +85,31 @@ func newSelector(
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
-func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) Select(ownerFilter token.SelectorFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	if ownerFilter == nil {
-		ownerFilter = &allOwners{}
+		return nil, nil, errors.New("owner filter is nil")
 	}
 
-	if len(ownerFilter.ID()) != 0 {
-		return s.selectByID(ownerFilter, q, tokenType)
+	switch f := ownerFilter.(type) {
+	case token.SelectorFilterByID:
+		return s.selectByOwnerID(f.ID(), q, tokenType)
+	case token.SelectorFilterByUnspentToken:
+		return s.selectByFilter(f, q, tokenType)
+	default:
+		return nil, nil, errors.New("unsupported owner filter")
+	}
+}
+
+func (s *selector) Filter(filter token.SelectorFilterByUnspentToken, q string) ([]*token2.ID, error) {
+	if filter == nil {
+		return nil, errors.New("filter is nil")
+	}
+	ids, _, err := s.selectByFilter(filter, q, "")
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to select tokens")
 	}
 
-	return s.selectByOwner(ownerFilter, q, tokenType)
+	return ids, nil
 }
 
 func (s *selector) concurrencyCheck(ids []*token2.ID) error {
@@ -102,7 +117,7 @@ func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 	return err
 }
 
-func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) selectByOwnerID(ownerID string, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	uuid, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate UUID")
@@ -118,12 +133,11 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to convert quantity")
 	}
-	id := ownerFilter.ID()
 
 	i := 0
 	for {
 		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
-		unspentTokens, err := s.queryService.UnspentTokensIteratorBy(id, tokenType)
+		unspentTokens, err := s.queryService.UnspentTokensIteratorBy(ownerID, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}
@@ -280,7 +294,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	}
 }
 
-func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) selectByFilter(filter token.SelectorFilterByUnspentToken, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity
@@ -326,14 +340,14 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 			}
 
 			// check type and ownership
-			if t.Type != tokenType {
+			if len(tokenType) != 0 && t.Type != tokenType {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("token [%s,%s] type does not match", q, tokenType)
 				}
 				continue
 			}
 
-			rightOwner := ownerFilter.ContainsToken(t)
+			rightOwner := filter.ContainsToken(t)
 
 			if !rightOwner {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {

@@ -55,6 +55,14 @@ integration-tests-tcc-dlog: docker-images dependencies
 integration-tests-tcc-fabtoken: docker-images dependencies
 	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
+.PHONY: integration-tests-tcc-dvp-fabtoken
+integration-tests-tcc-dvp-fabtoken: docker-images dependencies
+	cd ./integration/token/tcc/svp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-dvp-dlog
+integration-tests-tcc-dvp-dlog: docker-images dependencies
+	cd ./integration/token/tcc/svp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
 .PHONY: tidy
 tidy:
 	@go mod tidy
@@ -65,6 +73,8 @@ clean:
 	docker container prune -f
 	rm -rf ./integration/token/tcc/basic/dlog/cmd/
 	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/dvp/dlog/cmd/
+	rm -rf ./integration/token/tcc/dvp/fabtoken/cmd/
 	rm -rf ./samples/fabric/fungible/cmd
 
 .PHONY: tokengen
