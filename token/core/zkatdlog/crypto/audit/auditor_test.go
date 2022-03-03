@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package audit_test
 
 import (
@@ -26,8 +27,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit/mock"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -65,30 +64,6 @@ var _ = Describe("Auditor", func() {
 
 	})
 
-	Describe("Audit an Issue", func() {
-		When("audit information is computed correctly", func() {
-			It("succeeds", func() {
-				issue, metadata := createIssue(pp)
-				raw, err := issue.Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&driver.TokenRequest{Issues: [][]byte{raw}}, &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}, nil, "1")
-				Expect(err).NotTo(HaveOccurred())
-				sig, err := auditor.Endorse(&driver.TokenRequest{Issues: [][]byte{raw}}, "1")
-				Expect(err).NotTo(HaveOccurred())
-				Expect(sig).To(Equal([]byte("auditor-signature")))
-			})
-		})
-		When("when the token information does not match the outputs in issue ", func() {
-			It("no signature is generated", func() {
-				issue, metadata := createBogusIssue(pp)
-				raw, err := issue.Serialize()
-				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&driver.TokenRequest{Issues: [][]byte{raw}}, &driver.TokenRequestMetadata{Issues: []driver.IssueMetadata{metadata}}, nil, "1")
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("output at index [0] does not match the provided opening"))
-			})
-		})
-	})
 	Describe("Audit a transfer", func() {
 		When("audit information is computed correctly", func() {
 			It("succeeds", func() {
@@ -149,33 +124,6 @@ var _ = Describe("Auditor", func() {
 	})
 })
 
-func createIssue(pp *crypto.PublicParams) (*issue.IssueAction, driver.IssueMetadata) {
-	issuer := prepareIssuer(pp)
-	id, auditInfo := getIdemixInfo("./testdata/idemix")
-
-	issue, inf, err := issuer.GenerateZKIssue([]uint64{50, 20}, [][]byte{id, id})
-	Expect(err).NotTo(HaveOccurred())
-
-	marshalledinf := make([][]byte, len(inf))
-	for i := 0; i < len(inf); i++ {
-		marshalledinf[i], err = inf[i].Serialize()
-		Expect(err).NotTo(HaveOccurred())
-	}
-
-	metadata := driver.IssueMetadata{}
-	metadata.TokenInfo = marshalledinf
-	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
-	metadata.AuditInfos = make([][]byte, len(issue.OutputTokens))
-	for i := 0; i < len(issue.OutputTokens); i++ {
-		metadata.Outputs[i], err = json.Marshal(issue.OutputTokens[i].Data)
-		Expect(err).NotTo(HaveOccurred())
-		metadata.AuditInfos[i], err = auditInfo.Bytes()
-		Expect(err).NotTo(HaveOccurred())
-	}
-
-	return issue, metadata
-}
-
 func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.TransferMetadata, [][]*token.Token) {
 	id, auditInfo := getIdemixInfo("./testdata/idemix")
 	transfer, inf, inputs := prepareTransfer(pp, id)
@@ -207,37 +155,6 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.
 		tokns[0] = append(tokns[0], inputs[i])
 	}
 	return transfer, metadata, tokns
-}
-
-func createBogusIssue(pp *crypto.PublicParams) (*issue.IssueAction, driver.IssueMetadata) {
-	issuer := prepareIssuer(pp)
-	id, auditInfo := getIdemixInfo("./testdata/idemix")
-
-	issue, inf, err := issuer.GenerateZKIssue([]uint64{50, 20}, [][]byte{id, id})
-	Expect(err).NotTo(HaveOccurred())
-
-	c := math.Curves[pp.Curve]
-	// change value
-	inf[0].Value = c.NewZrFromInt(15)
-	marshalledinf := make([][]byte, len(inf))
-	for i := 0; i < len(inf); i++ {
-		marshalledinf[i], err = inf[i].Serialize()
-		Expect(err).NotTo(HaveOccurred())
-	}
-
-	metadata := driver.IssueMetadata{}
-	metadata.TokenInfo = marshalledinf
-	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
-	metadata.AuditInfos = make([][]byte, len(issue.OutputTokens))
-	for i := 0; i < len(issue.OutputTokens); i++ {
-		metadata.Outputs[i], err = json.Marshal(issue.OutputTokens[i].Data)
-		Expect(err).NotTo(HaveOccurred())
-		metadata.AuditInfos[i], err = auditInfo.Bytes()
-		Expect(err).NotTo(HaveOccurred())
-	}
-	inf[0].Value = c.NewZrFromInt(25)
-
-	return issue, metadata
 }
 
 func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.TransferMetadata, [][]*token.Token) {
@@ -371,28 +288,6 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo
-}
-
-func prepareIssuer(pp *crypto.PublicParams) *anonym.Issuer {
-	// prepare issuers' public keys
-	sk, pk, err := anonym.GenerateKeyPair("ABC", pp)
-	Expect(err).NotTo(HaveOccurred())
-
-	c := math.Curves[pp.Curve]
-	// there are two issuers whereby issuers[1] has secret key sk and issues tokens of type ttype
-	issuers := getIssuers(2, 1, pk, pp.ZKATPedParams, c)
-	err = pp.AddIssuer(issuers[0])
-	Expect(err).NotTo(HaveOccurred())
-	err = pp.AddIssuer(issuers[1])
-	Expect(err).NotTo(HaveOccurred())
-
-	witness := anonym.NewWitness(sk, nil, nil, nil, nil, 1)
-	signer := anonym.NewSigner(witness, nil, nil, 1, pp.ZKATPedParams, c)
-
-	issuer := &anonym.Issuer{}
-	issuer.New("ABC", signer, pp)
-
-	return issuer
 }
 
 func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []*token.TokenInformation) {

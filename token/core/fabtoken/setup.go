@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package fabtoken
 
 import (
@@ -18,9 +19,10 @@ const MaxMoney = uint64(21000000) * Coin
 const PublicParameters = "fabtoken"
 
 type PublicParams struct {
+	Label   string
 	MTV     uint64
 	Auditor []byte
-	Label   string
+	Issuers [][]byte
 }
 
 func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
@@ -84,6 +86,10 @@ func (pp *PublicParams) AuditorIdentity() view.Identity {
 
 func (pp *PublicParams) AddAuditor(auditor view.Identity) {
 	pp.Auditor = auditor
+}
+
+func (pp *PublicParams) AddIssuer(issuer view.Identity) {
+	pp.Issuers = append(pp.Issuers, issuer)
 }
 
 func Setup() (*PublicParams, error) {
