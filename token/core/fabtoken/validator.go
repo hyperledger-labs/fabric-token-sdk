@@ -18,11 +18,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type ValidationParameters interface {
-	AuditorIdentity() view.Identity
-	Issuers() [][]byte
-}
-
 type Validator struct {
 	pp           *PublicParams
 	deserializer driver.Deserializer
