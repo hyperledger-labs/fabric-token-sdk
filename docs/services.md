@@ -96,7 +96,6 @@ using the utility [`tokengen`](./../cmd/tokengen/README.md).
 Once initialized, the token chaincode can provide the following functionalities:
 - `Fetch the public parameters`. They must be fetched by each FSC node running the Token SDK stack.
   This is done automatically.
-- `Register issuers and auditors`. Indeed, only certain parties can issue tokens and audit token operations.
 - `Fetch Tokens` is used to retrieve the content of tokens by their ids.
 - `Validate and Translate Token Requests`. This is one of the essential steps in the lifecycle of a token transaction,
   as we have seen in the previous section.

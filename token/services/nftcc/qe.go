@@ -9,6 +9,8 @@ package nftcc
 import (
 	"encoding/base64"
 	"encoding/json"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -26,6 +28,22 @@ type selector interface {
 type QueryExecutor struct {
 	selector
 	vault
+}
+
+func NewQueryExecutor(selector selector, vault vault) *QueryExecutor {
+	return &QueryExecutor{selector: selector, vault: vault}
+}
+
+func GetQueryExecutor(sp view.ServiceProvider, opts ...token.ServiceOption) (*QueryExecutor, error) {
+	tms := token.GetManagementService(sp, opts...)
+	qe := tms.Vault().NewQueryEngine()
+	return &QueryExecutor{
+		selector: NewFilter(
+			qe,
+			metrics.Get(sp),
+		),
+		vault: qe,
+	}, nil
 }
 
 func (s *QueryExecutor) QueryByKey(house interface{}, key string, value string) error {

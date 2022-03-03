@@ -40,7 +40,7 @@ Le us explore in more details each layer of the Token SDK stack.
 - [`Driver API`](./driver-api.md): The Driver API defines the contracts any implementation should respect to 
   be compatible with the Token API.
 - [`Driver Implementations`](./drivers.md): The Token SDK comes equipped with two driver implementations:
-  - [`FabToken`](./fabtoken.md): This is a simple implementation of the Driver API that does not support privacy. 
+  - [`FabToken`](./fabtoken.md): This is a simple implementation of the Driver API that does not support any privacy. 
   - [`ZKAT DLog`](./zkat-dlog.md): This driver supports privacy via Zero Knowledge. We follow
     a simplified version of the blueprint described in the paper
     [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')

@@ -82,7 +82,7 @@ func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Tra
 	nfttx := nftcc.Wrap(tx)
 
 	house := &house.House{}
-	qe, err := nftcc.Wrap(tx).QueryExecutor()
+	qe, err := nfttx.QueryExecutor()
 	assert.NoError(err, "failed to create selector")
 	assert.NoError(qe.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
