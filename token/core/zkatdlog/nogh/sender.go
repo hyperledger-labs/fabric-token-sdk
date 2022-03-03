@@ -19,7 +19,7 @@ import (
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens ...*token3.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, Opts ...*driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
 
 	var signers []driver.Signer

@@ -14,7 +14,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.ID, Outputs ...*token2.Token) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, Opts ...*driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	id, err := wallet.GetRecipientIdentity()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting sender identity")

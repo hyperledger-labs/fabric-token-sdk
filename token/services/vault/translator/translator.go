@@ -376,6 +376,23 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	if err != nil {
 		return err
 	}
+	metadata := transferAction.GetMetadata()
+	if len(metadata) != 0 {
+		key, err := keys.CreateTransferActionMetadataKey(hash.Hashable(metadata).String())
+		if err != nil {
+			return errors.Wrapf(err, "failed constructing metadata key")
+		}
+		raw, err := w.RWSet.GetState(w.namespace, key)
+		if err != nil {
+			return err
+		}
+		if len(raw) != 0 {
+			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, string(raw))
+		}
+		if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
+			return err
+		}
+	}
 	w.counter = w.counter + uint64(transferAction.NumOutputs())
 	return nil
 }
