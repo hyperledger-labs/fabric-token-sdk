@@ -41,6 +41,7 @@ const (
 	OwnerSeparator                     = "/"
 	SerialNumber                       = "sn"
 	IssueActionMetadata                = "iam"
+	TransferActionMetadata             = "tram"
 )
 
 func GetTokenIdFromKey(key string) (*token2.ID, error) {
@@ -144,6 +145,10 @@ func CreateTokenRequestKey(txID string) (string, error) {
 
 func CreateIssueActionMetadataKey(hash string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, hash})
+}
+
+func CreateTransferActionMetadataKey(hash string) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, hash})
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

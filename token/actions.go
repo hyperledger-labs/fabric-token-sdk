@@ -66,3 +66,7 @@ func (t *TransferAction) GetInputs() ([]string, error) {
 func (t *TransferAction) IsGraphHiding() bool {
 	return t.a.IsGraphHiding()
 }
+
+func (t *TransferAction) GetMetadata() []byte {
+	return t.a.GetMetadata()
+}

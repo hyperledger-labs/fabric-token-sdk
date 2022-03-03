@@ -228,7 +228,7 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	ts := t.TokenService.tms
 
 	// Compute transfer
-	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens...)
+	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
@@ -261,7 +261,7 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	ts := t.TokenService.tms
 
 	// Compute redeem, it is a transfer with owner set to nil
-	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens...)
+	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens)
 	if err != nil {
 		return errors.Wrap(err, "failed creating transfer action")
 	}

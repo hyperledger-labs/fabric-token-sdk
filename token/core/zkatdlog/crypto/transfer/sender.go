@@ -169,6 +169,10 @@ func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }
 
+func (t *TransferAction) GetMetadata() []byte {
+	return nil
+}
+
 func getTokenData(tokens []*token.Token) []*math.G1 {
 	tokenData := make([]*math.G1, len(tokens))
 	for i := 0; i < len(tokens); i++ {
