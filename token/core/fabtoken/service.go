@@ -10,8 +10,6 @@ import (
 	"sync"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -35,8 +33,7 @@ type TokenLoader interface {
 
 type PublicParametersManager interface {
 	driver.PublicParamsManager
-	AuditorIdentity() view.Identity
-	Issuers() [][]byte
+	PublicParams() *PublicParams
 }
 
 type Service struct {
@@ -86,7 +83,7 @@ func (s *Service) IdentityProvider() driver.IdentityProvider {
 }
 
 func (s *Service) Validator() driver.Validator {
-	return NewValidator(s.PPM, s.Deserializer)
+	return NewValidator(s.PPM.PublicParams(), s.Deserializer)
 }
 
 func (s *Service) PublicParamsManager() driver.PublicParamsManager {

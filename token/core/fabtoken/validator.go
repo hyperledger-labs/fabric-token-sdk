@@ -24,19 +24,15 @@ type ValidationParameters interface {
 }
 
 type Validator struct {
-	validationParameters ValidationParameters
-	deserializer         driver.Deserializer
+	pp           *PublicParams
+	deserializer driver.Deserializer
 }
 
-func NewValidator(validationParameters ValidationParameters, deserializer driver.Deserializer) *Validator {
+func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator {
 	return &Validator{
-		validationParameters: validationParameters,
-		deserializer:         deserializer,
+		pp:           pp,
+		deserializer: deserializer,
 	}
-}
-
-func (v *Validator) GetValidationParameters() ValidationParameters {
-	return v.validationParameters
 }
 
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
@@ -92,7 +88,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	}
 	signed := append(bytes, []byte(binding)...)
 	var signatures [][]byte
-	if len(v.validationParameters.AuditorIdentity()) != 0 {
+	if len(v.pp.AuditorIdentity()) != 0 {
 		signatures = append(signatures, tr.AuditorSignatures...)
 		signatures = append(signatures, tr.Signatures...)
 	} else {
@@ -108,13 +104,13 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 }
 
 func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
-	if v.validationParameters.AuditorIdentity() != nil {
-		verifier, err := v.deserializer.GetAuditorVerifier(v.validationParameters.AuditorIdentity())
+	if v.pp.AuditorIdentity() != nil {
+		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.AuditorIdentity())
 		if err != nil {
 			return errors.Errorf("failed to deserialize auditor's public key")
 		}
 
-		return signatureProvider.HasBeenSignedBy(v.validationParameters.AuditorIdentity(), verifier)
+		return signatureProvider.HasBeenSignedBy(v.pp.AuditorIdentity(), verifier)
 	}
 	return nil
 }
@@ -125,7 +121,7 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 			return errors.Wrapf(err, "failed to verify issue action")
 		}
 
-		issuers := v.validationParameters.Issuers()
+		issuers := v.pp.Issuers
 		if len(issuers) != 0 {
 			// Check that issue.Issuers is in issuers
 			found := false
