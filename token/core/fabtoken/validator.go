@@ -3,23 +3,24 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package fabtoken
 
 import (
+	"bytes"
 	"encoding/json"
-
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type ValidationParameters interface {
 	AuditorIdentity() view.Identity
+	Issuers() [][]byte
 }
 
 type Validator struct {
@@ -122,6 +123,21 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 	for _, issue := range issues {
 		if err := v.verifyIssue(issue); err != nil {
 			return errors.Wrapf(err, "failed to verify issue action")
+		}
+
+		issuers := v.validationParameters.Issuers()
+		if len(issuers) != 0 {
+			// Check that issue.Issuers is in issuers
+			found := false
+			for _, issuer := range issuers {
+				if bytes.Equal(issue.Issuer, issuer) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.Errorf("issuer [%s] is not in issuers", issue.Issuer.String())
+			}
 		}
 
 		verifier, err := v.deserializer.GetIssuerVerifier(issue.Issuer)

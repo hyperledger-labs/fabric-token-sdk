@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
+	"bytes"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -146,6 +147,21 @@ func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider 
 
 		if err := v.verifyIssue(a); err != nil {
 			return errors.Wrapf(err, "failed to verify issue action")
+		}
+
+		issuers := v.pp.Issuers
+		if len(issuers) != 0 {
+			// Check that a.Issuer is in issuers
+			found := false
+			for _, issuer := range issuers {
+				if bytes.Equal(a.Issuer, issuer) {
+					found = true
+					break
+				}
+			}
+			if !found {
+				return errors.Errorf("issuer [%s] is not in issuers", view.Identity(a.Issuer).String())
+			}
 		}
 
 		verifier, err := v.deserializer.GetIssuerVerifier(a.Issuer)

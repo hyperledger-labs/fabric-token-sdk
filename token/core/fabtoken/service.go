@@ -36,6 +36,7 @@ type TokenLoader interface {
 type PublicParametersManager interface {
 	driver.PublicParamsManager
 	AuditorIdentity() view.Identity
+	Issuers() [][]byte
 }
 
 type Service struct {
