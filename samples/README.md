@@ -7,4 +7,3 @@ To make sure you have all the required docker images, you can run `make docker-i
 folder `$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk`.
 
 - [`Fungible Tokens, The Basics. On Fabric`](./fabric/fungible//README.md): A showcase of some capabilities that the Token SDK offers.
-- [`DvP`](../fabric/dvp/README.md): In this example, we see how to orchestrate a Delivery vs Payment use-case.
