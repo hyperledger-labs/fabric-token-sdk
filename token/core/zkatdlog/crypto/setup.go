@@ -9,10 +9,8 @@ package crypto
 import (
 	"crypto/sha256"
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	math2 "math"
-
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
@@ -31,6 +29,7 @@ type PublicParams struct {
 	IdemixPK         []byte
 	IssuingPolicy    []byte
 	Auditor          []byte
+	Issuers          [][]byte
 	Label            string
 	Curve            int
 
@@ -142,50 +141,6 @@ func (pp *PublicParams) GenerateRangeProofParameters(signer *pssign.Signer, maxV
 	return nil
 }
 
-func (pp *PublicParams) SetIssuingPolicy(issuers []*math.G1) error {
-	ip := &IssuingPolicy{BitLength: int(math2.Ceil(math2.Log2(float64(len(issuers))))), IssuersNumber: len(issuers)}
-	curve := math.Curves[pp.Curve]
-	// pad list of issuers with a dummy commitment
-	if len(issuers) != int(math2.Exp2(math2.Ceil(math2.Log2(float64(len(issuers)))))) {
-
-		for i := len(issuers); i < int(math2.Exp2(math2.Ceil(math2.Log2(float64(len(issuers)))))); i++ {
-			issuers = append(issuers, curve.GenG1)
-		}
-	}
-	ip.Issuers = issuers
-	var err error
-	pp.IssuingPolicy, err = ip.Serialize()
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (pp *PublicParams) AddIssuer(issuer *math.G1) error {
-	ip := &IssuingPolicy{}
-
-	err := ip.Deserialize(pp.IssuingPolicy)
-	if err != nil {
-		return errors.Wrapf(err, "failed deserializing issuing policy")
-	}
-
-	ip.Issuers = append(ip.Issuers, issuer)
-	if err := pp.SetIssuingPolicy(ip.Issuers); err != nil {
-		return errors.Wrapf(err, "failed setting issuing policy")
-	}
-	return nil
-}
-
-func (pp *PublicParams) GetIssuingPolicy() (*IssuingPolicy, error) {
-	ip := &IssuingPolicy{}
-	err := ip.Deserialize(pp.IssuingPolicy)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed deserializing issuing policy")
-	}
-	return ip, nil
-}
-
 func (pp *PublicParams) ComputeHash(raw []byte) error {
 	hash := sha256.New()
 	n, err := hash.Write(raw)
@@ -201,6 +156,10 @@ func (pp *PublicParams) ComputeHash(raw []byte) error {
 
 func (pp *PublicParams) AddAuditor(auditor view.Identity) {
 	pp.Auditor = auditor
+}
+
+func (pp *PublicParams) AddIssuer(id view.Identity) {
+	pp.Issuers = append(pp.Issuers, id)
 }
 
 func Setup(base int64, exponent int, nymPK []byte, curveID math.CurveID) (*PublicParams, error) {
@@ -220,12 +179,6 @@ func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, 
 		return nil, err
 	}
 	err = pp.GenerateRangeProofParameters(signer, base)
-	if err != nil {
-		return nil, err
-	}
-	// empty issuing policy
-	ip := &IssuingPolicy{}
-	pp.IssuingPolicy, err = ip.Serialize()
 	if err != nil {
 		return nil, err
 	}

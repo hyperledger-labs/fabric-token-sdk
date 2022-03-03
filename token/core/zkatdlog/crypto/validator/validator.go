@@ -3,9 +3,11 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package validator
 
 import (
+	"bytes"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -14,7 +16,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/anonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -148,28 +149,27 @@ func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider 
 			return errors.Wrapf(err, "failed to verify issue action")
 		}
 
-		if a.Anonymous {
-			verifier := &anonym.Verifier{}
-			ip := &crypto.IssuingPolicy{}
-			err := ip.Deserialize(v.pp.IssuingPolicy)
-			if err != nil {
-				return err
+		issuers := v.pp.Issuers
+		if len(issuers) != 0 {
+			// Check that a.Issuer is in issuers
+			found := false
+			for _, issuer := range issuers {
+				if bytes.Equal(a.Issuer, issuer) {
+					found = true
+					break
+				}
 			}
-			err = verifier.Deserialize(ip.BitLength, ip.Issuers, v.pp.ZKATPedParams, a.OutputTokens[0].Data, a.Issuer, math.Curves[v.pp.Curve])
-			if err != nil {
-				return err
+			if !found {
+				return errors.Errorf("issuer [%s] is not in issuers", view.Identity(a.Issuer).String())
 			}
-			if err := signatureProvider.HasBeenSignedBy(a.Issuer, verifier); err != nil {
-				return errors.Wrapf(err, "failed verifying signature")
-			}
-		} else {
-			verifier, err := v.deserializer.GetIssuerVerifier(a.Issuer)
-			if err != nil {
-				return errors.Wrapf(err, "failed getting verifier for [%s]", view.Identity(a.Issuer).String())
-			}
-			if err := signatureProvider.HasBeenSignedBy(a.Issuer, verifier); err != nil {
-				return errors.Wrapf(err, "failed verifying signature")
-			}
+		}
+
+		verifier, err := v.deserializer.GetIssuerVerifier(a.Issuer)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting verifier for [%s]", view.Identity(a.Issuer).String())
+		}
+		if err := signatureProvider.HasBeenSignedBy(a.Issuer, verifier); err != nil {
+			return errors.Wrapf(err, "failed verifying signature")
 		}
 	}
 	return nil

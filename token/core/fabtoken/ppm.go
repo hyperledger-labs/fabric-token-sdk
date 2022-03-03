@@ -54,6 +54,10 @@ func (v *PublicParamsManager) AuditorIdentity() view.Identity {
 	return v.PublicParams().Auditor
 }
 
+func (v *PublicParamsManager) Issuers() [][]byte {
+	return v.PublicParams().Issuers
+}
+
 func (v *PublicParamsManager) PublicParams() *PublicParams {
 	if v.pp == nil {
 		if v.publicParamsLoader == nil {

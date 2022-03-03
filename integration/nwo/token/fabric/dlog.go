@@ -96,7 +96,22 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	}
 
 	if len(tms.Issuers) != 0 {
-		// TODO
+		if len(wallets.Issuers) == 0 {
+			return nil, errors.Errorf("no issuer wallets provided")
+		}
+		for _, issuer := range wallets.Issuers {
+			// Build an MSP Identity
+			types := strings.Split(issuer.Type, ":")
+			provider, err := x509.NewProvider(issuer.Path, types[1], nil)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed to create x509 provider")
+			}
+			id, _, err := provider.Identity(nil)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed to get identity")
+			}
+			pp.AddIssuer(id)
+		}
 	}
 
 	ppRaw, err := pp.Serialize()
