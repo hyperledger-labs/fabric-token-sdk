@@ -47,21 +47,6 @@ dependencies:
 	go get -u github.com/gordonklaus/ineffassign
 	go get -u github.com/google/addlicense
 
-.PHONY: integration-tests
-integration-tests: docker-images dependencies
-	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
-	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
-	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
-	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
-
-.PHONY: integration-tests-dvp-dlog
-integration-tests-dvp-dlog: docker-images dependencies
-	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
-
-.PHONY: integration-tests-dvp-fabtoken
-integration-tests-dvp-fabtoken: docker-images dependencies
-	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
-
 .PHONY: integration-tests-tcc-dlog
 integration-tests-tcc-dlog: docker-images dependencies
 	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
@@ -78,8 +63,6 @@ tidy:
 clean:
 	docker network prune -f
 	docker container prune -f
-	rm -rf ./integration/token/dvp/dlog/cmd
-	rm -rf ./integration/token/dvp/fabtoken/cmd
 	rm -rf ./integration/token/tcc/basic/dlog/cmd/
 	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
 	rm -rf ./samples/fabric/fungible/cmd
