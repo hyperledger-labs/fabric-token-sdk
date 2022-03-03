@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/dvp/views/house"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views/house"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 )

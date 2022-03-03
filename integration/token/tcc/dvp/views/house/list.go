@@ -8,11 +8,9 @@ package house
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/dvp/views/house"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
 )
 
 // GetHouse contains the input to query a house by id
@@ -25,7 +23,7 @@ type GetHouseView struct {
 }
 
 func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
-	house := &house.House{}
+	house := &House{}
 	qe, err := nftcc.GetQueryExecutor(context)
 	assert.NoError(err, "failed to create selector")
 	assert.NoError(qe.QueryByKey(house, "LinearID", p.HouseID), "failed loading house with id %s", p.HouseID)
