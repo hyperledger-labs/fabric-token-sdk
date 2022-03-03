@@ -8,7 +8,6 @@ package keys
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"unicode/utf8"
 
@@ -199,15 +198,3 @@ func GetSNFromKey(key string) (string, error) {
 	return components[1], nil
 }
 */
-
-var (
-	keyRegexp = regexp.MustCompile("^[a-zA-Z0-9._\u0000=" + string(utf8.MaxRune) + "+/-]{1,}$")
-)
-
-func ValidateKey(key string) error {
-	if !keyRegexp.MatchString(key) {
-		return errors.Errorf("key '%s' is invalid", key)
-	}
-
-	return nil
-}
