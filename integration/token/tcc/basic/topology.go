@@ -141,6 +141,9 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
 		orion2.SetCustodian(tms, custodian)
+
+		// Enable orion sdk on each FSC node
+		backendNetwork.(*orion.Topology).SetDefaultSDK(fscTopology)
 	}
 	tms.AddAuditor(auditor)
 
