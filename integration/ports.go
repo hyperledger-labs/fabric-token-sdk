@@ -26,6 +26,7 @@ const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota
 	ZKATDLogBasics
 	FabTokenBasics
+	OrionZKATDLogBasics
 	ZKATDLogDVP
 	FabTokenDVP
 )

@@ -8,10 +8,12 @@ package topology
 
 import (
 	"fmt"
-
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 )
+
+type BackedTopology interface {
+	Name() string
+}
 
 type Chaincode struct {
 	Orgs        []string
@@ -25,12 +27,12 @@ type TMS struct {
 	Namespace           string
 	Driver              string
 	PublicParamsGenArgs []string
-	TokenChaincode      Chaincode
 	Auditors            []string
 	Certifiers          []string
 	Issuers             []string
 
-	TargetNetworkTopology *topology.Topology `yaml:"-"`
+	BackendTopology BackedTopology `yaml:"-"`
+	BackendParams   map[string]interface{}
 }
 
 func (t *TMS) AddAuditor(auditor *node.Node) *TMS {
@@ -48,26 +50,8 @@ func (t *TMS) AddIssuer(issuer *node.Node) *TMS {
 	return t
 }
 
-func (t *TMS) SetNamespace(orgs []string, publicParamsGenArgs ...string) {
-	t.TokenChaincode.Orgs = orgs
+func (t *TMS) SetTokenGenPublicParams(publicParamsGenArgs ...string) {
 	t.PublicParamsGenArgs = publicParamsGenArgs
-}
-
-func (t *TMS) Private(dockerImage string) {
-	t.TargetNetworkTopology.EnableFPC()
-	t.TargetNetworkTopology.AddChaincode(&topology.ChannelChaincode{
-		Chaincode: topology.Chaincode{
-			Name: t.Namespace,
-		},
-		PrivateChaincode: topology.PrivateChaincode{
-			Image: "",
-		},
-		Channel: t.Channel,
-		Private: true,
-	})
-
-	t.TokenChaincode.Private = true
-	t.TokenChaincode.DockerImage = dockerImage
 }
 
 func (t *TMS) ID() string {

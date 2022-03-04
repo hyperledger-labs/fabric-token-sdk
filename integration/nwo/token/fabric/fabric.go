@@ -121,19 +121,22 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 	// Prepare chaincodes
 	var chaincode *topology.ChannelChaincode
+	orgs := tms.BackendParams["fabric.orgs"].([]string)
 
-	if tms.TokenChaincode.Private {
+	if v, ok := tms.BackendParams["fpc.enabled"]; ok && v.(bool) {
+		dockerImage := tms.BackendParams["fpc.docker.image"].(string)
 		cc := p.Fabric(tms).Topology().AddFPCAtOrgs(
 			tms.Namespace,
-			tms.TokenChaincode.DockerImage,
-			tms.TokenChaincode.Orgs,
+			dockerImage,
+			orgs,
 		)
 		cc.Chaincode.Ctor = p.TCCCtor(tms)
 		chaincode = cc
 	} else {
-		chaincode, _ = p.PrepareTCC(tms)
+		chaincode, _ = p.PrepareTCC(tms, orgs)
 		p.Fabric(tms).Topology().AddChaincode(chaincode)
 	}
+
 	entry.TCC = &TCC{Chaincode: chaincode}
 }
 
