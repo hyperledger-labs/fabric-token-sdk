@@ -30,7 +30,8 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 		backendChannel = fabricTopology.Channels[0].Name
 	case "orion":
 		orionTopology := orion.NewTopology()
-		orionTopology.AddDB("custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
+		orionTopology.AddDB("token", "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
+		backendNetwork = orionTopology
 	default:
 		panic("unknown backend: " + backend)
 	}
@@ -137,7 +138,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
 		// we need to define the custodian
-		custodian := fscTopology.AddNodeByName("dmv")
+		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
 		orion2.SetCustodian(tms, custodian)
 	}

@@ -8,73 +8,10 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
-	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
-	"strings"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	. "github.com/onsi/gomega"
 )
-
-type FabTokenPublicParamsGenerator struct {
-}
-
-func NewFabTokenPublicParamsGenerator() *FabTokenPublicParamsGenerator {
-	return &FabTokenPublicParamsGenerator{}
-}
-
-func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
-	pp, err := fabtoken.Setup()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(tms.Auditors) != 0 {
-		if len(wallets.Auditors) == 0 {
-			return nil, errors.Errorf("no auditor wallets provided")
-		}
-		for _, auditor := range wallets.Auditors {
-			// Build an MSP Identity
-			types := strings.Split(auditor.Type, ":")
-			provider, err := x509.NewProvider(auditor.Path, types[1], nil)
-			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 provider")
-			}
-			id, _, err := provider.Identity(nil)
-			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
-			}
-			pp.AddAuditor(id)
-		}
-	}
-
-	if len(tms.Issuers) != 0 {
-		if len(wallets.Issuers) == 0 {
-			return nil, errors.Errorf("no issuer wallets provided")
-		}
-		for _, issuer := range wallets.Issuers {
-			// Build an MSP Identity
-			types := strings.Split(issuer.Type, ":")
-			provider, err := x509.NewProvider(issuer.Path, types[1], nil)
-			if err != nil {
-				return nil, errors.WithMessage(err, "failed to create x509 provider")
-			}
-			id, _, err := provider.Identity(nil)
-			if err != nil {
-				return nil, errors.WithMessage(err, "failed to get identity")
-			}
-			pp.AddIssuer(id)
-		}
-	}
-
-	ppRaw, err := pp.Serialize()
-	if err != nil {
-		return nil, err
-	}
-	return ppRaw, nil
-}
 
 type FabTokenFabricCryptoMaterialGenerator struct {
 	tokenPlatform tokenPlatform

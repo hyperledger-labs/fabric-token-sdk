@@ -9,7 +9,7 @@ package token
 import (
 	"bytes"
 	"fmt"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -54,27 +54,23 @@ type Platform struct {
 	PublicParamsGenerators map[string]generators.PublicParamsGenerator
 	NetworkHandlers        map[string]NetworkHandler
 
-	TokenGenPath             string
-	colorIndex               int
-	CryptoMaterialGenerators map[string]generators.CryptoMaterialGenerator
+	TokenGenPath string
+	ColorIndex   int
 }
 
 func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
 	curveID := math3.BN254
 	p := &Platform{
-		Context:                  ctx,
-		Topology:                 t.(*Topology),
-		Builder:                  builder,
-		EventuallyTimeout:        10 * time.Minute,
-		PublicParamsGenerators:   map[string]generators.PublicParamsGenerator{},
-		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{},
-		TokenGenPath:             DefaultTokenGenPath,
-		NetworkHandlers:          map[string]NetworkHandler{},
+		Context:                ctx,
+		Topology:               t.(*Topology),
+		Builder:                builder,
+		EventuallyTimeout:      10 * time.Minute,
+		PublicParamsGenerators: map[string]generators.PublicParamsGenerator{},
+		TokenGenPath:           DefaultTokenGenPath,
+		NetworkHandlers:        map[string]NetworkHandler{},
 	}
-	p.PublicParamsGenerators["fabtoken"] = fabric.NewFabTokenPublicParamsGenerator()
-	p.PublicParamsGenerators["dlog"] = fabric.NewDLogPublicParamsGenerator(curveID)
-	p.CryptoMaterialGenerators["fabtoken"] = fabric.NewFabTokenFabricCryptoMaterialGenerator(p)
-	p.CryptoMaterialGenerators["dlog"] = fabric.NewDLogCustomCryptoMaterialGenerator(p, curveID)
+	p.PublicParamsGenerators["fabtoken"] = common2.NewFabTokenPublicParamsGenerator()
+	p.PublicParamsGenerators["dlog"] = common2.NewDLogPublicParamsGenerator(curveID)
 
 	return p
 }
@@ -142,10 +138,6 @@ func (p *Platform) GetPublicParamsGenerators(driver string) generators.PublicPar
 	return p.PublicParamsGenerators[driver]
 }
 
-func (p *Platform) GetCryptoMaterialGenerator(driver string) generators.CryptoMaterialGenerator {
-	return p.CryptoMaterialGenerators[driver]
-}
-
 func (p *Platform) GetBuilder() api2.Builder {
 	return p.Builder
 }
@@ -195,10 +187,6 @@ func (p *Platform) SetPublicParamsGenerator(name string, gen generators.PublicPa
 	p.PublicParamsGenerators[name] = gen
 }
 
-func (p *Platform) SetCryptoMaterialGenerator(name string, gen generators.CryptoMaterialGenerator) {
-	p.CryptoMaterialGenerators[name] = gen
-}
-
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
@@ -240,11 +228,11 @@ func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
 }
 
 func (p *Platform) nextColor() string {
-	color := p.colorIndex%14 + 31
+	color := p.ColorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37
 	}
 
-	p.colorIndex++
+	p.ColorIndex++
 	return fmt.Sprintf("%dm", color)
 }

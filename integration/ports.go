@@ -27,6 +27,7 @@ const (
 	ZKATDLogBasics
 	FabTokenBasics
 	OrionZKATDLogBasics
+	OrionFabTokenBasics
 	ZKATDLogDVP
 	FabTokenDVP
 )

@@ -28,6 +28,6 @@ func (p *platformFactory) Name() string {
 func (p *platformFactory) New(ctx api.Context, t api.Topology, builder api.Builder) api.Platform {
 	tp := NewPlatform(ctx, t, builder)
 	tp.AddNetworkHandler(fabric2.TopologyName, fabric.NewNetworkHandler(tp))
-	tp.AddNetworkHandler(orion.TopologyName, orion2.NewNetworkHandler(tp))
+	tp.AddNetworkHandler(orion.TopologyName, orion2.NewNetworkHandler(tp, builder))
 	return tp
 }

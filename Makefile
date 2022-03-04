@@ -73,6 +73,8 @@ clean:
 	docker container prune -f
 	rm -rf ./integration/token/tcc/basic/dlog/cmd/
 	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/basic/odlog/cmd/
+	rm -rf ./integration/token/tcc/basic/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/dvp/dlog/cmd/
 	rm -rf ./integration/token/tcc/dvp/fabtoken/cmd/
 	rm -rf ./samples/fabric/fungible/cmd
