@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -28,6 +29,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/pkg/errors"
@@ -62,6 +64,9 @@ func (p *SDK) Install() error {
 		p.registry,
 		func(network, channel, namespace string) error {
 			n := fabric.GetFabricNetworkService(p.registry, network)
+			if n == nil && orion.GetOrionNetworkService(p.registry, network) != nil {
+				return nil
+			}
 			if err := n.ProcessorManager().AddProcessor(
 				namespace,
 				fabric4.NewTokenRWSetProcessor(
