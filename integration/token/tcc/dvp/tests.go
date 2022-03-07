@@ -23,13 +23,15 @@ func TestAll(network *integration.Infrastructure) {
 	registerAuditor(network)
 	issueCash(network)
 	checkBalance(network, "buyer", "", "USD", 10)
-	houseID := issueHouse(network)
-	queryHouse(network, "seller", houseID)
+	checkBalance(network, "seller", "", "USD", 0)
+	houseID := issueHouse(network, 4)
+	queryHouse(network, "seller", houseID, "5th Avenue")
+	queryHouse(network, "buyer", houseID, "5th Avenue", "failed loading house with id")
 	sellHouse(network, houseID)
-	queryHouse(network, "buyer", houseID)
-	queryHouse(network, "seller", houseID, "failed loading house with id")
-	checkBalance(network, "buyer", "", "USD", 5)
-	checkBalance(network, "seller", "", "USD", 5)
+	queryHouse(network, "buyer", houseID, "5th Avenue")
+	queryHouse(network, "seller", houseID, "5th Avenue", "failed loading house with id")
+	checkBalance(network, "buyer", "", "USD", 6)
+	checkBalance(network, "seller", "", "USD", 4)
 }
 
 func registerAuditor(network *integration.Infrastructure) {
@@ -48,12 +50,12 @@ func issueCash(network *integration.Infrastructure) {
 	time.Sleep(5 * time.Second)
 }
 
-func issueHouse(network *integration.Infrastructure) string {
+func issueHouse(network *integration.Infrastructure, valuation uint64) string {
 	houseIDBoxed, err := network.Client("house_issuer").CallView("issue_house", common.JSONMarshall(house.IssueHouse{
 		IssuerWallet: "",
 		Recipient:    "seller",
 		Address:      "5th Avenue",
-		Valuation:    5,
+		Valuation:    valuation,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	time.Sleep(5 * time.Second)
@@ -79,7 +81,7 @@ func checkBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
-func queryHouse(network *integration.Infrastructure, clientID string, houseID string, errorMsgs ...string) {
+func queryHouse(network *integration.Infrastructure, clientID string, houseID string, address string, errorMsgs ...string) {
 	resBoxed, err := network.Client(clientID).CallView("queryHouse", common.JSONMarshall(house.GetHouse{
 		HouseID: houseID,
 	}))
@@ -88,6 +90,7 @@ func queryHouse(network *integration.Infrastructure, clientID string, houseID st
 		h := &house.House{}
 		Expect(json.Unmarshal(resBoxed.([]byte), h)).NotTo(HaveOccurred())
 		Expect(h.LinearID).To(BeEquivalentTo(houseID))
+		Expect(h.Address).To(BeEquivalentTo(address))
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {

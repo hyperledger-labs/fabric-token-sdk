@@ -39,6 +39,9 @@ type IssueOption func(*IssueOptions) error
 // WithIssueAttribute sets an attribute to be used to customize the issue command
 func WithIssueAttribute(attr, value interface{}) IssueOption {
 	return func(o *IssueOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = map[interface{}]interface{}{}
+		}
 		o.Attributes[attr] = value
 		return nil
 	}

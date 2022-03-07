@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/uniqueness"
 )
 
 // IssueHouse contains the input information to issue a token
@@ -54,7 +55,10 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 		Address:   p.Address,
 		Valuation: p.Valuation,
 	}
-	err = tx.Issue(wallet, h, recipient)
+	uniqueID, err := uniqueness.GetService(context).ComputeID(h.Address)
+	assert.NoError(err, "failed computing unique ID")
+
+	err = tx.Issue(wallet, h, recipient, nftcc.WithUniqueID(uniqueID))
 	assert.NoError(err, "failed adding new issued token")
 
 	// The issuer is ready to collect all the required signatures.
