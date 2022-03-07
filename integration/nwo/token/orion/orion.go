@@ -15,6 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
+	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
 	"io"
@@ -35,6 +38,11 @@ type tokenPlatform interface {
 	PublicParametersDir() string
 	GetBuilder() api2.Builder
 	TokenDir() string
+}
+
+type orionPlatform interface {
+	CreateDBInstance() bcdb.BCDB
+	CreateUserSession(bcdb bcdb.BCDB, user string) bcdb.DBSession
 }
 
 type Entry struct {
@@ -123,6 +131,34 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 }
 
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
+	if load {
+		return
+	}
+
+	// Store the public parameters in orion
+	orion, ok := p.TokenPlatform.GetContext().PlatformByName(tms.BackendTopology.Name()).(orionPlatform)
+	Expect(ok).To(BeTrue(), "No orion platform found for topology %s", tms.BackendTopology.Name())
+	db := orion.CreateDBInstance()
+	custodianID := tms.BackendParams[Custodian].(*sfcnode.Node).Name
+	session := orion.CreateUserSession(db, custodianID)
+	tx, err := session.DataTx()
+	Expect(err).ToNot(HaveOccurred(), "Failed to create data transaction")
+
+	issuingValidator := &tcc.AllIssuersValid{}
+	rwset := &rwsWrapper{
+		db: tms.Namespace,
+		me: custodianID,
+		tx: tx,
+	}
+	w := translator.New(issuingValidator, "", rwset, "")
+	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
+	Expect(err).ToNot(HaveOccurred(), "Failed to read public parameters file %s", p.TokenPlatform.PublicParametersFile(tms))
+	action := &tcc.SetupAction{
+		SetupParameters: ppRaw,
+	}
+	Expect(w.Write(action)).ToNot(HaveOccurred(), "Failed to store public parameters for namespace %s", tms.Namespace)
+	_, _, err = tx.Commit(true)
+	Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction")
 }
 
 func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMaterialGenerator, tms *topology2.TMS, node *sfcnode.Node) {
