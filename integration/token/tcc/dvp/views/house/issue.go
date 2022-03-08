@@ -21,7 +21,9 @@ type IssueHouse struct {
 	IssuerWallet string
 	// Recipient is an identifier of the recipient identity
 	Recipient string
-	Address   string
+	// Address is the address of the house to issue
+	Address string
+	// Valuation is the valuation of the house to issue
 	Valuation uint64
 }
 
@@ -55,6 +57,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 		Address:   p.Address,
 		Valuation: p.Valuation,
 	}
+	// The issuer enforce uniqueness of the token by computing a unique identifier for the passed house.
 	uniqueID, err := uniqueness.GetService(context).ComputeID(h.Address)
 	assert.NoError(err, "failed computing unique ID")
 

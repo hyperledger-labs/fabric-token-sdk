@@ -16,10 +16,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 )
 
+// Sell contains the sell instructions
 type Sell struct {
-	Wallet  string
+	// Wallet is the wallet from which recipient identities must be derived
+	Wallet string
+	// HouseID is the house ID of the house to sell
 	HouseID string
-	Buyer   string
+	// Buyer is the identity of the buyer (it is identifier as defined in the topology)
+	Buyer string
 }
 
 type SellHouseView struct {

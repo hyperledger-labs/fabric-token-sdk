@@ -27,8 +27,8 @@ func (a *AcceptHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to receive tokens")
 
 	// The recipient can perform any check on the transaction as required by the business process
-	// In particular, here, the recipient checks that the transaction contains at least one output, and
-	// that there is at least one output that names the recipient. (The recipient is receiving something.
+	// In particular, here, the recipient checks that the transaction contains one output that names the recipient.
+	// (The recipient is receiving something)
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 	assert.NoError(outputs.Validate(), "failed validating outputs")
