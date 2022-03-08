@@ -25,17 +25,9 @@ var (
 	SelectorSufficientFundsButConcurrencyIssue = errors.New("sufficient funds but concurrency issue")
 )
 
-type SelectorFilter interface{}
-
-type SelectorFilterByID interface {
-	SelectorFilter
-	// ID returns the ID of the identity the selection should select for.
+// OwnerFilter tells if a passed identity is recognized
+type OwnerFilter interface {
 	ID() string
-}
-
-// SelectorFilterByUnspentToken is a SelectorFilter that selects tokens that are not yet spent.
-type SelectorFilterByUnspentToken interface {
-	SelectorFilter
 	// ContainsToken returns true if the passed token is recognized, false otherwise.
 	ContainsToken(token *token2.UnspentToken) bool
 }
@@ -44,10 +36,10 @@ type SelectorFilterByUnspentToken interface {
 type Selector interface {
 	// Select returns the list of token identifiers where
 	// 1. The owner match the passed owner filter.
-	// 2. The type is equal to the passed token type, if not empty
+	// 2. The type is equal to the passed token type.
 	// 3. The sum of amount in each token is at least the passed quantity.
 	// Quantity is a string in decimal format
 	// Notice that, the quantity selected might exceed the quantity requested due to the amounts
 	// stored in each token.
-	Select(filter SelectorFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error)
+	Select(ownerFilter OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error)
 }

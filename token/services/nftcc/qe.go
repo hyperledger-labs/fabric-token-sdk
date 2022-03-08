@@ -22,7 +22,7 @@ type vault interface {
 }
 
 type selector interface {
-	Filter(filter token.SelectorFilterByUnspentToken, q string) ([]*token2.ID, error)
+	Filter(filter Filter, q string) ([]*token2.ID, error)
 }
 
 type QueryExecutor struct {

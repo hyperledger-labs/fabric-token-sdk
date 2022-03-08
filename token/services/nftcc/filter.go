@@ -16,6 +16,12 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// Filter is a filter for NFTCC
+type Filter interface {
+	// ContainsToken returns true if the passed token is recognized, false otherwise.
+	ContainsToken(token *token2.UnspentToken) bool
+}
+
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
@@ -39,7 +45,7 @@ func NewFilter(service QueryService, metricsAgent MetricsAgent) *filter {
 	}
 }
 
-func (s *filter) Filter(filter token.SelectorFilterByUnspentToken, q string) ([]*token2.ID, error) {
+func (s *filter) Filter(filter Filter, q string) ([]*token2.ID, error) {
 	if filter == nil {
 		return nil, errors.New("filter is nil")
 	}
@@ -50,7 +56,7 @@ func (s *filter) Filter(filter token.SelectorFilterByUnspentToken, q string) ([]
 	return ids, nil
 }
 
-func (s *filter) selectByFilter(filter token.SelectorFilterByUnspentToken, q string) ([]*token2.ID, token2.Quantity, error) {
+func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Quantity, error) {
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	target, err := token2.ToQuantity(q, s.precision)
