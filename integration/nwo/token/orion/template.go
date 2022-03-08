@@ -14,6 +14,7 @@ token:
     namespace: {{ TMS.Namespace }}
     orion:
       custodian:
+        id: {{ CustodianID }}
         enabled: {{ IsCustodian }}
     certification: 
       interactive:

@@ -120,6 +120,9 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 			}
 			return custodianNode.(*sfcnode.Node).Name == node.Name
 		},
+		"CustodianID": func() string {
+			return tms.BackendParams[Custodian].(*sfcnode.Node).Name
+		},
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
