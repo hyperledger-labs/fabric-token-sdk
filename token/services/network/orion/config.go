@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package config
+package orion
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -55,8 +55,13 @@ func IsCustodian(cp configProvider) (bool, error) {
 		return false, errors.WithMessagef(err, "cannot load token-sdk configuration")
 	}
 
-	custodian := tmsConfigs[0].Orion.Custodian.Enabled
-	return custodian, nil
+	for _, config := range tmsConfigs {
+		logger.Debugf("config: %v", config.Orion.Custodian)
+		if config.Orion.Custodian.Enabled {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func GetCustodian(cp configProvider) (string, error) {

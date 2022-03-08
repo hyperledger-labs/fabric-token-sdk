@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -116,12 +115,11 @@ func (p *SDK) Install() error {
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)
 
-	enabled, err := config.IsCustodian(view2.GetConfigService(p.registry))
-	if err != nil {
-		logger.Error(err)
-	}
-	if err == nil && enabled {
-		view2.GetRegistry(p.registry).RegisterResponder(&orion2.RespondPublicParamsRequestView{}, &orion2.PublicParamsRequestView{})
+	enabled, err := orion2.IsCustodian(view2.GetConfigService(p.registry))
+	assert.NoError(err, "failed to get custodian status")
+	logger.Infof("Orion Custodian enabled: %t", enabled)
+	if enabled {
+		assert.NoError(orion2.InstallViews(p.registry), "failed to install custodian views")
 	}
 
 	return nil
