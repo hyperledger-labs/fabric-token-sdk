@@ -11,13 +11,13 @@ import (
 	"github.com/hyperledger-labs/orion-server/pkg/types"
 )
 
-type rwsWrapper struct {
+type RWSWrapper struct {
 	me string
 	db string
 	tx bcdb.DataTxContext
 }
 
-func (r *rwsWrapper) SetState(namespace string, key string, value []byte) error {
+func (r *RWSWrapper) SetState(namespace string, key string, value []byte) error {
 	return r.tx.Put(
 		r.db, key, value,
 		&types.AccessControl{
@@ -26,27 +26,27 @@ func (r *rwsWrapper) SetState(namespace string, key string, value []byte) error 
 	)
 }
 
-func (r *rwsWrapper) GetState(namespace string, key string) ([]byte, error) {
+func (r *RWSWrapper) GetState(namespace string, key string) ([]byte, error) {
 	res, _, err := r.tx.Get(r.db, key)
 	return res, err
 }
 
-func (r *rwsWrapper) DeleteState(namespace string, key string) error {
+func (r *RWSWrapper) DeleteState(namespace string, key string) error {
 	return r.tx.Delete(r.db, key)
 }
 
-func (r *rwsWrapper) Bytes() ([]byte, error) {
+func (r *RWSWrapper) Bytes() ([]byte, error) {
 	return nil, nil
 }
 
-func (r *rwsWrapper) Done() {
+func (r *RWSWrapper) Done() {
 	return
 }
 
-func (r *rwsWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
+func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
 	return nil
 }
 
-func (r *rwsWrapper) Equals(right interface{}, namespace string) error {
+func (r *RWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("implement me")
 }

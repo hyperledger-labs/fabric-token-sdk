@@ -72,7 +72,11 @@ func (n Network) ComputeTxID(id *driver.TxID) string {
 }
 
 func (n Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	panic("implement me")
+	pp, err := view2.GetManager(n.sp).InitiateView(&PublicParamsRequestView{})
+	if err != nil {
+		return nil, err
+	}
+	return pp.([]byte), nil
 }
 
 func (n Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {

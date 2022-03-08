@@ -8,6 +8,12 @@ package orion
 
 import (
 	"bytes"
+	"io"
+	"io/ioutil"
+	"os"
+	"text/template"
+	"time"
+
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
@@ -20,11 +26,6 @@ import (
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	. "github.com/onsi/gomega"
 	. "github.com/onsi/gomega/gexec"
-	"io"
-	"io/ioutil"
-	"os"
-	"text/template"
-	"time"
 )
 
 var logger = flogging.MustGetLogger("integration.token.orion")
@@ -148,7 +149,7 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	Expect(err).ToNot(HaveOccurred(), "Failed to create data transaction")
 
 	issuingValidator := &tcc.AllIssuersValid{}
-	rwset := &rwsWrapper{
+	rwset := &RWSWrapper{
 		db: tms.Namespace,
 		me: custodianID,
 		tx: tx,

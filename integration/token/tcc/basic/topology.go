@@ -146,6 +146,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 		orionTopology.SetDefaultSDK(fscTopology)
 	}
+	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}

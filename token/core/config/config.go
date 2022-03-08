@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 type configProvider interface {
@@ -48,4 +47,22 @@ func (m *Manager) TMS() *driver.TMS {
 
 func (m *Manager) TranslatePath(path string) string {
 	return m.cp.TranslatePath(path)
+}
+
+func IsCustodian(cp configProvider) (bool, error) {
+	var tmsConfigs []*TMS
+	if err := cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
+		return false, errors.WithMessagef(err, "cannot load token-sdk configuration")
+	}
+
+	custodian := tmsConfigs[0].Orion.Custodian.Enabled
+	return custodian, nil
+}
+
+func GetCustodian(cp configProvider) (string, error) {
+	var tmsConfigs []*TMS
+	if err := cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
+		return "", errors.WithMessagef(err, "cannot load token-sdk configuration")
+	}
+	return tmsConfigs[0].Orion.Custodian.ID, nil
 }

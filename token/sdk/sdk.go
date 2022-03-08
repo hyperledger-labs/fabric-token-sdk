@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -30,6 +31,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/pkg/errors"
@@ -113,6 +115,14 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)
+
+	enabled, err := config.IsCustodian(view2.GetConfigService(p.registry))
+	if err != nil {
+		logger.Error(err)
+	}
+	if err == nil && enabled {
+		view2.GetRegistry(p.registry).RegisterResponder(&orion2.RespondPublicParamsRequestView{}, &orion2.PublicParamsRequestView{})
+	}
 
 	return nil
 }
