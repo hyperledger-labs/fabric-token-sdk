@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -48,6 +49,15 @@ func (o *OutputStream) StateAt(index int, state interface{}) error {
 }
 
 func (o *OutputStream) Validate() error {
-	// TODO: implement
+	// all outputs must have quantity set to 1
+	for _, output := range o.OutputStream.Outputs() {
+		q, err := token2.ToQuantity(output.Quantity, 64)
+		if err != nil {
+			return errors.Wrapf(err, "failed to parse quantity [%s]", output.Quantity)
+		}
+		if q.Cmp(token2.NewQuantityFromUInt64(1)) != 0 {
+			return errors.New("all outputs must have quantity set to 1")
+		}
+	}
 	return nil
 }
