@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -28,12 +26,10 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
-	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -61,27 +57,10 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set TMS Provider")
+	pm := NewProcessorManager(p.registry)
 	tmsProvider := core.NewTMSProvider(
 		p.registry,
-		func(network, channel, namespace string) error {
-			n := fabric.GetFabricNetworkService(p.registry, network)
-			if n == nil && orion.GetOrionNetworkService(p.registry, network) != nil {
-				return nil
-			}
-			if err := n.ProcessorManager().AddProcessor(
-				namespace,
-				fabric4.NewTokenRWSetProcessor(
-					n,
-					namespace,
-					p.registry,
-					network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}),
-					network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
-				),
-			); err != nil {
-				return errors.Wrapf(err, "failed adding transaction processors")
-			}
-			return nil
-		},
+		pm.New,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 

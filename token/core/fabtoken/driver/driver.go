@@ -9,7 +9,7 @@ package driver
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -45,7 +45,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	qe := v.TokenVault().QueryEngine()
 	lm := n.LocalMembership()
 
-	cm, err := orion.NewManager(view2.GetConfigService(sp), networkID, channel, namespace)
+	cm, err := config.NewManager(view2.GetConfigService(sp), networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
