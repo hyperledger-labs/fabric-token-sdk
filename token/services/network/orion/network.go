@@ -11,12 +11,17 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"sync"
 )
 
 type Network struct {
 	sp view2.ServiceProvider
 	n  *orion.NetworkService
+
+	vaultCacheLock sync.RWMutex
+	vaultCache     map[string]driver.Vault
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *orion.NetworkService) *Network {
@@ -28,19 +33,49 @@ func (n *Network) Name() string {
 }
 
 func (n *Network) Channel() string {
-	panic("channels not supported")
+	return ""
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
-	panic("implement me")
+	// check cache
+	n.vaultCacheLock.RLock()
+	v, ok := n.vaultCache[namespace]
+	n.vaultCacheLock.RUnlock()
+	if ok {
+		return v, nil
+	}
+
+	// lock
+	n.vaultCacheLock.Lock()
+	defer n.vaultCacheLock.Unlock()
+
+	// check cache again
+	v, ok = n.vaultCache[namespace]
+	if ok {
+		return v, nil
+	}
+
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.n))
+	nv := &nv{
+		v:          n.n.Vault(),
+		tokenVault: tokenVault,
+	}
+	// store in cache
+	n.vaultCache[namespace] = nv
+
+	return nv, nil
 }
 
 func (n *Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
-	panic("implement me")
+	rws, err := n.n.Vault().GetRWSet(id, results)
+	if err != nil {
+		return nil, err
+	}
+	return rws, nil
 }
 
 func (n *Network) StoreEnvelope(id string, env []byte) error {
-	panic("implement me")
+	return n.n.Vault().StoreEnvelope(id, env)
 }
 
 func (n *Network) Broadcast(blob interface{}) error {
@@ -60,7 +95,7 @@ func (n *Network) NewEnvelope() driver.Envelope {
 }
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	panic("implement me")
+	return n.n.Vault().StoreTransient(id, orion.TransientMap(transient))
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -104,4 +139,29 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	panic("implement me")
+}
+
+type nv struct {
+	v          *orion.Vault
+	tokenVault *vault.Vault
+}
+
+func (v *nv) GetLastTxID() (string, error) {
+	return v.v.GetLastTxID()
+}
+
+func (v *nv) ListUnspentTokens() (*token2.UnspentTokens, error) {
+	return v.tokenVault.QueryEngine().ListUnspentTokens()
+}
+
+func (v *nv) Exists(id *token2.ID) bool {
+	return v.tokenVault.CertificationStorage().Exists(id)
+}
+
+func (v *nv) Store(certifications map[*token2.ID][]byte) error {
+	return v.tokenVault.CertificationStorage().Store(certifications)
+}
+
+func (v *nv) TokenVault() *vault.Vault {
+	return v.tokenVault
 }

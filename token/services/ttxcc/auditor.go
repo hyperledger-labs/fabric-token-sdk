@@ -238,8 +238,8 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 		return errors.Wrapf(err, "failed storing transient")
 	}
 
-	ch := network.GetInstance(context, tx.Network(), tx.Channel())
-	rws, err := ch.GetRWSet(tx.ID(), env.Results())
+	backend := network.GetInstance(context, tx.Network(), tx.Channel())
+	rws, err := backend.GetRWSet(tx.ID(), env.Results())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
 	}
@@ -249,7 +249,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
 	}
-	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 

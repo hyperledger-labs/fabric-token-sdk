@@ -93,7 +93,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	// 3. Endorse and return the Fabric transaction envelope
-	env, err := c.callChaincode(context)
+	env, err := c.requestApproval(context)
 	if err != nil {
 		return nil, err
 	}
@@ -333,10 +333,10 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	return distributionList, nil
 }
 
-func (c *collectEndorsementsView) callChaincode(context view.Context) (*network.Envelope, error) {
+func (c *collectEndorsementsView) requestApproval(context view.Context) (*network.Envelope, error) {
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "start", "callChaincode", c.tx.ID())
-	defer agent.EmitKey(0, "ttxcc", "end", "callChaincode", c.tx.ID())
+	agent.EmitKey(0, "ttxcc", "start", "requestApproval", c.tx.ID())
+	defer agent.EmitKey(0, "ttxcc", "end", "requestApproval", c.tx.ID())
 
 	requestRaw, err := c.tx.TokenRequest.RequestToBytes()
 	if err != nil {
@@ -453,8 +453,8 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			}
 
 			// Inform the vault about the transaction
-			ch := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
-			rws, err := ch.GetRWSet(c.tx.ID(), env.Results())
+			backend := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
+			rws, err := backend.GetRWSet(c.tx.ID(), env.Results())
 			if err != nil {
 				return errors.WithMessagef(err, "failed getting rwset for tx [%s]", c.tx.ID())
 			}
@@ -464,7 +464,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			if err != nil {
 				return errors.WithMessagef(err, "failed marshalling tx env [%s]", c.tx.ID())
 			}
-			if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
+			if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 				return errors.WithMessagef(err, "failed storing tx env [%s]", c.tx.ID())
 			}
 
@@ -647,8 +647,8 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
-	ch := network.GetInstance(context, tx.Network(), tx.Channel())
-	rws, err := ch.GetRWSet(tx.ID(), env.Results())
+	backend := network.GetInstance(context, tx.Network(), tx.Channel())
+	rws, err := backend.GetRWSet(tx.ID(), env.Results())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
 	}
@@ -659,7 +659,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
 	}
-	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 

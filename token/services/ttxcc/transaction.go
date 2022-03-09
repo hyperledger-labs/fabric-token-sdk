@@ -264,9 +264,20 @@ func (t *Transaction) storeTransient() error {
 }
 
 func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
-	t.Payload.TxID.Nonce = envelope.Nonce()
-	t.Payload.TxID.Creator = envelope.Creator()
-	t.Payload.ID = network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(&t.Payload.TxID)
+	if len(envelope.Nonce()) != 0 {
+		networkTxID := &network.TxID{
+			Nonce:   envelope.Nonce(),
+			Creator: envelope.Creator(),
+		}
+		tempTXID := network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(networkTxID)
+		if tempTXID != envelope.TxID() {
+			return errors.Errorf("txid mismatch, expected [%s], got [%s]", tempTXID, envelope.TxID())
+		}
+	}
+
+	if t.Payload.ID != envelope.TxID() {
+		return errors.Errorf("txid mismatch, expected [%s], got [%s]", t.Payload.ID, envelope.TxID())
+	}
 	t.Envelope = envelope
 
 	return nil

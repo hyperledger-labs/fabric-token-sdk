@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion/services/otx"
 	"github.com/hyperledger-labs/orion-server/pkg/types"
+	"github.com/pkg/errors"
 )
 
 type ReadOnlyRWSWrapper struct {
@@ -83,4 +84,47 @@ func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string
 
 func (r *RWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("implement me")
+}
+
+type OrionRWSWrapper struct {
+	r *orion.RWSet
+}
+
+func NewOrionRWSWrapper(r *orion.RWSet) *OrionRWSWrapper {
+	return &OrionRWSWrapper{r: r}
+}
+
+func (rwset *OrionRWSWrapper) SetState(namespace string, key string, value []byte) error {
+	return rwset.r.SetState(namespace, key, value)
+}
+
+func (rwset *OrionRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+	return rwset.r.GetState(namespace, key)
+}
+
+func (rwset *OrionRWSWrapper) DeleteState(namespace string, key string) error {
+	return rwset.r.DeleteState(namespace, key)
+}
+
+func (rwset *OrionRWSWrapper) Bytes() ([]byte, error) {
+	return rwset.r.Bytes()
+}
+
+func (rwset *OrionRWSWrapper) Done() {
+	rwset.r.Done()
+}
+
+func (rwset *OrionRWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
+	return rwset.r.SetStateMetadata(namespace, key, metadata)
+}
+
+func (rwset *OrionRWSWrapper) Equals(r interface{}, namespace string) error {
+	switch t := r.(type) {
+	case *OrionRWSWrapper:
+		return rwset.r.Equals(t.r, namespace)
+	case *orion.RWSet:
+		return rwset.r.Equals(t, namespace)
+	default:
+		return errors.Errorf("invalid type, got [%T]", t)
+	}
 }
