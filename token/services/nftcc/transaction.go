@@ -8,7 +8,6 @@ package nftcc
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
@@ -80,7 +79,7 @@ func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recip
 		return err
 	}
 	// marshal state to json
-	stateJSON, err := json.Marshal(state)
+	stateJSON, err := Marshal(state)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal state")
 	}
@@ -92,7 +91,7 @@ func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recip
 
 func (t *Transaction) Transfer(wallet *token.OwnerWallet, state interface{}, recipient view.Identity, opts ...token.TransferOption) error {
 	// marshal state to json
-	stateJSON, err := json.Marshal(state)
+	stateJSON, err := Marshal(state)
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal state")
 	}

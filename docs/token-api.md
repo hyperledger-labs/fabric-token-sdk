@@ -15,7 +15,7 @@ A token consists of the following triplet:
 These tokens are `fungible` with the respect to the same type. 
 In particular, tokens with the same denomination can be merged and split, if not otherwise forbidden.
 
-It looks like then that the above definition allows the developers to define non-fungible tokens as well.
+It looks like that the above definition allows the developers to define non-fungible tokens as well.
 A non-fungible token is a token whose quantity is `1` and whose type is `unique`. 
 If uniqueness is guaranteed, then such a token is by all means a non-fungible token.
 Drivers are free to implement additional semantics for non-fungible tokens.

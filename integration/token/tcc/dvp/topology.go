@@ -88,15 +88,9 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
 
-	// Monitoring
-	//monitoringTopology := monitoring.NewTopology()
-	//monitoringTopology.EnableHyperledgerExplorer()
-	//monitoringTopology.EnablePrometheusGrafana()
-
 	return []api.Topology{
 		fabricTopology,
 		tokenTopology,
 		fscTopology,
-		//monitoringTopology,
 	}
 }

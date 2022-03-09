@@ -8,7 +8,6 @@ package nftcc
 
 import (
 	"encoding/base64"
-	"encoding/json"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -42,7 +41,7 @@ func (o *OutputStream) StateAt(index int, state interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to decode type")
 	}
-	if err := json.Unmarshal(decoded, state); err == nil {
+	if err := Unmarshal(decoded, state); err == nil {
 		return errors.Wrap(err, "failed to unmarshal state")
 	}
 	return nil

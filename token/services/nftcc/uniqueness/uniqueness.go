@@ -10,7 +10,6 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
-	"encoding/json"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/pkg/errors"
@@ -58,9 +57,9 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 		}
 	}
 
-	raw, err := json.Marshal(state)
+	raw, err := Marshal(state)
 	if err != nil {
-		return "", errors.WithMessage(err, "failed to marshal state")
+		return "", errors.Wrapf(err, "failed to marshal state")
 	}
 
 	hash := sha256.New()
@@ -69,7 +68,7 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 		return "", errors.New("error writing to hash")
 	}
 	if err != nil {
-		return "", errors.WithMessage(err, "error writing to hash")
+		return "", errors.Wrapf(err, "error writing to hash")
 	}
 	digest := hash.Sum(nil)
 
