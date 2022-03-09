@@ -32,7 +32,7 @@ func (v *Vault) NewRWSet(txid string) (driver.RWSet, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewOrionRWSWrapper(rws), nil
+	return NewRWSWrapper(rws), nil
 }
 
 type Executor struct {

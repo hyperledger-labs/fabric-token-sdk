@@ -46,13 +46,13 @@ func (r *ReadOnlyRWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("programming error: this should not be called")
 }
 
-type RWSWrapper struct {
+type TxRWSWrapper struct {
 	me string
 	db string
 	tx *orion.Transaction
 }
 
-func (r *RWSWrapper) SetState(namespace string, key string, value []byte) error {
+func (r *TxRWSWrapper) SetState(namespace string, key string, value []byte) error {
 	return r.tx.Put(
 		r.db, key, value,
 		&types.AccessControl{
@@ -61,69 +61,69 @@ func (r *RWSWrapper) SetState(namespace string, key string, value []byte) error 
 	)
 }
 
-func (r *RWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+func (r *TxRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
 	res, _, err := r.tx.Get(r.db, key)
 	return res, err
 }
 
-func (r *RWSWrapper) DeleteState(namespace string, key string) error {
+func (r *TxRWSWrapper) DeleteState(namespace string, key string) error {
 	return r.tx.Delete(r.db, key)
 }
 
-func (r *RWSWrapper) Bytes() ([]byte, error) {
+func (r *TxRWSWrapper) Bytes() ([]byte, error) {
 	return nil, nil
 }
 
-func (r *RWSWrapper) Done() {
+func (r *TxRWSWrapper) Done() {
 	return
 }
 
-func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
+func (r *TxRWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
 	return nil
 }
 
-func (r *RWSWrapper) Equals(right interface{}, namespace string) error {
+func (r *TxRWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("implement me")
 }
 
-type OrionRWSWrapper struct {
+type RWSWrapper struct {
 	r *orion.RWSet
 }
 
-func NewOrionRWSWrapper(r *orion.RWSet) *OrionRWSWrapper {
-	return &OrionRWSWrapper{r: r}
+func NewRWSWrapper(r *orion.RWSet) *RWSWrapper {
+	return &RWSWrapper{r: r}
 }
 
-func (rwset *OrionRWSWrapper) SetState(namespace string, key string, value []byte) error {
-	return rwset.r.SetState(namespace, key, value)
+func (r *RWSWrapper) SetState(namespace string, key string, value []byte) error {
+	return r.r.SetState(namespace, key, value)
 }
 
-func (rwset *OrionRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
-	return rwset.r.GetState(namespace, key)
+func (r *RWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+	return r.r.GetState(namespace, key)
 }
 
-func (rwset *OrionRWSWrapper) DeleteState(namespace string, key string) error {
-	return rwset.r.DeleteState(namespace, key)
+func (r *RWSWrapper) DeleteState(namespace string, key string) error {
+	return r.r.DeleteState(namespace, key)
 }
 
-func (rwset *OrionRWSWrapper) Bytes() ([]byte, error) {
-	return rwset.r.Bytes()
+func (r *RWSWrapper) Bytes() ([]byte, error) {
+	return r.r.Bytes()
 }
 
-func (rwset *OrionRWSWrapper) Done() {
-	rwset.r.Done()
+func (r *RWSWrapper) Done() {
+	r.r.Done()
 }
 
-func (rwset *OrionRWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return rwset.r.SetStateMetadata(namespace, key, metadata)
+func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
+	return r.r.SetStateMetadata(namespace, key, metadata)
 }
 
-func (rwset *OrionRWSWrapper) Equals(r interface{}, namespace string) error {
-	switch t := r.(type) {
-	case *OrionRWSWrapper:
-		return rwset.r.Equals(t.r, namespace)
+func (r *RWSWrapper) Equals(right interface{}, namespace string) error {
+	switch t := right.(type) {
+	case *RWSWrapper:
+		return r.r.Equals(t.r, namespace)
 	case *orion.RWSet:
-		return rwset.r.Equals(t, namespace)
+		return r.r.Equals(t, namespace)
 	default:
 		return errors.Errorf("invalid type, got [%T]", t)
 	}

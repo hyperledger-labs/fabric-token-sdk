@@ -25,7 +25,7 @@ type ApprovalRequest struct {
 }
 
 type ApprovalResponse struct {
-	Tx []byte
+	Envelope []byte
 }
 
 type RequestApprovalView struct {
@@ -65,7 +65,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
 	env := r.Network.NewEnvelope()
-	if err := env.FromBytes(response.Tx); err != nil {
+	if err := env.FromBytes(response.Envelope); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal transaction")
 	}
 	return env, nil
@@ -86,7 +86,7 @@ func (r *RequestApprovalResponderView) Call(context view.Context) (interface{}, 
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
-	if err := session.Send(&ApprovalResponse{Tx: txRaw}); err != nil {
+	if err := session.Send(&ApprovalResponse{Envelope: txRaw}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
@@ -135,13 +135,13 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to create transaction [%s]", request.TxID)
 	}
-	rwset := &RWSWrapper{
+	rws := &TxRWSWrapper{
 		me: custodianID,
 		db: request.Namespace,
 		tx: tx,
 	}
 	issuingValidator := &AllIssuersValid{}
-	t := translator.New(issuingValidator, request.TxID, rwset, "")
+	t := translator.New(issuingValidator, request.TxID, rws, "")
 	for _, action := range actions {
 		err = t.Write(action)
 		if err != nil {
@@ -154,12 +154,12 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// close transaction
-	txRaw, err := tx.SingAndClose()
+	envelopeRaw, err := tx.SingAndClose()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
 	}
 
-	return txRaw, nil
+	return envelopeRaw, nil
 }
 
 type LedgerWrapper struct {
