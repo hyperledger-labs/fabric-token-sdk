@@ -21,14 +21,14 @@ var _ = Describe("Orion EndToEnd", func() {
 	)
 
 	AfterEach(func() {
-		network.DeleteOnStop = false
+		//network.DeleteOnStop = false
 		network.Stop()
 	})
 
 	Describe("Orion FabToken", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "/home/vagrant/testdata", basic.Topology("orion", "fabtoken")...)
+			network, err = integration.New(StartPortDlog(), "", basic.Topology("orion", "fabtoken")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

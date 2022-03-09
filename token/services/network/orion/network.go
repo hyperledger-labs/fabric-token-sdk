@@ -23,55 +23,70 @@ func NewNetwork(sp view2.ServiceProvider, n *orion.NetworkService) *Network {
 	return &Network{sp: sp, n: n}
 }
 
-func (n Network) Name() string {
+func (n *Network) Name() string {
 	return n.n.Name()
 }
 
-func (n Network) Channel() string {
+func (n *Network) Channel() string {
 	panic("channels not supported")
 }
 
-func (n Network) Vault(namespace string) (driver.Vault, error) {
+func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	panic("implement me")
 }
 
-func (n Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
+func (n *Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
 	panic("implement me")
 }
 
-func (n Network) StoreEnvelope(id string, env []byte) error {
+func (n *Network) StoreEnvelope(id string, env []byte) error {
 	panic("implement me")
 }
 
-func (n Network) Broadcast(blob interface{}) error {
+func (n *Network) Broadcast(blob interface{}) error {
 	panic("implement me")
 }
 
-func (n Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
+func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
 	panic("implement me")
 }
 
-func (n Network) IsFinal(id string) error {
+func (n *Network) IsFinal(id string) error {
 	panic("implement me")
 }
 
-func (n Network) NewEnvelope() driver.Envelope {
+func (n *Network) NewEnvelope() driver.Envelope {
+	return n.n.TransactionManager().NewEnvelope()
+}
+
+func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
 	panic("implement me")
 }
 
-func (n Network) StoreTransient(id string, transient driver.TransientMap) error {
-	panic("implement me")
+func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+	envBoxed, err := view2.GetManager(context).InitiateView(NewRequestApprovalView(
+		n, namespace,
+		requestRaw, signer, n.ComputeTxID(&txID),
+	))
+	if err != nil {
+		return nil, err
+	}
+	return envBoxed.(driver.Envelope), nil
 }
 
-func (n Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
-	panic("implement me")
+func (n *Network) ComputeTxID(id *driver.TxID) string {
+	logger.Debugf("compute tx id for [%s]", id.String())
+	temp := &orion.TxID{
+		Nonce:   id.Nonce,
+		Creator: id.Creator,
+	}
+	res := n.n.TransactionManager().ComputeTxID(temp)
+	id.Nonce = temp.Nonce
+	id.Creator = temp.Creator
+	return res
 }
 
-func (n Network) ComputeTxID(id *driver.TxID) string {
-	panic("implement me")
-}
-
-func (n Network) FetchPublicParameters(namespace string) ([]byte, error) {
+func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	pp, err := view2.GetManager(n.sp).InitiateView(NewPublicParamsRequestView(n.Name(), namespace))
 	if err != nil {
 		return nil, err
@@ -79,14 +94,14 @@ func (n Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return pp.([]byte), nil
 }
 
-func (n Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
 	panic("implement me")
 }
 
-func (n Network) LocalMembership() driver.LocalMembership {
+func (n *Network) LocalMembership() driver.LocalMembership {
 	panic("implement me")
 }
 
-func (n Network) GetEnrollmentID(raw []byte) (string, error) {
+func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	panic("implement me")
 }

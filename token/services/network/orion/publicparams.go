@@ -59,7 +59,11 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
-	if err := session.Send(&PublicParamsRequest{Network: v.Network}); err != nil {
+	request := &PublicParamsRequest{
+		Network:   v.Network,
+		Namespace: v.Namespace,
+	}
+	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &PublicParamsResponse{}
@@ -116,7 +120,7 @@ func ReadPublicParameters(context view2.ServiceProvider, network, namespace stri
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", network)
 	}
-	rwset := &RWSWrapper{qe: qe}
+	rwset := &ReadOnlyRWSWrapper{qe: qe}
 	issuingValidator := &AllIssuersValid{}
 	w := translator.New(issuingValidator, "", rwset, "")
 	ppRaw, err := w.ReadSetupParameters()
