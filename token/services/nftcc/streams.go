@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -41,7 +42,7 @@ func (o *OutputStream) StateAt(index int, state interface{}) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to decode type")
 	}
-	if err := Unmarshal(decoded, state); err == nil {
+	if err := marshaller.Unmarshal(decoded, state); err == nil {
 		return errors.Wrap(err, "failed to unmarshal state")
 	}
 	return nil

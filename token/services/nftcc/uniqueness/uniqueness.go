@@ -12,6 +12,7 @@ import (
 	"encoding/base64"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -57,7 +58,7 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 		}
 	}
 
-	raw, err := Marshal(state)
+	raw, err := marshaller.Marshal(state)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to marshal state")
 	}

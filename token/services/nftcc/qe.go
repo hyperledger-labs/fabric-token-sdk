@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"github.com/thedevsaddam/gojsonq"
@@ -69,7 +70,7 @@ func (s *QueryExecutor) QueryByKey(house interface{}, key string, value string) 
 			if err != nil {
 				return errors.Wrap(err, "failed to decode type")
 			}
-			if err := Unmarshal(decoded, house); err == nil {
+			if err := marshaller.Unmarshal(decoded, house); err == nil {
 				return errors.Wrap(err, "failed to unmarshal state")
 			}
 		}
