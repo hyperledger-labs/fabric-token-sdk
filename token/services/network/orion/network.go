@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 	"sync"
 )
 
@@ -134,11 +136,15 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
-	panic("implement me")
+	return &lm{lm: n.n.IdentityManager()}
 }
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	panic("implement me")
+	ai := &idemix2.AuditInfo{}
+	if err := ai.FromBytes(raw); err != nil {
+		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
+	}
+	return ai.EnrollmentID(), nil
 }
 
 type nv struct {
