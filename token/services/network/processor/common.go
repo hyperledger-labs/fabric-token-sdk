@@ -3,22 +3,32 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package fabric
+
+package processor
 
 import (
 	"encoding/json"
-
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
-func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rws *fabric.RWSet) error {
+var logger = flogging.MustGetLogger("token-sdk.network.processor")
+
+type GetStateOpt int
+
+type RWSet interface {
+	SetState(namespace string, key string, value []byte) error
+	GetState(namespace string, key string) ([]byte, error)
+	GetStateMetadata(namespace, key string) (map[string][]byte, error)
+	DeleteState(namespace string, key string) error
+	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
+}
+
+func DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -27,7 +37,7 @@ func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rw
 		logger.Debugf("delete key [%s]", outputID)
 	}
 
-	meta, err := rws.GetStateMetadata(ns, outputID, fabric.FromStorage)
+	meta, err := rws.GetStateMetadata(ns, outputID)
 	if err != nil {
 		return errors.Wrapf(err, "error getting metadata for key [%s]", outputID)
 	}
@@ -39,7 +49,7 @@ func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rw
 			return errors.Wrapf(err, "error unmarshalling IDs for key [%s]", outputID)
 		}
 		// delete extended tokens as well
-		tokenRaw, err := rws.GetState(ns, outputID, fabric.FromStorage)
+		tokenRaw, err := rws.GetState(ns, outputID)
 		if err != nil {
 			return errors.Wrapf(err, "error getting token for key [%s]", outputID)
 		}
@@ -71,7 +81,7 @@ func (r *RWSetProcessor) deleteFabToken(ns string, txID string, index uint64, rw
 	return nil
 }
 
-func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte, ids []string) error {
+func StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -116,7 +126,7 @@ func (r *RWSetProcessor) storeFabToken(ns string, txID string, index uint64, tok
 	return nil
 }
 
-func (r *RWSetProcessor) storeIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte, issuer view.Identity) error {
+func StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
@@ -157,7 +167,7 @@ func (r *RWSetProcessor) storeIssuedHistoryToken(ns string, txID string, index u
 	return nil
 }
 
-func (r *RWSetProcessor) storeAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws *fabric.RWSet, infoRaw []byte) error {
+func StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error {
 	outputID, err := keys.CreateAuditTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)

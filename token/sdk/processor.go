@@ -31,6 +31,7 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 		if err := ons.ProcessorManager().AddProcessor(
 			namespace,
 			orion2.NewTokenRWSetProcessor(
+				ons,
 				namespace,
 				p.sp,
 				network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}),

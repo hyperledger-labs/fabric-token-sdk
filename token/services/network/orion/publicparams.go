@@ -50,7 +50,7 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 
 	// this is not a custodian, connect to it
 	logger.Debugf("I'm not a custodian, connect to custodian")
-	custodian, err := GetCustodian(cp)
+	custodian, err := GetCustodian(cp, v.Network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
@@ -107,7 +107,7 @@ func ReadPublicParameters(context view2.ServiceProvider, network, namespace stri
 	if ons == nil {
 		return nil, errors.Errorf("failed to get orion network service for network [%s]", network)
 	}
-	custodianID, err := GetCustodian(view2.GetConfigService(context))
+	custodianID, err := GetCustodian(view2.GetConfigService(context), network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}

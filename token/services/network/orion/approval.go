@@ -41,7 +41,7 @@ func NewRequestApprovalView(network driver.Network, namespace string, requestRaw
 }
 
 func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
-	custodian, err := GetCustodian(view2.GetConfigService(context))
+	custodian, err := GetCustodian(view2.GetConfigService(context), r.Network.Name())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
@@ -107,7 +107,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	if ons == nil {
 		return nil, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
 	}
-	custodianID, err := GetCustodian(view2.GetConfigService(context))
+	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
