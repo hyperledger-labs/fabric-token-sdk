@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"strings"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion/services/otx"
 	"github.com/hyperledger-labs/orion-server/pkg/types"
@@ -17,11 +19,16 @@ type ReadOnlyRWSWrapper struct {
 	qe *orion.SessionQueryExecutor
 }
 
+func orionKey(key string) string {
+	return strings.ReplaceAll(key, string(rune(0)), "~")
+}
+
 func (r *ReadOnlyRWSWrapper) SetState(namespace string, key string, value []byte) error {
 	panic("programming error: this should not be called")
 }
 
 func (r *ReadOnlyRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+	key = orionKey(key)
 	res, _, err := r.qe.Get(key)
 	return res, err
 }
@@ -53,6 +60,7 @@ type TxRWSWrapper struct {
 }
 
 func (r *TxRWSWrapper) SetState(namespace string, key string, value []byte) error {
+	key = orionKey(key)
 	return r.tx.Put(
 		r.db, key, value,
 		&types.AccessControl{
@@ -62,11 +70,13 @@ func (r *TxRWSWrapper) SetState(namespace string, key string, value []byte) erro
 }
 
 func (r *TxRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+	key = orionKey(key)
 	res, _, err := r.tx.Get(r.db, key)
 	return res, err
 }
 
 func (r *TxRWSWrapper) DeleteState(namespace string, key string) error {
+	key = orionKey(key)
 	return r.tx.Delete(r.db, key)
 }
 
@@ -95,14 +105,17 @@ func NewRWSWrapper(r *orion.RWSet) *RWSWrapper {
 }
 
 func (r *RWSWrapper) SetState(namespace string, key string, value []byte) error {
+	key = orionKey(key)
 	return r.r.SetState(namespace, key, value)
 }
 
 func (r *RWSWrapper) GetState(namespace string, key string) ([]byte, error) {
+	key = orionKey(key)
 	return r.r.GetState(namespace, key)
 }
 
 func (r *RWSWrapper) DeleteState(namespace string, key string) error {
+	key = orionKey(key)
 	return r.r.DeleteState(namespace, key)
 }
 
@@ -115,6 +128,7 @@ func (r *RWSWrapper) Done() {
 }
 
 func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
+	key = orionKey(key)
 	return r.r.SetStateMetadata(namespace, key, metadata)
 }
 
