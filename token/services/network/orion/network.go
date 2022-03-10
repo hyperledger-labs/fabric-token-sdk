@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"sync"
+
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -15,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 type Network struct {
@@ -27,7 +28,7 @@ type Network struct {
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *orion.NetworkService) *Network {
-	return &Network{sp: sp, n: n}
+	return &Network{sp: sp, n: n, vaultCache: map[string]driver.Vault{}}
 }
 
 func (n *Network) Name() string {
