@@ -111,6 +111,11 @@ type nv struct {
 	tokenVault *vault.Vault
 }
 
+func (v *nv) Status(txID string) (driver.ValidationCode, error) {
+	vc, _, err := v.v.Status(txID)
+	return driver.ValidationCode(vc), err
+}
+
 func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }

@@ -5,6 +5,8 @@ SPDX-License-Identifier: Apache-2.0
 */
 package driver
 
+import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 type SerializedPublicParameters struct {
 	Identifier string
 	Raw        []byte
@@ -28,6 +30,7 @@ type PublicParameters interface {
 	MaxTokenValue() uint64
 	CertificationDriver() string
 	Bytes() ([]byte, error)
+	Auditors() []view.Identity
 }
 
 type PublicParamsManager interface {

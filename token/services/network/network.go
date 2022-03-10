@@ -21,6 +21,17 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+type ValidationCode int
+
+const (
+	_               ValidationCode = iota
+	Valid                          // Transaction is valid and committed
+	Invalid                        // Transaction is invalid and has been discarded
+	Busy                           // Transaction does not yet have a validity state
+	Unknown                        // Transaction is unknown
+	HasDependencies                // Transaction is unknown but has known dependencies
+)
+
 type GetFunc func() (view.Identity, []byte, error)
 
 type TxID struct {
@@ -150,6 +161,11 @@ func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
 
 func (v *Vault) TokenVault() *vault.Vault {
 	return v.v.TokenVault()
+}
+
+func (v *Vault) Status(id string) (ValidationCode, error) {
+	vc, err := v.v.Status(id)
+	return ValidationCode(vc), err
 }
 
 type LocalMembership struct {

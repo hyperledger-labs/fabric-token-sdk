@@ -6,7 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package token
 
-import tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+)
 
 type PublicParamsFetcher interface {
 	Fetch() ([]byte, error)
@@ -44,4 +47,8 @@ func (c *PublicParametersManager) ForceFetch() error {
 
 func (c *PublicParametersManager) Identifier() string {
 	return c.ppm.PublicParameters().Identifier()
+}
+
+func (c *PublicParametersManager) Auditors() []view.Identity {
+	return c.ppm.PublicParameters().Auditors()
 }

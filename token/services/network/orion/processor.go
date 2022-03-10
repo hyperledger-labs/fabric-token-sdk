@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -17,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 	"strconv"
+	"strings"
 )
 
 type ONS interface {
@@ -62,23 +62,6 @@ func (r *RWSetProcessor) Process(req orion.Request, tx orion.ProcessTransaction,
 	}
 
 	return r.tokenRequest(req, tx, rws, ns)
-}
-
-func (r *RWSetProcessor) setup(req fabric.Request, tx fabric.ProcessTransaction, rws *orion.RWSet, ns string) error {
-	logger.Debugf("[setup] store setup bundle")
-	key, err := keys.CreateSetupBundleKey()
-	if err != nil {
-		return err
-	}
-	logger.Debugf("[setup] store setup bundle [%s,%s]", key, req.ID())
-	err = rws.SetState(ns, key, []byte(req.ID()))
-	if err != nil {
-		logger.Errorf("failed setting setup bundle state [%s,%s]", key, req.ID())
-		return errors.Wrapf(err, "failed setting setup bundle state [%s,%s]", key, req.ID())
-	}
-	logger.Debugf("[setup] store setup bundle done")
-
-	return nil
 }
 
 func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransaction, rws *orion.RWSet, ns string) error {
@@ -144,7 +127,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Parsing write key [%s]", key)
 		}
-		prefix, components, err := keys.SplitCompositeKey(key)
+		prefix, components, err := keys.SplitCompositeKey(strings.ReplaceAll(key, "~", string(rune(0))))
 		if err != nil {
 			panic(err)
 		}

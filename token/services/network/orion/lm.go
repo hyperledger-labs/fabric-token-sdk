@@ -14,14 +14,15 @@ import (
 
 type lm struct {
 	lm *orion.IdentityManager
+	ip IdentityProvider
 }
 
 func (n *lm) DefaultIdentity() view.Identity {
-	return view.Identity(n.lm.Me())
+	return n.ip.DefaultIdentity()
 }
 
 func (n *lm) AnonymousIdentity() view.Identity {
-	panic("implement me")
+	return view.Identity(n.lm.Me())
 }
 
 func (n *lm) IsMe(id view.Identity) bool {

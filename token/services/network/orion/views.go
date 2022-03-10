@@ -13,6 +13,8 @@ import (
 func InstallViews(sp view.ServiceProvider) error {
 	logger.Debugf("Installing custodian views...")
 	view.GetRegistry(sp).RegisterResponder(&RespondPublicParamsRequestView{}, &PublicParamsRequestView{})
+	view.GetRegistry(sp).RegisterResponder(&RequestApprovalResponderView{}, &RequestApprovalView{})
+	view.GetRegistry(sp).RegisterResponder(&BroadcastResponderView{}, &BroadcastView{})
 
 	return nil
 }

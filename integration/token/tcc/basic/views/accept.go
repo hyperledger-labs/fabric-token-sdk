@@ -6,9 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -56,20 +56,20 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in busy state in the vault
-	fns := fabric.GetFabricNetworkService(context, tx.Network())
-	ch, err := fns.Channel(tx.Channel())
-	assert.NoError(err, "failed to retrieve channel [%s]", tx.Channel())
-	vc, _, err := ch.Vault().Status(tx.ID())
+	net := network.GetInstance(context, tx.Network(), tx.Channel())
+	vault, err := net.Vault(tx.Namespace())
+	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
+	vc, err := vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(fabric.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Before completing, the recipient waits for finality of the transaction
 	_, err = context.RunView(ttxcc.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
-	vc, _, err = ch.Vault().Status(tx.ID())
+	vc, err = vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(fabric.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	return nil, nil
 }

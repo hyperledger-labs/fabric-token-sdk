@@ -19,16 +19,26 @@ import (
 	"github.com/pkg/errors"
 )
 
+type IdentityProvider interface {
+	DefaultIdentity() view.Identity
+}
+
 type Network struct {
 	sp view2.ServiceProvider
 	n  *orion.NetworkService
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
+	ip             IdentityProvider
 }
 
-func NewNetwork(sp view2.ServiceProvider, n *orion.NetworkService) *Network {
-	return &Network{sp: sp, n: n, vaultCache: map[string]driver.Vault{}}
+func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService) *Network {
+	return &Network{
+		sp:         sp,
+		ip:         ip,
+		n:          n,
+		vaultCache: map[string]driver.Vault{},
+	}
 }
 
 func (n *Network) Name() string {
@@ -82,7 +92,14 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 }
 
 func (n *Network) Broadcast(blob interface{}) error {
-	panic("implement me")
+	var err error
+	switch b := blob.(type) {
+	case driver.Envelope:
+		_, err = view2.GetManager(n.sp).InitiateView(NewBroadcastView(n, b))
+	default:
+		_, err = view2.GetManager(n.sp).InitiateView(NewBroadcastView(n, b))
+	}
+	return err
 }
 
 func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
@@ -90,7 +107,7 @@ func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error
 }
 
 func (n *Network) IsFinal(id string) error {
-	panic("implement me")
+	return n.n.Finality().IsFinal(id)
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {
@@ -137,7 +154,10 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
-	return &lm{lm: n.n.IdentityManager()}
+	return &lm{
+		lm: n.n.IdentityManager(),
+		ip: n.ip,
+	}
 }
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
@@ -171,4 +191,9 @@ func (v *nv) Store(certifications map[*token2.ID][]byte) error {
 
 func (v *nv) TokenVault() *vault.Vault {
 	return v.tokenVault
+}
+
+func (v *nv) Status(txID string) (driver.ValidationCode, error) {
+	vc, err := v.v.Status(txID)
+	return driver.ValidationCode(vc), err
 }

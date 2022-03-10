@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package vault
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -47,7 +49,8 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 	}
 
 	// Create new vault
-	if fabric.GetFabricNetworkService(v.sp, network) != nil {
+	fns := fabric.GetFabricNetworkService(v.sp, network)
+	if fns != nil {
 		ch := fabric.GetChannel(v.sp, network, channel)
 		res = vault.New(
 			v.sp,
@@ -55,6 +58,16 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 			namespace,
 			fabric2.NewVault(ch),
 		)
+	} else {
+		ons := orion.GetOrionNetworkService(v.sp, network)
+		if ons != nil {
+			res = vault.New(
+				v.sp,
+				"",
+				namespace,
+				orion2.NewVault(ons),
+			)
+		}
 	}
 
 	// update cache

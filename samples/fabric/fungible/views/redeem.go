@@ -8,8 +8,8 @@ package views
 
 import (
 	"encoding/json"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -40,7 +40,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(fabric.GetDefaultIdentityProvider(context).Identity("auditor")),
+		ttxcc.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating transaction")
 

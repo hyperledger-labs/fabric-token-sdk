@@ -130,16 +130,23 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
 	}
 
-	v, err := a.tx.TokenService().SigService().AuditorVerifier(a.tx.Opts.Auditor)
-	if err != nil {
-		return nil, err
+	validAuditing := false
+	for _, auditor := range a.tx.TokenService().PublicParametersManager().Auditors() {
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
+		if err != nil {
+			logger.Debugf("Failed to get auditor verifier for %s", auditor.UniqueID())
+		}
+		if err := v.Verify(signed, msg.Payload); err != nil {
+			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
+		} else {
+			validAuditing = true
+			break
+		}
 	}
-	if err := v.Verify(signed, msg.Payload); err != nil {
-		return nil, errors.Wrapf(err, "failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
+	if !validAuditing {
+		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
 	}
-
 	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
-
 	return nil, nil
 }
 

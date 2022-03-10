@@ -9,10 +9,9 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -66,7 +65,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
 		ttxcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/issue", []byte("issue"))

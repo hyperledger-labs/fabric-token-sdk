@@ -23,7 +23,11 @@ func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.N
 		return nil, errors.Errorf("network %s not found", network)
 	}
 
-	return NewNetwork(sp, n), nil
+	return NewNetwork(
+		sp,
+		view.GetIdentityProvider(sp),
+		n,
+	), nil
 }
 
 func init() {

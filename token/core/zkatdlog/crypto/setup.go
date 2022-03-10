@@ -79,6 +79,10 @@ func (pp *PublicParams) Bytes() ([]byte, error) {
 	return pp.Serialize()
 }
 
+func (pp *PublicParams) Auditors() []view.Identity {
+	return []view.Identity{pp.Auditor}
+}
+
 func (pp *PublicParams) Serialize() ([]byte, error) {
 	raw, err := json.Marshal(pp)
 	if err != nil {
