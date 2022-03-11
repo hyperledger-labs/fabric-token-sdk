@@ -9,34 +9,43 @@ package views
 import (
 	"encoding/json"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// Redeem contains the input information for a redeem operation
-type Redeem struct {
-	// Wallet is the identifier of the wallet that owns the tokens to redeem
+// Transfer contains the input information for a transfer
+type Transfer struct {
+	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
-	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
+	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
 	TokenIDs []*token.ID
-	// TokenType of tokens to redeem
+	// TokenType of tokens to transfer
 	TokenType string
-	// Quantity to redeem
+	// Quantity to transfer
 	Quantity uint64
+	// Recipient is the identity of the recipient's FSC node
+	Recipient string
+	// Retry tells if a retry must happen in case of a failure
+	Retry bool
 }
 
-type RedeemView struct {
-	*Redeem
+type TransferView struct {
+	*Transfer
 }
 
-func (t *RedeemView) Call(context view.Context) (interface{}, error) {
-	// The sender directly prepare the token transaction.
-	// The sender creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+func (t *TransferView) Call(context view.Context) (interface{}, error) {
+	// As a first step operation, the sender contacts the recipient's FSC node
+	// to ask for the identity to use to assign ownership of the freshly created token.
+	// Notice that, this step would not be required if the sender knew already which
+	// identity the recipient wants to use.
+	recipient, err := ttxcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(t.Recipient))
+	assert.NoError(err, "failed getting recipient")
+
+	// At this point, the sender is ready to prepare the token transaction.
+	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -48,28 +57,29 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	senderWallet := ttxcc.GetWallet(context, t.Wallet)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
-	// the sender adds a new redeem operation to the transaction following the instruction received.
-	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Redeem
+	// The sender adds a new transfer operation to the transaction following the instruction received.
+	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the Transfer
 	// function uses those tokens, otherwise the tokens will be selected on the spot.
 	// Token selection happens internally by invoking the default token selector:
 	// selector, err := tx.TokenService().SelectorManager().NewSelector(tx.ID())
 	// assert.NoError(err, "failed getting selector")
 	// selector.Select(wallet, amount, tokenType)
-	// It is also possible to pass a custom token selector to the Redeem function by using the relative opt:
+	// It is also possible to pass a custom token selector to the Transfer function by using the relative opt:
 	// token2.WithTokenSelector(selector).
-	err = tx.Redeem(
+	err = tx.Transfer(
 		senderWallet,
 		t.TokenType,
-		t.Quantity,
+		[]uint64{t.Quantity},
+		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")
 
 	// The sender is ready to collect all the required signatures.
 	// In this case, the sender's and the auditor's signatures.
-	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
 	// This is all done in one shot running the following view.
-	// Before completing, all recipients receive the approved Fabric transaction.
+	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
@@ -82,11 +92,11 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	return tx.ID(), nil
 }
 
-type RedeemViewFactory struct{}
+type TransferViewFactory struct{}
 
-func (p *RedeemViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RedeemView{Redeem: &Redeem{}}
-	err := json.Unmarshal(in, f.Redeem)
+func (p *TransferViewFactory) NewView(in []byte) (view.View, error) {
+	f := &TransferView{Transfer: &Transfer{}}
+	err := json.Unmarshal(in, f.Transfer)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

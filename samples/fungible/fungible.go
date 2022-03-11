@@ -8,11 +8,12 @@ package main
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/cmd"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/cmd/network"
 	view "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/view/cmd"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/fungible/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/topology"
 	"github.com/pkg/errors"
 )
 
@@ -31,7 +32,11 @@ func main() {
 		}
 		return nil
 	}
-	mainCmd.AddCommand(network.NewCmd(topology.Topology("dlog")...))
+	mainCmd.AddCommand(network.NewCmdWithMultipleTopologies(
+		map[string][]api.Topology{
+			"default": topology.Fabric("dlog"),
+			"orion":   topology.Orion("dlog"),
+		}))
 	mainCmd.AddCommand(view.NewCmd())
 	m.Execute()
 }

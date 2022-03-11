@@ -109,7 +109,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		}
 		recipient, err := w.GetRecipientIdentity()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to get recipient identity from wallet [%s]", w.ID())
 		}
 		return recipient, nil
 	} else {
@@ -118,7 +118,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		}
 		session, err := context.GetSession(context.Initiator(), f.Other)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to get session with [%s]", f.Other)
 		}
 
 		// Ask for identity
@@ -132,7 +132,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		}
 		err = session.Send(rrRaw)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to send recipient request")
 		}
 		agent.EmitKey(0, "ttxcc", "sent", "requestRecipientIdentity", session.Info().ID)
 
@@ -150,11 +150,11 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		recipientData := &RecipientData{}
 		if err := recipientData.FromBytes(payload); err != nil {
 			logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 		}
 		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
 			logger.Errorf("failed to register recipient identity: [%s]", err)
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to register recipient identity")
 		}
 
 		// Update the Endpoint Resolver
@@ -165,7 +165,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
 			}
-			return nil, err
+			return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, f.Other)
 		}
 
 		return recipientData.Identity, nil

@@ -10,13 +10,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/fungible/views"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
 )
 
-func Topology(tokenSDKDriver string) []api.Topology {
+func Fabric(tokenSDKDriver string) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -40,8 +39,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		token.WithDefaultIssuerIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
 	)
-	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
-	issuer.RegisterViewFactory("issued", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
+	issuer.RegisterViewFactory("issued", &views2.ListIssuedTokensViewFactory{})
 
 	// auditor
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
@@ -49,7 +48,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
 
 	// alice
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -58,12 +57,12 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
 	)
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	alice.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	alice.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	alice.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	alice.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
+	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
+	alice.RegisterViewFactory("transfer", &views2.TransferViewFactory{})
+	alice.RegisterViewFactory("redeem", &views2.RedeemViewFactory{})
+	alice.RegisterViewFactory("swap", &views2.SwapInitiatorViewFactory{})
+	alice.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
 
 	// bob
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
@@ -72,13 +71,13 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
 	)
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
-	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	bob.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	bob.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	bob.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
+	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
+	bob.RegisterResponder(&views2.SwapResponderView{}, &views2.SwapInitiatorView{})
+	bob.RegisterViewFactory("transfer", &views2.TransferViewFactory{})
+	bob.RegisterViewFactory("redeem", &views2.RedeemViewFactory{})
+	bob.RegisterViewFactory("swap", &views2.SwapInitiatorViewFactory{})
+	bob.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
 
 	// charlie
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
@@ -87,13 +86,13 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
 	)
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
-	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
-	charlie.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
-	charlie.RegisterViewFactory("transfer", &views.TransferViewFactory{})
-	charlie.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	charlie.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
-	charlie.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
+	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
+	charlie.RegisterResponder(&views2.SwapResponderView{}, &views2.SwapInitiatorView{})
+	charlie.RegisterViewFactory("transfer", &views2.TransferViewFactory{})
+	charlie.RegisterViewFactory("redeem", &views2.RedeemViewFactory{})
+	charlie.RegisterViewFactory("swap", &views2.SwapInitiatorViewFactory{})
+	charlie.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)

@@ -40,11 +40,11 @@ type SwapInitiatorView struct {
 func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	// As a first step operation, A contacts the recipient's FSC node
 	// to exchange identities to use to assign ownership of the transferred tokens.
-	me, other, err := ttxcc.ExchangeRecipientIdentities(context, t.FromWallet, view.Identity(t.To))
+	me, other, err := ttxcc.ExchangeRecipientIdentities(context, t.FromWallet, view2.GetIdentityProvider(context).Identity(t.To))
 	assert.NoError(err, "failed exchanging identities")
 
 	// At this point, A is ready to prepare the token transaction.
-	// A creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// A creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -93,7 +93,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.Equal(0, os.Sum().Cmp(token2.NewQuantityFromUInt64(t.ToQuantity)))
 	assert.Equal(os.Count(), os.ByType(t.ToType).Count())
 
-	// A is ready to collect all the required signatures and form the Fabric Transaction.
+	// A is ready to collect all the required signatures and form the Transaction.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 

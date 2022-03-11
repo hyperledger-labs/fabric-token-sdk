@@ -63,7 +63,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
-	// The issuer creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// The issuer creates an anonymous transaction (this means that the resulting transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -86,9 +86,9 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 
 	// The issuer is ready to collect all the required signatures.
 	// In this case, the issuer's and the auditor's signatures.
-	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
 	// This is all done in one shot running the following view.
-	// Before completing, all recipients receive the approved Fabric transaction.
+	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
@@ -198,7 +198,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting recipient")
 
 	// At this point, the sender is ready to prepare the token transaction.
-	// The sender creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// The sender creates an anonymous transaction (this means that the resulting transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -230,9 +230,9 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 
 	// The sender is ready to collect all the required signatures.
 	// In this case, the sender's and the auditor's signatures.
-	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
 	// This is all done in one shot running the following view.
-	// Before completing, all recipients receive the approved Fabric transaction.
+	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
@@ -283,7 +283,7 @@ type RedeemView struct {
 
 func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// The sender directly prepare the token transaction.
-	// The sender creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// The sender creates an anonymous transaction (this means that the resulting transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -314,9 +314,9 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 
 	// The sender is ready to collect all the required signatures.
 	// In this case, the sender's and the auditor's signatures.
-	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
 	// This is all done in one shot running the following view.
-	// Before completing, all recipients receive the approved Fabric transaction.
+	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
@@ -365,7 +365,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed exchanging identities")
 
 	// At this point, A is ready to prepare the token transaction.
-	// A creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// A creates an anonymous transaction (this means that the resulting transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -414,7 +414,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.Equal(0, os.Sum().Cmp(token2.NewQuantityFromUInt64(t.ToQuantity)))
 	assert.Equal(os.Count(), os.ByType(t.ToType).Count())
 
-	// A is ready to collect all the required signatures and form the Fabric Transaction.
+	// A is ready to collect all the required signatures and form the Transaction.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 

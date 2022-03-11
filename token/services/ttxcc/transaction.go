@@ -154,7 +154,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	return cctx, nil
 }
 
-// ID returns the ID of this transaction. It is equal to the underlying Fabric transaction's ID.
+// ID returns the ID of this transaction. It is equal to the underlying transaction's ID.
 func (t *Transaction) ID() string {
 	return t.Payload.ID
 }

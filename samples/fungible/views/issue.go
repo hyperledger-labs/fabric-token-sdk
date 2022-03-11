@@ -40,7 +40,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttxcc.RequestRecipientIdentity(context, view.Identity(p.Recipient))
+	recipient, err := ttxcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
@@ -60,7 +60,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
-	// The issuer creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -83,9 +83,9 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 
 	// The issuer is ready to collect all the required signatures.
 	// In this case, the issuer's and the auditor's signatures.
-	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
 	// This is all done in one shot running the following view.
-	// Before completing, all recipients receive the approved Fabric transaction.
+	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))

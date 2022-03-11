@@ -44,7 +44,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed exchanging identities")
 
 	// At this point, Alice is ready to prepare the token transaction.
-	// Alice creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
+	// Alice creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
@@ -93,7 +93,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.Equal(0, os.Sum().Cmp(token2.NewQuantityFromUInt64(t.FromBobAmount)))
 	assert.Equal(os.Count(), os.ByType(t.FromBobType).Count())
 
-	// Alice is ready to collect all the required signatures and form the Fabric Transaction.
+	// Alice is ready to collect all the required signatures and form the Transaction.
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 

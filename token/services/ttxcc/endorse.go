@@ -41,8 +41,8 @@ type collectEndorsementsView struct {
 // This view does the following:
 // 1. It collects all the required signatures
 // to authorize any issue and transfer operation contained in the token transaction.
-// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
-// 3. Before completing, all recipients receive the approved Fabric transaction.
+// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
+// 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
 func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
@@ -53,8 +53,8 @@ func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
 // This view does the following:
 // 1. It collects all the required signatures
 // to authorize any issue and transfer operation contained in the token transaction.
-// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative Fabric transaction.
-// 3. Before completing, all recipients receive the approved Fabric transaction.
+// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
+// 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
 func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
@@ -92,7 +92,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 		distributionList = append(distributionList, c.tx.Opts.Auditor)
 	}
 
-	// 3. Endorse and return the Fabric transaction envelope
+	// 3. Endorse and return the transaction envelope
 	env, err := c.requestApproval(context)
 	if err != nil {
 		return nil, err
@@ -375,7 +375,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	defer agent.EmitKey(0, "ttxcc", "end", "distributeEnv", c.tx.ID())
 
 	if env == nil {
-		return errors.New("fabric transaction envelope is empty")
+		return errors.New("transaction envelope is empty")
 	}
 
 	// double check that the transaction is valid
@@ -444,7 +444,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("distribute fabric transaction enveloper to [%s]", entry.ID.UniqueID())
+			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
 		}
 
 		if entry.IsMe {
@@ -552,7 +552,7 @@ type endorseView struct {
 // The view does the following:
 // 1. Wait for signature requests.
 // 2. Upon receiving a signature request, it validates the request and send back the requested signature.
-// 3. After, it waits to receive the Fabric Transaction. The Fabric Transaction is validated and stored locally
+// 3. After, it waits to receive the Transaction. The Transaction is validated and stored locally
 // to be processed at time of committing.
 // 4. It sends back an ack.
 func NewEndorseView(tx *Transaction) *endorseView {
@@ -563,7 +563,7 @@ func NewEndorseView(tx *Transaction) *endorseView {
 // The view does the following:
 // 1. Wait for signature requests.
 // 2. Upon receiving a signature request, it validates the request and send back the requested signature.
-// 3. After, it waits to receive the Fabric Transaction. The Fabric Transaction is validated and stored locally
+// 3. After, it waits to receive the Transaction. The Transaction is validated and stored locally
 // to be processed at time of committing.
 // 4. It sends back an ack.
 func (s *endorseView) Call(context view.Context) (interface{}, error) {
