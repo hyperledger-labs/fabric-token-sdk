@@ -1,4 +1,4 @@
-name: Token Basics with FabToken Driver
+name: Token Basics with DLOG Driver
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-fabtoken
+      run: make integration-tests-tcc-dlog-orion

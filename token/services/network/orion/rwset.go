@@ -23,6 +23,10 @@ func orionKey(key string) string {
 	return strings.ReplaceAll(key, string(rune(0)), "~")
 }
 
+func notOrionKey(key string) string {
+	return strings.ReplaceAll(key, "~", string(rune(0)))
+}
+
 func (r *ReadOnlyRWSWrapper) SetState(namespace string, key string, value []byte) error {
 	panic("programming error: this should not be called")
 }

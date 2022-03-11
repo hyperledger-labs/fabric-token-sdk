@@ -335,7 +335,7 @@ func marshal(t *Transaction) ([]byte, error) {
 	if len(t.Payload.Transient) != 0 {
 		transientRaw, err = MarshalMeta(t.Payload.Transient)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to marshal transient")
 		}
 	}
 
@@ -343,7 +343,7 @@ func marshal(t *Transaction) ([]byte, error) {
 	if t.Payload.TokenRequest != nil {
 		tokenRequestRaw, err = t.Payload.TokenRequest.Bytes()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to marshal token request")
 		}
 	}
 
@@ -351,11 +351,11 @@ func marshal(t *Transaction) ([]byte, error) {
 	if t.Payload.Envelope != nil {
 		envRaw, err = t.Envelope.Bytes()
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
 	}
 
-	return asn1.Marshal(TransactionSer{
+	res, err := asn1.Marshal(TransactionSer{
 		Nonce:        t.Payload.TxID.Nonce,
 		Creator:      t.Payload.TxID.Creator,
 		ID:           t.Payload.ID,
@@ -367,6 +367,10 @@ func marshal(t *Transaction) ([]byte, error) {
 		TokenRequest: tokenRequestRaw,
 		Envelope:     envRaw,
 	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to marshal transaction")
+	}
+	return res, nil
 }
 
 func unmarshal(t *Transaction, p *Payload, raw []byte) error {

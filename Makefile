@@ -47,13 +47,21 @@ dependencies:
 	go get -u github.com/gordonklaus/ineffassign
 	go get -u github.com/google/addlicense
 
-.PHONY: integration-tests-tcc-dlog
-integration-tests-tcc-dlog: docker-images dependencies
+.PHONY: integration-tests-tcc-dlog-fabric
+integration-tests-tcc-dlog-fabric: docker-images dependencies
 	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-fabtoken
-integration-tests-tcc-fabtoken: docker-images dependencies
+.PHONY: integration-tests-tcc-fabtoken-fabric
+integration-tests-tcc-fabtoken-fabric: docker-images dependencies
 	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-dlog-orion
+integration-tests-tcc-dlog-orion: docker-images dependencies
+	cd ./integration/token/tcc/basic/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-fabtoken-orion
+integration-tests-tcc-fabtoken-orion: docker-images dependencies
+	cd ./integration/token/tcc/basic/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dvp-fabtoken
 integration-tests-tcc-dvp-fabtoken: docker-images dependencies

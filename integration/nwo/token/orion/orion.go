@@ -8,6 +8,7 @@ package orion
 
 import (
 	"bytes"
+	math3 "github.com/IBM/mathlib"
 	"io"
 	"io/ioutil"
 	"os"
@@ -65,6 +66,7 @@ func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *Netwo
 		Entries:           map[string]*Entry{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
 			"fabtoken": NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform, builder),
+			"dlog":     NewDLogCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
 		},
 	}
 }

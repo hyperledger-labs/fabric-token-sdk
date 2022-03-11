@@ -167,6 +167,6 @@ type LedgerWrapper struct {
 }
 
 func (l *LedgerWrapper) GetState(key string) ([]byte, error) {
-	raw, _, err := l.qe.Get(key)
+	raw, _, err := l.qe.Get(orionKey(key))
 	return raw, err
 }

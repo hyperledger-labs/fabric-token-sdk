@@ -165,6 +165,11 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			continue
 		}
 
+		if err := wrappedRWS.SetState(ns, key, val); err != nil {
+			logger.Errorf("failed to set state [%s]", err)
+			return errors.Wrapf(err, "failed to set state [%s]", key)
+		}
+
 		index, err := strconv.ParseUint(components[1], 10, 64)
 		if err != nil {
 			logger.Errorf("invalid output index for key [%s]", key)
@@ -251,21 +256,21 @@ type rwsWrapper struct {
 }
 
 func (r *rwsWrapper) SetState(namespace string, key string, value []byte) error {
-	return r.RWSet.SetState(namespace, key, value)
+	return r.RWSet.SetState(namespace, notOrionKey(key), value)
 }
 
 func (r *rwsWrapper) GetState(namespace string, key string) ([]byte, error) {
-	return r.RWSet.GetState(namespace, key, orion.FromStorage)
+	return r.RWSet.GetState(namespace, notOrionKey(key), orion.FromStorage)
 }
 
 func (r *rwsWrapper) GetStateMetadata(namespace, key string) (map[string][]byte, error) {
-	return r.RWSet.GetStateMetadata(namespace, key, orion.FromStorage)
+	return r.RWSet.GetStateMetadata(namespace, notOrionKey(key), orion.FromStorage)
 }
 
 func (r *rwsWrapper) DeleteState(namespace string, key string) error {
-	return r.RWSet.DeleteState(namespace, key)
+	return r.RWSet.DeleteState(namespace, notOrionKey(key))
 }
 
 func (r *rwsWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return r.RWSet.SetStateMetadata(namespace, key, metadata)
+	return r.RWSet.SetStateMetadata(namespace, notOrionKey(key), metadata)
 }
