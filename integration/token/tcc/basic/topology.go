@@ -37,7 +37,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("grpc=error:debug", "")
+	fscTopology.SetLogging("info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),

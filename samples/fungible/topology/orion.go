@@ -8,11 +8,9 @@ package topology
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
 )
@@ -23,14 +21,12 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("info", "")
 	fscTopology.EnableLogToFile()
 	fscTopology.EnablePrometheusMetrics()
 
 	// issuer
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
 		token.WithDefaultIssuerIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
@@ -40,8 +36,6 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	// auditor
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(),
 	)
@@ -49,8 +43,6 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	// alice
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
-		fabric.WithOrganization("Org2"),
-		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
@@ -64,8 +56,6 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	// bob
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
-		fabric.WithOrganization("Org2"),
-		fabric.WithAnonymousIdentity(),
 		orion.WithRole("bob"),
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
@@ -80,8 +70,6 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	// charlie
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
-		fabric.WithOrganization("Org2"),
-		fabric.WithAnonymousIdentity(),
 		orion.WithRole("charlie"),
 		token.WithDefaultOwnerIdentity(tokenSDKDriver),
 		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
@@ -94,14 +82,14 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	charlie.RegisterViewFactory("swap", &views2.SwapInitiatorViewFactory{})
 	charlie.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
 
+	// we need to define the custodian
+	custodian := fscTopology.AddNodeByName("custodian")
+	custodian.AddOptions(orion.WithRole("custodian"))
+
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(orionTopology, "", tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
-	fabric2.SetOrgs(tms, "Org1")
-	// we need to define the custodian
-	custodian := fscTopology.AddNodeByName("custodian")
-	custodian.AddOptions(orion.WithRole("custodian"))
 	orion2.SetCustodian(tms, custodian)
 
 	// Enable orion sdk on each FSC node
@@ -111,15 +99,9 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)
 
-	// Monitoring
-	//monitoringTopology := monitoring.NewTopology()
-	//monitoringTopology.EnableHyperledgerExplorer()
-	//monitoringTopology.EnablePrometheusGrafana()
-
 	return []api.Topology{
 		orionTopology,
 		tokenTopology,
 		fscTopology,
-		//monitoringTopology,
 	}
 }

@@ -1,4 +1,4 @@
-name: Token Basics with FabToken Driver
+name: Token Basics with FabToken Driver (Fabric)
 
 on:
   push:
