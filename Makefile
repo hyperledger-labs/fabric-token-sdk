@@ -37,9 +37,17 @@ docker-images:
 	docker image tag hyperledger/fabric-baseos:2.2 hyperledger/fabric-baseos:latest
 	docker pull hyperledger/fabric-ccenv:2.2
 	docker image tag hyperledger/fabric-ccenv:2.2 hyperledger/fabric-ccenv:latest
-	docker pull couchdb:3.1.1
-	docker pull confluentinc/cp-kafka:5.3.1
-	docker pull confluentinc/cp-zookeeper:5.3.1
+
+.PHONY: monitoring-docker-images
+monitoring-docker-images:
+	docker pull hyperledger/explorer-db:latest
+	docker pull hyperledger/explorer:latest
+	docker pull prom/prometheus:latest
+	docker pull grafana/grafana:latest
+
+.PHONY: orion-server-images
+orion-server-images:
+	docker pull orionbcdb/orion-server:latest
 
 .PHONY: dependencies
 dependencies:
@@ -56,11 +64,11 @@ integration-tests-tcc-fabtoken-fabric: docker-images dependencies
 	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dlog-orion
-integration-tests-tcc-dlog-orion: docker-images dependencies
+integration-tests-tcc-dlog-orion: docker-images orion-server-images dependencies
 	cd ./integration/token/tcc/basic/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-fabtoken-orion
-integration-tests-tcc-fabtoken-orion: docker-images dependencies
+integration-tests-tcc-fabtoken-orion: docker-images orion-server-images dependencies
 	cd ./integration/token/tcc/basic/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dvp-fabtoken

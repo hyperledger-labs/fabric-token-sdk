@@ -346,7 +346,8 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 	for _, d := range drivers {
 		nw, err := d.New(np.sp, network, channel)
 		if err != nil {
-			logger.Errorf("Failed to create network [%s:%s]: %s", network, channel, err)
+			logger.Warningf("failed to create network [%s:%s]: %s", network, channel, err)
+			continue
 		}
 		if nw != nil {
 			return &Network{n: nw}, nil
