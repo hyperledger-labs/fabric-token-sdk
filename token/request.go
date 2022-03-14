@@ -7,6 +7,7 @@ package token
 
 import (
 	"encoding/asn1"
+	"fmt"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -52,7 +53,7 @@ type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
 	// Selector is the custom token selector to use. If nil, the default will be used.
-	Selector Selector
+	Selector driver.Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
 	TokenIDs []*token.ID
 }
@@ -71,7 +72,7 @@ func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
 type TransferOption func(*TransferOptions) error
 
 // WithTokenSelector sets the passed token selector
-func WithTokenSelector(selector Selector) TransferOption {
+func WithTokenSelector(selector driver.Selector) TransferOption {
 	return func(o *TransferOptions) error {
 		o.Selector = selector
 		return nil
@@ -90,6 +91,19 @@ func WithTokenIDs(ids ...*token.ID) TransferOption {
 func WithTransferAttribute(attr, value interface{}) TransferOption {
 	return func(o *TransferOptions) error {
 		o.Attributes[attr] = value
+		return nil
+	}
+}
+
+// WithOutputMetdata adds metadata to transfer outputs
+func WithOutputMetadata(metadata [][]byte) TransferOption {
+	return func(o *TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = make(map[interface{}]interface{})
+		}
+		for i, bytes := range metadata {
+			o.Attributes[fmt.Sprintf("output.metadata.%d", i)] = bytes
+		}
 		return nil
 	}
 }
@@ -229,9 +243,21 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", t.TxID, len(tokenIDs), len(outputTokens))
 
 	ts := t.TokenService.tms
-
+	opt, err := compileTransferOptions(opts...)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
 	// Compute transfer
-	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens)
+	transfer, transferMetadata, err := ts.Transfer(
+		t.TxID,
+		wallet.w,
+		tokenIDs,
+		outputTokens,
+		&driver.TransferOptions{
+			Selector:   opt.Selector,
+			Attributes: opt.Attributes,
+			TokenIDs:   opt.TokenIDs},
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
@@ -262,9 +288,21 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
 
 	ts := t.TokenService.tms
-
+	opt, err := compileTransferOptions(opts...)
+	if err != nil {
+		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
 	// Compute redeem, it is a transfer with owner set to nil
-	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens)
+	transfer, transferMetadata, err := ts.Transfer(
+		t.TxID,
+		wallet.w,
+		tokenIDs,
+		outputTokens,
+		&driver.TransferOptions{
+			Attributes: opt.Attributes,
+			Selector:   opt.Selector,
+			TokenIDs:   opt.TokenIDs,
+		})
 	if err != nil {
 		return errors.Wrap(err, "failed creating transfer action")
 	}

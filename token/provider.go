@@ -23,7 +23,7 @@ type VaultProvider interface {
 }
 
 type SelectorManager interface {
-	NewSelector(id string) (Selector, error)
+	NewSelector(id string) (tokenapi.Selector, error)
 	Unlock(txID string) error
 }
 

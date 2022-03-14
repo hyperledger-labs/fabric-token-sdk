@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"strconv"
 	"time"
 
@@ -85,7 +86,7 @@ func newSelector(
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
-func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) Select(ownerFilter driver.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	if ownerFilter == nil {
 		ownerFilter = &allOwners{}
 	}
@@ -102,7 +103,7 @@ func (s *selector) concurrencyCheck(ids []*token2.ID) error {
 	return err
 }
 
-func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) selectByID(ownerFilter driver.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	uuid, err := uuid.GenerateUUID()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate UUID")
@@ -244,7 +245,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			if concurrencyIssue {
 				logger.Debugf("concurrency issue, some of the tokens might not exist anymore")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientFundsButConcurrencyIssue,
+					driver.SelectorSufficientFundsButConcurrencyIssue,
 					"token selection failed: sufficient funs but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
 				)
 			}
@@ -253,7 +254,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				// funds are potentially enough but they are locked
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientButLockedFunds,
+					driver.SelectorSufficientButLockedFunds,
 					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked, tokenType,
 				)
 			}
@@ -262,7 +263,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				// funds are potentially enough but they are locked
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientButNotCertifiedFunds,
+					driver.SelectorSufficientButNotCertifiedFunds,
 					"token selection failed: sufficient but partially not certified, potential [%s] tokens of type [%s] are available", potentialSumWithNonCertified, tokenType,
 				)
 			}
@@ -270,7 +271,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			// funds are insufficient
 			logger.Debugf("token selection: it is time to fail but how, insufficient funds")
 			return nil, nil, errors.WithMessagef(
-				token.SelectorInsufficientFunds,
+				driver.SelectorInsufficientFunds,
 				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
 			)
 		}
@@ -280,7 +281,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	}
 }
 
-func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
+func (s *selector) selectByOwner(ownerFilter driver.OwnerFilter, q string, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
 	var potentialSumWithLocked token2.Quantity
@@ -427,7 +428,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 			if concurrencyIssue {
 				logger.Debugf("concurrency issue, some of the tokens might not exist anymore")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientFundsButConcurrencyIssue,
+					driver.SelectorSufficientFundsButConcurrencyIssue,
 					"token selection failed: sufficient funs but concurrency issue, potential [%s] tokens of type [%s] were available", potentialSumWithLocked, tokenType,
 				)
 			}
@@ -436,7 +437,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 				// funds are potentially enough but they are locked
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientButLockedFunds,
+					driver.SelectorSufficientButLockedFunds,
 					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked, tokenType,
 				)
 			}
@@ -445,7 +446,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 				// funds are potentially enough but they are locked
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
-					token.SelectorSufficientButNotCertifiedFunds,
+					driver.SelectorSufficientButNotCertifiedFunds,
 					"token selection failed: sufficient but partially not certified, potential [%s] tokens of type [%s] are available", potentialSumWithNonCertified, tokenType,
 				)
 			}
@@ -453,7 +454,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 			// funds are insufficient
 			logger.Debugf("token selection: it is time to fail but how, insufficient funds")
 			return nil, nil, errors.WithMessagef(
-				token.SelectorInsufficientFunds,
+				driver.SelectorInsufficientFunds,
 				"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum, tokenType,
 			)
 		}
