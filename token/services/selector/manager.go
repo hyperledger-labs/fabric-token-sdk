@@ -6,9 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"time"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 type NewQueryEngineFunc func() QueryService
@@ -43,7 +42,7 @@ func newManager(
 	}
 }
 
-func (m *manager) NewSelector(id string) (token.Selector, error) {
+func (m *manager) NewSelector(id string) (driver.Selector, error) {
 	return newSelector(
 		id,
 		m.locker,

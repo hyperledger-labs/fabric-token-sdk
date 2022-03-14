@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"sync"
 	"time"
 
@@ -28,7 +29,7 @@ type Transaction interface {
 }
 
 type Repository interface {
-	Next(typ string, of token.OwnerFilter) (*token2.UnspentToken, error)
+	Next(typ string, of driver.OwnerFilter) (*token2.UnspentToken, error)
 }
 
 type LockerProvider interface {

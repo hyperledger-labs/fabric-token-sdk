@@ -8,6 +8,7 @@ package ttxcc
 
 import (
 	"encoding/asn1"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
@@ -217,7 +218,7 @@ func (t *Transaction) MarshallToAudit() ([]byte, error) {
 }
 
 // Selector returns the default token selector for this transaction
-func (t *Transaction) Selector() (token.Selector, error) {
+func (t *Transaction) Selector() (driver.Selector, error) {
 	return t.TokenService().SelectorManager().NewSelector(t.ID())
 }
 

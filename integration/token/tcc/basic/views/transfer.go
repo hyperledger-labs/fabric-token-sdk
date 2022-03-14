@@ -7,6 +7,7 @@ package views
 
 import (
 	"encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"time"
 
 	"github.com/pkg/errors"
@@ -183,13 +184,13 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 			switch cause {
 			case nil:
 				assert.NoError(err, "system failure")
-			case token2.SelectorInsufficientFunds:
+			case driver.SelectorInsufficientFunds:
 				assert.NoError(err, "pineapple")
-			case token2.SelectorSufficientButLockedFunds:
+			case driver.SelectorSufficientButLockedFunds:
 				assert.NoError(err, "lemonade")
-			case token2.SelectorSufficientButNotCertifiedFunds:
+			case driver.SelectorSufficientButNotCertifiedFunds:
 				assert.NoError(err, "mandarin")
-			case token2.SelectorSufficientFundsButConcurrencyIssue:
+			case driver.SelectorSufficientFundsButConcurrencyIssue:
 				assert.NoError(err, "peach")
 			}
 		}
