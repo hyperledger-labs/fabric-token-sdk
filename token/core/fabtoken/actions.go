@@ -141,3 +141,7 @@ func (t *TransferAction) GetInputs() ([]string, error) {
 func (t *TransferAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
+
+func (t *TransferAction) GetMetadata() []byte {
+	return nil
+}
