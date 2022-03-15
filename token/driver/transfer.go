@@ -13,10 +13,6 @@ import (
 type TransferOptions struct {
 	// Attributes is a container of generic options that might be driver specific
 	Attributes map[interface{}]interface{}
-	// Selector is the custom token selector to use. If nil, the default will be used.
-	// tod add Selector Selector
-	// TokenIDs to transfer. If empty, the tokens will be selected.
-	TokenIDs []*token2.ID
 }
 
 type TransferService interface {
