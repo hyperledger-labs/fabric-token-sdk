@@ -84,12 +84,12 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	distributionList = append(distributionList, parties...)
 
 	// 2. Audit
-	if !c.tx.Opts.auditor.IsNone() {
+	if !c.tx.Opts.Auditor.IsNone() {
 		_, err := context.RunView(newAuditingViewInitiator(c.tx))
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.auditor.String())
+			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
 		}
-		distributionList = append(distributionList, c.tx.Opts.auditor)
+		distributionList = append(distributionList, c.tx.Opts.Auditor)
 	}
 
 	// 3. Endorse and return the Fabric transaction envelope
@@ -104,8 +104,8 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	// Cleanup
-	if !c.tx.Opts.auditor.IsNone() {
-		session, err := context.GetSession(nil, c.tx.Opts.auditor)
+	if !c.tx.Opts.Auditor.IsNone() {
+		session, err := context.GetSession(nil, c.tx.Opts.Auditor)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed getting auditor's session")
 		}

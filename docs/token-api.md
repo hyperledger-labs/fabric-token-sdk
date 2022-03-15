@@ -9,11 +9,16 @@ A token consists of the following triplet:
 - `Type`: The *denomination* of the token;
   This is a string whose value can be application specific. Examples are:
   The denomination of a digital currency or unique identifiers.
-- `Quantity`: The amount stored by this token. It is a positive number
+- `Quantity`: The amount stored by this token. It is a positive number, larger or equal to zero, 
   encoded as a string containing a number in base 16. The string starts with the prefix `0x`.
 
-These tokens are `fungible` with the respect to the same type. In particular,
-tokens with the same denomination can be merged and split, if not otherwise forbidden.
+These tokens are `fungible` with the respect to the same type. 
+In particular, tokens with the same denomination can be merged and split, if not otherwise forbidden.
+
+It looks like that the above definition allows the developers to define non-fungible tokens as well.
+A non-fungible token is a token whose quantity is `1` and whose type is `unique`. 
+If uniqueness is guaranteed, then such a token is by all means a non-fungible token.
+Drivers are free to implement additional semantics for non-fungible tokens.
 
 A token can be spent only by the `rightful owner`. This concept is implementation dependant. For example,
 if the `Owner` field contains a public-key, then a valid signature under that public key must be presented to spend the token.
