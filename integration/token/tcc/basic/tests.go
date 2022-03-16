@@ -274,7 +274,9 @@ func TestAll(network *integration.Infrastructure) {
 
 	// Transfer by IDs
 	txID := issueCash(network, "", "CHF", 17, "alice")
-	txID = transferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob")
+	transferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", true, "test release")
+	// the previous call should not keep the token locked if release is successful
+	txID = transferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", false)
 	redeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17)
 }
 
@@ -350,13 +352,14 @@ func transferCash(network *integration.Infrastructure, id string, wallet string,
 	}
 }
 
-func transferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, errorMsgs ...string) string {
+func transferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, failToRelease bool, errorMsgs ...string) string {
 	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Wallet:    wallet,
-		Type:      "",
-		TokenIDs:  ids,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
+		Wallet:        wallet,
+		Type:          "",
+		TokenIDs:      ids,
+		Amount:        amount,
+		Recipient:     network.Identity(receiver),
+		FailToRelease: failToRelease,
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())

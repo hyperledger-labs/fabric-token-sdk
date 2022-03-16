@@ -34,6 +34,8 @@ type Transfer struct {
 	Recipient view.Identity
 	// Retry tells if a retry must happen in case of a failure
 	Retry bool
+	// FailToRelease if true, it fails after transfer to trigger the Release function on the token transaction
+	FailToRelease bool
 }
 
 type TransferView struct {
@@ -78,6 +80,12 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")
+
+	if t.FailToRelease {
+		// return an error to trigger the Release function on the token transaction
+		// The Release function is called when the context is canceled due to a panic or an error.
+		return nil, errors.New("test release")
+	}
 
 	// The sender is ready to collect all the required signatures.
 	// In this case, the sender's and the auditor's signatures.
