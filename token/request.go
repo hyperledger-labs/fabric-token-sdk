@@ -7,6 +7,7 @@ package token
 
 import (
 	"encoding/asn1"
+	"fmt"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -74,6 +75,19 @@ type TransferOption func(*TransferOptions) error
 func WithTokenSelector(selector Selector) TransferOption {
 	return func(o *TransferOptions) error {
 		o.Selector = selector
+		return nil
+	}
+}
+
+// WithOutputMetadata() sets outputs metadata
+func WithOutputMetadata(metadata [][]byte) TransferOption {
+	return func(o *TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = make(map[interface{}]interface{})
+		}
+		for i, bytes := range metadata {
+			o.Attributes[fmt.Sprintf("output.metadata.%d", i)] = bytes
+		}
 		return nil
 	}
 }
@@ -220,8 +234,11 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 			return nil, errors.Errorf("value is zero")
 		}
 	}
-
-	tokenIDs, outputTokens, err := t.prepareTransfer(false, wallet, typ, values, owners, opts...)
+	opt, err := compileTransferOptions(opts...)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
+	tokenIDs, outputTokens, err := t.prepareTransfer(false, wallet, typ, values, owners, opt)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
@@ -231,7 +248,15 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	ts := t.TokenService.tms
 
 	// Compute transfer
-	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens...)
+	transfer, transferMetadata, err := ts.Transfer(
+		t.TxID,
+		wallet.w,
+		tokenIDs,
+		outputTokens,
+		&driver.TransferOptions{
+			Attributes: opt.Attributes,
+		},
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
@@ -254,7 +279,11 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 }
 
 func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...TransferOption) error {
-	tokenIDs, outputTokens, err := t.prepareTransfer(true, wallet, typ, []uint64{value}, []view.Identity{nil}, opts...)
+	opt, err := compileTransferOptions(opts...)
+	if err != nil {
+		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
+	}
+	tokenIDs, outputTokens, err := t.prepareTransfer(true, wallet, typ, []uint64{value}, []view.Identity{nil}, opt)
 	if err != nil {
 		return errors.Wrap(err, "failed preparing transfer")
 	}
@@ -264,7 +293,15 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	ts := t.TokenService.tms
 
 	// Compute redeem, it is a transfer with owner set to nil
-	transfer, transferMetadata, err := ts.Transfer(t.TxID, wallet.w, tokenIDs, outputTokens...)
+	transfer, transferMetadata, err := ts.Transfer(
+		t.TxID,
+		wallet.w,
+		tokenIDs,
+		outputTokens,
+		&driver.TransferOptions{
+			Attributes: opt.Attributes,
+		},
+	)
 	if err != nil {
 		return errors.Wrap(err, "failed creating transfer action")
 	}
@@ -676,12 +713,7 @@ func (t *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) ([]*token.ID, []*token.Token, error) {
-	// compile options
-	transferOpts, err := compileTransferOptions(opts...)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed compiling transfer options [%v]", opts)
-	}
+func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 
 	for _, owner := range owners {
 		if redeem {
@@ -696,7 +728,7 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 	}
 	var tokenIDs []*token.ID
 	var inputSum token.Quantity
-
+	var err error
 	// if inputs have been passed, parse and certify them, if needed
 	if len(transferOpts.TokenIDs) != 0 {
 		tokenIDs, inputSum, typ, err = t.parseInputIDs(transferOpts.TokenIDs)

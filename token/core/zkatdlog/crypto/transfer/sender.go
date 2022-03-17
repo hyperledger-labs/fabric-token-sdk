@@ -8,7 +8,7 @@ package transfer
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -167,6 +167,10 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
+}
+
+func (t *TransferAction) GetMetadata() []byte {
+	return nil
 }
 
 func getTokenData(tokens []*token.Token) []*math.G1 {
