@@ -57,11 +57,19 @@ dependencies:
 
 .PHONY: integration-tests-tcc-dlog-fabric
 integration-tests-tcc-dlog-fabric: docker-images dependencies
-	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/tcc/fungible/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-fabtoken-fabric
 integration-tests-tcc-fabtoken-fabric: docker-images dependencies
-	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/tcc/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-nft-dlog
+integration-tests-tcc-nft-dlog: docker-images dependencies
+	cd ./integration/token/tcc/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-nft-fabtoken
+integration-tests-tcc-nft-fabtoken: docker-images dependencies
+	cd ./integration/token/tcc/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dlog-orion
 integration-tests-tcc-dlog-orion: docker-images orion-server-images dependencies
@@ -87,8 +95,10 @@ tidy:
 clean:
 	docker network prune -f
 	docker container prune -f
-	rm -rf ./integration/token/tcc/basic/dlog/cmd/
-	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/fungible/dlog/cmd/
+	rm -rf ./integration/token/tcc/fungible/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/nft/dlog/cmd/
+	rm -rf ./integration/token/tcc/nft/fabtoken/cmd/
 	rm -rf ./integration/token/tcc/basic/odlog/cmd/
 	rm -rf ./integration/token/tcc/basic/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/dvp/dlog/cmd/

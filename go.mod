@@ -38,5 +38,6 @@ require (
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.18.1
+	golang.org/x/sys v0.0.0-20220327210214-530d0810a4d0 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )

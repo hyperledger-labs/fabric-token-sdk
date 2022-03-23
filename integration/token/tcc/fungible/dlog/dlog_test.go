@@ -4,15 +4,16 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package dlog
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible"
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -24,10 +25,10 @@ var _ = Describe("EndToEnd", func() {
 		network.Stop()
 	})
 
-	Describe("FabToken", func() {
+	Describe("Fungible", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", basic.Topology("fabric", "fabtoken")...)
+			network, err = integration.New(StartPortDlog(), "", fungible.Topology("dlog")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -35,7 +36,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			basic.TestAll(network)
+			fungible.TestAll(network)
 		})
 	})
 

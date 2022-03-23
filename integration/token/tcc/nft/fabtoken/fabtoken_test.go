@@ -4,16 +4,14 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package fabtoken
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/nft"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic"
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -25,10 +23,10 @@ var _ = Describe("EndToEnd", func() {
 		network.Stop()
 	})
 
-	Describe("ZKAT-DLog", func() {
+	Describe("NFT", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", basic.Topology("fabric", "dlog")...)
+			network, err = integration.New(StartPortDlog(), "", nft.Topology("fabric", "fabtoken")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -36,7 +34,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			basic.TestAll(network)
+			nft.TestAll(network)
 		})
 	})
 

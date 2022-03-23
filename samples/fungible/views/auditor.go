@@ -30,10 +30,10 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
 	// Check Metadata
-	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/issue")
+	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/issue")
 	if len(opRaw) != 0 {
 		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
-		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/meta")
+		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/meta")
 		assert.Equal([]byte("meta"), metaRaw, "expected 'meta' application metadata")
 	}
 

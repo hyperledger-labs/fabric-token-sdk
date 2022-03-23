@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package basic
+package fungible
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/views"
 )
 
 func Topology(backend string, tokenSDKDriver string) []api.Topology {

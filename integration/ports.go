@@ -24,12 +24,14 @@ const (
 
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota
-	ZKATDLogBasics
-	FabTokenBasics
+	ZKATDLogFungible
+	FabTokenFungible
 	OrionZKATDLogBasics
 	OrionFabTokenBasics
 	ZKATDLogDVP
 	FabTokenDVP
+	ZKATDLogNFT
+	FabTokenNFT
 )
 
 // StartPortForNode On linux, the default ephemeral port range is 32768-60999 and can be

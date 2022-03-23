@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package fabtoken
 
 import (
 	"testing"
@@ -21,9 +21,9 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "EndToEnd ZKAT CC (DLOG) Suite")
+	RunSpecs(t, "EndToEnd Fungible (FabToken) Suite")
 }
 
 func StartPortDlog() int {
-	return integration.ZKATDLogBasics.StartPortForNode()
+	return integration.FabTokenFungible.StartPortForNode()
 }
