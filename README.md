@@ -18,6 +18,15 @@ token-based distributed application on Hyperledger Fabric.
 - [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client): The Token SDK leverages the 
   `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out. 
   
+# Additional Resources
+
+- (March 17, 2022) [`Hyperledger in-Depth: Tokens in Hyperledger Fabric: What’s possible today and what’s coming`](https://www.hyperledger.org/learn/webinars/hyperledger-in-depth-tokens-in-hyperledger-fabric-whats-possible-today-and-whats-coming):
+  Tokenizing the physical world is a hot blockchain topic in the industry, especially as it relates to the 
+  trade of tokens as a basis of new forms of commerce. In this Hyperledger Foundation member webinar, 
+  the IBM Research team describes in this webinar what tokenization use cases are possible with Hyperledger Fabric today, 
+  and what enhancements are in the works (aka Fabric Token SDK).
+   
+
 # Disclaimer
 
 `Fabric Token SDK` has not been audited and is provided as-is, use at your own risk. 
