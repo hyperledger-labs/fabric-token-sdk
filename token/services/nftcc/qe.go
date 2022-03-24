@@ -17,6 +17,11 @@ import (
 	"github.com/thedevsaddam/gojsonq"
 )
 
+var (
+	// ErrNoResults is returned when no results are found
+	ErrNoResults = errors.New("no results found")
+)
+
 type vault interface {
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
@@ -53,6 +58,9 @@ func (s *QueryExecutor) QueryByKey(house interface{}, key string, value string) 
 		value: value,
 	}, "1")
 	if err != nil {
+		if errors.Cause(err) == ErrNoResults {
+			return ErrNoResults
+		}
 		return errors.Wrap(err, "failed to filter")
 	}
 	tokens, err := s.vault.GetTokens(ids...)
@@ -75,7 +83,7 @@ func (s *QueryExecutor) QueryByKey(house interface{}, key string, value string) 
 			}
 		}
 	}
-	return errors.Wrap(err, "no suitable token found")
+	return ErrNoResults
 }
 
 type jsonFilter struct {
@@ -83,7 +91,7 @@ type jsonFilter struct {
 	key, value string
 }
 
-func (j jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
+func (j *jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 	decoded, err := base64.StdEncoding.DecodeString(token.Type)
 	if err != nil {
 		logger.Debugf("failed to decode token type [%s]", token.Type)
@@ -91,7 +99,10 @@ func (j jsonFilter) ContainsToken(token *token2.UnspentToken) bool {
 	}
 	logger.Debugf("decoded token type [%s]", string(decoded))
 	jq := j.q.FromString(string(decoded))
-	res := jq.From(j.key).Where(j.key, "==", j.value).Get()
+	res := jq.Find(j.key)
+	if v, ok := res.(string); ok {
+		return v == j.value
+	}
 	logger.Debugf("res [%s] for [%s,%s]", res, j.key, j.value)
-	return res != nil
+	return false
 }
