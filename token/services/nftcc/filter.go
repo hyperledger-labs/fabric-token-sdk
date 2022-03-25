@@ -24,6 +24,7 @@ type Filter interface {
 
 type QueryService interface {
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
@@ -32,13 +33,15 @@ type MetricsAgent interface {
 }
 
 type filter struct {
+	wallet       string
 	queryService QueryService
 	precision    uint64
 	metricsAgent MetricsAgent
 }
 
-func NewFilter(service QueryService, metricsAgent MetricsAgent) *filter {
+func NewFilter(wallet string, service QueryService, metricsAgent MetricsAgent) *filter {
 	return &filter{
+		wallet:       wallet,
 		queryService: service,
 		precision:    keys.Precision,
 		metricsAgent: metricsAgent,
@@ -64,7 +67,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 		return nil, nil, errors.Wrap(err, "failed to convert quantity")
 	}
 
-	unspentTokens, err := s.queryService.UnspentTokensIterator()
+	unspentTokens, err := s.queryService.UnspentTokensIteratorBy(s.wallet, "")
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "token selection failed")
 	}

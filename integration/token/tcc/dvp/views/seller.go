@@ -83,21 +83,19 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transacti
 
 func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Transaction) (*ttxcc.Transaction, *house.House, error) {
 	// let's prepare the NFT transfer
-	nfttx := nftcc.Wrap(tx)
+	wallet := nftcc.MyWallet(context)
+	assert.NotNil(wallet, "failed getting default wallet")
 
 	house := &house.House{}
-	qe, err := nfttx.QueryExecutor()
-	assert.NoError(err, "failed to create selector")
-	assert.NoError(qe.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
+	assert.NoError(wallet.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
 	buyer, err := nftcc.RequestRecipientIdentity(context, view.Identity(d.Buyer))
 	assert.NoError(err, "failed getting buyer identity")
 
-	wallet := nftcc.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	// Transfer ownership of the house to the buyer
-	assert.NoError(nfttx.Transfer(wallet, house, buyer), "failed transferring house")
+	assert.NoError(nftcc.Wrap(tx).Transfer(wallet, house, buyer), "failed transferring house")
 
 	return tx, house, nil
 }

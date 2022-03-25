@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
@@ -90,7 +89,7 @@ func (t *Transaction) Issue(wallet *token.IssuerWallet, state interface{}, recip
 	return t.Transaction.Issue(wallet, recipient, stateJSONStr, 1, opts...)
 }
 
-func (t *Transaction) Transfer(wallet *token.OwnerWallet, state interface{}, recipient view.Identity, opts ...token.TransferOption) error {
+func (t *Transaction) Transfer(wallet *OwnerWallet, state interface{}, recipient view.Identity, opts ...token.TransferOption) error {
 	// marshal state to json
 	stateJSON, err := marshaller.Marshal(state)
 	if err != nil {
@@ -98,7 +97,7 @@ func (t *Transaction) Transfer(wallet *token.OwnerWallet, state interface{}, rec
 	}
 	stateJSONStr := base64.StdEncoding.EncodeToString(stateJSON)
 
-	return t.Transaction.Transfer(wallet, stateJSONStr, []uint64{1}, []view.Identity{recipient}, opts...)
+	return t.Transaction.Transfer(wallet.OwnerWallet, stateJSONStr, []uint64{1}, []view.Identity{recipient}, opts...)
 }
 
 func (t *Transaction) Outputs() (*OutputStream, error) {
@@ -107,17 +106,6 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 		return nil, err
 	}
 	return &OutputStream{OutputStream: os}, nil
-}
-
-func (t *Transaction) QueryExecutor() (*QueryExecutor, error) {
-	qe := t.TokenService().Vault().NewQueryEngine()
-	return &QueryExecutor{
-		selector: NewFilter(
-			qe,
-			metrics.Get(t.Transaction.SP),
-		),
-		vault: qe,
-	}, nil
 }
 
 func (t *Transaction) setStateID(s interface{}) (string, error) {
