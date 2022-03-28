@@ -154,7 +154,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// close transaction
-	envelopeRaw, err := tx.SingAndClose()
+	envelopeRaw, err := tx.SignAndClose()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
 	}
