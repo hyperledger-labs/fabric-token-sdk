@@ -35,15 +35,12 @@ type QueryExecutor struct {
 	vault
 }
 
-func NewQueryExecutor(selector selector, vault vault) *QueryExecutor {
-	return &QueryExecutor{selector: selector, vault: vault}
-}
-
-func GetQueryExecutor(sp view.ServiceProvider, opts ...token.ServiceOption) (*QueryExecutor, error) {
+func NewQueryExecutor(sp view.ServiceProvider, wallet string, opts ...token.ServiceOption) (*QueryExecutor, error) {
 	tms := token.GetManagementService(sp, opts...)
 	qe := tms.Vault().NewQueryEngine()
 	return &QueryExecutor{
 		selector: NewFilter(
+			wallet,
 			qe,
 			metrics.Get(sp),
 		),
@@ -51,7 +48,7 @@ func GetQueryExecutor(sp view.ServiceProvider, opts ...token.ServiceOption) (*Qu
 	}, nil
 }
 
-func (s *QueryExecutor) QueryByKey(house interface{}, key string, value string) error {
+func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) error {
 	ids, err := s.selector.Filter(&jsonFilter{
 		q:     gojsonq.New(),
 		key:   key,
@@ -78,7 +75,7 @@ func (s *QueryExecutor) QueryByKey(house interface{}, key string, value string) 
 			if err != nil {
 				return errors.Wrap(err, "failed to decode type")
 			}
-			if err := marshaller.Unmarshal(decoded, house); err == nil {
+			if err := marshaller.Unmarshal(decoded, state); err == nil {
 				return errors.Wrap(err, "failed to unmarshal state")
 			}
 		}

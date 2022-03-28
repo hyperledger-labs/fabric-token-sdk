@@ -23,10 +23,11 @@ type GetHouseView struct {
 }
 
 func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
+	wallet := nftcc.MyWallet(context)
+	assert.NotNil(wallet, "wallet is nil")
+
 	house := &House{}
-	qe, err := nftcc.GetQueryExecutor(context)
-	assert.NoError(err, "failed to create selector")
-	assert.NoError(qe.QueryByKey(house, "LinearID", p.HouseID), "failed loading house with id %s", p.HouseID)
+	assert.NoError(wallet.QueryByKey(house, "LinearID", p.HouseID), "failed loading house with id %s", p.HouseID)
 
 	return house, nil
 }

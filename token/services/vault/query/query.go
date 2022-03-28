@@ -62,9 +62,18 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 
 func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensIterator, error) {
 	logger.Debugf("List token iterator [%s,%s]...", id, typ)
-	startKey, err := keys.CreateCompositeKey(keys.FabTokenExtendedKeyPrefix, []string{id, typ})
-	if err != nil {
-		return nil, err
+	var startKey string
+	var err error
+	if len(typ) == 0 {
+		startKey, err = keys.CreateCompositeKey(keys.FabTokenExtendedKeyPrefix, []string{id})
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		startKey, err = keys.CreateCompositeKey(keys.FabTokenExtendedKeyPrefix, []string{id, typ})
+		if err != nil {
+			return nil, err
+		}
 	}
 	endKey := startKey + string(keys.MaxUnicodeRuneValue)
 
