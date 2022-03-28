@@ -89,6 +89,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tms := tokenTopology.AddTMS(fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org1")
+	tms.AddAuditor(auditor)
 
 	return []api.Topology{
 		fabricTopology,

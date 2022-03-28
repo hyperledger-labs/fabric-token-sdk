@@ -135,6 +135,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
 		if err != nil {
 			logger.Debugf("Failed to get auditor verifier for %s", auditor.UniqueID())
+			continue
 		}
 		if err := v.Verify(signed, msg.Payload); err != nil {
 			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)

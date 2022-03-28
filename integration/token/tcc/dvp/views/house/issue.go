@@ -8,7 +8,7 @@ package house
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
@@ -44,9 +44,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation
 	tx, err := nftcc.NewAnonymousTransaction(
 		context,
-		nftcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
-		),
+		nftcc.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating issue transaction")
 
