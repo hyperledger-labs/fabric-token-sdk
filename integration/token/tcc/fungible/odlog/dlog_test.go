@@ -9,7 +9,7 @@ package dlog
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 )
@@ -26,7 +26,7 @@ var _ = Describe("Orion EndToEnd", func() {
 	Describe("Orion ZKAT-DLog", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", basic.Topology("orion", "dlog")...)
+			network, err = integration.New(StartPortDlog(), "", fungible.Topology("orion", "dlog")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -34,7 +34,7 @@ var _ = Describe("Orion EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			basic.TestAll(network)
+			fungible.TestAll(network)
 		})
 	})
 

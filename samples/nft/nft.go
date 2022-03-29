@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/cmd/network"
 	view "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/view/cmd"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/nft/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/samples/nft/topology"
 	"github.com/pkg/errors"
 )
 

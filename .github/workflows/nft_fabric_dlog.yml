@@ -1,4 +1,4 @@
-name: Token Basics with FabToken Driver (Orion)
+name: NFT with DLOG Driver (Fabric)
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-fabtoken-orion
+      run: make integration-tests-tcc-nft-dlog

@@ -11,7 +11,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/nft/views"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/samples/nft/views"
 )
 
 func Topology(tokenSDKDriver string) []api.Topology {
@@ -61,8 +62,9 @@ func Topology(tokenSDKDriver string) []api.Topology {
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)
-	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
-	tms.SetNamespace([]string{"Org1"}, "100", "2")
+	tms := tokenTopology.AddTMS(fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
+	tms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}

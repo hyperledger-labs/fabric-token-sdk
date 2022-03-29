@@ -1,4 +1,4 @@
-name: Token DVP with DLOG Driver
+name: Fungible Tokens with FabToken Driver (Orion)
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-dvp-dlog
+      run: make integration-tests-tcc-fabtoken-orion

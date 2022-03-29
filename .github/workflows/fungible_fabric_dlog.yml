@@ -1,4 +1,4 @@
-name: Token Basics with FabToken Driver (Fabric)
+name: Fungible Tokens with DLOG Driver (Fabric)
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-fabtoken-fabric
+      run: make integration-tests-tcc-dlog-fabric

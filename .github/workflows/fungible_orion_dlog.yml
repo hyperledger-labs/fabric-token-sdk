@@ -1,4 +1,4 @@
-name: NFT with DLOG Driver
+name: Fungible Tokens with DLOG Driver (Orion)
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-nft-dlog
+      run: make integration-tests-tcc-dlog-orion

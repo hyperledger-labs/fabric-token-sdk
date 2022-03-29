@@ -97,14 +97,14 @@ clean:
 	docker container prune -f
 	rm -rf ./integration/token/tcc/fungible/dlog/cmd/
 	rm -rf ./integration/token/tcc/fungible/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/fungible/odlog/cmd/
+	rm -rf ./integration/token/tcc/fungible/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/nft/dlog/cmd/
 	rm -rf ./integration/token/tcc/nft/fabtoken/cmd/
-	rm -rf ./integration/token/tcc/basic/odlog/cmd/
-	rm -rf ./integration/token/tcc/basic/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/dvp/dlog/cmd/
 	rm -rf ./integration/token/tcc/dvp/fabtoken/cmd/
-	rm -rf ./samples/fabric/fungible/cmd
-	rm -rf ./samples/fabric/dvp/cmd
+	rm -rf ./samples/fungible/cmd
+	rm -rf ./samples/nft/cmd
 
 .PHONY: tokengen
 tokengen:

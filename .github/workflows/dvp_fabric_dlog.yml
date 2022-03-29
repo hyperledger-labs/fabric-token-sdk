@@ -1,4 +1,4 @@
-name: Token DVP with FabToken Driver
+name: Token DVP with DLOG Driver (Fabric)
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-dvp-fabtoken
+      run: make integration-tests-tcc-dvp-dlog
