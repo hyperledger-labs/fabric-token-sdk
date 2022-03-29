@@ -8,7 +8,7 @@ package views
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
@@ -33,7 +33,7 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 	tx, err := nftcc.NewAnonymousTransaction(
 		context,
 		nftcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed to create a new token transaction")
@@ -42,7 +42,7 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 	house := &House{}
 	assert.NoError(nftcc.MyWallet(context).QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
-	buyer, err := nftcc.RequestRecipientIdentity(context, view.Identity(d.Recipient))
+	buyer, err := nftcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(d.Recipient))
 	assert.NoError(err, "failed getting buyer identity")
 
 	wallet := nftcc.MyWallet(context)

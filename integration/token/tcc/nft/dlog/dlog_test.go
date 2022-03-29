@@ -26,7 +26,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("NFT", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", nft.Topology("dlog")...)
+			network, err = integration.New(StartPortDlog(), "", nft.Topology("fabric", "dlog")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

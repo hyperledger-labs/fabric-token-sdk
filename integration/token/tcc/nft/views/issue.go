@@ -8,7 +8,7 @@ package views
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
@@ -36,7 +36,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := nftcc.RequestRecipientIdentity(context, view.Identity(p.Recipient))
+	recipient, err := nftcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// At this point, the issuer is ready to prepare the token transaction.
@@ -45,7 +45,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	tx, err := nftcc.NewAnonymousTransaction(
 		context,
 		nftcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed creating issue transaction")

@@ -45,7 +45,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := nftcc.RequestRecipientIdentity(context, view.Identity(p.Recipient))
+	recipient, err := nftcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// At this point, the issuer is ready to prepare the token transaction.
@@ -54,7 +54,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	tx, err := nftcc.NewAnonymousTransaction(
 		context,
 		nftcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed creating issue transaction")
@@ -156,16 +156,6 @@ Here is an example of a `view` representing the sender's operations in the `tran
 This view is execute by the sender's FSC node.
 
 ```go
-// Transfer contains the transfer instructions
-type Transfer struct {
-	// Wallet is the wallet from which recipient identities must be derived
-	Wallet string
-	// HouseID is the house ID of the house to sell
-	HouseID string
-	// Recipient is the identity of the buyer (it is identifier as defined in the topology)
-	Recipient string
-}
-
 type TransferHouseView struct {
 	*Transfer
 }
@@ -175,12 +165,12 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 	tx, err := nftcc.NewAnonymousTransaction(
 		context,
 		nftcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
 	assert.NoError(err, "failed to create a new token transaction")
 
-	buyer, err := nftcc.RequestRecipientIdentity(context, view.Identity(d.Recipient))
+	buyer, err := nftcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(d.Recipient))
 	assert.NoError(err, "failed getting buyer identity")
 
 	wallet := nftcc.MyWallet(context)
@@ -188,9 +178,7 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 
 	// Transfer ownership of the house to the buyer
 	house := &House{}
-	qe, err := tx.QueryExecutor()
-	assert.NoError(err, "failed to create selector")
-	assert.NoError(qe.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
+	assert.NoError(wallet.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
 	assert.NoError(tx.Transfer(wallet, house, buyer), "failed transferring house")
 
@@ -236,10 +224,7 @@ type GetHouseView struct {
 
 func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
 	house := &House{}
-	qe, err := nftcc.GetQueryExecutor(context)
-	assert.NoError(err, "failed to create selector")
-	err = qe.QueryByKey(house, "LinearID", p.HouseID)
-	if err != nil {
+	if err := nftcc.MyWallet(context).QueryByKey(house, "LinearID", p.HouseID); err != nil {
 		if err == nftcc.ErrNoResults {
 			return fmt.Sprintf("no house found with id [%s]", p.HouseID), nil
 		}
@@ -273,7 +258,7 @@ For the FSC network, we have a topology with a node for each business party.
 We can describe the network topology programmatically as follows:
 
 ```go
-func Topology(tokenSDKDriver string) []api.Topology {
+func Fabric(tokenSDKDriver string) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -320,8 +305,9 @@ func Topology(tokenSDKDriver string) []api.Topology {
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)
-	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
-	tms.SetNamespace([]string{"Org1"}, "100", "2")
+	tms := tokenTopology.AddTMS(fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
+	tms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}

@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/samples/nft/views"
 )
 
-func Topology(tokenSDKDriver string) []api.Topology {
+func Fabric(tokenSDKDriver string) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()

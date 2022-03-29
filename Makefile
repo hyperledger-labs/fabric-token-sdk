@@ -63,6 +63,14 @@ integration-tests-tcc-dlog-fabric: docker-images dependencies
 integration-tests-tcc-fabtoken-fabric: docker-images dependencies
 	cd ./integration/token/tcc/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
+.PHONY: integration-tests-tcc-dlog-orion
+integration-tests-tcc-dlog-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/tcc/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-fabtoken-orion
+integration-tests-tcc-fabtoken-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/tcc/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
 .PHONY: integration-tests-tcc-nft-dlog
 integration-tests-tcc-nft-dlog: docker-images dependencies
 	cd ./integration/token/tcc/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
@@ -71,13 +79,13 @@ integration-tests-tcc-nft-dlog: docker-images dependencies
 integration-tests-tcc-nft-fabtoken: docker-images dependencies
 	cd ./integration/token/tcc/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-dlog-orion
-integration-tests-tcc-dlog-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-tcc-nft-dlog-orion
+integration-tests-tcc-nft-dlog-orion: docker-images dependencies
+	cd ./integration/token/tcc/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-fabtoken-orion
-integration-tests-tcc-fabtoken-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-tcc-nft-fabtoken-orion
+integration-tests-tcc-nft-fabtoken-orion: docker-images dependencies
+	cd ./integration/token/tcc/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dvp-fabtoken
 integration-tests-tcc-dvp-fabtoken: docker-images dependencies
@@ -101,6 +109,8 @@ clean:
 	rm -rf ./integration/token/tcc/fungible/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/nft/dlog/cmd/
 	rm -rf ./integration/token/tcc/nft/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/nft/odlog/cmd/
+	rm -rf ./integration/token/tcc/nft/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/dvp/dlog/cmd/
 	rm -rf ./integration/token/tcc/dvp/fabtoken/cmd/
 	rm -rf ./samples/fungible/cmd

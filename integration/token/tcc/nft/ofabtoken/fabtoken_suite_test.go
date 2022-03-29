@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package dlog
+package fabtoken
 
 import (
 	"testing"
@@ -21,9 +21,9 @@ func TestEndToEnd(t *testing.T) {
 	}
 
 	RegisterFailHandler(Fail)
-	RunSpecs(t, "EndToEnd NFT (DLOG) Suite Orion")
+	RunSpecs(t, "EndToEnd NFT (FabToken) Suite Orion")
 }
 
 func StartPortDlog() int {
-	return integration.OrionZKATDLogNFT.StartPortForNode()
+	return integration.OrionFabTokenNFT.StartPortForNode()
 }
