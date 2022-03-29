@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package basic
 
 import (
@@ -242,7 +243,7 @@ func TestAll(network *integration.Infrastructure) {
 
 		transfer := concurrentTransfers[i]
 		go func() {
-			_, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+			txid, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
 				Wallet:    "",
 				Type:      "YUAN",
 				Amount:    7,
@@ -254,6 +255,7 @@ func TestAll(network *integration.Infrastructure) {
 				return
 			}
 			transfer <- nil
+			Expect(network.Client("charlie").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 		}()
 	}
 	// one must fail, the other succeeded
@@ -307,6 +309,7 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 
 	return common.JSONUnmarshalString(txid)
 }

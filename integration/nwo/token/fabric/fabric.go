@@ -9,6 +9,7 @@ package fabric
 import (
 	"bytes"
 	"fmt"
+	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"io"
 	"io/ioutil"
@@ -51,7 +52,6 @@ type tokenPlatform interface {
 	GetContext() api2.Context
 	PublicParameters(tms *topology2.TMS) []byte
 	GetPublicParamsGenerators(driver string) generators.PublicParamsGenerator
-	GetCryptoMaterialGenerator(driver string) generators.CryptoMaterialGenerator
 	PublicParametersDir() string
 	GetBuilder() api2.Builder
 	TokenDir() string
@@ -64,19 +64,26 @@ type Entry struct {
 }
 
 type NetworkHandler struct {
-	TokenPlatform      tokenPlatform
-	EventuallyTimeout  time.Duration
-	TokenChaincodePath string
-	colorIndex         int
-	Entries            map[string]*Entry
+	TokenPlatform            tokenPlatform
+	TokenChaincodePath       string
+	Entries                  map[string]*Entry
+	CryptoMaterialGenerators map[string]generators.CryptoMaterialGenerator
+
+	EventuallyTimeout time.Duration
+	ColorIndex        int
 }
 
 func NewNetworkHandler(tokenPlatform tokenPlatform) *NetworkHandler {
+	curveID := math3.BN254
 	return &NetworkHandler{
 		TokenPlatform:      tokenPlatform,
 		EventuallyTimeout:  10 * time.Minute,
 		TokenChaincodePath: DefaultTokenChaincode,
 		Entries:            map[string]*Entry{},
+		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
+			"fabtoken": NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform),
+			"dlog":     NewDLogCustomCryptoMaterialGenerator(tokenPlatform, curveID),
+		},
 	}
 }
 
@@ -84,7 +91,8 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	entry := p.GetEntry(tms)
 
 	// Generate crypto material
-	cmGenerator := p.TokenPlatform.GetCryptoMaterialGenerator(tms.Driver)
+	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
+	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 
 	// - Setup
 	root, err := cmGenerator.Setup(tms)
@@ -121,19 +129,22 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 	// Prepare chaincodes
 	var chaincode *topology.ChannelChaincode
+	orgs := tms.BackendParams["fabric.orgs"].([]string)
 
-	if tms.TokenChaincode.Private {
+	if v, ok := tms.BackendParams["fpc.enabled"]; ok && v.(bool) {
+		dockerImage := tms.BackendParams["fpc.docker.image"].(string)
 		cc := p.Fabric(tms).Topology().AddFPCAtOrgs(
 			tms.Namespace,
-			tms.TokenChaincode.DockerImage,
-			tms.TokenChaincode.Orgs,
+			dockerImage,
+			orgs,
 		)
 		cc.Chaincode.Ctor = p.TCCCtor(tms)
 		chaincode = cc
 	} else {
-		chaincode, _ = p.PrepareTCC(tms)
+		chaincode, _ = p.PrepareTCC(tms, orgs)
 		p.Fabric(tms).Topology().AddChaincode(chaincode)
 	}
+
 	entry.TCC = &TCC{Chaincode: chaincode}
 }
 

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	fsc2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	. "github.com/onsi/gomega"
@@ -23,6 +22,10 @@ const (
 var (
 	Drivers = []string{"dlog", "fabtoken"}
 )
+
+type BackedTopology interface {
+	Name() string
+}
 
 type Topology struct {
 	TopologyName string `yaml:"name,omitempty"`
@@ -47,7 +50,11 @@ func (t *Topology) Type() string {
 	return t.TopologyType
 }
 
-func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *topology2.TMS {
+func (t *Topology) DefaultChannel() string {
+	return ""
+}
+
+func (t *Topology) AddTMS(backend BackedTopology, channel string, driver string) *topology2.TMS {
 	found := false
 	for _, s := range Drivers {
 		if driver == s {
@@ -60,13 +67,13 @@ func (t *Topology) AddTMS(fabric *topology.Topology, driver string) *topology2.T
 	}
 
 	tms := &topology2.TMS{
-		TargetNetworkTopology: fabric,
-		Network:               fabric.Name(),
-		Channel:               fabric.Channels[0].Name,
-		Namespace:             "zkat",
-		Driver:                driver,
-		Certifiers:            []string{},
-		TokenChaincode:        topology2.Chaincode{},
+		BackendTopology: backend,
+		Network:         backend.Name(),
+		Channel:         channel,
+		Namespace:       "zkat",
+		Driver:          driver,
+		Certifiers:      []string{},
+		BackendParams:   map[string]interface{}{},
 	}
 	t.TMSs = append(t.TMSs, tms)
 	return tms

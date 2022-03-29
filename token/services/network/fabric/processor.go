@@ -7,18 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
@@ -28,24 +27,15 @@ type net interface {
 	Channel(id string) (*fabric.Channel, error)
 }
 
-type Ownership interface {
-	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
-}
-
-type Issued interface {
-	// Issued returns true if the passed issuer issued the passed token
-	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
-}
-
 type RWSetProcessor struct {
 	network   net
 	nss       []string
 	sp        view2.ServiceProvider
-	ownership Ownership
-	issued    Issued
+	ownership network.Ownership
+	issued    network.Issued
 }
 
-func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership Ownership, issued Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Ownership, issued network.Issued) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:   network,
 		nss:       []string{ns},
@@ -150,10 +140,12 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		return err
 	}
 
+	wrappedRWS := &rwsWrapper{RWSet: rws}
+
 	if tms.PublicParametersManager().GraphHiding() {
 		// Delete inputs
 		for _, id := range metadata.SpentTokenID() {
-			if err := r.deleteFabToken(ns, id.TxId, id.Index, rws); err != nil {
+			if err := processor.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
 				return err
 			}
 		}
@@ -213,7 +205,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 
 		// This is a delete, add a delete for fabtoken
 		if len(val) == 0 {
-			if err := r.deleteFabToken(ns, components[0], index, rws); err != nil {
+			if err := processor.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
 				return err
 			}
 			continue
@@ -254,14 +246,14 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			}
 
 			// Store Fabtoken-like entry
-			if err := r.storeFabToken(ns, txID, index, tok, rws, tokenInfoRaw, ids); err != nil {
+			if err := processor.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}
-			if err := r.storeAuditToken(ns, txID, index, tok, rws, tokenInfoRaw); err != nil {
+			if err := processor.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
 				return err
 			}
 		}
@@ -270,7 +262,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.storeIssuedHistoryToken(ns, txID, index, tok, rws, tokenInfoRaw, issuer); err != nil {
+			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer); err != nil {
 				return err
 			}
 		}
@@ -284,4 +276,28 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	}
 
 	return nil
+}
+
+type rwsWrapper struct {
+	*fabric.RWSet
+}
+
+func (r *rwsWrapper) SetState(namespace string, key string, value []byte) error {
+	return r.RWSet.SetState(namespace, key, value)
+}
+
+func (r *rwsWrapper) GetState(namespace string, key string) ([]byte, error) {
+	return r.RWSet.GetState(namespace, key, fabric.FromStorage)
+}
+
+func (r *rwsWrapper) GetStateMetadata(namespace, key string) (map[string][]byte, error) {
+	return r.RWSet.GetStateMetadata(namespace, key, fabric.FromStorage)
+}
+
+func (r *rwsWrapper) DeleteState(namespace string, key string) error {
+	return r.RWSet.DeleteState(namespace, key)
+}
+
+func (r *rwsWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
+	return r.RWSet.SetStateMetadata(namespace, key, metadata)
 }

@@ -41,9 +41,6 @@ func (m *tmsProvider) GetTokenManagerService(network string, channel string, nam
 	if len(network) == 0 {
 		return nil, errors.Errorf("network not specified")
 	}
-	if len(channel) == 0 {
-		return nil, errors.Errorf("channel not specified")
-	}
 	if len(namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}

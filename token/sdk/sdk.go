@@ -10,18 +10,15 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/fabric"
+	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
@@ -29,7 +26,8 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	fabric4 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 )
@@ -59,36 +57,22 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set TMS Provider")
+	pm := NewProcessorManager(p.registry)
 	tmsProvider := core.NewTMSProvider(
 		p.registry,
-		func(network, channel, namespace string) error {
-			n := fabric.GetFabricNetworkService(p.registry, network)
-			if err := n.ProcessorManager().AddProcessor(
-				namespace,
-				fabric4.NewTokenRWSetProcessor(
-					n,
-					namespace,
-					p.registry,
-					fabric4.NewOwnershipMultiplexer(&fabric4.WalletOwnership{}),
-					fabric4.NewIssuedMultiplexer(&fabric4.WalletIssued{}),
-				),
-			); err != nil {
-				return errors.Wrapf(err, "failed adding transaction processors")
-			}
-			return nil
-		},
+		pm.New,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
 		p.registry,
 		tmsProvider,
-		fabric2.NewNormalizer(p.registry),
-		fabric2.NewVaultProvider(p.registry),
-		fabric2.NewCertificationClientProvider(p.registry),
+		network2.NewNormalizer(p.registry),
+		vault.NewVaultProvider(p.registry),
+		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(
 			p.registry,
-			fabric2.NewLockerProvider(
+			network2.NewLockerProvider(
 				p.registry,
 				2*time.Second,
 				(5*time.Minute).Milliseconds(),
@@ -109,6 +93,13 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)
+
+	enabled, err := orion2.IsCustodian(view2.GetConfigService(p.registry))
+	assert.NoError(err, "failed to get custodian status")
+	logger.Infof("Orion Custodian enabled: %t", enabled)
+	if enabled {
+		assert.NoError(orion2.InstallViews(p.registry), "failed to install custodian views")
+	}
 
 	return nil
 }

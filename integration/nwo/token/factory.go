@@ -9,6 +9,8 @@ package token
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	fabric2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 )
@@ -26,5 +28,6 @@ func (p *platformFactory) Name() string {
 func (p *platformFactory) New(ctx api.Context, t api.Topology, builder api.Builder) api.Platform {
 	tp := NewPlatform(ctx, t, builder)
 	tp.AddNetworkHandler(fabric2.TopologyName, fabric.NewNetworkHandler(tp))
+	tp.AddNetworkHandler(orion.TopologyName, orion2.NewNetworkHandler(tp, builder))
 	return tp
 }

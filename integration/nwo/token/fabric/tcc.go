@@ -106,10 +106,8 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 	return cc, port
 }
 
-func (p *NetworkHandler) PrepareTCC(tms *topology3.TMS) (*topology.ChannelChaincode, uint16) {
+func (p *NetworkHandler) PrepareTCC(tms *topology3.TMS, orgs []string) (*topology.ChannelChaincode, uint16) {
 	// Standard Chaincode
-	orgs := tms.TokenChaincode.Orgs
-
 	policy := "AND ("
 	for i, org := range orgs {
 		if i > 0 {

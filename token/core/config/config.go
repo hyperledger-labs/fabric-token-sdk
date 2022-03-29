@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 type configProvider interface {

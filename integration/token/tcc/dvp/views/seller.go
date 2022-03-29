@@ -8,7 +8,7 @@ package views
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views/house"
@@ -37,9 +37,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	// 2. The second leg will be used to transfer the cash to the seller.
 	tx, err := ttxcc.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(
-			fabric.GetDefaultIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
-		),
+		ttxcc.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed to create a new token transaction")
 

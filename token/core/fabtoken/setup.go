@@ -92,6 +92,10 @@ func (pp *PublicParams) AddIssuer(issuer view.Identity) {
 	pp.Issuers = append(pp.Issuers, issuer)
 }
 
+func (pp *PublicParams) Auditors() []view.Identity {
+	return []view.Identity{pp.Auditor}
+}
+
 func Setup() (*PublicParams, error) {
 	return &PublicParams{
 		MTV:   MaxMoney,

@@ -44,8 +44,8 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("parse rws for id [%s]", s.tx.ID())
 	}
-	ch := network.GetInstance(context, s.tx.Network(), s.tx.Channel())
-	rws, err := ch.GetRWSet(s.tx.ID(), env.Results())
+	backend := network.GetInstance(context, s.tx.Network(), s.tx.Channel())
+	rws, err := backend.GetRWSet(s.tx.ID(), env.Results())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", s.tx.ID())
 	}
@@ -58,7 +58,7 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", s.tx.ID())
 	}
 
-	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", s.tx.ID())
 	}
 	agent.EmitKey(0, "ttxcc", "end", "acceptViewStoreEnv", s.tx.ID())

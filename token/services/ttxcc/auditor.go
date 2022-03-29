@@ -130,16 +130,24 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		logger.Debugf("Verifying auditor signature on [%s][%s][%s]", a.tx.Opts.Auditor.UniqueID(), hash.Hashable(signed).String(), a.tx.ID())
 	}
 
-	v, err := a.tx.TokenService().SigService().AuditorVerifier(a.tx.Opts.Auditor)
-	if err != nil {
-		return nil, err
+	validAuditing := false
+	for _, auditor := range a.tx.TokenService().PublicParametersManager().Auditors() {
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
+		if err != nil {
+			logger.Debugf("Failed to get auditor verifier for %s", auditor.UniqueID())
+			continue
+		}
+		if err := v.Verify(signed, msg.Payload); err != nil {
+			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
+		} else {
+			validAuditing = true
+			break
+		}
 	}
-	if err := v.Verify(signed, msg.Payload); err != nil {
-		return nil, errors.Wrapf(err, "failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
+	if !validAuditing {
+		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.TxID)
 	}
-
 	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
-
 	return nil, nil
 }
 
@@ -238,8 +246,8 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 		return errors.Wrapf(err, "failed storing transient")
 	}
 
-	ch := network.GetInstance(context, tx.Network(), tx.Channel())
-	rws, err := ch.GetRWSet(tx.ID(), env.Results())
+	backend := network.GetInstance(context, tx.Network(), tx.Channel())
+	rws, err := backend.GetRWSet(tx.ID(), env.Results())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
 	}
@@ -249,7 +257,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
 	}
-	if err := ch.StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
