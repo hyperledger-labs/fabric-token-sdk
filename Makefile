@@ -80,11 +80,11 @@ integration-tests-tcc-nft-fabtoken: docker-images dependencies
 	cd ./integration/token/tcc/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-nft-dlog-orion
-integration-tests-tcc-nft-dlog-orion: docker-images dependencies
+integration-tests-tcc-nft-dlog-orion: docker-images orion-server-images dependencies
 	cd ./integration/token/tcc/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-nft-fabtoken-orion
-integration-tests-tcc-nft-fabtoken-orion: docker-images dependencies
+integration-tests-tcc-nft-fabtoken-orion: docker-images orion-server-images dependencies
 	cd ./integration/token/tcc/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dvp-fabtoken
