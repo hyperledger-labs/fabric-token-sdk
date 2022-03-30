@@ -8,6 +8,7 @@ package token
 
 import (
 	"fmt"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 
 	"github.com/pkg/errors"
 
@@ -17,6 +18,8 @@ import (
 	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+var logger = flogging.MustGetLogger("token-sdk")
+
 // TMSID models a TMS identifier
 type TMSID struct {
 	Network   string
@@ -24,6 +27,7 @@ type TMSID struct {
 	Namespace string
 }
 
+// String returns a string representation of the TMSID
 func (t *TMSID) String() string {
 	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
 }
@@ -34,18 +38,19 @@ type ServiceProvider interface {
 	GetService(v interface{}) (interface{}, error)
 }
 
-type Info struct {
-	TokenDataHiding bool
-	GraphHiding     bool
-}
-
+// ServiceOptions is used to configure the service
 type ServiceOptions struct {
-	Network             string
-	Channel             string
-	Namespace           string
+	// Network is the name of the network
+	Network string
+	// Channel is the name of the channel, if meaningful for the underlying backend
+	Channel string
+	// Namespace is the namespace of the token
+	Namespace string
+	// PublicParamsFetcher is used to fetch the public parameters
 	PublicParamsFetcher PublicParamsFetcher
 }
 
+// TMSID returns the TMSID for the given ServiceOptions
 func (o ServiceOptions) TMSID() TMSID {
 	return TMSID{
 		Network:   o.Network,
@@ -54,6 +59,7 @@ func (o ServiceOptions) TMSID() TMSID {
 	}
 }
 
+// CompileServiceOptions compiles the given list of ServiceOption
 func CompileServiceOptions(opts ...ServiceOption) (*ServiceOptions, error) {
 	txOptions := &ServiceOptions{}
 	for _, opt := range opts {
@@ -64,8 +70,10 @@ func CompileServiceOptions(opts ...ServiceOption) (*ServiceOptions, error) {
 	return txOptions, nil
 }
 
+// ServiceOption is a function that configures a ServiceOptions
 type ServiceOption func(*ServiceOptions) error
 
+// WithNetwork sets the network name
 func WithNetwork(network string) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Network = network
@@ -73,6 +81,7 @@ func WithNetwork(network string) ServiceOption {
 	}
 }
 
+// WithChannel sets the channel
 func WithChannel(channel string) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Channel = channel
@@ -80,6 +89,7 @@ func WithChannel(channel string) ServiceOption {
 	}
 }
 
+// WithNamespace sets the namespace for the service
 func WithNamespace(namespace string) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.Namespace = namespace
@@ -87,6 +97,7 @@ func WithNamespace(namespace string) ServiceOption {
 	}
 }
 
+// WithPublicParameterFetcher sets the public parameter fetcher
 func WithPublicParameterFetcher(ppFetcher PublicParamsFetcher) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.PublicParamsFetcher = ppFetcher
@@ -114,6 +125,10 @@ func WithTMSID(id TMSID) ServiceOption {
 	}
 }
 
+// ManagementService (TMS, for short) is the entry point for the Token API. A TMS is uniquely
+// identified by a network, channel, namespace, and public parameters.
+// The TMS gives access, among other things, to the wallet manager, the public paramenters,
+// the token selector, and so on.
 type ManagementService struct {
 	sp        view.ServiceProvider
 	network   string
@@ -127,30 +142,38 @@ type ManagementService struct {
 	signatureService            *SignatureService
 }
 
+// String returns a string representation of the TMS
 func (t *ManagementService) String() string {
 	return fmt.Sprintf("TMS[%s:%s:%s]", t.Network(), t.Channel(), t.Network())
 }
 
+// Network returns the network identifier
 func (t *ManagementService) Network() string {
 	return t.network
 }
 
+// Channel returns the channel identifier
 func (t *ManagementService) Channel() string {
 	return t.channel
 }
 
+// Namespace returns the namespace identifier, empty if not defined
 func (t *ManagementService) Namespace() string {
 	return t.namespace
 }
 
-func (t *ManagementService) NewRequest(txId string) (*Request, error) {
-	return NewRequest(t, txId), nil
+// NewRequest returns a new Token Request whose anchor is the passed id
+func (t *ManagementService) NewRequest(id string) (*Request, error) {
+	return NewRequest(t, id), nil
 }
 
-func (t *ManagementService) NewRequestFromBytes(txId string, requestRaw []byte, metaRaw []byte) (*Request, error) {
-	return NewRequestFromBytes(t, txId, requestRaw, metaRaw)
+// NewRequestFromBytes returns a new Token Request for the passed anchor, and whose actions and metadata are
+// unmarshalled from the passed bytes
+func (t *ManagementService) NewRequestFromBytes(anchor string, actions []byte, meta []byte) (*Request, error) {
+	return NewRequestFromBytes(t, anchor, actions, meta)
 }
 
+// NewMetadataFromBytes unmarshals the passed bytes into a Metadata object
 func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) {
 	tokenRequestMetadata := &tokenapi.TokenRequestMetadata{}
 	if err := tokenRequestMetadata.FromBytes(raw); err != nil {
@@ -162,22 +185,27 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 	}, nil
 }
 
+// Validator returns a new token validator for this TMS
 func (t *ManagementService) Validator() *Validator {
 	return &Validator{backend: t.tms.Validator()}
 }
 
+// Vault returns the Token Vault for this TMS
 func (t *ManagementService) Vault() *Vault {
 	return &Vault{v: t.vaultProvider.Vault(t.network, t.channel, t.namespace)}
 }
 
+// WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
 	return &WalletManager{ts: t.tms}
 }
 
+// CertificationManager returns the certification manager for this TMS
 func (t *ManagementService) CertificationManager() *CertificationManager {
 	return &CertificationManager{c: t.tms}
 }
 
+// CertificationClient returns the certification client for this TMS
 func (t *ManagementService) CertificationClient() *CertificationClient {
 	certificationClient, err := t.certificationClientProvider.New(
 		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().CertificationDriver(),
@@ -188,18 +216,23 @@ func (t *ManagementService) CertificationClient() *CertificationClient {
 	return &CertificationClient{cc: certificationClient}
 }
 
+// PublicParametersManager returns a manager that gives access to the public parameters
+// governing this TMS.
 func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
 	return &PublicParametersManager{ppm: t.tms.PublicParamsManager()}
 }
 
+// SelectorManager returns a manager that gives access to the token selectors
 func (t *ManagementService) SelectorManager() SelectorManager {
 	return t.selectorManagerProvider.SelectorManager(t.Network(), t.Channel(), t.Namespace())
 }
 
+// SigService returns the signature service for this TMS
 func (t *ManagementService) SigService() *SignatureService {
 	return t.signatureService
 }
 
+// ID returns the TMS identifier
 func (t *ManagementService) ID() TMSID {
 	return TMSID{
 		Network:   t.Network(),
@@ -208,14 +241,20 @@ func (t *ManagementService) ID() TMSID {
 	}
 }
 
+// ConfigManager returns the configuration manager for this TMS
 func (t *ManagementService) ConfigManager() *ConfigManager {
 	return &ConfigManager{cm: t.tms.ConfigManager()}
 }
 
+// GetManagementService returns the management service for the passed options. If no options are passed,
+// the default management service is returned.
+// Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
 	return GetManagementServiceProvider(sp).GetManagementService(opts...)
 }
 
+// NewServicesFromPublicParams uses the passed marshalled public parameters to create an instance
+// of PublicParametersManager and a new instance of Validator.
 func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Validator, error) {
 	logger.Debugf("unmarshall public parameters...")
 	pp, err := core.PublicParametersFromBytes(params)

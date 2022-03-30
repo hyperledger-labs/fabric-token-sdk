@@ -14,27 +14,40 @@ var (
 	managementServiceProviderIndex = &ManagementServiceProvider{}
 )
 
+// Normalizer is used to set default values of ServiceOptions struct, if needed.
 type Normalizer interface {
+	// Normalize normalizes the given ServiceOptions struct.
 	Normalize(opt *ServiceOptions) *ServiceOptions
 }
 
+// VaultProvider provides token vault instances
 type VaultProvider interface {
+	// Vault returns a token vault instance for the passed inputs
 	Vault(network string, channel string, namespace string) tokenapi.Vault
 }
 
+// SelectorManager provides instances of Selector
 type SelectorManager interface {
+	// NewSelector returns a new Selector instance bound the passed id
 	NewSelector(id string) (Selector, error)
-	Unlock(txID string) error
+	// Unlock unlocks the tokens bound to the passed if, if any
+	Unlock(id string) error
 }
 
+// SelectorManagerProvider provides instances of SelectorManager
 type SelectorManagerProvider interface {
+	// SelectorManager returns a new SelectorManager instance for the passed inputs.
+	// If the selector manager has already been created, it returns the existing instance.
 	SelectorManager(network string, channel string, namespace string) SelectorManager
 }
 
+// CertificationClientProvider provides instances of CertificationClient
 type CertificationClientProvider interface {
+	// New returns a new CertificationClient instance for the passed inputs
 	New(network string, channel string, namespace string, driver string) (tokenapi.CertificationClient, error)
 }
 
+// ManagementServiceProvider provides instances of the management service
 type ManagementServiceProvider struct {
 	sp                          ServiceProvider
 	tmsProvider                 tokenapi.TokenManagerServiceProvider
@@ -44,6 +57,7 @@ type ManagementServiceProvider struct {
 	vaultProvider               VaultProvider
 }
 
+// NewManagementServiceProvider returns a new instance of ManagementServiceProvider
 func NewManagementServiceProvider(
 	sp ServiceProvider,
 	tmsProvider tokenapi.TokenManagerServiceProvider,
@@ -62,6 +76,8 @@ func NewManagementServiceProvider(
 	}
 }
 
+// GetManagementService returns an instance of the management service for the passed options.
+// If the management service has not been created yet, it will be created.
 func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) *ManagementService {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
@@ -99,6 +115,7 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 	}
 }
 
+// GetManagementServiceProvider returns the management service provider from the passed service provider
 func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
 	s, err := sp.GetService(managementServiceProviderIndex)
 	if err != nil {

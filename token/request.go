@@ -79,7 +79,7 @@ func WithTokenSelector(selector Selector) TransferOption {
 	}
 }
 
-// WithOutputMetadata() sets outputs metadata
+// WithOutputMetadata sets outputs metadata
 func WithOutputMetadata(metadata [][]byte) TransferOption {
 	return func(o *TransferOptions) error {
 		if o.Attributes == nil {
@@ -108,42 +108,59 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 	}
 }
 
+// AuditRecord models the audit record returned by the audit command
+// It contains the token request's anchor, inputs (with Type and Quantity), and outputs
 type AuditRecord struct {
-	TxID   string
-	Inputs *InputStream
-	Ouputs *OutputStream
+	Anchor  string
+	Inputs  *InputStream
+	Outputs *OutputStream
 }
 
+// Issue contains information about an issue operation.
+// In particular, it carries the identities of the issuer and the receivers
 type Issue struct {
 	Issuer    view.Identity
 	Receivers []view.Identity
 }
 
+// Transfer contains information about a transfer operation.
+// In particular, it carries the identities of the senders and the receivers
 type Transfer struct {
 	Senders   []view.Identity
 	Receivers []view.Identity
 }
 
+// Request aggregates token operations that must be performed atomically.
+// Operations are represented in a backend agnostic way but driver specific.
 type Request struct {
-	TxID         string
-	Actions      *driver.TokenRequest
-	Metadata     *driver.TokenRequestMetadata
+	// Anchor is used to bind the Actions to a given Transaction
+	Anchor string
+	// Actions contains the token operations.
+	Actions *driver.TokenRequest
+	// Metadata contains the actions' metadata used to unscramble the content of the actions, if the
+	// underlying token driver requires that
+	Metadata *driver.TokenRequestMetadata
+
+	// TokenService this request refers to
 	TokenService *ManagementService `json:"-"`
 }
 
-func NewRequest(tokenService *ManagementService, txid string) *Request {
+// NewRequest creates a new empty request for the given token service and anchor
+func NewRequest(tokenService *ManagementService, anchor string) *Request {
 	return &Request{
-		TxID:         txid,
+		Anchor:       anchor,
 		Actions:      &driver.TokenRequest{},
 		Metadata:     &driver.TokenRequestMetadata{},
 		TokenService: tokenService,
 	}
 }
 
-func NewRequestFromBytes(tokenService *ManagementService, txid string, trRaw []byte, trmRaw []byte) (*Request, error) {
+// NewRequestFromBytes creates a new request from the given anchor, and whose actions and metadata
+// are unmarshalled from the given bytes
+func NewRequestFromBytes(tokenService *ManagementService, anchor string, actions []byte, trmRaw []byte) (*Request, error) {
 	tr := &driver.TokenRequest{}
-	if err := tr.FromBytes(trRaw); err != nil {
-		return nil, errors.Wrapf(err, "failed unmarshalling token request [%d]", len(trRaw))
+	if err := tr.FromBytes(actions); err != nil {
+		return nil, errors.Wrapf(err, "failed unmarshalling token request [%d]", len(actions))
 	}
 	trm := &driver.TokenRequestMetadata{}
 	if len(trmRaw) != 0 {
@@ -152,17 +169,21 @@ func NewRequestFromBytes(tokenService *ManagementService, txid string, trRaw []b
 		}
 	}
 	return &Request{
-		TxID:         txid,
+		Anchor:       anchor,
 		Actions:      tr,
 		Metadata:     trm,
 		TokenService: tokenService,
 	}, nil
 }
 
+// ID returns the anchor of the request
 func (t *Request) ID() string {
-	return t.TxID
+	return t.Anchor
 }
 
+// Issue appends an issue action to the request. The action will be prepared using the provided issuer wallet.
+// The action issues to the receiver a token of the passed type and quantity.
+// Additional options can be passed to customize the action.
 func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	if typ == "" {
 		return nil, errors.Errorf("type is empty")
@@ -228,6 +249,10 @@ func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	return &IssueAction{a: issue}, nil
 }
 
+// Transfer appends a transfer action to the request. The action will be prepared using the provided owner wallet.
+// The action transfers tokens of the passed types to the receivers for the passed quantities.
+// In other words, owners[0] will receives values[0], and so on.
+// Additional options can be passed to customize the action.
 func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) (*TransferAction, error) {
 	for _, v := range values {
 		if v == 0 {
@@ -243,13 +268,13 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 		return nil, errors.Wrap(err, "failed preparing transfer")
 	}
 
-	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", t.TxID, len(tokenIDs), len(outputTokens))
+	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", t.Anchor, len(tokenIDs), len(outputTokens))
 
 	ts := t.TokenService.tms
 
 	// Compute transfer
 	transfer, transferMetadata, err := ts.Transfer(
-		t.TxID,
+		t.Anchor,
 		wallet.w,
 		tokenIDs,
 		outputTokens,
@@ -278,6 +303,9 @@ func (t *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	return &TransferAction{a: transfer}, nil
 }
 
+// Redeem appends a redeem action to the request. The action will be prepared using the provided owner wallet.
+// The action redeems tokens of the passed type for a total amount matching the passed value.
+// Additional options can be passed to customize the action.
 func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...TransferOption) error {
 	opt, err := compileTransferOptions(opts...)
 	if err != nil {
@@ -294,7 +322,7 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 
 	// Compute redeem, it is a transfer with owner set to nil
 	transfer, transferMetadata, err := ts.Transfer(
-		t.TxID,
+		t.Anchor,
 		wallet.w,
 		tokenIDs,
 		outputTokens,
@@ -322,6 +350,7 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	return nil
 }
 
+// Outputs returns the sequence of outputs of the request supporting sequential and parallel aggregate operations.
 func (t *Request) Outputs() (*OutputStream, error) {
 	var outputs []*Output
 	for i, issue := range t.Actions.Issues {
@@ -387,6 +416,9 @@ func (t *Request) Outputs() (*OutputStream, error) {
 	return NewOutputStream(outputs), nil
 }
 
+// Inputs returns the sequence of inputs of the request supporting sequential and parallel aggregate operations.
+// Notice that the inputs do not carry Type and Quantity because this information might be available to all parties.
+// If you are an auditor, you can use the AuditInputs method to get everything.
 func (t *Request) Inputs() (*InputStream, error) {
 	var inputs []*Input
 	for i := range t.Actions.Transfers {
@@ -454,14 +486,17 @@ func (t *Request) IsValid() error {
 	return t.Verify()
 }
 
+// MarshallToAudit marshalls the request to a message suitable for audit signature.
+// In particular, metadata is not included.
 func (t *Request) MarshallToAudit() ([]byte, error) {
 	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: t.Actions.Issues, Transfers: t.Actions.Transfers})
 	if err != nil {
-		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", t.TxID)
+		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", t.Anchor)
 	}
-	return append(bytes, []byte(t.TxID)...), nil
+	return append(bytes, []byte(t.Anchor)...), nil
 }
 
+// MarshallToSign marshalls the request to a message suitable for signing.
 func (t *Request) MarshallToSign() ([]byte, error) {
 	req := &driver.TokenRequest{
 		Issues:    t.Actions.Issues,
@@ -470,14 +505,18 @@ func (t *Request) MarshallToSign() ([]byte, error) {
 	return req.Bytes()
 }
 
+// RequestToBytes marshalls the request's actions to bytes.
 func (t *Request) RequestToBytes() ([]byte, error) {
 	return t.Actions.Bytes()
 }
 
+// MetadataToBytes marshalls the request's metadata to bytes.
 func (t *Request) MetadataToBytes() ([]byte, error) {
 	return t.Metadata.Bytes()
 }
 
+// Bytes marshalls the request to bytes.
+// It includes: Anchor (or ID), actions, and metadata.
 func (t *Request) Bytes() ([]byte, error) {
 	req, err := t.RequestToBytes()
 	if err != nil {
@@ -488,19 +527,20 @@ func (t *Request) Bytes() ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed marshalling metadata to bytes")
 	}
 	return asn1.Marshal(requestSer{
-		TxID:     t.TxID,
+		TxID:     t.Anchor,
 		Actions:  req,
 		Metadata: meta,
 	})
 }
 
+// FromBytes unmarshalls the request from bytes overriding the content of the current request.
 func (t *Request) FromBytes(request []byte) error {
 	var req requestSer
 	_, err := asn1.Unmarshal(request, &req)
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling request")
 	}
-	t.TxID = req.TxID
+	t.Anchor = req.TxID
 	if len(req.Actions) > 0 {
 		if err := t.Actions.FromBytes(req.Actions); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling actions")
@@ -514,14 +554,17 @@ func (t *Request) FromBytes(request []byte) error {
 	return nil
 }
 
+// AddAuditorSignature adds an auditor signature to the request.
 func (t *Request) AddAuditorSignature(sigma []byte) {
 	t.Actions.AuditorSignatures = append(t.Actions.AuditorSignatures, sigma)
 }
 
+// AppendSignature appends a signature to the request.
 func (t *Request) AppendSignature(sigma []byte) {
 	t.Actions.Signatures = append(t.Actions.Signatures, sigma)
 }
 
+// SetTokenService sets the token service.
 func (t *Request) SetTokenService(service *ManagementService) {
 	t.TokenService = service
 }
@@ -564,6 +607,7 @@ func (t *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 	return nil
 }
 
+// Issues returns the list of issued tokens.
 func (t *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range t.Metadata.Issues {
@@ -575,6 +619,7 @@ func (t *Request) Issues() []*Issue {
 	return issues
 }
 
+// Transfers returns the list of transfers.
 func (t *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
 	for _, transfer := range t.Metadata.Transfers {
@@ -586,6 +631,8 @@ func (t *Request) Transfers() []*Transfer {
 	return transfers
 }
 
+// Import imports the actions and metadata from the passed request.
+// TODO: check that the anchor is the same.
 func (t *Request) Import(request *Request) error {
 	for _, issue := range request.Actions.Issues {
 		t.Actions.Issues = append(t.Actions.Issues, issue)
@@ -602,6 +649,8 @@ func (t *Request) Import(request *Request) error {
 	return nil
 }
 
+// AuditCheck performs the audit check of the request in addition to
+// the checks of the token request itself via Verify.
 func (t *Request) AuditCheck() error {
 	if err := t.Verify(); err != nil {
 		return err
@@ -609,10 +658,12 @@ func (t *Request) AuditCheck() error {
 	return t.TokenService.tms.AuditorCheck(
 		t.Actions,
 		t.Metadata,
-		t.TxID,
+		t.Anchor,
 	)
 }
 
+// AuditRecord return the audit record of the request.
+// The audit record contains: The anchor, the audit inputs and outputs
 func (t *Request) AuditRecord() (*AuditRecord, error) {
 	inputs, err := t.AuditInputs()
 	if err != nil {
@@ -623,12 +674,13 @@ func (t *Request) AuditRecord() (*AuditRecord, error) {
 		return nil, errors.WithMessagef(err, "failed getting audit outputs")
 	}
 	return &AuditRecord{
-		TxID:   t.TxID,
-		Inputs: inputs,
-		Ouputs: outputs,
+		Anchor:  t.Anchor,
+		Inputs:  inputs,
+		Outputs: outputs,
 	}, nil
 }
 
+// AuditInputs is like Inputs but in addition Type and Quantity are included.
 func (t *Request) AuditInputs() (*InputStream, error) {
 	inputs, err := t.Inputs()
 	if err != nil {
@@ -651,10 +703,12 @@ func (t *Request) AuditInputs() (*InputStream, error) {
 	return inputs, nil
 }
 
+// AuditOutputs is like Outputs
 func (t *Request) AuditOutputs() (*OutputStream, error) {
 	return t.Outputs()
 }
 
+// ApplicationMetadata returns the application metadata corresponding to the given key
 func (t *Request) ApplicationMetadata(k string) []byte {
 	if len(t.Metadata.Application) == 0 {
 		return nil
@@ -662,6 +716,8 @@ func (t *Request) ApplicationMetadata(k string) []byte {
 	return t.Metadata.Application[k]
 }
 
+// SetApplicationMetadata sets application metadata in terms of key-value pairs.
+// The Token-SDK does not control the format of the metadata.
 func (t *Request) SetApplicationMetadata(k string, v []byte) {
 	if len(t.Metadata.Application) == 0 {
 		t.Metadata.Application = map[string][]byte{}
@@ -762,7 +818,7 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		selector := transferOpts.Selector
 		if selector == nil {
 			// resort to default strategy
-			selector, err = t.TokenService.SelectorManager().NewSelector(t.TxID)
+			selector, err = t.TokenService.SelectorManager().NewSelector(t.Anchor)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}

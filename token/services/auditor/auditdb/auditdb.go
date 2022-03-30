@@ -121,11 +121,11 @@ func (db *AuditDB) Append(record *token.AuditRecord) error {
 	logger.Debug("lock acquired")
 
 	if err := db.db.BeginUpdate(); err != nil {
-		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.TxID)
+		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
 	}
 
 	inputs := record.Inputs
-	outputs := record.Ouputs
+	outputs := record.Outputs
 
 	// compute the payment done in the transaction
 	eIDs := outputs.EnrollmentIDs()
@@ -140,7 +140,7 @@ func (db *AuditDB) Append(record *token.AuditRecord) error {
 			}
 
 			if err := db.db.AddRecord(&driver.Record{
-				TxID:         record.TxID,
+				TxID:         record.Anchor,
 				ActionIndex:  0,
 				EnrollmentID: eID,
 				Amount:       diff.Neg(diff),
@@ -169,7 +169,7 @@ func (db *AuditDB) Append(record *token.AuditRecord) error {
 			}
 
 			if err := db.db.AddRecord(&driver.Record{
-				TxID:         record.TxID,
+				TxID:         record.Anchor,
 				ActionIndex:  0,
 				EnrollmentID: eID,
 				Amount:       diff,
@@ -184,7 +184,7 @@ func (db *AuditDB) Append(record *token.AuditRecord) error {
 	}
 
 	if err := db.db.Commit(); err != nil {
-		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.TxID)
+		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
 	}
 
 	logger.Debugf("Appending new completed without errors")
