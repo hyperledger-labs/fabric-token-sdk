@@ -344,14 +344,13 @@ func (n *Network) requestApprovalFPC(context view.Context, namespace string, req
 	return chaincode.NewEndorseView(
 		namespace,
 		InvokeFunction,
+		requestRaw,
 	).WithNetwork(
 		n.n.Name(),
 	).WithChannel(
 		n.ch.Name(),
 	).WithSignerIdentity(
 		signer,
-	).WithTransientEntry(
-		"token_request", requestRaw,
 	).WithTxID(
 		fabric.TxID{
 			Nonce:   txID.Nonce,
