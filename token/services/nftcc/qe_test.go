@@ -21,7 +21,7 @@ type House struct {
 	Valuation uint64
 }
 
-func TestJsonFilterHit(t *testing.T) {
+func TestJsonFilter(t *testing.T) {
 	h := &House{
 		LinearID:  "hello world",
 		Address:   "5th Avenue",

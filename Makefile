@@ -57,19 +57,35 @@ dependencies:
 
 .PHONY: integration-tests-tcc-dlog-fabric
 integration-tests-tcc-dlog-fabric: docker-images dependencies
-	cd ./integration/token/tcc/basic/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/tcc/fungible/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-fabtoken-fabric
 integration-tests-tcc-fabtoken-fabric: docker-images dependencies
-	cd ./integration/token/tcc/basic/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/tcc/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dlog-orion
 integration-tests-tcc-dlog-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/basic/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/tcc/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-fabtoken-orion
 integration-tests-tcc-fabtoken-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/basic/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/tcc/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-nft-dlog
+integration-tests-tcc-nft-dlog: docker-images dependencies
+	cd ./integration/token/tcc/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-nft-fabtoken
+integration-tests-tcc-nft-fabtoken: docker-images dependencies
+	cd ./integration/token/tcc/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-nft-dlog-orion
+integration-tests-tcc-nft-dlog-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/tcc/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-tcc-nft-fabtoken-orion
+integration-tests-tcc-nft-fabtoken-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/tcc/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-tcc-dvp-fabtoken
 integration-tests-tcc-dvp-fabtoken: docker-images dependencies
@@ -87,14 +103,18 @@ tidy:
 clean:
 	docker network prune -f
 	docker container prune -f
-	rm -rf ./integration/token/tcc/basic/dlog/cmd/
-	rm -rf ./integration/token/tcc/basic/fabtoken/cmd/
-	rm -rf ./integration/token/tcc/basic/odlog/cmd/
-	rm -rf ./integration/token/tcc/basic/ofabtoken/cmd/
+	rm -rf ./integration/token/tcc/fungible/dlog/cmd/
+	rm -rf ./integration/token/tcc/fungible/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/fungible/odlog/cmd/
+	rm -rf ./integration/token/tcc/fungible/ofabtoken/cmd/
+	rm -rf ./integration/token/tcc/nft/dlog/cmd/
+	rm -rf ./integration/token/tcc/nft/fabtoken/cmd/
+	rm -rf ./integration/token/tcc/nft/odlog/cmd/
+	rm -rf ./integration/token/tcc/nft/ofabtoken/cmd/
 	rm -rf ./integration/token/tcc/dvp/dlog/cmd/
 	rm -rf ./integration/token/tcc/dvp/fabtoken/cmd/
-	rm -rf ./samples/fabric/fungible/cmd
-	rm -rf ./samples/fabric/dvp/cmd
+	rm -rf ./samples/fungible/cmd
+	rm -rf ./samples/nft/cmd
 
 .PHONY: tokengen
 tokengen:

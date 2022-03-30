@@ -3,13 +3,13 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-
 package views
 
 import (
 	"encoding/json"
 	"fmt"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
@@ -27,8 +27,8 @@ type IssueCash struct {
 	TokenType string
 	// Quantity represent the number of units of a certain token type stored in the token
 	Quantity uint64
-	// Recipient is an identifier of the recipient identity
-	Recipient string
+	// Recipient is the identity of the recipient's FSC node
+	Recipient view.Identity
 }
 
 type IssueCashView struct {
@@ -40,7 +40,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttxcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
+	recipient, err := ttxcc.RequestRecipientIdentity(context, p.Recipient)
 	assert.NoError(err, "failed getting recipient identity")
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
@@ -91,9 +91,24 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign issue transaction")
 
+	// Sanity checks:
+	// - the transaction is in busy state in the vault
+	net := network.GetInstance(context, tx.Network(), tx.Channel())
+	vault, err := net.Vault(tx.Namespace())
+	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
+	vc, err := vault.Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+
 	// Last but not least, the issuer sends the transaction for ordering and waits for transaction finality.
 	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit issue transaction")
+
+	// Sanity checks:
+	// - the transaction is in valid state in the vault
+	vc, err = vault.Status(tx.ID())
+	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
+	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	return tx.ID(), nil
 }

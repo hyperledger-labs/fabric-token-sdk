@@ -8,7 +8,6 @@ package nftcc
 
 import (
 	"encoding/base64"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/state"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -122,7 +121,7 @@ func (t *Transaction) setStateID(s interface{}) (string, error) {
 		}
 	case LinearState:
 		logger.Debugf("LinearState...")
-		key = state.GenerateUUID()
+		key = GenerateUUID()
 		key = d.SetLinearID(key)
 	default:
 		// TODO: should we return an error here?

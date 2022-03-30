@@ -108,5 +108,5 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 		}
 	}
 
-	return nil, nil, errors.New("no token found")
+	return nil, nil, ErrNoResults
 }

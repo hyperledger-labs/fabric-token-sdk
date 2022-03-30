@@ -9,7 +9,7 @@ We will consider the following business parties:
 - `Auditor`: The entity that is auditing the token transactions.
 
 Each party is running a Smart Fabric Client node with the Token SDK enabled.
-The parties are connected in a peer-to-peer network that is established and manteined by the nodes.
+The parties are connected in a peer-to-peer network that is established and maintained by the nodes.
 
 Let us then describe each token operation with examples:
 
@@ -71,8 +71,8 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
-	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/issue", []byte("issue"))
-	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/basic/meta", []byte("meta"))
+	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/issue", []byte("issue"))
+	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/meta", []byte("meta"))
 	assert.NoError(err, "failed creating issue transaction")
 
 	// The issuer adds a new issue operation to the transaction following the instruction received
@@ -246,7 +246,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 }
 ```
 
-The `view` representing the recipient's operations can be exactly the same of that used for the issuance, or different
+The `view` representing the recipient's operations can be exactly the same of that used for the issuance, or different.
 It depends on the specific business process.
 
 Thanks to the interaction between the sender and the recipient, the recipient
@@ -695,7 +695,7 @@ If you reached this point, you can now invoke the business views on the FSC node
 To issue a fungible token, we can run the following command:
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/issuer/client-config.yaml -f issue -i "{\"TokenType\":\"TOK\", \"Quantity\":10, \"Recipient\":\"alice\"}"
+./fungible view -c ./testdata/fsc/nodes/issuer/client-config.yaml -f issue -i "{\"TokenType\":\"TOK\", \"Quantity\":10, \"Recipient\":\"alice\"}"
 ```
 
 The above command invoke the `issue` view on the issuer's FSC node. The `-c` option specifies the client configuration file.
@@ -711,7 +711,7 @@ The above is the transaction id of the transaction that issued the fungible toke
 Indeed, once the token is issued, the recipient can query its wallet to see the token.
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
+./fungible view -c ./testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
 ```
 
 The above command will query Alice's wallet to get a list of unspent tokens whose type `TOK`.
@@ -736,7 +736,7 @@ You can expect to see an output like this (beautified):
 Alice can now transfer some of her tokens to other parties. For example:
 
 ```shell 
-./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f transfer -i "{\"TokenType\":\"TOK\", \"Quantity\":6, \"Recipient\":\"bob\"}"
+./fungible view -c ./testdata/fsc/nodes/alice/client-config.yaml -f transfer -i "{\"TokenType\":\"TOK\", \"Quantity\":6, \"Recipient\":\"bob\"}"
 ```
 
 The above command instructs Alice's node to perform a transfer of 6 units of tokens `TOK` to `bob`.
@@ -753,7 +753,7 @@ Now, we check again Alice and Bob's wallets to see if they are up-to-date.
 Alice:
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
+./fungible view -c ./testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
 ```
 
 You can expect to see an output like this (beautified):
@@ -779,7 +779,7 @@ You can expect to see an output like this (beautified):
 Then, Bob:
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/bob/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
+./fungible view -c ./testdata/fsc/nodes/bob/client-config.yaml -f unspent -i "{\"TokenType\":\"TOK\"}"
 ```
 
 You can expect to see an output like this (beautified):
@@ -808,7 +808,7 @@ Because KOT tokens don't exist yet, let us issue them first.
 The following command instructs the issuer to issue KOT tokens to Charlie.
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/issuer/client-config.yaml -f issue -i "{\"TokenType\":\"KOT\", \"Quantity\":10, \"Recipient\":\"charlie\"}"
+./fungible view -c ./testdata/fsc/nodes/issuer/client-config.yaml -f issue -i "{\"TokenType\":\"KOT\", \"Quantity\":10, \"Recipient\":\"charlie\"}"
 ```
 
 This is transaction id of the transaction that issues KOT tokens
@@ -819,7 +819,7 @@ This is transaction id of the transaction that issues KOT tokens
 Let us query Charlie's wallet
 
 ````shell
-./fungible view -c ~/testdata/fsc/nodes/charlie/client-config.yaml -f unspent -i "{\"TokenType\":\"KOT\"}"
+./fungible view -c ./testdata/fsc/nodes/charlie/client-config.yaml -f unspent -i "{\"TokenType\":\"KOT\"}"
 ````
 
 You can expect to see an output like this (beautified):
@@ -847,7 +847,7 @@ The above command instructs Alice's node to start the swap we described above wh
 previous sections.
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f swap -i "{\"FromType\":\"TOK\", \"FromQuantity\":1,\"ToType\":\"KOT\", \"ToQuantity\":1, \"To\":\"charlie\"}"
+./fungible view -c ./testdata/fsc/nodes/alice/client-config.yaml -f swap -i "{\"FromType\":\"TOK\", \"FromQuantity\":1,\"ToType\":\"KOT\", \"ToQuantity\":1, \"To\":\"charlie\"}"
 ```
 
 If everything is successfully, you can expect to see the transaction id of the transaction that performed the swap.
@@ -861,7 +861,7 @@ We can now query the wallets of Alice and Charlie to confirm the swap happened.
 Alice:
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"\"}"
+./fungible view -c ./testdata/fsc/nodes/alice/client-config.yaml -f unspent -i "{\"TokenType\":\"\"}"
 ```
  
 You can expect to see that Alice has 3 units of TOK tokens, and 1 unit of KOT tokens.
@@ -898,7 +898,7 @@ You can expect to see that Alice has 3 units of TOK tokens, and 1 unit of KOT to
 Charlie:
 
 ```shell
-./fungible view -c ~/testdata/fsc/nodes/charlie/client-config.yaml -f unspent -i "{\"TokenType\":\"\"}"
+./fungible view -c ./testdata/fsc/nodes/charlie/client-config.yaml -f unspent -i "{\"TokenType\":\"\"}"
 ```
 
 You can expect to see that Charlie has 1 unit of TOK tokens and still 9 units of KOT tokens.
