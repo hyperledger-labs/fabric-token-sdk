@@ -91,7 +91,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 }
 ```
 
-The important point to highlight is that the issuer is that the issuer must ensure that the NFT is unique in the system.
+The important point to highlight is that the issuer must ensure that the NFT is unique in the system.
 There are many ways to do that. The simplest one is to compute a salted hash of the data structure (or part of it) one
 wants to convert to an NFT. This is the approach followed by the `uniqueness` package.
 
