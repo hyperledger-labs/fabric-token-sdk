@@ -8,19 +8,18 @@ package fabric
 
 import (
 	"encoding/json"
-	"strings"
-	"sync"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/fpc"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	"strings"
+	"sync"
 )
 
 const (
@@ -143,10 +142,19 @@ type Network struct {
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
+
+	fpcChaincodes     map[string]bool
+	fpcChaincodesLock sync.RWMutex
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel) *Network {
-	return &Network{n: n, ch: ch, sp: sp, vaultCache: map[string]driver.Vault{}}
+	return &Network{
+		n:             n,
+		ch:            ch,
+		sp:            sp,
+		vaultCache:    map[string]driver.Vault{},
+		fpcChaincodes: map[string]bool{},
+	}
 }
 
 func (n *Network) Name() string {
@@ -220,27 +228,29 @@ func (n *Network) StoreTransient(id string, transient driver.TransientMap) error
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
-	env, err := chaincode.NewEndorseView(
-		namespace,
-		InvokeFunction,
-	).WithNetwork(
-		n.n.Name(),
-	).WithChannel(
-		n.ch.Name(),
-	).WithSignerIdentity(
-		signer,
-	).WithTransientEntry(
-		"token_request", requestRaw,
-	).WithTxID(
-		fabric.TxID{
-			Nonce:   txID.Nonce,
-			Creator: txID.Creator,
-		},
-	).Endorse(context)
-	if err != nil {
-		return nil, err
+	n.fpcChaincodesLock.RLock()
+	fpcFlag, ok := n.fpcChaincodes[namespace]
+	n.fpcChaincodesLock.RUnlock()
+
+	if !ok {
+		n.fpcChaincodesLock.Lock()
+		fpcFlag, ok = n.fpcChaincodes[namespace]
+		if !ok {
+			exist, err := fpc.GetChannel(context, n.n.Name(), n.ch.Name()).EnclaveRegistry().IsPrivate(namespace)
+			if err == nil && exist {
+				n.fpcChaincodes[namespace] = true
+				fpcFlag = true
+			} else {
+				n.fpcChaincodes[namespace] = false
+			}
+		}
+		n.fpcChaincodesLock.Unlock()
 	}
-	return env, nil
+
+	if fpcFlag {
+		return n.requestApprovalFPC(context, namespace, requestRaw, signer, txID)
+	}
+	return n.requestApproval(context, namespace, requestRaw, signer, txID)
 }
 
 func (n *Network) ComputeTxID(id *driver.TxID) string {
@@ -308,4 +318,44 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
 	return ai.EnrollmentID(), nil
+}
+
+func (n *Network) requestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (*fabric.Envelope, error) {
+	return chaincode.NewEndorseView(
+		namespace,
+		InvokeFunction,
+	).WithNetwork(
+		n.n.Name(),
+	).WithChannel(
+		n.ch.Name(),
+	).WithSignerIdentity(
+		signer,
+	).WithTransientEntry(
+		"token_request", requestRaw,
+	).WithTxID(
+		fabric.TxID{
+			Nonce:   txID.Nonce,
+			Creator: txID.Creator,
+		},
+	).Endorse(context)
+}
+
+func (n *Network) requestApprovalFPC(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (*fabric.Envelope, error) {
+	return chaincode.NewEndorseView(
+		namespace,
+		InvokeFunction,
+	).WithNetwork(
+		n.n.Name(),
+	).WithChannel(
+		n.ch.Name(),
+	).WithSignerIdentity(
+		signer,
+	).WithTransientEntry(
+		"token_request", requestRaw,
+	).WithTxID(
+		fabric.TxID{
+			Nonce:   txID.Nonce,
+			Creator: txID.Creator,
+		},
+	).Endorse(context)
 }
