@@ -30,6 +30,7 @@ var _ = Describe("ccvalidator", func() {
 			TokenServicesFactory: func(i []byte) (chaincode2.PublicParametersManager, chaincode2.Validator, error) {
 				return fakePPM, fakeValidator, nil
 			},
+			ExtractTokenRequest: chaincode2.ExtractTokenRequestFromTransient,
 		}
 
 		pp := base64.StdEncoding.EncodeToString([]byte("public parameters"))

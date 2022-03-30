@@ -61,8 +61,9 @@ func main() {
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
 					return token.NewServicesFromPublicParams(bytes)
 				},
-				MetricsEnabled: config.MetricsEnabled,
-				MetricsServer:  config.MetricsServer,
+				ExtractTokenRequest: tcc.ExtractTokenRequestFromTransient,
+				MetricsEnabled:      config.MetricsEnabled,
+				MetricsServer:       config.MetricsServer,
 			},
 		)
 		if err != nil {
@@ -80,9 +81,10 @@ func main() {
 				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
 					return token.NewServicesFromPublicParams(bytes)
 				},
-				LogLevel:       config.LogLevel,
-				MetricsEnabled: config.MetricsEnabled,
-				MetricsServer:  config.MetricsServer,
+				ExtractTokenRequest: tcc.ExtractTokenRequestFromTransient,
+				LogLevel:            config.LogLevel,
+				MetricsEnabled:      config.MetricsEnabled,
+				MetricsServer:       config.MetricsServer,
 			},
 			TLSProps: shim.TLSProperties{
 				// TODO : enable TLS
