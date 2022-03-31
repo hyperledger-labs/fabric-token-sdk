@@ -71,7 +71,7 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 		func(s string, s2 string) (string, []byte) {
 			// logger.Infof("replace [%s:%s]?", s, s2)
 			// Is the public params?
-			if strings.HasSuffix(s, "/token/services/tcc/params.go") {
+			if strings.HasSuffix(s, "/token/services/network/fabric/tcc/params.go") {
 				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", s, s2)
 				return "", paramsFile.Bytes()
 			}

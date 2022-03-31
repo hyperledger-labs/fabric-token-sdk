@@ -10,7 +10,7 @@ import (
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	tcc "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/fetcher"
+	tcc "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fetcher"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
 

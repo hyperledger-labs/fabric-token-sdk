@@ -8,13 +8,14 @@ package fabric
 
 import (
 	"fmt"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric/commands"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric/commands"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"

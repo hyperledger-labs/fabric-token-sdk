@@ -55,45 +55,45 @@ dependencies:
 	go get -u github.com/gordonklaus/ineffassign
 	go get -u github.com/google/addlicense
 
-.PHONY: integration-tests-tcc-dlog-fabric
-integration-tests-tcc-dlog-fabric: docker-images dependencies
-	cd ./integration/token/tcc/fungible/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-dlog-fabric
+integration-tests-dlog-fabric: docker-images dependencies
+	cd ./integration/token/fungible/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-fabtoken-fabric
-integration-tests-tcc-fabtoken-fabric: docker-images dependencies
-	cd ./integration/token/tcc/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-fabtoken-fabric
+integration-tests-fabtoken-fabric: docker-images dependencies
+	cd ./integration/token/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-dlog-orion
-integration-tests-tcc-dlog-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-dlog-orion
+integration-tests-dlog-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-fabtoken-orion
-integration-tests-tcc-fabtoken-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-fabtoken-orion
+integration-tests-fabtoken-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-nft-dlog
-integration-tests-tcc-nft-dlog: docker-images dependencies
-	cd ./integration/token/tcc/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-nft-dlog
+integration-tests-nft-dlog: docker-images dependencies
+	cd ./integration/token/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-nft-fabtoken
-integration-tests-tcc-nft-fabtoken: docker-images dependencies
-	cd ./integration/token/tcc/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-nft-fabtoken
+integration-tests-nft-fabtoken: docker-images dependencies
+	cd ./integration/token/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-nft-dlog-orion
-integration-tests-tcc-nft-dlog-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-nft-dlog-orion
+integration-tests-nft-dlog-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-nft-fabtoken-orion
-integration-tests-tcc-nft-fabtoken-orion: docker-images orion-server-images dependencies
-	cd ./integration/token/tcc/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-nft-fabtoken-orion
+integration-tests-nft-fabtoken-orion: docker-images orion-server-images dependencies
+	cd ./integration/token/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-dvp-fabtoken
-integration-tests-tcc-dvp-fabtoken: docker-images dependencies
-	cd ./integration/token/tcc/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-dvp-fabtoken
+integration-tests-dvp-fabtoken: docker-images dependencies
+	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
-.PHONY: integration-tests-tcc-dvp-dlog
-integration-tests-tcc-dvp-dlog: docker-images dependencies
-	cd ./integration/token/tcc/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+.PHONY: integration-tests-dvp-dlog
+integration-tests-dvp-dlog: docker-images dependencies
+	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: tidy
 tidy:
@@ -103,16 +103,16 @@ tidy:
 clean:
 	docker network prune -f
 	docker container prune -f
-	rm -rf ./integration/token/tcc/fungible/dlog/cmd/
-	rm -rf ./integration/token/tcc/fungible/fabtoken/cmd/
-	rm -rf ./integration/token/tcc/fungible/odlog/cmd/
-	rm -rf ./integration/token/tcc/fungible/ofabtoken/cmd/
-	rm -rf ./integration/token/tcc/nft/dlog/cmd/
-	rm -rf ./integration/token/tcc/nft/fabtoken/cmd/
-	rm -rf ./integration/token/tcc/nft/odlog/cmd/
-	rm -rf ./integration/token/tcc/nft/ofabtoken/cmd/
-	rm -rf ./integration/token/tcc/dvp/dlog/cmd/
-	rm -rf ./integration/token/tcc/dvp/fabtoken/cmd/
+	rm -rf ./integration/token/fungible/dlog/cmd/
+	rm -rf ./integration/token/fungible/fabtoken/cmd/
+	rm -rf ./integration/token/fungible/odlog/cmd/
+	rm -rf ./integration/token/fungible/ofabtoken/cmd/
+	rm -rf ./integration/token/nft/dlog/cmd/
+	rm -rf ./integration/token/nft/fabtoken/cmd/
+	rm -rf ./integration/token/nft/odlog/cmd/
+	rm -rf ./integration/token/nft/ofabtoken/cmd/
+	rm -rf ./integration/token/dvp/dlog/cmd/
+	rm -rf ./integration/token/dvp/fabtoken/cmd/
 	rm -rf ./samples/fungible/cmd
 	rm -rf ./samples/nft/cmd
 

@@ -9,14 +9,15 @@ package fabric
 import (
 	"bytes"
 	"fmt"
-	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"text/template"
 	"time"
+
+	math3 "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -34,7 +35,7 @@ import (
 var logger = flogging.MustGetLogger("integration.token.fabric")
 
 const (
-	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main"
+	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
 )
 
 type fabricPlatform interface {

@@ -9,7 +9,6 @@ package token
 import (
 	"bytes"
 	"fmt"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"io"
 	"io/ioutil"
 	"os/exec"
@@ -17,6 +16,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"

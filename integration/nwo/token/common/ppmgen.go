@@ -7,6 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"io/ioutil"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -15,10 +20,6 @@ import (
 	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
-	"io/ioutil"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 type FabTokenPublicParamsGenerator struct{}

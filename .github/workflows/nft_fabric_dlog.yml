@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-nft-dlog
+      run: make integration-tests-nft-dlog

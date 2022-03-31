@@ -8,12 +8,13 @@ package orion
 
 import (
 	"bytes"
-	math3 "github.com/IBM/mathlib"
 	"io"
 	"io/ioutil"
 	"os"
 	"text/template"
 	"time"
+
+	math3 "github.com/IBM/mathlib"
 
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -22,7 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	. "github.com/onsi/gomega"
