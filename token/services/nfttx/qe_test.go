@@ -4,15 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nftcc
+package nfttx
 
 import (
 	"encoding/base64"
 	"encoding/json"
+	"testing"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	"github.com/thedevsaddam/gojsonq"
-	"testing"
 )
 
 type House struct {

@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 )
 
 // GetHouse contains the input to query a house by id
@@ -24,7 +24,7 @@ type GetHouseView struct {
 }
 
 func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
-	wallet := nftcc.MyWallet(context)
+	wallet := nfttx.MyWallet(context)
 	assert.NotNil(wallet, "wallet is nil")
 
 	house := &House{}

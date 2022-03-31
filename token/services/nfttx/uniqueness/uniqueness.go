@@ -12,7 +12,7 @@ import (
 	"encoding/base64"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	"github.com/pkg/errors"
 	"sync"
 )
@@ -36,7 +36,7 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 	defer s.mutex.Unlock()
 
 	kvs := kvs.GetService(s.sp)
-	k := "github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/uniqueness/key"
+	k := "github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness/key"
 	var key []byte
 	if kvs.Exists(k) {
 		if err := kvs.Get(k, &key); err != nil {

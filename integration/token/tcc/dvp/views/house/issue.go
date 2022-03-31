@@ -12,8 +12,8 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/uniqueness"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness"
 )
 
 // IssueHouse contains the input information to issue a token
@@ -37,20 +37,20 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := nftcc.RequestRecipientIdentity(context, view.Identity(p.Recipient))
+	recipient, err := nfttx.RequestRecipientIdentity(context, view.Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// At this point, the issuer is ready to prepare the token transaction.
 	// The issuer creates an anonymous transaction (this means that the result Fabric transaction will be signed using idemix),
 	// and specify the auditor that must be contacted to approve the operation
-	tx, err := nftcc.NewAnonymousTransaction(
+	tx, err := nfttx.NewAnonymousTransaction(
 		context,
-		nftcc.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		nfttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating issue transaction")
 
 	// The issuer adds a new issue operation to the transaction following the instruction received
-	wallet := nftcc.GetIssuerWallet(context, p.IssuerWallet)
+	wallet := nfttx.GetIssuerWallet(context, p.IssuerWallet)
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	h := &House{
 		Address:   p.Address,
@@ -60,7 +60,7 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	uniqueID, err := uniqueness.GetService(context).ComputeID(h.Address)
 	assert.NoError(err, "failed computing unique ID")
 
-	err = tx.Issue(wallet, h, recipient, nftcc.WithUniqueID(uniqueID))
+	err = tx.Issue(wallet, h, recipient, nfttx.WithUniqueID(uniqueID))
 	assert.NoError(err, "failed adding new issued token")
 
 	// The issuer is ready to collect all the required signatures.
@@ -70,11 +70,11 @@ func (p *IssueHouseView) Call(context view.Context) (interface{}, error) {
 	// Before completing, all recipients receive the approved Fabric transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
-	_, err = context.RunView(nftcc.NewCollectEndorsementsView(tx))
+	_, err = context.RunView(nfttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign issue transaction")
 
 	// Last but not least, the issuer sends the transaction for ordering and waits for transaction finality.
-	_, err = context.RunView(nftcc.NewOrderingAndFinalityView(tx))
+	_, err = context.RunView(nfttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit issue transaction")
 
 	return h.LinearID, nil

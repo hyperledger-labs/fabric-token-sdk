@@ -9,9 +9,10 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 )
 
 // GetHouse contains the input to query a house by id
@@ -25,8 +26,8 @@ type GetHouseView struct {
 
 func (p *GetHouseView) Call(context view.Context) (interface{}, error) {
 	house := &House{}
-	if err := nftcc.MyWallet(context).QueryByKey(house, "LinearID", p.HouseID); err != nil {
-		if err == nftcc.ErrNoResults {
+	if err := nfttx.MyWallet(context).QueryByKey(house, "LinearID", p.HouseID); err != nil {
+		if err == nfttx.ErrNoResults {
 			return fmt.Sprintf("no house found with id [%s]", p.HouseID), nil
 		}
 		return nil, err

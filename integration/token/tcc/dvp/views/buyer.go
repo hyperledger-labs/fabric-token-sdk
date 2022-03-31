@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views/house"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
@@ -18,7 +18,7 @@ type BuyHouseView struct{}
 
 func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	// Respond to a request for an identity to transfer the house
-	meHouse, err := nftcc.RespondRequestRecipientIdentity(context)
+	meHouse, err := nfttx.RespondRequestRecipientIdentity(context)
 	assert.NoError(err, "failed to respond to identity request")
 
 	// Respond to a request to exchange identifies for the cash transfer
@@ -30,7 +30,7 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed receiving action")
 
 	// check transaction, it must contain the house transfer
-	nfttx := nftcc.Wrap(tx)
+	nfttx := nfttx.Wrap(tx)
 	outputs, err := nfttx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 	assert.NoError(outputs.Validate(), "failed validating outputs")

@@ -4,20 +4,21 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nftcc
+package nfttx
 
 import (
 	"encoding/base64"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.nftcc")
+var logger = flogging.MustGetLogger("token-sdk.nfttx")
 
 type TxOption ttx.TxOption
 

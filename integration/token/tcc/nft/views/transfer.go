@@ -12,7 +12,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 )
 
 // Transfer contains the transfer instructions
@@ -31,9 +31,9 @@ type TransferHouseView struct {
 
 func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 	// Prepare a new token transaction.
-	tx, err := nftcc.NewAnonymousTransaction(
+	tx, err := nfttx.NewAnonymousTransaction(
 		context,
-		nftcc.WithAuditor(
+		nfttx.WithAuditor(
 			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
@@ -41,23 +41,23 @@ func (d *TransferHouseView) Call(context view.Context) (interface{}, error) {
 
 	// Prepare House Transfer
 	house := &House{}
-	assert.NoError(nftcc.MyWallet(context).QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
+	assert.NoError(nfttx.MyWallet(context).QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
-	buyer, err := nftcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(d.Recipient))
+	buyer, err := nfttx.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(d.Recipient))
 	assert.NoError(err, "failed getting buyer identity")
 
-	wallet := nftcc.MyWallet(context)
+	wallet := nfttx.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	// Transfer ownership of the house to the buyer
 	assert.NoError(tx.Transfer(wallet, house, buyer), "failed transferring house")
 
 	// Collect signature from the parties
-	_, err = context.RunView(nftcc.NewCollectEndorsementsView(tx))
+	_, err = context.RunView(nfttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to collect endorsements")
 
 	// Send to the ordering service and wait for confirmation
-	_, err = context.RunView(nftcc.NewOrderingAndFinalityView(tx))
+	_, err = context.RunView(nfttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to order and finalize")
 
 	return tx.ID(), nil

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nftcc
+package nfttx
 
 // LinearState models a state with a unique identifier that does not change through the evolution
 // of the state.

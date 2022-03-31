@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views/house"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
@@ -60,7 +60,7 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 
 func (d *SellHouseView) preparePayment(context view.Context, tx *ttx.Transaction, house *house.House) (*ttx.Transaction, error) {
 	// we need the house's valuation
-	wallet := nftcc.MyWallet(context)
+	wallet := nfttx.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	// exchange pseudonyms for the token transfer
@@ -82,19 +82,19 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *ttx.Transaction
 
 func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttx.Transaction) (*ttx.Transaction, *house.House, error) {
 	// let's prepare the NFT transfer
-	wallet := nftcc.MyWallet(context)
+	wallet := nfttx.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	house := &house.House{}
 	assert.NoError(wallet.QueryByKey(house, "LinearID", d.HouseID), "failed loading house with id %s", d.HouseID)
 
-	buyer, err := nftcc.RequestRecipientIdentity(context, view.Identity(d.Buyer))
+	buyer, err := nfttx.RequestRecipientIdentity(context, view.Identity(d.Buyer))
 	assert.NoError(err, "failed getting buyer identity")
 
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	// Transfer ownership of the house to the buyer
-	assert.NoError(nftcc.Wrap(tx).Transfer(wallet, house, buyer), "failed transferring house")
+	assert.NoError(nfttx.Wrap(tx).Transfer(wallet, house, buyer), "failed transferring house")
 
 	return tx, house, nil
 }
