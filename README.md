@@ -7,16 +7,33 @@
 The `Fabric Token SDK` is a set of API and services that let developers create 
 token-based distributed application on Hyperledger Fabric.
 
+# Disclaimer
+
+`Fabric Token SDK` has not been audited and is provided as-is, use at your own risk.
+The project will be subject to rapid changes to complete the open-sourcing process, and  the list of features.
+
 # Useful Links
 
 - [`Documentation`](./docs/design.md): Discover the design principles of the Fabric Token SDK.
 - [`Samples`](./samples/README.md): A collection of sample applications that demonstrate the use of the Fabric Token SDK.
 - `Feedback`: Your help is the key to the success of the Fabric Token SDK. 
   - Submit your issues [`here`][`fabric-token-sdk` Issues]. 
-  - If you have any questions, queries or comments, find us on [GitHub discussions].
+  - Found a bug? Need help to fix an issue? You have a great idea for a new feature? Talk to us! You can reach us on
+    [Discord](https://discord.gg/hyperledger) in #fabric-token-sdk.
   
 - [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client): The Token SDK leverages the 
   `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out. 
+
+# Getting started
+
+Clone the code and make sure it is on your `$GOPATH`.
+(Important: we assume in this documentation and default configuration that your `$GOPATH` has a single root-directory!).
+Sometimes, we use `$FTS_PATH` to refer to the Fabric Token SDK repository in your filesystem.
+
+```bash
+export $FTS_PATH=$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk
+git clone https://github.com/hyperledger-labs/fabric-token-sdk.git $FTS_PATH
+```
   
 # Additional Resources
 
@@ -25,18 +42,6 @@ token-based distributed application on Hyperledger Fabric.
   trade of tokens as a basis of new forms of commerce. In this Hyperledger Foundation member webinar, 
   the IBM Research team describes in this webinar what tokenization use cases are possible with Hyperledger Fabric today, 
   and what enhancements are in the works (aka Fabric Token SDK).
-   
-
-# Disclaimer
-
-`Fabric Token SDK` has not been audited and is provided as-is, use at your own risk. 
-The project will be subject to rapid changes to complete the open-sourcing process, and
-the list of features.
-
-# Getting Help
-
-Found a bug? Need help to fix an issue? You have a great idea for a new feature? Talk to us! You can reach us on
-[Discord](https://discord.gg/hyperledger) in #fabric-token-sdk.
 
 # Motivation
 
