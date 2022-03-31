@@ -4,7 +4,7 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 )
 
 type PublicParametersManager struct {

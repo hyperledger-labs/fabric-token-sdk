@@ -12,8 +12,8 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 
-	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/mock"
+	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/mock"
 )
 
 var _ = Describe("ccvalidator", func() {
