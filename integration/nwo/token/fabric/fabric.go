@@ -35,7 +35,7 @@ import (
 var logger = flogging.MustGetLogger("integration.token.fabric")
 
 const (
-	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main"
+	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
 )
 
 type fabricPlatform interface {

@@ -84,7 +84,7 @@ In the previous Section, we have seen that part of the lifecycle of a Token Tran
 
 The `Token Namespace` contains the tokens and any additional information needed to make sense out of them
 in a key-value format. Attached to the namespace we have:
-- The [`Token Chaincode`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/services/tcc),
+- The [`Token Chaincode`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/services/network/fabric/tcc),
   that exposes functionalities useful to develop token applications, and
 - The `Endorsement Policy` that describe the governance of the token chaincode. In other words, who is allowed to
   modify the namespace.

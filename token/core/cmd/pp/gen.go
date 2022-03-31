@@ -156,7 +156,7 @@ func genChaincodePackage(raw []byte) error {
 	}
 
 	err = packager.New().PackageChaincode(
-		"github.com/hyperledger-labs/fabric-token-sdk/token/services/tcc/main",
+		"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main",
 		"golang",
 		"tcc",
 		filepath.Join(output, "tcc.tar"),
