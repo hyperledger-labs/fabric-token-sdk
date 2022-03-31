@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views/house"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 type BuyHouseView struct{}
@@ -22,11 +22,11 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to respond to identity request")
 
 	// Respond to a request to exchange identifies for the cash transfer
-	meCash, otherCash, err := ttxcc.RespondExchangeRecipientIdentities(context)
+	meCash, otherCash, err := ttx.RespondExchangeRecipientIdentities(context)
 	assert.NoError(err, "failed getting identity")
 
 	// Receive the request to transfer action
-	tx, action, err := ttxcc.ReceiveAction(context)
+	tx, action, err := ttx.ReceiveAction(context)
 	assert.NoError(err, "failed receiving action")
 
 	// check transaction, it must contain the house transfer
@@ -53,7 +53,7 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 
 	// Append the cash transfer to the transaction
 	err = tx.Transfer(
-		ttxcc.MyWalletFromTx(context, tx),
+		ttx.MyWalletFromTx(context, tx),
 		action.Type,
 		[]uint64{action.Amount},
 		[]view.Identity{action.Recipient},
@@ -61,13 +61,13 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed appending transfer")
 
 	// Respond to the request to transfer the cash
-	_, err = context.RunView(ttxcc.NewCollectActionsResponderView(tx, action))
+	_, err = context.RunView(ttx.NewCollectActionsResponderView(tx, action))
 	assert.NoError(err, "failed responding to action collect")
 
 	// Sign and send back
-	_, err = context.RunView(ttxcc.NewEndorseView(tx))
+	_, err = context.RunView(ttx.NewEndorseView(tx))
 	assert.NoError(err, "failed to endorse transaction")
 
 	// Wait for confirmation
-	return context.RunView(ttxcc.NewFinalityView(tx))
+	return context.RunView(ttx.NewFinalityView(tx))
 }

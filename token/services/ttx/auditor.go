@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package ttxcc
+package ttx
 
 import (
 	"time"
@@ -103,14 +103,14 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "sent", "auditing", a.tx.ID())
+	agent.EmitKey(0, "ttx", "sent", "auditing", a.tx.ID())
 
 	// Receive signature
 	ch := session.Receive()
 	var msg *view.Message
 	select {
 	case msg = <-ch:
-		agent.EmitKey(0, "ttxcc", "received", "auditingAck", a.tx.ID())
+		agent.EmitKey(0, "ttx", "received", "auditingAck", a.tx.ID())
 		logger.Debug("reply received from %s", a.tx.Opts.Auditor)
 	case <-time.After(60 * time.Second):
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.Auditor)
@@ -218,7 +218,7 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "sent", "auditingAck", a.tx.ID())
+	agent.EmitKey(0, "ttx", "sent", "auditingAck", a.tx.ID())
 
 	if err := a.waitFabricEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
@@ -270,7 +270,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 		return err
 	}
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "sent", "txAck", tx.ID())
+	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
 
 	return nil
 }

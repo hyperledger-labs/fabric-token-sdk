@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 type AcceptCashView struct{}
@@ -19,12 +19,12 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// The recipient of a token (issued or transfer) responds, as first operation,
 	// to a request for a recipient.
 	// The recipient can do that by using the following code.
-	// The recipient identity will be taken from the default wallet (ttxcc.MyWallet(context)), if not otherwise specified.
-	id, err := ttxcc.RespondRequestRecipientIdentity(context)
+	// The recipient identity will be taken from the default wallet (ttx.MyWallet(context)), if not otherwise specified.
+	id, err := ttx.RespondRequestRecipientIdentity(context)
 	assert.NoError(err, "failed to respond to identity request")
 
 	// At some point, the recipient receives the token transaction that in the meantime has been assembled
-	tx, err := ttxcc.ReceiveTransaction(context)
+	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed to receive tokens")
 
 	// The recipient can perform any check on the transaction as required by the business process
@@ -38,11 +38,11 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 	// This depends on the driver implementation.
-	_, err = context.RunView(ttxcc.NewAcceptView(tx))
+	_, err = context.RunView(ttx.NewAcceptView(tx))
 	assert.NoError(err, "failed to accept new tokens")
 
 	// Before completing, the recipient waits for finality of the transaction
-	_, err = context.RunView(ttxcc.NewFinalityView(tx))
+	_, err = context.RunView(ttx.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
 	return nil, nil

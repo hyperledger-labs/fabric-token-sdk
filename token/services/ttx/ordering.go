@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package ttxcc
+package ttx
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
@@ -31,8 +31,8 @@ func NewOrderingView(tx *Transaction) *orderingView {
 // 1. It broadcasts the token token transaction to the proper Fabric ordering service.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "start", "orderingView", o.tx.ID())
-	defer agent.EmitKey(0, "ttxcc", "end", "orderingView", o.tx.ID())
+	agent.EmitKey(0, "ttx", "start", "orderingView", o.tx.ID())
+	defer agent.EmitKey(0, "ttx", "end", "orderingView", o.tx.ID())
 
 	if err := network.GetInstance(context, o.tx.Network(), "").Broadcast(o.tx.Payload.Envelope); err != nil {
 		return nil, err
@@ -60,8 +60,8 @@ func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
 // Fabric peer nodes trusted by the FSC node.
 func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "start", "orderingAndFinalityView", o.tx.ID())
-	defer agent.EmitKey(0, "ttxcc", "end", "orderingAndFinalityView", o.tx.ID())
+	agent.EmitKey(0, "ttx", "start", "orderingAndFinalityView", o.tx.ID())
+	defer agent.EmitKey(0, "ttx", "end", "orderingAndFinalityView", o.tx.ID())
 
 	nw := network.GetInstance(context, o.tx.Network(), o.tx.Channel())
 	if nw == nil {

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package ttxcc
+package ttx
 
 import (
 	"encoding/asn1"
@@ -149,7 +149,7 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	}
 
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "received", "tx", cctx.ID())
+	agent.EmitKey(0, "ttx", "received", "tx", cctx.ID())
 
 	return cctx, nil
 }

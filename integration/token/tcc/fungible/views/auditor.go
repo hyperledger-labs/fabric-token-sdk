@@ -12,21 +12,21 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type AuditView struct{}
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
-	tx, err := ttxcc.ReceiveTransaction(context)
+	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed receiving transaction")
 
-	w := ttxcc.MyAuditorWallet(context)
+	w := ttx.MyAuditorWallet(context)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Validate
-	auditor := ttxcc.NewAuditor(context, w)
+	auditor := ttx.NewAuditor(context, w)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
 	// Check Metadata
@@ -131,13 +131,13 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	}
 	aqe.Done()
 
-	return context.RunView(ttxcc.NewAuditApproveView(w, tx))
+	return context.RunView(ttx.NewAuditApproveView(w, tx))
 }
 
 type RegisterAuditorView struct{}
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
-	return context.RunView(ttxcc.NewRegisterAuditorView(
+	return context.RunView(ttx.NewRegisterAuditorView(
 		&AuditView{},
 	))
 }

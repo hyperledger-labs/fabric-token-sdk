@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package ttxcc
+package ttx
 
 import (
 	"time"
@@ -94,8 +94,8 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "start", "RequestRecipientIdentityView", context.ID())
-	defer agent.EmitKey(0, "ttxcc", "end", "RequestRecipientIdentityView", context.ID())
+	agent.EmitKey(0, "ttx", "start", "RequestRecipientIdentityView", context.ID())
+	defer agent.EmitKey(0, "ttx", "end", "RequestRecipientIdentityView", context.ID())
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
@@ -134,7 +134,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to send recipient request")
 		}
-		agent.EmitKey(0, "ttxcc", "sent", "requestRecipientIdentity", session.Info().ID)
+		agent.EmitKey(0, "ttx", "sent", "requestRecipientIdentity", session.Info().ID)
 
 		// Wait to receive a view identity
 		ch := session.Receive()
@@ -142,7 +142,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		select {
 		case msg := <-ch:
 			payload = msg.Payload
-			agent.EmitKey(0, "ttxcc", "received", "responseRecipientIdentity", session.Info().ID)
+			agent.EmitKey(0, "ttx", "received", "responseRecipientIdentity", session.Info().ID)
 		case <-time.After(60 * time.Second):
 			return nil, errors.New("time out reached")
 		}
@@ -189,15 +189,15 @@ func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "start", "RespondRequestRecipientIdentityView", context.ID())
-	defer agent.EmitKey(0, "ttxcc", "end", "RespondRequestRecipientIdentityView", context.ID())
+	agent.EmitKey(0, "ttx", "start", "RespondRequestRecipientIdentityView", context.ID())
+	defer agent.EmitKey(0, "ttx", "end", "RespondRequestRecipientIdentityView", context.ID())
 
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		logger.Errorf("failed to read first message: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to read first message")
 	}
-	agent.EmitKey(0, "ttxcc", "received", "requestRecipientIdentity", session.Info().ID)
+	agent.EmitKey(0, "ttx", "received", "requestRecipientIdentity", session.Info().ID)
 
 	recipientRequest := &RecipientRequest{}
 	if err := recipientRequest.FromBytes(payload); err != nil {
@@ -250,7 +250,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
-	agent.EmitKey(0, "ttxcc", "sent", "responseRecipientIdentity", session.Info().ID)
+	agent.EmitKey(0, "ttx", "sent", "responseRecipientIdentity", session.Info().ID)
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)

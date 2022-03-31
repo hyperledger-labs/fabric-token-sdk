@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 // ListUnspentTokens contains the input to query the list of unspent tokens
@@ -29,11 +29,11 @@ type ListUnspentTokensView struct {
 
 func (p *ListUnspentTokensView) Call(context view.Context) (interface{}, error) {
 	// Tokens owner by identities in this wallet will be listed
-	wallet := ttxcc.GetWallet(context, p.Wallet)
+	wallet := ttx.GetWallet(context, p.Wallet)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
 
 	// Return the list of unspent tokens by type
-	return wallet.ListUnspentTokens(ttxcc.WithType(p.TokenType))
+	return wallet.ListUnspentTokens(ttx.WithType(p.TokenType))
 }
 
 type ListUnspentTokensViewFactory struct{}

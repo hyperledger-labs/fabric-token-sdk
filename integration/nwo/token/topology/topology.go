@@ -8,6 +8,7 @@ package topology
 
 import (
 	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 )
 

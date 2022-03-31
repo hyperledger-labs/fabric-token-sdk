@@ -12,33 +12,33 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc/marshaller"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.nftcc")
 
-type TxOption ttxcc.TxOption
+type TxOption ttx.TxOption
 
 func WithAuditor(auditor view.Identity) TxOption {
-	return func(o *ttxcc.TxOptions) error {
+	return func(o *ttx.TxOptions) error {
 		o.Auditor = auditor
 		return nil
 	}
 }
 
 type Transaction struct {
-	*ttxcc.Transaction
+	*ttx.Transaction
 }
 
 func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, error) {
-	// convert opts to ttxcc.TxOption
-	txOpts := make([]ttxcc.TxOption, len(opts))
+	// convert opts to ttx.TxOption
+	txOpts := make([]ttx.TxOption, len(opts))
 	for i, opt := range opts {
-		txOpts[i] = ttxcc.TxOption(opt)
+		txOpts[i] = ttx.TxOption(opt)
 	}
-	tx, err := ttxcc.NewAnonymousTransaction(sp, txOpts...)
+	tx, err := ttx.NewAnonymousTransaction(sp, txOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 	return &Transaction{Transaction: tx}, nil
 }
 
-func Wrap(tx *ttxcc.Transaction) *Transaction {
+func Wrap(tx *ttx.Transaction) *Transaction {
 	return &Transaction{Transaction: tx}
 }
 
@@ -55,12 +55,12 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 		logger.Debugf("receive a new transaction...")
 	}
 
-	txBoxed, err := context.RunView(ttxcc.NewReceiveTransactionView(""), view.WithSameContext())
+	txBoxed, err := context.RunView(ttx.NewReceiveTransactionView(""), view.WithSameContext())
 	if err != nil {
 		return nil, err
 	}
 
-	cctx, ok := txBoxed.(*ttxcc.Transaction)
+	cctx, ok := txBoxed.(*ttx.Transaction)
 	if !ok {
 		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
 	}

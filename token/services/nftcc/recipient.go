@@ -9,13 +9,13 @@ package nftcc
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, error) {
-	return ttxcc.RequestRecipientIdentity(context, recipient, opts...)
+	return ttx.RequestRecipientIdentity(context, recipient, opts...)
 }
 
 func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error) {
-	return ttxcc.RespondRequestRecipientIdentity(context)
+	return ttx.RespondRequestRecipientIdentity(context)
 }

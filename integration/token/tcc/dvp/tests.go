@@ -8,6 +8,8 @@ package dvp
 
 import (
 	"encoding/json"
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views"
@@ -16,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
-	"time"
 )
 
 func TestAll(network *integration.Infrastructure) {

@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
+	"testing"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/integration"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"testing"
 )
 
 func TestEndToEnd(t *testing.T) {

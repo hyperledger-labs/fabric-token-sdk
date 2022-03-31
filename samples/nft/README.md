@@ -105,7 +105,7 @@ func (a *AcceptIssuedHouseView) Call(context view.Context) (interface{}, error) 
 	// The recipient of a token (issued or transfer) responds, as first operation,
 	// to a request for a recipient.
 	// The recipient can do that by using the following code.
-	// The recipient identity will be taken from the default wallet (ttxcc.MyWallet(context)), if not otherwise specified.
+	// The recipient identity will be taken from the default wallet (ttx.MyWallet(context)), if not otherwise specified.
 	id, err := nftcc.RespondRequestRecipientIdentity(context)
 	assert.NoError(err, "failed to respond to identity request")
 

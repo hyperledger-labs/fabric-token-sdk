@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -20,12 +20,12 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// The recipient of a token (issued or transfer) responds, as first operation,
 	// to a request for a recipient.
 	// The recipient can do that by using the following code.
-	// The recipient identity will be taken from the default wallet (ttxcc.MyWallet(context)), if not otherwise specified.
-	id, err := ttxcc.RespondRequestRecipientIdentity(context)
+	// The recipient identity will be taken from the default wallet (ttx.MyWallet(context)), if not otherwise specified.
+	id, err := ttx.RespondRequestRecipientIdentity(context)
 	assert.NoError(err, "failed to respond to identity request")
 
 	// At some point, the recipient receives the token transaction that in the mean time has been assembled
-	tx, err := ttxcc.ReceiveTransaction(context)
+	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed to receive tokens")
 
 	// The recipient can perform any check on the transaction as required by the business process
@@ -40,7 +40,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// she does not hold already more than 3000 units of that type.
 	// Just a fancy query to show the capabilities of the services we are using.
 	for _, output := range outputs.ByRecipient(id).Outputs() {
-		unspentTokens, err := ttxcc.MyWallet(context).ListUnspentTokens(ttxcc.WithType(output.Type))
+		unspentTokens, err := ttx.MyWallet(context).ListUnspentTokens(ttx.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		assert.True(
 			unspentTokens.Sum(64).Cmp(token2.NewQuantityFromUInt64(3000)) <= 0,
@@ -51,7 +51,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 	// This depends on the driver implementation.
-	_, err = context.RunView(ttxcc.NewAcceptView(tx))
+	_, err = context.RunView(ttx.NewAcceptView(tx))
 	assert.NoError(err, "failed to accept new tokens")
 
 	// Sanity checks:
@@ -64,7 +64,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Before completing, the recipient waits for finality of the transaction
-	_, err = context.RunView(ttxcc.NewFinalityView(tx))
+	_, err = context.RunView(ttx.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
 	vc, err = vault.Status(tx.ID())

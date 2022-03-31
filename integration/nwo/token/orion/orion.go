@@ -8,12 +8,13 @@ package orion
 
 import (
 	"bytes"
-	math3 "github.com/IBM/mathlib"
 	"io"
 	"io/ioutil"
 	"os"
 	"text/template"
 	"time"
+
+	math3 "github.com/IBM/mathlib"
 
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"

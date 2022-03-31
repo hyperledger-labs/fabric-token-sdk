@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric/mock"
 	"os"
 	"testing"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric/mock"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"

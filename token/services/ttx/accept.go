@@ -3,7 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
-package ttxcc
+package ttx
 
 import (
 	"strconv"
@@ -24,8 +24,8 @@ type acceptView struct {
 
 func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttxcc", "start", "acceptView", s.tx.ID())
-	defer agent.EmitKey(0, "ttxcc", "end", "acceptView", s.tx.ID())
+	agent.EmitKey(0, "ttx", "start", "acceptView", s.tx.ID())
+	defer agent.EmitKey(0, "ttx", "end", "acceptView", s.tx.ID())
 
 	// Processes
 	env := s.tx.Payload.Envelope
@@ -33,14 +33,14 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
 
-	agent.EmitKey(0, "ttxcc", "start", "acceptViewStoreTransient", s.tx.ID())
+	agent.EmitKey(0, "ttx", "start", "acceptViewStoreTransient", s.tx.ID())
 	err := s.tx.storeTransient()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
-	agent.EmitKey(0, "ttxcc", "end", "acceptViewStoreTransient", s.tx.ID())
+	agent.EmitKey(0, "ttx", "end", "acceptViewStoreTransient", s.tx.ID())
 
-	agent.EmitKey(0, "ttxcc", "start", "acceptViewParseRWS", s.tx.ID())
+	agent.EmitKey(0, "ttx", "start", "acceptViewParseRWS", s.tx.ID())
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("parse rws for id [%s]", s.tx.ID())
 	}
@@ -50,9 +50,9 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", s.tx.ID())
 	}
 	rws.Done()
-	agent.EmitKey(0, "ttxcc", "end", "acceptViewParseRWS", s.tx.ID())
+	agent.EmitKey(0, "ttx", "end", "acceptViewParseRWS", s.tx.ID())
 
-	agent.EmitKey(0, "ttxcc", "start", "acceptViewStoreEnv", s.tx.ID())
+	agent.EmitKey(0, "ttx", "start", "acceptViewStoreEnv", s.tx.ID())
 	rawEnv, err := env.Bytes()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", s.tx.ID())
@@ -61,9 +61,9 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", s.tx.ID())
 	}
-	agent.EmitKey(0, "ttxcc", "end", "acceptViewStoreEnv", s.tx.ID())
+	agent.EmitKey(0, "ttx", "end", "acceptViewStoreEnv", s.tx.ID())
 
-	agent.EmitKey(0, "ttxcc", "size", "acceptViewEnvelopeSize", s.tx.ID(), strconv.Itoa(len(rawEnv)))
+	agent.EmitKey(0, "ttx", "size", "acceptViewEnvelopeSize", s.tx.ID(), strconv.Itoa(len(rawEnv)))
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("send back ack")
@@ -75,7 +75,7 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	agent.EmitKey(0, "ttxcc", "sent", "txAck", s.tx.ID())
+	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
 
 	return s.tx, nil
 }

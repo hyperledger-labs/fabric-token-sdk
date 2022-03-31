@@ -9,6 +9,7 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -16,7 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 // IssueCash contains the input information to issue a token
@@ -40,18 +41,18 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttxcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
+	recipient, err := ttx.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(p.Recipient))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 	// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 	// have been issued already including the current request.
 	// No check is performed for other types.
-	wallet := ttxcc.GetIssuerWallet(context, p.IssuerWallet)
+	wallet := ttx.GetIssuerWallet(context, p.IssuerWallet)
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
-		history, err := wallet.ListIssuedTokens(ttxcc.WithType(p.TokenType))
+		history, err := wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
 		fmt.Printf("History [%s,%s]<[230]?\n", history.Sum(64).ToBigInt().Text(10), p.TokenType)
 
@@ -62,9 +63,9 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// At this point, the issuer is ready to prepare the token transaction.
 	// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation
-	tx, err := ttxcc.NewAnonymousTransaction(
+	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(
+		ttx.WithAuditor(
 			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
@@ -88,11 +89,11 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
-	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign issue transaction")
 
 	// Last but not least, the issuer sends the transaction for ordering and waits for transaction finality.
-	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
+	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed to commit issue transaction")
 
 	return tx.ID(), nil

@@ -8,11 +8,12 @@ package views
 
 import (
 	"encoding/json"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -41,20 +42,20 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttxcc.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(t.Recipient))
+	recipient, err := ttx.RequestRecipientIdentity(context, view2.GetIdentityProvider(context).Identity(t.Recipient))
 	assert.NoError(err, "failed getting recipient")
 
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
-	tx, err := ttxcc.NewAnonymousTransaction(
+	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed creating transaction")
 
 	// The sender will select tokens owned by this wallet
-	senderWallet := ttxcc.GetWallet(context, t.Wallet)
+	senderWallet := ttx.GetWallet(context, t.Wallet)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
 	// The sender adds a new transfer operation to the transaction following the instruction received.
@@ -82,11 +83,11 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
-	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 
 	// Send to the ordering service and wait for finality
-	_, err = context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
+	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 
 	return tx.ID(), nil

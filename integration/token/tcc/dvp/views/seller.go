@@ -8,12 +8,13 @@ package views
 
 import (
 	"encoding/json"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/dvp/views/house"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nftcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxcc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 // Sell contains the sell instructions
@@ -35,9 +36,9 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	// It will contain two legs:
 	// 1. The first leg will be used to transfer the house to the buyer.
 	// 2. The second leg will be used to transfer the cash to the seller.
-	tx, err := ttxcc.NewAnonymousTransaction(
+	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttxcc.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 	)
 	assert.NoError(err, "failed to create a new token transaction")
 
@@ -50,25 +51,25 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to prepare payment")
 
 	// Collect signature from the parties
-	_, err = context.RunView(ttxcc.NewCollectEndorsementsView(tx))
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to collect endorsements")
 
 	// Send to the ordering service and wait for confirmation
-	return context.RunView(ttxcc.NewOrderingAndFinalityView(tx))
+	return context.RunView(ttx.NewOrderingAndFinalityView(tx))
 }
 
-func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transaction, house *house.House) (*ttxcc.Transaction, error) {
+func (d *SellHouseView) preparePayment(context view.Context, tx *ttx.Transaction, house *house.House) (*ttx.Transaction, error) {
 	// we need the house's valuation
 	wallet := nftcc.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
 
 	// exchange pseudonyms for the token transfer
-	me, other, err := ttxcc.ExchangeRecipientIdentities(context, d.Wallet, view.Identity(d.Buyer))
+	me, other, err := ttx.ExchangeRecipientIdentities(context, d.Wallet, view.Identity(d.Buyer))
 	assert.NoError(err, "failed exchanging identities")
 
 	// collect token transfer from the buyer
-	_, err = context.RunView(ttxcc.NewCollectActionsView(tx,
-		&ttxcc.ActionTransfer{
+	_, err = context.RunView(ttx.NewCollectActionsView(tx,
+		&ttx.ActionTransfer{
 			From:      other,
 			Type:      "USD",
 			Amount:    house.Valuation,
@@ -79,7 +80,7 @@ func (d *SellHouseView) preparePayment(context view.Context, tx *ttxcc.Transacti
 	return tx, nil
 }
 
-func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttxcc.Transaction) (*ttxcc.Transaction, *house.House, error) {
+func (d *SellHouseView) prepareHouseTransfer(context view.Context, tx *ttx.Transaction) (*ttx.Transaction, *house.House, error) {
 	// let's prepare the NFT transfer
 	wallet := nftcc.MyWallet(context)
 	assert.NotNil(wallet, "failed getting default wallet")
