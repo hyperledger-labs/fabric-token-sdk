@@ -15,6 +15,10 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// TokenRequest is a collection of Token Action:
+// Issues, to create new Tokens;
+// Transfers, to manipulate Tokens (e.g., transfer ownership or redeem)
+// The actions in the collection are independent. An action cannot spend tokens created by another action in the same Token Request. In addition, actions comes with a set of Witnesses to verify the right to spend or the right to issue a given token
 type TokenRequest struct {
 	Issues            [][]byte
 	Transfers         [][]byte
