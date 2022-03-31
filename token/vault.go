@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -29,9 +30,9 @@ func (q *QueryEngine) UnspentTokensIterator() (*UnspentTokensIterator, error) {
 	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
-// UnspentTokensIteratorBy is an iterator over all unspent tokens in this vault owned by passed id and whose token type matches the passed token type
-func (q *QueryEngine) UnspentTokensIteratorBy(id, typ string) (*UnspentTokensIterator, error) {
-	it, err := q.qe.UnspentTokensIteratorBy(id, typ)
+// UnspentTokensIteratorBy is an iterator over all unspent tokens in this vault owned by passed wallet id and whose token type matches the passed token type
+func (q *QueryEngine) UnspentTokensIteratorBy(walletID, tokenType string) (*UnspentTokensIterator, error) {
+	it, err := q.qe.UnspentTokensIteratorBy(walletID, tokenType)
 	if err != nil {
 		return nil, err
 	}

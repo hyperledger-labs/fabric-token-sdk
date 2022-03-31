@@ -26,18 +26,17 @@ type VaultProvider interface {
 	Vault(network string, channel string, namespace string) tokenapi.Vault
 }
 
-// SelectorManager provides instances of Selector
+// SelectorManager handles token selection operations
 type SelectorManager interface {
-	// NewSelector returns a new Selector instance bound the passed id
+	// NewSelector returns a new Selector instance bound the passed id.
 	NewSelector(id string) (Selector, error)
-	// Unlock unlocks the tokens bound to the passed if, if any
+	// Unlock unlocks the tokens bound to the passed id, if any
 	Unlock(id string) error
 }
 
 // SelectorManagerProvider provides instances of SelectorManager
 type SelectorManagerProvider interface {
-	// SelectorManager returns a new SelectorManager instance for the passed inputs.
-	// If the selector manager has already been created, it returns the existing instance.
+	// SelectorManager returns a SelectorManager instance for the passed inputs.
 	SelectorManager(network string, channel string, namespace string) SelectorManager
 }
 

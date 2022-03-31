@@ -40,7 +40,7 @@ func (m *Metadata) GetToken(raw []byte) (*token2.Token, view.Identity, []byte, e
 	return tok, id, tokenInfoRaw, nil
 }
 
-// SpentTokenID returns the token IDs of the tokens that ware spent by the Token Request this metadata is associated.
+// SpentTokenID returns the token IDs of the tokens that were spent by the Token Request this metadata is associated with.
 func (m *Metadata) SpentTokenID() []*token2.ID {
 	var res []*token2.ID
 	for _, transfer := range m.tokenRequestMetadata.Transfers {

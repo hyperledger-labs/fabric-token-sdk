@@ -11,7 +11,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// CertificationManager is the interface for managing token certification as described by the paper
+// CertificationManager manages token certifications as described by the paper
 // [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')
 type CertificationManager struct {
 	c driver.CertificationService
@@ -33,12 +33,12 @@ func (c *CertificationManager) VerifyCertifications(ids []*token2.ID, certificat
 	return c.c.VerifyCertifications(ids, certifications)
 }
 
-// CertificationClient is the interface for the client side of the certification
+// CertificationClient is the client side of the certification process
 type CertificationClient struct {
 	cc driver.CertificationClient
 }
 
-// IsCertified returns true if the passed token id has been already certified
+// IsCertified returns true if the passed token id has been already certified, otherwise false
 func (c *CertificationClient) IsCertified(id *token2.ID) bool {
 	return c.cc.IsCertified(id)
 }
