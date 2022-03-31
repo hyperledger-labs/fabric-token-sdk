@@ -71,8 +71,8 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
 		),
 	)
-	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/issue", []byte("issue"))
-	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/tcc/fungible/meta", []byte("meta"))
+	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue", []byte("issue"))
+	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta", []byte("meta"))
 	assert.NoError(err, "failed creating issue transaction")
 
 	// The issuer adds a new issue operation to the transaction following the instruction received

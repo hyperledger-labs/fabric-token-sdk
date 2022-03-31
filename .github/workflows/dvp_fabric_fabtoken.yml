@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-tcc-dvp-fabtoken
+      run: make integration-tests-dvp-fabtoken
