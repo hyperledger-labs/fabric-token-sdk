@@ -169,6 +169,10 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	}
 }
 
+func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
+	p.CryptoMaterialGenerators[driver] = generator
+}
+
 func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMaterialGenerator, tms *topology2.TMS, node *sfcnode.Node) {
 	entry := p.GetEntry(tms)
 	o := node.PlatformOpts()
