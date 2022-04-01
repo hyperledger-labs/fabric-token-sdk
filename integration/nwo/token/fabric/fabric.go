@@ -35,7 +35,8 @@ import (
 var logger = flogging.MustGetLogger("integration.token.fabric")
 
 const (
-	DefaultTokenChaincode = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
+	DefaultTokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
+	DefaultTokenChaincodeParamsReplaceSuffix = "/token/services/network/fabric/tcc/params.go"
 )
 
 type fabricPlatform interface {
@@ -65,10 +66,11 @@ type Entry struct {
 }
 
 type NetworkHandler struct {
-	TokenPlatform            tokenPlatform
-	TokenChaincodePath       string
-	Entries                  map[string]*Entry
-	CryptoMaterialGenerators map[string]generators.CryptoMaterialGenerator
+	TokenPlatform                     tokenPlatform
+	TokenChaincodePath                string
+	TokenChaincodeParamsReplaceSuffix string
+	Entries                           map[string]*Entry
+	CryptoMaterialGenerators          map[string]generators.CryptoMaterialGenerator
 
 	EventuallyTimeout time.Duration
 	ColorIndex        int
@@ -77,10 +79,11 @@ type NetworkHandler struct {
 func NewNetworkHandler(tokenPlatform tokenPlatform) *NetworkHandler {
 	curveID := math3.BN254
 	return &NetworkHandler{
-		TokenPlatform:      tokenPlatform,
-		EventuallyTimeout:  10 * time.Minute,
-		TokenChaincodePath: DefaultTokenChaincode,
-		Entries:            map[string]*Entry{},
+		TokenPlatform:                     tokenPlatform,
+		EventuallyTimeout:                 10 * time.Minute,
+		TokenChaincodePath:                DefaultTokenChaincode,
+		TokenChaincodeParamsReplaceSuffix: DefaultTokenChaincodeParamsReplaceSuffix,
+		Entries:                           map[string]*Entry{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
 			"fabtoken": NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform),
 			"dlog":     NewDLogCustomCryptoMaterialGenerator(tokenPlatform, curveID),
