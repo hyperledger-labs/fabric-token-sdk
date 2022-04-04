@@ -68,16 +68,16 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 		cc.Chaincode.Lang,
 		cc.Chaincode.Label,
 		packageFile,
-		func(s string, s2 string) (string, []byte) {
+		func(filePath string, fileName string) (string, []byte) {
 			// logger.Infof("replace [%s:%s]?", s, s2)
 			// Is the public params?
-			if strings.HasSuffix(s, "/token/services/network/fabric/tcc/params.go") {
-				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", s, s2)
+			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
+				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
 				return "", paramsFile.Bytes()
 			}
 
 			// Is connection.json?
-			if s == s2 && s == "connection.json" {
+			if filePath == fileName && filePath == "connection.json" {
 				// Connection holds the path and type for a chaincode package
 				type Connection struct {
 					Address     string `json:"address"`

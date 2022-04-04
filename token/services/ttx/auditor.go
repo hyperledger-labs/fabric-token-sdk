@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"encoding/base64"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
@@ -140,6 +141,9 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		if err := v.Verify(signed, msg.Payload); err != nil {
 			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("Auditor signature verified [%s][%s]", auditor, base64.StdEncoding.EncodeToString(msg.Payload))
+			}
 			validAuditing = true
 			break
 		}
