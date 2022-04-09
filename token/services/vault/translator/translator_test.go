@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package translator_test
 
 import (
@@ -19,9 +20,6 @@ import (
 
 const (
 	tokenNameSpace = "zkat"
-	action         = "action"
-	actionIssue    = "issue"
-	actionTransfer = "transfer"
 )
 
 var _ = Describe("Translator", func() {
@@ -44,7 +42,6 @@ var _ = Describe("Translator", func() {
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)
-		fakeRWSet.SetStateMetadataReturns(nil)
 
 		fakeIssuingValidator.ValidateReturns(nil)
 
@@ -73,7 +70,6 @@ var _ = Describe("Translator", func() {
 				Expect(err).NotTo(HaveOccurred())
 
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
-				Expect(fakeRWSet.SetStateMetadataCallCount()).To(Equal(2))
 
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
@@ -82,11 +78,6 @@ var _ = Describe("Translator", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
-				ns, id, metadata := fakeRWSet.SetStateMetadataArgsForCall(0)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(id).To(Equal(key))
-				Expect(metadata).To(Equal(map[string][]byte{action: []byte(actionIssue)}))
-
 				ns, id, out = fakeRWSet.SetStateArgsForCall(1)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
@@ -94,12 +85,6 @@ var _ = Describe("Translator", func() {
 				key, err = keys.CreateTokenKey("0", 1)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
-
-				ns, id, metadata = fakeRWSet.SetStateMetadataArgsForCall(1)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(id).To(Equal(key))
-				Expect(metadata).To(Equal(map[string][]byte{action: []byte(actionIssue)}))
-
 			})
 		})
 
@@ -158,7 +143,6 @@ var _ = Describe("Translator", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(2))
-				Expect(fakeRWSet.SetStateMetadataCallCount()).To(Equal(5))
 
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
@@ -168,11 +152,6 @@ var _ = Describe("Translator", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
-				ns, id, metadata := fakeRWSet.SetStateMetadataArgsForCall(0)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(id).To(Equal(key))
-				Expect(metadata).To(Equal(map[string][]byte{action: []byte(actionTransfer)}))
-
 				ns, id, out = fakeRWSet.SetStateArgsForCall(1)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
@@ -180,12 +159,6 @@ var _ = Describe("Translator", func() {
 				key, err = keys.CreateTokenKey("0", 1)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
-
-				ns, id, metadata = fakeRWSet.SetStateMetadataArgsForCall(1)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(id).To(Equal(key))
-				Expect(metadata).To(Equal(map[string][]byte{action: []byte(actionTransfer)}))
-
 			})
 		})
 		When("created tokens already exist", func() {
@@ -242,7 +215,6 @@ var _ = Describe("Translator", func() {
 				err := writer.Write(faketransfer)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(fakeRWSet.SetStateCallCount()).To(Equal(5))
-				Expect(fakeRWSet.SetStateMetadataCallCount()).To(Equal(2))
 
 				ns, id, out := fakeRWSet.SetStateArgsForCall(0)
 				Expect(ns).To(Equal(tokenNameSpace))
@@ -252,11 +224,6 @@ var _ = Describe("Translator", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
 
-				ns, id, metadata := fakeRWSet.SetStateMetadataArgsForCall(0)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(id).To(Equal(key))
-				Expect(metadata).To(Equal(map[string][]byte{action: []byte(actionTransfer)}))
-
 				ns, id, out = fakeRWSet.SetStateArgsForCall(1)
 				Expect(ns).To(Equal(tokenNameSpace))
 				Expect(out).To(Equal([]byte("output-2")))
@@ -264,12 +231,6 @@ var _ = Describe("Translator", func() {
 				key, err = keys.CreateTokenKey("0", 1)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(id).To(Equal(key))
-
-				ns, id, metadata = fakeRWSet.SetStateMetadataArgsForCall(1)
-				Expect(ns).To(Equal(tokenNameSpace))
-				Expect(id).To(Equal(key))
-				Expect(metadata).To(Equal(map[string][]byte{action: []byte(actionTransfer)}))
-
 			})
 		})
 		When("serial numbers already exist", func() {

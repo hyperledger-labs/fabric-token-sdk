@@ -49,10 +49,6 @@ func (r *ReadOnlyRWSWrapper) Done() {
 	panic("programming error: this should not be called")
 }
 
-func (r *ReadOnlyRWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	panic("programming error: this should not be called")
-}
-
 func (r *ReadOnlyRWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("programming error: this should not be called")
 }
@@ -92,10 +88,6 @@ func (r *TxRWSWrapper) Done() {
 	return
 }
 
-func (r *TxRWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return nil
-}
-
 func (r *TxRWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("implement me")
 }
@@ -129,11 +121,6 @@ func (r *RWSWrapper) Bytes() ([]byte, error) {
 
 func (r *RWSWrapper) Done() {
 	r.r.Done()
-}
-
-func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	key = orionKey(key)
-	return r.r.SetStateMetadata(namespace, key, metadata)
 }
 
 func (r *RWSWrapper) Equals(right interface{}, namespace string) error {

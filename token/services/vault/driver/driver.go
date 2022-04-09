@@ -11,7 +11,6 @@ type RWSet interface {
 	SetState(namespace string, key string, value []byte) error
 	GetState(namespace string, key string) ([]byte, error)
 	DeleteState(namespace string, key string) error
-	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
 	Equals(rwset interface{}, namespace string) error
 }
 

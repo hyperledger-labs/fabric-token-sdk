@@ -33,10 +33,6 @@ func (rwset *rwsWrapper) Done() {
 	return
 }
 
-func (rwset *rwsWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return nil
-}
-
 func (rwset *rwsWrapper) Equals(r interface{}, namespace string) error {
 	panic("implement me")
 }
