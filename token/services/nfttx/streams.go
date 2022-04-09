@@ -51,12 +51,9 @@ func (o *OutputStream) StateAt(index int, state interface{}) error {
 
 func (o *OutputStream) Validate() error {
 	// all outputs must have quantity set to 1
+	one := token2.NewOneQuantity(o.Precision)
 	for _, output := range o.OutputStream.Outputs() {
-		q, err := token2.ToQuantity(output.Quantity, 64)
-		if err != nil {
-			return errors.Wrapf(err, "failed to parse quantity [%s]", output.Quantity)
-		}
-		if q.Cmp(token2.NewQuantityFromUInt64(1)) != 0 {
+		if output.Quantity.Cmp(one) != 0 {
 			return errors.New("all outputs must have quantity set to 1")
 		}
 	}

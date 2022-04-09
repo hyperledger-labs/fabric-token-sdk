@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"strconv"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -129,6 +130,9 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(ns),
 	)
+	if tms == nil {
+		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
+	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
@@ -262,7 +266,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer); err != nil {
+			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
 				return err
 			}
 		}

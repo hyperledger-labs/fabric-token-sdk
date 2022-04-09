@@ -14,15 +14,19 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
-const Coin = uint64(1000000000)
-const MaxMoney = uint64(21000000) * Coin
-const PublicParameters = "fabtoken"
+const (
+	Coin             = uint64(1000000000)
+	MaxMoney         = uint64(21000000) * Coin
+	PublicParameters = "fabtoken"
+	DefaultPrecision = uint64(64)
+)
 
 type PublicParams struct {
-	Label   string
-	MTV     uint64
-	Auditor []byte
-	Issuers [][]byte
+	Label             string
+	MTV               uint64
+	QuantityPrecision uint64
+	Auditor           []byte
+	Issuers           [][]byte
 }
 
 func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
@@ -96,9 +100,14 @@ func (pp *PublicParams) Auditors() []view.Identity {
 	return []view.Identity{pp.Auditor}
 }
 
+func (pp *PublicParams) Precision() uint64 {
+	return pp.QuantityPrecision
+}
+
 func Setup() (*PublicParams, error) {
 	return &PublicParams{
-		MTV:   MaxMoney,
-		Label: PublicParameters,
+		MTV:               MaxMoney,
+		Label:             PublicParameters,
+		QuantityPrecision: DefaultPrecision,
 	}, nil
 }

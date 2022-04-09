@@ -11,27 +11,28 @@ import (
 	"encoding/json"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 const (
 	DLogPublicParameters = "zkatdlog"
+	DefaultPrecision     = uint64(64)
 )
 
 type PublicParams struct {
-	P                *math.G1
-	ZKATPedParams    []*math.G1
-	RangeProofParams *RangeProofParams
-	IdemixCurve      math.CurveID
-	IdemixPK         []byte
-	IssuingPolicy    []byte
-	Auditor          []byte
-	Issuers          [][]byte
-	Label            string
-	Curve            int
+	P                 *math.G1
+	ZKATPedParams     []*math.G1
+	RangeProofParams  *RangeProofParams
+	IdemixCurve       math.CurveID
+	IdemixPK          []byte
+	IssuingPolicy     []byte
+	Auditor           []byte
+	Issuers           [][]byte
+	Label             string
+	Curve             int
+	QuantityPrecision uint64
 
 	Hash []byte
 }
@@ -92,6 +93,10 @@ func (pp *PublicParams) Serialize() ([]byte, error) {
 		Identifier: pp.Label,
 		Raw:        raw,
 	})
+}
+
+func (pp *PublicParams) Precision() uint64 {
+	return pp.QuantityPrecision
 }
 
 func (pp *PublicParams) Deserialize(raw []byte) error {
@@ -189,6 +194,7 @@ func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, 
 	pp.IdemixPK = nymPK
 	pp.IdemixCurve = curveID
 	pp.RangeProofParams.Exponent = exponent
+	pp.QuantityPrecision = DefaultPrecision
 	// max value of any given token is max = base^exponent - 1
 	return pp, nil
 }

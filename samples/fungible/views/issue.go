@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -52,12 +54,14 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
+		precision := token.GetManagementService(context).PublicParametersManager().Precision()
+
 		history, err := wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
-		fmt.Printf("History [%s,%s]<[230]?\n", history.Sum(64).ToBigInt().Text(10), p.TokenType)
+		fmt.Printf("History [%s,%s]<[230]?\n", history.Sum(precision).ToBigInt().Text(10), p.TokenType)
 
 		// Fail if the sum of the issued tokens and the current quest is larger than 230
-		assert.True(history.Sum(64).Add(token2.NewQuantityFromUInt64(p.Quantity)).Cmp(token2.NewQuantityFromUInt64(230)) <= 0)
+		assert.True(history.Sum(precision).Add(token2.NewQuantityFromUInt64(p.Quantity)).Cmp(token2.NewQuantityFromUInt64(230)) <= 0)
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.

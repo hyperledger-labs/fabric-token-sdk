@@ -8,6 +8,7 @@ package processor
 
 import (
 	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -126,7 +127,7 @@ func StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws 
 	return nil
 }
 
-func StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity) error {
+func StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
@@ -145,7 +146,7 @@ func StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.T
 	}
 	raw := MarshalOrPanic(issuedToken)
 
-	q, err := token2.ToQuantity(tok.Quantity, 64)
+	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
 		return errors.Wrapf(err, "invalid quantity [%s]", tok.Quantity)
 	}

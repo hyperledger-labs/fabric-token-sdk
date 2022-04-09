@@ -17,10 +17,11 @@ import (
 type OwnerWallet struct {
 	view2.ServiceProvider
 	*token.OwnerWallet
+	Precision uint64
 }
 
 func (o *OwnerWallet) QueryByKey(state interface{}, key string, value string) error {
-	qe, err := NewQueryExecutor(o.ServiceProvider, o.OwnerWallet.ID())
+	qe, err := NewQueryExecutor(o.ServiceProvider, o.OwnerWallet.ID(), o.Precision)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to create query executor")
 	}
@@ -38,48 +39,52 @@ func WithType(tokenType string) token.ListTokensOption {
 
 // MyWallet returns the default wallet, nil if not found.
 func MyWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *OwnerWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().OwnerWallet("")
+	tms := token.GetManagementService(sp, opts...)
+	w := tms.WalletManager().OwnerWallet("")
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
 }
 
 // MyWalletFromTx returns the default wallet for the tuple (network, channel, namespace) as identified by the passed
 // transaction. Returns nil if no wallet is found.
 func MyWalletFromTx(sp view2.ServiceProvider, tx *Transaction) *OwnerWallet {
-	w := token.GetManagementService(
+	tms := token.GetManagementService(
 		sp,
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(tx.Namespace()),
-	).WalletManager().OwnerWallet("")
+	)
+	w := tms.WalletManager().OwnerWallet("")
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
 }
 
 // GetWallet returns the wallet whose id is the passed id.
 // If the passed id is empty, GetWallet has the same behaviour of MyWallet.
 // It returns nil, if no wallet is found.
 func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption) *OwnerWallet {
-	w := token.GetManagementService(sp, opts...).WalletManager().OwnerWallet(id)
+	tms := token.GetManagementService(sp, opts...)
+	w := tms.WalletManager().OwnerWallet(id)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
 }
 
 // GetWalletForChannel returns the wallet whose id is the passed id for the passed channel.
 // If the passed id is empty, GetWalletForChannel has the same behaviour of MyWalletFromTx.
 // It returns nil, if no wallet is found.
 func GetWalletForChannel(sp view2.ServiceProvider, channel, id string, opts ...token.ServiceOption) *OwnerWallet {
-	w := token.GetManagementService(sp, append(opts, token.WithChannel(channel))...).WalletManager().OwnerWallet(id)
+	tms := token.GetManagementService(sp, append(opts, token.WithChannel(channel))...)
+	w := tms.WalletManager().OwnerWallet(id)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
 }
 
 // MyIssuerWallet returns the default issuer wallet, nil if not found

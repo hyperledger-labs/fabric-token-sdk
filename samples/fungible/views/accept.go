@@ -43,7 +43,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 		unspentTokens, err := ttx.MyWallet(context).ListUnspentTokens(ttx.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		assert.True(
-			unspentTokens.Sum(64).Cmp(token2.NewQuantityFromUInt64(3000)) <= 0,
+			unspentTokens.Sum(tx.TokenService().PublicParametersManager().Precision()).Cmp(token2.NewQuantityFromUInt64(3000)) <= 0,
 			"cannot have more than 3000 unspent quantity for type [%s]", output.Type,
 		)
 	}

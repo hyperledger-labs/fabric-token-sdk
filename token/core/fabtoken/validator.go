@@ -167,11 +167,11 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	}
 	for _, output := range issue.GetOutputs() {
 		out := output.(*TransferOutput).Output
-		q, err := token2.ToQuantity(out.Quantity, 64)
+		q, err := token2.ToQuantity(out.Quantity, v.pp.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
 		}
-		zero := token2.NewZeroQuantity(64)
+		zero := token2.NewZeroQuantity(v.pp.QuantityPrecision)
 		if q.Cmp(zero) == 0 {
 			return errors.Errorf("quantity is zero")
 		}
@@ -190,13 +190,13 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 		return errors.Errorf("first input is nil")
 	}
 	typ := inputTokens[0].Type
-	inputSum := token2.NewZeroQuantity(64)
-	outputSum := token2.NewZeroQuantity(64)
+	inputSum := token2.NewZeroQuantity(v.pp.QuantityPrecision)
+	outputSum := token2.NewZeroQuantity(v.pp.QuantityPrecision)
 	for i, input := range inputTokens {
 		if input == nil {
 			return errors.Errorf("input %d is nil", i)
 		}
-		q, err := token2.ToQuantity(input.Quantity, 64)
+		q, err := token2.ToQuantity(input.Quantity, v.pp.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
 		}
@@ -207,7 +207,7 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 	}
 	for _, output := range tr.GetOutputs() {
 		out := output.(*TransferOutput).Output
-		q, err := token2.ToQuantity(out.Quantity, 64)
+		q, err := token2.ToQuantity(out.Quantity, v.pp.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
 		}

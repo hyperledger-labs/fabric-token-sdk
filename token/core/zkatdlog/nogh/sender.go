@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"strconv"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -15,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -46,15 +43,11 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	var owners [][]byte
 	var ownerIdentities []view.Identity
 	for _, output := range outputTokens {
-		q, err := token3.ToQuantity(output.Quantity, keys.Precision)
+		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
 			return nil, nil, err
 		}
-		v, err := strconv.ParseUint(q.Decimal(), 10, 64)
-		if err != nil {
-			return nil, nil, err
-		}
-		values = append(values, v)
+		values = append(values, q.ToBigInt().Uint64())
 		owners = append(owners, output.Owner.Raw)
 
 		// add owner identity if not present already

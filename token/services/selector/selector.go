@@ -16,7 +16,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -69,6 +68,7 @@ func newSelector(
 	numRetry int,
 	timeout time.Duration,
 	requestCertification bool,
+	precision uint64,
 	metricsAgent MetricsAgent,
 ) *selector {
 	return &selector{
@@ -76,7 +76,7 @@ func newSelector(
 		locker:               locker,
 		queryService:         service,
 		certClient:           certClient,
-		precision:            keys.Precision,
+		precision:            precision,
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: requestCertification,
@@ -150,7 +150,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				break
 			}
 
-			q := t.Quantity
+			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				s.locker.UnlockIDs(toBeSpent...)
 				s.locker.UnlockIDs(toBeCertified...)
@@ -318,7 +318,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 				break
 			}
 
-			q := t.Quantity
+			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				s.locker.UnlockIDs(toBeSpent...)
 				s.locker.UnlockIDs(toBeCertified...)

@@ -98,6 +98,15 @@ func NewZeroQuantity(precision uint64) Quantity {
 	}
 }
 
+func NewOneQuantity(precision uint64) Quantity {
+	switch precision {
+	case 64:
+		return &UInt64Quantity{Value: 1}
+	default:
+		return &BigQuantity{Int: big.NewInt(1), Precision: precision}
+	}
+}
+
 func NewQuantityFromUInt64(q uint64) Quantity {
 	return &UInt64Quantity{Value: q}
 }

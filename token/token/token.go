@@ -90,12 +90,8 @@ type UnspentToken struct {
 	Owner *Owner
 	// Type is the type of the token
 	Type string
-	// DecimalQuantity represents the number of units of Type that this unspent token holds.
-	// It is formatted in decimal representation
-	DecimalQuantity string
 	// Quantity represents the number of units of Type that this unspent token holds.
-	// It might be nil.
-	Quantity Quantity `json:"-"`
+	Quantity string
 }
 
 // UnspentTokens is used to hold the output of ListRequest
@@ -111,7 +107,7 @@ func (it *UnspentTokens) Count() int {
 func (it *UnspentTokens) Sum(precision uint64) Quantity {
 	sum := NewZeroQuantity(precision)
 	for _, token := range it.Tokens {
-		q, err := ToQuantity(token.DecimalQuantity, precision)
+		q, err := ToQuantity(token.Quantity, precision)
 		if err != nil {
 			panic(err)
 		}

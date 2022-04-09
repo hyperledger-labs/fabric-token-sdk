@@ -3,19 +3,16 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package query
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type BalanceQuery struct {
@@ -34,7 +31,8 @@ type BalanceView struct {
 }
 
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
-	wallet := token.GetManagementService(context, token.WithTMSID(b.TMSID)).WalletManager().OwnerWallet(b.Wallet)
+	tms := token.GetManagementService(context, token.WithTMSID(b.TMSID))
+	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
@@ -44,9 +42,10 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	sum := token2.NewZeroQuantity(keys.Precision)
+	precision := tms.PublicParametersManager().Precision()
+	sum := token2.NewZeroQuantity(precision)
 	for _, tok := range unspentTokens.Tokens {
-		q, err := token2.ToQuantity(tok.DecimalQuantity, keys.Precision)
+		q, err := token2.ToQuantity(tok.Quantity, precision)
 		if err != nil {
 			return nil, err
 		}
@@ -80,7 +79,8 @@ type AllMyBalanceView struct {
 }
 
 func (b *AllMyBalanceView) Call(context view.Context) (interface{}, error) {
-	wallet := token.GetManagementService(context, token.WithTMSID(b.TMSID)).WalletManager().OwnerWallet(b.Wallet)
+	tms := token.GetManagementService(context, token.WithTMSID(b.TMSID))
+	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
 	if wallet == nil {
 		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
 	}
@@ -90,13 +90,14 @@ func (b *AllMyBalanceView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	precision := tms.PublicParametersManager().Precision()
 	for _, tok := range unspentTokens.Tokens {
 		fmt.Printf("\n am I here? \n")
 		_, exists := balances[tok.Type]
 		if !exists {
-			balances[tok.Type] = token2.NewZeroQuantity(keys.Precision)
+			balances[tok.Type] = token2.NewZeroQuantity(precision)
 		}
-		q, err := token2.ToQuantity(tok.DecimalQuantity, keys.Precision)
+		q, err := token2.ToQuantity(tok.Quantity, precision)
 		if err != nil {
 			return nil, err
 		}
