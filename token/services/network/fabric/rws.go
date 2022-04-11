@@ -39,10 +39,6 @@ func (rwset *RWSWrapper) Done() {
 	rwset.r.Done()
 }
 
-func (rwset *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return rwset.r.SetStateMetadata(namespace, key, metadata)
-}
-
 func (rwset *RWSWrapper) Equals(r interface{}, namespace string) error {
 	switch t := r.(type) {
 	case *RWSWrapper:

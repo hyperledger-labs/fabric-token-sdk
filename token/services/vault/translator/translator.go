@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package translator
 
 import (
@@ -309,16 +310,7 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
-
 		if err := w.RWSet.SetState(w.namespace, outputID, output); err != nil {
-			return err
-		}
-
-		if err := w.RWSet.SetStateMetadata(w.namespace, outputID,
-			map[string][]byte{
-				keys.Action: []byte(keys.ActionIssue),
-			},
-		); err != nil {
 			return err
 		}
 	}
@@ -359,10 +351,6 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 				return err
 			}
 			err = w.RWSet.SetState(w.namespace, outputID, bytes)
-			if err != nil {
-				return err
-			}
-			err = w.RWSet.SetStateMetadata(w.namespace, outputID, map[string][]byte{keys.Action: []byte(keys.ActionTransfer)})
 			if err != nil {
 				return err
 			}
@@ -417,12 +405,6 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 		for _, id := range ids {
 			logger.Debugf("Delete state %s\n", id)
 			err := w.RWSet.DeleteState(w.namespace, id)
-			if err != nil {
-				return err
-			}
-
-			logger.Debugf("Delete state metadata %s\n", id)
-			err = w.RWSet.SetStateMetadata(w.namespace, id, nil)
 			if err != nil {
 				return err
 			}

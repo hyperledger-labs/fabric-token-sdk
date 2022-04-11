@@ -52,10 +52,6 @@ func (r *RWSWrapper) Done() {
 	return
 }
 
-func (r *RWSWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return nil
-}
-
 func (r *RWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("implement me")
 }
