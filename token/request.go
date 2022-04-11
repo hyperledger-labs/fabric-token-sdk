@@ -352,9 +352,12 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 
 // Outputs returns the sequence of outputs of the request supporting sequential and parallel aggregate operations.
 func (t *Request) Outputs() (*OutputStream, error) {
+	tms := t.TokenService.tms
+	precision := tms.PublicParamsManager().PublicParameters().Precision()
+
 	var outputs []*Output
 	for i, issue := range t.Actions.Issues {
-		action, err := t.TokenService.tms.DeserializeIssueAction(issue)
+		action, err := tms.DeserializeIssueAction(issue)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
@@ -363,26 +366,30 @@ func (t *Request) Outputs() (*OutputStream, error) {
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed deserializing issue action output [%d,%d]", i, j)
 			}
-			tok, _, err := t.TokenService.tms.DeserializeToken(raw, t.Metadata.Issues[i].TokenInfo[j])
+			tok, _, err := tms.DeserializeToken(raw, t.Metadata.Issues[i].TokenInfo[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 			}
-			eID, err := t.TokenService.tms.GetEnrollmentID(t.Metadata.Issues[i].AuditInfos[j])
+			eID, err := tms.GetEnrollmentID(t.Metadata.Issues[i].AuditInfos[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
 
+			q, err := token.ToQuantity(tok.Quantity, precision)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+			}
 			outputs = append(outputs, &Output{
 				ActionIndex:  i,
 				Owner:        tok.Owner.Raw,
 				EnrollmentID: eID,
 				Type:         tok.Type,
-				Quantity:     tok.Quantity,
+				Quantity:     q,
 			})
 		}
 	}
 	for i, transfer := range t.Actions.Transfers {
-		action, err := t.TokenService.tms.DeserializeTransferAction(transfer)
+		action, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -391,41 +398,47 @@ func (t *Request) Outputs() (*OutputStream, error) {
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed deserializing transfer action output [%d,%d]", i, j)
 			}
-			tok, _, err := t.TokenService.tms.DeserializeToken(raw, t.Metadata.Transfers[i].TokenInfo[j])
+			tok, _, err := tms.DeserializeToken(raw, t.Metadata.Transfers[i].TokenInfo[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 			}
 			var eID string
 			if len(tok.Owner.Raw) != 0 {
-				eID, err = t.TokenService.tms.GetEnrollmentID(t.Metadata.Transfers[i].ReceiverAuditInfos[j])
+				eID, err = tms.GetEnrollmentID(t.Metadata.Transfers[i].ReceiverAuditInfos[j])
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 				}
 			}
 
+			q, err := token.ToQuantity(tok.Quantity, precision)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+			}
 			outputs = append(outputs, &Output{
 				ActionIndex:  i,
 				Owner:        tok.Owner.Raw,
 				EnrollmentID: eID,
 				Type:         tok.Type,
-				Quantity:     tok.Quantity,
+				Quantity:     q,
 			})
 		}
 	}
 
-	return NewOutputStream(outputs), nil
+	return NewOutputStream(outputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
 // Inputs returns the sequence of inputs of the request supporting sequential and parallel aggregate operations.
 // Notice that the inputs do not carry Type and Quantity because this information might be available to all parties.
 // If you are an auditor, you can use the AuditInputs method to get everything.
 func (t *Request) Inputs() (*InputStream, error) {
+	tms := t.TokenService.tms
+
 	var inputs []*Input
 	for i := range t.Actions.Transfers {
 		meta := t.Metadata.Transfers[i]
 
 		for j, id := range meta.TokenIDs {
-			eID, err := t.TokenService.tms.GetEnrollmentID(t.Metadata.Transfers[i].SenderAuditInfos[j])
+			eID, err := tms.GetEnrollmentID(t.Metadata.Transfers[i].SenderAuditInfos[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
@@ -437,7 +450,7 @@ func (t *Request) Inputs() (*InputStream, error) {
 			})
 		}
 	}
-	return NewInputStream(t.TokenService.Vault().NewQueryEngine(), inputs), nil
+	return NewInputStream(t.TokenService.Vault().NewQueryEngine(), inputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
 func (t *Request) Verify() error {
@@ -695,10 +708,15 @@ func (t *Request) AuditInputs() (*InputStream, error) {
 		return nil, errors.Errorf("retrieved less inputs than those in the transaction [%d][%d]", len(ids), len(toks))
 	}
 
+	precision := t.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
 	for i := 0; i < len(ids); i++ {
 		in := inputs.At(i)
 		in.Type = toks[i].Type
-		in.Quantity = toks[i].Quantity
+		q, err := token.ToQuantity(toks[i].Quantity, precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed converting quantity [%s]", toks[i].Quantity)
+		}
+		in.Quantity = q
 	}
 	return inputs, nil
 }
@@ -751,7 +769,8 @@ func (t *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
 	}
 	var typ string
-	sum := token.NewQuantityFromUInt64(0)
+	precision := t.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
+	sum := token.NewZeroQuantity(precision)
 	for _, tok := range inputTokens {
 		if len(typ) == 0 {
 			typ = tok.Type
@@ -759,7 +778,7 @@ func (t *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 		if typ != tok.Type {
 			return nil, nil, "", errors.WithMessagef(err, "tokens must have the same type [%s]!=[%s]", typ, tok.Type)
 		}
-		q, err := token.ToQuantity(tok.Quantity, 64)
+		q, err := token.ToQuantity(tok.Quantity, precision)
 		if err != nil {
 			return nil, nil, "", errors.WithMessagef(err, "failed unmarshalling token quantity [%s]", tok.Quantity)
 		}

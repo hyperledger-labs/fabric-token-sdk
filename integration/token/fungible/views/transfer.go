@@ -207,12 +207,13 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		assert.NoError(err, "failed getting tokens from ids")
 
 		// Then, the sender double check that what returned by the selector is correct
-		recomputedSum := token.NewQuantityFromUInt64(0)
+		precision := tx.TokenService().PublicParametersManager().Precision()
+		recomputedSum := token.NewZeroQuantity(precision)
 		for _, tok := range tokens {
 			// Is the token of the right type?
 			assert.Equal(t.Type, tok.Type, "expected token of type [%s], got [%s]", t.Type, tok.Type)
 			// Add the quantity to the total
-			q, err := token.ToQuantity(tok.Quantity, 64)
+			q, err := token.ToQuantity(tok.Quantity, precision)
 			assert.NoError(err, "failed converting quantity")
 			recomputedSum = recomputedSum.Add(q)
 		}

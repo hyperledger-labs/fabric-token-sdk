@@ -3,13 +3,13 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -23,7 +23,7 @@ type Output struct {
 	Owner        view.Identity
 	EnrollmentID string
 	Type         string
-	Quantity     string
+	Quantity     token2.Quantity
 }
 
 // Input models an input of a token action
@@ -33,17 +33,18 @@ type Input struct {
 	Owner        view.Identity
 	EnrollmentID string
 	Type         string
-	Quantity     string
+	Quantity     token2.Quantity
 }
 
 // OutputStream models a stream over a set of outputs (Output).
 type OutputStream struct {
-	outputs []*Output
+	Precision uint64
+	outputs   []*Output
 }
 
-// NewOutputStream creates a new OutputStream for the passed outputs.
-func NewOutputStream(outputs []*Output) *OutputStream {
-	return &OutputStream{outputs: outputs}
+// NewOutputStream creates a new OutputStream for the passed outputs and Precision.
+func NewOutputStream(outputs []*Output, precision uint64) *OutputStream {
+	return &OutputStream{outputs: outputs, Precision: precision}
 }
 
 // Filter filters the OutputStream to only include outputs that match the passed predicate.
@@ -54,7 +55,7 @@ func (o *OutputStream) Filter(f func(t *Output) bool) *OutputStream {
 			filtered = append(filtered, output)
 		}
 	}
-	return &OutputStream{outputs: filtered}
+	return &OutputStream{outputs: filtered, Precision: o.Precision}
 }
 
 // ByRecipient filters the OutputStream to only include outputs that match the passed recipient.
@@ -83,14 +84,9 @@ func (o *OutputStream) Count() int {
 
 // Sum returns the sum of the quantity of all outputs in the OutputStream.
 func (o *OutputStream) Sum() token2.Quantity {
-	sum := token2.NewZeroQuantity(64)
+	sum := token2.NewZeroQuantity(o.Precision)
 	for _, output := range o.outputs {
-		q, err := token2.ToQuantity(output.Quantity, 64)
-		if err != nil {
-			panic(err)
-		}
-
-		sum = sum.Add(q)
+		sum = sum.Add(output.Quantity)
 	}
 	return sum
 }
@@ -138,13 +134,14 @@ func (o *OutputStream) TokenTypes() []string {
 
 // InputStream models a stream over a set of inputs (Input).
 type InputStream struct {
-	qs     QueryService
-	inputs []*Input
+	qs        QueryService
+	inputs    []*Input
+	precision uint64
 }
 
 // NewInputStream creates a new InputStream for the passed inputs and query service.
-func NewInputStream(qs QueryService, inputs []*Input) *InputStream {
-	return &InputStream{qs: qs, inputs: inputs}
+func NewInputStream(qs QueryService, inputs []*Input, precision uint64) *InputStream {
+	return &InputStream{qs: qs, inputs: inputs, precision: precision}
 }
 
 // Filter returns a new InputStream with only the inputs that satisfy the predicate
@@ -155,7 +152,7 @@ func (is *InputStream) Filter(f func(t *Input) bool) *InputStream {
 			filtered = append(filtered, item)
 		}
 	}
-	return &InputStream{inputs: filtered}
+	return &InputStream{inputs: filtered, precision: is.precision}
 }
 
 // Count returns the number of inputs in the stream
@@ -261,13 +258,9 @@ func (is *InputStream) ByType(tokenType string) *InputStream {
 
 // Sum returns the sum of the quantities of the inputs.
 func (is *InputStream) Sum() token2.Quantity {
-	sum := token2.NewZeroQuantity(64)
+	sum := token2.NewZeroQuantity(is.precision)
 	for _, input := range is.inputs {
-		q, err := token2.ToQuantity(input.Quantity, 64)
-		if err != nil {
-			panic(err)
-		}
-		sum = sum.Add(q)
+		sum = sum.Add(input.Quantity)
 	}
 	return sum
 }

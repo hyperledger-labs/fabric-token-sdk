@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -15,8 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-	"strconv"
-	"strings"
 )
 
 type ONS interface {
@@ -235,7 +236,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer); err != nil {
+			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
 				return err
 			}
 		}

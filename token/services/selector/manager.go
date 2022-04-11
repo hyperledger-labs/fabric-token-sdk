@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package selector
 
 import (
@@ -20,6 +21,7 @@ type manager struct {
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
+	precision            uint64
 	metricsAgent         MetricsAgent
 }
 
@@ -30,6 +32,7 @@ func newManager(
 	numRetry int,
 	timeout time.Duration,
 	requestCertification bool,
+	precision uint64,
 	metricsAgent MetricsAgent,
 ) *manager {
 	return &manager{
@@ -39,6 +42,7 @@ func newManager(
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: requestCertification,
+		precision:            precision,
 		metricsAgent:         metricsAgent,
 	}
 }
@@ -52,6 +56,7 @@ func (m *manager) NewSelector(id string) (token.Selector, error) {
 		m.numRetry,
 		m.timeout,
 		m.requestCertification,
+		m.precision,
 		m.metricsAgent,
 	), nil
 }

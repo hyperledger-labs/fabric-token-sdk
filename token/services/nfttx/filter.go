@@ -12,7 +12,6 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -39,11 +38,11 @@ type filter struct {
 	metricsAgent MetricsAgent
 }
 
-func NewFilter(wallet string, service QueryService, metricsAgent MetricsAgent) *filter {
+func NewFilter(wallet string, service QueryService, precision uint64, metricsAgent MetricsAgent) *filter {
 	return &filter{
 		wallet:       wallet,
 		queryService: service,
-		precision:    keys.Precision,
+		precision:    precision,
 		metricsAgent: metricsAgent,
 	}
 }
@@ -85,7 +84,7 @@ func (s *filter) selectByFilter(filter Filter, q string) ([]*token2.ID, token2.Q
 			break
 		}
 
-		q := t.Quantity
+		q, err := token2.ToQuantity(t.Quantity, s.precision)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to convert quantity")
 		}

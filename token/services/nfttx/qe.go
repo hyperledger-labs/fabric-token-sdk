@@ -34,18 +34,21 @@ type selector interface {
 type QueryExecutor struct {
 	selector
 	vault
+	precision uint64
 }
 
-func NewQueryExecutor(sp view.ServiceProvider, wallet string, opts ...token.ServiceOption) (*QueryExecutor, error) {
+func NewQueryExecutor(sp view.ServiceProvider, wallet string, precision uint64, opts ...token.ServiceOption) (*QueryExecutor, error) {
 	tms := token.GetManagementService(sp, opts...)
 	qe := tms.Vault().NewQueryEngine()
 	return &QueryExecutor{
 		selector: NewFilter(
 			wallet,
 			qe,
+			tms.PublicParametersManager().Precision(),
 			metrics.Get(sp),
 		),
-		vault: qe,
+		vault:     qe,
+		precision: precision,
 	}, nil
 }
 
@@ -66,7 +69,7 @@ func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) 
 		return errors.Wrap(err, "failed to get tokens")
 	}
 	for _, t := range tokens {
-		q, err := token2.ToQuantity(t.Quantity, 64)
+		q, err := token2.ToQuantity(t.Quantity, s.precision)
 		if err != nil {
 			return errors.Wrap(err, "failed to convert quantity")
 		}

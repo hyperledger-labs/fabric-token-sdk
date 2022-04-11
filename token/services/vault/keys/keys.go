@@ -16,32 +16,31 @@ import (
 )
 
 const (
-	minUnicodeRuneValue                = 0            // U+0000
-	MaxUnicodeRuneValue                = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
-	CompositeKeyNamespace              = "\x00"
-	TokenKeyPrefix                     = "ztoken"
-	SignaturePrefix                    = "sig"
-	FabTokenKeyPrefix                  = "token"
-	FabTokenExtendedKeyPrefix          = "etoken"
-	AuditTokenKeyPrefix                = "audittoken"
-	TokenMineKeyPrefix                 = "mine"
-	TokenSetupKeyPrefix                = "setup"
-	IssuedHistoryTokenKeyPrefix        = "issued"
-	TokenAuditorKeyPrefix              = "auditor"
-	TokenNameSpace                     = "zkat"
-	numComponentsInKey                 = 2 // 2 components: txid, index, excluding TokenKeyPrefix
-	numComponentsInExtendedKey         = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
-	Action                             = "action"
-	ActionIssue                        = "issue"
-	ActionTransfer                     = "transfer"
-	Precision                   uint64 = 64
-	Info                               = "info"
-	IDs                                = "ids"
-	TokenRequestKeyPrefix              = "token_request"
-	OwnerSeparator                     = "/"
-	SerialNumber                       = "sn"
-	IssueActionMetadata                = "iam"
-	TransferActionMetadata             = "tam"
+	minUnicodeRuneValue         = 0            // U+0000
+	MaxUnicodeRuneValue         = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
+	CompositeKeyNamespace       = "\x00"
+	TokenKeyPrefix              = "ztoken"
+	SignaturePrefix             = "sig"
+	FabTokenKeyPrefix           = "token"
+	FabTokenExtendedKeyPrefix   = "etoken"
+	AuditTokenKeyPrefix         = "audittoken"
+	TokenMineKeyPrefix          = "mine"
+	TokenSetupKeyPrefix         = "setup"
+	IssuedHistoryTokenKeyPrefix = "issued"
+	TokenAuditorKeyPrefix       = "auditor"
+	TokenNameSpace              = "zkat"
+	numComponentsInKey          = 2 // 2 components: txid, index, excluding TokenKeyPrefix
+	numComponentsInExtendedKey  = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
+	Action                      = "action"
+	ActionIssue                 = "issue"
+	ActionTransfer              = "transfer"
+	Info                        = "info"
+	IDs                         = "ids"
+	TokenRequestKeyPrefix       = "token_request"
+	OwnerSeparator              = "/"
+	SerialNumber                = "sn"
+	IssueActionMetadata         = "iam"
+	TransferActionMetadata      = "tam"
 )
 
 func GetTokenIdFromKey(key string) (*token2.ID, error) {

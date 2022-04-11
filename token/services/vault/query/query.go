@@ -170,17 +170,12 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 				return nil, err
 			}
 			// Convert quantity to decimal
-			q, err := token.ToQuantity(output.Quantity, keys.Precision)
-			if err != nil {
-				return nil, err
-			}
 			tokens = append(tokens,
 				&token.UnspentToken{
-					Owner:           output.Owner,
-					Type:            output.Type,
-					DecimalQuantity: q.Decimal(),
-					Quantity:        q,
-					Id:              id,
+					Owner:    output.Owner,
+					Type:     output.Type,
+					Quantity: output.Quantity,
+					Id:       id,
 				})
 		}
 	}
@@ -272,16 +267,12 @@ func (e *Engine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 				return nil, err
 			}
 			// Convert quantity to decimal
-			q, err := token.ToQuantity(output.Quantity, keys.Precision)
-			if err != nil {
-				return nil, err
-			}
 			tokens = append(tokens,
 				&token.IssuedToken{
 					Id:       id,
 					Owner:    output.Owner,
 					Type:     output.Type,
-					Quantity: q.Decimal(),
+					Quantity: output.Quantity,
 					Issuer:   output.Issuer,
 				})
 		}
@@ -448,16 +439,11 @@ func (e *Engine) unmarshalUnspentToken(key string, raw []byte, extended bool) (*
 		return nil, errors.Wrapf(err, "failed getting token ID from key [%v]", key)
 	}
 	// Convert quantity to decimal
-	q, err := token.ToQuantity(output.Quantity, keys.Precision)
-	if err != nil {
-		return nil, err
-	}
 	ut := &token.UnspentToken{
-		Owner:           output.Owner,
-		Type:            output.Type,
-		DecimalQuantity: q.Decimal(),
-		Quantity:        q,
-		Id:              id,
+		Owner:    output.Owner,
+		Type:     output.Type,
+		Quantity: output.Quantity,
+		Id:       id,
 	}
 
 	// store in cache and return

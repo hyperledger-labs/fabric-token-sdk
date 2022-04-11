@@ -18,9 +18,12 @@ type PublicParamsFetcher interface {
 }
 
 // PublicParametersManager exposes methods to manage the public parameters
-// TODO: add precision
 type PublicParametersManager struct {
 	ppm tokenapi.PublicParamsManager
+}
+
+func (c *PublicParametersManager) Precision() uint64 {
+	return c.ppm.PublicParameters().Precision()
 }
 
 // CertificationDriver return the certification driver used to certify that tokens exist

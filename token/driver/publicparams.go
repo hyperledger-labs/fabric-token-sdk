@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
 import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -31,6 +32,7 @@ type PublicParameters interface {
 	CertificationDriver() string
 	Bytes() ([]byte, error)
 	Auditors() []view.Identity
+	Precision() uint64
 }
 
 type PublicParamsManager interface {
