@@ -56,5 +56,5 @@ func (t *TMS) SetTokenGenPublicParams(publicParamsGenArgs ...string) {
 }
 
 func (t *TMS) ID() string {
-	return fmt.Sprintf("%s-%s-%s", t.Network, t.Channel, t.Network)
+	return fmt.Sprintf("%s-%s-%s", t.Network, t.Channel, t.Namespace)
 }
