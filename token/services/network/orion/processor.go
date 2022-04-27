@@ -26,20 +26,22 @@ type ONS interface {
 }
 
 type RWSetProcessor struct {
-	network   ONS
-	nss       []string
-	sp        view2.ServiceProvider
-	ownership network.Ownership
-	issued    network.Issued
+	network    ONS
+	nss        []string
+	sp         view2.ServiceProvider
+	ownership  network.Ownership
+	issued     network.Issued
+	tokenStore processor.TokenStore
 }
 
 func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Ownership, issued network.Issued) *RWSetProcessor {
 	return &RWSetProcessor{
-		network:   network,
-		nss:       []string{ns},
-		sp:        sp,
-		ownership: ownership,
-		issued:    issued,
+		network:    network,
+		nss:        []string{ns},
+		sp:         sp,
+		ownership:  ownership,
+		issued:     issued,
+		tokenStore: processor.NewCommonTokenStore(sp),
 	}
 }
 
@@ -114,7 +116,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 	if tms.PublicParametersManager().GraphHiding() {
 		// Delete inputs
 		for _, id := range metadata.SpentTokenID() {
-			if err := processor.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
 				return err
 			}
 		}
@@ -179,7 +181,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 		// This is a delete, add a delete for fabtoken
 		if len(val) == 0 {
-			if err := processor.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
 				return err
 			}
 			continue
@@ -220,14 +222,14 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			}
 
 			// Store Fabtoken-like entry
-			if err := processor.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
+			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}
-			if err := processor.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
+			if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
 				return err
 			}
 		}
@@ -236,7 +238,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
 				return err
 			}
 		}

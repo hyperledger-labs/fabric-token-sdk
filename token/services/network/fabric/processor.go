@@ -9,13 +9,12 @@ package fabric
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -29,20 +28,22 @@ type net interface {
 }
 
 type RWSetProcessor struct {
-	network   net
-	nss       []string
-	sp        view2.ServiceProvider
-	ownership network.Ownership
-	issued    network.Issued
+	network    net
+	nss        []string
+	sp         view2.ServiceProvider
+	ownership  network.Ownership
+	issued     network.Issued
+	tokenStore processor.TokenStore
 }
 
 func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Ownership, issued network.Issued) *RWSetProcessor {
 	return &RWSetProcessor{
-		network:   network,
-		nss:       []string{ns},
-		sp:        sp,
-		ownership: ownership,
-		issued:    issued,
+		network:    network,
+		nss:        []string{ns},
+		sp:         sp,
+		ownership:  ownership,
+		issued:     issued,
+		tokenStore: processor.NewCommonTokenStore(sp),
 	}
 }
 
@@ -149,7 +150,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	if tms.PublicParametersManager().GraphHiding() {
 		// Delete inputs
 		for _, id := range metadata.SpentTokenID() {
-			if err := processor.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
 				return err
 			}
 		}
@@ -209,7 +210,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 
 		// This is a delete, add a delete for fabtoken
 		if len(val) == 0 {
-			if err := processor.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
 				return err
 			}
 			continue
@@ -250,14 +251,14 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			}
 
 			// Store Fabtoken-like entry
-			if err := processor.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
+			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}
-			if err := processor.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
+			if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
 				return err
 			}
 		}
@@ -266,7 +267,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := processor.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
 				return err
 			}
 		}

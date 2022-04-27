@@ -228,6 +228,12 @@ func (t *Transaction) Release() {
 	if err := t.TokenService().SelectorManager().Unlock(t.ID()); err != nil {
 		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
 	}
+
+	pub, err := publisher(t.SP)
+	if err != nil {
+		return
+	}
+	publishAbortTx(pub, t)
 }
 
 func (t *Transaction) TokenService() *token.ManagementService {

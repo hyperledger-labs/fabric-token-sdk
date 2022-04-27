@@ -9,6 +9,8 @@ package processor
 import (
 	"encoding/json"
 
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -29,7 +31,29 @@ type RWSet interface {
 	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
 }
 
-func DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
+type TokenStore interface {
+	DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error
+	StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error
+	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error
+	StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error
+}
+
+type CommonTokenStore struct {
+	notifier events.Publisher
+}
+
+func NewCommonTokenStore(sp view2.ServiceProvider) *CommonTokenStore {
+	notifier, err := events.GetPublisher(sp)
+	if err != nil {
+		// TODO how to handle error here?
+		logger.Warnf("cannot get notifier instance")
+		// just return nil?
+	}
+
+	return &CommonTokenStore{notifier: notifier}
+}
+
+func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -60,6 +84,10 @@ func DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("delete extended key [%s]", id)
 			}
+
+			logger.Debugf("post new delete-token event")
+			cts.Notify(DeleteToken, id, token.Type, txID, index)
+
 			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
 			if err != nil {
 				return errors.Wrapf(err, "error creating extendend output ID: %s", err)
@@ -79,10 +107,11 @@ func DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
 	if err != nil {
 		return errors.Wrapf(err, "error deleting metadata for key [%s]", outputID)
 	}
+
 	return nil
 }
 
-func StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
+func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -110,6 +139,7 @@ func StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws 
 		if len(id) == 0 {
 			continue
 		}
+
 		outputID, err := keys.CreateExtendedFabTokenKey(id, tok.Type, txID, index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -123,11 +153,16 @@ func StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws 
 		if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
 			return err
 		}
+
+		// notify others
+		logger.Debugf("post new event!")
+		cts.Notify(AddToken, id, tok.Type, txID, index)
 	}
+
 	return nil
 }
 
-func StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
+func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
@@ -168,7 +203,7 @@ func StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.T
 	return nil
 }
 
-func StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error {
+func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error {
 	outputID, err := keys.CreateAuditTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
