@@ -5,7 +5,6 @@ go 1.16
 replace (
 	github.com/fsouza/go-dockerclient => github.com/fsouza/go-dockerclient v1.4.1
 	github.com/go-kit/kit => github.com/go-kit/kit v0.7.0
-	github.com/hyperledger-labs/fabric-smart-client => github.com/mbrandenburger/fabric-smart-client v0.0.0-20220404072000-2820ec7cddec
 	github.com/hyperledger/fabric => github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7
 	github.com/hyperledger/fabric-protos-go => github.com/hyperledger/fabric-protos-go v0.0.0-20201028172056-a3136dde2354
 	go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20181228115726-23731bf9ba55
@@ -19,7 +18,7 @@ require (
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220425064633-fe3961b4f250
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220427123747-70d31638f847
 	github.com/hyperledger-labs/orion-sdk-go v0.0.0-20220213082028-b0ee3d8f361c
 	github.com/hyperledger-labs/orion-server v0.2.1
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20220128025611-fad7f691a967
