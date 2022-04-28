@@ -9,6 +9,7 @@ package fungible
 import (
 	"crypto/rand"
 	"math/big"
+	"strings"
 	"time"
 
 	. "github.com/onsi/gomega"
@@ -22,87 +23,85 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure) {
-	// registerIssuers(network)
-	// registerCertifier(network)
-	registerAuditor(network)
+	RegisterAuditor(network)
 
 	// Rest of the test
-	issueCash(network, "", "USD", 110, "alice")
-	checkBalance(network, "alice", "", "USD", 110)
-	issueCash(network, "", "USD", 10, "alice")
-	checkBalance(network, "alice", "", "USD", 120)
-	checkBalance(network, "alice", "alice", "USD", 120)
+	IssueCash(network, "", "USD", 110, "alice")
+	CheckBalance(network, "alice", "", "USD", 110)
+	IssueCash(network, "", "USD", 10, "alice")
+	CheckBalance(network, "alice", "", "USD", 120)
+	CheckBalance(network, "alice", "alice", "USD", 120)
 
-	h := listIssuerHistory(network, "", "USD")
+	h := ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = listIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
-	issueCash(network, "", "EUR", 10, "bob")
-	checkBalance(network, "bob", "", "EUR", 10)
-	issueCash(network, "", "EUR", 10, "bob")
-	checkBalance(network, "bob", "", "EUR", 20)
-	issueCash(network, "", "EUR", 10, "bob")
-	checkBalance(network, "bob", "", "EUR", 30)
+	IssueCash(network, "", "EUR", 10, "bob")
+	CheckBalance(network, "bob", "", "EUR", 10)
+	IssueCash(network, "", "EUR", 10, "bob")
+	CheckBalance(network, "bob", "", "EUR", 20)
+	IssueCash(network, "", "EUR", 10, "bob")
+	CheckBalance(network, "bob", "", "EUR", 30)
 
-	h = listIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = listIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
 
-	checkBalance(network, "alice", "", "USD", 120)
-	checkBalance(network, "bob", "", "EUR", 30)
+	CheckBalance(network, "alice", "", "USD", 120)
+	CheckBalance(network, "bob", "", "EUR", 30)
 
 	network.StopFSCNode("alice")
 	time.Sleep(3 * time.Second)
 	network.StartFSCNode("alice")
 	time.Sleep(5 * time.Second)
 
-	transferCash(network, "alice", "", "USD", 110, "bob")
-	ut := listUnspentTokens(network, "alice", "", "USD")
+	TransferCash(network, "alice", "", "USD", 110, "bob")
+	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(10))).To(BeEquivalentTo(0))
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
-	ut = listUnspentTokens(network, "bob", "", "USD")
+	ut = ListUnspentTokens(network, "bob", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(BeEquivalentTo(0))
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
 
-	checkBalance(network, "alice", "", "USD", 10)
-	checkBalance(network, "alice", "", "EUR", 0)
-	checkBalance(network, "bob", "", "EUR", 30)
-	checkBalance(network, "bob", "bob", "EUR", 30)
-	checkBalance(network, "bob", "", "USD", 110)
+	CheckBalance(network, "alice", "", "USD", 10)
+	CheckBalance(network, "alice", "", "EUR", 0)
+	CheckBalance(network, "bob", "", "EUR", 30)
+	CheckBalance(network, "bob", "bob", "EUR", 30)
+	CheckBalance(network, "bob", "", "USD", 110)
 
-	swapCash(network, "alice", "", "USD", 10, "EUR", 10, "bob")
+	SwapCash(network, "alice", "", "USD", 10, "EUR", 10, "bob")
 
-	checkBalance(network, "alice", "", "USD", 0)
-	checkBalance(network, "alice", "", "EUR", 10)
-	checkBalance(network, "bob", "", "EUR", 20)
-	checkBalance(network, "bob", "", "USD", 120)
+	CheckBalance(network, "alice", "", "USD", 0)
+	CheckBalance(network, "alice", "", "EUR", 10)
+	CheckBalance(network, "bob", "", "EUR", 20)
+	CheckBalance(network, "bob", "", "USD", 120)
 
-	redeemCash(network, "bob", "", "USD", 10)
-	checkBalance(network, "bob", "", "USD", 110)
+	RedeemCash(network, "bob", "", "USD", 10)
+	CheckBalance(network, "bob", "", "USD", 110)
 
 	// Check self endpoints
-	issueCash(network, "", "USD", 110, "issuer")
-	issueCash(network, "", "EUR", 150, "issuer")
-	issueCash(network, "issuer.id1", "EUR", 10, "issuer.owner")
+	IssueCash(network, "", "USD", 110, "issuer")
+	IssueCash(network, "", "EUR", 150, "issuer")
+	IssueCash(network, "issuer.id1", "EUR", 10, "issuer.owner")
 
-	h = listIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(230))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = listIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
@@ -112,92 +111,92 @@ func TestAll(network *integration.Infrastructure) {
 	time.Sleep(3 * time.Second)
 	network.StartFSCNode("auditor")
 	time.Sleep(5 * time.Second)
-	registerAuditor(network)
+	RegisterAuditor(network)
 
-	checkBalance(network, "issuer", "", "USD", 110)
-	checkBalance(network, "issuer", "", "EUR", 150)
-	checkBalance(network, "issuer", "issuer.owner", "EUR", 10)
+	CheckBalance(network, "issuer", "", "USD", 110)
+	CheckBalance(network, "issuer", "", "EUR", 150)
+	CheckBalance(network, "issuer", "issuer.owner", "EUR", 10)
 
-	transferCash(network, "issuer", "", "USD", 50, "issuer")
-	checkBalance(network, "issuer", "", "USD", 110)
-	checkBalance(network, "issuer", "", "EUR", 150)
+	TransferCash(network, "issuer", "", "USD", 50, "issuer")
+	CheckBalance(network, "issuer", "", "USD", 110)
+	CheckBalance(network, "issuer", "", "EUR", 150)
 
-	transferCash(network, "issuer", "", "USD", 50, "manager")
-	transferCash(network, "issuer", "", "EUR", 20, "manager")
-	checkBalance(network, "issuer", "", "USD", 60)
-	checkBalance(network, "issuer", "", "EUR", 130)
-	checkBalance(network, "manager", "", "USD", 50)
-	checkBalance(network, "manager", "", "EUR", 20)
+	TransferCash(network, "issuer", "", "USD", 50, "manager")
+	TransferCash(network, "issuer", "", "EUR", 20, "manager")
+	CheckBalance(network, "issuer", "", "USD", 60)
+	CheckBalance(network, "issuer", "", "EUR", 130)
+	CheckBalance(network, "manager", "", "USD", 50)
+	CheckBalance(network, "manager", "", "EUR", 20)
 
 	// Play with wallets
-	transferCash(network, "manager", "", "USD", 10, "manager.id1")
-	transferCash(network, "manager", "", "USD", 10, "manager.id2")
-	transferCash(network, "manager", "", "USD", 10, "manager.id3")
-	checkBalance(network, "manager", "", "USD", 20)
-	checkBalance(network, "manager", "manager.id1", "USD", 10)
-	checkBalance(network, "manager", "manager.id2", "USD", 10)
-	checkBalance(network, "manager", "manager.id3", "USD", 10)
+	TransferCash(network, "manager", "", "USD", 10, "manager.id1")
+	TransferCash(network, "manager", "", "USD", 10, "manager.id2")
+	TransferCash(network, "manager", "", "USD", 10, "manager.id3")
+	CheckBalance(network, "manager", "", "USD", 20)
+	CheckBalance(network, "manager", "manager.id1", "USD", 10)
+	CheckBalance(network, "manager", "manager.id2", "USD", 10)
+	CheckBalance(network, "manager", "manager.id3", "USD", 10)
 
-	transferCash(network, "manager", "manager.id1", "USD", 10, "manager.id2")
-	checkBalance(network, "manager", "", "USD", 20)
-	checkBalance(network, "manager", "manager.id1", "USD", 0)
-	checkBalance(network, "manager", "manager.id2", "USD", 20)
-	checkBalance(network, "manager", "manager.id3", "USD", 10)
+	TransferCash(network, "manager", "manager.id1", "USD", 10, "manager.id2")
+	CheckBalance(network, "manager", "", "USD", 20)
+	CheckBalance(network, "manager", "manager.id1", "USD", 0)
+	CheckBalance(network, "manager", "manager.id2", "USD", 20)
+	CheckBalance(network, "manager", "manager.id3", "USD", 10)
 
 	// Swap among wallets
-	transferCash(network, "manager", "", "EUR", 10, "manager.id1")
-	checkBalance(network, "manager", "", "EUR", 10)
-	checkBalance(network, "manager", "manager.id1", "EUR", 10)
+	TransferCash(network, "manager", "", "EUR", 10, "manager.id1")
+	CheckBalance(network, "manager", "", "EUR", 10)
+	CheckBalance(network, "manager", "manager.id1", "EUR", 10)
 
-	swapCash(network, "manager", "manager.id1", "EUR", 10, "USD", 10, "manager.id2")
-	checkBalance(network, "manager", "", "USD", 20)
-	checkBalance(network, "manager", "", "EUR", 10)
-	checkBalance(network, "manager", "manager.id1", "USD", 10)
-	checkBalance(network, "manager", "manager.id1", "EUR", 0)
-	checkBalance(network, "manager", "manager.id2", "USD", 10)
-	checkBalance(network, "manager", "manager.id2", "EUR", 10)
-	checkBalance(network, "manager", "manager.id3", "USD", 10)
+	SwapCash(network, "manager", "manager.id1", "EUR", 10, "USD", 10, "manager.id2")
+	CheckBalance(network, "manager", "", "USD", 20)
+	CheckBalance(network, "manager", "", "EUR", 10)
+	CheckBalance(network, "manager", "manager.id1", "USD", 10)
+	CheckBalance(network, "manager", "manager.id1", "EUR", 0)
+	CheckBalance(network, "manager", "manager.id2", "USD", 10)
+	CheckBalance(network, "manager", "manager.id2", "EUR", 10)
+	CheckBalance(network, "manager", "manager.id3", "USD", 10)
 
 	// no more USD can be issued, reached quota of 220
-	issueCashFail(network, "USD", 10, "alice")
+	IssueCashFail(network, "USD", 10, "alice")
 
-	checkBalance(network, "alice", "", "USD", 0)
-	checkBalance(network, "alice", "", "EUR", 10)
+	CheckBalance(network, "alice", "", "USD", 0)
+	CheckBalance(network, "alice", "", "EUR", 10)
 
 	// limits
-	checkBalance(network, "alice", "", "USD", 0)
-	checkBalance(network, "alice", "", "EUR", 10)
-	checkBalance(network, "bob", "", "EUR", 20)
-	checkBalance(network, "bob", "", "USD", 110)
-	issueCash(network, "", "EUR", 2200, "alice")
-	issueCash(network, "", "EUR", 2000, "charlie")
-	checkBalance(network, "alice", "", "EUR", 2210)
-	checkBalance(network, "charlie", "", "EUR", 2000)
-	transferCash(network, "alice", "", "EUR", 210, "bob", "payment limit reached", "alice", "[EUR][210]")
+	CheckBalance(network, "alice", "", "USD", 0)
+	CheckBalance(network, "alice", "", "EUR", 10)
+	CheckBalance(network, "bob", "", "EUR", 20)
+	CheckBalance(network, "bob", "", "USD", 110)
+	IssueCash(network, "", "EUR", 2200, "alice")
+	IssueCash(network, "", "EUR", 2000, "charlie")
+	CheckBalance(network, "alice", "", "EUR", 2210)
+	CheckBalance(network, "charlie", "", "EUR", 2000)
+	TransferCash(network, "alice", "", "EUR", 210, "bob", "payment limit reached", "alice", "[EUR][210]")
 
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob")
-	transferCash(network, "alice", "", "EUR", 200, "bob", "cumulative payment limit reached", "alice", "[EUR][2000]")
-	transferCash(network, "charlie", "", "EUR", 200, "bob")
-	transferCash(network, "charlie", "", "EUR", 200, "bob")
-	transferCash(network, "charlie", "", "EUR", 200, "bob")
-	transferCash(network, "charlie", "", "EUR", 200, "bob")
-	transferCash(network, "charlie", "", "EUR", 200, "bob")
-	transferCash(network, "charlie", "", "EUR", 200, "bob", "holding limit reached", "bob", "[EUR][3020]")
-	checkBalance(network, "bob", "", "EUR", 2820)
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob")
+	TransferCash(network, "alice", "", "EUR", 200, "bob", "cumulative payment limit reached", "alice", "[EUR][2000]")
+	TransferCash(network, "charlie", "", "EUR", 200, "bob")
+	TransferCash(network, "charlie", "", "EUR", 200, "bob")
+	TransferCash(network, "charlie", "", "EUR", 200, "bob")
+	TransferCash(network, "charlie", "", "EUR", 200, "bob")
+	TransferCash(network, "charlie", "", "EUR", 200, "bob")
+	TransferCash(network, "charlie", "", "EUR", 200, "bob", "holding limit reached", "bob", "[EUR][3020]")
+	CheckBalance(network, "bob", "", "EUR", 2820)
 
 	// Routing
-	issueCash(network, "", "EUR", 10, "alice.id1")
-	transferCash(network, "alice", "alice.id1", "EUR", 10, "bob.id1")
-	checkBalance(network, "alice", "alice.id1", "EUR", 0)
-	checkBalance(network, "bob", "bob.id1", "EUR", 10)
+	IssueCash(network, "", "EUR", 10, "alice.id1")
+	TransferCash(network, "alice", "alice.id1", "EUR", 10, "bob.id1")
+	CheckBalance(network, "alice", "alice.id1", "EUR", 0)
+	CheckBalance(network, "bob", "bob.id1", "EUR", 10)
 
 	// Concurrent transfers
 	concurrentTransfers := make([]chan error, 5)
@@ -229,14 +228,14 @@ func TestAll(network *integration.Infrastructure) {
 		err := <-transfer
 		Expect(err).ToNot(HaveOccurred())
 	}
-	checkBalance(network, "bob", "", "EUR", 2820-sum)
+	CheckBalance(network, "bob", "", "EUR", 2820-sum)
 
 	// Transfer With Selector
-	issueCash(network, "", "YUAN", 17, "alice")
-	transferCashWithSelector(network, "alice", "", "YUAN", 10, "bob")
-	checkBalance(network, "alice", "", "YUAN", 7)
-	checkBalance(network, "bob", "", "YUAN", 10)
-	transferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", "pineapple", "insufficient funds")
+	IssueCash(network, "", "YUAN", 17, "alice")
+	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob")
+	CheckBalance(network, "alice", "", "YUAN", 7)
+	CheckBalance(network, "bob", "", "YUAN", 10)
+	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", "pineapple", "insufficient funds")
 	concurrentTransfers = make([]chan error, 2)
 	for i := range concurrentTransfers {
 		concurrentTransfers[i] = make(chan error, 1)
@@ -264,43 +263,38 @@ func TestAll(network *integration.Infrastructure) {
 		errors = append(errors, <-transfer)
 	}
 	Expect((errors[0] == nil && errors[1] != nil) || (errors[0] != nil && errors[1] == nil)).To(BeTrue())
+	var errStr string
 	if errors[0] == nil {
-		Expect(errors[1].Error()).To(ContainSubstring("lemonade"))
+		errStr = errors[1].Error()
 	} else {
-		Expect(errors[0].Error()).To(ContainSubstring("lemonade"))
-
+		errStr = errors[0].Error()
 	}
-	checkBalance(network, "bob", "", "YUAN", 3)
-	checkBalance(network, "alice", "", "YUAN", 7)
-	checkBalance(network, "charlie", "", "YUAN", 7)
+	v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
+	Expect(v).To(BeEquivalentTo(true))
+
+	CheckBalance(network, "bob", "", "YUAN", 3)
+	CheckBalance(network, "alice", "", "YUAN", 7)
+	CheckBalance(network, "charlie", "", "YUAN", 7)
 
 	// Transfer by IDs
-	txID := issueCash(network, "", "CHF", 17, "alice")
-	transferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", true, "test release")
+	txID := IssueCash(network, "", "CHF", 17, "alice")
+	TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", true, "test release")
 	// the previous call should not keep the token locked if release is successful
-	txID = transferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", false)
-	redeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17)
+	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", false)
+	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17)
 }
 
-/*
-func registerIssuers(network *integration.Infrastructure) {
-	_, err := network.Client("issuer").CallView("register", common.JSONMarshall(&views.RegisterIssuer{
-		TokenTypes: []string{"USD", "EUR"},
-	}))
-	Expect(err).NotTo(HaveOccurred())
-}*/
-
-func registerAuditor(network *integration.Infrastructure) {
+func RegisterAuditor(network *integration.Infrastructure) {
 	_, err := network.Client("auditor").CallView("register", nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func registerCertifier(network *integration.Infrastructure) {
+func RegisterCertifier(network *integration.Infrastructure) {
 	_, err := network.Client("certifier").CallView("register", nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func issueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
 	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
 		IssuerWallet: wallet,
 		TokenType:    typ,
@@ -314,7 +308,27 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 	return common.JSONUnmarshalString(txid)
 }
 
-func listIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
+func IssueCashFail(network *integration.Infrastructure, typ string, amount uint64, receiver string) {
+	_, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
+		TokenType: typ,
+		Quantity:  amount,
+		Recipient: network.Identity(receiver),
+	}))
+	Expect(err).To(HaveOccurred())
+}
+
+func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
+	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(len(b)).To(BeEquivalentTo(1))
+	Expect(b[0].Type).To(BeEquivalentTo(typ))
+	q, err := token2.ToQuantity(b[0].Quantity, 64)
+	Expect(err).NotTo(HaveOccurred())
+	expectedQ := token2.NewQuantityFromUInt64(expected)
+	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
+func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
 	res, err := network.Client("issuer").CallView("history", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
@@ -326,16 +340,19 @@ func listIssuerHistory(network *integration.Infrastructure, wallet string, typ s
 	return issuedTokens
 }
 
-func issueCashFail(network *integration.Infrastructure, typ string, amount uint64, receiver string) {
-	_, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
+func ListUnspentTokens(network *integration.Infrastructure, id string, wallet string, typ string) *token2.UnspentTokens {
+	res, err := network.Client(id).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
+		Wallet:    wallet,
 		TokenType: typ,
-		Quantity:  amount,
-		Recipient: network.Identity(receiver),
 	}))
-	Expect(err).To(HaveOccurred())
+	Expect(err).NotTo(HaveOccurred())
+
+	unspentTokens := &token2.UnspentTokens{}
+	common.JSONUnmarshal(res.([]byte), unspentTokens)
+	return unspentTokens
 }
 
-func transferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, errorMsgs ...string) {
+func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, errorMsgs ...string) {
 	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Wallet:    wallet,
 		Type:      typ,
@@ -355,7 +372,7 @@ func transferCash(network *integration.Infrastructure, id string, wallet string,
 	}
 }
 
-func transferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, failToRelease bool, errorMsgs ...string) string {
+func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, failToRelease bool, errorMsgs ...string) string {
 	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Wallet:        wallet,
 		Type:          "",
@@ -379,7 +396,7 @@ func transferCashByIDs(network *integration.Infrastructure, id string, wallet st
 	}
 }
 
-func transferCashWithSelector(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, errorMsgs ...string) {
+func TransferCashWithSelector(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, errorMsgs ...string) {
 	txid, err := network.Client(id).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
 		Wallet:    wallet,
 		Type:      typ,
@@ -399,7 +416,7 @@ func transferCashWithSelector(network *integration.Infrastructure, id string, wa
 	}
 }
 
-func redeemCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64) {
+func RedeemCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64) {
 	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Wallet: wallet,
 		Type:   typ,
@@ -409,7 +426,7 @@ func redeemCash(network *integration.Infrastructure, id string, wallet string, t
 	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
-func redeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64) {
+func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64) {
 	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Wallet:   wallet,
 		Type:     "",
@@ -420,7 +437,7 @@ func redeemCashByIDs(network *integration.Infrastructure, id string, wallet stri
 	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
-func swapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string) {
+func SwapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string) {
 	txid, err := network.Client(id).CallView("swap", common.JSONMarshall(&views.Swap{
 		AliceWallet:     wallet,
 		FromAliceType:   typeLeft,
@@ -432,27 +449,4 @@ func swapCash(network *integration.Infrastructure, id string, wallet string, typ
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-}
-
-func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
-	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(b)).To(BeEquivalentTo(1))
-	Expect(b[0].Type).To(BeEquivalentTo(typ))
-	q, err := token2.ToQuantity(b[0].Quantity, 64)
-	Expect(err).NotTo(HaveOccurred())
-	expectedQ := token2.NewQuantityFromUInt64(expected)
-	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
-}
-
-func listUnspentTokens(network *integration.Infrastructure, id string, wallet string, typ string) *token2.UnspentTokens {
-	res, err := network.Client(id).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
-		Wallet:    wallet,
-		TokenType: typ,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-
-	unspentTokens := &token2.UnspentTokens{}
-	common.JSONUnmarshal(res.([]byte), unspentTokens)
-	return unspentTokens
 }
