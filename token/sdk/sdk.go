@@ -80,7 +80,7 @@ func (p *SDK) Install() error {
 			network2.NewLockerProvider(
 				p.registry,
 				2*time.Second,
-				(5*time.Minute).Milliseconds(),
+				5*time.Minute,
 			),
 			2,
 			5*time.Second),

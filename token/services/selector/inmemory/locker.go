@@ -45,20 +45,20 @@ func (l *lockEntry) String() string {
 }
 
 type locker struct {
-	vault                        Vault
-	lock                         sync.RWMutex
-	locked                       map[token2.ID]*lockEntry
-	sleepTimeout                 time.Duration
-	validTxEvictionTimeoutMillis int64
+	vault                  Vault
+	lock                   sync.RWMutex
+	locked                 map[token2.ID]*lockEntry
+	sleepTimeout           time.Duration
+	validTxEvictionTimeout time.Duration
 }
 
-func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeoutMillis int64) selector.Locker {
+func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeout time.Duration) selector.Locker {
 	r := &locker{
-		vault:                        vault,
-		sleepTimeout:                 timeout,
-		lock:                         sync.RWMutex{},
-		locked:                       map[token2.ID]*lockEntry{},
-		validTxEvictionTimeoutMillis: validTxEvictionTimeoutMillis,
+		vault:                  vault,
+		sleepTimeout:           timeout,
+		lock:                   sync.RWMutex{},
+		locked:                 map[token2.ID]*lockEntry{},
+		validTxEvictionTimeout: validTxEvictionTimeout,
 	}
 	r.Start()
 	return r
@@ -206,7 +206,7 @@ func (d *locker) scan() {
 			switch status {
 			case Valid:
 				// remove only if elapsed enough time from last access, to avoid concurrency issue
-				if time.Now().Sub(entry.LastAccess).Milliseconds() > d.validTxEvictionTimeoutMillis {
+				if time.Now().Sub(entry.LastAccess) > d.validTxEvictionTimeout {
 					removeList = append(removeList, id)
 					if logger.IsEnabledFor(zapcore.DebugLevel) {
 						logger.Debugf("token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, status)
