@@ -810,9 +810,6 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed parsing passed input tokens")
 		}
-		if err := t.TokenService.CertificationClient().RequestCertification(tokenIDs...); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed certifiying inputs")
-		}
 	}
 
 	if typ == "" {
