@@ -60,30 +60,6 @@ type selector struct {
 	metricsAgent MetricsAgent
 }
 
-func newSelector(
-	txID string,
-	locker Locker,
-	service QueryService,
-	certClient CertClient,
-	numRetry int,
-	timeout time.Duration,
-	requestCertification bool,
-	precision uint64,
-	metricsAgent MetricsAgent,
-) *selector {
-	return &selector{
-		txID:                 txID,
-		locker:               locker,
-		queryService:         service,
-		certClient:           certClient,
-		precision:            precision,
-		numRetry:             numRetry,
-		timeout:              timeout,
-		requestCertification: requestCertification,
-		metricsAgent:         metricsAgent,
-	}
-}
-
 // Select selects tokens to be spent based on ownership, quantity, and type
 func (s *selector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
 	if ownerFilter == nil {

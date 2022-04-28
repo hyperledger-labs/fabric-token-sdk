@@ -25,7 +25,7 @@ type manager struct {
 	metricsAgent         MetricsAgent
 }
 
-func newManager(
+func NewManager(
 	locker Locker,
 	newQueryEngine NewQueryEngineFunc,
 	certClient CertClient,
@@ -48,17 +48,17 @@ func newManager(
 }
 
 func (m *manager) NewSelector(id string) (token.Selector, error) {
-	return newSelector(
-		id,
-		m.locker,
-		m.newQueryEngine(),
-		m.certClient,
-		m.numRetry,
-		m.timeout,
-		m.requestCertification,
-		m.precision,
-		m.metricsAgent,
-	), nil
+	return &selector{
+		txID:                 id,
+		locker:               m.locker,
+		queryService:         m.newQueryEngine(),
+		certClient:           m.certClient,
+		precision:            m.precision,
+		numRetry:             m.numRetry,
+		timeout:              m.timeout,
+		requestCertification: m.requestCertification,
+		metricsAgent:         m.metricsAgent,
+	}, nil
 }
 
 func (m *manager) Unlock(txID string) error {
