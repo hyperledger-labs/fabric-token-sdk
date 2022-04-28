@@ -94,7 +94,6 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		func() QueryService {
 			return qe
 		},
-		tms.CertificationClient(),
 		s.numRetry,
 		s.timeout,
 		s.requestCertification,

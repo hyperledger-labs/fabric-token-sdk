@@ -17,7 +17,6 @@ type NewQueryEngineFunc func() QueryService
 type manager struct {
 	locker               Locker
 	newQueryEngine       NewQueryEngineFunc
-	certClient           CertClient
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
@@ -28,7 +27,6 @@ type manager struct {
 func NewManager(
 	locker Locker,
 	newQueryEngine NewQueryEngineFunc,
-	certClient CertClient,
 	numRetry int,
 	timeout time.Duration,
 	requestCertification bool,
@@ -38,7 +36,6 @@ func NewManager(
 	return &manager{
 		locker:               locker,
 		newQueryEngine:       newQueryEngine,
-		certClient:           certClient,
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: requestCertification,
@@ -52,7 +49,6 @@ func (m *manager) NewSelector(id string) (token.Selector, error) {
 		txID:                 id,
 		locker:               m.locker,
 		queryService:         m.newQueryEngine(),
-		certClient:           m.certClient,
 		precision:            m.precision,
 		numRetry:             m.numRetry,
 		timeout:              m.timeout,

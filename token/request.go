@@ -810,9 +810,6 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed parsing passed input tokens")
 		}
-		if err := t.TokenService.CertificationClient().RequestCertification(tokenIDs...); err != nil {
-			return nil, nil, errors.Wrapf(err, "failed certifiying inputs")
-		}
 	}
 
 	if typ == "" {
@@ -863,6 +860,15 @@ func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 			Type:     typ,
 			Quantity: diff.Decimal(),
 		})
+	}
+
+	if t.TokenService.PublicParametersManager().GraphHiding() {
+		logger.Debugf("graph hiding enabled, request certification")
+		// Check token certification
+		cc := t.TokenService.CertificationClient()
+		if err := cc.RequestCertification(tokenIDs...); err != nil {
+			return nil, nil, errors.WithMessagef(err, "failed certifiying inputs")
+		}
 	}
 
 	return tokenIDs, outputTokens, nil
