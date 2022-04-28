@@ -89,7 +89,7 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		tms.Vault().NewQueryEngine(),
 		locker,
 	)
-	manager = newManager(
+	manager = NewManager(
 		locker,
 		func() QueryService {
 			return qe
