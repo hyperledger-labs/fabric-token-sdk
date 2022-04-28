@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package tcc
 
 import (
-	"bytes"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -87,38 +85,13 @@ type TokenChaincode struct {
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
 	logger.Infof("init token chaincode...")
 
-	params := cc.ReadParamsFromFile()
-	if params == "" {
-		if len(Params) == 0 {
-			args := stub.GetArgs()
-			// args[0] public parameters
-			if len(args) != 2 {
-				return shim.Error("length of provided arguments != 2")
-			}
-
-			if string(args[0]) != "init" {
-				return shim.Error("expected init function")
-			}
-			params = string(args[1])
-		} else {
-			params = Params
-		}
-	}
-
-	ppRaw, err := base64.StdEncoding.DecodeString(params)
+	ppRaw, err := cc.Params(Params)
 	if err != nil {
-		return shim.Error("failed to decode public parameters: " + err.Error())
+		return shim.Error(fmt.Sprintf("failed to get public parameters: %s", err))
 	}
 
-	issuingValidator := &AllIssuersValid{}
-	rwset := &rwsWrapper{stub: stub}
-	w := translator.New(issuingValidator, "", rwset, "")
-	action := &SetupAction{
-		SetupParameters: ppRaw,
-	}
-
-	err = w.Write(action)
-	if err != nil {
+	w := translator.New(&AllIssuersValid{}, "", &rwsWrapper{stub: stub}, "")
+	if err := w.Write(&SetupAction{SetupParameters: ppRaw}); err != nil {
 		return shim.Error(err.Error())
 	}
 
@@ -176,6 +149,58 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	}
 }
 
+func (cc *TokenChaincode) Params(builtInParams string) ([]byte, error) {
+	params := cc.ReadParamsFromFile()
+	if params == "" {
+		if len(builtInParams) == 0 {
+			return nil, errors.New("no params provided")
+		} else {
+			params = builtInParams
+		}
+	}
+
+	ppRaw, err := base64.StdEncoding.DecodeString(params)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed decoding params [%s]", params)
+	}
+
+	return ppRaw, nil
+}
+
+func (cc *TokenChaincode) GetValidator(builtInParams string) (Validator, error) {
+	var firstInitError error
+	cc.initOnce.Do(func() {
+		if err := cc.Initialize(builtInParams); err != nil {
+			firstInitError = err
+		}
+	})
+
+	if firstInitError != nil {
+		return nil, firstInitError
+	}
+	return cc.Validator, nil
+}
+
+func (cc *TokenChaincode) Initialize(builtInParams string) error {
+	logger.Infof("reading public parameters...")
+
+	ppRaw, err := cc.Params(builtInParams)
+	if err != nil {
+		return errors.WithMessagef(err, "failed reading public parameters")
+	}
+
+	logger.Infof("instantiate public parameter manager and validator...")
+	ppm, validator, err := cc.TokenServicesFactory(ppRaw)
+	logger.Infof("instantiate public parameter manager and validator done with err [%v]", err)
+	if err != nil {
+		return errors.Wrap(err, "failed to instantiate public parameter manager and validator")
+	}
+	cc.PublicParametersManager = ppm
+	cc.Validator = validator
+
+	return nil
+}
+
 func (cc *TokenChaincode) ReadParamsFromFile() string {
 	publicParamsPath := os.Getenv(PublicParamsPathVarEnv)
 	if publicParamsPath == "" {
@@ -195,71 +220,9 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	return base64.StdEncoding.EncodeToString(paramsAsBytes)
 }
 
-func (cc *TokenChaincode) GetPublicParametersManager(stub shim.ChaincodeStubInterface) (PublicParametersManager, error) {
-	if err := cc.Initialize(stub); err != nil {
-		return nil, err
-	}
-	return cc.PublicParametersManager, nil
-}
-
-func (cc *TokenChaincode) GetValidator(stub shim.ChaincodeStubInterface) (Validator, error) {
-	var firstInitError error
-	cc.initOnce.Do(func() {
-		if err := cc.Initialize(stub); err != nil {
-			firstInitError = err
-		}
-	})
-
-	if firstInitError != nil {
-		return nil, firstInitError
-	}
-	return cc.Validator, nil
-}
-
-func (cc *TokenChaincode) Initialize(stub shim.ChaincodeStubInterface) error {
-	logger.Infof("reading public parameters...")
-
-	rwset := &rwsWrapper{stub: stub}
-	issuingValidator := &AllIssuersValid{}
-	w := translator.New(issuingValidator, stub.GetTxID(), rwset, "")
-	ppRaw, err := w.ReadSetupParameters()
-	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve public parameters")
-	}
-	logger.Infof("public parameters read [%d]", len(ppRaw))
-	if len(ppRaw) == 0 {
-		return errors.Errorf("public parameters are not initiliazed yet")
-	}
-	hash := sha256.New()
-	n, err := hash.Write(ppRaw)
-	if n != len(ppRaw) {
-		return errors.New("failed hashing public parameters, bytes not consumed")
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed hashing public parameters")
-	}
-	digest := hash.Sum(nil)
-	if len(cc.PPDigest) != 0 && cc.Validator != nil && bytes.Equal(digest, cc.PPDigest) {
-		logger.Infof("no need instantiate public parameter manager and validator, already set")
-		return nil
-	}
-
-	logger.Infof("instantiate public parameter manager and validator...")
-	ppm, validator, err := cc.TokenServicesFactory(ppRaw)
-	logger.Infof("instantiate public parameter manager and validator done with err [%v]", err)
-	if err != nil {
-		return errors.Wrap(err, "failed to instantiate public parameter manager and validator")
-	}
-	cc.PublicParametersManager = ppm
-	cc.Validator = validator
-	cc.PPDigest = digest
-
-	return nil
-}
-
 func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
 	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
-	validator, err := cc.GetValidator(stub)
+	validator, err := cc.GetValidator(Params)
 	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	if err != nil {
 		return shim.Error(err.Error())
