@@ -25,16 +25,6 @@ type QueryService interface {
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
-type CertificationClient interface {
-	IsCertified(id *token2.ID) bool
-	RequestCertification(ids ...*token2.ID) error
-}
-
-type CertClient interface {
-	IsCertified(id *token2.ID) bool
-	RequestCertification(ids ...*token2.ID) error
-}
-
 type Locker interface {
 	Lock(id *token2.ID, txID string, reclaim bool) (string, error)
 	UnlockIDs(id ...*token2.ID)
@@ -50,7 +40,6 @@ type selector struct {
 	txID         string
 	locker       Locker
 	queryService QueryService
-	certClient   CertClient
 	precision    uint64
 
 	numRetry             int
@@ -144,18 +133,6 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				continue
 			}
 
-			// check certification, if needed
-			if s.certClient != nil && !s.certClient.IsCertified(t.Id) {
-				toBeCertified = append(toBeCertified, t.Id)
-				potentialSumWithNonCertified = potentialSumWithNonCertified.Add(q)
-
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-
-					logger.Debugf("token [%s,%s] is not certified, skipping", q, tokenType)
-				}
-				continue
-			}
-
 			// Append token
 			logger.Debugf("adding quantity [%s]", q.Decimal())
 			toBeSpent = append(toBeSpent, t.Id)
@@ -178,27 +155,6 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 			}
 			concurrencyIssue = true
 			logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
-		}
-
-		// if we reached this point is because there are not enough funds or there is a concurrency issue but why?
-
-		// Maybe it is a certification issue?
-		if !concurrencyIssue && target.Cmp(potentialSumWithNonCertified) <= 0 && s.requestCertification {
-			logger.Warnf("token selection failed: missing certifications, request them for [%s]", toBeCertified)
-			// request certification
-			err := s.certClient.RequestCertification(toBeCertified...)
-			if err == nil {
-				// TODO: refine this
-				ids := append(toBeSpent, toBeCertified...)
-				err := s.concurrencyCheck(ids)
-				if err == nil {
-					return ids, potentialSumWithNonCertified, nil
-				}
-				concurrencyIssue = true
-				logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
-			} else {
-				logger.Warnf("token selection failed: failed requesting token certification for [%v]: [%s]", toBeCertified, err)
-			}
 		}
 
 		// Unlock and check the conditions for a retry
@@ -329,18 +285,6 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 				continue
 			}
 
-			// check certification, if needed
-			if s.certClient != nil && !s.certClient.IsCertified(t.Id) {
-				toBeCertified = append(toBeCertified, t.Id)
-				potentialSumWithNonCertified = potentialSumWithNonCertified.Add(q)
-
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-
-					logger.Debugf("token [%s,%s,%v] is not certified, skipping", q, tokenType, rightOwner)
-				}
-				continue
-			}
-
 			// Append token
 			logger.Debugf("adding quantity [%s]", q.Decimal())
 			toBeSpent = append(toBeSpent, t.Id)
@@ -361,27 +305,6 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 			}
 			concurrencyIssue = true
 			logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
-		}
-
-		// if we reached this point is because there are not enough funds or there is a concurrency issue but why?
-
-		// Maybe it is a certification issue?
-		if !concurrencyIssue && target.Cmp(potentialSumWithNonCertified) <= 0 && s.requestCertification {
-			logger.Warnf("token selection failed: missing certifications, request them for [%s]", toBeCertified)
-			// request certification
-			err := s.certClient.RequestCertification(toBeCertified...)
-			if err == nil {
-				// TODO: refine this
-				ids := append(toBeSpent, toBeCertified...)
-				err := s.concurrencyCheck(ids)
-				if err == nil {
-					return ids, potentialSumWithNonCertified, nil
-				}
-				concurrencyIssue = true
-				logger.Errorf("concurrency issue, some of the tokens might not exist anymore [%s]", err)
-			} else {
-				logger.Warnf("token selection failed: failed requesting token certification for [%v]: [%s]", toBeCertified, err)
-			}
 		}
 
 		// Unlock and check the conditions for a retry
