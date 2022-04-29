@@ -253,8 +253,8 @@ func TestAll(network *integration.Infrastructure) {
 				transfer <- err
 				return
 			}
-			transfer <- nil
 			Expect(network.Client("charlie").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+			transfer <- nil
 		}()
 	}
 	// one must fail, the other succeeded
