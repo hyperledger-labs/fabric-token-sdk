@@ -7,6 +7,8 @@ package tcc_test
 
 import (
 	"encoding/base64"
+	"io/ioutil"
+	"os"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -22,6 +24,7 @@ var _ = Describe("ccvalidator", func() {
 		chaincode     *chaincode2.TokenChaincode
 		fakeValidator *mock.Validator
 		fakePPM       *mock.PublicParametersManager
+		ppFile        *os.File
 	)
 	BeforeEach(func() {
 		fakeValidator = &mock.Validator{}
@@ -33,13 +36,21 @@ var _ = Describe("ccvalidator", func() {
 		}
 
 		pp := base64.StdEncoding.EncodeToString([]byte("public parameters"))
+		var err error
+		ppFile, err = ioutil.TempFile("", "pp")
+		Expect(err).NotTo(HaveOccurred())
+		_, err = ppFile.Write([]byte(pp))
+		Expect(err).NotTo(HaveOccurred())
 
 		fakestub = &mock.ChaincodeStubInterface{}
-		fakestub.GetStateReturnsOnCall(0, []byte("public parameters"), nil)
-		fakestub.PutStateReturns(nil)
-		fakestub.GetArgsReturns([][]byte{[]byte("init"), []byte(pp)})
-
+		err = os.Setenv(chaincode2.PublicParamsPathVarEnv, ppFile.Name())
+		Expect(err).NotTo(HaveOccurred())
 	})
+
+	AfterEach(func() {
+		os.Remove(ppFile.Name())
+	})
+
 	Describe("Init", func() {
 		Context("when init is called correctly", func() {
 			It("Succeeds", func() {
