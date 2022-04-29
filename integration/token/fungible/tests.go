@@ -199,12 +199,12 @@ func TestAll(network *integration.Infrastructure) {
 	CheckBalance(network, "bob", "bob.id1", "EUR", 10)
 
 	// Concurrent transfers
-	concurrentTransfers := make([]chan error, 5)
+	transferErrors := make([]chan error, 5)
 	var sum uint64
-	for i := range concurrentTransfers {
-		concurrentTransfers[i] = make(chan error, 1)
+	for i := range transferErrors {
+		transferErrors[i] = make(chan error, 1)
 
-		transfer := concurrentTransfers[i]
+		transfer := transferErrors[i]
 		r, err := rand.Int(rand.Reader, big.NewInt(200))
 		Expect(err).ToNot(HaveOccurred())
 		v := r.Uint64() + 1
@@ -224,7 +224,7 @@ func TestAll(network *integration.Infrastructure) {
 			transfer <- nil
 		}()
 	}
-	for _, transfer := range concurrentTransfers {
+	for _, transfer := range transferErrors {
 		err := <-transfer
 		Expect(err).ToNot(HaveOccurred())
 	}
@@ -236,11 +236,15 @@ func TestAll(network *integration.Infrastructure) {
 	CheckBalance(network, "alice", "", "YUAN", 7)
 	CheckBalance(network, "bob", "", "YUAN", 10)
 	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", "pineapple", "insufficient funds")
-	concurrentTransfers = make([]chan error, 2)
-	for i := range concurrentTransfers {
-		concurrentTransfers[i] = make(chan error, 1)
 
-		transfer := concurrentTransfers[i]
+	// Now, the tests asks Bob to transfer to Charlie 14 YUAN split in two parallel transactions each one transferring 7 YUAN.
+	// Notice that Bob has only 10 YUAN, therefore bob will be able to assemble only one transfer.
+	// We use two channels to collect the results of the two transfers.
+	transferErrors = make([]chan error, 2)
+	for i := range transferErrors {
+		transferErrors[i] = make(chan error, 1)
+
+		transferError := transferErrors[i]
 		go func() {
 			txid, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
 				Wallet:    "",
@@ -250,16 +254,18 @@ func TestAll(network *integration.Infrastructure) {
 				Retry:     false,
 			}))
 			if err != nil {
-				transfer <- err
+				// The transaction failed, we return the error to the caller.
+				transferError <- err
 				return
 			}
-			transfer <- nil
+			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
 			Expect(network.Client("charlie").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+			transferError <- nil
 		}()
 	}
-	// one must fail, the other succeeded
+	// collect the errors, and check that they are all nil, and one of them is the error we expect.
 	var errors []error
-	for _, transfer := range concurrentTransfers {
+	for _, transfer := range transferErrors {
 		errors = append(errors, <-transfer)
 	}
 	Expect((errors[0] == nil && errors[1] != nil) || (errors[0] != nil && errors[1] == nil)).To(BeTrue())
