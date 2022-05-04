@@ -411,8 +411,8 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 }
 
 func (lm *LocalMembership) addResolver(Name string, Type string, EnrollmentID string, defaultID bool, IdentityGetter GetIdentityFunc) {
-	lm.resolversMutex.RLock()
-	defer lm.resolversMutex.RUnlock()
+	lm.resolversMutex.Lock()
+	defer lm.resolversMutex.Unlock()
 
 	if Type == BccspMSP && lm.binderService != nil {
 		id, _, err := IdentityGetter(nil)
