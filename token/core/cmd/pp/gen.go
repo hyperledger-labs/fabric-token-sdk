@@ -31,14 +31,32 @@ const (
 	IdemixConfigFileIssuerPublicKey = "IssuerPublicKey"
 )
 
-var Driver string
-var IdemixMSPDir string
-var Output string
-var Base int64
-var Exponent int
-var CC bool
-var Issuers []string
-var Auditors []string
+var (
+	// Driver is the Token-SDK driver to use
+	Driver string
+	// IdemixMSPDir is the directory containing the Idemix MSP config (Issuer Key Pair)
+	IdemixMSPDir string
+	// OutputDir is the directory to output the generated files
+	OutputDir string
+	// GenerateCCPackage is whether to generate the chaincode package
+	GenerateCCPackage bool
+	// Issuers is the list of issuers to include in the public parameters.
+	// Each issuer should be specified in the form of <MSP-Dir>:<MSP-ID>
+	Issuers []string
+	// Auditors is the list of auditors to include in the public parameters.
+	// Each auditor should be specified in the form of <MSP-Dir>:<MSP-ID>
+	Auditors []string
+
+	// Base is a dlog driver related parameter
+	Base int64
+	// Exponent is a dlog driver related parameter
+	Exponent int
+)
+
+type PP interface {
+	AddAuditor(raw view.Identity)
+	AddIssuer(raw view.Identity)
+}
 
 // Cmd returns the Cobra Command for Version
 func Cmd() *cobra.Command {
@@ -46,12 +64,13 @@ func Cmd() *cobra.Command {
 	flags := cobraCommand.Flags()
 	flags.StringVarP(&Driver, "driver", "d", "dlog", "driver (dlog, zkatdlog or fabtoken)")
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
-	flags.StringVarP(&Output, "output", "o", ".", "output folder")
-	flags.Int64VarP(&Base, "base", "b", 100, "max token quantity")
-	flags.IntVarP(&Exponent, "exponent", "e", 2, "max token quantity")
-	flags.BoolVarP(&CC, "cc", "", false, "generate chaincode package")
-	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor keys")
-	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer keys")
+	flags.StringVarP(&OutputDir, "output", "o", ".", "output folder")
+	flags.BoolVarP(&GenerateCCPackage, "cc", "", false, "generate chaincode package")
+	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor keys in the form of <MSP-Dir>:<MSP-ID>")
+	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer keys in the form of <MSP-Dir>:<MSP-ID>")
+
+	flags.Int64VarP(&Base, "base", "b", 100, "base field used by the dlog driver")
+	flags.IntVarP(&Exponent, "exponent", "e", 2, "exponent field used by the dlog driver")
 
 	return cobraCommand
 }
@@ -87,7 +106,7 @@ func Gen(args []string) error {
 		return err
 	}
 
-	if CC {
+	if GenerateCCPackage {
 		fmt.Println("Generate chaincode package...")
 		if err := GenChaincodePackage(raw); err != nil {
 			return err
@@ -100,9 +119,6 @@ func Gen(args []string) error {
 
 func ZKATDLogGen(args []string) ([]byte, error) {
 	// Load Idemix Issuer Public Key
-	if len(IdemixMSPDir) == 0 {
-		return nil, errors.New("identity mixer msp dir is required")
-	}
 	path := filepath.Join(IdemixMSPDir, IdemixConfigDirMsp, IdemixConfigFileIssuerPublicKey)
 	ipkBytes, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -124,7 +140,7 @@ func ZKATDLogGen(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path = filepath.Join(Output, "zkatdlog_pp.json")
+	path = filepath.Join(OutputDir, "zkatdlog_pp.json")
 	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
@@ -146,7 +162,7 @@ func FabTokenGen(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(Output, "fabtoken_pp.json")
+	path := filepath.Join(OutputDir, "fabtoken_pp.json")
 	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
@@ -171,7 +187,7 @@ func GenChaincodePackage(raw []byte) error {
 		"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main",
 		"golang",
 		"tcc",
-		filepath.Join(Output, "tcc.tar"),
+		filepath.Join(OutputDir, "tcc.tar"),
 		func(s string, s2 string) (string, []byte) {
 			if strings.HasSuffix(s, "github.com/hyperledger-labs/fabric-token-sdk/token/tcc/params.go") {
 				return "", paramsFile.Bytes()
@@ -186,24 +202,26 @@ func GenChaincodePackage(raw []byte) error {
 	return nil
 }
 
-type PP interface {
-	AddAuditor(raw view.Identity)
-	AddIssuer(raw view.Identity)
+func GetMSPIdentity(s string) (view.Identity, error) {
+	entries := strings.Split(s, ":")
+	if len(entries) != 2 {
+		return nil, errors.Errorf("invalid input [%s]", s)
+	}
+	provider, err := x509.NewProvider(entries[0], entries[1], nil)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", s)
+	}
+	id, _, err := provider.Identity(nil)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get identity [%s]", s)
+	}
+	return id, nil
 }
 
 func SetupIssuersAndAuditors(pp PP) error {
 	// Auditors
 	for _, auditor := range Auditors {
-		// Build an MSP Identity
-		entries := strings.Split(auditor, ":")
-		if len(entries) != 2 {
-			return errors.Errorf("invalid auditor [%s]", auditor)
-		}
-		provider, err := x509.NewProvider(entries[0], entries[1], nil)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to create x509 provider for auditor [%s]", auditor)
-		}
-		id, _, err := provider.Identity(nil)
+		id, err := GetMSPIdentity(auditor)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get auditor identity [%s]", auditor)
 		}
@@ -211,16 +229,7 @@ func SetupIssuersAndAuditors(pp PP) error {
 	}
 	// Issuers
 	for _, issuer := range Issuers {
-		// Build an MSP Identity
-		entries := strings.Split(issuer, ":")
-		if len(entries) != 2 {
-			return errors.Errorf("invalid issuer [%s]", issuer)
-		}
-		provider, err := x509.NewProvider(entries[0], entries[1], nil)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to create x509 provider for issuer [%s]", issuer)
-		}
-		id, _, err := provider.Identity(nil)
+		id, err := GetMSPIdentity(issuer)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get issuer identity [%s]", issuer)
 		}
