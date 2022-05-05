@@ -20,7 +20,7 @@ var logger = flogging.MustGetLogger("token-sdk.core")
 
 type CallbackFunc func(network, channel, namespace string) error
 
-type tmsProvider struct {
+type TMSProvider struct {
 	sp           view2.ServiceProvider
 	callbackFunc CallbackFunc
 
@@ -28,8 +28,8 @@ type tmsProvider struct {
 	services map[string]api2.TokenManagerService
 }
 
-func NewTMSProvider(sp view2.ServiceProvider, callbackFunc CallbackFunc) *tmsProvider {
-	ms := &tmsProvider{
+func NewTMSProvider(sp view2.ServiceProvider, callbackFunc CallbackFunc) *TMSProvider {
+	ms := &TMSProvider{
 		sp:           sp,
 		callbackFunc: callbackFunc,
 		services:     map[string]api2.TokenManagerService{},
@@ -37,23 +37,22 @@ func NewTMSProvider(sp view2.ServiceProvider, callbackFunc CallbackFunc) *tmsPro
 	return ms
 }
 
-func (m *tmsProvider) GetTokenManagerService(network string, channel string, namespace string, publicParamsFetcher api2.PublicParamsFetcher) (api2.TokenManagerService, error) {
+func (m *TMSProvider) GetTokenManagerService(network string, channel string, namespace string, publicParamsFetcher api2.PublicParamsFetcher) (api2.TokenManagerService, error) {
 	if len(network) == 0 {
 		return nil, errors.Errorf("network not specified")
 	}
 	if len(namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}
-	if publicParamsFetcher == nil {
-		return nil, errors.Errorf("public params fetcher not specified")
-	}
-
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	key := network + channel + namespace
 	service, ok := m.services[key]
 	if !ok {
+		if publicParamsFetcher == nil {
+			return nil, errors.Errorf("public params fetcher not specified")
+		}
 		logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", network, channel, namespace)
 		var err error
 		service, err = m.newTMS(network, channel, namespace, publicParamsFetcher)
@@ -65,7 +64,7 @@ func (m *tmsProvider) GetTokenManagerService(network string, channel string, nam
 	return service, nil
 }
 
-func (m *tmsProvider) newTMS(networkID string, channel string, namespace string, publicParamsFetcher api2.PublicParamsFetcher) (api2.TokenManagerService, error) {
+func (m *TMSProvider) newTMS(networkID string, channel string, namespace string, publicParamsFetcher api2.PublicParamsFetcher) (api2.TokenManagerService, error) {
 	ppRaw, err := publicParamsFetcher.Fetch()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed fetching public parameters")
