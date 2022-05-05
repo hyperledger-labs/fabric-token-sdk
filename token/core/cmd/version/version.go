@@ -13,7 +13,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Program name
 const ProgramName = "tokengen"
 
 // Cmd returns the Cobra Command for Version
