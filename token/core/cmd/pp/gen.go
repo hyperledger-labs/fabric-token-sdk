@@ -59,6 +59,9 @@ var (
 )
 
 func AddGenerator(label string, generator GeneratorFunc) {
+	if generator == nil {
+		panic("generator is nil")
+	}
 	if generators == nil {
 		generators = make(map[string]GeneratorFunc)
 	}
@@ -111,8 +114,8 @@ var cobraCommand = &cobra.Command{
 func Gen(args []string) error {
 	fmt.Printf("Generate public parameters for [%s]...\n", Driver)
 	// choose the right generator
-	generator := generators[Driver]
-	if generator == nil {
+	generator, exists := generators[Driver]
+	if !exists {
 		return fmt.Errorf("unknown driver [%s]", Driver)
 	}
 	// generate the public parameters
