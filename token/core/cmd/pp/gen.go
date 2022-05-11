@@ -26,6 +26,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type GeneratorFunc = func(args []string) ([]byte, error)
+
 const (
 	IdemixConfigDirMsp              = "msp"
 	IdemixConfigFileIssuerPublicKey = "IssuerPublicKey"
@@ -51,7 +53,26 @@ var (
 	Base int64
 	// Exponent is a dlog driver related parameter
 	Exponent int
+
+	// public parameters generators
+	generators map[string]GeneratorFunc
 )
+
+func AddGenerator(label string, generator GeneratorFunc) {
+	if generator == nil {
+		panic("generator is nil")
+	}
+	if generators == nil {
+		generators = make(map[string]GeneratorFunc)
+	}
+	generators[label] = generator
+}
+
+func init() {
+	AddGenerator("dlog", ZKATDLogGen)
+	AddGenerator("zkatdlog", ZKATDLogGen)
+	AddGenerator("fabtoken", FabTokenGen)
+}
 
 type PP interface {
 	AddAuditor(raw view.Identity)
@@ -91,21 +112,19 @@ var cobraCommand = &cobra.Command{
 
 // Gen read topology and generates artifacts
 func Gen(args []string) error {
-	var raw []byte
-	var err error
 	fmt.Printf("Generate public parameters for [%s]...\n", Driver)
-	switch Driver {
-	case "dlog", "zkatdlog":
-		raw, err = ZKATDLogGen(args)
-	case "fabtoken":
-		raw, err = FabTokenGen(args)
-	default:
-		errors.Errorf("Invalid crypto type, expected 'dlog, zkatdlog, or fabtoken', got [%s]", Driver)
+	// choose the right generator
+	generator, exists := generators[Driver]
+	if !exists {
+		return fmt.Errorf("unknown driver [%s]", Driver)
 	}
+	// generate the public parameters
+	raw, err := generator(args)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to generate public parameters")
 	}
 
+	// generate the chaincode package
 	if GenerateCCPackage {
 		fmt.Println("Generate chaincode package...")
 		if err := GenChaincodePackage(raw); err != nil {

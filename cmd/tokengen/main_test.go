@@ -35,7 +35,7 @@ func TestGen(t *testing.T) {
 	}
 	b, err := exec.Command(tokengen, args...).CombinedOutput()
 	gt.Expect(err).To(HaveOccurred())
-	gt.Expect(string(b)).To(ContainSubstring("Error: failed to get auditor identity [a:Org1MSP]: failed to create x509 provider for [a:Org1MSP]: could not load a valid signer certificate from directory a/signcerts: stat a/signcerts: no such file or directory"))
+	gt.Expect(string(b)).To(ContainSubstring("Error: failed to generate public parameters: failed to get auditor identity [a:Org1MSP]"))
 
 	args = []string{
 		"gen",
@@ -44,7 +44,7 @@ func TestGen(t *testing.T) {
 	}
 	b, err = exec.Command(tokengen, args...).CombinedOutput()
 	gt.Expect(err).To(HaveOccurred())
-	gt.Expect(string(b)).To(ContainSubstring("Error: failed to get auditor identity [aOrg1MSP]: invalid input [aOrg1MSP]"))
+	gt.Expect(string(b)).To(ContainSubstring("Error: failed to generate public parameters: failed to get auditor identity [aOrg1MSP]: invalid input [aOrg1MSP]"))
 
 	// issuers
 	args = []string{
@@ -54,7 +54,7 @@ func TestGen(t *testing.T) {
 	}
 	b, err = exec.Command(tokengen, args...).CombinedOutput()
 	gt.Expect(err).To(HaveOccurred())
-	gt.Expect(string(b)).To(ContainSubstring("Error: failed to get issuer identity [a:Org1MSP]: failed to create x509 provider for [a:Org1MSP]: could not load a valid signer certificate from directory a/signcerts: stat a/signcerts: no such file or directory"))
+	gt.Expect(string(b)).To(ContainSubstring("Error: failed to generate public parameters: failed to get issuer identity [a:Org1MSP]"))
 
 	args = []string{
 		"gen",
@@ -63,5 +63,5 @@ func TestGen(t *testing.T) {
 	}
 	b, err = exec.Command(tokengen, args...).CombinedOutput()
 	gt.Expect(err).To(HaveOccurred())
-	gt.Expect(string(b)).To(ContainSubstring("Error: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]"))
+	gt.Expect(string(b)).To(ContainSubstring("Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: invalid input [aOrg1MSP]"))
 }
