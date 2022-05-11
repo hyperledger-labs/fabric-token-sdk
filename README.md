@@ -31,7 +31,7 @@ Clone the code and make sure it is on your `$GOPATH`.
 Sometimes, we use `$FTS_PATH` to refer to the Fabric Token SDK repository in your filesystem.
 
 ```bash
-export $FTS_PATH=$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk
+export FTS_PATH=$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk
 git clone https://github.com/hyperledger-labs/fabric-token-sdk.git $FTS_PATH
 ```
   
