@@ -11,7 +11,29 @@ We will consider the following business parties:
 Each party is running a Smart Fabric Client node with the Token SDK enabled.
 The parties are connected in a peer-to-peer network that is established and maintained by the nodes.
 
-Let us then describe each token operation with examples:
+**Remark**: The Smart Fabric Client SDK and the Token SDK can be embedded in an already existing 
+Go-based application node by using the following code:
+```go
+  // import
+  // 	fscnode "github.com/hyperledger-labs/fabric-smart-client/node"
+  // "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+  // sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
+    
+  // Instantiate a new Fabric Smart Client Node
+  n := fscnode.New() // Use NewFromConfPath(<conf-path>) to load configuration from a file
+  // Install the required SDKs
+  n.InstallSDK(fabric.NewSDK(n))
+  n.InstallSDK(sdk.NewSDK(n))
+
+  // Execute the stack
+  n.Execute(func() error {
+    // Your initialization code here
+    return nil
+  })
+```
+This is also the code that is executed by a standalone Fabric Smart Client node.
+
+Now, let us then describe each token operation with examples:
 
 ## Issuance
 
@@ -656,8 +678,9 @@ If the compilation is successful, we can run the `fungible` command line tool as
 
 The above command will start the Fabric network and the FSC network,
 and store all configuration files under the `./testdata` directory.
-The CLI will also create the folder `./cmd` that contains a go main file for each FSC node.
-The CLI compiles these go main files and then runs them.
+The CLI will also create the folder `./cmd` that contains a go main file for each FSC node. 
+These go main files  are synthesized on the fly, and
+the CLI compiles and then runs them.
 
 If everything is successful, you will see something like the following:
 
@@ -688,6 +711,8 @@ To clean up all artifacts, we can run the following command:
 ```
 
 The `./testdata` and `./cmd` folders will be deleted.
+
+### 
 
 ### Invoke the business views
 

@@ -6,8 +6,8 @@ To run the samples, we recommend to use go 1.16 or later. You will also need doc
 To make sure you have all the required docker images, you can run `make docker-images` in the
 folder `$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk`.
 
-- [`Fungible Tokens, The Basics. On Fabric`](./fabric/fungible//README.md): How to handle `fungible tokens`.
-- [`Non-Fungible Tokens, The Basics. On Fabric`](./fabric/nft//README.md): How to handle `non-fungible tokens`.
+- [`Fungible Tokens, The Basics. On Fabric`](./fungible//README.md): How to handle `fungible tokens`.
+- [`Non-Fungible Tokens, The Basics. On Fabric`](./nft//README.md): How to handle `non-fungible tokens`.
 
 ## Additional Examples via Integration Tests
 
