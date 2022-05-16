@@ -726,6 +726,7 @@ logging:
   spec: info
   # Format
   format: '%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'
+# The fsc section is dedicated to the FSC node itself
 fsc:
   # The FSC id provides a name for this node instance and is used when
   # naming docker resources.
@@ -802,7 +803,8 @@ fsc:
   p2p:
     # Listening address
     listenAddress: /ip4/127.0.0.1/tcp/20007
-    # If empty, this is a P2P boostrap node. Otherwise, it contains the name of the FCS node that is a bootstrap node
+    # If empty, this is a P2P boostrap node. Otherwise, it contains the name of the FCS node that is a bootstrap node.
+    # The name of the FCS node that is a bootstrap node must be set under fsc.endpoint.resolvers
     bootstrapNode: issuer
   # The Key-Value Store is used to store various information related to the FSC node
   kvs:
@@ -813,10 +815,12 @@ fsc:
         path: /home/vagrant/testdata/fsc/nodes/alice/kvs
   # HTML Server configuration for REST calls
   web:
+    # Enable the REST server
     enabled: true
     # HTTPS server listener address
     address: 0.0.0.0:20008
     tls:
+      # Require server-side TLS
       enabled:  true
       cert:
         file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.crt
@@ -881,11 +885,15 @@ fsc:
         addresses:
         aliases:
           - charlie.id1
-
-fabric:
+          - 
+# The fabric section defines the configuration of the fabric networks.  
+fabric: 
   enabled: true
+  # The name of the network 
   default:
+    # Is this the default network?
     default: true
+    # BCCSP configuration for this fabric network. Similar to the equivalent section in Fabric peer configuration.
     BCCSP:
       Default: SW
       SW:
@@ -893,15 +901,21 @@ fabric:
         Security: 256
         FileKeyStore:
           KeyStore:
+    # The MSP config path of the default identity to connect to this network.
     mspConfigPath: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/msp
+    # Local MSP ID of the default identity
     localMspId: Org2MSP
+    # Cache size to use when handling idemix pseudonyms. If the value is larger than 0, the cache is enabled and
+    # pseudonyms are generated in batches of the given size to be ready to be used.
     mspCacheSize: 500
+    # Additional MSP identities that can be used to connect to this network.
     msps:
-      - id: idemix
-        mspType: idemix
-        mspID: IdemixOrgMSP
-        cacheSize: 0
+      - id: idemix # The id of the identity. 
+        mspType: idemix # The type of the MSP.
+        mspID: IdemixOrgMSP # The MSP ID.
+        # The path to the MSP folder containing the cryptographic materials.
         path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/extraids/idemix
+    # TLS Settings
     tls:
       enabled:  true
       clientAuthRequired: false
@@ -919,27 +933,32 @@ fabric:
         files:
           - /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/ca.crt
       rootCertFile: /home/vagrant/testdata/fabric.default/crypto/ca-certs.pem
+    # List of orderer nodes this node can connect to. There must be at least one orderer node.
     orderers:
       - address: 127.0.0.1:20015
         connectionTimeout: 10s
         tlsEnabled: true
         tlsRootCertFile: /home/vagrant/testdata/fabric.default/crypto/ca-certs.pem
         serverNameOverride:
+    # List of trusted peers this node can connect to. There must be at least one trusted peer.
     peers:
       - address: 127.0.0.1:20026
         connectionTimeout: 10s
         tlsEnabled: true
         tlsRootCertFile: /home/vagrant/testdata/fabric.default/crypto/ca-certs.pem
         serverNameOverride:
+    # List of channels this node is aware of
     channels:
       - name: testchannel
         default: true
-        chaincodes:
+    # Configuration of the vault used to store the RW sets assembled by this node
     vault:
       persistence:
         type: file
         opts:
           path: /home/vagrant/testdata/fsc/nodes/alice/fabric.default/vault
+    # The endpoint section tells how to reach other Fabric nodes in the network.
+    # For each node, the name, the domain, the identity of the node, and its addresses must be specified.
     endpoint:
       resolvers:
         - name: Org1_peer_0
@@ -1022,16 +1041,25 @@ token:
           path: /home/vagrant/testdata/fsc/nodes/alice/kvs
         type: badger
   enabled: true
+  # TMS stands for Token Management Service. A TMS is uniquely identified by a network, channel, and 
+  # namespace identifiers. The network identifier should refer to a configure network (Fabric, Orion, and so on).
+  # The meaning of channel and namespace are network dependant. For Fabric, the meaning is clear.
+  # For Orion, channel is empty and namespace is the DB name to use.
   tms:
-    - certification: null
-      channel: testchannel
-      namespace: zkat
+    - channel: testchannel # Channel identifier within the specified network
+      namespace: zkat # Namespace identifier within the specified channel
+      # Network identifier this TMS refers to. It must match the identifier of a Fabric or Orion netowkr
       network: default
+      # Wallets associated with this TMS
       wallets:
+        # Owners wallets are used to own tokens
         owners:
           - default: true
-            id: alice
+            # ID of the wallet
+            id: alice 
+            # Path to folder containing the crypographic material 
             path: /home/vagrant/testdata/token/crypto/default-testchannel-zkat/idemix/alice
+            # Type of the wallet in the form of <type>:<MSPID>:<idemix elliptic curve>
             type: idemix:IdemixOrgMSP:BN254
           - default: false
             id: alice.id1
