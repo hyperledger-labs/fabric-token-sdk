@@ -14,4 +14,4 @@ jobs:
       - uses: gaurav-nelson/github-action-markdown-link-check@v1
         with:
           use-verbose-mode: 'yes'
-          config-file: 'mlc_config.json'
+          config-file: ${{ env.GOPATH }}/src/github.com/hyperledger-labs/fabric-token-sdk/.github/workflows/mlc_config.json
