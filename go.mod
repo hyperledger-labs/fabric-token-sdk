@@ -17,6 +17,8 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/golang/protobuf v1.5.2
+	github.com/google/addlicense v1.0.0 // indirect
+	github.com/gordonklaus/ineffassign v0.0.0-20210914165742-4cc7213b9bc8 // indirect
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220427123747-70d31638f847
@@ -39,7 +41,8 @@ require (
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.18.1
-	golang.org/x/sys v0.0.0-20220502124256-b6088ccd6cba // indirect
+	golang.org/x/sync v0.0.0-20220513210516-0976fa681c29 // indirect
+	golang.org/x/sys v0.0.0-20220513210249-45d2b4557a2a // indirect
 	golang.org/x/xerrors v0.0.0-20220411194840-2f41105eb62f // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )

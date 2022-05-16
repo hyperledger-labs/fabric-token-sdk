@@ -172,7 +172,7 @@ func Gen() error {
 // ZKATDLogGen generates the public parameters for the ZKATDLog driver
 func ZKATDLogGen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
-	path, ipkBytes, err := LoadIdemixIssuerPublicKey(args)
+	_, ipkBytes, err := LoadIdemixIssuerPublicKey(args)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading idemix issuer public key")
 	}
@@ -192,7 +192,7 @@ func ZKATDLogGen(args *GeneratorArgs) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path = filepath.Join(args.OutputDir, "zkatdlog_pp.json")
+	path := filepath.Join(args.OutputDir, "zkatdlog_pp.json")
 	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
