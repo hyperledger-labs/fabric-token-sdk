@@ -67,9 +67,11 @@ var (
 	// Each auditor should be specified in the form of <MSP-Dir>:<MSP-ID>
 	Auditors []string
 
-	// Base is a dlog driver related parameter
+	// Base is a dlog driver related parameter.
+	// It is used to define the maximum quantity a token can contain as Base^Exponent
 	Base int64
 	// Exponent is a dlog driver related parameter
+	// It is used to define the maximum quantity a token can contain as Base^Exponent
 	Exponent int
 
 	// public parameters generators
@@ -113,8 +115,8 @@ func Cmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor keys in the form of <MSP-Dir>:<MSP-ID>")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer keys in the form of <MSP-Dir>:<MSP-ID>")
 
-	flags.Int64VarP(&Base, "base", "b", 100, "base field used by the dlog driver")
-	flags.IntVarP(&Exponent, "exponent", "e", 2, "exponent field used by the dlog driver")
+	flags.Int64VarP(&Base, "base", "b", 100, "tt is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.IntVarP(&Exponent, "exponent", "e", 2, "tt is used to define the maximum quantity a token can contain as Base^Exponent")
 
 	return cobraCommand
 }

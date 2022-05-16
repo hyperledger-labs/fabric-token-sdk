@@ -54,10 +54,10 @@ Usage:
 
 Flags:
   -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>:<MSP-ID>
-  -b, --base int           base field used by the dlog driver (default 100)
+  -b, --base int           tt is used to define the maximum quantity a token can contain as Base^Exponent (default 100)
       --cc                 generate chaincode package
   -d, --driver string      driver (dlog, zkatdlog or fabtoken) (default "dlog")
-  -e, --exponent int       exponent field used by the dlog driver (default 2)
+  -e, --exponent int       tt is used to define the maximum quantity a token can contain as Base^Exponent (default 2)
   -h, --help               help for gen
   -i, --idemix string      idemix msp dir
   -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>:<MSP-ID>
