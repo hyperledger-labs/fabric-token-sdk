@@ -26,12 +26,30 @@ import (
 	"github.com/spf13/cobra"
 )
 
-type GeneratorFunc = func(args []string) ([]byte, error)
+type GeneratorArgs struct {
+	// Driver is the Token-SDK driver to use
+	Driver string
+	// IdemixMSPDir is the directory containing the Idemix MSP config (Issuer Key Pair)
+	IdemixMSPDir string
+	// OutputDir is the directory to output the generated files
+	OutputDir string
+	// GenerateCCPackage is whether to generate the chaincode package
+	GenerateCCPackage bool
+	// Issuers is the list of issuers to include in the public parameters.
+	// Each issuer should be specified in the form of <MSP-Dir>:<MSP-ID>
+	Issuers []string
+	// Auditors is the list of auditors to include in the public parameters.
+	// Each auditor should be specified in the form of <MSP-Dir>:<MSP-ID>
+	Auditors []string
 
-const (
-	IdemixConfigDirMsp              = "msp"
-	IdemixConfigFileIssuerPublicKey = "IssuerPublicKey"
-)
+	// Base is a dlog driver related parameter
+	Base int64
+	// Exponent is a dlog driver related parameter
+	Exponent int
+}
+
+// GeneratorFunc is the function signature for a generator function
+type GeneratorFunc = func(args *GeneratorArgs) ([]byte, error)
 
 var (
 	// Driver is the Token-SDK driver to use
@@ -58,6 +76,8 @@ var (
 	generators map[string]GeneratorFunc
 )
 
+// AddGenerator adds a generator to the list of generators.
+// If a generator with the same name already exists, it will be overwritten.
 func AddGenerator(label string, generator GeneratorFunc) {
 	if generator == nil {
 		panic("generator is nil")
@@ -74,8 +94,11 @@ func init() {
 	AddGenerator("fabtoken", FabTokenGen)
 }
 
+// PP defines an interface shared by all public parameters
 type PP interface {
+	// AddAuditor adds an auditor to the public parameters
 	AddAuditor(raw view.Identity)
+	// AddIssuer adds an issuer to the public parameters
 	AddIssuer(raw view.Identity)
 }
 
@@ -106,12 +129,12 @@ var cobraCommand = &cobra.Command{
 		}
 		// Parsing of the command line is done so silence cmd usage
 		cmd.SilenceUsage = true
-		return Gen(args)
+		return Gen()
 	},
 }
 
 // Gen read topology and generates artifacts
-func Gen(args []string) error {
+func Gen() error {
 	fmt.Printf("Generate public parameters for [%s]...\n", Driver)
 	// choose the right generator
 	generator, exists := generators[Driver]
@@ -119,7 +142,17 @@ func Gen(args []string) error {
 		return fmt.Errorf("unknown driver [%s]", Driver)
 	}
 	// generate the public parameters
-	raw, err := generator(args)
+	genArgs := &GeneratorArgs{
+		Driver:            Driver,
+		IdemixMSPDir:      IdemixMSPDir,
+		OutputDir:         OutputDir,
+		GenerateCCPackage: GenerateCCPackage,
+		Issuers:           Issuers,
+		Auditors:          Auditors,
+		Base:              Base,
+		Exponent:          Exponent,
+	}
+	raw, err := generator(genArgs)
 	if err != nil {
 		return errors.Wrap(err, "failed to generate public parameters")
 	}
@@ -136,17 +169,17 @@ func Gen(args []string) error {
 	return nil
 }
 
-func ZKATDLogGen(args []string) ([]byte, error) {
+// ZKATDLogGen generates the public parameters for the ZKATDLog driver
+func ZKATDLogGen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
-	path := filepath.Join(IdemixMSPDir, IdemixConfigDirMsp, IdemixConfigFileIssuerPublicKey)
-	ipkBytes, err := ioutil.ReadFile(path)
+	path, ipkBytes, err := LoadIdemixIssuerPublicKey(args)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed reading idemix issuer public key")
 	}
 
 	// Setup
 	// TODO: update the curve here
-	pp, err := crypto.Setup(Base, Exponent, ipkBytes, math3.BN254)
+	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BN254)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
@@ -159,7 +192,7 @@ func ZKATDLogGen(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path = filepath.Join(OutputDir, "zkatdlog_pp.json")
+	path = filepath.Join(args.OutputDir, "zkatdlog_pp.json")
 	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
@@ -167,7 +200,8 @@ func ZKATDLogGen(args []string) ([]byte, error) {
 	return raw, nil
 }
 
-func FabTokenGen(args []string) ([]byte, error) {
+// FabTokenGen generates the public parameters for the FabToken driver
+func FabTokenGen(args *GeneratorArgs) ([]byte, error) {
 	// Setup
 	pp, err := fabtoken.Setup()
 	if err != nil {
@@ -181,7 +215,7 @@ func FabTokenGen(args []string) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
-	path := filepath.Join(OutputDir, "fabtoken_pp.json")
+	path := filepath.Join(args.OutputDir, "fabtoken_pp.json")
 	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
@@ -189,6 +223,7 @@ func FabTokenGen(args []string) ([]byte, error) {
 	return raw, nil
 }
 
+// GenChaincodePackage generates the chaincode package for the given raw public parameters
 func GenChaincodePackage(raw []byte) error {
 	t, err := template.New("node").Funcs(template.FuncMap{
 		"Params": func() string { return base64.StdEncoding.EncodeToString(raw) },
@@ -221,22 +256,24 @@ func GenChaincodePackage(raw []byte) error {
 	return nil
 }
 
-func GetMSPIdentity(s string) (view.Identity, error) {
-	entries := strings.Split(s, ":")
+// GetMSPIdentity returns the MSP identity from the passed entry formatted as <MSPConfigPath>:<MSPID>
+func GetMSPIdentity(entry string) (view.Identity, error) {
+	entries := strings.Split(entry, ":")
 	if len(entries) != 2 {
-		return nil, errors.Errorf("invalid input [%s]", s)
+		return nil, errors.Errorf("invalid input [%s]", entry)
 	}
 	provider, err := x509.NewProvider(entries[0], entries[1], nil)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", s)
+		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", entry)
 	}
 	id, _, err := provider.Identity(nil)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get identity [%s]", s)
+		return nil, errors.WithMessagef(err, "failed to get identity [%s]", entry)
 	}
 	return id, nil
 }
 
+// SetupIssuersAndAuditors sets up the issuers and auditors for the given public parameters
 func SetupIssuersAndAuditors(pp PP) error {
 	// Auditors
 	for _, auditor := range Auditors {
