@@ -46,7 +46,7 @@ Le us explore in more details each layer of the Token SDK stack.
   - [`FabToken`](./fabtoken.md): This is a simple implementation of the Driver API that does not support any privacy. 
   - [`ZKAT DLog`](./zkat-dlog.md): This driver supports privacy via Zero Knowledge. We follow
     a simplified version of the blueprint described in the paper
-    [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058.pdf')
+    [`Privacy-preserving auditable token payments in a permissioned blockchain system`]('https://eprint.iacr.org/2019/1058')
     by Androulaki et al.
 - [`Services`](./services.md): It is at the `service layer` that we will describe the integration with Fabric. 
   In particular, we will focus our attention on the lifecycle of a `Fabric Token Transaction`. 
