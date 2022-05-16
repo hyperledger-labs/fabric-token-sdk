@@ -1,4 +1,12 @@
 {
+  "ignorePatterns": [
+    {
+      "pattern": "^https://wiki.hyperledger.org/display/fabric"
+    },
+    {
+      "pattern": "^https://eprint.iacr.org/2019/1058.pdf"
+    }
+  ],
   "timeout": "20s",
   "retryOn429": true,
   "retryCount": 5,
