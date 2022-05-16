@@ -43,6 +43,7 @@ git clone https://github.com/hyperledger-labs/fabric-token-sdk.git $FTS_PATH
   the IBM Research team describes in this webinar what tokenization use cases are possible with Hyperledger Fabric today, 
   and what enhancements are in the works (aka Fabric Token SDK).
 
+<!-- markdown-link-check-disable -->
 # Motivation
 
 [Hyperledger Fabric]('https://wiki.hyperledger.org/display/fabric') is a permissioned, modular, and extensible open-source DLT platform. Fabric architecture follows a novel `execute-order-validate` paradigm that supports distributed execution of untrusted code in an untrusted environment. Indeed, Fabric-based distributed applications can be written in any general-purpose programming language.  
@@ -62,6 +63,7 @@ What would happen if the developers could use a `Fabric Token SDK` that let:
 - Add a token layer to existing Fabric distributed application?
 
 Developing Enterprise Token-based distributed applications would become simpler and more secure.
+<!-- markdown-link-check-disable -->
 
 # Testing Philosophy
 
