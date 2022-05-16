@@ -17,13 +17,14 @@ token:
     network: {{ TMS.Network }}
     # Channel identifier within the specified network
     channel: {{ TMS.Channel }}
-	# Namespace identifier within the specified channel
+    # Namespace identifier within the specified channel
     namespace: {{ TMS.Namespace }}
     certification: 
-      interactive:
+      {{ if TMS.Certifiers }} interactive:
         ids: {{ range TMS.Certifiers }}
-        - {{ . }}{{ end }}
-    {{ if Wallets }} # Wallets associated with this TMS
+        - {{ . }}{{ end }}{{ end }}
+    {{ if Wallets }}
+    # Wallets associated with this TMS
     wallets:{{ if Wallets.Certifiers }}
       # Certifiers wallets are used to certify tokens
       certifiers: {{ range Wallets.Certifiers }}
@@ -33,7 +34,7 @@ token:
         path: {{ .Path }}
       {{ end }}
     {{ end }}{{ if Wallets.Issuers }}
-	  # Issuers wallets are used to issue tokens
+      # Issuers wallets are used to issue tokens
       issuers: {{ range Wallets.Issuers }}
       - id: {{ .ID }}
         default: {{ .Default }}
@@ -41,7 +42,7 @@ token:
         path: {{ .Path }}
       {{ end }}
     {{ end }}{{ if Wallets.Owners }}
-	  # Owners wallets are used to own tokens
+      # Owners wallets are used to own tokens
       owners: {{ range Wallets.Owners }}
       - id: {{ .ID }}
         default: {{ .Default }}
@@ -49,7 +50,7 @@ token:
         path: {{ .Path }}
       {{ end }}
     {{ end }}{{ if Wallets.Auditors }}
-	  # Auditors wallets are used to audit tokens
+      # Auditors wallets are used to audit tokens
       auditors: {{ range Wallets.Auditors }}
       - id: {{ .ID }}
         default: {{ .Default }}

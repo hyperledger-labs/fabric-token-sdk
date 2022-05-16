@@ -712,7 +712,332 @@ To clean up all artifacts, we can run the following command:
 
 The `./testdata` and `./cmd` folders will be deleted.
 
-### 
+### Anatomy of the configuration file
+
+Each FSC node has a configuration file that contains the information about the FSC node itself,
+the networks (Fabric, Orion, ...) that the FSC node is part of, and the token-related configuration.
+
+Here is how the configuration file looks like for Alice's node:
+
+```yaml
+# Logging section
+logging:
+  # Spec
+  spec: info
+  # Format
+  format: '%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'
+fsc:
+  # The FSC id provides a name for this node instance and is used when
+  # naming docker resources.
+  id: fsc.alice
+  # The networkId allows for logical separation of networks and is used when
+  # naming docker resources.
+  networkId: u6l7g33mhjdn3ko7zrnzl5ftae
+  # This represents the endpoint to other FSC nodes in the same organization.
+  address: 127.0.0.1:20006
+  # Whether the FSC node should programmatically determine its address
+  # This case is useful for docker containers.
+  # When set to true, will override FSC address.
+  addressAutoDetect: true
+  # GRPC Server listener address   
+  listenAddress: 127.0.0.1:20006
+  # Identity of this node, used to connect to other nodes
+  identity:
+    # X.509 certificate used as identity of this node
+    cert:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/msp/signcerts/alice.fsc.example.com-cert.pem
+    # Private key matching the X.509 certificate
+    key:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/msp/keystore/priv_sk
+  # Admin X.509 certificates
+  admin:
+    certs:
+      - /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/users/Admin@fsc.example.com/msp/signcerts/Admin@fsc.example.com-cert.pem
+  # TLS Settings
+  # (We use here the same set of properties as Hyperledger Fabric)
+  tls:
+    # Require server-side TLS
+    enabled:  true
+    # Require client certificates / mutual TLS for inbound connections.
+    # Note that clients that are not configured to use a certificate will
+    # fail to connect to the node.
+    clientAuthRequired: false
+    # X.509 certificate used for TLS server
+    cert:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.crt
+    # Private key used for TLS server
+    key:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.key
+    # X.509 certificate used for TLS when making client connections.
+    # If not set, fsc.tls.cert.file will be used instead
+    clientCert:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.crt
+    # Private key used for TLS when making client connections.
+    # If not set, fsc.tls.key.file will be used instead
+    clientKey:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.key
+    # rootcert.file represents the trusted root certificate chain used for verifying certificates
+    # of other nodes during outbound connections.
+    rootcert:
+      file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/ca.crt
+    # If mutual TLS is enabled, clientRootCAs.files contains a list of additional root certificates
+    # used for verifying certificates of client connections.
+    clientRootCAs:
+      files:
+        - /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/ca.crt
+    rootCertFile: /home/vagrant/testdata/fsc/crypto/ca-certs.pem
+  # Keepalive settings for node server and clients
+  keepalive:
+    # MinInterval is the minimum permitted time between client pings.
+    # If clients send pings more frequently, the peer server will
+    # disconnect them
+    minInterval: 60s
+    # Interval is the duration after which if the server does not see
+    # any activity from the client it pings the client to see if it's alive
+    interval: 300s
+    # Timeout is the duration the server waits for a response
+    # from the client after sending a ping before closing the connection
+    timeout: 600s
+  # P2P configuration
+  p2p:
+    # Listening address
+    listenAddress: /ip4/127.0.0.1/tcp/20007
+    # If empty, this is a P2P boostrap node. Otherwise, it contains the name of the FCS node that is a bootstrap node
+    bootstrapNode: issuer
+  # The Key-Value Store is used to store various information related to the FSC node
+  kvs:
+    persistence:
+      # Persistence type can be \'badger\' (on disk) or \'memory\'
+      type: badger
+      opts:
+        path: /home/vagrant/testdata/fsc/nodes/alice/kvs
+  # HTML Server configuration for REST calls
+  web:
+    enabled: true
+    # HTTPS server listener address
+    address: 0.0.0.0:20008
+    tls:
+      enabled:  true
+      cert:
+        file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.crt
+      key:
+        file: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/server.key
+      clientRootCAs:
+        files:
+          - /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/tls/ca.crt
+    rootCertFile: /home/vagrant/testdata/fsc/crypto/ca-certs.pem
+  tracing:
+    provider: none
+    udp:
+      address: 127.0.0.1:8125
+  metrics:
+    # metrics provider is one of statsd, prometheus, or disabled
+    provider: prometheus
+    # statsd configuration
+    statsd:
+      # network type: tcp or udp
+      network: udp
+      # statsd server address
+      address: 127.0.0.1:8125
+      # the interval at which locally cached counters and gauges are pushed
+      # to statsd; timings are pushed immediately
+      writeInterval: 10s
+      # prefix is prepended to all emitted statsd metrics
+      prefix:
+
+  # The endpoint section tells how to reach other FSC node in the network.
+  # For each node, the name, the domain, the identity of the node, and its addresses must be specified.
+  endpoint:
+    resolvers:
+      - name: issuer
+        domain: fsc.example.com
+        identity:
+          id: issuer
+          path: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/issuer.fsc.example.com/msp/signcerts/issuer.fsc.example.com-cert.pem
+        addresses:
+          P2P: 127.0.0.1:20001
+        aliases:
+          - issuer.id1
+      - name: auditor
+        domain: fsc.example.com
+        identity:
+          id: auditor
+          path: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/auditor.fsc.example.com/msp/signcerts/auditor.fsc.example.com-cert.pem
+        addresses:
+        aliases:
+      - name: bob
+        domain: fsc.example.com
+        identity:
+          id: bob
+          path: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/bob.fsc.example.com/msp/signcerts/bob.fsc.example.com-cert.pem
+        addresses:
+        aliases:
+          - bob.id1
+      - name: charlie
+        domain: fsc.example.com
+        identity:
+          id: charlie
+          path: /home/vagrant/testdata/fsc/crypto/peerOrganizations/fsc.example.com/peers/charlie.fsc.example.com/msp/signcerts/charlie.fsc.example.com-cert.pem
+        addresses:
+        aliases:
+          - charlie.id1
+
+fabric:
+  enabled: true
+  default:
+    default: true
+    BCCSP:
+      Default: SW
+      SW:
+        Hash: SHA2
+        Security: 256
+        FileKeyStore:
+          KeyStore:
+    mspConfigPath: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/msp
+    localMspId: Org2MSP
+    mspCacheSize: 500
+    msps:
+      - id: idemix
+        mspType: idemix
+        mspID: IdemixOrgMSP
+        cacheSize: 0
+        path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/extraids/idemix
+    tls:
+      enabled:  true
+      clientAuthRequired: false
+      cert:
+        file: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/server.crt
+      key:
+        file: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/server.key
+      clientCert:
+        file: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/server.crt
+      clientKey:
+        file: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/server.key
+      rootcert:
+        file: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/ca.crt
+      clientRootCAs:
+        files:
+          - /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/tls/ca.crt
+      rootCertFile: /home/vagrant/testdata/fabric.default/crypto/ca-certs.pem
+    orderers:
+      - address: 127.0.0.1:20015
+        connectionTimeout: 10s
+        tlsEnabled: true
+        tlsRootCertFile: /home/vagrant/testdata/fabric.default/crypto/ca-certs.pem
+        serverNameOverride:
+    peers:
+      - address: 127.0.0.1:20026
+        connectionTimeout: 10s
+        tlsEnabled: true
+        tlsRootCertFile: /home/vagrant/testdata/fabric.default/crypto/ca-certs.pem
+        serverNameOverride:
+    channels:
+      - name: testchannel
+        default: true
+        chaincodes:
+    vault:
+      persistence:
+        type: file
+        opts:
+          path: /home/vagrant/testdata/fsc/nodes/alice/fabric.default/vault
+    endpoint:
+      resolvers:
+        - name: Org1_peer_0
+          domain: org1.example.com
+          identity:
+            id: Org1_peer_0
+            mspType: bccsp
+            mspID: Org1MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org1.example.com/peers/Org1_peer_0.org1.example.com/msp/signcerts/Org1_peer_0.org1.example.com-cert.pem
+          addresses:
+            Listen: 127.0.0.1:20019
+          aliases:
+        - name: Org2_peer_0
+          domain: org2.example.com
+          identity:
+            id: Org2_peer_0
+            mspType: bccsp
+            mspID: Org2MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/Org2_peer_0.org2.example.com/msp/signcerts/Org2_peer_0.org2.example.com-cert.pem
+          addresses:
+            Listen: 127.0.0.1:20026
+          aliases:
+        - name: issuer
+          domain: org1.example.com
+          identity:
+            id: issuer
+            mspType: bccsp
+            mspID: Org1MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org1.example.com/peers/issuer.org1.example.com/msp/signcerts/issuer.org1.example.com-cert.pem
+          addresses:
+          aliases:
+            - issuer
+            - issuer.id1
+        - name: auditor
+          domain: org1.example.com
+          identity:
+            id: auditor
+            mspType: bccsp
+            mspID: Org1MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org1.example.com/peers/auditor.org1.example.com/msp/signcerts/auditor.org1.example.com-cert.pem
+          addresses:
+          aliases:
+            - auditor
+        - name: alice
+          domain: org2.example.com
+          identity:
+            id: alice
+            mspType: bccsp
+            mspID: Org2MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/alice.org2.example.com/msp/signcerts/alice.org2.example.com-cert.pem
+          addresses:
+          aliases:
+            - alice
+        - name: bob
+          domain: org2.example.com
+          identity:
+            id: bob
+            mspType: bccsp
+            mspID: Org2MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/bob.org2.example.com/msp/signcerts/bob.org2.example.com-cert.pem
+          addresses:
+          aliases:
+            - bob
+        - name: charlie
+          domain: org2.example.com
+          identity:
+            id: charlie
+            mspType: bccsp
+            mspID: Org2MSP
+            path: /home/vagrant/testdata/fabric.default/crypto/peerOrganizations/org2.example.com/peers/charlie.org2.example.com/msp/signcerts/charlie.org2.example.com-cert.pem
+          addresses:
+          aliases:
+            - charlie
+
+token:
+  auditor:
+    auditdb:
+      persistence:
+        opts:
+          path: /home/vagrant/testdata/fsc/nodes/alice/kvs
+        type: badger
+  enabled: true
+  tms:
+    - certification: null
+      channel: testchannel
+      namespace: zkat
+      network: default
+      wallets:
+        owners:
+          - default: true
+            id: alice
+            path: /home/vagrant/testdata/token/crypto/default-testchannel-zkat/idemix/alice
+            type: idemix:IdemixOrgMSP:BN254
+          - default: false
+            id: alice.id1
+            path: /home/vagrant/testdata/token/crypto/default-testchannel-zkat/idemix/alice.id1
+            type: idemix:IdemixOrgMSP:BN254
+```
 
 ### Invoke the business views
 
