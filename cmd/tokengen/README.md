@@ -51,7 +51,7 @@ The `tokengen gen` command has two subcommands, as follows:
 - fatoken: generates the public parameters for the fabtoken driver
 - dlog: generates the public parameters for the dlog driver
 
-## tokengen gen fatoken
+## tokengen gen fabtoken
 
 ```
 Usage:
@@ -66,7 +66,9 @@ Flags:
 
 ```
 
-### dlog public parameters
+The public parameters are stored in the output folder with name `fabtoken_pp.json`.
+
+### tokengen gen dlog
 
 ```
 Usage:
@@ -82,6 +84,8 @@ Flags:
   -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>:<MSP-ID>
   -o, --output string      output folder (default ".")
 ``` 
+
+The public parameters are stored in the output folder with name `zkatdlog_pp.json`.
 
 ## tokengen help
 
