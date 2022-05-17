@@ -18,6 +18,8 @@ import (
 	"strings"
 	"text/template"
 
+	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/cc"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	. "github.com/onsi/gomega"
 
@@ -25,7 +27,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp"
 )
 
 type TCC struct {
