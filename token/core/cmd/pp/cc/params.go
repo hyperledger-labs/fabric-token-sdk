@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package pp
+package cc
 
 // DefaultParams defines the template for the public parameters burned into
 // the token chaincode.

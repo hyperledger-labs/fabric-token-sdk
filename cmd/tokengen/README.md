@@ -46,23 +46,42 @@ Flags:
 
 ## tokengen gen
 
-```
-Generates public parameters.
+The `tokengen gen` command has two subcommands, as follows:
 
+- fatoken: generates the public parameters for the fabtoken driver
+- dlog: generates the public parameters for the dlog driver
+
+## tokengen gen fatoken
+
+```
 Usage:
-  tokengen gen [flags]
+  tokengen gen fabtoken [flags]
 
 Flags:
   -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>:<MSP-ID>
-  -b, --base int           tt is used to define the maximum quantity a token can contain as Base^Exponent (default 100)
       --cc                 generate chaincode package
-  -d, --driver string      driver (dlog, zkatdlog or fabtoken) (default "dlog")
-  -e, --exponent int       tt is used to define the maximum quantity a token can contain as Base^Exponent (default 2)
-  -h, --help               help for gen
+  -h, --help               help for fabtoken
+  -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>:<MSP-ID>
+  -o, --output string      output folder (default ".")
+
+```
+
+### dlog public parameters
+
+```
+Usage:
+  tokengen gen dlog [flags]
+
+Flags:
+  -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>:<MSP-ID>
+  -b, --base int           base is used to define the maximum quantity a token can contain as Base^Exponent (default 100)
+      --cc                 generate chaincode package
+  -e, --exponent int       exponent is used to define the maximum quantity a token can contain as Base^Exponent (default 2)
+  -h, --help               help for dlog
   -i, --idemix string      idemix msp dir
   -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>:<MSP-ID>
   -o, --output string      output folder (default ".")
-```
+``` 
 
 ## tokengen help
 
