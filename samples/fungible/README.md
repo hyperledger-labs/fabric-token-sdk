@@ -803,8 +803,8 @@ fsc:
   p2p:
     # Listening address
     listenAddress: /ip4/127.0.0.1/tcp/20007
-    # If empty, this is a P2P boostrap node. Otherwise, it contains the name of the FCS node that is a bootstrap node.
-    # The name of the FCS node that is a bootstrap node must be set under fsc.endpoint.resolvers
+    # If empty, this is a P2P boostrap node. Otherwise, it contains the name of the FSC node that is a bootstrap node.
+    # The name of the FSC node that is a bootstrap node must be set under fsc.endpoint.resolvers
     bootstrapNode: issuer
   # The Key-Value Store is used to store various information related to the FSC node
   kvs:
@@ -1042,8 +1042,8 @@ token:
         type: badger
   enabled: true
   # TMS stands for Token Management Service. A TMS is uniquely identified by a network, channel, and 
-  # namespace identifiers. The network identifier should refer to a configure network (Fabric, Orion, and so on).
-  # The meaning of channel and namespace are network dependant. For Fabric, the meaning is clear.
+  # namespace identifiers. The network identifier should refer to a configured network (Fabric, Orion, and so on).
+  # The meaning of channel and namespace are network dependent. For Fabric, the meaning is clear.
   # For Orion, channel is empty and namespace is the DB name to use.
   tms:
     - channel: testchannel # Channel identifier within the specified network
