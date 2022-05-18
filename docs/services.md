@@ -19,7 +19,7 @@ To build our Fabric token infrastructure, we will need the following building bl
     - A `Token Selector` to pick tokens from the vault and use them in operations like transfer and redeem.
     - `Auditing` to enforce rules on a token transaction before this gets committed. This part is optional.
   
-If you to jump ahead and see some examples, have a look ['here'](./../integration/README.md).
+If you to jump ahead and see some examples, have a look [here](./../samples/README.md).
 
 Let us continue with the lifecycle of a token transaction. This will give us the possibility to describe
 how all the above components play together.
