@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package badger
 
 import (
@@ -11,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger/keys"
@@ -18,9 +20,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Record struct {
+type MovementRecord struct {
 	Id     uint64
-	Record *driver.Record
+	Record *driver.MovementRecord
+}
+
+type TransactionRecord struct {
+	Id     uint64
+	Record *driver.TransactionRecord
 }
 
 type Persistence struct {
@@ -106,14 +113,14 @@ func (db *Persistence) Discard() error {
 	return nil
 }
 
-func (db *Persistence) AddRecord(record *driver.Record) error {
+func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
 	next, err := db.seq.Next()
 	if err != nil {
 		return errors.Wrapf(err, "failed getting next index")
 	}
-	dbKey := dbKey("default", fmt.Sprintf("%d", next))
+	dbKey := dbKey("mv", dbKey(fmt.Sprintf("%d", next), record.TxID))
 
-	value := &Record{
+	value := &MovementRecord{
 		Id:     next,
 		Record: record,
 	}
@@ -131,21 +138,48 @@ func (db *Persistence) AddRecord(record *driver.Record) error {
 	return nil
 }
 
-func (db *Persistence) SetStatus(txID string, status driver.Status) error {
-	panic("implement me")
+func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
+	next, err := db.seq.Next()
+	if err != nil {
+		return errors.Wrapf(err, "failed getting next index")
+	}
+	dbKey := dbKey("tx", dbKey(fmt.Sprintf("%d", next), record.TxID))
+
+	value := &TransactionRecord{
+		Id:     next,
+		Record: record,
+	}
+
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return errors.Wrapf(err, "could not marshal record for key %s", dbKey)
+	}
+
+	err = db.txn.Set([]byte(dbKey), bytes)
+	if err != nil {
+		return errors.Wrapf(err, "could not set value for key %s", dbKey)
+	}
+
+	return nil
 }
 
-func (db *Persistence) Query(ids []string, types []string, status []driver.Status, direction driver.Direction, value driver.Value, numRecords int) ([]*driver.Record, error) {
+func (db *Persistence) QueryTransactions(from, to *time.Time) (driver.TransactionIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	var records RecordSlice
+	it.Rewind()
+	return &TransactionIterator{it: it, from: from, to: to}, nil
+}
 
+func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
+	// Search the records for the passed transaction ID and update the status
+	it := db.txn.NewIterator(badger.DefaultIteratorOptions)
+	defer it.Close()
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
-		if !strings.HasPrefix(string(item.Key()), "default") {
+		if !strings.HasSuffix(string(item.Key()), txID) {
 			continue
 		}
-		record := &Record{}
+		record := &MovementRecord{}
 		err := item.Value(func(val []byte) error {
 			if err := json.Unmarshal(val, record); err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
@@ -153,13 +187,48 @@ func (db *Persistence) Query(ids []string, types []string, status []driver.Statu
 			return nil
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
+			return errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
+		}
+		record.Record.Status = status
+		bytes, err := json.Marshal(record)
+		if err != nil {
+			return errors.Wrapf(err, "could not marshal record for key %s", string(item.Key()))
+		}
+
+		err = db.txn.Set(item.Key(), bytes)
+		if err != nil {
+			return errors.Wrapf(err, "could not set value for key %s", string(item.Key()))
+		}
+	}
+	return nil
+}
+
+func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string, txStatuses []driver.TxStatus, searchDirection driver.SearchDirection, movementDirection driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
+	txn := db.db.NewTransaction(false)
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	var records RecordSlice
+	defer it.Close()
+
+	for it.Rewind(); it.Valid(); it.Next() {
+		item := it.Item()
+		if !strings.HasPrefix(string(item.Key()), "mv") {
+			continue
+		}
+		record := &MovementRecord{}
+		err := item.Value(func(val []byte) error {
+			if err := json.Unmarshal(val, record); err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get movementDirection for key %s", string(item.Key()))
 		}
 
 		// filter
-		if len(ids) != 0 {
+		if len(enrollmentIDs) != 0 {
 			found := false
-			for _, id := range ids {
+			for _, id := range enrollmentIDs {
 				if record.Record.EnrollmentID == id {
 					found = true
 					break
@@ -169,10 +238,10 @@ func (db *Persistence) Query(ids []string, types []string, status []driver.Statu
 				continue
 			}
 		}
-		if len(types) != 0 {
+		if len(tokenTypes) != 0 {
 			found := false
-			for _, typ := range types {
-				if record.Record.Type == typ {
+			for _, typ := range tokenTypes {
+				if record.Record.TokenType == typ {
 					found = true
 					break
 				}
@@ -181,9 +250,9 @@ func (db *Persistence) Query(ids []string, types []string, status []driver.Statu
 				continue
 			}
 		}
-		if len(status) != 0 {
+		if len(txStatuses) != 0 {
 			found := false
-			for _, st := range status {
+			for _, st := range txStatuses {
 				if record.Record.Status == st {
 					found = true
 					break
@@ -199,11 +268,11 @@ func (db *Persistence) Query(ids []string, types []string, status []driver.Statu
 			}
 		}
 
-		if value == driver.Sent && record.Record.Amount.Sign() > 0 {
+		if movementDirection == driver.Sent && record.Record.Amount.Sign() > 0 {
 			continue
 		}
 
-		if value == driver.Received && record.Record.Amount.Sign() < 0 {
+		if movementDirection == driver.Received && record.Record.Amount.Sign() < 0 {
 			continue
 		}
 
@@ -211,7 +280,7 @@ func (db *Persistence) Query(ids []string, types []string, status []driver.Statu
 	}
 
 	// Sort
-	switch direction {
+	switch searchDirection {
 	case driver.FromBeginning:
 		sort.Sort(records)
 	case driver.FromLast:
@@ -222,7 +291,7 @@ func (db *Persistence) Query(ids []string, types []string, status []driver.Statu
 		records = records[:numRecords]
 	}
 
-	var res []*driver.Record
+	var res []*driver.MovementRecord
 	for _, record := range records {
 		res = append(res, record.Record)
 	}
@@ -234,8 +303,52 @@ func dbKey(namespace, key string) string {
 	return namespace + keys.NamespaceSeparator + key
 }
 
-type RecordSlice []*Record
+type RecordSlice []*MovementRecord
 
 func (p RecordSlice) Len() int           { return len(p) }
 func (p RecordSlice) Less(i, j int) bool { return p[i].Id < p[j].Id }
 func (p RecordSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
+
+type TransactionIterator struct {
+	it   *badger.Iterator
+	from *time.Time
+	to   *time.Time
+}
+
+func (t *TransactionIterator) Close() {
+	t.it.Close()
+}
+
+func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
+	for {
+		t.it.Next()
+		if !t.it.Valid() {
+			return nil, nil
+		}
+		item := t.it.Item()
+		if item == nil {
+			return nil, nil
+		}
+		if !strings.HasPrefix(string(item.Key()), "tx") {
+			continue
+		}
+		record := &TransactionRecord{}
+		err := item.Value(func(val []byte) error {
+			if err := json.Unmarshal(val, record); err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get transaction for key %s", string(item.Key()))
+		}
+		// is record in the time range
+		if t.from != nil && record.Record.Timestamp.Before(*t.from) {
+			continue
+		}
+		if t.to != nil && record.Record.Timestamp.After(*t.to) {
+			return nil, nil
+		}
+		return record.Record, nil
+	}
+}

@@ -6,24 +6,27 @@ SPDX-License-Identifier: Apache-2.0
 package memory
 
 import (
+	"time"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 )
 
 type Persistence struct {
-	records []*driver.Record
+	movementRecords    []*driver.MovementRecord
+	transactionRecords []*driver.TransactionRecord
 }
 
-func (p *Persistence) Query(ids []string, types []string, status []driver.Status, direction driver.Direction, value driver.Value, numRecords int) ([]*driver.Record, error) {
-	var res []*driver.Record
+func (p *Persistence) QueryMovements(ids []string, types []string, status []driver.TxStatus, direction driver.SearchDirection, value driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
+	var res []*driver.MovementRecord
 
 	var cursor int
 	switch direction {
 	case driver.FromBeginning:
 		cursor = -1
 	case driver.FromLast:
-		cursor = len(p.records)
+		cursor = len(p.movementRecords)
 	default:
 		panic("direction not valid")
 	}
@@ -35,11 +38,11 @@ func (p *Persistence) Query(ids []string, types []string, status []driver.Status
 		case driver.FromLast:
 			cursor--
 		}
-		if cursor < 0 || cursor >= len(p.records) {
+		if cursor < 0 || cursor >= len(p.movementRecords) {
 			break
 		}
 
-		record := p.records[cursor]
+		record := p.movementRecords[cursor]
 		if len(ids) != 0 {
 			found := false
 			for _, id := range ids {
@@ -55,7 +58,7 @@ func (p *Persistence) Query(ids []string, types []string, status []driver.Status
 		if len(types) != 0 {
 			found := false
 			for _, typ := range types {
-				if record.Type == typ {
+				if record.TokenType == typ {
 					found = true
 					break
 				}
@@ -100,14 +103,42 @@ func (p *Persistence) Query(ids []string, types []string, status []driver.Status
 	return res, nil
 }
 
-func (p *Persistence) AddRecord(record *driver.Record) error {
-	p.records = append(p.records, record)
+func (p *Persistence) AddMovement(record *driver.MovementRecord) error {
+	p.movementRecords = append(p.movementRecords, record)
 
 	return nil
 }
 
-func (p *Persistence) SetStatus(txID string, status driver.Status) error {
-	for _, record := range p.records {
+func (p *Persistence) QueryTransactions(from, to *time.Time) (driver.TransactionIterator, error) {
+	// search over the transaction for those whose timestamp is between from and to
+	var subset []*driver.TransactionRecord
+	for _, record := range p.transactionRecords {
+		if from != nil && record.Timestamp.Before(*from) {
+			continue
+		}
+		if to != nil && record.Timestamp.After(*to) {
+			continue
+		}
+		subset = append(subset, record)
+	}
+	return &TransactionIterator{txs: subset}, nil
+}
+
+func (p *Persistence) AddTransaction(record *driver.TransactionRecord) error {
+	p.transactionRecords = append(p.transactionRecords, record)
+
+	return nil
+}
+
+func (p *Persistence) SetStatus(txID string, status driver.TxStatus) error {
+	// movements
+	for _, record := range p.movementRecords {
+		if record.TxID == txID {
+			record.Status = status
+		}
+	}
+	// transactions
+	for _, record := range p.transactionRecords {
 		if record.TxID == txID {
 			record.Status = status
 		}
@@ -131,8 +162,25 @@ func (p *Persistence) Discard() error {
 	return nil
 }
 
-type Driver struct {
+type TransactionIterator struct {
+	txs    []*driver.TransactionRecord
+	cursor int
 }
+
+func (t *TransactionIterator) Close() {
+}
+
+func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
+	// return next transaction, if any
+	if t.cursor >= len(t.txs) {
+		return nil, nil
+	}
+	record := t.txs[t.cursor]
+	t.cursor++
+	return record, nil
+}
+
+type Driver struct{}
 
 func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.AuditDB, error) {
 	return &Persistence{}, nil

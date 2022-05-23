@@ -8,19 +8,68 @@ package fungible
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
 
-	. "github.com/onsi/gomega"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	. "github.com/onsi/gomega"
 )
+
+var TestAllTransactions = []*auditdb.TransactionRecord{
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "alice",
+		TokenType:       "USD",
+		Amount:          big.NewInt(110),
+		Status:          auditdb.Pending,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "alice",
+		TokenType:       "USD",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Pending,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "EUR",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Pending,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "EUR",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Pending,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "EUR",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Pending,
+	},
+}
 
 func TestAll(network *integration.Infrastructure) {
 	RegisterAuditor(network)
@@ -28,9 +77,12 @@ func TestAll(network *integration.Infrastructure) {
 	// Rest of the test
 	IssueCash(network, "", "USD", 110, "alice")
 	CheckBalance(network, "alice", "", "USD", 110)
+	CheckAuditedTransactions(network, TestAllTransactions[:1])
+
 	IssueCash(network, "", "USD", 10, "alice")
 	CheckBalance(network, "alice", "", "USD", 120)
 	CheckBalance(network, "alice", "alice", "USD", 120)
+	CheckAuditedTransactions(network, TestAllTransactions[:2])
 
 	h := ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -46,6 +98,7 @@ func TestAll(network *integration.Infrastructure) {
 	CheckBalance(network, "bob", "", "EUR", 20)
 	IssueCash(network, "", "EUR", 10, "bob")
 	CheckBalance(network, "bob", "", "EUR", 30)
+	CheckAuditedTransactions(network, TestAllTransactions[:5])
 
 	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -321,6 +374,25 @@ func IssueCashFail(network *integration.Infrastructure, typ string, amount uint6
 		Recipient: network.Identity(receiver),
 	}))
 	Expect(err).To(HaveOccurred())
+}
+
+func CheckAuditedTransactions(network *integration.Infrastructure, expected []*auditdb.TransactionRecord) {
+	txsBoxed, err := network.Client("auditor").CallView("history", common.JSONMarshall(&views.ListAuditedTransactions{}))
+	Expect(err).NotTo(HaveOccurred())
+	var txs []*auditdb.TransactionRecord
+	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
+	Expect(len(txs)).To(Equal(len(expected)))
+	for i, tx := range txs {
+		fmt.Printf("tx %d: %+v\n", i, tx)
+		fmt.Printf("expected %d: %+v\n", i, expected[i])
+		txExpected := expected[i]
+		Expect(tx.Amount).To(Equal(txExpected.Amount))
+		Expect(tx.TokenType).To(Equal(txExpected.TokenType))
+		Expect(tx.SenderEID).To(Equal(txExpected.SenderEID))
+		Expect(tx.RecipientEID).To(Equal(txExpected.RecipientEID))
+		Expect(tx.Status).To(Equal(txExpected.Status))
+		Expect(tx.TransactionType).To(Equal(txExpected.TransactionType))
+	}
 }
 
 func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {

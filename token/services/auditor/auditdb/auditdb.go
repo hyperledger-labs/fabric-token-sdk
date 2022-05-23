@@ -3,12 +3,14 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package auditdb
 
 import (
 	"math/big"
 	"sort"
 	"sync"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -18,7 +20,7 @@ import (
 	"go.uber.org/atomic"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.zkat.auditdb")
+var logger = flogging.MustGetLogger("token-sdk.auditor.auditdb")
 
 var (
 	driversMu sync.RWMutex
@@ -59,12 +61,89 @@ func Drivers() []string {
 	return list
 }
 
-type Status string
+// TxStatus is the status of a transaction
+type TxStatus string
 
 const (
-	Pending Status = "Pending"
-	Valid   Status = "Confirmed"
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending TxStatus = "Pending"
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed TxStatus = "Confirmed"
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted TxStatus = "Deleted"
 )
+
+// TransactionType is the type of transaction
+type TransactionType int
+
+const (
+	// Issue is the type of transaction for issuing assets
+	Issue TransactionType = iota
+	// Transfer is the type of transaction for transferring assets
+	Transfer
+	// Redeem is the type of transaction for redeeming assets
+	Redeem
+)
+
+type MovementRecord struct {
+	// TxID is the transaction ID
+	TxID string
+	// EnrollmentID is the enrollment ID of the account that is receiving or sendeing
+	EnrollmentID string
+	// TokenType is the type of token
+	TokenType string
+	// Amount is positive if tokens are received. Negative otherwise
+	Amount *big.Int
+	// Status is the status of the transaction
+	Status TxStatus
+}
+
+type TransactionRecord struct {
+	// TxID is the transaction ID
+	TxID string
+	// TransactionType is the type of transaction
+	TransactionType TransactionType
+	// SenderEID is the enrollment ID of the account that is sending tokens
+	SenderEID string
+	// RecipientEID is the enrollment ID of the account that is receiving tokens
+	RecipientEID string
+	// TokenType is the type of token
+	TokenType string
+	// Amount is positive if tokens are received. Negative otherwise
+	Amount *big.Int
+	// Timestamp is the time the transaction was submitted to the auditor
+	Timestamp time.Time
+	// Status is the status of the transaction
+	Status TxStatus
+}
+
+type TransactionIterator struct {
+	it driver.TransactionIterator
+}
+
+func (t *TransactionIterator) Close() {
+	t.it.Close()
+}
+
+func (t *TransactionIterator) Next() (*TransactionRecord, error) {
+	next, err := t.it.Next()
+	if err != nil {
+		return nil, err
+	}
+	if next == nil {
+		return nil, nil
+	}
+	return &TransactionRecord{
+		TxID:            next.TxID,
+		TransactionType: TransactionType(next.TransactionType),
+		SenderEID:       next.SenderEID,
+		RecipientEID:    next.RecipientEID,
+		TokenType:       next.TokenType,
+		Amount:          next.Amount,
+		Timestamp:       next.Timestamp,
+		Status:          TxStatus(next.Status),
+	}, nil
+}
 
 type QueryExecutor struct {
 	db     *AuditDB
@@ -81,6 +160,14 @@ func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
 	return &HoldingsFilter{
 		db: qe.db,
 	}
+}
+
+func (qe *QueryExecutor) Transactions(from, to *time.Time) (*TransactionIterator, error) {
+	it, err := qe.db.db.QueryTransactions(from, to)
+	if err != nil {
+		return nil, errors.Errorf("failed to query transactions: %s", err)
+	}
+	return &TransactionIterator{it: it}, nil
 }
 
 func (qe *QueryExecutor) Done() {
@@ -123,66 +210,15 @@ func (db *AuditDB) Append(record *token.AuditRecord) error {
 	if err := db.db.BeginUpdate(); err != nil {
 		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
 	}
-
-	inputs := record.Inputs
-	outputs := record.Outputs
-
-	// compute the payment done in the transaction
-	eIDs := outputs.EnrollmentIDs()
-	tokenTypes := outputs.TokenTypes()
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
-			diff := sent.Sub(sent, received)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				continue
-			}
-
-			if err := db.db.AddRecord(&driver.Record{
-				TxID:         record.Anchor,
-				ActionIndex:  0,
-				EnrollmentID: eID,
-				Amount:       diff.Neg(diff),
-				Type:         tokenType,
-				Status:       driver.Pending,
-			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
-					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-				}
-				return err
-			}
-		}
+	if err := db.appendSendMovements(record); err != nil {
+		return errors.WithMessagef(err, "append send movements for txid '%s' failed", record.Anchor)
 	}
-
-	// compute what received in the transaction
-	eIDs = outputs.EnrollmentIDs()
-	tokenTypes = outputs.TokenTypes()
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
-			diff := received.Sub(received, sent)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				// Nothing received
-				continue
-			}
-
-			if err := db.db.AddRecord(&driver.Record{
-				TxID:         record.Anchor,
-				ActionIndex:  0,
-				EnrollmentID: eID,
-				Amount:       diff,
-				Type:         tokenType, Status: driver.Pending,
-			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
-					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-				}
-				return err
-			}
-		}
+	if err := db.appendReceivedMovements(record); err != nil {
+		return errors.WithMessagef(err, "append received movements for txid '%s' failed", record.Anchor)
 	}
-
+	if err := db.appendTransactions(record); err != nil {
+		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+	}
 	if err := db.db.Commit(); err != nil {
 		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
 	}
@@ -198,7 +234,7 @@ func (db *AuditDB) NewQueryExecutor() *QueryExecutor {
 	return &QueryExecutor{db: db}
 }
 
-func (db *AuditDB) SetStatus(txID string, status Status) error {
+func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
 	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
@@ -208,7 +244,7 @@ func (db *AuditDB) SetStatus(txID string, status Status) error {
 		return errors.WithMessagef(err, "begin update for txid '%s' failed", txID)
 	}
 
-	if err := db.db.SetStatus(txID, driver.Status(status)); err != nil {
+	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
 		if err1 := db.db.Discard(); err1 != nil {
 			logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 		}
@@ -240,6 +276,149 @@ func (db *AuditDB) Unlock(eIDs ...string) {
 		}
 		lock.(*sync.RWMutex).Unlock()
 	}
+}
+
+func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	eIDs := outputs.EnrollmentIDs()
+	tokenTypes := outputs.TokenTypes()
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			diff := sent.Sub(sent, received)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				continue
+			}
+
+			if err := db.db.AddMovement(&driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff.Neg(diff),
+				TokenType:    tokenType,
+				Status:       driver.Pending,
+			}); err != nil {
+				if err1 := db.db.Discard(); err1 != nil {
+					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+				}
+				return err
+			}
+		}
+	}
+	logger.Debugf("finished to append send movements for tx [%s]", record.Anchor)
+
+	return nil
+}
+
+func (db *AuditDB) appendReceivedMovements(record *token.AuditRecord) error {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	eIDs := outputs.EnrollmentIDs()
+	tokenTypes := outputs.TokenTypes()
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			diff := received.Sub(received, sent)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				// Nothing received
+				continue
+			}
+
+			if err := db.db.AddMovement(&driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Status:       driver.Pending,
+			}); err != nil {
+				if err1 := db.db.Discard(); err1 != nil {
+					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+				}
+				return err
+			}
+		}
+	}
+	logger.Debugf("finished to append received movements for tx [%s]", record.Anchor)
+
+	return nil
+}
+
+func (db *AuditDB) appendTransactions(record *token.AuditRecord) error {
+	inputs := record.Inputs
+	outputs := record.Outputs
+
+	actionIndex := 0
+	timestamp := time.Now()
+	for {
+		// collect inputs and outputs from the same action
+		ins := inputs.Filter(func(t *token.Input) bool {
+			return t.ActionIndex == actionIndex
+		})
+		ous := outputs.Filter(func(t *token.Output) bool {
+			return t.ActionIndex == actionIndex
+		})
+		if ins.Count() == 0 && ous.Count() == 0 {
+			logger.Debugf("no actions left for tx [%s][%d]", record.Anchor, actionIndex)
+			// no more actions
+			break
+		}
+
+		// create a transaction record from ins and ous
+
+		// All ins should be for same EID, check this
+		inEIDs := ins.EnrollmentIDs()
+		if len(inEIDs) > 1 {
+			return errors.Errorf("expected at most 1 input enrollment id, got %d", len(inEIDs))
+		}
+		inEID := ""
+		if len(inEIDs) == 1 {
+			inEID = inEIDs[0]
+		}
+
+		outEIDs := ous.EnrollmentIDs()
+		outEIDs = append(outEIDs, "")
+		outTT := ous.TokenTypes()
+		for _, outEID := range outEIDs {
+			for _, tokenType := range outTT {
+				received := outputs.ByEnrollmentID(outEID).ByType(tokenType).Sum().ToBigInt()
+				if received.Cmp(big.NewInt(0)) <= 0 {
+					continue
+				}
+
+				tt := driver.Issue
+				if len(inEIDs) != 0 {
+					if len(outEID) == 0 {
+						tt = driver.Redeem
+					} else {
+						tt = driver.Transfer
+					}
+				}
+
+				if err := db.db.AddTransaction(&driver.TransactionRecord{
+					TxID:            record.Anchor,
+					SenderEID:       inEID,
+					RecipientEID:    outEID,
+					TokenType:       tokenType,
+					Amount:          received,
+					Status:          driver.Pending,
+					TransactionType: tt,
+					Timestamp:       timestamp,
+				}); err != nil {
+					if err1 := db.db.Discard(); err1 != nil {
+						logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+					}
+					return err
+				}
+			}
+		}
+
+		actionIndex++
+	}
+	logger.Debugf("finished appending transactions for tx [%s]", record.Anchor)
+
+	return nil
 }
 
 type Manager struct {

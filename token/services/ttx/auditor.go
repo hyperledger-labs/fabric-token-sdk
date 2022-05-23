@@ -46,6 +46,9 @@ func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStr
 	return a.auditor.Audit(tx.TokenRequest)
 }
 
+// NewQueryExecutor returns a new query executor. The query executor is used to
+// execute queries against the AuditDB.
+// The function `Done` on the query executor must be called when it is no longer needed.
 func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
