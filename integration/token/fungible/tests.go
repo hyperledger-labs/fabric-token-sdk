@@ -13,11 +13,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
@@ -388,8 +387,8 @@ func CheckAuditedTransactions(network *integration.Infrastructure, expected []*a
 		txExpected := expected[i]
 		Expect(tx.Amount).To(Equal(txExpected.Amount))
 		Expect(tx.TokenType).To(Equal(txExpected.TokenType))
-		Expect(tx.SenderEID).To(Equal(txExpected.SenderEID))
-		Expect(tx.RecipientEID).To(Equal(txExpected.RecipientEID))
+		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue())
+		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue())
 		Expect(tx.Status).To(Equal(txExpected.Status))
 		Expect(tx.TransactionType).To(Equal(txExpected.TransactionType))
 	}
