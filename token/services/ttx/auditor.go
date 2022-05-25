@@ -170,7 +170,9 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	// Append audit records
 	logger.Debugf("store audit records...")
-	auditor.New(context, a.w).Append(a.tx)
+	if err := auditor.New(context, a.w).Append(a.tx); err != nil {
+		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
+	}
 	logger.Debugf("store audit records...done")
 
 	logger.Debugf("sign and send back")

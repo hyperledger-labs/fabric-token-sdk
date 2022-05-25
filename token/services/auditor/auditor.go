@@ -50,7 +50,7 @@ type Auditor struct {
 
 // New returns a new Auditor instance for the passed auditor wallet
 func New(sp view2.ServiceProvider, w *token.AuditorWallet) *Auditor {
-	return &Auditor{db: auditdb.GetAuditDB(sp, w)}
+	return &Auditor{sp: sp, db: auditdb.GetAuditDB(sp, w)}
 }
 
 // Validate validates the passed token request

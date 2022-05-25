@@ -73,15 +73,22 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 func TestAll(network *integration.Infrastructure) {
 	RegisterAuditor(network)
 
+	t0 := time.Now()
 	// Rest of the test
 	IssueCash(network, "", "USD", 110, "alice")
+	t1 := time.Now()
 	CheckBalance(network, "alice", "", "USD", 110)
-	CheckAuditedTransactions(network, TestAllTransactions[:1])
+	CheckAuditedTransactions(network, TestAllTransactions[:1], nil, nil)
+	CheckAuditedTransactions(network, TestAllTransactions[:1], &t0, &t1)
 
+	t2 := time.Now()
 	IssueCash(network, "", "USD", 10, "alice")
+	t3 := time.Now()
 	CheckBalance(network, "alice", "", "USD", 120)
 	CheckBalance(network, "alice", "alice", "USD", 120)
-	CheckAuditedTransactions(network, TestAllTransactions[:2])
+	CheckAuditedTransactions(network, TestAllTransactions[:2], nil, nil)
+	CheckAuditedTransactions(network, TestAllTransactions[:2], &t0, &t3)
+	CheckAuditedTransactions(network, TestAllTransactions[1:2], &t2, &t3)
 
 	h := ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -91,13 +98,19 @@ func TestAll(network *integration.Infrastructure) {
 	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
+	t4 := time.Now()
 	IssueCash(network, "", "EUR", 10, "bob")
+	//t5 := time.Now()
 	CheckBalance(network, "bob", "", "EUR", 10)
 	IssueCash(network, "", "EUR", 10, "bob")
+	//t6 := time.Now()
 	CheckBalance(network, "bob", "", "EUR", 20)
 	IssueCash(network, "", "EUR", 10, "bob")
+	t7 := time.Now()
 	CheckBalance(network, "bob", "", "EUR", 30)
-	CheckAuditedTransactions(network, TestAllTransactions[:5])
+	CheckAuditedTransactions(network, TestAllTransactions[:5], nil, nil)
+	CheckAuditedTransactions(network, TestAllTransactions[:5], &t0, &t7)
+	CheckAuditedTransactions(network, TestAllTransactions[2:5], &t4, &t7)
 
 	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -375,8 +388,11 @@ func IssueCashFail(network *integration.Infrastructure, typ string, amount uint6
 	Expect(err).To(HaveOccurred())
 }
 
-func CheckAuditedTransactions(network *integration.Infrastructure, expected []*auditdb.TransactionRecord) {
-	txsBoxed, err := network.Client("auditor").CallView("history", common.JSONMarshall(&views.ListAuditedTransactions{}))
+func CheckAuditedTransactions(network *integration.Infrastructure, expected []*auditdb.TransactionRecord, start *time.Time, end *time.Time) {
+	txsBoxed, err := network.Client("auditor").CallView("history", common.JSONMarshall(&views.ListAuditedTransactions{
+		From: start,
+		To:   end,
+	}))
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*auditdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
