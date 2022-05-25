@@ -169,7 +169,8 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 }
 
 func (n *Network) TxStatusListen(txID string, listener driver.TxStatusListener) error {
-	panic("implement me")
+	// TODO: implement
+	return nil
 }
 
 type nv struct {
