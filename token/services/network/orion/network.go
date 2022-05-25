@@ -168,6 +168,10 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	return ai.EnrollmentID(), nil
 }
 
+func (n *Network) TxStatusListen(txID string, listener driver.TxStatusListener) error {
+	panic("implement me")
+}
+
 type nv struct {
 	v          *orion.Vault
 	tokenVault *vault.Vault

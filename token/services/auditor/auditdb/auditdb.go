@@ -85,6 +85,7 @@ const (
 	Redeem
 )
 
+// MovementRecord is a record of a movement of assets
 type MovementRecord struct {
 	// TxID is the transaction ID
 	TxID string
@@ -98,6 +99,7 @@ type MovementRecord struct {
 	Status TxStatus
 }
 
+// TransactionRecord is a record of a transaction
 type TransactionRecord struct {
 	// TxID is the transaction ID
 	TxID string
@@ -117,14 +119,18 @@ type TransactionRecord struct {
 	Status TxStatus
 }
 
+// TransactionIterator is an iterator over transaction records
 type TransactionIterator struct {
 	it driver.TransactionIterator
 }
 
+// Close closes the iterator. It must be called when done with the iterator.
 func (t *TransactionIterator) Close() {
 	t.it.Close()
 }
 
+// Next returns the next transaction record, if any.
+// It returns nil, nil if there are no more records.
 func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	next, err := t.it.Next()
 	if err != nil {
@@ -145,23 +151,28 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	}, nil
 }
 
+// QueryExecutor executors queries against the audit DB
 type QueryExecutor struct {
 	db     *AuditDB
 	closed bool
 }
 
+// NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
 func (qe *QueryExecutor) NewPaymentsFilter() *PaymentsFilter {
 	return &PaymentsFilter{
 		db: qe.db,
 	}
 }
 
+// NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
 func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
 	return &HoldingsFilter{
 		db: qe.db,
 	}
 }
 
+// Transactions returns an iterators of transaction records in the given time internal.
+// If from and to are both nil, all transactions are returned.
 func (qe *QueryExecutor) Transactions(from, to *time.Time) (*TransactionIterator, error) {
 	it, err := qe.db.db.QueryTransactions(from, to)
 	if err != nil {
@@ -170,6 +181,7 @@ func (qe *QueryExecutor) Transactions(from, to *time.Time) (*TransactionIterator
 	return &TransactionIterator{it: it}, nil
 }
 
+// Done closes the query executor. It must be called when the query executor is no longer needed.s
 func (qe *QueryExecutor) Done() {
 	if qe.closed {
 		return
@@ -179,6 +191,7 @@ func (qe *QueryExecutor) Done() {
 	qe.closed = true
 }
 
+// AuditDB is a database that stores audit information
 type AuditDB struct {
 	counter atomic.Int32
 
@@ -201,11 +214,17 @@ func newAuditDB(p driver.AuditDB) *AuditDB {
 	return &AuditDB{db: p, eIDsLocks: sync.Map{}}
 }
 
-func (db *AuditDB) Append(record *token.AuditRecord) error {
+// Append appends the passed token request to the audit database
+func (db *AuditDB) Append(req *token.Request) error {
 	logger.Debugf("Appending new record... [%d]", db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
+
+	record, err := req.AuditRecord()
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
+	}
 
 	if err := db.db.BeginUpdate(); err != nil {
 		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
@@ -227,6 +246,7 @@ func (db *AuditDB) Append(record *token.AuditRecord) error {
 	return nil
 }
 
+// NewQueryExecutor returns a new query executor
 func (db *AuditDB) NewQueryExecutor() *QueryExecutor {
 	db.counter.Inc()
 	db.storeLock.RLock()
@@ -234,6 +254,7 @@ func (db *AuditDB) NewQueryExecutor() *QueryExecutor {
 	return &QueryExecutor{db: db}
 }
 
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
 	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
 	db.storeLock.Lock()
@@ -259,6 +280,8 @@ func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
 	return nil
 }
 
+// AcquireLocks acquires locks for the passed enrollment ids.
+// This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
 func (db *AuditDB) AcquireLocks(eIDs ...string) error {
 	for _, id := range deduplicate(eIDs) {
 		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
@@ -267,6 +290,7 @@ func (db *AuditDB) AcquireLocks(eIDs ...string) error {
 	return nil
 }
 
+// Unlock unlocks the locks for the passed enrollment ids.
 func (db *AuditDB) Unlock(eIDs ...string) {
 	for _, id := range deduplicate(eIDs) {
 		lock, ok := db.eIDsLocks.Load(id)
@@ -421,6 +445,7 @@ func (db *AuditDB) appendTransactions(record *token.AuditRecord) error {
 	return nil
 }
 
+// Manager handles the audit databases
 type Manager struct {
 	sp     view2.ServiceProvider
 	driver string
@@ -428,6 +453,7 @@ type Manager struct {
 	dbs    map[string]*AuditDB
 }
 
+// NewManager creates a new audit manager
 func NewManager(sp view2.ServiceProvider, driver string) *Manager {
 	return &Manager{
 		sp:     sp,
@@ -436,6 +462,7 @@ func NewManager(sp view2.ServiceProvider, driver string) *Manager {
 	}
 }
 
+// AuditDB returns an AuditDB for the given auditor wallet
 func (cm *Manager) AuditDB(w *token.AuditorWallet) (*AuditDB, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
@@ -453,14 +480,26 @@ func (cm *Manager) AuditDB(w *token.AuditorWallet) (*AuditDB, error) {
 	return c, nil
 }
 
+var (
+	managerKey = &Manager{}
+)
+
+// GetAuditDB returns the AuditDB for the given auditor wallet.
+// Nil might be returned if the auditor wallet is not found or an error occurred.
 func GetAuditDB(sp view2.ServiceProvider, w *token.AuditorWallet) *AuditDB {
-	s, err := sp.GetService(&Manager{})
+	if w == nil {
+		logger.Debugf("no auditor wallet provided")
+		return nil
+	}
+	s, err := sp.GetService(managerKey)
 	if err != nil {
-		panic(err)
+		logger.Errorf("failed to get audit manager service: [%s]", err)
+		return nil
 	}
 	c, err := s.(*Manager).AuditDB(w)
 	if err != nil {
-		panic(err)
+		logger.Errorf("failed to get audit db for wallet [%s]: [%s]", w.ID(), err)
+		return nil
 	}
 	return c
 }

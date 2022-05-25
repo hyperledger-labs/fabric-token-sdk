@@ -16,11 +16,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -308,4 +307,8 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
 	return ai.EnrollmentID(), nil
+}
+
+func (n *Network) TxStatusListen(txID string, listener driver.TxStatusListener) error {
+	return nil
 }
