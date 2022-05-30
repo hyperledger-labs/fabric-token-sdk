@@ -39,7 +39,7 @@ func (f *PaymentsFilter) Last(num int) *PaymentsFilter {
 }
 
 func (f *PaymentsFilter) Execute() (*PaymentsFilter, error) {
-	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, nil, driver.FromLast, driver.Sent, f.LastNumRecords)
+	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, []driver.TxStatus{driver.Pending, driver.Confirmed}, driver.FromLast, driver.Sent, f.LastNumRecords)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +76,7 @@ func (f *HoldingsFilter) ByType(tokenType string) *HoldingsFilter {
 }
 
 func (f *HoldingsFilter) Execute() (*HoldingsFilter, error) {
-	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, nil, driver.FromBeginning, driver.All, 0)
+	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, []driver.TxStatus{driver.Pending, driver.Confirmed}, driver.FromBeginning, driver.All, 0)
 	if err != nil {
 		return nil, err
 	}

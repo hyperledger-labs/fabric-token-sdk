@@ -30,7 +30,7 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		RecipientEID:    "alice",
 		TokenType:       "USD",
 		Amount:          big.NewInt(110),
-		Status:          auditdb.Pending,
+		Status:          auditdb.Confirmed,
 	},
 	{
 		TxID:            "",
@@ -39,7 +39,7 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		RecipientEID:    "alice",
 		TokenType:       "USD",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Pending,
+		Status:          auditdb.Confirmed,
 	},
 	{
 		TxID:            "",
@@ -48,7 +48,7 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		RecipientEID:    "bob",
 		TokenType:       "EUR",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Pending,
+		Status:          auditdb.Confirmed,
 	},
 	{
 		TxID:            "",
@@ -57,7 +57,7 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		RecipientEID:    "bob",
 		TokenType:       "EUR",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Pending,
+		Status:          auditdb.Confirmed,
 	},
 	{
 		TxID:            "",
@@ -66,7 +66,16 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		RecipientEID:    "bob",
 		TokenType:       "EUR",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Pending,
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Transfer,
+		SenderEID:       "alice",
+		RecipientEID:    "bob",
+		TokenType:       "USD",
+		Amount:          big.NewInt(110),
+		Status:          auditdb.Confirmed,
 	},
 }
 
@@ -130,7 +139,10 @@ func TestAll(network *integration.Infrastructure) {
 	network.StartFSCNode("alice")
 	time.Sleep(5 * time.Second)
 
+	t8 := time.Now()
 	TransferCash(network, "alice", "", "USD", 110, "bob")
+	t9 := time.Now()
+	CheckAuditedTransactions(network, TestAllTransactions[5:6], &t8, &t9)
 	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(10))).To(BeEquivalentTo(0))
@@ -404,7 +416,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, expected []*a
 		Expect(tx.Amount).To(Equal(txExpected.Amount))
 		Expect(tx.TokenType).To(Equal(txExpected.TokenType))
 		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue())
-		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue())
+		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx.RecipientEID: %s, txExpected.RecipientEID: %s", tx.RecipientEID, txExpected.RecipientEID)
 		Expect(tx.Status).To(Equal(txExpected.Status))
 		Expect(tx.TransactionType).To(Equal(txExpected.TransactionType))
 	}

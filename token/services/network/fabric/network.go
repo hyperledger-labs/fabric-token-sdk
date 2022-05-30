@@ -309,6 +309,10 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	return ai.EnrollmentID(), nil
 }
 
-func (n *Network) TxStatusListen(txID string, listener driver.TxStatusListener) error {
-	return nil
+func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
+	return n.ch.Committer().SubscribeTxStatusChanges(txID, listener)
+}
+
+func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
+	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
 }

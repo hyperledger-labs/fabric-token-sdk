@@ -12,8 +12,6 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events/simple"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -57,9 +55,6 @@ func (p *SDK) Install() error {
 		return nil
 	}
 	logger.Infof("Token platform enabled, installing...")
-
-	// event service
-	assert.NoError(p.registry.RegisterService(&events.Service{EventSystem: simple.NewEventBus()}))
 
 	logger.Infof("Set TMS Provider")
 	pm := NewProcessorManager(p.registry)

@@ -43,7 +43,7 @@ func OpenDB(path string) (*Persistence, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not open DB at '%s'", path)
 	}
-	seq, err := db.GetSequence([]byte("idseq"), 1)
+	seq, err := db.GetSequence([]byte("idseq"), 10)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting sequence for DB at '%s'", path)
 	}
@@ -176,30 +176,54 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	defer it.Close()
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
-		if !strings.HasSuffix(string(item.Key()), txID) {
+
+		keyStr := string(item.Key())
+
+		var bytes []byte
+
+		switch {
+		case strings.HasPrefix(keyStr, "mv") && strings.HasSuffix(keyStr, txID):
+			record := &MovementRecord{}
+			err := item.Value(func(val []byte) error {
+				if err := json.Unmarshal(val, record); err != nil {
+					return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
+				}
+				return nil
+			})
+			if err != nil {
+				return errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
+			}
+			record.Record.Status = status
+			bytes, err = json.Marshal(record)
+			if err != nil {
+				return errors.Wrapf(err, "could not marshal record for key %s", string(item.Key()))
+			}
+		case strings.HasPrefix(keyStr, "tx") && strings.HasSuffix(keyStr, txID):
+			record := &TransactionRecord{}
+			err := item.Value(func(val []byte) error {
+				if err := json.Unmarshal(val, record); err != nil {
+					return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
+				}
+				return nil
+			})
+			if err != nil {
+				return errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
+			}
+			record.Record.Status = status
+			bytes, err = json.Marshal(record)
+			if err != nil {
+				return errors.Wrapf(err, "could not marshal record for key %s", string(item.Key()))
+			}
+		default:
 			continue
 		}
-		record := &MovementRecord{}
-		err := item.Value(func(val []byte) error {
-			if err := json.Unmarshal(val, record); err != nil {
-				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
-			}
-			return nil
-		})
-		if err != nil {
-			return errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
-		}
-		record.Record.Status = status
-		bytes, err := json.Marshal(record)
-		if err != nil {
-			return errors.Wrapf(err, "could not marshal record for key %s", string(item.Key()))
-		}
 
-		err = db.txn.Set(item.Key(), bytes)
-		if err != nil {
+		logger.Debugf("setting key %s to %s", string(item.Key()), string(bytes))
+		if err := db.txn.Set([]byte(keyStr), bytes); err != nil {
 			return errors.Wrapf(err, "could not set value for key %s", string(item.Key()))
 		}
 	}
+
 	return nil
 }
 
@@ -216,11 +240,18 @@ func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []strin
 		}
 		record := &MovementRecord{}
 		err := item.Value(func(val []byte) error {
+			if len(val) == 0 {
+				record = nil
+				return nil
+			}
 			if err := json.Unmarshal(val, record); err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
 			}
 			return nil
 		})
+		if record == nil {
+			continue
+		}
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get movementDirection for key %s", string(item.Key()))
 		}
@@ -310,6 +341,7 @@ func (p RecordSlice) Less(i, j int) bool { return p[i].Id < p[j].Id }
 func (p RecordSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 type TransactionIterator struct {
+	db   *Persistence
 	it   *badger.Iterator
 	from *time.Time
 	to   *time.Time
@@ -342,6 +374,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "could not get transaction for key %s", string(item.Key()))
 		}
+
 		// is record in the time range
 		if t.from != nil && record.Record.Timestamp.Before(*t.from) {
 			continue

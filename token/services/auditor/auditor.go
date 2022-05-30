@@ -7,13 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.auditor")
 
 type Transaction interface {
 	ID() string
@@ -88,20 +90,18 @@ func (a *Auditor) Append(tx Transaction) error {
 	if net == nil {
 		return errors.Errorf("failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
-	if err := net.TxStatusListen(tx.ID(), a.txStatusListener); err != nil {
+	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
+	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.txStatusListener}); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
+	logger.Debugf("append done for request %s", tx.ID())
 	return nil
 }
 
-func (a *Auditor) txStatusListener(txID string, status network.ValidationCode, timeout bool) error {
-	if timeout {
-		// TODO: What should we do?
-		return nil
-	}
-
+func (a *Auditor) txStatusListener(txID string, status int) error {
+	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var auditDBTxStatus auditdb.TxStatus
-	switch status {
+	switch network.ValidationCode(status) {
 	case network.Valid:
 		auditDBTxStatus = auditdb.Confirmed
 	case network.Invalid:
@@ -110,5 +110,15 @@ func (a *Auditor) txStatusListener(txID string, status network.ValidationCode, t
 	if err := a.db.SetStatus(txID, auditDBTxStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
+	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
 	return nil
+}
+
+type TxStatusChangesListener struct {
+	net      *network.Network
+	listener func(txID string, status int) error
+}
+
+func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
+	return t.listener(txID, status)
 }

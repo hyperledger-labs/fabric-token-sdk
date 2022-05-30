@@ -208,10 +208,19 @@ type AuditDB struct {
 	storeLock sync.RWMutex
 
 	eIDsLocks sync.Map
+
+	// status related fields
+	statusUpdating atomic.Bool
+	pendingTXs     []string
+	wg             sync.WaitGroup
 }
 
 func newAuditDB(p driver.AuditDB) *AuditDB {
-	return &AuditDB{db: p, eIDsLocks: sync.Map{}}
+	return &AuditDB{
+		db:         p,
+		eIDsLocks:  sync.Map{},
+		pendingTXs: make([]string, 0, 10000),
+	}
 }
 
 // Append appends the passed token request to the audit database
@@ -227,18 +236,23 @@ func (db *AuditDB) Append(req *token.Request) error {
 	}
 
 	if err := db.db.BeginUpdate(); err != nil {
+		db.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
 	}
 	if err := db.appendSendMovements(record); err != nil {
+		db.rollback(err)
 		return errors.WithMessagef(err, "append send movements for txid '%s' failed", record.Anchor)
 	}
 	if err := db.appendReceivedMovements(record); err != nil {
+		db.rollback(err)
 		return errors.WithMessagef(err, "append received movements for txid '%s' failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
+		db.rollback(err)
 		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
 	}
 	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
 		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
 	}
 
@@ -266,13 +280,12 @@ func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
 	}
 
 	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
-		if err1 := db.db.Discard(); err1 != nil {
-			logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-		}
+		db.rollback(err)
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
 	}
 
 	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
 		return errors.WithMessagef(err, "committing tx for txid '%s' failed", txID)
 	}
 
@@ -443,6 +456,12 @@ func (db *AuditDB) appendTransactions(record *token.AuditRecord) error {
 	logger.Debugf("finished appending transactions for tx [%s]", record.Anchor)
 
 	return nil
+}
+
+func (db *AuditDB) rollback(err error) {
+	if err1 := db.db.Discard(); err1 != nil {
+		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+	}
 }
 
 // Manager handles the audit databases

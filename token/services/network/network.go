@@ -31,10 +31,11 @@ const (
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
 
-// TxStatusListener is a callback function that is called when a transaction
-// status changes.
-// If a timeout is reached, the function is called with timeout set to true.
-type TxStatusListener func(txID string, status ValidationCode, timeout bool) error
+// TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
+type TxStatusChangeListener interface {
+	// OnStatusChange is called when the status of a transaction changes
+	OnStatusChange(txID string, status int) error
+}
 
 type GetFunc func() (view.Identity, []byte, error)
 
@@ -329,11 +330,15 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	return n.n.GetEnrollmentID(raw)
 }
 
-// TxStatusListen register a listener for transaction status updates for the given id
-func (n *Network) TxStatusListen(txID string, listener TxStatusListener) error {
-	return n.n.TxStatusListen(txID, func(txID string, status driver.ValidationCode, timeout bool) error {
-		return listener(txID, ValidationCode(status), timeout)
-	})
+// SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
+// TODO: introduce a TTL
+func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
+	return n.n.SubscribeTxStatusChanges(txID, listener)
+}
+
+// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
+func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error {
+	return n.n.UnsubscribeTxStatusChanges(id, listener)
 }
 
 // Provider returns an instance of network provider
