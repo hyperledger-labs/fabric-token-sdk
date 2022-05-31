@@ -57,4 +57,7 @@ type IdentityProvider interface {
 
 	// RegisterOwnerWallet registers the passed wallet as the owner wallet of the passed identity.
 	RegisterOwnerWallet(id string, typ string, path string) error
+
+	// RegisterIssuerWallet registers the passed wallet ad the issuer wallet of the passed identity.
+	RegisterIssuerWallet(id string, typ string, path string) error
 }
