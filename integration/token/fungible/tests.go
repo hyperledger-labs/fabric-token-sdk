@@ -74,7 +74,16 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		SenderEID:       "alice",
 		RecipientEID:    "bob",
 		TokenType:       "USD",
-		Amount:          big.NewInt(110),
+		Amount:          big.NewInt(20),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Transfer,
+		SenderEID:       "alice",
+		RecipientEID:    "alice",
+		TokenType:       "USD",
+		Amount:          big.NewInt(100),
 		Status:          auditdb.Confirmed,
 	},
 }
@@ -140,9 +149,10 @@ func TestAll(network *integration.Infrastructure) {
 	time.Sleep(5 * time.Second)
 
 	t8 := time.Now()
-	TransferCash(network, "alice", "", "USD", 110, "bob")
+	TransferCash(network, "alice", "", "USD", 20, "bob")
 	t9 := time.Now()
-	CheckAuditedTransactions(network, TestAllTransactions[5:6], &t8, &t9)
+	CheckAuditedTransactions(network, TestAllTransactions[5:7], &t8, &t9)
+	TransferCash(network, "alice", "", "USD", 90, "bob")
 	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(10))).To(BeEquivalentTo(0))
@@ -408,7 +418,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, expected []*a
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*auditdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	Expect(len(txs)).To(Equal(len(expected)))
+	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
 	for i, tx := range txs {
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])

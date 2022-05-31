@@ -15,6 +15,7 @@ require (
 	github.com/IBM/mathlib v0.0.0-20220112091634-0a7378db6912
 	github.com/containerd/containerd v1.5.5 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.2
+	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hashicorp/golang-lru v0.5.4 // indirect

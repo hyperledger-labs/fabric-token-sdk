@@ -9,6 +9,7 @@ package auditdb
 import (
 	"math/big"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -117,6 +118,28 @@ type TransactionRecord struct {
 	Timestamp time.Time
 	// Status is the status of the transaction
 	Status TxStatus
+}
+
+func (t *TransactionRecord) String() string {
+	var s strings.Builder
+	s.WriteString("{")
+	s.WriteString(t.TxID)
+	s.WriteString(" ")
+	s.WriteString(string(t.TransactionType))
+	s.WriteString(" ")
+	s.WriteString(t.SenderEID)
+	s.WriteString(" ")
+	s.WriteString(t.RecipientEID)
+	s.WriteString(" ")
+	s.WriteString(t.TokenType)
+	s.WriteString(" ")
+	s.WriteString(t.Amount.String())
+	s.WriteString(" ")
+	s.WriteString(t.Timestamp.String())
+	s.WriteString(" ")
+	s.WriteString(string(t.Status))
+	s.WriteString("}")
+	return s.String()
 }
 
 // TransactionIterator is an iterator over transaction records
@@ -275,20 +298,10 @@ func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	if err := db.db.BeginUpdate(); err != nil {
-		return errors.WithMessagef(err, "begin update for txid '%s' failed", txID)
-	}
-
 	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
 		db.rollback(err)
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
 	}
-
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid '%s' failed", txID)
-	}
-
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
 	return nil
 }

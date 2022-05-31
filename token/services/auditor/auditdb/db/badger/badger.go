@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package badger
 
 import (
+	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -15,6 +17,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger/v3"
+	"github.com/dgraph-io/ristretto/z"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 	"github.com/pkg/errors"
@@ -171,63 +174,84 @@ func (db *Persistence) QueryTransactions(from, to *time.Time) (driver.Transactio
 }
 
 func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
-	// Search the records for the passed transaction ID and update the status
-	it := db.txn.NewIterator(badger.DefaultIteratorOptions)
-	defer it.Close()
-	for it.Rewind(); it.Valid(); it.Next() {
-		item := it.Item()
+	// search for all matching keys
+	type Entry struct {
+		key   string
+		value []byte
+	}
+	var entries []Entry
+	stream := db.db.NewStream()
+	stream.NumGo = 16
+	stream.LogPrefix = "adutidb.SetStatus"
+	txIdAsBytes := []byte(txID)
+	stream.ChooseKey = func(item *badger.Item) bool {
+		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+	}
+	stream.Send = func(buf *z.Buffer) error {
+		list, err := badger.BufferToKVList(buf)
+		if err != nil {
+			return err
+		}
+		for _, kv := range list.Kv {
+			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
+		}
+		return nil
 
-		keyStr := string(item.Key())
+	}
+	if err := stream.Orchestrate(context.Background()); err != nil {
+		return err
+	}
 
+	if len(entries) == 0 {
+		// nothing to update
+		logger.Debugf("no entries found for txID %s, skipping", txID)
+		return nil
+	}
+
+	// update status for all matching keys
+	txn := db.db.NewTransaction(true)
+	for _, entry := range entries {
 		var bytes []byte
-
+		var err error
 		switch {
-		case strings.HasPrefix(keyStr, "mv") && strings.HasSuffix(keyStr, txID):
+		case strings.HasPrefix(entry.key, "mv"):
 			record := &MovementRecord{}
-			err := item.Value(func(val []byte) error {
-				if err := json.Unmarshal(val, record); err != nil {
-					return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
-				}
-				return nil
-			})
-			if err != nil {
-				return errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
+			if err := json.Unmarshal(entry.value, record); err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
 			bytes, err = json.Marshal(record)
 			if err != nil {
-				return errors.Wrapf(err, "could not marshal record for key %s", string(item.Key()))
+				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
-		case strings.HasPrefix(keyStr, "tx") && strings.HasSuffix(keyStr, txID):
+		case strings.HasPrefix(entry.key, "tx"):
 			record := &TransactionRecord{}
-			err := item.Value(func(val []byte) error {
-				if err := json.Unmarshal(val, record); err != nil {
-					return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
-				}
-				return nil
-			})
-			if err != nil {
-				return errors.Wrapf(err, "could not get value for key %s", string(item.Key()))
+			if err := json.Unmarshal(entry.value, record); err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
 			bytes, err = json.Marshal(record)
 			if err != nil {
-				return errors.Wrapf(err, "could not marshal record for key %s", string(item.Key()))
+				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
 		default:
 			continue
 		}
 
-		logger.Debugf("setting key %s to %s", string(item.Key()), string(bytes))
-		if err := db.txn.Set([]byte(keyStr), bytes); err != nil {
-			return errors.Wrapf(err, "could not set value for key %s", string(item.Key()))
+		logger.Debugf("setting key %s to %s", entry.key, string(bytes))
+		if err := txn.Set([]byte(entry.key), bytes); err != nil {
+			return errors.Wrapf(err, "could not set value for key %s", entry.key)
 		}
 	}
-
+	if err := txn.Commit(); err != nil {
+		txn.Discard()
+		return errors.Wrapf(err, "could not commit transaction to set status for tx %s", txID)
+	}
 	return nil
 }
 
 func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string, txStatuses []driver.TxStatus, searchDirection driver.SearchDirection, movementDirection driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
+	// TODO: Move to stream
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	var records RecordSlice
