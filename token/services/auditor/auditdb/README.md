@@ -65,3 +65,26 @@ The following example shows how to retrieve the total amount of holdings for a g
         return errors.WithMessagef(err, "failed getting holdings for enrollment id [%s] and token type [%s]", eID, tokenType)
     }
 ```
+
+## Transactions
+
+The following example shows how to retrieve the total amount of transactions for a given business party,
+
+```go
+    it, err := qe.Transactions(from, to)
+	if err != nil {
+		return err
+    }  
+    defer it.Close()
+
+    for {
+        tx, err := it.Next()
+        if err != nil {
+            return err
+        }
+        if tx == nil {
+            break
+        }
+        fmt.Println(tx)
+    }
+```

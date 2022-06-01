@@ -91,14 +91,19 @@ func (a *Auditor) Append(tx Transaction) error {
 		return errors.Errorf("failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
-	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.txStatusListener}); err != nil {
+	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.db}); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("append done for request %s", tx.ID())
 	return nil
 }
 
-func (a *Auditor) txStatusListener(txID string, status int) error {
+type TxStatusChangesListener struct {
+	net *network.Network
+	db  *auditdb.AuditDB
+}
+
+func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var auditDBTxStatus auditdb.TxStatus
 	switch network.ValidationCode(status) {
@@ -107,18 +112,9 @@ func (a *Auditor) txStatusListener(txID string, status int) error {
 	case network.Invalid:
 		auditDBTxStatus = auditdb.Deleted
 	}
-	if err := a.db.SetStatus(txID, auditDBTxStatus); err != nil {
+	if err := t.db.SetStatus(txID, auditDBTxStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
 	return nil
-}
-
-type TxStatusChangesListener struct {
-	net      *network.Network
-	listener func(txID string, status int) error
-}
-
-func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
-	return t.listener(txID, status)
 }

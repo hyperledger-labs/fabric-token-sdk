@@ -10,8 +10,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -121,7 +121,7 @@ func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed getting next index")
 	}
-	dbKey := dbKey("mv", dbKey(fmt.Sprintf("%d", next), record.TxID))
+	key := dbKey("mv", dbKey(nextLexicographicString(26, int(next)+4), record.TxID))
 
 	value := &MovementRecord{
 		Id:     next,
@@ -130,12 +130,12 @@ func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
 
 	bytes, err := json.Marshal(value)
 	if err != nil {
-		return errors.Wrapf(err, "could not marshal record for key %s", dbKey)
+		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(dbKey), bytes)
+	err = db.txn.Set([]byte(key), bytes)
 	if err != nil {
-		return errors.Wrapf(err, "could not set value for key %s", dbKey)
+		return errors.Wrapf(err, "could not set value for key %s", key)
 	}
 
 	return nil
@@ -146,7 +146,7 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed getting next index")
 	}
-	dbKey := dbKey("tx", dbKey(fmt.Sprintf("%d", next), record.TxID))
+	key := dbKey("tx", dbKey(nextLexicographicString(26, int(next)+4), record.TxID))
 
 	value := &TransactionRecord{
 		Id:     next,
@@ -155,12 +155,12 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 
 	bytes, err := json.Marshal(value)
 	if err != nil {
-		return errors.Wrapf(err, "could not marshal record for key %s", dbKey)
+		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(dbKey), bytes)
+	err = db.txn.Set([]byte(key), bytes)
 	if err != nil {
-		return errors.Wrapf(err, "could not set value for key %s", dbKey)
+		return errors.Wrapf(err, "could not set value for key %s", key)
 	}
 
 	return nil
@@ -169,7 +169,8 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 func (db *Persistence) QueryTransactions(from, to *time.Time) (driver.TransactionIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	it.Rewind()
+	it.Seek([]byte("tx"))
+
 	return &TransactionIterator{it: it, from: from, to: to}, nil
 }
 
@@ -377,7 +378,6 @@ func (t *TransactionIterator) Close() {
 
 func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	for {
-		t.it.Next()
 		if !t.it.Valid() {
 			return nil, nil
 		}
@@ -399,6 +399,8 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 			return nil, errors.Wrapf(err, "could not get transaction for key %s", string(item.Key()))
 		}
 
+		t.it.Next()
+
 		// is record in the time range
 		if t.from != nil && record.Record.Timestamp.Before(*t.from) {
 			continue
@@ -406,6 +408,23 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 		if t.to != nil && record.Record.Timestamp.After(*t.to) {
 			return nil, nil
 		}
+		logger.Debugf("found transaction [%s,%s]", string(item.Key()), record.Record.TxID)
 		return record.Record, nil
 	}
+}
+
+func nextLexicographicString(n, k int) string {
+	d := make([]int, n)
+	for i := n - 1; i > -1; i-- {
+		d[i] = k % 26
+		k /= 26
+	}
+	if k > 0 {
+		return "-1"
+	}
+	var sb strings.Builder
+	for i := 0; i < n; i++ {
+		sb.WriteString(strconv.Itoa(d[i] + ('a')))
+	}
+	return sb.String()
 }

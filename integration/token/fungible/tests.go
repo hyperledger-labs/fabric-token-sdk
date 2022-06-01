@@ -74,7 +74,7 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		SenderEID:       "alice",
 		RecipientEID:    "bob",
 		TokenType:       "USD",
-		Amount:          big.NewInt(20),
+		Amount:          big.NewInt(111),
 		Status:          auditdb.Confirmed,
 	},
 	{
@@ -83,7 +83,34 @@ var TestAllTransactions = []*auditdb.TransactionRecord{
 		SenderEID:       "alice",
 		RecipientEID:    "alice",
 		TokenType:       "USD",
+		Amount:          big.NewInt(9),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Transfer,
+		SenderEID:       "bob",
+		RecipientEID:    "bob",
+		TokenType:       "USD",
 		Amount:          big.NewInt(100),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Redeem,
+		SenderEID:       "bob",
+		RecipientEID:    "",
+		TokenType:       "USD",
+		Amount:          big.NewInt(11),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "USD",
+		Amount:          big.NewInt(10),
 		Status:          auditdb.Confirmed,
 	},
 }
@@ -149,18 +176,27 @@ func TestAll(network *integration.Infrastructure) {
 	time.Sleep(5 * time.Second)
 
 	t8 := time.Now()
-	TransferCash(network, "alice", "", "USD", 20, "bob")
+	TransferCash(network, "alice", "", "USD", 111, "bob")
 	t9 := time.Now()
 	CheckAuditedTransactions(network, TestAllTransactions[5:7], &t8, &t9)
-	TransferCash(network, "alice", "", "USD", 90, "bob")
 	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(10))).To(BeEquivalentTo(0))
+	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0))
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
 	ut = ListUnspentTokens(network, "bob", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(BeEquivalentTo(0))
+	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(BeEquivalentTo(0))
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
+
+	RedeemCash(network, "bob", "", "USD", 11)
+	t10 := time.Now()
+	CheckAuditedTransactions(network, TestAllTransactions[7:9], &t9, &t10)
+	IssueCash(network, "", "USD", 10, "bob")
+	t11 := time.Now()
+	CheckAuditedTransactions(network, TestAllTransactions[9:10], &t10, &t11)
+	CheckAuditedTransactions(network, TestAllTransactions[:], &t0, &t11)
+
+	IssueCash(network, "", "USD", 1, "alice")
 
 	CheckBalance(network, "alice", "", "USD", 10)
 	CheckBalance(network, "alice", "", "EUR", 0)
@@ -185,7 +221,7 @@ func TestAll(network *integration.Infrastructure) {
 
 	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(230))).To(BeEquivalentTo(0))
+	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", "EUR")

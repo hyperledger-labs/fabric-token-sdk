@@ -9,6 +9,7 @@ package auditdb
 import (
 	"math/big"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -125,7 +126,7 @@ func (t *TransactionRecord) String() string {
 	s.WriteString("{")
 	s.WriteString(t.TxID)
 	s.WriteString(" ")
-	s.WriteString(string(t.TransactionType))
+	s.WriteString(strconv.Itoa(int(t.TransactionType)))
 	s.WriteString(" ")
 	s.WriteString(t.SenderEID)
 	s.WriteString(" ")

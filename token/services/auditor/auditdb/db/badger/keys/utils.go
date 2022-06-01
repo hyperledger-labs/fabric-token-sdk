@@ -12,8 +12,8 @@ import (
 )
 
 var (
-	nsRegexp  = regexp.MustCompile("^[a-zA-Z0-9._-]{1,20}$")
-	keyRegexp = regexp.MustCompile("^[a-zA-Z0-9._\u0000=+/-]{1,200}$")
+	nsRegexp  = regexp.MustCompile("^[a-zA-Z0-9._-]{1,120}$")
+	keyRegexp = regexp.MustCompile("^[a-zA-Z0-9._\u0000=+/-]{1,1000}$")
 )
 
 const NamespaceSeparator = "\u0000"

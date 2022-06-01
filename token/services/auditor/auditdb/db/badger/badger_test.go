@@ -77,26 +77,36 @@ func TestTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, db)
 
-	assert.NoError(t, db.BeginUpdate())
-	now := time.Now().UTC()
-	tr := &driver.TransactionRecord{
-		TxID:            "0",
-		TransactionType: driver.Issue,
-		SenderEID:       "",
-		RecipientEID:    "alice",
-		TokenType:       "magic",
-		Amount:          big.NewInt(10),
-		Timestamp:       now,
-		Status:          driver.Pending,
-	}
-	assert.NoError(t, db.AddTransaction(tr))
-	assert.NoError(t, db.Commit())
+	var txs []*driver.TransactionRecord
 
-	it, err := db.QueryTransactions(&now, &now)
+	t0 := time.Now().UTC()
+	assert.NoError(t, db.BeginUpdate())
+
+	for i := 0; i < 20; i++ {
+		now := time.Now().UTC()
+		tr1 := &driver.TransactionRecord{
+			TxID:            fmt.Sprintf("%d", i),
+			TransactionType: driver.Issue,
+			SenderEID:       "",
+			RecipientEID:    "alice",
+			TokenType:       "magic",
+			Amount:          big.NewInt(10),
+			Timestamp:       now,
+			Status:          driver.Pending,
+		}
+		assert.NoError(t, db.AddTransaction(tr1))
+		txs = append(txs, tr1)
+	}
+	assert.NoError(t, db.Commit())
+	t1 := time.Now().UTC()
+
+	it, err := db.QueryTransactions(&t0, &t1)
 	assert.NoError(t, err)
-	tr2, err := it.Next()
-	assert.NoError(t, err)
-	assert.Equal(t, tr, tr2)
+	for i := 0; i < 20; i++ {
+		tr, err := it.Next()
+		assert.NoError(t, err)
+		assert.Equal(t, txs[i], tr)
+	}
 	it.Close()
 }
 
