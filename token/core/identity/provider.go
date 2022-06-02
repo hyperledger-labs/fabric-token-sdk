@@ -223,6 +223,10 @@ func (i *Provider) RegisterOwnerWallet(id string, typ string, path string) error
 	return i.mappers[driver.OwnerRole].RegisterIdentity(id, typ, path)
 }
 
+func (i *Provider) RegisterIssuerWallet(id string, typ string, path string) error {
+	return i.mappers[driver.IssuerRole].RegisterIdentity(id, typ, path)
+}
+
 func (i *Provider) AddDeserializer(d Deserializer) {
 	i.deserializers = append(i.deserializers, d)
 }
