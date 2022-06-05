@@ -8,10 +8,9 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
@@ -54,20 +53,11 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	}
 
 	// assemble transfer metadata
-	var ownerIdentities []view.Identity
+	var receivers []view.Identity
 	for _, output := range outs {
-		// add owner identity if not present already
-		found := false
-		for _, identity := range ownerIdentities {
-			if identity.Equal(output.Output.Owner.Raw) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			ownerIdentities = append(ownerIdentities, output.Output.Owner.Raw)
-		}
+		receivers = append(receivers, output.Output.Owner.Raw)
 	}
+
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
 		auditInfo, err := s.IP.GetAuditInfo(t.Owner.Raw)
@@ -76,6 +66,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo)
 	}
+
 	var receiverAuditInfos [][]byte
 	for _, output := range outs {
 		auditInfo, err := s.IP.GetAuditInfo(output.Output.Owner.Raw)
@@ -89,8 +80,8 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
 
-	receiverIsSender := make([]bool, len(ownerIdentities))
-	for i, receiver := range ownerIdentities {
+	receiverIsSender := make([]bool, len(receivers))
+	for i, receiver := range receivers {
 		receiverIsSender[i] = s.OwnerWalletByID(receiver) != nil
 	}
 
@@ -100,10 +91,12 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		SenderAuditInfos:   senderAuditInfos,
 		TokenIDs:           ids,
 		TokenInfo:          infos,
-		Receivers:          ownerIdentities,
+		Receivers:          receivers,
 		ReceiverIsSender:   receiverIsSender,
 		ReceiverAuditInfos: receiverAuditInfos,
 	}
+
+	logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.Outputs), len(metadata.Receivers))
 
 	// done
 	return transfer, metadata, nil

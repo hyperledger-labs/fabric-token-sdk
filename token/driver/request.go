@@ -11,7 +11,6 @@ import (
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -35,25 +34,47 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 	return err
 }
 
+// IssueMetadata contains the metadata of an issue action.
+// In more details, there is an issuer and a list of outputs.
+// For each output, there is a token info and a list of receivers with their audit info to recover their enrollment ID.
 type IssueMetadata struct {
-	Issuer     view.Identity
-	Outputs    [][]byte
-	TokenInfo  [][]byte
-	Receivers  []view.Identity
-	AuditInfos [][]byte
+	// Issuer is the identity of the issuer
+	Issuer view.Identity
+	// Outputs is the list of outputs issued
+	Outputs [][]byte
+	// TokenInfo, for each output we have a TokenInfo entry that contains secrets to de-obfuscate the output
+	TokenInfo [][]byte
+	// Receivers, for each output we have a receiver
+	Receivers []view.Identity
+	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
+	ReceiversAuditInfos [][]byte
 }
 
-// TransferMetadata contains the following information:
-// - For each TokenID there is a sender
+// TransferMetadata contains the metadata of a transfer action
+// For each TokenID there is a sender with its audit info to recover its enrollment ID,
+// For each Output there is:
+// - A TokenInfo entry to de-obfuscate the output;
+// - A Receiver identity;
+// - A ReceiverAuditInfo entry to recover the enrollment ID of the receiver
+// - A Flag to indicate if the receiver is a sender in this very same action
 type TransferMetadata struct {
-	TokenIDs           []*token2.ID
-	Outputs            [][]byte
-	TokenInfo          [][]byte
-	Senders            []view.Identity
-	SenderAuditInfos   [][]byte
-	Receivers          []view.Identity
-	ReceiverIsSender   []bool
+	// TokenIDs is the list of TokenIDs spent by this action
+	TokenIDs []*token2.ID
+	// Senders is the list of senders
+	Senders []view.Identity
+	// SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
+	SenderAuditInfos [][]byte
+
+	// Outputs is the list of outputs created by this transfer action
+	Outputs [][]byte
+	// TokenInfo, for each output we have a TokenInfo entry that contains secrets to de-obfuscate the output
+	TokenInfo [][]byte
+	// Receivers is the list of receivers
+	Receivers []view.Identity
+	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
 	ReceiverAuditInfos [][]byte
+	// ReceiverIsSender indicates if the receiver is a sender in this very same action
+	ReceiverIsSender []bool
 }
 
 type TokenRequestMetadata struct {

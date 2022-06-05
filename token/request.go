@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -11,11 +12,10 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 // IssueOptions models the options that can be passed to the issue command
@@ -238,11 +238,11 @@ func (t *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 
 	t.Metadata.Issues = append(t.Metadata.Issues,
 		driver.IssueMetadata{
-			Issuer:     issuer,
-			Outputs:    outputs,
-			TokenInfo:  tokenInfos,
-			Receivers:  []view.Identity{receiver},
-			AuditInfos: [][]byte{auditInfo},
+			Issuer:              issuer,
+			Outputs:             outputs,
+			TokenInfo:           tokenInfos,
+			Receivers:           []view.Identity{receiver},
+			ReceiversAuditInfos: [][]byte{auditInfo},
 		},
 	)
 
@@ -352,33 +352,58 @@ func (t *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 
 // Outputs returns the sequence of outputs of the request supporting sequential and parallel aggregate operations.
 func (t *Request) Outputs() (*OutputStream, error) {
+	return t.outputs(false)
+}
+
+func (t *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	tms := t.TokenService.tms
 	precision := tms.PublicParamsManager().PublicParameters().Precision()
+	meta := t.GetMetadata()
 
 	var outputs []*Output
 	for i, issue := range t.Actions.Issues {
-		action, err := tms.DeserializeIssueAction(issue)
+		// deserialize action
+		issueAction, err := tms.DeserializeIssueAction(issue)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
-		for j, output := range action.GetOutputs() {
+		// get metadata for action
+		issueMeta, err := meta.Issue(i)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting issue metadata [%d]", i)
+		}
+		if err := issueMeta.Match(&IssueAction{a: issueAction}); err != nil {
+			return nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
+		}
+
+		// extract outputs for this action
+		for j, output := range issueAction.GetOutputs() {
 			raw, err := output.Serialize()
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed deserializing issue action output [%d,%d]", i, j)
 			}
-			tok, _, err := tms.DeserializeToken(raw, t.Metadata.Issues[i].TokenInfo[j])
+
+			// is the j-th meta present? It might have been filtered out
+			if issueMeta.IsOutputAbsent(j) {
+				if failOnMissing {
+					return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
+				}
+				continue
+			}
+
+			tok, _, err := tms.DeserializeToken(raw, issueMeta.TokenInfo[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 			}
-			eID, err := tms.GetEnrollmentID(t.Metadata.Issues[i].AuditInfos[j])
+			eID, err := tms.GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
-
 			q, err := token.ToQuantity(tok.Quantity, precision)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
 			}
+
 			outputs = append(outputs, &Output{
 				ActionIndex:  i,
 				Owner:        tok.Owner.Raw,
@@ -388,23 +413,43 @@ func (t *Request) Outputs() (*OutputStream, error) {
 			})
 		}
 	}
+
 	for i, transfer := range t.Actions.Transfers {
-		action, err := tms.DeserializeTransferAction(transfer)
+		// deserialize action
+		transferAction, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
-		for j, output := range action.GetOutputs() {
+		// get metadata for action
+		transferMeta, err := meta.Transfer(i)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
+		}
+		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
+			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
+		}
+
+		for j, output := range transferAction.GetOutputs() {
 			raw, err := output.Serialize()
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed deserializing transfer action output [%d,%d]", i, j)
 			}
-			tok, _, err := tms.DeserializeToken(raw, t.Metadata.Transfers[i].TokenInfo[j])
+
+			// is the j-th meta present? It might have been filtered out
+			if transferMeta.IsOutputAbsent(j) {
+				if failOnMissing {
+					return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
+				}
+				continue
+			}
+
+			tok, _, err := tms.DeserializeToken(raw, transferMeta.TokenInfo[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 			}
 			var eID string
 			if len(tok.Owner.Raw) != 0 {
-				eID, err = tms.GetEnrollmentID(t.Metadata.Transfers[i].ReceiverAuditInfos[j])
+				eID, err = tms.GetEnrollmentID(transferMeta.ReceiverAuditInfos[j])
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 				}
@@ -414,6 +459,7 @@ func (t *Request) Outputs() (*OutputStream, error) {
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
 			}
+
 			outputs = append(outputs, &Output{
 				ActionIndex:  i,
 				Owner:        tok.Owner.Raw,
@@ -431,21 +477,52 @@ func (t *Request) Outputs() (*OutputStream, error) {
 // Notice that the inputs do not carry Type and Quantity because this information might be available to all parties.
 // If you are an auditor, you can use the AuditInputs method to get everything.
 func (t *Request) Inputs() (*InputStream, error) {
+	return t.inputs(false)
+}
+
+func (t *Request) inputs(failOnMissing bool) (*InputStream, error) {
 	tms := t.TokenService.tms
+	meta := t.GetMetadata()
 
 	var inputs []*Input
-	for i := range t.Actions.Transfers {
-		meta := t.Metadata.Transfers[i]
+	for i, transfer := range t.Actions.Transfers {
+		// deserialize action
+		transferAction, err := tms.DeserializeTransferAction(transfer)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
+		}
+		// get metadata for action
+		transferMeta, err := meta.Transfer(i)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
+		}
+		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
+			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
+		}
 
-		for j, id := range meta.TokenIDs {
-			eID, err := tms.GetEnrollmentID(t.Metadata.Transfers[i].SenderAuditInfos[j])
+		// we might not have TokenIDs if they have been filtered
+		if len(transferMeta.TokenIDs) == 0 && failOnMissing {
+			return nil, errors.Errorf("missing token ids for transfer [%d]", i)
+		}
+
+		for j, id := range transferMeta.TokenIDs {
+			// The recipient might be missing because it has been filtered out. Skip in this case
+			if transferMeta.IsInputAbsent(j) {
+				if failOnMissing {
+					return nil, errors.Errorf("missing receiver for transfer [%d,%d]", i, j)
+				}
+				continue
+			}
+
+			eID, err := tms.GetEnrollmentID(transferMeta.SenderAuditInfos[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
+
 			inputs = append(inputs, &Input{
 				ActionIndex:  i,
 				Id:           id,
-				Owner:        meta.Senders[j],
+				Owner:        transferMeta.Senders[j],
 				EnrollmentID: eID,
 			})
 		}
@@ -695,10 +772,13 @@ func (t *Request) AuditRecord() (*AuditRecord, error) {
 
 // AuditInputs is like Inputs but in addition Type and Quantity are included.
 func (t *Request) AuditInputs() (*InputStream, error) {
-	inputs, err := t.Inputs()
+	// get the input stream
+	inputs, err := t.inputs(true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting inputs")
 	}
+
+	// load the tokens corresponding to the input token ids
 	ids := inputs.IDs()
 	toks, err := t.TokenService.Vault().NewQueryEngine().ListAuditTokens(ids...)
 	if err != nil {
@@ -708,6 +788,7 @@ func (t *Request) AuditInputs() (*InputStream, error) {
 		return nil, errors.Errorf("retrieved less inputs than those in the transaction [%d][%d]", len(ids), len(toks))
 	}
 
+	// populate type and quantity
 	precision := t.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
 	for i := 0; i < len(ids); i++ {
 		in := inputs.At(i)
@@ -721,9 +802,9 @@ func (t *Request) AuditInputs() (*InputStream, error) {
 	return inputs, nil
 }
 
-// AuditOutputs is like Outputs
+// AuditOutputs returns a stream over all the outputs in the token request
 func (t *Request) AuditOutputs() (*OutputStream, error) {
-	return t.Outputs()
+	return t.outputs(true)
 }
 
 // ApplicationMetadata returns the application metadata corresponding to the given key
@@ -741,6 +822,32 @@ func (t *Request) SetApplicationMetadata(k string, v []byte) {
 		t.Metadata.Application = map[string][]byte{}
 	}
 	t.Metadata.Application[k] = v
+}
+
+// FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
+func (t *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
+	meta := &Metadata{
+		tms:                  t.TokenService.tms,
+		tokenRequestMetadata: t.Metadata,
+	}
+	filteredMeta, err := meta.FilterBy(eIDs[0])
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed filtering metadata by [%s]", eIDs[0])
+	}
+	return &Request{
+		Anchor:       t.Anchor,
+		Actions:      t.Actions,
+		Metadata:     filteredMeta.tokenRequestMetadata,
+		TokenService: t.TokenService,
+	}, nil
+}
+
+// GetMetadata returns the metadata of the request.
+func (t *Request) GetMetadata() *Metadata {
+	return &Metadata{
+		tms:                  t.TokenService.tms,
+		tokenRequestMetadata: t.Metadata,
+	}
 }
 
 func (t *Request) countOutputs() (int, error) {
