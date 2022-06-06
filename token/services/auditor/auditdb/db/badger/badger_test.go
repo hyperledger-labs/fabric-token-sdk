@@ -11,6 +11,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"sort"
 	"testing"
 	"time"
 
@@ -108,6 +109,17 @@ func TestTransaction(t *testing.T) {
 		assert.Equal(t, txs[i], tr)
 	}
 	it.Close()
+}
+
+func TestKThLexicographicString(t *testing.T) {
+	var list []string
+	for i := 0; i < 100; i++ {
+		list = append(list, kThLexicographicString(26, i))
+	}
+	sort.Strings(list)
+	for i := 0; i < 100; i++ {
+		assert.Equal(t, list[i], kThLexicographicString(26, i))
+	}
 }
 
 var tempDir string

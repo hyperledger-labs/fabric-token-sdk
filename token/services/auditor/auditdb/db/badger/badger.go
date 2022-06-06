@@ -9,9 +9,7 @@ package badger
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"sort"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -21,6 +19,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 	"github.com/pkg/errors"
+)
+
+const (
+	// SeqBandwidth sets the size of the lease, determining how many Next() requests can be served from memory
+	SeqBandwidth = 10
+	// IndexLength is the length of the index used to store the sequence
+	IndexLength = 26
 )
 
 type MovementRecord struct {
@@ -46,7 +51,7 @@ func OpenDB(path string) (*Persistence, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not open DB at '%s'", path)
 	}
-	seq, err := db.GetSequence([]byte("idseq"), 10)
+	seq, err := db.GetSequence([]byte("idseq"), SeqBandwidth)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting sequence for DB at '%s'", path)
 	}
@@ -117,18 +122,17 @@ func (db *Persistence) Discard() error {
 }
 
 func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
-	next, err := db.seq.Next()
+	next, key, err := db.movementKey(record.TxID)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting next index")
+		return errors.Wrapf(err, "could not get key for movement %s", record.TxID)
 	}
-	key := dbKey("mv", dbKey(nextLexicographicString(26, int(next)+4), record.TxID))
 
 	value := &MovementRecord{
 		Id:     next,
 		Record: record,
 	}
 
-	bytes, err := json.Marshal(value)
+	bytes, err := MarshalMovementRecord(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
@@ -142,18 +146,17 @@ func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
 }
 
 func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
-	next, err := db.seq.Next()
+	next, key, err := db.transactionKey(record.TxID)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting next index")
+		return errors.Wrapf(err, "could not get key for transaction %s", record.TxID)
 	}
-	key := dbKey("tx", dbKey(nextLexicographicString(26, int(next)+4), record.TxID))
 
 	value := &TransactionRecord{
 		Id:     next,
 		Record: record,
 	}
 
-	bytes, err := json.Marshal(value)
+	bytes, err := MarshalTransactionRecord(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
@@ -213,25 +216,24 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	txn := db.db.NewTransaction(true)
 	for _, entry := range entries {
 		var bytes []byte
-		var err error
 		switch {
 		case strings.HasPrefix(entry.key, "mv"):
-			record := &MovementRecord{}
-			if err := json.Unmarshal(entry.value, record); err != nil {
+			record, err := UnmarshalMovementRecord(entry.value)
+			if err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
-			bytes, err = json.Marshal(record)
+			bytes, err = MarshalMovementRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
 		case strings.HasPrefix(entry.key, "tx"):
-			record := &TransactionRecord{}
-			if err := json.Unmarshal(entry.value, record); err != nil {
+			record, err := UnmarshalTransactionRecord(entry.value)
+			if err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
-			bytes, err = json.Marshal(record)
+			bytes, err = MarshalTransactionRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
@@ -258,18 +260,26 @@ func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []strin
 	var records RecordSlice
 	defer it.Close()
 
+	selector := &MovementSelector{
+		enrollmentIDs:     enrollmentIDs,
+		tokenTypes:        tokenTypes,
+		txStatuses:        txStatuses,
+		searchDirection:   searchDirection,
+		movementDirection: movementDirection,
+	}
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		if !strings.HasPrefix(string(item.Key()), "mv") {
 			continue
 		}
-		record := &MovementRecord{}
+		var record *MovementRecord
 		err := item.Value(func(val []byte) error {
 			if len(val) == 0 {
 				record = nil
 				return nil
 			}
-			if err := json.Unmarshal(val, record); err != nil {
+			var err error
+			if record, err = UnmarshalMovementRecord(val); err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
 			}
 			return nil
@@ -282,57 +292,9 @@ func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []strin
 		}
 
 		// filter
-		if len(enrollmentIDs) != 0 {
-			found := false
-			for _, id := range enrollmentIDs {
-				if record.Record.EnrollmentID == id {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
+		if selector.Select(record) {
+			records = append(records, record)
 		}
-		if len(tokenTypes) != 0 {
-			found := false
-			for _, typ := range tokenTypes {
-				if record.Record.TokenType == typ {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		}
-		if len(txStatuses) != 0 {
-			found := false
-			for _, st := range txStatuses {
-				if record.Record.Status == st {
-					found = true
-					break
-				}
-			}
-			if !found {
-				continue
-			}
-		} else {
-			// exclude the deleted
-			if record.Record.Status == driver.Deleted {
-				continue
-			}
-		}
-
-		if movementDirection == driver.Sent && record.Record.Amount.Sign() > 0 {
-			continue
-		}
-
-		if movementDirection == driver.Received && record.Record.Amount.Sign() < 0 {
-			continue
-		}
-
-		records = append(records, record)
 	}
 
 	// Sort
@@ -353,6 +315,22 @@ func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []strin
 	}
 
 	return res, nil
+}
+
+func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
+	next, err := db.seq.Next()
+	if err != nil {
+		return 0, "", errors.Wrapf(err, "failed getting next index")
+	}
+	return next, dbKey("tx", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
+}
+
+func (db *Persistence) movementKey(txID string) (uint64, string, error) {
+	next, err := db.seq.Next()
+	if err != nil {
+		return 0, "", errors.Wrapf(err, "failed getting next index")
+	}
+	return next, dbKey("mv", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
 }
 
 func dbKey(namespace, key string) string {
@@ -385,12 +363,16 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 		if item == nil {
 			return nil, nil
 		}
+
 		if !strings.HasPrefix(string(item.Key()), "tx") {
+			t.it.Next()
 			continue
 		}
-		record := &TransactionRecord{}
+
+		var record *TransactionRecord
 		err := item.Value(func(val []byte) error {
-			if err := json.Unmarshal(val, record); err != nil {
+			var err error
+			if record, err = UnmarshalTransactionRecord(val); err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
 			}
 			return nil
@@ -413,7 +395,9 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	}
 }
 
-func nextLexicographicString(n, k int) string {
+// kThLexicographicString returns the k-th string of length n over alphabet (a+25) in lexicographic order.
+func kThLexicographicString(n, k int) string {
+	//k += 4
 	d := make([]int, n)
 	for i := n - 1; i > -1; i-- {
 		d[i] = k % 26
@@ -424,7 +408,71 @@ func nextLexicographicString(n, k int) string {
 	}
 	var sb strings.Builder
 	for i := 0; i < n; i++ {
-		sb.WriteString(strconv.Itoa(d[i] + ('a')))
+		sb.WriteRune(rune(d[i] + ('a')))
 	}
 	return sb.String()
+}
+
+// MovementSelector is used to select a set of movement records
+type MovementSelector struct {
+	enrollmentIDs     []string
+	tokenTypes        []string
+	txStatuses        []driver.TxStatus
+	searchDirection   driver.SearchDirection
+	movementDirection driver.MovementDirection
+}
+
+// Select returns true is the record matches the selection criteria
+func (m *MovementSelector) Select(record *MovementRecord) bool {
+	if len(m.enrollmentIDs) != 0 {
+		found := false
+		for _, id := range m.enrollmentIDs {
+			if record.Record.EnrollmentID == id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	if len(m.tokenTypes) != 0 {
+		found := false
+		for _, typ := range m.tokenTypes {
+			if record.Record.TokenType == typ {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	if len(m.txStatuses) != 0 {
+		found := false
+		for _, st := range m.txStatuses {
+			if record.Record.Status == st {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false
+		}
+	} else {
+		// exclude the deleted
+		if record.Record.Status == driver.Deleted {
+			return false
+		}
+	}
+
+	if m.movementDirection == driver.Sent && record.Record.Amount.Sign() > 0 {
+		return false
+	}
+
+	if m.movementDirection == driver.Received && record.Record.Amount.Sign() < 0 {
+		return false
+	}
+
+	return true
 }
