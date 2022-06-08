@@ -8,29 +8,132 @@ package fungible
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
 
-	. "github.com/onsi/gomega"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	. "github.com/onsi/gomega"
 )
+
+var TestAllTransactions = []*auditdb.TransactionRecord{
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "alice",
+		TokenType:       "USD",
+		Amount:          big.NewInt(110),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "alice",
+		TokenType:       "USD",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "EUR",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "EUR",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "EUR",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Transfer,
+		SenderEID:       "alice",
+		RecipientEID:    "bob",
+		TokenType:       "USD",
+		Amount:          big.NewInt(111),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Transfer,
+		SenderEID:       "alice",
+		RecipientEID:    "alice",
+		TokenType:       "USD",
+		Amount:          big.NewInt(9),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Transfer,
+		SenderEID:       "bob",
+		RecipientEID:    "bob",
+		TokenType:       "USD",
+		Amount:          big.NewInt(100),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Redeem,
+		SenderEID:       "bob",
+		RecipientEID:    "",
+		TokenType:       "USD",
+		Amount:          big.NewInt(11),
+		Status:          auditdb.Confirmed,
+	},
+	{
+		TxID:            "",
+		TransactionType: auditdb.Issue,
+		SenderEID:       "",
+		RecipientEID:    "bob",
+		TokenType:       "USD",
+		Amount:          big.NewInt(10),
+		Status:          auditdb.Confirmed,
+	},
+}
 
 func TestAll(network *integration.Infrastructure) {
 	RegisterAuditor(network)
 
+	t0 := time.Now()
 	// Rest of the test
 	IssueCash(network, "", "USD", 110, "alice")
+	t1 := time.Now()
 	CheckBalance(network, "alice", "", "USD", 110)
+	CheckAuditedTransactions(network, TestAllTransactions[:1], nil, nil)
+	CheckAuditedTransactions(network, TestAllTransactions[:1], &t0, &t1)
+
+	t2 := time.Now()
 	IssueCash(network, "", "USD", 10, "alice")
+	t3 := time.Now()
 	CheckBalance(network, "alice", "", "USD", 120)
 	CheckBalance(network, "alice", "alice", "USD", 120)
+	CheckAuditedTransactions(network, TestAllTransactions[:2], nil, nil)
+	CheckAuditedTransactions(network, TestAllTransactions[:2], &t0, &t3)
+	CheckAuditedTransactions(network, TestAllTransactions[1:2], &t2, &t3)
 
 	h := ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -40,12 +143,19 @@ func TestAll(network *integration.Infrastructure) {
 	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
+	t4 := time.Now()
 	IssueCash(network, "", "EUR", 10, "bob")
+	//t5 := time.Now()
 	CheckBalance(network, "bob", "", "EUR", 10)
 	IssueCash(network, "", "EUR", 10, "bob")
+	//t6 := time.Now()
 	CheckBalance(network, "bob", "", "EUR", 20)
 	IssueCash(network, "", "EUR", 10, "bob")
+	t7 := time.Now()
 	CheckBalance(network, "bob", "", "EUR", 30)
+	CheckAuditedTransactions(network, TestAllTransactions[:5], nil, nil)
+	CheckAuditedTransactions(network, TestAllTransactions[:5], &t0, &t7)
+	CheckAuditedTransactions(network, TestAllTransactions[2:5], &t4, &t7)
 
 	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -65,15 +175,28 @@ func TestAll(network *integration.Infrastructure) {
 	network.StartFSCNode("alice")
 	time.Sleep(5 * time.Second)
 
-	TransferCash(network, "alice", "", "USD", 110, "bob")
+	t8 := time.Now()
+	TransferCash(network, "alice", "", "USD", 111, "bob")
+	t9 := time.Now()
+	CheckAuditedTransactions(network, TestAllTransactions[5:7], &t8, &t9)
 	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(10))).To(BeEquivalentTo(0))
+	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0))
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
 	ut = ListUnspentTokens(network, "bob", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(BeEquivalentTo(0))
+	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(BeEquivalentTo(0))
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
+
+	RedeemCash(network, "bob", "", "USD", 11)
+	t10 := time.Now()
+	CheckAuditedTransactions(network, TestAllTransactions[7:9], &t9, &t10)
+	IssueCash(network, "", "USD", 10, "bob")
+	t11 := time.Now()
+	CheckAuditedTransactions(network, TestAllTransactions[9:10], &t10, &t11)
+	CheckAuditedTransactions(network, TestAllTransactions[:], &t0, &t11)
+
+	IssueCash(network, "", "USD", 1, "alice")
 
 	CheckBalance(network, "alice", "", "USD", 10)
 	CheckBalance(network, "alice", "", "EUR", 0)
@@ -98,7 +221,7 @@ func TestAll(network *integration.Infrastructure) {
 
 	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(230))).To(BeEquivalentTo(0))
+	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", "EUR")
@@ -321,6 +444,28 @@ func IssueCashFail(network *integration.Infrastructure, typ string, amount uint6
 		Recipient: network.Identity(receiver),
 	}))
 	Expect(err).To(HaveOccurred())
+}
+
+func CheckAuditedTransactions(network *integration.Infrastructure, expected []*auditdb.TransactionRecord, start *time.Time, end *time.Time) {
+	txsBoxed, err := network.Client("auditor").CallView("history", common.JSONMarshall(&views.ListAuditedTransactions{
+		From: start,
+		To:   end,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	var txs []*auditdb.TransactionRecord
+	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
+	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
+	for i, tx := range txs {
+		fmt.Printf("tx %d: %+v\n", i, tx)
+		fmt.Printf("expected %d: %+v\n", i, expected[i])
+		txExpected := expected[i]
+		Expect(tx.Amount).To(Equal(txExpected.Amount))
+		Expect(tx.TokenType).To(Equal(txExpected.TokenType))
+		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue())
+		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx.RecipientEID: %s, txExpected.RecipientEID: %s", tx.RecipientEID, txExpected.RecipientEID)
+		Expect(tx.Status).To(Equal(txExpected.Status))
+		Expect(tx.TransactionType).To(Equal(txExpected.TransactionType))
+	}
 }
 
 func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {

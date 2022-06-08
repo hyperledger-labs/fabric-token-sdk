@@ -11,9 +11,14 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+// TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
+type TxStatusChangeListener interface {
+	// OnStatusChange is called when the status of a transaction changes
+	OnStatusChange(txID string, status int) error
+}
 
 type TransientMap map[string][]byte
 
@@ -79,4 +84,10 @@ type Network interface {
 
 	// GetEnrollmentID returns the enrollment id of the passed identity
 	GetEnrollmentID(raw []byte) (string, error)
+
+	// SubscribeTxStatusChanges registers a listener for transaction status changes for the passed id
+	SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error
+
+	// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
+	UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error
 }

@@ -14,11 +14,10 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type ValidationCode int
@@ -31,6 +30,12 @@ const (
 	Unknown                        // Transaction is unknown
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
+
+// TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
+type TxStatusChangeListener interface {
+	// OnStatusChange is called when the status of a transaction changes
+	OnStatusChange(txID string, status int) error
+}
 
 type GetFunc func() (view.Identity, []byte, error)
 
@@ -208,18 +213,22 @@ func (l *LocalMembership) RegisterIdentity(id string, typ string, path string) e
 	return l.lm.RegisterIdentity(id, typ, path)
 }
 
+// Network provides access to the remote network
 type Network struct {
 	n driver.Network
 }
 
+// Name returns the name of the network
 func (n *Network) Name() string {
 	return n.n.Name()
 }
 
+// Channel returns the channel name
 func (n *Network) Channel() string {
 	return n.n.Channel()
 }
 
+// Vault returns the vault for the given namespace
 func (n *Network) Vault(namespace string) (*Vault, error) {
 	v, err := n.n.Vault(namespace)
 	if err != nil {
@@ -228,6 +237,7 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	return &Vault{v: v}, nil
 }
 
+// GetRWSet returns the read-write set unmarshalled from the given bytes and bound to the given id
 func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
 	rws, err := n.n.GetRWSet(id, results)
 	if err != nil {
@@ -236,10 +246,12 @@ func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
 	return &RWSet{rws: rws}, nil
 }
 
+// StoreEnvelope stores locally the given transaction envelope and associated it with the given id
 func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.StoreEnvelope(id, env)
 }
 
+// Broadcast sends the given blob to the network
 func (n *Network) Broadcast(blob interface{}) error {
 	switch b := blob.(type) {
 	case *Envelope:
@@ -249,26 +261,32 @@ func (n *Network) Broadcast(blob interface{}) error {
 	}
 }
 
+// IsFinalForParties returns true if the given transaction is final for the given parties
 func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
 	return n.n.IsFinalForParties(id, endpoints...)
 }
 
+// IsFinal returns true if the given transaction is final
 func (n *Network) IsFinal(id string) error {
 	return n.n.IsFinal(id)
 }
 
+// AnonymousIdentity returns a fresh anonymous identity
 func (n *Network) AnonymousIdentity() view.Identity {
 	return n.n.LocalMembership().AnonymousIdentity()
 }
 
+// NewEnvelope creates a new envelope
 func (n *Network) NewEnvelope() *Envelope {
 	return &Envelope{e: n.n.NewEnvelope()}
 }
 
+// StoreTransient stores locally the given transient data and associated it with the given id
 func (n *Network) StoreTransient(id string, transient TransientMap) error {
 	return n.n.StoreTransient(id, driver.TransientMap(transient))
 }
 
+// RequestApproval requests approval for the given token request
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
 	env, err := n.n.RequestApproval(context, namespace, requestRaw, signer, driver.TxID{
 		Nonce:   txID.Nonce,
@@ -280,6 +298,7 @@ func (n *Network) RequestApproval(context view.Context, namespace string, reques
 	return &Envelope{e: env}, nil
 }
 
+// ComputeTxID computes the transaction ID in the target network format for the given tx id
 func (n *Network) ComputeTxID(id *TxID) string {
 	temp := &driver.TxID{
 		Nonce:   id.Nonce,
@@ -291,22 +310,37 @@ func (n *Network) ComputeTxID(id *TxID) string {
 	return txID
 }
 
+// FetchPublicParameters returns the public parameters for the given namespace
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return n.n.FetchPublicParameters(namespace)
 }
 
+// QueryTokens returns the tokens corresponding to the given token ids int the given namespace
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
 	return n.n.QueryTokens(context, namespace, IDs)
 }
 
+// LocalMembership returns the local membership for this network
 func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
 }
 
+// GetEnrollmentID returns the enrollment ID bound to the passed marshalled audit info
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	return n.n.GetEnrollmentID(raw)
 }
 
+// SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
+func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
+	return n.n.SubscribeTxStatusChanges(txID, listener)
+}
+
+// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
+func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error {
+	return n.n.UnsubscribeTxStatusChanges(id, listener)
+}
+
+// Provider returns an instance of network provider
 type Provider struct {
 	sp view2.ServiceProvider
 
@@ -314,6 +348,7 @@ type Provider struct {
 	networks map[string]*Network
 }
 
+// NewProvider returns a new instance of network provider
 func NewProvider(sp view2.ServiceProvider) *Provider {
 	ms := &Provider{
 		sp:       sp,
@@ -322,6 +357,7 @@ func NewProvider(sp view2.ServiceProvider) *Provider {
 	return ms
 }
 
+// GetNetwork returns a network instance for the given network and channel
 func (np *Provider) GetNetwork(network string, channel string) (*Network, error) {
 	np.lock.Lock()
 	defer np.lock.Unlock()
@@ -356,6 +392,7 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 	return nil, errors.Errorf("no network driver found for [%s:%s]", network, channel)
 }
 
+// GetInstance returns a network instance for the given network and channel
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
 	s, err := sp.GetService(&Provider{})
 	if err != nil {

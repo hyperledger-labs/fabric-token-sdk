@@ -58,10 +58,10 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 
 		history, err := wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
-		fmt.Printf("History [%s,%s]<[230]?\n", history.Sum(precision).ToBigInt().Text(10), p.TokenType)
+		fmt.Printf("History [%s,%s]<[241]?\n", history.Sum(precision).ToBigInt().Text(10), p.TokenType)
 
-		// Fail if the sum of the issued tokens and the current quest is larger than 230
-		assert.True(history.Sum(precision).Add(token2.NewQuantityFromUInt64(p.Quantity)).Cmp(token2.NewQuantityFromUInt64(230)) <= 0)
+		// Fail if the sum of the issued tokens and the current quest is larger than 241
+		assert.True(history.Sum(precision).Add(token2.NewQuantityFromUInt64(p.Quantity)).Cmp(token2.NewQuantityFromUInt64(241)) <= 0)
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.

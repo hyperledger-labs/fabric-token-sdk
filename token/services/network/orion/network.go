@@ -168,6 +168,14 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 	return ai.EnrollmentID(), nil
 }
 
+func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
+	return n.n.Committer().SubscribeTxStatusChanges(txID, listener)
+}
+
+func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
+	return n.n.Committer().UnsubscribeTxStatusChanges(txID, listener)
+}
+
 type nv struct {
 	v          *orion.Vault
 	tokenVault *vault.Vault

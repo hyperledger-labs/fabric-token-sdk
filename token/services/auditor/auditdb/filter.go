@@ -3,14 +3,14 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package auditdb
 
 import (
 	"math/big"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type PaymentsFilter struct {
@@ -20,7 +20,7 @@ type PaymentsFilter struct {
 	Types          []string
 	LastNumRecords int
 
-	records []*driver.Record
+	records []*driver.MovementRecord
 }
 
 func (f *PaymentsFilter) ByEnrollmentId(id string) *PaymentsFilter {
@@ -39,7 +39,7 @@ func (f *PaymentsFilter) Last(num int) *PaymentsFilter {
 }
 
 func (f *PaymentsFilter) Execute() (*PaymentsFilter, error) {
-	records, err := f.db.db.Query(f.EnrollmentIds, f.Types, nil, driver.FromLast, driver.Sent, f.LastNumRecords)
+	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, []driver.TxStatus{driver.Pending, driver.Confirmed}, driver.FromLast, driver.Sent, f.LastNumRecords)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +62,7 @@ type HoldingsFilter struct {
 	EnrollmentIds []string
 	Types         []string
 
-	records []*driver.Record
+	records []*driver.MovementRecord
 }
 
 func (f *HoldingsFilter) ByEnrollmentId(id string) *HoldingsFilter {
@@ -76,7 +76,7 @@ func (f *HoldingsFilter) ByType(tokenType string) *HoldingsFilter {
 }
 
 func (f *HoldingsFilter) Execute() (*HoldingsFilter, error) {
-	records, err := f.db.db.Query(f.EnrollmentIds, f.Types, nil, driver.FromBeginning, driver.All, 0)
+	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, []driver.TxStatus{driver.Pending, driver.Confirmed}, driver.FromBeginning, driver.All, 0)
 	if err != nil {
 		return nil, err
 	}

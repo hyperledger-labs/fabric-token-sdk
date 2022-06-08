@@ -37,7 +37,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("info", "")
+	fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -62,6 +62,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 		token.WithAuditorIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),

@@ -171,6 +171,10 @@ func (t *Transaction) Namespace() string {
 	return t.Payload.Namespace
 }
 
+func (t *Transaction) Request() *token.Request {
+	return t.Payload.TokenRequest
+}
+
 func (t *Transaction) Bytes() ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("marshalling tx, id [%s]", t.Payload.TxID.String())

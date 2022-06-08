@@ -46,6 +46,9 @@ func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStr
 	return a.auditor.Audit(tx.TokenRequest)
 }
 
+// NewQueryExecutor returns a new query executor. The query executor is used to
+// execute queries against the AuditDB.
+// The function `Done` on the query executor must be called when it is no longer needed.
 func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
@@ -166,30 +169,14 @@ func NewAuditApproveView(w *token.AuditorWallet, tx *Transaction) *AuditApproveV
 
 func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 	// Append audit records
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("store audit records...")
-	}
-	auditRecord, err := a.tx.TokenRequest.AuditRecord()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting audit records for tx [%s]", a.tx.ID())
-	}
-	if err := auditdb.GetAuditDB(context, a.w).Append(auditRecord); err != nil {
-		return nil, errors.WithMessagef(err, "failed appening audit records for tx [%s]", a.tx.ID())
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("store audit records...done")
+	if err := auditor.New(context, a.w).Append(a.tx); err != nil {
+		return nil, errors.Wrapf(err, "failed appending audit records for transaction %s", a.tx.ID())
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("sign and send back")
-	}
 	if err := a.signAndSendBack(context); err != nil {
 		return nil, err
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("audit approve done")
-	}
 	return nil, nil
 }
 

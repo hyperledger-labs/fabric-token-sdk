@@ -15,54 +15,51 @@ import (
 
 func Test(t *testing.T) {
 	db := &Persistence{}
-	err := db.AddRecord(&driver.Record{
+	err := db.AddMovement(&driver.MovementRecord{
 		TxID:         "0",
-		ActionIndex:  0,
 		EnrollmentID: "alice",
 		Amount:       big.NewInt(10),
-		Type:         "EUR",
+		TokenType:    "EUR",
 		Status:       driver.Pending,
 	})
 	assert.NoError(t, err)
-	err = db.AddRecord(&driver.Record{
-		TxID:         "0",
-		ActionIndex:  0,
+	err = db.AddMovement(&driver.MovementRecord{
+		TxID:         "1",
 		EnrollmentID: "alice",
 		Amount:       big.NewInt(20),
-		Type:         "EUR",
+		TokenType:    "EUR",
 		Status:       driver.Pending,
 	})
 	assert.NoError(t, err)
-	err = db.AddRecord(&driver.Record{
-		TxID:         "0",
-		ActionIndex:  0,
+	err = db.AddMovement(&driver.MovementRecord{
+		TxID:         "2",
 		EnrollmentID: "alice",
 		Amount:       big.NewInt(-5),
-		Type:         "EUR",
+		TokenType:    "EUR",
 		Status:       driver.Pending,
 	})
 	assert.NoError(t, err)
 
-	records, err := db.Query([]string{"alice"}, []string{"EUR"}, nil, driver.FromBeginning, driver.Sent, 0)
+	records, err := db.QueryMovements([]string{"alice"}, []string{"EUR"}, nil, driver.FromBeginning, driver.Sent, 0)
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
-	records, err = db.Query([]string{"alice"}, []string{"EUR"}, nil, driver.FromLast, driver.Sent, 0)
+	records, err = db.QueryMovements([]string{"alice"}, []string{"EUR"}, nil, driver.FromLast, driver.Sent, 0)
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
-	records, err = db.Query([]string{"alice"}, []string{"EUR"}, nil, driver.FromLast, driver.Received, 0)
+	records, err = db.QueryMovements([]string{"alice"}, []string{"EUR"}, nil, driver.FromLast, driver.Received, 0)
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
-	records, err = db.Query([]string{"alice"}, []string{"EUR"}, nil, driver.FromLast, driver.Received, 1)
+	records, err = db.QueryMovements([]string{"alice"}, []string{"EUR"}, nil, driver.FromLast, driver.Received, 1)
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
 
-	records, err = db.Query([]string{"bob"}, []string{"EUR"}, nil, driver.FromBeginning, driver.Sent, 0)
+	records, err = db.QueryMovements([]string{"bob"}, []string{"EUR"}, nil, driver.FromBeginning, driver.Sent, 0)
 	assert.NoError(t, err)
 	assert.Len(t, records, 0)
-	records, err = db.Query([]string{"alice"}, []string{"USD"}, nil, driver.FromBeginning, driver.Sent, 0)
+	records, err = db.QueryMovements([]string{"alice"}, []string{"USD"}, nil, driver.FromBeginning, driver.Sent, 0)
 	assert.NoError(t, err)
 	assert.Len(t, records, 0)
-	records, err = db.Query([]string{"alice"}, []string{"EUR"}, []driver.Status{driver.Confirmed}, driver.FromBeginning, driver.Sent, 0)
+	records, err = db.QueryMovements([]string{"alice"}, []string{"EUR"}, []driver.TxStatus{driver.Confirmed}, driver.FromBeginning, driver.Sent, 0)
 	assert.NoError(t, err)
 	assert.Len(t, records, 0)
 }
