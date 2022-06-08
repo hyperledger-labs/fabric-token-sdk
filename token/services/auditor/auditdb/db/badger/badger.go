@@ -26,6 +26,10 @@ const (
 	SeqBandwidth = 10
 	// IndexLength is the length of the index used to store the sequence
 	IndexLength = 26
+	// DefaultNumGoStream is the default number of goroutines used to process the DB streams
+	DefaultNumGoStream = 16
+	// streamLogPrefixStatus is the prefix for the status log
+	streamLogPrefixStatus = "auditdb.SetStatus"
 )
 
 type MovementRecord struct {
@@ -39,11 +43,11 @@ type TransactionRecord struct {
 }
 
 type Persistence struct {
-	db *badger.DB
-
-	seq     *badger.Sequence
-	txn     *badger.Txn
-	txnLock sync.Mutex
+	db          *badger.DB
+	numGoStream int
+	seq         *badger.Sequence
+	txn         *badger.Txn
+	txnLock     sync.Mutex
 }
 
 func OpenDB(path string) (*Persistence, error) {
@@ -56,7 +60,7 @@ func OpenDB(path string) (*Persistence, error) {
 		return nil, errors.Wrapf(err, "failed getting sequence for DB at '%s'", path)
 	}
 
-	return &Persistence{db: db, seq: seq}, nil
+	return &Persistence{db: db, seq: seq, numGoStream: DefaultNumGoStream}, nil
 }
 
 func (db *Persistence) Close() error {
@@ -185,8 +189,8 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	}
 	var entries []Entry
 	stream := db.db.NewStream()
-	stream.NumGo = 16
-	stream.LogPrefix = "adutidb.SetStatus"
+	stream.NumGo = db.numGoStream
+	stream.LogPrefix = streamLogPrefixStatus
 	txIdAsBytes := []byte(txID)
 	stream.ChooseKey = func(item *badger.Item) bool {
 		return bytes.HasSuffix(item.Key(), txIdAsBytes)
