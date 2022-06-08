@@ -331,7 +331,6 @@ func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
 }
 
 // SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
-// TODO: introduce a TTL
 func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
 	return n.n.SubscribeTxStatusChanges(txID, listener)
 }

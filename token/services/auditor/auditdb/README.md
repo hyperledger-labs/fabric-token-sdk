@@ -20,7 +20,7 @@ An `Audit Record` can be obtained from a `Token Request`.
 Usually Token Requests are themselves embedded in token transactions.
 
 Here is an example of extraction of an audit record from a token request, and
-appending of the record to the audit DB:
+appending of the record to the Audit DB:
 
 ```go
 	auditRecord, err := tx.TokenRequest.AuditRecord()
@@ -28,7 +28,7 @@ appending of the record to the audit DB:
 		return errors.WithMessagef(err, "failed getting audit records for tx [%s]", tx.ID())
 	}
 	if err := auditDB.Append(auditRecord); err != nil {
-		return errors.WithMessagef(err, "failed appening audit records for tx [%s]", tx.ID())
+		return errors.WithMessagef(err, "failed appending audit records for tx [%s]", tx.ID())
 	}
 ```
 

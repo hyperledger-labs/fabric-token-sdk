@@ -8,6 +8,7 @@ package auditdb
 
 import (
 	"math/big"
+	"reflect"
 	"sort"
 	"strconv"
 	"strings"
@@ -514,7 +515,7 @@ func (cm *Manager) AuditDB(w *token.AuditorWallet) (*AuditDB, error) {
 }
 
 var (
-	managerKey = &Manager{}
+	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
 // GetAuditDB returns the AuditDB for the given auditor wallet.
@@ -524,7 +525,7 @@ func GetAuditDB(sp view2.ServiceProvider, w *token.AuditorWallet) *AuditDB {
 		logger.Debugf("no auditor wallet provided")
 		return nil
 	}
-	s, err := sp.GetService(managerKey)
+	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get audit manager service: [%s]", err)
 		return nil
