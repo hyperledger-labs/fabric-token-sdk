@@ -14,6 +14,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const DefaultCacheSize = 3
+
 type IdentityCacheBackendFunc func(opts *driver2.IdentityOptions) (view.Identity, []byte, error)
 
 type identityCacheEntry struct {

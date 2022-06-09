@@ -315,8 +315,9 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 			IdemixMSP,
 			provider.EnrollmentID(),
 			setDefault,
-			NewIdentityCache(provider.Identity, 500).Identity,
+			NewIdentityCache(provider.Identity, DefaultCacheSize).Identity,
 		)
+		logger.Debugf("added %s resolver for id %s with cache of size %d", IdemixMSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 	case BccspMSP:
 		provider, err := x509.NewProvider(lm.cm.TranslatePath(path), typeAndMspID[1], lm.signerService)
 		if err != nil {
@@ -361,8 +362,9 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 				IdemixMSP,
 				provider.EnrollmentID(),
 				false,
-				NewIdentityCache(provider.Identity, 500).Identity,
+				NewIdentityCache(provider.Identity, DefaultCacheSize).Identity,
 			)
+			logger.Debugf("added %s resolver for id %s with cache of size %d", IdemixMSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 		}
 	case BccspMSPFolder:
 		entries, err := ioutil.ReadDir(lm.cm.TranslatePath(path))
