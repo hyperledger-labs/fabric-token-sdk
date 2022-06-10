@@ -333,8 +333,13 @@ func (db *AuditDB) Unlock(eIDs ...string) {
 func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
-	eIDs := outputs.EnrollmentIDs()
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	iEIDs := inputs.EnrollmentIDs()
+	oEIDs := outputs.EnrollmentIDs()
+	eIDs := append(iEIDs, oEIDs...)
+	eIDs = deduplicate(eIDs)
 	tokenTypes := outputs.TokenTypes()
+
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
@@ -366,8 +371,13 @@ func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
 func (db *AuditDB) appendReceivedMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
-	eIDs := outputs.EnrollmentIDs()
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	iEIDs := inputs.EnrollmentIDs()
+	oEIDs := outputs.EnrollmentIDs()
+	eIDs := append(iEIDs, oEIDs...)
+	eIDs = deduplicate(eIDs)
 	tokenTypes := outputs.TokenTypes()
+
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()

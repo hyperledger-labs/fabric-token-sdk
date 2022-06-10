@@ -279,6 +279,10 @@ func (w *wallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
 	return nil, nil
 }
 
+func (w *wallet) EnrollmentID() string {
+	return w.identityInfo.EnrollmentID
+}
+
 func (w *wallet) GetSigner(identity view.Identity) (api2.Signer, error) {
 	if !w.Contains(identity) {
 		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", identity, w.ID())

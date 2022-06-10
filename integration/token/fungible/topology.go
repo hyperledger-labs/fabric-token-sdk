@@ -54,6 +54,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
 	issuer.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -63,6 +64,8 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	)
 	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+	auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -78,6 +81,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	alice.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
 	alice.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -95,6 +99,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	bob.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
 	bob.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -112,6 +117,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	charlie.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	charlie.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
 	charlie.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
+	charlie.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -130,6 +136,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	manager.RegisterViewFactory("swap", &views.SwapInitiatorViewFactory{})
 	manager.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
 	manager.RegisterViewFactory("history", &views.ListUnspentTokensViewFactory{})
+	manager.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)

@@ -126,6 +126,7 @@ func (db *Persistence) Discard() error {
 }
 
 func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
+	logger.Debugf("Adding movement record [%s:%s:%s:%s]", record.TxID, record.TokenType, record.EnrollmentID, record.Amount)
 	next, key, err := db.movementKey(record.TxID)
 	if err != nil {
 		return errors.Wrapf(err, "could not get key for movement %s", record.TxID)

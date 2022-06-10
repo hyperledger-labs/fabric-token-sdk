@@ -270,6 +270,10 @@ func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token2.Unspe
 	return o.w.ListTokens(compiledOpts)
 }
 
+func (o *OwnerWallet) EnrollmentID() string {
+	return o.w.EnrollmentID()
+}
+
 // IssuerWallet models the wallet of an issuer
 type IssuerWallet struct {
 	w api2.IssuerWallet
