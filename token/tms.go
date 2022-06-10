@@ -8,14 +8,12 @@ package token
 
 import (
 	"fmt"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
-	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -28,7 +26,7 @@ type TMSID struct {
 }
 
 // String returns a string representation of the TMSID
-func (t *TMSID) String() string {
+func (t TMSID) String() string {
 	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
 }
 
@@ -197,7 +195,7 @@ func (t *ManagementService) Vault() *Vault {
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{ts: t.tms}
+	return &WalletManager{ts: t}
 }
 
 // CertificationManager returns the certification manager for this TMS

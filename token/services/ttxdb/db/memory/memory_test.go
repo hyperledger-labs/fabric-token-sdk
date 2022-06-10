@@ -10,7 +10,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	"github.com/stretchr/testify/assert"
 )
 

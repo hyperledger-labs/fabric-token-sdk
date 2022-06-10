@@ -3,20 +3,22 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package badger
 
 import (
 	"os"
 	"path/filepath"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.zkat.auditdb.badger")
+var logger = flogging.MustGetLogger("token-sdk.zkat.ttxdb.badger")
 
 type Opts struct {
 	Path string
@@ -25,9 +27,9 @@ type Opts struct {
 type Driver struct {
 }
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.AuditDB, error) {
+func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.DB, error) {
 	opts := &Opts{}
-	err := view2.GetConfigService(sp).UnmarshalKey("token.auditor.auditdb.persistence.opts", opts)
+	err := view2.GetConfigService(sp).UnmarshalKey("token.ttxdb.persistence.opts", opts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
@@ -46,5 +48,5 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.AuditDB, err
 }
 
 func init() {
-	auditdb.Register("badger", &Driver{})
+	ttxdb.Register("badger", &Driver{})
 }

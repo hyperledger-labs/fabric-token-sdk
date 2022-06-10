@@ -10,8 +10,8 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
@@ -26,16 +26,16 @@ type Transaction interface {
 
 // QueryExecutor defines the interface for the query executor
 type QueryExecutor struct {
-	*auditdb.QueryExecutor
+	*ttxdb.QueryExecutor
 }
 
 // Payments returns a filter for payments
-func (a *QueryExecutor) Payments() *auditdb.PaymentsFilter {
+func (a *QueryExecutor) Payments() *ttxdb.PaymentsFilter {
 	return a.QueryExecutor.NewPaymentsFilter()
 }
 
 // Holdings returns a filter for holdings
-func (a *QueryExecutor) Holdings() *auditdb.HoldingsFilter {
+func (a *QueryExecutor) Holdings() *ttxdb.HoldingsFilter {
 	return a.QueryExecutor.NewHoldingsFilter()
 }
 
@@ -47,12 +47,12 @@ func (a *QueryExecutor) Done() {
 // Auditor is the interface for the auditor service
 type Auditor struct {
 	sp view2.ServiceProvider
-	db *auditdb.AuditDB
+	db *ttxdb.DB
 }
 
 // New returns a new Auditor instance for the passed auditor wallet
 func New(sp view2.ServiceProvider, w *token.AuditorWallet) *Auditor {
-	return &Auditor{sp: sp, db: auditdb.GetAuditDB(sp, w)}
+	return &Auditor{sp: sp, db: ttxdb.Get(sp, w)}
 }
 
 // Validate validates the passed token request
@@ -100,17 +100,17 @@ func (a *Auditor) Append(tx Transaction) error {
 
 type TxStatusChangesListener struct {
 	net *network.Network
-	db  *auditdb.AuditDB
+	db  *ttxdb.DB
 }
 
 func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
-	var auditDBTxStatus auditdb.TxStatus
+	var auditDBTxStatus ttxdb.TxStatus
 	switch network.ValidationCode(status) {
 	case network.Valid:
-		auditDBTxStatus = auditdb.Confirmed
+		auditDBTxStatus = ttxdb.Confirmed
 	case network.Invalid:
-		auditDBTxStatus = auditdb.Deleted
+		auditDBTxStatus = ttxdb.Deleted
 	}
 	if err := t.db.SetStatus(txID, auditDBTxStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)

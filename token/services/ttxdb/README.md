@@ -1,17 +1,17 @@
-# Audit DB
+# Token Transactions DB
 
-The Audit DB is a database of audit records. It is used to track the
+The Token Transactions DB is a database of audit records. It is used to track the
 history of audit events. In particular, it is used to track payments, holdings,
 and transactions of any business party identified by a unique enrollment ID.
 
 ## Getting Started
 
-Each Audit DB is bound to a single auditor wallet. 
-To get the instance of Audit DB bound to a given auditor wallet, use the
+Each Token Transactions DB is bound to a single auditor wallet. 
+To get the instance of Token Transactions DB bound to a given auditor wallet, use the
 following:
 
 ```go
-   auditDB := auditdb.GetAuditDB(context, auditorWallet)
+   ttxDB := ttxdb.Get(context, wallet)
 ```
 
 ## Append Audit Record
@@ -20,14 +20,14 @@ An `Audit Record` can be obtained from a `Token Request`.
 Usually Token Requests are themselves embedded in token transactions.
 
 Here is an example of extraction of an audit record from a token request, and
-appending of the record to the Audit DB:
+appending of the record to the Token Transactions DB:
 
 ```go
 	auditRecord, err := tx.TokenRequest.AuditRecord()
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting audit records for tx [%s]", tx.ID())
 	}
-	if err := auditDB.Append(auditRecord); err != nil {
+	if err := ttxDB.Append(auditRecord); err != nil {
 		return errors.WithMessagef(err, "failed appending audit records for tx [%s]", tx.ID())
 	}
 ```
@@ -38,7 +38,7 @@ To get a list of payments filtered by given criteria, one must first obtain a `q
 this:
 
 ```go
-    qe := auditDB.NewQueryExecutor()
+    qe := ttxDB.NewQueryExecutor()
 ```
 
 Now, we are ready to perform payment queries. 

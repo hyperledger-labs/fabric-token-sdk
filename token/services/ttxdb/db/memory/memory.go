@@ -9,9 +9,10 @@ package memory
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 )
 
 type Persistence struct {
@@ -183,10 +184,10 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 
 type Driver struct{}
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.AuditDB, error) {
+func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.DB, error) {
 	return &Persistence{}, nil
 }
 
 func init() {
-	auditdb.Register("memory", &Driver{})
+	ttxdb.Register("memory", &Driver{})
 }

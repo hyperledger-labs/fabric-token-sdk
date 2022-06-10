@@ -4,17 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package auditdb
+package ttxdb
 
 import (
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type PaymentsFilter struct {
-	db *AuditDB
+	db *DB
 
 	EnrollmentIds  []string
 	Types          []string
@@ -64,7 +65,7 @@ func (f *PaymentsFilter) Sum() token2.Quantity {
 }
 
 type HoldingsFilter struct {
-	db *AuditDB
+	db *DB
 
 	EnrollmentIds []string
 	Types         []string

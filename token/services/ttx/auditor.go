@@ -10,6 +10,8 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -20,7 +22,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
@@ -47,18 +48,18 @@ func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStr
 }
 
 // NewQueryExecutor returns a new query executor. The query executor is used to
-// execute queries against the AuditDB.
+// execute queries against the DB.
 // The function `Done` on the query executor must be called when it is no longer needed.
 func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
 
 func (a *txAuditor) AcquireLocks(eIDs ...string) error {
-	return auditdb.GetAuditDB(a.sp, a.w).AcquireLocks(eIDs...)
+	return ttxdb.Get(a.sp, a.w).AcquireLocks(eIDs...)
 }
 
 func (a *txAuditor) Unlock(eIDs []string) {
-	auditdb.GetAuditDB(a.sp, a.w).Unlock(eIDs...)
+	ttxdb.Get(a.sp, a.w).Unlock(eIDs...)
 }
 
 type RegisterAuditorView struct {

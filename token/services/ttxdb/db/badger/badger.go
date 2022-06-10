@@ -14,10 +14,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto/z"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger/keys"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 	"github.com/pkg/errors"
 )
 
@@ -29,7 +30,7 @@ const (
 	// DefaultNumGoStream is the default number of goroutines used to process the DB streams
 	DefaultNumGoStream = 16
 	// streamLogPrefixStatus is the prefix for the status log
-	streamLogPrefixStatus = "auditdb.SetStatus"
+	streamLogPrefixStatus = "ttxdb.SetStatus"
 )
 
 type MovementRecord struct {

@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -72,7 +72,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	defer it.Close()
 
 	// Return the list of issued tokens by type
-	var txs []*auditdb.TransactionRecord
+	var txs []*ttxdb.TransactionRecord
 	for {
 		tx, err := it.Next()
 		assert.NoError(err, "failed iterating over transactions")

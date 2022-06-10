@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package badger
 
 import (
@@ -15,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMovements(t *testing.T) {

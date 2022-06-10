@@ -87,7 +87,7 @@ type TransactionRecord struct {
 	TokenType string
 	// Amount is positive if tokens are received. Negative otherwise
 	Amount *big.Int
-	// Timestamp is the time the transaction was submitted to the auditor
+	// Timestamp is the time the transaction was submitted to the db
 	Timestamp time.Time
 	// Status is the status of the transaction
 	Status TxStatus
@@ -99,27 +99,27 @@ type TransactionIterator interface {
 	Next() (*TransactionRecord, error)
 }
 
-// AuditDB defines the interface for an audit database
-type AuditDB interface {
-	// Close closes the audit database
+// DB defines the interface for a token transactions related database
+type DB interface {
+	// Close closes the database
 	Close() error
 
-	// BeginUpdate begins a new update to the audit database
+	// BeginUpdate begins a new update to the database
 	BeginUpdate() error
 
-	// Commit commits the current update to the audit database
+	// Commit commits the current update to the database
 	Commit() error
 
-	// Discard discards the current update to the audit database
+	// Discard discards the current update to the database
 	Discard() error
 
 	// SetStatus sets the status of a transaction
 	SetStatus(txID string, status TxStatus) error
 
-	// AddMovement adds a movement record to the audit database
+	// AddMovement adds a movement record to the database
 	AddMovement(record *MovementRecord) error
 
-	// AddTransaction adds a transaction record to the audit database
+	// AddTransaction adds a transaction record to the database
 	AddTransaction(record *TransactionRecord) error
 
 	// QueryTransactions returns a list of transactions that match the given criteria
@@ -133,5 +133,5 @@ type AuditDB interface {
 // Driver is the interface for a database driver
 type Driver interface {
 	// Open opens a database connection
-	Open(sp view.ServiceProvider, name string) (AuditDB, error)
+	Open(sp view.ServiceProvider, name string) (DB, error)
 }

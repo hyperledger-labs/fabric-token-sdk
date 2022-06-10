@@ -14,105 +14,106 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
 
-var TestAllTransactions = []*auditdb.TransactionRecord{
+var TestAllTransactions = []*ttxdb.TransactionRecord{
 	{
 		TxID:            "",
-		TransactionType: auditdb.Issue,
+		TransactionType: ttxdb.Issue,
 		SenderEID:       "",
 		RecipientEID:    "alice",
 		TokenType:       "USD",
 		Amount:          big.NewInt(110),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Issue,
+		TransactionType: ttxdb.Issue,
 		SenderEID:       "",
 		RecipientEID:    "alice",
 		TokenType:       "USD",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Issue,
+		TransactionType: ttxdb.Issue,
 		SenderEID:       "",
 		RecipientEID:    "bob",
 		TokenType:       "EUR",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Issue,
+		TransactionType: ttxdb.Issue,
 		SenderEID:       "",
 		RecipientEID:    "bob",
 		TokenType:       "EUR",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Issue,
+		TransactionType: ttxdb.Issue,
 		SenderEID:       "",
 		RecipientEID:    "bob",
 		TokenType:       "EUR",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Transfer,
+		TransactionType: ttxdb.Transfer,
 		SenderEID:       "alice",
 		RecipientEID:    "bob",
 		TokenType:       "USD",
 		Amount:          big.NewInt(111),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Transfer,
+		TransactionType: ttxdb.Transfer,
 		SenderEID:       "alice",
 		RecipientEID:    "alice",
 		TokenType:       "USD",
 		Amount:          big.NewInt(9),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Transfer,
+		TransactionType: ttxdb.Transfer,
 		SenderEID:       "bob",
 		RecipientEID:    "bob",
 		TokenType:       "USD",
 		Amount:          big.NewInt(100),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Redeem,
+		TransactionType: ttxdb.Redeem,
 		SenderEID:       "bob",
 		RecipientEID:    "",
 		TokenType:       "USD",
 		Amount:          big.NewInt(11),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 	{
 		TxID:            "",
-		TransactionType: auditdb.Issue,
+		TransactionType: ttxdb.Issue,
 		SenderEID:       "",
 		RecipientEID:    "bob",
 		TokenType:       "USD",
 		Amount:          big.NewInt(10),
-		Status:          auditdb.Confirmed,
+		Status:          ttxdb.Confirmed,
 	},
 }
 
@@ -458,13 +459,13 @@ func IssueCashFail(network *integration.Infrastructure, typ string, amount uint6
 	Expect(err).To(HaveOccurred())
 }
 
-func CheckAuditedTransactions(network *integration.Infrastructure, expected []*auditdb.TransactionRecord, start *time.Time, end *time.Time) {
+func CheckAuditedTransactions(network *integration.Infrastructure, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
 	txsBoxed, err := network.Client("auditor").CallView("history", common.JSONMarshall(&views.ListAuditedTransactions{
 		From: start,
 		To:   end,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	var txs []*auditdb.TransactionRecord
+	var txs []*ttxdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
 	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
 	for i, tx := range txs {
