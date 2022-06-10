@@ -99,12 +99,19 @@ func (v *WellFormednessVerifier) Verify(proof []byte) error {
 	if err != nil {
 		return err
 	}
+
 	// initialize scchnorr verifier
 	ver := &common.SchnorrVerifier{PedParams: v.PedParams, Curve: v.Curve}
 	// parse proof
-	zkps := v.parseProof(wf)
+	zkps, err := v.parseProof(wf)
+	if err != nil {
+		return errors.Wrapf(err, "invalid zero-knowledge issue")
+	}
 	// recompute commitments used in proof
-	coms := ver.RecomputeCommitments(zkps, wf.Challenge)
+	coms, err := ver.RecomputeCommitments(zkps, wf.Challenge)
+	if err != nil {
+		return errors.Wrapf(err, "invalid zero-knowledge issue")
+	}
 	// recompute challenge
 	chal := v.SchnorrVerifier.ComputeChallenge(common.GetG1Array(coms, v.Tokens))
 	// check proof
@@ -114,9 +121,16 @@ func (v *WellFormednessVerifier) Verify(proof []byte) error {
 	return nil
 }
 
-func (v *WellFormednessVerifier) parseProof(proof *WellFormedness) []*common.SchnorrProof {
+func (v *WellFormednessVerifier) parseProof(proof *WellFormedness) ([]*common.SchnorrProof, error) {
+
 	if !v.Anonymous {
 		proof.Type = v.Curve.ModMul(proof.Challenge, v.Curve.HashToZr([]byte(proof.TypeInTheClear)), v.Curve.GroupOrder)
+	}
+	if len(proof.Values) != len(v.Tokens) {
+		return nil, errors.Errorf("well-formedness proof is not well formed")
+	}
+	if len(proof.BlindingFactors) != len(v.Tokens) {
+		return nil, errors.Errorf("well-formedness proof is not well formed")
 	}
 	// parse proof
 	zkps := make([]*common.SchnorrProof, len(v.Tokens))
@@ -127,10 +141,13 @@ func (v *WellFormednessVerifier) parseProof(proof *WellFormedness) []*common.Sch
 		zkps[i].Proof[1] = proof.Values[i]
 		zkps[i].Proof[2] = proof.BlindingFactors[i]
 		zkps[i].Statement = v.Curve.NewG1()
+		if v.Tokens[i] == nil {
+			return nil, errors.Errorf("well-formedness proof not well formed")
+		}
 		zkps[i].Statement = v.Tokens[i].Copy()
 	}
 
-	return zkps
+	return zkps, nil
 }
 
 func (p *WellFormednessProver) computeCommitments() error {

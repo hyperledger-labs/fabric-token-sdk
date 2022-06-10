@@ -9,6 +9,7 @@ package driver
 import (
 	"bytes"
 	"encoding/asn1"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -195,6 +196,57 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	m.Application, err = UnmarshalMeta(ser.Application)
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+// IsWellFormed returns nil if the token request metadata is well-formed
+func (m *TokenRequestMetadata) IsWellFormed() error {
+	for _, i := range m.Issues {
+		err := i.isWellFormed()
+		if err != nil {
+			return errors.Wrap(err, "invalid token request metadata")
+		}
+	}
+	for _, t := range m.Transfers {
+		err := t.isWellFormed()
+		if err != nil {
+			return errors.Wrap(err, "invalid token request metadata")
+		}
+	}
+	return nil
+}
+
+// This method checks if issue metadata is well formed.
+func (m *IssueMetadata) isWellFormed() error {
+	if len(m.Receivers) != len(m.Outputs) {
+		return errors.Errorf("invalid issue metadata: number of receivers does not match number of outputs [%d] vs. [%d]", len(m.Receivers), len(m.Outputs))
+	}
+	if len(m.Outputs) != len(m.TokenInfo) {
+		return errors.Errorf("invalid issue metadata: number of outputs does not match number of token info [%d] vs. [%d]", len(m.Outputs), len(m.TokenInfo))
+	}
+	if len(m.Receivers) != len(m.AuditInfos) {
+		return errors.Errorf("invalid issue metadata: number of receivers does not match number of receivers' audit info [%d] vs. [%d]", len(m.Receivers), len(m.AuditInfos))
+	}
+	return nil
+}
+
+// This method checks if transfer metadata is well formed.
+func (m *TransferMetadata) isWellFormed() error {
+	if len(m.Senders) != len(m.TokenIDs) {
+		return errors.Errorf("invalid transfer metadata: number of senders does not match number of inputs [%d] vs. [%d]", len(m.Senders), len(m.TokenIDs))
+	}
+	if len(m.Receivers) != len(m.Outputs) {
+		return errors.Errorf("invalid transfer metadata: number of receivers does not match number of outputs [%d] vs. [%d]", len(m.Receivers), len(m.Outputs))
+	}
+	if len(m.Outputs) != len(m.TokenInfo) {
+		return errors.Errorf("invalid transfer metadata: number of outputs does not match number of token info [%d] vs. [%d]", len(m.Outputs), len(m.TokenInfo))
+	}
+	if len(m.ReceiverAuditInfos) != len(m.Receivers) {
+		return errors.Errorf("invalid transfer metadata: number of receivers does not match number of receivers' audit info [%d] vs. [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
+	}
+	if len(m.SenderAuditInfos) != len(m.Senders) {
+		return errors.Errorf("invalid transfer metadata: number of receivers does not match number of receivers' audit info [%d] vs. [%d]", len(m.Receivers), len(m.ReceiverAuditInfos))
 	}
 	return nil
 }

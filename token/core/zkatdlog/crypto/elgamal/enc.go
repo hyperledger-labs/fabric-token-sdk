@@ -42,6 +42,9 @@ func (pk *PublicKey) Encrypt(M *math.G1) (*Ciphertext, *math.Zr, error) {
 	if pk.Gen == nil || pk.H == nil {
 		return nil, nil, errors.Errorf("Provide a non-nil Elgamal public key")
 	}
+	if M == nil {
+		return nil, nil, errors.Errorf("Provide a non-nil message")
+	}
 	rand, err := pk.Curve.Rand()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to compute Elgamal ciphertext")
@@ -56,14 +59,23 @@ func (pk *PublicKey) Encrypt(M *math.G1) (*Ciphertext, *math.Zr, error) {
 }
 
 // Decrypt using Elgamal secret key
-func (sk *SecretKey) Decrypt(c *Ciphertext) *math.G1 {
+func (sk *SecretKey) Decrypt(c *Ciphertext) (*math.G1, error) {
+	if sk.x == nil {
+		return nil, errors.Errorf("Provide a non-nil secret key")
+	}
 	c.C2.Sub(c.C1.Mul(sk.x))
-	return c.C2
+	return c.C2, nil
 
 }
 
 // encrypt message in Zr using Elgamal encryption
 func (pk *PublicKey) EncryptZr(m *math.Zr) (*Ciphertext, *math.Zr, error) {
+	if pk.Gen == nil || pk.H == nil {
+		return nil, nil, errors.Errorf("Provide a non-nil Elgamal public key")
+	}
+	if m == nil {
+		return nil, nil, errors.Errorf("Provide a non-nil message")
+	}
 	rand, err := pk.Curve.Rand()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to compute Elgamal ciphertext")

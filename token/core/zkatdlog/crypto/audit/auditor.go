@@ -85,12 +85,19 @@ func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer Signin
 }
 
 func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
+	if tokenRequest == nil {
+		return nil, errors.Errorf("audit of tx [%s] failed: : token request is nil", txID)
+	}
 	// Prepare signature
 	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
 	if err != nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
 	}
 	logger.Debugf("Endorse [%s][%s]", hash.Hashable(bytes).String(), txID)
+	if a.Signer == nil {
+		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
+	}
+
 	return a.Signer.Sign(append(bytes, []byte(txID)...))
 
 }
@@ -152,10 +159,16 @@ func (a *Auditor) inspectOutputs(tokens []*AuditableToken) error {
 		if err != nil {
 			return errors.Wrapf(err, "failed inspecting output [%d]", i)
 		}
+		if t == nil || t.Token == nil {
+			return errors.Errorf("failed to inspect nil output [%d]", i)
+		}
 		if !t.Token.IsRedeem() { // this is not a redeemed output
 			owner, err := a.rawOwner(t.Token.Owner)
 			if err != nil {
 				return errors.Errorf("output owner at index [%d] cannot be unwrapped", i)
+			}
+			if t.owner.ownerInfo == nil {
+				return errors.Errorf("failed to inspect owner of output [%d]: owner info is nil", i)
 			}
 			err = t.owner.ownerInfo.Match(owner)
 			if err != nil {
@@ -171,9 +184,15 @@ func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
 	}
+	if output == nil || output.data == nil {
+		return errors.Errorf("invalid output at index [%d]", index)
+	}
 	t, err := common.ComputePedersenCommitment([]*math.Zr{a.Curve.HashToZr([]byte(output.data.ttype)), output.data.value, output.data.bf}, a.PedersenParams, a.Curve)
 	if err != nil {
 		return err
+	}
+	if output.Token == nil || output.Token.Data == nil {
+		return errors.Errorf("invalid output at index [%d]", index)
 	}
 	if !t.Equals(output.Token.Data) {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
@@ -192,8 +211,10 @@ func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 			if err != nil {
 				return errors.Errorf("input owner at index [%d] cannot be unwrapped", i)
 			}
-
 			// this is not a redeem
+			if input.owner.ownerInfo == nil {
+				return errors.Errorf("invalid input at index [%d]: owner info is nil", i)
+			}
 			if err := input.owner.ownerInfo.Match(owner); err != nil {
 				return errors.Errorf("input at index [%d] does not match the provided opening", i)
 			}
@@ -216,6 +237,9 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 	}
 	outputs := make([][]*AuditableToken, len(issues))
 	for k, issue := range metadata {
+		if &issue == nil {
+			return nil, errors.Errorf("invalid issue metadata: it is nil")
+		}
 		ia := &issue2.IssueAction{}
 		err := json.Unmarshal(issues[k], ia)
 		if err != nil {
@@ -233,6 +257,9 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 			matcher, err := des.GetOwnerMatcher(issue.AuditInfos[i])
 			if err != nil {
 				return nil, err
+			}
+			if ia.OutputTokens[i] == nil {
+				return nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
 			if ia.OutputTokens[i].IsRedeem() {
 				return nil, errors.Errorf("issue cannot redeem tokens")
@@ -263,6 +290,9 @@ func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []d
 		for i := 0; i < len(tr.SenderAuditInfos); i++ {
 			var matcher driver.Matcher
 			var err error
+			if inputs[k][i] == nil {
+				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
+			}
 			if !inputs[k][i].IsRedeem() {
 				matcher, err = des.GetOwnerMatcher(tr.SenderAuditInfos[i])
 				if err != nil {
@@ -291,6 +321,9 @@ func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []d
 			}
 
 			var matcher driver.Matcher
+			if ta.OutputTokens[i] == nil {
+				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
+			}
 			if !ta.OutputTokens[i].IsRedeem() {
 				matcher, err = des.GetOwnerMatcher(tr.ReceiverAuditInfos[i])
 				if err != nil {

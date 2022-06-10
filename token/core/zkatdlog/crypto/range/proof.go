@@ -169,13 +169,15 @@ func (p *Prover) Prove() ([]byte, error) {
 }
 
 func (v *Verifier) Verify(raw []byte) error {
+	// todo check length of public parameters
 	proof := &Proof{}
 	err := json.Unmarshal(raw, proof)
 	if err != nil {
 		return err
 	}
+
 	if len(proof.MembershipProofs) != len(v.Token) {
-		return errors.Errorf("failed to verify range proofz")
+		return errors.Errorf("range proof not well formed")
 	}
 
 	var verifications []func()
@@ -183,8 +185,11 @@ func (v *Verifier) Verify(raw []byte) error {
 
 	//  verify membership
 	for k := 0; k < len(v.Token); k++ {
+		if proof.MembershipProofs[k] == nil {
+			return errors.Errorf("range proof not well formed")
+		}
 		if len(proof.MembershipProofs[k].Commitments) != len(proof.MembershipProofs[k].SignatureProofs) {
-			return errors.Errorf("failed to verify range proof")
+			return errors.Errorf("range proof not well formed")
 		}
 		for i := 0; i < len(proof.MembershipProofs[k].Commitments); i++ {
 			mv := sigproof.NewMembershipVerifier(proof.MembershipProofs[k].Commitments[i], v.P, v.Q, v.PK, v.PedersenParams[:2], v.Curve)
@@ -215,7 +220,10 @@ func (v *Verifier) Verify(raw []byte) error {
 	}
 
 	//  verify equality
-	com := v.recomputeCommitments(proof)
+	com, err := v.recomputeCommitments(proof)
+	if err != nil {
+		return err
+	}
 	coms := make([][]*mathlib.G1, len(proof.MembershipProofs))
 	for i := 0; i < len(proof.MembershipProofs); i++ {
 		for k := 0; k < len(proof.MembershipProofs[i].Commitments); k++ {
@@ -316,25 +324,55 @@ func (v *Verifier) computeChallenge(commitment *Commitment, comToValue [][]*math
 	return v.Curve.HashToZr(bytes)
 }
 
-func (v *Verifier) recomputeCommitments(p *Proof) *Commitment {
+func (v *Verifier) recomputeCommitments(p *Proof) (*Commitment, error) {
+	if p.EqualityProofs == nil {
+		return nil, errors.Errorf("range proof not well formed")
+	}
+	if len(p.EqualityProofs.Value) != len(v.Token) {
+		return nil, errors.Errorf("range proof not well formed")
+	}
+	if len(p.EqualityProofs.TokenBlindingFactor) != len(v.Token) {
+		return nil, errors.Errorf("range proof not well formed")
+	}
+	if len(p.EqualityProofs.CommitmentBlindingFactor) != len(v.Token) {
+		return nil, errors.Errorf("range proof not well formed")
+	}
+
 	c := &Commitment{}
 	// recompute commitments for verification
 	for j := 0; j < len(v.Token); j++ {
 		ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 		zkp := &common.SchnorrProof{Statement: v.Token[j], Proof: []*mathlib.Zr{p.EqualityProofs.Type, p.EqualityProofs.Value[j], p.EqualityProofs.TokenBlindingFactor[j]}, Challenge: p.Challenge}
-		c.Token = append(c.Token, ver.RecomputeCommitment(zkp))
+		com, err := ver.RecomputeCommitment(zkp)
+		if err != nil {
+			return nil, err
+		}
+		c.Token = append(c.Token, com)
 	}
 
 	for j := 0; j < len(v.Token); j++ {
 		com := v.Curve.NewG1()
+		if p.MembershipProofs[j] == nil {
+			return nil, errors.Errorf("range proof not well formed")
+		}
+		if len(p.MembershipProofs[j].Commitments) != v.Exponent {
+			return nil, errors.Errorf("range proof not well formed")
+		}
 		for i := 0; i < v.Exponent; i++ {
 			pow := v.Curve.NewZrFromInt(int64(math.Pow(float64(v.Base), float64(i))))
+			if p.MembershipProofs[j].Commitments == nil {
+				return nil, errors.Errorf("range proof not well formed")
+			}
 			com.Add(p.MembershipProofs[j].Commitments[i].Mul(pow))
 		}
 
 		ver := &common.SchnorrVerifier{PedParams: v.PedersenParams[:2], Curve: v.Curve}
 		zkp := &common.SchnorrProof{Statement: com, Proof: []*mathlib.Zr{p.EqualityProofs.Value[j], p.EqualityProofs.CommitmentBlindingFactor[j]}, Challenge: p.Challenge}
-		c.CommitmentToValue = append(c.CommitmentToValue, ver.RecomputeCommitment(zkp))
+		com, err := ver.RecomputeCommitment(zkp)
+		if err != nil {
+			return nil, err
+		}
+		c.CommitmentToValue = append(c.CommitmentToValue, com)
 	}
-	return c
+	return c, nil
 }

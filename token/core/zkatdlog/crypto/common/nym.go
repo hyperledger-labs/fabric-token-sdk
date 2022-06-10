@@ -37,7 +37,11 @@ func (s *NYMSigner) Sign(message []byte) ([]byte, error) {
 	com.Add(s.NYMParams[1].Mul(bfRandomness))
 
 	sig := &NYMSig{}
-	sig.Challenge = s.Curve.HashToZr(append(message, GetG1Array(s.NYMParams, []*math.G1{s.NYM, com}).Bytes()...))
+	raw, err := GetG1Array(s.NYMParams, []*math.G1{s.NYM, com}).Bytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to sign anonymously")
+	}
+	sig.Challenge = s.Curve.HashToZr(append(message, raw...))
 	sig.SK = s.Curve.ModMul(sig.Challenge, s.SK, s.Curve.GroupOrder)
 	sig.SK = s.Curve.ModAdd(sig.SK, skRandomness, s.Curve.GroupOrder)
 
@@ -46,7 +50,7 @@ func (s *NYMSigner) Sign(message []byte) ([]byte, error) {
 
 	bytes, err := sig.Serialize()
 	if err != nil {
-		return nil, errors.Errorf("failed to serialized nym signature")
+		return nil, errors.Errorf("failed to serialize nym signature")
 	}
 	return bytes, nil
 }
@@ -73,15 +77,28 @@ func (v *NYMVerifier) Deserialize(raw []byte) error {
 
 // verify signature relative to pseudonym
 func (v *NYMVerifier) Verify(message []byte, signature []byte) error {
+	// todo check parameters
 	sig, err := v.DeserializeSignature(signature)
 	if err != nil {
 		return errors.Errorf("failed to deserialize nym signature")
 	}
-
+	// verify Schnorr proof
 	sv := &SchnorrVerifier{PedParams: v.NYMParams} // todo Curve?
 	sp := &SchnorrProof{Challenge: sig.Challenge, Proof: []*math.Zr{sig.SK, sig.BF}, Statement: v.NYM}
-	com := sv.RecomputeCommitment(sp)
-	chal := v.Curve.HashToZr(append(message, GetG1Array(v.NYMParams, []*math.G1{v.NYM, com}).Bytes()...))
+	com, err := sv.RecomputeCommitment(sp)
+	if err != nil {
+		return errors.Errorf("failed to verify nym signature")
+	}
+	raw, err := GetG1Array(v.NYMParams, []*math.G1{v.NYM, com}).Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to verify nym signature")
+	}
+	// compute challenge
+	chal := v.Curve.HashToZr(append(message, raw...))
+	// check challenge equality
+	if sig.Challenge == nil {
+		return errors.Errorf("failed verify nym signature: challenge is nil")
+	}
 	if !chal.Equals(sig.Challenge) {
 		return errors.Errorf("invalid nym signature")
 	}
@@ -104,11 +121,8 @@ type NYMSigBytes struct {
 
 func (s *NYMSig) Serialize() ([]byte, error) {
 	pb := &NYMSigBytes{}
-
 	pb.SK = s.SK.Bytes()
-
 	pb.BF = s.BF.Bytes()
-
 	pb.Challenge = s.Challenge.Bytes()
 
 	return json.Marshal(pb)
