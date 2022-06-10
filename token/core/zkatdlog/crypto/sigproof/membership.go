@@ -249,7 +249,10 @@ func (v *MembershipVerifier) recomputeCommitments(p *MembershipProof) (*Membersh
 	}
 	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 	zkp := &common.SchnorrProof{Statement: v.CommitmentToValue, Proof: []*math.Zr{p.Value, p.ComBlindingFactor}, Challenge: p.Challenge}
-	c.CommitmentToValue = ver.RecomputeCommitment(zkp)
+	c.CommitmentToValue, err = ver.RecomputeCommitment(zkp)
+	if err != nil {
+		return nil, err
+	}
 
 	return c, nil
 }

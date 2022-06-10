@@ -29,22 +29,33 @@ type SchnorrProver struct {
 	Challenge  *math.Zr
 }
 
-func (v *SchnorrVerifier) RecomputeCommitment(zkp *SchnorrProof) *math.G1 {
+func (v *SchnorrVerifier) RecomputeCommitment(zkp *SchnorrProof) (*math.G1, error) {
+	if zkp.Challenge == nil {
+		return nil, errors.Errorf("invalid zero-knowledge proof")
+	}
 	com := v.Curve.NewG1()
 	for i, p := range zkp.Proof {
+		if p == nil {
+			return nil, errors.Errorf("invalid zero-knowledge proof")
+		}
 		com.Add(v.PedParams[i].Mul(p))
 	}
+
 	com.Sub(zkp.Statement.Mul(zkp.Challenge))
-	return com
+	return com, nil
 }
 
-func (v *SchnorrVerifier) RecomputeCommitments(zkps []*SchnorrProof, challenge *math.Zr) []*math.G1 {
+func (v *SchnorrVerifier) RecomputeCommitments(zkps []*SchnorrProof, challenge *math.Zr) ([]*math.G1, error) {
 	commitments := make([]*math.G1, len(zkps))
+	var err error
 	for i, zkp := range zkps {
 		zkp.Challenge = challenge
-		commitments[i] = v.RecomputeCommitment(zkp)
+		commitments[i], err = v.RecomputeCommitment(zkp)
+		if err != nil {
+			return nil, err
+		}
 	}
-	return commitments
+	return commitments, nil
 }
 
 func (v *SchnorrVerifier) ComputeChallenge(pub PublicInput) *math.Zr {
@@ -70,6 +81,9 @@ func ComputePedersenCommitment(opening []*math.Zr, base []*math.G1, c *math.Curv
 	}
 	com := c.NewG1()
 	for i := 0; i < len(base); i++ {
+		if base[i] == nil || opening[i] == nil {
+			return nil, errors.Errorf("can't compute Pedersen commitment: nil EC points")
+		}
 		com.Add(base[i].Mul(opening[i]))
 	}
 	return com, nil

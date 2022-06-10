@@ -62,6 +62,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error {
 	action := ia.(*issue.IssueAction)
 
+	// todo check tokenInfo
 	return issue.NewVerifier(
 		action.GetCommitments(),
 		action.IsAnonymous(),

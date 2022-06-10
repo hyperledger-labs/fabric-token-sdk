@@ -135,13 +135,24 @@ func (v *POKVerifier) RecomputeCommitment(p *POK) (*math.Gt, error) {
 	}
 	t := v.Curve.NewG2()
 	for i := 0; i < len(p.Messages); i++ {
+		if p.Messages[i] == nil {
+			return nil, errors.Errorf("invalid pok")
+		}
 		t.Add(v.PK[i+1].Mul(p.Messages[i]))
+	}
+	if p.Hash == nil {
+		return nil, errors.Errorf("invalid pok")
 	}
 	t.Add(v.PK[len(p.Messages)+1].Mul(p.Hash))
 
 	pk := v.Curve.NewG2()
 	pk.Sub(v.PK[0])
-
+	if p.Signature == nil || p.Signature.R == nil || p.Signature.S == nil {
+		return nil, errors.Errorf("invalid pok")
+	}
+	if p.Challenge == nil || p.BlindingFactor == nil {
+		return nil, errors.Errorf("invalid pok")
+	}
 	com := v.Curve.Pairing2(v.Q, p.Signature.S.Mul(p.Challenge), pk, p.Signature.R.Mul(p.Challenge))
 	com.Inverse()
 	com.Mul(v.Curve.Pairing2(t, p.Signature.R, v.Q, v.P.Mul(p.BlindingFactor)))

@@ -127,7 +127,10 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 		return errors.Wrapf(err, "invalid transfer proof: cannot parse proof")
 	}
 	zkps, err := v.parseProof(v.Inputs, iop.InputValues, iop.InputBlindingFactors, iop.Type, iop.Sum)
-	inCommitments := v.RecomputeCommitments(zkps, iop.Challenge)
+	if err != nil {
+		return errors.Wrapf(err, "invalid transfer proof")
+	}
+	inCommitments, err := v.RecomputeCommitments(zkps, iop.Challenge)
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
 	}
@@ -135,7 +138,8 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
 	}
-	outCommitments := v.RecomputeCommitments(zkps, iop.Challenge)
+	outCommitments, err := v.RecomputeCommitments(zkps, iop.Challenge)
+	return errors.Wrapf(err, "invalid transfer proof")
 
 	chal := v.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(inCommitments, outCommitments, v.Inputs, v.Outputs))
 	if !chal.Equals(iop.Challenge) {
@@ -146,7 +150,7 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 
 func (v *WellFormednessVerifier) parseProof(tokens []*math.G1, values []*math.Zr, randomness []*math.Zr, ttype *math.Zr, sum *math.Zr) ([]*crypto.SchnorrProof, error) {
 	if len(values) != len(tokens) || len(randomness) != len(tokens) {
-		return nil, errors.Errorf("failed to parse proof ")
+		return nil, errors.Errorf("failed to parse wellformedness proof ")
 	}
 	zkps := make([]*crypto.SchnorrProof, len(tokens)+1)
 	aggregate := v.Curve.NewG1()
@@ -157,13 +161,20 @@ func (v *WellFormednessVerifier) parseProof(tokens []*math.G1, values []*math.Zr
 		zkps[i].Proof[1] = values[i]
 		zkps[i].Proof[2] = randomness[i]
 		zkps[i].Statement = tokens[i]
+		if tokens[i] == nil {
+			return nil, errors.Errorf("invalid wellformedness proof")
+		}
 		aggregate.Add(tokens[i])
 	}
 	zkps[len(tokens)] = &crypto.SchnorrProof{}
 	zkps[len(tokens)].Proof = make([]*math.Zr, 3)
 	zkps[len(tokens)].Proof[0] = v.Curve.ModMul(ttype, v.Curve.NewZrFromInt(int64(len(tokens))), v.Curve.GroupOrder)
 	zkps[len(tokens)].Proof[1] = sum
-	zkps[len(tokens)].Proof[2] = crypto.Sum(randomness, v.Curve)
+	var err error
+	zkps[len(tokens)].Proof[2], err = crypto.Sum(randomness, v.Curve)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid wellformedness proof")
+	}
 	zkps[len(tokens)].Statement = aggregate
 
 	return zkps, nil
@@ -216,7 +227,10 @@ func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness
 	wf.Type = typeProof[0]
 
 	// generate zkat proof for the sum of input/output Values
-	sum := crypto.Sum(p.witness.inValues, p.Curve)
+	sum, err := crypto.Sum(p.witness.inValues, p.Curve)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute proof for the sum of transferred tokens")
+	}
 
 	sp = &crypto.SchnorrProver{Witness: []*math.Zr{sum}, Randomness: []*math.Zr{randomness.sum}, Challenge: chal, SchnorrVerifier: &crypto.SchnorrVerifier{Curve: p.Curve}}
 	sumProof, err := sp.Prove()

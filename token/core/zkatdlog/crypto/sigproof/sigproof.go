@@ -192,7 +192,13 @@ func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign
 	g1array := common.GetG1Array(v.PedersenParams, []*math.G1{comToMessages, com.CommitmentToMessages,
 		v.P})
 	g2array := common.GetG2Array(v.PK, []*math.G2{v.Q})
+	if com.Signature == nil {
+		return nil, errors.Errorf("failed to compute challenge:commitment is not well formed")
+	}
 	raw := common.GetBytesArray(g1array.Bytes(), g2array.Bytes(), com.Signature.Bytes())
+	if signature == nil {
+		return nil, errors.Errorf("failed to compute challenge: Pointcheval-Sanders signature is nil")
+	}
 	bytes, err := signature.Serialize()
 	if err != nil {
 		return nil, errors.Errorf("failed to compute challenge: error while serializing Pointcheval-Sanders signature")
@@ -204,20 +210,28 @@ func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign
 
 // recompute commitments for verification
 func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) {
+	if p == nil {
+		return nil, errors.Errorf("invalid signature proof")
+	}
 	if len(p.Hidden)+len(v.Disclosed) != len(v.PK)-2 {
 		return nil, errors.Errorf("length of signature public key does not match number of signed messages")
 	}
-
 	c := &SigCommitment{}
 	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 	zkp := &common.SchnorrProof{Statement: v.CommitmentToMessages, Proof: append(p.Hidden, p.ComBlindingFactor), Challenge: p.Challenge}
-
-	c.CommitmentToMessages = ver.RecomputeCommitment(zkp)
+	var err error
+	c.CommitmentToMessages, err = ver.RecomputeCommitment(zkp)
+	if err != nil {
+		return nil, err
+	}
 	proof := make([]*math.Zr, len(v.PK)-2)
 	for i, index := range v.HiddenIndices {
 		proof[index] = p.Hidden[i]
 	}
 	for i, index := range v.DisclosedIndices {
+		if v.Disclosed[i] == nil || p.Challenge == nil {
+			return nil, errors.Errorf("signature proof is not well formed")
+		}
 		proof[index] = v.Curve.ModMul(v.Disclosed[i], p.Challenge, v.Curve.GroupOrder)
 	}
 
@@ -230,7 +244,7 @@ func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) 
 	}
 
 	sv := &POKVerifier{P: v.P, Q: v.Q, PK: v.PK, Curve: v.Curve}
-	var err error
+
 	c.Signature, err = sv.RecomputeCommitment(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to verify signature proof")
