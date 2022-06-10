@@ -1,8 +1,11 @@
 /*
-Copyright IBM Corp. All Rights Reserved.
-
-SPDX-License-Identifier: Apache-2.0
-*/
+ *
+ * Copyright IBM Corp. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * /
+ *
+ */
 
 package token
 
@@ -55,7 +58,7 @@ func (m *Metadata) SpentTokenID() []*token2.ID {
 // For Issue actions: the returned metadata will contain only the outputs whose owner has the given enrollment IDs.
 // For Transfer actions:
 // - The returned metadata will contain only the outputs whose owner has the given enrollment IDs;
-// - The returned metadata will contain only the senders whose enrollment ID has the given enrollment IDs;
+// - The senders are all included;
 // - The list of token IDs will be empty.
 func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	res := &Metadata{
@@ -84,22 +87,10 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		transferRes := api2.TransferMetadata{}
 
 		// Filter senders:
-		// If the sender has the given enrollment ID, add it. Otherwise, add empty entries.
-		for i, auditInfo := range transfer.SenderAuditInfos {
-			recipientEID, err := m.tms.GetEnrollmentID(auditInfo)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed getting enrollment ID")
-			}
-
-			var Senders view.Identity
-			var SenderAuditInfos []byte
-			if search(eIDs, recipientEID) != -1 {
-				Senders = transfer.Senders[i]
-				SenderAuditInfos = transfer.SenderAuditInfos[i]
-			}
-
-			transferRes.Senders = append(transferRes.Senders, Senders)
-			transferRes.SenderAuditInfos = append(transferRes.SenderAuditInfos, SenderAuditInfos)
+		// All senders are appended
+		for i, sender := range transfer.Senders {
+			transferRes.Senders = append(transferRes.Senders, sender)
+			transferRes.SenderAuditInfos = append(transferRes.SenderAuditInfos, transfer.SenderAuditInfos[i])
 		}
 
 		// Filter outputs

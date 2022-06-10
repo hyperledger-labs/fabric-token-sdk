@@ -1,8 +1,11 @@
 /*
-Copyright IBM Corp. All Rights Reserved.
-
-SPDX-License-Identifier: Apache-2.0
-*/
+ *
+ * Copyright IBM Corp. All Rights Reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ * /
+ *
+ */
 
 package driver
 
@@ -40,6 +43,7 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 type IssueMetadata struct {
 	// Issuer is the identity of the issuer
 	Issuer view.Identity
+
 	// Outputs is the list of outputs issued
 	Outputs [][]byte
 	// TokenInfo, for each output we have a TokenInfo entry that contains secrets to de-obfuscate the output
