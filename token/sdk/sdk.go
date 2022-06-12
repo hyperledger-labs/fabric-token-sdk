@@ -86,12 +86,8 @@ func (p *SDK) Install() error {
 	// Network provider
 	assert.NoError(p.registry.RegisterService(network.NewProvider(p.registry)))
 
-	// DB
-	driverName := view2.GetConfigService(p.registry).GetString("token.auditor.ttxdb.persistence.type")
-	if len(driverName) == 0 {
-		driverName = "memory"
-	}
-	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, driverName)))
+	// Token Transaction DB, use the driver from the configuration
+	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
 
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)

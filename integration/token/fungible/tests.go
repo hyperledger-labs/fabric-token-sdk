@@ -236,6 +236,10 @@ func TestAll(network *integration.Infrastructure) {
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
 
+	CheckBalance(network, "issuer", "", "USD", 110)
+	CheckBalance(network, "issuer", "", "EUR", 150)
+	CheckBalance(network, "issuer", "issuer.owner", "EUR", 10)
+
 	// Restart the auditor
 	network.StopFSCNode("auditor")
 	time.Sleep(3 * time.Second)

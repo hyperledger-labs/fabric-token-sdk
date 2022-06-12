@@ -18,7 +18,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.zkat.ttxdb.badger")
+var logger = flogging.MustGetLogger("token-sdk.ttxdb.badger")
 
 type Opts struct {
 	Path string

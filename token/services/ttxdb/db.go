@@ -23,9 +23,13 @@ import (
 	"go.uber.org/atomic"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.ttxdb")
+const (
+	// PersistenceTypeConfigKey is the key for the persistence type in the config.
+	PersistenceTypeConfigKey = "token.ttxdb.persistence.type"
+)
 
 var (
+	logger    = flogging.MustGetLogger("token-sdk.ttxdb")
 	driversMu sync.RWMutex
 	drivers   = make(map[string]driver.Driver)
 )
@@ -496,8 +500,19 @@ type Manager struct {
 	dbs    map[string]*DB
 }
 
-// NewManager creates a new DB manager
+// NewManager creates a new DB manager.
+// The driver is the name of the driver to use.
+// If the driver is not supported, an error is returned.
+// If the driver is not specified, the driver is taken from the configuration.
+// If the configuration is not specified, the default driver is used.
 func NewManager(sp view2.ServiceProvider, driver string) *Manager {
+	if len(driver) == 0 {
+		driver = view2.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
+		if len(driver) == 0 {
+			driver = "memory"
+		}
+	}
+	logger.Debugf("instantiate ttxdb manager using driver [%s]", driver)
 	return &Manager{
 		sp:     sp,
 		driver: driver,
