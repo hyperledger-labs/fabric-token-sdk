@@ -485,17 +485,15 @@ func (t *Request) Verify() error {
 	return nil
 }
 
-// IsValid allows the auditor to check well-formedness of token request and metadata and verify if the token request verifies correctly
 func (t *Request) IsValid() error {
-	if t.countIssues() != t.countIssueMetadata() {
-		return errors.Errorf("invalid transaction, the number of issues differs from the number of issue metadata [%d], [%d]", t.countIssues(), t.countIssueMetadata())
-	}
-	if t.countTransfers() != t.countTransferMetadata() {
-		return errors.Errorf("invalid transaction, the number of transfers differs from the number of transfer metadata [%d], [%d]", t.countTransfers(), t.countTransferMetadata())
-	}
-	err := t.Metadata.IsWellFormed()
+	// TODO: IsValid tokens
+	numTokens, err := t.countOutputs()
 	if err != nil {
-		return errors.Wrapf(err, "invalid transaction")
+		return errors.Wrapf(err, "failed extracting tokens")
+	}
+	tis := t.Metadata.TokenInfos()
+	if numTokens != len(tis) {
+		return errors.Errorf("invalid transaction, the number of tokens differs from the number of token info [%d],[%d]", numTokens, len(tis))
 	}
 
 	return t.Verify()
@@ -788,22 +786,6 @@ func (t *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	}
 
 	return inputs, sum, typ, nil
-}
-
-func (t *Request) countIssues() int {
-	return len(t.Actions.Issues)
-}
-
-func (t *Request) countTransfers() int {
-	return len(t.Actions.Transfers)
-}
-
-func (t *Request) countIssueMetadata() int {
-	return len(t.Metadata.Issues)
-}
-
-func (t *Request) countTransferMetadata() int {
-	return len(t.Metadata.Transfers)
 }
 
 func (t *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {

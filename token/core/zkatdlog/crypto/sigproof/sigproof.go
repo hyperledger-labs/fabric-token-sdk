@@ -189,13 +189,19 @@ func (p *SigProver) obfuscateSignature() (*pssign.Signature, error) {
 }
 
 func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign.Signature, com *SigCommitment) (*math.Zr, error) {
-	g1array := common.GetG1Array(v.PedersenParams, []*math.G1{comToMessages, com.CommitmentToMessages,
-		v.P})
-	g2array := common.GetG2Array(v.PK, []*math.G2{v.Q})
+	g1array, err := common.GetG1Array(v.PedersenParams, []*math.G1{comToMessages, com.CommitmentToMessages,
+		v.P}).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
+	}
+	g2array, err := common.GetG2Array(v.PK, []*math.G2{v.Q}).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
+	}
 	if com.Signature == nil {
 		return nil, errors.Errorf("failed to compute challenge:commitment is not well formed")
 	}
-	raw := common.GetBytesArray(g1array.Bytes(), g2array.Bytes(), com.Signature.Bytes())
+	raw := common.GetBytesArray(g1array, g2array, com.Signature.Bytes())
 	if signature == nil {
 		return nil, errors.Errorf("failed to compute challenge: Pointcheval-Sanders signature is nil")
 	}

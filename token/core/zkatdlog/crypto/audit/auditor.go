@@ -25,13 +25,20 @@ import (
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
+var logger = flogging.MustGetLogger("token-sdk.zkatdlog.audit")
+
 // signing identity
 type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
-var logger = flogging.MustGetLogger("token-sdk.zkatdlog.audit")
+// deserializer
+type Deserializer interface {
+	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
+}
 
+// AuditableToken contains a zkat token and the information that allows
+// an auditor to learn its content.
 type AuditableToken struct {
 	Token *token.Token
 	data  *tokenDataOpening
@@ -52,26 +59,31 @@ func NewAuditableToken(token *token.Token, matcher driver.Matcher, ttype string,
 	}, nil
 }
 
+// tokenDataOpening contains the opening of the TokenData.
+// TokenData is a Pedersen commitment to token type and value.
 type tokenDataOpening struct {
 	ttype string
 	value *math.Zr
 	bf    *math.Zr
 }
 
-type Deserializer interface {
-	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
-}
-
+// OwnerOpening contains the information that allows the auditor to identify the owner.
 type ownerOpening struct {
 	ownerInfo driver.Matcher
 }
 
+// Auditor inspects zkat tokens and their owners.
 type Auditor struct {
-	Des            Deserializer
-	Signer         SigningIdentity
+	// Owner Identity Deserializer
+	Des Deserializer
+	// Auditor's signing identity
+	Signer SigningIdentity
+	// Pedersen generators used to compute TokenData
 	PedersenParams []*math.G1
-	NYMParams      []byte
-	Curve          *math.Curve
+	// SigningIdentity parameters (e.g., pseudonym parameters)
+	NYMParams []byte
+	// Elliptic curve
+	Curve *math.Curve
 }
 
 func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
@@ -84,38 +96,43 @@ func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer Signin
 	}
 }
 
+// Endorse is called to sign a valid token request
 func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
 	if tokenRequest == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: : token request is nil", txID)
 	}
-	// Prepare signature
+	// Marshal tokenRequest
 	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
 	if err != nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
 	}
+	// Sign
 	logger.Debugf("Endorse [%s][%s]", hash.Hashable(bytes).String(), txID)
 	if a.Signer == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
 	}
 
 	return a.Signer.Sign(append(bytes, []byte(txID)...))
-
 }
 
+// Check validates TokenRequest against TokenRequestMetadata
 func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
+	// De-obfuscate issue requests
 	outputsFromIssue, err := getAuditInfoForIssues(a.Des, tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues")
 	}
+	// check validity of issue requests
 	err = a.checkIssueRequests(outputsFromIssue, txID)
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues")
 	}
-
+	// De-odfuscate transfer requests
 	auditableInputs, outputsFromTransfer, err := getAuditInfoForTransfers(a.Des, tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers")
 	}
+	// check validity of transfer requests
 	if err := a.checkTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
 		return errors.Wrapf(err, "failed checking transfers")
 	}
@@ -123,6 +140,7 @@ func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata 
 	return nil
 }
 
+// checkTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
 func (a *Auditor) checkTransferRequests(inputs [][]*AuditableToken, outputsFromTransfer [][]*AuditableToken, txID string) error {
 
 	for k, transferred := range outputsFromTransfer {
@@ -142,6 +160,7 @@ func (a *Auditor) checkTransferRequests(inputs [][]*AuditableToken, outputsFromT
 	return nil
 }
 
+// checkTransferRequests verifies that the commitments in issue outputs match the information provided in the clear.
 func (a *Auditor) checkIssueRequests(outputsFromIssue [][]*AuditableToken, txID string) error {
 	// Inspect
 	for k, issued := range outputsFromIssue {
@@ -153,6 +172,7 @@ func (a *Auditor) checkIssueRequests(outputsFromIssue [][]*AuditableToken, txID 
 	return nil
 }
 
+// inspectOutputs verifies that the commitments in an array of outputs match the information provided in the clear.
 func (a *Auditor) inspectOutputs(tokens []*AuditableToken) error {
 	for i, t := range tokens {
 		err := a.inspectOutput(t, i)
@@ -180,6 +200,8 @@ func (a *Auditor) inspectOutputs(tokens []*AuditableToken) error {
 	return nil
 }
 
+// inspectOutput verifies that the commitments in an output token of a given index
+// match the information provided in the clear.
 func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
@@ -200,6 +222,7 @@ func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
 	return nil
 }
 
+// inspectInputs verifies that the commitments in an array of inputs match the information provided in the clear.
 func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 	for i, input := range inputs {
 		if input == nil || input.Token == nil {
@@ -223,6 +246,7 @@ func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 	return nil
 }
 
+// rawOwner unmarshal a series of bytes into an raw owner
 func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
 	si, err := identity.UnmarshallRawOwner(raw)
 	if err != nil {
@@ -231,30 +255,32 @@ func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
 	return si.Identity, nil
 }
 
+// getAuditInfoForIssues returns an array of AuditableToken for each issue action
+// It takes a deserializer, an array of serialized issue actions and an array of issue metadata.
 func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
 	if len(issues) != len(metadata) {
 		return nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
 	outputs := make([][]*AuditableToken, len(issues))
-	for k, issue := range metadata {
-		if &issue == nil {
-			return nil, errors.Errorf("invalid issue metadata: it is nil")
-		}
+	for k, md := range metadata {
 		ia := &issue2.IssueAction{}
 		err := json.Unmarshal(issues[k], ia)
 		if err != nil {
 			return nil, err
 		}
-		if len(ia.OutputTokens) != len(issue.AuditInfos) || len(ia.OutputTokens) != len(issue.TokenInfo) {
+		if &md == nil {
+			return nil, errors.Errorf("invalid issue metadata: it is nil")
+		}
+		if len(ia.OutputTokens) != len(md.AuditInfos) || len(ia.OutputTokens) != len(md.TokenInfo) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
-		for i := 0; i < len(issue.AuditInfos); i++ {
+		for i := 0; i < len(md.AuditInfos); i++ {
 			ti := &token.TokenInformation{}
-			err := json.Unmarshal(issue.TokenInfo[i], ti)
+			err := json.Unmarshal(md.TokenInfo[i], ti)
 			if err != nil {
 				return nil, err
 			}
-			matcher, err := des.GetOwnerMatcher(issue.AuditInfos[i])
+			matcher, err := des.GetOwnerMatcher(md.AuditInfos[i])
 			if err != nil {
 				return nil, err
 			}
@@ -274,6 +300,8 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 	return outputs, nil
 }
 
+// getAuditInfoForTransfers returns an array of AuditableToken for each transfer action.
+// It takes a deserializer, an array of serialized transfer actions and an array of transfer metadata.
 func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")

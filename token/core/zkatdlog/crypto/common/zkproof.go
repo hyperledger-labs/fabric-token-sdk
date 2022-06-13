@@ -5,10 +5,6 @@ SPDX-License-Identifier: Apache-2.0
 */
 package common
 
-type PublicInput interface {
-	Bytes() []byte
-}
-
 type Prover interface {
 	Prove() ([]byte, error)
 }

@@ -110,7 +110,10 @@ func (p *Prover) Prove() ([]byte, error) {
 	}
 	// compute challenge
 	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, p.Commitments, p.PedersenParams)
-	bytes := publicInput.Bytes()
+	bytes, err := publicInput.Bytes()
+	if err != nil {
+		return nil, err
+	}
 	bytes = append(bytes, []byte(strconv.Itoa(p.BitLength))...)
 	bytes = append(bytes, p.Message...)
 	chal := p.Curve.HashToZr(bytes)
@@ -144,7 +147,10 @@ func (v *Verifier) Verify(p []byte) error {
 		return errors.Errorf("the size of the proofs in one out of many proof is not a multiple of %d", v.BitLength)
 	}
 	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, v.Commitments, v.PedersenParams)
-	bytes := publicInput.Bytes()
+	bytes, err := publicInput.Bytes()
+	if err != nil {
+		return err
+	}
 	bytes = append(bytes, []byte(strconv.Itoa(v.BitLength))...)
 	bytes = append(bytes, v.Message...)
 	hash := v.Curve.HashToZr(bytes)

@@ -10,18 +10,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Struct for Schnorr proofs
+// SchnorrProof carries a ZKP for statement (w_1, ..., w_n): Com = \prod_{i=1}^n P_i^w_i
 type SchnorrProof struct {
 	Statement *math.G1
 	Proof     []*math.Zr
 	Challenge *math.Zr
 }
 
-type SchnorrVerifier struct {
-	PedParams []*math.G1
-	Curve     *math.Curve
-}
-
+// SchnorrProver produces a Schnorr proof
 type SchnorrProver struct {
 	*SchnorrVerifier
 	Witness    []*math.Zr
@@ -29,12 +25,65 @@ type SchnorrProver struct {
 	Challenge  *math.Zr
 }
 
+// SchnorrVerifier verifies a SchnorrProof
+type SchnorrVerifier struct {
+	PedParams []*math.G1
+	Curve     *math.Curve
+}
+
+// Prove produces an array of Zr elements that match the passed
+// challenge, witnesses and randomness.
+func (p *SchnorrProver) Prove() ([]*math.Zr, error) {
+	if len(p.Witness) != len(p.Randomness) {
+		return nil, errors.Errorf("cannot compute proof")
+	}
+	proof := make([]*math.Zr, len(p.Witness))
+	// p_i = r_i + c*w_i mod q
+	for i := 0; i < len(proof); i++ {
+		proof[i] = p.Curve.ModMul(p.Challenge, p.Witness[i], p.Curve.GroupOrder)
+		proof[i] = p.Curve.ModAdd(proof[i], p.Randomness[i], p.Curve.GroupOrder)
+	}
+	return proof, nil
+}
+
+// ComputePedersenCommitment returns the commitment to opening relative to base in passed curve.
+func ComputePedersenCommitment(opening []*math.Zr, base []*math.G1, c *math.Curve) (*math.G1, error) {
+	if len(opening) != len(base) {
+		return nil, errors.Errorf("can't compute Pedersen commitment [%d]!=[%d]", len(opening), len(base))
+	}
+	if c == nil {
+		return nil, errors.Errorf("can't compute Pedersen commitment: please initialize curve")
+	}
+	com := c.NewG1()
+	for i := 0; i < len(base); i++ {
+		if base[i] == nil || opening[i] == nil {
+			return nil, errors.Errorf("can't compute Pedersen commitment: nil EC points")
+		}
+		com.Add(base[i].Mul(opening[i]))
+	}
+	return com, nil
+}
+
+// RecomputeCommitment is called by the verifier.
+// It takes a SchnorrProof and returns the corresponding randomness commitment.
 func (v *SchnorrVerifier) RecomputeCommitment(zkp *SchnorrProof) (*math.G1, error) {
-	if zkp.Challenge == nil {
+	// safety checks
+	if zkp.Challenge == nil || zkp.Statement == nil {
 		return nil, errors.Errorf("invalid zero-knowledge proof")
 	}
+	if v.Curve == nil {
+		return nil, errors.New("please initialize curve")
+	}
+	if len(zkp.Proof) > len(v.PedParams) {
+		return nil, errors.Errorf("please initialize Pedersen parameters correctly")
+	}
 	com := v.Curve.NewG1()
+	// compute commitment
 	for i, p := range zkp.Proof {
+		// more safety checks
+		if v.PedParams == nil {
+			return nil, errors.New("please initialize Pedersen parameters")
+		}
 		if p == nil {
 			return nil, errors.Errorf("invalid zero-knowledge proof")
 		}
@@ -58,33 +107,10 @@ func (v *SchnorrVerifier) RecomputeCommitments(zkps []*SchnorrProof, challenge *
 	return commitments, nil
 }
 
-func (v *SchnorrVerifier) ComputeChallenge(pub PublicInput) *math.Zr {
-	raw := pub.Bytes()
-	return v.Curve.HashToZr(raw)
-}
-
-func (p *SchnorrProver) Prove() ([]*math.Zr, error) {
-	if len(p.Witness) != len(p.Randomness) {
-		return nil, errors.Errorf("cannot compute proof")
+// ComputeChallenge takes an array of bytes and returns the corresponding hash.
+func (v *SchnorrVerifier) ComputeChallenge(raw []byte) (*math.Zr, error) {
+	if v.Curve == nil {
+		return nil, errors.New("failed to compute challenge: please initialize curve")
 	}
-	proof := make([]*math.Zr, len(p.Witness))
-	for i := 0; i < len(proof); i++ {
-		proof[i] = p.Curve.ModMul(p.Challenge, p.Witness[i], p.Curve.GroupOrder)
-		proof[i] = p.Curve.ModAdd(proof[i], p.Randomness[i], p.Curve.GroupOrder)
-	}
-	return proof, nil
-}
-
-func ComputePedersenCommitment(opening []*math.Zr, base []*math.G1, c *math.Curve) (*math.G1, error) {
-	if len(opening) != len(base) {
-		return nil, errors.Errorf("can't compute Pedersen commitment [%d]!=[%d]", len(opening), len(base))
-	}
-	com := c.NewG1()
-	for i := 0; i < len(base); i++ {
-		if base[i] == nil || opening[i] == nil {
-			return nil, errors.Errorf("can't compute Pedersen commitment: nil EC points")
-		}
-		com.Add(base[i].Mul(opening[i]))
-	}
-	return com, nil
+	return v.Curve.HashToZr(raw), nil
 }

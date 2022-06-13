@@ -191,12 +191,15 @@ func (p *POKProver) obfuscateSignature() (*pssign.Signature, error) {
 
 func (v *POKVerifier) computeChallenge(com *math.Gt, signature *pssign.Signature) (*math.Zr, error) {
 	// serialize public inputs
-	g2a := common.GetG2Array(v.PK, []*math.G2{v.Q})
+	g2a, err := common.GetG2Array(v.PK, []*math.G2{v.Q}).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
+	}
 	bytes, err := signature.Serialize()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compute challenge")
 	}
 	// compute challenge
-	return v.Curve.HashToZr(common.GetBytesArray(v.P.Bytes(), g2a.Bytes(), bytes, com.Bytes())), nil
+	return v.Curve.HashToZr(common.GetBytesArray(v.P.Bytes(), g2a, bytes, com.Bytes())), nil
 
 }

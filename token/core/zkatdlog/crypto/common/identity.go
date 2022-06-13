@@ -7,6 +7,7 @@ package common
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
@@ -32,5 +33,8 @@ func (S *WrappedSigningIdentity) Verify(message []byte, signature []byte) error 
 }
 
 func (S *WrappedSigningIdentity) Sign(raw []byte) ([]byte, error) {
+	if S.Signer == nil {
+		return nil, errors.New("please initialize signing identity in WrappedSigningIdentity")
+	}
 	return S.Signer.Sign(raw)
 }
