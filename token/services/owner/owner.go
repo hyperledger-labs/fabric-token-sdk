@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package auditor
+package owner
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -15,8 +15,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.auditor")
+var logger = flogging.MustGetLogger("token-sdk.owner")
 
+// Transaction models a token transaction
 type Transaction interface {
 	ID() string
 	Network() string
@@ -44,45 +45,26 @@ func (a *QueryExecutor) Done() {
 	a.QueryExecutor.Done()
 }
 
-// Auditor is the interface for the auditor service
-type Auditor struct {
+// Owner is the interface for the owner service
+type Owner struct {
 	sp view2.ServiceProvider
 	db *ttxdb.DB
 }
 
-// New returns a new Auditor instance for the passed auditor wallet
-func New(sp view2.ServiceProvider, w *token.AuditorWallet) *Auditor {
-	return &Auditor{sp: sp, db: ttxdb.Get(sp, w)}
-}
-
-// Validate validates the passed token request
-func (a *Auditor) Validate(request *token.Request) error {
-	return request.AuditCheck()
-}
-
-// Audit evaluates the passed token request and returns the list on inputs and outputs in the request
-func (a *Auditor) Audit(request *token.Request) (*token.InputStream, *token.OutputStream, error) {
-	inputs, err := request.AuditInputs()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting inputs")
-	}
-	outputs, err := request.AuditOutputs()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting outputs")
-	}
-
-	return inputs, outputs, nil
+// New returns a new Owner instance for the passed wallet
+func New(sp view2.ServiceProvider, tms *token.ManagementService) *Owner {
+	return &Owner{sp: sp, db: ttxdb.Get(sp, &tmsWallet{tms: tms})}
 }
 
 // NewQueryExecutor returns a new query executor
-func (a *Auditor) NewQueryExecutor() *QueryExecutor {
+func (a *Owner) NewQueryExecutor() *QueryExecutor {
 	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
 }
 
-// Append adds the passed transaction to the auditor database
-func (a *Auditor) Append(tx Transaction) error {
-	// append request to audit db
-	if err := a.db.Append(tx.Request()); err != nil {
+// Append adds the passed transaction to the database
+func (a *Owner) Append(tx Transaction) error {
+	// append request to the db
+	if err := a.db.AppendTransaction(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -118,4 +100,16 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
 	return nil
+}
+
+type tmsWallet struct {
+	tms *token.ManagementService
+}
+
+func (t *tmsWallet) ID() string {
+	return ""
+}
+
+func (t *tmsWallet) TMS() *token.ManagementService {
+	return t.tms
 }

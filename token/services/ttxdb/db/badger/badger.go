@@ -13,13 +13,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger/keys"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto/z"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
 )
 
@@ -165,6 +163,7 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 		Id:     next,
 		Record: record,
 	}
+	logger.Debugf("Adding transaction record [%s:%d:%s:%s:%s:%s]", record.TxID, record.TransactionType, record.TokenType, record.SenderEID, record.RecipientEID, record.Amount)
 
 	bytes, err := MarshalTransactionRecord(value)
 	if err != nil {
@@ -179,12 +178,12 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 	return nil
 }
 
-func (db *Persistence) QueryTransactions(from, to *time.Time) (driver.TransactionIterator, error) {
+func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	it.Seek([]byte("tx"))
 
-	return &TransactionIterator{it: it, from: from, to: to}, nil
+	return &TransactionIterator{it: it, params: params}, nil
 }
 
 func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
@@ -263,7 +262,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	return nil
 }
 
-func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string, txStatuses []driver.TxStatus, searchDirection driver.SearchDirection, movementDirection driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
+func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*driver.MovementRecord, error) {
 	// TODO: Move to stream
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
@@ -271,11 +270,7 @@ func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []strin
 	defer it.Close()
 
 	selector := &MovementSelector{
-		enrollmentIDs:     enrollmentIDs,
-		tokenTypes:        tokenTypes,
-		txStatuses:        txStatuses,
-		searchDirection:   searchDirection,
-		movementDirection: movementDirection,
+		params: params,
 	}
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
@@ -308,15 +303,15 @@ func (db *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []strin
 	}
 
 	// Sort
-	switch searchDirection {
+	switch params.SearchDirection {
 	case driver.FromBeginning:
 		sort.Sort(records)
 	case driver.FromLast:
 		sort.Sort(sort.Reverse(records))
 	}
 
-	if numRecords > 0 && len(records) > numRecords {
-		records = records[:numRecords]
+	if params.NumRecords > 0 && len(records) > params.NumRecords {
+		records = records[:params.NumRecords]
 	}
 
 	var res []*driver.MovementRecord
@@ -354,10 +349,9 @@ func (p RecordSlice) Less(i, j int) bool { return p[i].Id < p[j].Id }
 func (p RecordSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 type TransactionIterator struct {
-	db   *Persistence
-	it   *badger.Iterator
-	from *time.Time
-	to   *time.Time
+	db     *Persistence
+	it     *badger.Iterator
+	params driver.QueryTransactionsParams
 }
 
 func (t *TransactionIterator) Close() {
@@ -393,14 +387,34 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 
 		t.it.Next()
 
-		// is record in the time range
-		if t.from != nil && record.Record.Timestamp.Before(*t.from) {
+		// match the time constraints
+		if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
+			logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
 			continue
 		}
-		if t.to != nil && record.Record.Timestamp.After(*t.to) {
+		if t.params.To != nil && record.Record.Timestamp.After(*t.params.To) {
+			logger.Debugf("skipping transaction [%s] because it is after the to time", record.Record.TxID)
 			return nil, nil
 		}
-		logger.Debugf("found transaction [%s,%s]", string(item.Key()), record.Record.TxID)
+		// match the wallet
+		senderMatch := true
+		if len(t.params.SenderWallet) != 0 && record.Record.SenderEID != t.params.SenderWallet {
+			senderMatch = false
+		}
+		receiverMatch := true
+		if len(t.params.RecipientWallet) != 0 && record.Record.RecipientEID != t.params.RecipientWallet {
+			receiverMatch = false
+		}
+		if !senderMatch && !receiverMatch {
+			logger.Debugf("skipping transaction [%s] because it does not match the sender [%s:%s] or receiver [%s:%s]",
+				record.Record.TxID,
+				record.Record.SenderEID, t.params.SenderWallet,
+				record.Record.RecipientEID, t.params.RecipientWallet,
+			)
+			continue
+		}
+
+		logger.Debugf("found transaction [%s,%s]", string(item.Key()), record.Record.TxID, record.Record.SenderEID, record.Record.RecipientEID)
 		return record.Record, nil
 	}
 }
@@ -425,18 +439,14 @@ func kThLexicographicString(n, k int) string {
 
 // MovementSelector is used to select a set of movement records
 type MovementSelector struct {
-	enrollmentIDs     []string
-	tokenTypes        []string
-	txStatuses        []driver.TxStatus
-	searchDirection   driver.SearchDirection
-	movementDirection driver.MovementDirection
+	params driver.QueryMovementsParams
 }
 
 // Select returns true is the record matches the selection criteria
 func (m *MovementSelector) Select(record *MovementRecord) bool {
-	if len(m.enrollmentIDs) != 0 {
+	if len(m.params.EnrollmentIDs) != 0 {
 		found := false
-		for _, id := range m.enrollmentIDs {
+		for _, id := range m.params.EnrollmentIDs {
 			if record.Record.EnrollmentID == id {
 				found = true
 				break
@@ -446,9 +456,9 @@ func (m *MovementSelector) Select(record *MovementRecord) bool {
 			return false
 		}
 	}
-	if len(m.tokenTypes) != 0 {
+	if len(m.params.TokenTypes) != 0 {
 		found := false
-		for _, typ := range m.tokenTypes {
+		for _, typ := range m.params.TokenTypes {
 			if record.Record.TokenType == typ {
 				found = true
 				break
@@ -458,9 +468,9 @@ func (m *MovementSelector) Select(record *MovementRecord) bool {
 			return false
 		}
 	}
-	if len(m.txStatuses) != 0 {
+	if len(m.params.TxStatuses) != 0 {
 		found := false
-		for _, st := range m.txStatuses {
+		for _, st := range m.params.TxStatuses {
 			if record.Record.Status == st {
 				found = true
 				break
@@ -476,11 +486,11 @@ func (m *MovementSelector) Select(record *MovementRecord) bool {
 		}
 	}
 
-	if m.movementDirection == driver.Sent && record.Record.Amount.Sign() > 0 {
+	if m.params.MovementDirection == driver.Sent && record.Record.Amount.Sign() > 0 {
 		return false
 	}
 
-	if m.movementDirection == driver.Received && record.Record.Amount.Sign() < 0 {
+	if m.params.MovementDirection == driver.Received && record.Record.Amount.Sign() < 0 {
 		return false
 	}
 

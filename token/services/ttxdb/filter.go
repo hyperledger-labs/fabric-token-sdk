@@ -10,44 +10,37 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// PaymentsFilter is a filter for payments.
 type PaymentsFilter struct {
-	db *DB
-
-	EnrollmentIds  []string
-	Types          []string
-	LastNumRecords int
-
+	db      *DB
+	params  driver.QueryMovementsParams
 	records []*driver.MovementRecord
 }
 
+// ByEnrollmentId add an enrollment id to the filter.
 func (f *PaymentsFilter) ByEnrollmentId(id string) *PaymentsFilter {
-	f.EnrollmentIds = append(f.EnrollmentIds, id)
+	f.params.EnrollmentIDs = append(f.params.EnrollmentIDs, id)
 	return f
 }
 
 func (f *PaymentsFilter) ByType(tokenType string) *PaymentsFilter {
-	f.Types = append(f.Types, tokenType)
+	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
 	return f
 }
 
 func (f *PaymentsFilter) Last(num int) *PaymentsFilter {
-	f.LastNumRecords = num
+	f.params.NumRecords = num
 	return f
 }
 
 func (f *PaymentsFilter) Execute() (*PaymentsFilter, error) {
-	records, err := f.db.db.QueryMovements(
-		f.EnrollmentIds,
-		f.Types,
-		[]driver.TxStatus{driver.Pending, driver.Confirmed},
-		driver.FromLast,
-		driver.Sent,
-		f.LastNumRecords,
-	)
+	f.params.TxStatuses = []driver.TxStatus{driver.Pending, driver.Confirmed}
+	f.params.MovementDirection = driver.Sent
+	f.params.SearchDirection = driver.FromLast
+	records, err := f.db.db.QueryMovements(f.params)
 	if err != nil {
 		return nil, err
 	}
@@ -65,26 +58,26 @@ func (f *PaymentsFilter) Sum() token2.Quantity {
 }
 
 type HoldingsFilter struct {
-	db *DB
-
-	EnrollmentIds []string
-	Types         []string
-
+	db      *DB
+	params  driver.QueryMovementsParams
 	records []*driver.MovementRecord
 }
 
 func (f *HoldingsFilter) ByEnrollmentId(id string) *HoldingsFilter {
-	f.EnrollmentIds = append(f.EnrollmentIds, id)
+	f.params.EnrollmentIDs = append(f.params.EnrollmentIDs, id)
 	return f
 }
 
 func (f *HoldingsFilter) ByType(tokenType string) *HoldingsFilter {
-	f.Types = append(f.Types, tokenType)
+	f.params.TokenTypes = append(f.params.TokenTypes, tokenType)
 	return f
 }
 
 func (f *HoldingsFilter) Execute() (*HoldingsFilter, error) {
-	records, err := f.db.db.QueryMovements(f.EnrollmentIds, f.Types, []driver.TxStatus{driver.Pending, driver.Confirmed}, driver.FromBeginning, driver.All, 0)
+	f.params.TxStatuses = []driver.TxStatus{driver.Pending, driver.Confirmed}
+	f.params.MovementDirection = driver.All
+	f.params.SearchDirection = driver.FromBeginning
+	records, err := f.db.db.QueryMovements(f.params)
 	if err != nil {
 		return nil, err
 	}

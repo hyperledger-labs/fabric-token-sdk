@@ -3,18 +3,14 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
-	"strconv"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type acceptView struct {
@@ -27,12 +23,13 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	agent.EmitKey(0, "ttx", "start", "acceptView", s.tx.ID())
 	defer agent.EmitKey(0, "ttx", "end", "acceptView", s.tx.ID())
 
-	// Processes
+	// Check the envelope exists
 	env := s.tx.Payload.Envelope
 	if env == nil {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
 
+	// Store transient
 	agent.EmitKey(0, "ttx", "start", "acceptViewStoreTransient", s.tx.ID())
 	err := s.tx.storeTransient()
 	if err != nil {
@@ -40,31 +37,17 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	}
 	agent.EmitKey(0, "ttx", "end", "acceptViewStoreTransient", s.tx.ID())
 
-	agent.EmitKey(0, "ttx", "start", "acceptViewParseRWS", s.tx.ID())
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("parse rws for id [%s]", s.tx.ID())
-	}
-	backend := network.GetInstance(context, s.tx.Network(), s.tx.Channel())
-	rws, err := backend.GetRWSet(s.tx.ID(), env.Results())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", s.tx.ID())
-	}
-	rws.Done()
-	agent.EmitKey(0, "ttx", "end", "acceptViewParseRWS", s.tx.ID())
-
-	agent.EmitKey(0, "ttx", "start", "acceptViewStoreEnv", s.tx.ID())
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", s.tx.ID())
+	// Store envelope
+	if err := StoreEnvelope(context, s.tx); err != nil {
+		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
-	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
-		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", s.tx.ID())
+	// Store transaction in the token transaction database
+	if err := StoreTransactionRecords(context, s.tx); err != nil {
+		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
-	agent.EmitKey(0, "ttx", "end", "acceptViewStoreEnv", s.tx.ID())
 
-	agent.EmitKey(0, "ttx", "size", "acceptViewEnvelopeSize", s.tx.ID(), strconv.Itoa(len(rawEnv)))
-
+	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("send back ack")
 	}

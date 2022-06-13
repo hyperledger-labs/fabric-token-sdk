@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -48,7 +50,6 @@ func (i *ListIssuedTokensViewFactory) NewView(in []byte) (view.View, error) {
 	return f, nil
 }
 
-// ListAuditedTransactions contains the input to query the list of issued tokens
 type ListAuditedTransactions struct {
 	From *time.Time
 	To   *time.Time
@@ -63,11 +64,11 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	w := ttx.MyAuditorWallet(context)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
-	// Validate
+	// Get query executor
 	auditor := ttx.NewAuditor(context, w)
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
-	it, err := aqe.Transactions(p.From, p.To)
+	it, err := aqe.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
 	assert.NoError(err, "failed querying transactions")
 	defer it.Close()
 
@@ -89,6 +90,54 @@ type ListAuditedTransactionsViewFactory struct{}
 func (i *ListAuditedTransactionsViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListAuditedTransactionsView{ListAuditedTransactions: &ListAuditedTransactions{}}
 	err := json.Unmarshal(in, f.ListAuditedTransactions)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+// ListAcceptedTransactions contains the input to query the list of issued tokens
+type ListAcceptedTransactions struct {
+	SenderWallet    string
+	RecipientWallet string
+	From            *time.Time
+	To              *time.Time
+}
+
+type ListAcceptedTransactionsView struct {
+	*ListAcceptedTransactions
+}
+
+func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
+	// Get query executor
+	owner := ttx.NewOwner(context, token.GetManagementService(context))
+	aqe := owner.NewQueryExecutor()
+	defer aqe.Done()
+	it, err := aqe.Transactions(ttxdb.QueryTransactionsParams{
+		SenderWallet:    p.SenderWallet,
+		RecipientWallet: p.RecipientWallet,
+		From:            p.From,
+		To:              p.To,
+	})
+	assert.NoError(err, "failed querying transactions")
+	defer it.Close()
+
+	// Return the list of issued tokens by type
+	var txs []*ttxdb.TransactionRecord
+	for {
+		tx, err := it.Next()
+		assert.NoError(err, "failed iterating over transactions")
+		if tx == nil {
+			break
+		}
+		txs = append(txs, tx)
+	}
+	return txs, nil
+}
+
+type ListAcceptedTransactionsViewFactory struct{}
+
+func (i *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, error) {
+	f := &ListAcceptedTransactionsView{ListAcceptedTransactions: &ListAcceptedTransactions{}}
+	err := json.Unmarshal(in, f.ListAcceptedTransactions)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

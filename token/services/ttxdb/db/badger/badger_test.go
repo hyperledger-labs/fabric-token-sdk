@@ -55,11 +55,13 @@ func TestMovements(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, db.Commit())
 
-	records, err := db.QueryMovements(nil, nil, []driver.TxStatus{driver.Pending}, driver.FromLast, driver.Received, 2)
+	records, err := db.QueryMovements(driver.QueryMovementsParams{
+		TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 2,
+	})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 
-	records, err = db.QueryMovements(nil, nil, []driver.TxStatus{driver.Pending}, driver.FromLast, driver.Received, 3)
+	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 3)
 
@@ -67,7 +69,7 @@ func TestMovements(t *testing.T) {
 	assert.NoError(t, db.SetStatus("2", driver.Confirmed))
 	assert.NoError(t, db.Commit())
 
-	records, err = db.QueryMovements(nil, nil, []driver.TxStatus{driver.Pending}, driver.FromLast, driver.Received, 3)
+	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 }
@@ -102,7 +104,7 @@ func TestTransaction(t *testing.T) {
 	assert.NoError(t, db.Commit())
 	t1 := time.Now().UTC()
 
-	it, err := db.QueryTransactions(&t0, &t1)
+	it, err := db.QueryTransactions(driver.QueryTransactionsParams{From: &t0, To: &t1})
 	assert.NoError(t, err)
 	for i := 0; i < 20; i++ {
 		tr, err := it.Next()

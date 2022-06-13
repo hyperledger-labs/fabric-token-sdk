@@ -180,6 +180,9 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	}, nil
 }
 
+// QueryTransactionsParams defines the parameters for querying movements
+type QueryTransactionsParams = driver.QueryTransactionsParams
+
 // QueryExecutor executors queries against the DB
 type QueryExecutor struct {
 	db     *DB
@@ -201,9 +204,8 @@ func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
 }
 
 // Transactions returns an iterators of transaction records in the given time internal.
-// If from and to are both nil, all transactions are returned.
-func (qe *QueryExecutor) Transactions(from, to *time.Time) (*TransactionIterator, error) {
-	it, err := qe.db.db.QueryTransactions(from, to)
+func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
+	it, err := qe.db.db.QueryTransactions(params)
 	if err != nil {
 		return nil, errors.Errorf("failed to query transactions: %s", err)
 	}
@@ -257,7 +259,7 @@ func newDB(p driver.DB) *DB {
 	}
 }
 
-// Append appends the passed token request to the database
+// Append appends send and receive movements, and transaction records corresponding to passed token request
 func (db *DB) Append(req *token.Request) error {
 	logger.Debugf("Appending new record... [%d]", db.counter)
 	db.storeLock.Lock()
@@ -280,6 +282,44 @@ func (db *DB) Append(req *token.Request) error {
 	if err := db.appendReceivedMovements(record); err != nil {
 		db.rollback(err)
 		return errors.WithMessagef(err, "append received movements for txid '%s' failed", record.Anchor)
+	}
+	if err := db.appendTransactions(record); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+	}
+	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
+	}
+
+	logger.Debugf("Appending new completed without errors")
+	return nil
+}
+
+// AppendTransaction appends the transaction records corresponding to the passed token request.
+func (db *DB) AppendTransaction(req *token.Request) error {
+	logger.Debugf("Appending new transaction record... [%d]", db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
+
+	ins, err := req.Inputs()
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting inputs for request [%s]", req.Anchor)
+	}
+	outs, err := req.Outputs()
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting outputs for request [%s]", req.Anchor)
+	}
+
+	record := &token.AuditRecord{
+		Anchor:  req.Anchor,
+		Inputs:  ins,
+		Outputs: outs,
+	}
+	if err := db.db.BeginUpdate(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
@@ -530,7 +570,7 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 	if !ok {
 		driver, err := drivers[cm.driver].Open(cm.sp, "")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver")
+			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}
 		c = newDB(driver)
 		cm.dbs[id] = c

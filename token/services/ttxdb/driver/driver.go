@@ -99,6 +99,41 @@ type TransactionIterator interface {
 	Next() (*TransactionRecord, error)
 }
 
+// QueryMovementsParams defines the parameters for querying movements
+type QueryMovementsParams struct {
+	// EnrollmentIDs is the enrollment IDs of the accounts to query
+	EnrollmentIDs []string
+	// TokenTypes is the token types to query
+	TokenTypes []string
+	// TxStatuses is the statuses of the transactions to query
+	TxStatuses []TxStatus
+	// SearchDirection is the direction of the search
+	SearchDirection SearchDirection
+	// MovementDirection is the direction of the movement
+	MovementDirection MovementDirection
+	// NumRecords is the number of records to return
+	// If 0, all records are returned
+	NumRecords int
+}
+
+// QueryTransactionsParams defines the parameters for querying transactions
+type QueryTransactionsParams struct {
+	// SenderWallet is the wallet of the sender
+	// If empty, any sender is accepted
+	// If the sender does not match but the recipient matches, the transaction is returned
+	SenderWallet string
+	// RecipientWallet is the wallet of the recipient
+	// If empty, any recipient is accepted
+	// If the recipient does not match but the sender matches, the transaction is returned
+	RecipientWallet string
+	// From is the start time of the query
+	// If nil, the query starts from the first transaction
+	From *time.Time
+	// To is the end time of the query
+	// If nil, the query ends at the last transaction
+	To *time.Time
+}
+
 // DB defines the interface for a token transactions related database
 type DB interface {
 	// Close closes the database
@@ -123,11 +158,10 @@ type DB interface {
 	AddTransaction(record *TransactionRecord) error
 
 	// QueryTransactions returns a list of transactions that match the given criteria
-	// If both from and to are nil, then all transactions are returned.
-	QueryTransactions(from, to *time.Time) (TransactionIterator, error)
+	QueryTransactions(params QueryTransactionsParams) (TransactionIterator, error)
 
 	// QueryMovements returns a list of movement records
-	QueryMovements(enrollmentIDs []string, tokenTypes []string, txStatuses []TxStatus, searchDirection SearchDirection, movementDirection MovementDirection, numRecords int) ([]*MovementRecord, error)
+	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
 }
 
 // Driver is the interface for a database driver
