@@ -173,7 +173,7 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentHolding := filter.Sum()
 	decimal := currentHolding.Decimal()
-	logger.Infof("Current Holding: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
+	logger.Debugf("Current Holding: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
 
 	return decimal, nil
 }
@@ -211,7 +211,7 @@ func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed retrieving spending for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentSpending := filter.Sum()
 	decimal := currentSpending.Decimal()
-	logger.Infof("Current Spending: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
+	logger.Debugf("Current Spending: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
 
 	return decimal, nil
 }

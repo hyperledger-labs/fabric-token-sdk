@@ -508,7 +508,7 @@ func CheckBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(holding).To(Equal(int(expected)))
 }
 
-func CheckSpending(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
+func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, expected uint64) {
 	// check spending
 	// first get the enrollment id
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
@@ -518,10 +518,10 @@ func CheckSpending(network *integration.Infrastructure, id string, wallet string
 	eID := common.JSONUnmarshalString(eIDBoxed)
 	spendingBoxed, err := network.Client("auditor").CallView("spending", common.JSONMarshall(&views.CurrentSpending{
 		EnrollmentID: eID,
-		TokenType:    typ,
+		TokenType:    tokenType,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	spending, err := strconv.Atoi(common.JSONUnmarshalString(spendingBoxed))
+	spending, err := strconv.ParseUint(common.JSONUnmarshalString(spendingBoxed), 10, 64)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(spending).To(Equal(int(expected)))
 }
