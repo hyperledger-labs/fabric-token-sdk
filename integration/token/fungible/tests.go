@@ -523,7 +523,7 @@ func CheckSpending(network *integration.Infrastructure, id string, wallet string
 	Expect(err).NotTo(HaveOccurred())
 	spending, err := strconv.ParseUint(common.JSONUnmarshalString(spendingBoxed), 10, 64)
 	Expect(err).NotTo(HaveOccurred())
-	Expect(spending).To(Equal(int(expected)))
+	Expect(spending).To(Equal(expected))
 }
 
 func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
