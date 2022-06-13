@@ -117,3 +117,13 @@ func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
 		BlindingFactor: tdw.BlindingFactor.Copy(),
 	}
 }
+
+// NewTokenDataWitness returns an array of TokenDataWitness
+func NewTokenDataWitness(ttype string, values, bfs []*math.Zr) []*TokenDataWitness {
+	witness := make([]*TokenDataWitness, len(values))
+	for i, v := range values {
+		witness[i] = &TokenDataWitness{Value: v, BlindingFactor: bfs[i]}
+	}
+	witness[0].Type = ttype
+	return witness
+}
