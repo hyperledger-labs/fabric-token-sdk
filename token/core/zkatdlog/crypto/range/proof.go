@@ -148,8 +148,10 @@ func (p *Prover) Prove() ([]byte, error) {
 		return nil, err
 	}
 
-	proof.Challenge = p.computeChallenge(commitment, preProcessed.commitment)
-
+	proof.Challenge, err = p.computeChallenge(commitment, preProcessed.commitment)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compute range proof")
+	}
 	// equality proof
 	proof.EqualityProofs = &EqualityProofs{}
 	for k := 0; k < len(p.Token); k++ {
@@ -230,9 +232,12 @@ func (v *Verifier) Verify(raw []byte) error {
 			coms[i] = append(coms[i], proof.MembershipProofs[i].Commitments[k])
 		}
 	}
-	chal := v.computeChallenge(com, coms)
+	chal, err := v.computeChallenge(com, coms)
+	if err != nil {
+		return errors.Wrap(err, "failed to verify range proof")
+	}
 	if !chal.Equals(proof.Challenge) {
-		return errors.Errorf("failed to verify range proof")
+		return errors.Errorf("invalid range proof")
 	}
 
 	return nil
@@ -314,14 +319,24 @@ func (p *Prover) computeCommitment() (*Commitment, *Randomness, error) {
 	return commitment, randomness, nil
 }
 
-func (v *Verifier) computeChallenge(commitment *Commitment, comToValue [][]*mathlib.G1) *mathlib.Zr {
-	g1array := common.GetG1Array([]*mathlib.G1{v.P}, v.Token, commitment.Token, commitment.CommitmentToValue, v.PedersenParams)
-	g2array := common.GetG2Array([]*mathlib.G2{v.Q}, v.PK)
-	bytes := append(g1array.Bytes(), g2array.Bytes()...)
-	for i := 0; i < len(comToValue); i++ {
-		bytes = append(bytes, common.GetG1Array(comToValue[i]).Bytes()...)
+func (v *Verifier) computeChallenge(commitment *Commitment, comToValue [][]*mathlib.G1) (*mathlib.Zr, error) {
+	g1array, err := common.GetG1Array([]*mathlib.G1{v.P}, v.Token, commitment.Token, commitment.CommitmentToValue, v.PedersenParams).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
 	}
-	return v.Curve.HashToZr(bytes)
+	g2array, err := common.GetG2Array([]*mathlib.G2{v.Q}, v.PK).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
+	}
+	bytes := append(g1array, g2array...)
+	for i := 0; i < len(comToValue); i++ {
+		raw, err := common.GetG1Array(comToValue[i]).Bytes()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to compute challenge")
+		}
+		bytes = append(bytes, raw...)
+	}
+	return v.Curve.HashToZr(bytes), nil
 }
 
 func (v *Verifier) recomputeCommitments(p *Proof) (*Commitment, error) {

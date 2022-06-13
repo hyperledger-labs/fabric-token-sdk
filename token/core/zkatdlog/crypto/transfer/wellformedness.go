@@ -72,14 +72,15 @@ func NewWellFormednessProver(witness *WellFormednessWitness, pp []*math.G1, inpu
 }
 
 func NewWellFormednessVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1, c *math.Curve) *WellFormednessVerifier {
-	return &WellFormednessVerifier{Inputs: inputs, Outputs: outputs, SchnorrVerifier: &crypto.SchnorrVerifier{PedParams: pp, Curve: c}}
+	return &WellFormednessVerifier{Inputs: inputs, Outputs: outputs, PedParams: pp, Curve: c}
 }
 
 // SchnorrVerifier for input output correctness
 type WellFormednessVerifier struct {
-	*crypto.SchnorrVerifier
-	Inputs  []*math.G1
-	Outputs []*math.G1
+	PedParams []*math.G1
+	Curve     *math.Curve
+	Inputs    []*math.G1
+	Outputs   []*math.G1
 }
 
 // Randomness used in proof generation
@@ -109,9 +110,11 @@ func (p *WellFormednessProver) Prove() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	chal := p.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(commitments.Inputs, []*math.G1{commitments.InputSum}, commitments.Outputs, []*math.G1{commitments.OutputSum},
-		p.Inputs, p.Outputs))
+	raw, err := crypto.GetG1Array(commitments.Inputs, []*math.G1{commitments.InputSum}, commitments.Outputs, []*math.G1{commitments.OutputSum}, p.Inputs, p.Outputs).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot compute transfer proof")
+	}
+	chal := p.Curve.HashToZr(raw)
 	iop, err := p.computeProof(randomness, chal)
 	if err != nil {
 		return nil, err
@@ -119,7 +122,7 @@ func (p *WellFormednessProver) Prove() ([]byte, error) {
 	return iop.Serialize()
 }
 
-// Verify returns an error when zktp is not a valid transfer proof
+// Verify returns an error when zkp is not a valid transfer proof
 func (v *WellFormednessVerifier) Verify(p []byte) error {
 	iop := &WellFormedness{}
 	err := iop.Deserialize(p)
@@ -130,7 +133,8 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
 	}
-	inCommitments, err := v.RecomputeCommitments(zkps, iop.Challenge)
+	sv := &crypto.SchnorrVerifier{Curve: v.Curve, PedParams: v.PedParams}
+	inCommitments, err := sv.RecomputeCommitments(zkps, iop.Challenge)
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
 	}
@@ -138,11 +142,15 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer proof")
 	}
-	outCommitments, err := v.RecomputeCommitments(zkps, iop.Challenge)
-	return errors.Wrapf(err, "invalid transfer proof")
-
-	chal := v.SchnorrVerifier.ComputeChallenge(crypto.GetG1Array(inCommitments, outCommitments, v.Inputs, v.Outputs))
-	if !chal.Equals(iop.Challenge) {
+	outCommitments, err := sv.RecomputeCommitments(zkps, iop.Challenge)
+	if err != nil {
+		return errors.Wrapf(err, "invalid transfer proof")
+	}
+	raw, err := crypto.GetG1Array(inCommitments, outCommitments, v.Inputs, v.Outputs).Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "cannot verify transfer proof")
+	}
+	if !v.Curve.HashToZr(raw).Equals(iop.Challenge) {
 		return errors.Errorf("invalid zero-knowledge transfer")
 	}
 	return nil

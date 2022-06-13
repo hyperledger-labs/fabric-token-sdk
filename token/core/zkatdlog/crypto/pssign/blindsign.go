@@ -124,8 +124,11 @@ func (s *BlindSigner) BlindSign(request *BlindSignRequest) (*BlindSignResponse, 
 
 func (r *Recipient) VerifyResponse(response *BlindSignResponse) (*Signature, error) {
 	sig := &Signature{}
-	sig.S = r.EncSK.Decrypt(response.Ciphertext)
 	var err error
+	sig.S, err = r.EncSK.Decrypt(response.Ciphertext)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to verify blind signature response")
+	}
 	sig.R = r.EncSK.Curve.HashToG1(r.Commitment.Bytes())
 
 	err = r.SignVerifier.Verify(append(r.Witness.messages, response.Hash), sig)
@@ -176,8 +179,12 @@ func (r *Recipient) Prove() ([]byte, error) {
 	for i := 0; i < len(r.Ciphertexts); i++ {
 		ciphertexts = append(ciphertexts, r.Ciphertexts[i].C1, r.Ciphertexts[i].C2)
 	}
-	sv := &common.SchnorrVerifier{Curve: r.Curve}
-	proof.Challenge = sv.ComputeChallenge(common.GetG1Array(r.PedersenParameters, []*math.G1{r.EncSK.PublicKey.Gen, r.EncSK.PublicKey.H}, ciphertexts, []*math.G1{r.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}))
+
+	bytes, err := common.GetG1Array(r.PedersenParameters, []*math.G1{r.EncSK.PublicKey.Gen, r.EncSK.PublicKey.H}, ciphertexts, []*math.G1{r.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}).Bytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate a blind signature request")
+	}
+	proof.Challenge = r.Curve.HashToZr(bytes)
 
 	proof.Messages = make([]*math.Zr, len(r.Witness.messages))
 	proof.EncRandomness = make([]*math.Zr, len(r.Witness.messages))
@@ -249,12 +256,14 @@ func (v *EncVerifier) Verify(proof []byte) error {
 		commitments.C2 = append(commitments.C2, T)
 		ciphertexts = append(ciphertexts, v.Ciphertexts[i].C1, v.Ciphertexts[i].C2)
 	}
-	sv := &common.SchnorrVerifier{Curve: v.Curve}
 	// compute challenge
-	chal := sv.ComputeChallenge(common.GetG1Array(v.PedersenParameters, []*math.G1{v.EncPK.Gen, v.EncPK.H}, ciphertexts, []*math.G1{v.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}))
+	raw, err := common.GetG1Array(v.PedersenParameters, []*math.G1{v.EncPK.Gen, v.EncPK.H}, ciphertexts, []*math.G1{v.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}).Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "blind signature request: verification of encryption correctness failed")
+	}
 	// check challenge
-	if !chal.Equals(p.Challenge) {
-		return errors.Errorf("verification of encryption correctness failed")
+	if !v.Curve.HashToZr(raw).Equals(p.Challenge) {
+		return errors.Errorf("blind signature request: verification of encryption correctness failed")
 	}
 	return nil
 }

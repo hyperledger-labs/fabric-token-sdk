@@ -212,9 +212,15 @@ func (p *MembershipProver) computeCommitment(obfuscatedSignature *pssign.Signatu
 }
 
 func (v *MembershipVerifier) computeChallenge(comToValue *math.G1, com *MembershipCommitment, signature *pssign.Signature) (*math.Zr, error) {
-	g1array := common.GetG1Array(v.PedersenParams, []*math.G1{comToValue, com.CommitmentToValue, v.P})
-	g2array := common.GetG2Array(v.PK, []*math.G2{v.Q})
-	raw := common.GetBytesArray(g1array.Bytes(), g2array.Bytes(), com.Signature.Bytes())
+	g1array, err := common.GetG1Array(v.PedersenParams, []*math.G1{comToValue, com.CommitmentToValue, v.P}).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
+	}
+	g2array, err := common.GetG2Array(v.PK, []*math.G2{v.Q}).Bytes()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to compute challenge")
+	}
+	raw := common.GetBytesArray(g1array, g2array, com.Signature.Bytes())
 	bytes, err := signature.Serialize()
 	if err != nil {
 		return nil, errors.Errorf("failed to compute challenge: error while serializing Pointcheval-Sanders signature")

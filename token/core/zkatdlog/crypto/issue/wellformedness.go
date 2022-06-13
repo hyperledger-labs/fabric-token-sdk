@@ -50,7 +50,8 @@ type WellFormednessRandomness struct {
 
 // zero knowledge verifier for issue
 type WellFormednessVerifier struct {
-	*common.SchnorrVerifier
+	PedParams []*math.G1
+	Curve     *math.Curve
 	Tokens    []*math.G1
 	Anonymous bool
 }
@@ -71,23 +72,27 @@ func NewWellFormednessProver(witness []*token.TokenDataWitness, tokens []*math.G
 
 func NewWellFormednessVerifier(tokens []*math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *WellFormednessVerifier {
 	return &WellFormednessVerifier{
-		Tokens:          tokens,
-		Anonymous:       anonymous,
-		SchnorrVerifier: &common.SchnorrVerifier{PedParams: pp, Curve: c},
+		Tokens:    tokens,
+		Anonymous: anonymous,
+		PedParams: pp,
+		Curve:     c,
 	}
 }
 
 func (p *WellFormednessProver) Prove() ([]byte, error) {
 	err := p.computeCommitments()
 	if err != nil {
-		return nil, errors.Wrap(err, "The computation of the transfer proof failed 1")
+		return nil, errors.Wrap(err, "The computation of the issue proof failed")
 	}
 	// compute challenge for proof
-	chal := p.SchnorrVerifier.ComputeChallenge(common.GetG1Array(p.Commitments, p.Tokens))
-	// compute proof
-	wf, err := p.computeProof(chal)
+	raw, err := common.GetG1Array(p.Commitments, p.Tokens).Bytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "The computation of the transfer proof failed 3")
+		errors.Wrapf(err, "The computation of the issue proof failed")
+	}
+	// compute proof
+	wf, err := p.computeProof(p.Curve.HashToZr(raw))
+	if err != nil {
+		return nil, errors.Wrap(err, "The computation of the issue proof failed")
 	}
 	// serialize proof
 	return wf.Serialize()
@@ -100,29 +105,32 @@ func (v *WellFormednessVerifier) Verify(proof []byte) error {
 		return err
 	}
 
-	// initialize scchnorr verifier
-	ver := &common.SchnorrVerifier{PedParams: v.PedParams, Curve: v.Curve}
 	// parse proof
 	zkps, err := v.parseProof(wf)
 	if err != nil {
 		return errors.Wrapf(err, "invalid zero-knowledge issue")
 	}
+
 	// recompute commitments used in proof
+	// initialize scchnorr verifier
+	ver := &common.SchnorrVerifier{PedParams: v.PedParams, Curve: v.Curve}
 	coms, err := ver.RecomputeCommitments(zkps, wf.Challenge)
 	if err != nil {
 		return errors.Wrapf(err, "invalid zero-knowledge issue")
 	}
-	// recompute challenge
-	chal := v.SchnorrVerifier.ComputeChallenge(common.GetG1Array(coms, v.Tokens))
-	// check proof
-	if !chal.Equals(wf.Challenge) {
+
+	// recompute challenge and check proof validity
+	raw, err := common.GetG1Array(coms, v.Tokens).Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to verify issue proof")
+	}
+	if !v.Curve.HashToZr(raw).Equals(wf.Challenge) {
 		return errors.Errorf("invalid zero-knowledge issue")
 	}
 	return nil
 }
 
 func (v *WellFormednessVerifier) parseProof(proof *WellFormedness) ([]*common.SchnorrProof, error) {
-
 	if !v.Anonymous {
 		proof.Type = v.Curve.ModMul(proof.Challenge, v.Curve.HashToZr([]byte(proof.TypeInTheClear)), v.Curve.GroupOrder)
 	}
