@@ -25,7 +25,7 @@ type GetEnrollmentIDView struct {
 
 func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
 	w := ttx.GetWallet(context, r.Wallet)
-	assert.NotNil(w, "failed getting default auditor wallet")
+	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
 
 	return w.EnrollmentID(), nil
 }
