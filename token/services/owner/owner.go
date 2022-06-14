@@ -64,7 +64,7 @@ func (a *Owner) NewQueryExecutor() *QueryExecutor {
 // Append adds the passed transaction to the database
 func (a *Owner) Append(tx Transaction) error {
 	// append request to the db
-	if err := a.db.AppendTransaction(tx.Request()); err != nil {
+	if err := a.db.AppendTransactionRecord(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -88,14 +88,14 @@ type TxStatusChangesListener struct {
 
 func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
-	var auditDBTxStatus ttxdb.TxStatus
+	var txStatus ttxdb.TxStatus
 	switch network.ValidationCode(status) {
 	case network.Valid:
-		auditDBTxStatus = ttxdb.Confirmed
+		txStatus = ttxdb.Confirmed
 	case network.Invalid:
-		auditDBTxStatus = ttxdb.Deleted
+		txStatus = ttxdb.Deleted
 	}
-	if err := t.db.SetStatus(txID, auditDBTxStatus); err != nil {
+	if err := t.db.SetStatus(txID, txStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)

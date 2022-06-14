@@ -1034,13 +1034,17 @@ fabric:
             - charlie
 
 token:
-  auditor:
-    auditdb:
-      persistence:
-        opts:
-          path: /home/vagrant/testdata/fsc/nodes/alice/kvs
-        type: badger
   enabled: true
+  # The Token Transaction DB is a database of audit records. It is used to track the
+  # history of audit events. In particular, it is used to track payments, holdings,
+  # and transactions of any business party identified by a unique enrollment ID.
+  ttxdb:
+    persistence:
+      # The type of persistence mechanism used to store the Token Transaction DB. (memory, badger)
+      type: badger
+      opts:
+        # The path to the Token Transaction DB.
+        path: /home/vagrant/testdata/fsc/nodes/alice/kvs
   # TMS stands for Token Management Service. A TMS is uniquely identified by a network, channel, and 
   # namespace identifiers. The network identifier should refer to a configured network (Fabric, Orion, and so on).
   # The meaning of channel and namespace are network dependent. For Fabric, the meaning is clear.

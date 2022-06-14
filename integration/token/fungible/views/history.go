@@ -72,7 +72,7 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	assert.NoError(err, "failed querying transactions")
 	defer it.Close()
 
-	// Return the list of issued tokens by type
+	// Return the list of audited transactions
 	var txs []*ttxdb.TransactionRecord
 	for {
 		tx, err := it.Next()
@@ -120,7 +120,7 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 	assert.NoError(err, "failed querying transactions")
 	defer it.Close()
 
-	// Return the list of issued tokens by type
+	// Return the list of accepted transactions
 	var txs []*ttxdb.TransactionRecord
 	for {
 		tx, err := it.Next()

@@ -222,8 +222,11 @@ func (qe *QueryExecutor) Done() {
 	qe.closed = true
 }
 
+// Wallet models a wallet
 type Wallet interface {
+	// ID returns the wallet ID
 	ID() string
+	// TMS returns the TMS of the wallet
 	TMS() *token.ManagementService
 }
 
@@ -296,8 +299,8 @@ func (db *DB) Append(req *token.Request) error {
 	return nil
 }
 
-// AppendTransaction appends the transaction records corresponding to the passed token request.
-func (db *DB) AppendTransaction(req *token.Request) error {
+// AppendTransactionRecord appends the transaction records corresponding to the passed token request.
+func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	logger.Debugf("Appending new transaction record... [%d]", db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
