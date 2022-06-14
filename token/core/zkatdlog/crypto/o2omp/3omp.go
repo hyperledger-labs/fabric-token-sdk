@@ -14,12 +14,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-// prover for the one out of many proofs
+// Prover produces a one-out-of-many proof
+// A one-out-of-many proof allows a prover who is given a list of commitments
+// (c_1, ..., c_n) shows that they know that there is i \in [N] and r_i \in Z_p
+// such that c_i = Q^r_i (i.e., c_i is commitment to 0)
 type Prover struct {
 	*Verifier
 	witness *Witness
 }
 
+// Verifier checks the validity of one-out-of-many proofs
+type Verifier struct {
+	Commitments    []*math.G1
+	Message        []byte
+	PedersenParams []*math.G1 // Pedersen commitments parameters
+	BitLength      int
+	Curve          *math.Curve
+}
+
+// NewProver returns a Prover instantiated with the passed arguments
 func NewProver(commitments []*math.G1, message []byte, pp []*math.G1, length int, index int, randomness *math.Zr, curve *math.Curve) *Prover {
 	return &Prover{
 		witness: &Witness{
@@ -30,6 +43,7 @@ func NewProver(commitments []*math.G1, message []byte, pp []*math.G1, length int
 	}
 }
 
+// NewVerifier returns a Verifier instantiated with the passed arguments
 func NewVerifier(commitments []*math.G1, message []byte, pp []*math.G1, length int, curve *math.Curve) *Verifier {
 	return &Verifier{
 		Commitments:    commitments,
@@ -40,22 +54,16 @@ func NewVerifier(commitments []*math.G1, message []byte, pp []*math.G1, length i
 	}
 }
 
-// verifier for the one out of many proofs
-type Verifier struct {
-	Commitments    []*math.G1
-	Message        []byte
-	PedersenParams []*math.G1 // Pedersen commitments parameters
-	BitLength      int
-	Curve          *math.Curve
-}
-
-// Witness information
+// Witness represents the secret information of one-out-of-many proofs
 type Witness struct {
-	index         int
+	// index is the index of commitment c_i = Q^r_i in  the list of
+	// commitments (c_1, ..., c_n)
+	index int
+	// comRandomness corresponds to r_i such that c_i = Q^r_i
 	comRandomness *math.Zr
 }
 
-//
+// Commitments to the randomness used in the one-out-of-many proof
 type Commitments struct {
 	L []*math.G1
 	A []*math.G1
@@ -63,6 +71,10 @@ type Commitments struct {
 	D []*math.G1
 }
 
+// Values corresponds to r+w*c, where c is the challenge in one-out-of-many proof,
+// r is a random number and w is a secret information known to the prover.
+// The Prover uses Values to show knowledge of (i, r_i) such that
+// c_i \in {c_1, ..., c_n} corresponds to c_i = H^r_i
 type Values struct {
 	L []*math.Zr
 	A []*math.Zr
@@ -70,19 +82,23 @@ type Values struct {
 	D *math.Zr
 }
 
+// Proof is a one-out-of-many proof
 type Proof struct {
 	Commitments *Commitments
 	Values      *Values
 }
 
+// Serialize marshals Proof
 func (p *Proof) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
+// Deserialize un-marshals Proof
 func (p *Proof) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, p)
 }
 
+// Prove produces a one-out-of-many proof
 func (p *Prover) Prove() ([]byte, error) {
 	if len(p.PedersenParams) != 2 {
 		return nil, errors.Errorf("length of Pedersen parameters != 2")
@@ -95,7 +111,7 @@ func (p *Prover) Prove() ([]byte, error) {
 		indexBits[i] = (1 << uint(i)) & p.witness.index
 	}
 
-	// randomness
+	// generate randomness
 	a := make([]*math.Zr, p.BitLength)
 	r := make([]*math.Zr, p.BitLength)
 	s := make([]*math.Zr, p.BitLength)
@@ -103,6 +119,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	rho := make([]*math.Zr, p.BitLength)
 	proof := &Proof{}
 
+	// commit to randomness
 	var err error
 	proof.Commitments, err = p.compute3OMPCommitments(a, r, s, t, rho, indexBits)
 	if err != nil {
@@ -117,16 +134,13 @@ func (p *Prover) Prove() ([]byte, error) {
 	bytes = append(bytes, []byte(strconv.Itoa(p.BitLength))...)
 	bytes = append(bytes, p.Message...)
 	chal := p.Curve.HashToZr(bytes)
-
+	// compute proof
 	p.computeO2OMProof(proof, indexBits, chal, a, r, s, t, rho)
 
 	return proof.Serialize()
 }
 
-func (p *Prover) SetWitness(index int, randomness *math.Zr) {
-	p.witness = &Witness{comRandomness: randomness, index: index}
-}
-
+// Verify checks the validity of a serialized one-out-of-many proof
 func (v *Verifier) Verify(p []byte) error {
 	if len(v.PedersenParams) != 2 {
 		return errors.Errorf("length of Pedersen parameters != 2")
@@ -201,16 +215,19 @@ func (v *Verifier) Verify(p []byte) error {
 	return nil
 }
 
-// structs for proof
+// monomial is one degree polynomial, used in the one-out-of-many proof
 type monomial struct {
 	alpha *math.Zr
 	beta  *math.Zr
 }
 
+// polynomial is used in one-out-of-many proof to show
+// that index i is in [N]
 type polynomial struct {
 	coefficients []*math.Zr
 }
 
+// compute3OMPCommitments commits to the randomness used to generate one-out-of-many proofs
 func (p *Prover) compute3OMPCommitments(a, r, s, t, rho []*math.Zr, indexBits []int) (*Commitments, error) {
 	commitments := &Commitments{}
 	commitments.L = make([]*math.G1, p.BitLength)
@@ -255,6 +272,7 @@ func (p *Prover) compute3OMPCommitments(a, r, s, t, rho []*math.Zr, indexBits []
 	return commitments, nil
 }
 
+// computeO2OMProof computes Proof.Values with the
 func (p *Prover) computeO2OMProof(proof *Proof, indexBits []int, chal *math.Zr, a, r, s, t, rho []*math.Zr) {
 	proof.Values = &Values{}
 	proof.Values.L = make([]*math.Zr, p.BitLength)
@@ -281,7 +299,8 @@ func (p *Prover) computeO2OMProof(proof *Proof, indexBits []int, chal *math.Zr, 
 	proof.Values.D = p.Curve.ModSub(p.Curve.ModMul(p.witness.comRandomness, power, p.Curve.GroupOrder), proof.Values.D, p.Curve.GroupOrder)
 }
 
-// get monomials for proof
+// getfMonomials returns the monomials used in the one-out-of-many proofs
+// Monomials are used to show a value b is a bit.
 func (p *Prover) getfMonomials(indexBits []int, a []*math.Zr) ([]*monomial, []*monomial) {
 	f0 := make([]*monomial, len(a))
 	f1 := make([]*monomial, len(a))
@@ -301,7 +320,8 @@ func (p *Prover) getfMonomials(indexBits []int, a []*math.Zr) ([]*monomial, []*m
 	return f0, f1
 }
 
-// get polynomials for proof
+// getPolynomials returns an array of N polynomials (one polynomial per index i \in [N])
+// Each polynomial is a function of monomials f0 and f1
 func (p *Prover) getPolynomials(N, n int, f0, f1 []*monomial) []*polynomial {
 	polynomials := make([]*polynomial, N)
 	for i := 0; i < N; i++ {
@@ -310,6 +330,8 @@ func (p *Prover) getPolynomials(N, n int, f0, f1 []*monomial) []*polynomial {
 	return polynomials
 }
 
+// getPolynomialforIndex returns a polynomial which is computed as function of
+// f0 and f1 and index j
 func (p *Prover) getPolynomialforIndex(j, n int, f0, f1 []*monomial) *polynomial {
 	g := make([]*monomial, n)
 	multiplier := p.Curve.NewZrFromInt(1)
@@ -342,6 +364,8 @@ func (p *Prover) getPolynomialforIndex(j, n int, f0, f1 []*monomial) *polynomial
 	return &polynomial{coefficients: poly.coefficients[:n]}
 }
 
+// getCoefficientsFromRoots takes an array of polynomial roots a returns the coefficients of
+// the polynomial
 func (p *Prover) getCoefficientsFromRoots(roots []*math.Zr) []*math.Zr {
 	coefficients := make([]*math.Zr, len(roots)+1)
 	if len(roots) == 0 {
