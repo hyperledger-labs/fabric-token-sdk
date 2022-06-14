@@ -98,7 +98,7 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 			panic(err)
 		}
 
-		w := newOwnerWallet(s, id, wrappedID, wID)
+		w := newOwnerWallet(s, id, wrappedID, wID, idInfo)
 		s.OwnerWallets = append(s.OwnerWallets, w)
 		logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, walletID)
 		return w
@@ -207,16 +207,18 @@ func (s *Service) walletID(id string) string {
 type ownerWallet struct {
 	tokenService *Service
 	id           string
+	identityInfo *driver.IdentityInfo
 	identity     view.Identity
 	wrappedID    view.Identity
 }
 
-func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string) *ownerWallet {
+func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string, identityInfo *driver.IdentityInfo) *ownerWallet {
 	return &ownerWallet{
 		tokenService: tokenService,
 		id:           id,
 		identity:     identity,
 		wrappedID:    wrappedID,
+		identityInfo: identityInfo,
 	}
 }
 
@@ -281,6 +283,10 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.Unspent
 	logger.Debugf("wallet: list tokens done, found [%d] unspent tokens", len(unspentTokens.Tokens))
 
 	return unspentTokens, nil
+}
+
+func (w *ownerWallet) EnrollmentID() string {
+	return w.identityInfo.EnrollmentID
 }
 
 type issuerWallet struct {

@@ -333,8 +333,10 @@ func (db *AuditDB) Unlock(eIDs ...string) {
 func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
-	eIDs := outputs.EnrollmentIDs()
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
 	tokenTypes := outputs.TokenTypes()
+
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
@@ -366,8 +368,10 @@ func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
 func (db *AuditDB) appendReceivedMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
-	eIDs := outputs.EnrollmentIDs()
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
 	tokenTypes := outputs.TokenTypes()
+
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
@@ -538,6 +542,16 @@ func GetAuditDB(sp view2.ServiceProvider, w *token.AuditorWallet) *AuditDB {
 	return c
 }
 
+// joinIOEIDs joins enrollment IDs of inputs and outputs
+func joinIOEIDs(record *token.AuditRecord) []string {
+	iEIDs := record.Inputs.EnrollmentIDs()
+	oEIDs := record.Outputs.EnrollmentIDs()
+	eIDs := append(iEIDs, oEIDs...)
+	eIDs = deduplicate(eIDs)
+	return eIDs
+}
+
+// deduplicate removes duplicate entries from a slice
 func deduplicate(source []string) []string {
 	support := make(map[string]bool)
 	var res []string

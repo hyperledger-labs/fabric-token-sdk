@@ -3,15 +3,16 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -146,5 +147,81 @@ type RegisterAuditorViewFactory struct{}
 
 func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 	f := &RegisterAuditorView{}
+	return f, nil
+}
+
+type CurrentHolding struct {
+	EnrollmentID string `json:"enrollment_id"`
+	TokenType    string `json:"token_type"`
+}
+
+// CurrentHoldingView is used to retrieve the current holding of token type of the passed enrollment id
+type CurrentHoldingView struct {
+	*CurrentHolding
+}
+
+func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
+	w := ttx.MyAuditorWallet(context)
+	assert.NotNil(w, "failed getting default auditor wallet")
+
+	auditor := ttx.NewAuditor(context, w)
+
+	aqe := auditor.NewQueryExecutor()
+	defer aqe.Done()
+
+	filter, err := aqe.Holdings().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
+	currentHolding := filter.Sum()
+	decimal := currentHolding.Decimal()
+	logger.Debugf("Current Holding: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
+
+	return decimal, nil
+}
+
+type CurrentHoldingViewFactory struct{}
+
+func (p *CurrentHoldingViewFactory) NewView(in []byte) (view.View, error) {
+	f := &CurrentHoldingView{CurrentHolding: &CurrentHolding{}}
+	err := json.Unmarshal(in, f.CurrentHolding)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}
+
+type CurrentSpending struct {
+	EnrollmentID string `json:"enrollment_id"`
+	TokenType    string `json:"token_type"`
+}
+
+// CurrentSpendingView is used to retrieve the current spending of token type of the passed enrollment id
+type CurrentSpendingView struct {
+	*CurrentSpending
+}
+
+func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
+	w := ttx.MyAuditorWallet(context)
+	assert.NotNil(w, "failed getting default auditor wallet")
+
+	auditor := ttx.NewAuditor(context, w)
+
+	aqe := auditor.NewQueryExecutor()
+	defer aqe.Done()
+
+	filter, err := aqe.Payments().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	assert.NoError(err, "failed retrieving spending for [%s][%s]", r.EnrollmentID, r.TokenType)
+	currentSpending := filter.Sum()
+	decimal := currentSpending.Decimal()
+	logger.Debugf("Current Spending: [%s][%s][%s]", r.EnrollmentID, r.TokenType, decimal)
+
+	return decimal, nil
+}
+
+type CurrentSpendingViewFactory struct{}
+
+func (p *CurrentSpendingViewFactory) NewView(in []byte) (view.View, error) {
+	f := &CurrentSpendingView{CurrentSpending: &CurrentSpending{}}
+	err := json.Unmarshal(in, f.CurrentSpending)
+	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

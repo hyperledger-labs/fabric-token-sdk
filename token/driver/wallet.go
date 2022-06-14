@@ -49,6 +49,9 @@ type OwnerWallet interface {
 
 	// GetTokenMetadata returns any information needed to implement the transfer
 	GetTokenMetadata(id view.Identity) ([]byte, error)
+
+	// EnrollmentID returns the enrollment ID of the owner wallet
+	EnrollmentID() string
 }
 
 // IssuerWallet models the wallet of an issuer as a container of issuer identities.

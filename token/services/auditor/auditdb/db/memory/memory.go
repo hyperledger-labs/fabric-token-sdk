@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package memory
 
 import (
@@ -18,11 +19,11 @@ type Persistence struct {
 	transactionRecords []*driver.TransactionRecord
 }
 
-func (p *Persistence) QueryMovements(ids []string, types []string, status []driver.TxStatus, direction driver.SearchDirection, value driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
+func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string, txStatuses []driver.TxStatus, searchDirection driver.SearchDirection, movementDirection driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
 	var res []*driver.MovementRecord
 
 	var cursor int
-	switch direction {
+	switch searchDirection {
 	case driver.FromBeginning:
 		cursor = -1
 	case driver.FromLast:
@@ -32,7 +33,7 @@ func (p *Persistence) QueryMovements(ids []string, types []string, status []driv
 	}
 	counter := 0
 	for {
-		switch direction {
+		switch searchDirection {
 		case driver.FromBeginning:
 			cursor++
 		case driver.FromLast:
@@ -43,9 +44,9 @@ func (p *Persistence) QueryMovements(ids []string, types []string, status []driv
 		}
 
 		record := p.movementRecords[cursor]
-		if len(ids) != 0 {
+		if len(enrollmentIDs) != 0 {
 			found := false
-			for _, id := range ids {
+			for _, id := range enrollmentIDs {
 				if record.EnrollmentID == id {
 					found = true
 					break
@@ -55,9 +56,9 @@ func (p *Persistence) QueryMovements(ids []string, types []string, status []driv
 				continue
 			}
 		}
-		if len(types) != 0 {
+		if len(tokenTypes) != 0 {
 			found := false
-			for _, typ := range types {
+			for _, typ := range tokenTypes {
 				if record.TokenType == typ {
 					found = true
 					break
@@ -67,9 +68,9 @@ func (p *Persistence) QueryMovements(ids []string, types []string, status []driv
 				continue
 			}
 		}
-		if len(status) != 0 {
+		if len(txStatuses) != 0 {
 			found := false
-			for _, st := range status {
+			for _, st := range txStatuses {
 				if record.Status == st {
 					found = true
 					break
@@ -89,10 +90,10 @@ func (p *Persistence) QueryMovements(ids []string, types []string, status []driv
 			break
 		}
 
-		if value == driver.Sent && record.Amount.Sign() > 0 {
+		if movementDirection == driver.Sent && record.Amount.Sign() > 0 {
 			continue
 		}
-		if value == driver.Received && record.Amount.Sign() < 0 {
+		if movementDirection == driver.Received && record.Amount.Sign() < 0 {
 			continue
 		}
 
