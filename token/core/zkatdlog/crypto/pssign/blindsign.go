@@ -18,14 +18,14 @@ import (
 // Recipient would like to obtain a Pointcheval-Sanders signature on
 // a committed vector of messages
 type Recipient struct {
-	*EncVerifier
+	*encVerifier
 	*SignVerifier
 	// Elgamal encryption secret key
 	// This is used to decrypt the blind signature
 	EncSK *elgamal.SecretKey
-	// EncWitness coresponds to the message and the randomness used to
+	// encWitness coresponds to the message and the randomness used to
 	// encrypt the blind signature request
-	Witness *EncWitness
+	Witness *encWitness
 	// Elliptic curve
 	Curve *math.Curve
 }
@@ -51,12 +51,12 @@ func NewBlindSigner(SK []*math.Zr, PK []*math.G2, Q *math.G2, pp []*math.G1, cur
 // a Pointcheval-Sanders blind signature on the passed messages
 func NewRecipient(messages []*math.Zr, blindingfactor *math.Zr, com *math.G1, sk *math.Zr, gen, pk *math.G1, pp []*math.G1, PK []*math.G2, Q *math.G2, curve *math.Curve) *Recipient {
 	return &Recipient{
-		Witness: &EncWitness{
+		Witness: &encWitness{
 			messages:          messages,
 			comBlindingFactor: blindingfactor,
 		},
 		EncSK: elgamal.NewSecretKey(sk, gen, pk, curve),
-		EncVerifier: &EncVerifier{
+		encVerifier: &encVerifier{
 			PedersenParameters: pp,
 			Commitment:         com,
 			Curve:              curve,
@@ -70,9 +70,9 @@ func NewRecipient(messages []*math.Zr, blindingfactor *math.Zr, com *math.G1, sk
 	}
 }
 
-// EncVerifier verifies if a vector of Elgamal ciphertexts are the encryption
+// encVerifier verifies if a vector of Elgamal ciphertexts are the encryption
 // of a committed vector
-type EncVerifier struct {
+type encVerifier struct {
 	// Pedersen commitment generators
 	PedersenParameters []*math.G1 //g_0, g_1, g_2, g_3, h (owner, type, value, sn, randomness)
 	// commitment to encrypted messages
@@ -85,8 +85,8 @@ type EncVerifier struct {
 	Curve *math.Curve
 }
 
-// EncWitness if the secret information that the recipient uses to produce EncProof
-type EncWitness struct {
+// encWitness if the secret information that the recipient uses to produce EncProof
+type encWitness struct {
 	// committed messages and which will be encrypted
 	messages []*math.Zr
 	// randomness used in encryption of messages
@@ -117,7 +117,7 @@ type BlindSignRequest struct {
 	// Elgamal encryption of the committed messages
 	Ciphertexts []*elgamal.Ciphertext
 	// Proof of correctness of encryption and commitment
-	Proof []byte
+	Proof *EncProof
 	// One-time Elgamal public key picked by the recipient
 	EncPK *elgamal.PublicKey
 }
@@ -156,17 +156,21 @@ func (s *BlindSigner) BlindSign(request *BlindSignRequest) (*BlindSignResponse, 
 		return nil, errors.Errorf("number of ciphertexts in blind signature request does not match number of public keys: expect [%d], got [%d]", len(s.PK)-2, len(request.Ciphertexts))
 	}
 	// verify encryption correctness
-	v := &EncVerifier{Commitment: request.Commitment, Ciphertexts: request.Ciphertexts, EncPK: request.EncPK, PedersenParameters: s.PedersenParameters, Curve: s.Curve}
+	v := &encVerifier{Commitment: request.Commitment, Ciphertexts: request.Ciphertexts, EncPK: request.EncPK, PedersenParameters: s.PedersenParameters, Curve: s.Curve}
 
 	err := v.Verify(request.Proof)
 	if err != nil {
 		return nil, err
 	}
 
+	raw, err := json.Marshal(request.Proof)
+	if err != nil {
+		return nil, err
+	}
 	// hash proof in request
 	// this will be blindly signed along the messages
 	// this is an artefact of Pointcheval-Sanders signature
-	response := &BlindSignResponse{Hash: s.Curve.HashToZr(request.Proof)}
+	response := &BlindSignResponse{Hash: s.Curve.HashToZr(raw)}
 
 	// this results in an Elgamal encryption of a Pointcheval-Sanders signature
 	response.Ciphertext = &elgamal.Ciphertext{}
@@ -204,7 +208,7 @@ func (r *Recipient) VerifyResponse(response *BlindSignResponse) (*Signature, err
 }
 
 // Prove produces a serialized EncProof
-func (r *Recipient) Prove() ([]byte, error) {
+func (r *Recipient) Prove() (*EncProof, error) {
 	if len(r.Witness.messages) != len(r.Witness.encRandomness) {
 		return nil, errors.Errorf("cannot generate encryption proof")
 	}
@@ -263,7 +267,7 @@ func (r *Recipient) Prove() ([]byte, error) {
 
 	proof.ComBlindingFactor = r.Curve.ModAdd(randomness.comBlindingFactor, r.Curve.ModMul(r.Witness.comBlindingFactor, proof.Challenge, r.Curve.GroupOrder), r.Curve.GroupOrder)
 
-	return json.Marshal(proof)
+	return proof, nil
 }
 
 // GenerateBlindSignRequest returns a blind Pointcheval-Sanders signature request
@@ -287,16 +291,11 @@ func (r *Recipient) GenerateBlindSignRequest() (*BlindSignRequest, error) {
 }
 
 // Verify checks if EncProof is valid
-func (v *EncVerifier) Verify(proof []byte) error {
+func (v *encVerifier) Verify(p *EncProof) error {
 	if len(v.Ciphertexts) != len(v.PedersenParameters)-1 {
 		return errors.Errorf("failed to verify encryption proof: number of ciphertexts is different from [%d]", len(v.PedersenParameters)-1)
 	}
 
-	p := &EncProof{}
-	err := json.Unmarshal(proof, p)
-	if err != nil {
-		return errors.Errorf("failed to unmarshal encryption proof")
-	}
 	if len(v.Ciphertexts) != len(p.Messages) {
 		return errors.Errorf("failed to verify encryption proof: number of proofs is different from [%d]", len(v.PedersenParameters)-1)
 	}
