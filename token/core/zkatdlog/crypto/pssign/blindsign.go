@@ -8,7 +8,7 @@ package pssign
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/elgamal"
 	"github.com/pkg/errors"
@@ -152,15 +152,21 @@ type EncProofCommitments struct {
 // BlindSign takes as input a BlindSignRequest and returns the corresponding BlindSignResponse,
 // if the request is valid. Else, BlindSign returns an error
 func (s *BlindSigner) BlindSign(request *BlindSignRequest) (*BlindSignResponse, error) {
+	if request == nil {
+		return nil, errors.New("cannot produce Pointcheval-Sanders signature: nil blind signature request")
+	}
+	if s.Curve == nil {
+		return nil, errors.New("cannot produce Pointcheval-Sanders signature: please initialize curve")
+	}
 	if len(request.Ciphertexts) != len(s.PK)-2 {
-		return nil, errors.Errorf("number of ciphertexts in blind signature request does not match number of public keys: expect [%d], got [%d]", len(s.PK)-2, len(request.Ciphertexts))
+		return nil, errors.Errorf("cannot produce Pointcheval-Sanders signature: number of ciphertexts request does not match number of public keys: expect [%d], got [%d]", len(s.PK)-2, len(request.Ciphertexts))
 	}
 	// verify encryption correctness
 	v := &encVerifier{Commitment: request.Commitment, Ciphertexts: request.Ciphertexts, EncPK: request.EncPK, PedersenParameters: s.PedersenParameters, Curve: s.Curve}
 
 	err := v.Verify(request.Proof)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("cannot produce Pointcheval-Sanders signature: invalid request")
 	}
 
 	raw, err := json.Marshal(request.Proof)
@@ -171,16 +177,24 @@ func (s *BlindSigner) BlindSign(request *BlindSignRequest) (*BlindSignResponse, 
 	// this will be blindly signed along the messages
 	// this is an artefact of Pointcheval-Sanders signature
 	response := &BlindSignResponse{Hash: s.Curve.HashToZr(raw)}
-
 	// this results in an Elgamal encryption of a Pointcheval-Sanders signature
 	response.Ciphertext = &elgamal.Ciphertext{}
 	// generator for Pointcheval-Sanders signature
 	hash := s.Signer.Curve.HashToG1(request.Commitment.Bytes())
 	response.Ciphertext.C1 = s.Curve.NewG1()
+	if s.SK[0] == nil {
+		return nil, errors.New("cannot produce Pointcheval-Sanders signature: please initialize signer secret keys")
+	}
 	response.Ciphertext.C2 = hash.Mul(s.SK[0])
 	for i := 0; i < len(request.Ciphertexts); i++ {
+		if s.SK[i+1] == nil {
+			return nil, errors.New("cannot produce Pointcheval-Sanders signature: please initialize signer secret keys")
+		}
 		response.Ciphertext.C1.Add(request.Ciphertexts[i].C1.Mul(s.SK[i+1]))
 		response.Ciphertext.C2.Add(request.Ciphertexts[i].C2.Mul(s.SK[i+1]))
+	}
+	if s.SK[len(request.Ciphertexts)+1] == nil {
+		return nil, errors.New("cannot produce Pointcheval-Sanders signature: please initialize signer secret keys")
 	}
 	response.Ciphertext.C2.Add(hash.Mul(s.Curve.ModMul(response.Hash, s.SK[len(request.Ciphertexts)+1], s.Curve.GroupOrder)))
 	return response, nil
@@ -195,7 +209,7 @@ func (r *Recipient) VerifyResponse(response *BlindSignResponse) (*Signature, err
 	// this results in Pointcheval-Sanders signature
 	sig.S, err = r.EncSK.Decrypt(response.Ciphertext)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to verify blind signature response")
+		return nil, errors.Wrapf(err, "failed to decrypt blind signature response")
 	}
 	sig.R = r.EncSK.Curve.HashToG1(r.Commitment.Bytes())
 
@@ -295,43 +309,66 @@ func (v *encVerifier) Verify(p *EncProof) error {
 	if len(v.Ciphertexts) != len(v.PedersenParameters)-1 {
 		return errors.Errorf("failed to verify encryption proof: number of ciphertexts is different from [%d]", len(v.PedersenParameters)-1)
 	}
-
 	if len(v.Ciphertexts) != len(p.Messages) {
 		return errors.Errorf("failed to verify encryption proof: number of proofs is different from [%d]", len(v.PedersenParameters)-1)
 	}
-
 	if len(v.Ciphertexts) != len(p.EncRandomness) {
 		return errors.Errorf("failed to verify encryption proof: number of proofs is different from [%d]", len(v.PedersenParameters)-1)
 	}
-
+	if v.Commitment == nil {
+		return errors.Errorf("failed to verify encryption proof: nil commitment")
+	}
 	hash := v.EncPK.Curve.HashToG1(v.Commitment.Bytes())
+
 	commitments := &EncProofCommitments{}
+	if v.PedersenParameters[len(v.PedersenParameters)-1] == nil {
+		return errors.Errorf("failed to verify encryption proof: please initialize Pedersen generators")
+	}
+	if p.ComBlindingFactor == nil || p.Challenge == nil {
+		return errors.Errorf("failed to verify encryption proof: nil proof element")
+	}
 
 	commitments.Commitment = v.PedersenParameters[len(v.PedersenParameters)-1].Mul(p.ComBlindingFactor)
 	commitments.Commitment.Sub(v.Commitment.Mul(p.Challenge))
 	for i := 0; i < len(v.PedersenParameters)-1; i++ {
+		if v.PedersenParameters[i] == nil {
+			return errors.Errorf("failed to verify encryption proof: please initialize Pedersen generators")
+		}
+		if p.Messages[i] == nil {
+			return errors.Errorf("failed to verify encryption proof: nil proof element")
+		}
 		commitments.Commitment.Add(v.PedersenParameters[i].Mul(p.Messages[i]))
 	}
 
 	var ciphertexts []*math.G1
 	for i := 0; i < len(v.Ciphertexts); i++ {
+		if p.EncRandomness[i] == nil {
+			return errors.Errorf("failed to verify encryption proof: nil proof element")
+		}
+		if v.Ciphertexts[i] == nil || v.Ciphertexts[i].C1 == nil || v.Ciphertexts[i].C2 == nil {
+			return errors.Errorf("failed to verify encryption proof: nil ciphertexts")
+		}
+
 		T := v.EncPK.Gen.Mul(p.EncRandomness[i])
 		T.Sub(v.Ciphertexts[i].C1.Mul(p.Challenge))
+
 		commitments.C1 = append(commitments.C1, T)
+
 		T = v.EncPK.H.Mul(p.EncRandomness[i])
 		T.Add(hash.Mul(p.Messages[i]))
 		T.Sub(v.Ciphertexts[i].C2.Mul(p.Challenge))
+
 		commitments.C2 = append(commitments.C2, T)
 		ciphertexts = append(ciphertexts, v.Ciphertexts[i].C1, v.Ciphertexts[i].C2)
 	}
 	// compute challenge
 	raw, err := common.GetG1Array(v.PedersenParameters, []*math.G1{v.EncPK.Gen, v.EncPK.H}, ciphertexts, []*math.G1{v.Commitment}, commitments.C1, commitments.C2, []*math.G1{commitments.Commitment}).Bytes()
 	if err != nil {
-		return errors.Wrapf(err, "blind signature request: verification of encryption correctness failed")
+		return errors.Wrapf(err, "failed to verify encryption proof")
 	}
 	// check challenge
 	if !v.Curve.HashToZr(raw).Equals(p.Challenge) {
-		return errors.Errorf("blind signature request: verification of encryption correctness failed")
+		return errors.New("verification of encryption correctness failed")
 	}
 	return nil
 }
