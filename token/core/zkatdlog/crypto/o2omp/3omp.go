@@ -9,7 +9,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/pkg/errors"
 )
@@ -142,8 +142,15 @@ func (p *Prover) Prove() ([]byte, error) {
 
 // Verify checks the validity of a serialized one-out-of-many proof
 func (v *Verifier) Verify(p []byte) error {
+	if v.Curve == nil || v.Curve.GroupOrder == nil {
+		return errors.New("cannot verify one-out-of-many proof: please initialize curve")
+	}
 	if len(v.PedersenParams) != 2 {
-		return errors.Errorf("length of Pedersen parameters != 2")
+		return errors.Errorf("cannot verify one-out-of-many proof: length of Pedersen parameters != 2")
+	}
+
+	if len(v.Commitments) != 1<<v.BitLength {
+		return errors.Errorf("cannot verify one-out-of-many proof: the number of commitments is not 2^bitlength [%v != %v]", len(v.Commitments), 1<<v.BitLength)
 	}
 	proof := &Proof{}
 	err := proof.Deserialize(p)
@@ -151,8 +158,8 @@ func (v *Verifier) Verify(p []byte) error {
 		return err
 	}
 
-	if len(v.Commitments) != 1<<v.BitLength {
-		return errors.Errorf("the number of commitments is not 2^bitlength [%v != %v]", len(v.Commitments), 1<<v.BitLength)
+	if proof.Commitments == nil || proof.Values == nil {
+		return errors.New("cannot verify one-out-of-many proof: nil elements in proof")
 	}
 	if len(proof.Commitments.L) != v.BitLength || len(proof.Commitments.A) != v.BitLength || len(proof.Commitments.B) != v.BitLength || len(proof.Commitments.D) != v.BitLength {
 		return errors.Errorf("the size of the commitments in one out of many proof is not a multiple of %d", v.BitLength)
@@ -161,15 +168,19 @@ func (v *Verifier) Verify(p []byte) error {
 		return errors.Errorf("the size of the proofs in one out of many proof is not a multiple of %d", v.BitLength)
 	}
 	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, v.Commitments, v.PedersenParams)
-	bytes, err := publicInput.Bytes()
+	bytes, err := publicInput.Bytes() // Bytes() returns an error if one of the elements in publicInput is nil
 	if err != nil {
-		return err
+		return errors.Wrap(err, "invalid one-out-of-many proof")
 	}
 	bytes = append(bytes, []byte(strconv.Itoa(v.BitLength))...)
 	bytes = append(bytes, v.Message...)
+
 	hash := v.Curve.HashToZr(bytes)
 
 	for i := 0; i < v.BitLength; i++ {
+		if proof.Values.A[i] == nil || proof.Values.B[i] == nil || proof.Values.L[i] == nil {
+			return errors.New("invalid one-out-of-many proof: nil elements in proof")
+		}
 		t := proof.Commitments.L[i].Mul(hash)
 		t.Add(proof.Commitments.A[i])
 
@@ -187,7 +198,6 @@ func (v *Verifier) Verify(p []byte) error {
 			return errors.Errorf("verification of second equation of one out of many proof failed")
 		}
 	}
-
 	s := v.Curve.NewG1()
 	for j := 0; j < len(v.Commitments); j++ {
 		f := v.Curve.NewZrFromInt(1)
@@ -208,7 +218,9 @@ func (v *Verifier) Verify(p []byte) error {
 		power := hash.PowMod(v.Curve.NewZrFromInt(int64(i)))
 		s.Sub(proof.Commitments.D[i].Mul(power))
 	}
-
+	if proof.Values.D == nil {
+		return errors.New("invalid one-out-of-many proof: nil elements in proof")
+	}
 	if !s.Equals(v.PedersenParams[1].Mul(proof.Values.D)) {
 		return errors.Errorf("verification of third equation of one out of many proof failed")
 	}
@@ -382,6 +394,5 @@ func (p *Prover) getCoefficientsFromRoots(roots []*math.Zr) []*math.Zr {
 			coefficients[0] = p.Curve.ModMul(coefficients[0], roots[i-1], p.Curve.GroupOrder)
 		}
 	}
-
 	return coefficients
 }
