@@ -8,12 +8,33 @@ package topology
 
 import (
 	"fmt"
+	"regexp"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/pkg/errors"
 )
+
+var (
+	nsRegexp = regexp.MustCompile("^[a-zA-Z0-9._-]{1,120}$")
+)
+
+// ValidateNs checks if the namespace is valid
+func ValidateNs(ns string) error {
+	if !nsRegexp.MatchString(ns) {
+		return errors.Errorf("namespace '%s' is invalid", ns)
+	}
+
+	return nil
+}
 
 type BackedTopology interface {
 	Name() string
+}
+
+// TokenTopology models the topology of the token network
+type TokenTopology interface {
+	// GetTMSs returns the list of TMSs in the topology
+	GetTMSs() []*TMS
 }
 
 type Chaincode struct {
@@ -32,6 +53,7 @@ type TMS struct {
 	Certifiers          []string
 	Issuers             []string
 
+	TokenTopology   TokenTopology  `yaml:"-"`
 	BackendTopology BackedTopology `yaml:"-"`
 	BackendParams   map[string]interface{}
 }
@@ -57,4 +79,24 @@ func (t *TMS) SetTokenGenPublicParams(publicParamsGenArgs ...string) {
 
 func (t *TMS) ID() string {
 	return fmt.Sprintf("%s-%s-%s", t.Network, t.Channel, t.Namespace)
+}
+
+// SetNamespace sets the namespace of the TMS
+func (t *TMS) SetNamespace(namespace string) *TMS {
+	// Check if namespace is valid
+	err := ValidateNs(namespace)
+	if err != nil {
+		panic(errors.WithMessagef(err, "invalid namespace '%s'", namespace))
+	}
+	// Check if another namespace already exists in the same <network,channel>
+	for _, tms := range t.TokenTopology.GetTMSs() {
+		if tms.Network == t.Network && tms.Channel == t.Channel {
+			if tms.Namespace == namespace {
+				panic(fmt.Sprintf("Namespace [%s] already exists", namespace))
+			}
+		}
+	}
+
+	t.Namespace = namespace
+	return t
 }

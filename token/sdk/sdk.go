@@ -65,12 +65,11 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
-	tmsConfigManager, err := config.NewManager(configProvider)
-	assert.NoError(err, "Failed to create TMS config manager")
+	// Register the token management service provider
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
 		p.registry,
 		tmsProvider,
-		network2.NewNormalizer(tmsConfigManager, p.registry),
+		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
 		vault.NewVaultProvider(p.registry),
 		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(

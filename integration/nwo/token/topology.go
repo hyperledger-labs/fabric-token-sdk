@@ -74,6 +74,7 @@ func (t *Topology) AddTMS(backend BackedTopology, channel string, driver string)
 		Driver:          driver,
 		Certifiers:      []string{},
 		BackendParams:   map[string]interface{}{},
+		TokenTopology:   t,
 	}
 	t.TMSs = append(t.TMSs, tms)
 	return tms
@@ -87,4 +88,8 @@ func (t *Topology) SetSDK(fscTopology *fsc2.Topology, sdk api.SDK) {
 	for _, node := range fscTopology.Nodes {
 		node.AddSDK(sdk)
 	}
+}
+
+func (t *Topology) GetTMSs() []*topology2.TMS {
+	return t.TMSs
 }

@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -75,7 +77,7 @@ type EnrollmentService interface {
 
 type WalletManager struct {
 	sp              view2.ServiceProvider
-	cm              driver.ConfigManager
+	cm              config.Manager
 	empty           bool
 	defaultIdentity view.Identity
 	signerService   SignerService
@@ -86,7 +88,7 @@ type WalletManager struct {
 	auditors *LocalMembership
 }
 
-func NewWalletManager(sp view2.ServiceProvider, cm driver.ConfigManager, defaultIdentity view.Identity, signerService SignerService, binderService BinderService) *WalletManager {
+func NewWalletManager(sp view2.ServiceProvider, cm config.Manager, defaultIdentity view.Identity, signerService SignerService, binderService BinderService) *WalletManager {
 	return &WalletManager{
 		sp:              sp,
 		cm:              cm,
@@ -154,7 +156,7 @@ func (l *WalletManager) Auditors() *LocalMembership {
 
 type LocalMembership struct {
 	sp                 view2.ServiceProvider
-	cm                 driver.ConfigManager
+	cm                 config.Manager
 	defaultFSCIdentity view.Identity
 	signerService      SignerService
 	binderService      BinderService
@@ -167,7 +169,7 @@ type LocalMembership struct {
 	bccspResolversByIdentity map[string]*Resolver
 }
 
-func NewLocalMembership(sp view2.ServiceProvider, cm driver.ConfigManager, defaultFSCIdentity view.Identity, signerService SignerService, binderService BinderService) *LocalMembership {
+func NewLocalMembership(sp view2.ServiceProvider, cm config.Manager, defaultFSCIdentity view.Identity, signerService SignerService, binderService BinderService) *LocalMembership {
 	return &LocalMembership{
 		sp:                       sp,
 		cm:                       cm,
@@ -181,7 +183,7 @@ func NewLocalMembership(sp view2.ServiceProvider, cm driver.ConfigManager, defau
 	}
 }
 
-func (lm *LocalMembership) Load(identities []*driver.Identity) error {
+func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	logger.Debugf("loadWallets: %+v", identities)
 
 	type Provider interface {

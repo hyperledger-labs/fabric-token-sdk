@@ -6,11 +6,13 @@ SPDX-License-Identifier: Apache-2.0
 
 package token
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+)
 
 // ConfigManager manages the configuration of the token-sdk
 type ConfigManager struct {
-	cm driver.ConfigManager
+	cm config.Manager
 }
 
 // Certifiers returns the list of certifier ids.

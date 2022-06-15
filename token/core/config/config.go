@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
 
@@ -16,69 +16,43 @@ type configProvider interface {
 	TranslatePath(path string) string
 }
 
-// TMSProvider is a config provider for a specific TMS
-type TMSProvider struct {
-	cp    configProvider
-	tms   *driver.TMS
-	index int
+// TMS is the configuration of a given TMS
+type TMS struct {
+	cp  configProvider
+	tms *config.TMS
 }
 
-// NewTMSProvider creates a new TMSProvider for a specific TMS.
-// If no matching configuration is found, an error is returned.
-func NewTMSProvider(cp configProvider, network, channel, namespace string) (*TMSProvider, error) {
-	var tmsConfigs []*driver.TMS
-	if err := cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
-		return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
-	}
-
-	for i, config := range tmsConfigs {
-		if config.Network == network && config.Channel == channel && config.Namespace == namespace {
-			return &TMSProvider{
-				tms:   config,
-				index: i,
-				cp:    cp,
-			}, nil
-		}
-	}
-
-	return nil, errors.Errorf("no token-sdk configuration for network %s, channel %s, namespace %s", network, channel, namespace)
-}
-
-// TMS returns the TMS configuration this provider is associated with.
-func (m *TMSProvider) TMS() *driver.TMS {
+// TMS returns the full TMS
+func (m *TMS) TMS() *config.TMS {
 	return m.tms
 }
 
 // TranslatePath translates the passed path relative to the config path
-func (m *TMSProvider) TranslatePath(path string) string {
+func (m *TMS) TranslatePath(path string) string {
 	return m.cp.TranslatePath(path)
 }
 
-// Manager manages the configuration of the token-sdk.
-type Manager struct {
+// TokenSDK is the configuration of the TokenSDK
+type TokenSDK struct {
 	cp configProvider
 }
 
-// NewManager creates a new Manager.
-func NewManager(cp configProvider) (*Manager, error) {
-	var tmsConfigs []*driver.TMS
-	if err := cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
-		return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
-	}
-	return &Manager{cp: cp}, nil
+// NewTokenSDK creates a new TokenSDK configuration.
+func NewTokenSDK(cp configProvider) *TokenSDK {
+	return &TokenSDK{cp: cp}
 }
 
-// SearchTMS searches for a TMS configuration that matches the given network and channel, and
+// LookupNamespace searches for a TMS configuration that matches the given network and channel, and
 // return its namespace.
 // If no matching configuration is found, an error is returned.
 // If multiple matching configurations are found, an error is returned.
-func (m *Manager) SearchTMS(network, channel string) (string, error) {
-	var tmsConfigs []*driver.TMS
+func (m *TokenSDK) LookupNamespace(network, channel string) (string, error) {
+	var tmsConfigs []*config.TMS
 	if err := m.cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
 		return "", errors.WithMessagef(err, "cannot load token-sdk configuration")
 	}
 
-	var hits []*driver.TMS
+	var hits []*config.TMS
 	for _, config := range tmsConfigs {
 		if config.Network == network && config.Channel == channel {
 			hits = append(hits, config)
@@ -91,4 +65,23 @@ func (m *Manager) SearchTMS(network, channel string) (string, error) {
 		return "", errors.Errorf("no token-sdk configuration for network %s, channel %s", network, channel)
 	}
 	return "", errors.Errorf("multiple token-sdk configurations for network %s, channel %s", network, channel)
+}
+
+// GetTMS returns a TMS configuration for the given network, channel, and namespace.
+func (m *TokenSDK) GetTMS(network, channel, namespace string) (*TMS, error) {
+	var tmsConfigs []*config.TMS
+	if err := m.cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
+		return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
+	}
+
+	for _, config := range tmsConfigs {
+		if config.Network == network && config.Channel == channel && config.Namespace == namespace {
+			return &TMS{
+				tms: config,
+				cp:  m.cp,
+			}, nil
+		}
+	}
+
+	return nil, errors.Errorf("no token-sdk configuration for network %s, channel %s, namespace %s", network, channel, namespace)
 }

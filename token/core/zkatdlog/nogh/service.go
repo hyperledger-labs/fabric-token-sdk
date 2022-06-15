@@ -8,6 +8,8 @@ package nogh
 import (
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
@@ -52,7 +54,7 @@ type Service struct {
 	TokenCommitmentLoader TokenCommitmentLoader
 	QE                    QueryEngine
 	DeserializerProvider  DeserializerProviderFunc
-	CM                    api3.ConfigManager
+	CM                    config.Manager
 
 	identityProvider api3.IdentityProvider
 	OwnerWallets     []*wallet
@@ -72,7 +74,7 @@ func NewTokenService(
 	identityProvider api3.IdentityProvider,
 	deserializerProvider DeserializerProviderFunc,
 	ppLabel string,
-	cm api3.ConfigManager,
+	cm config.Manager,
 ) (*Service, error) {
 	s := &Service{
 		Channel:               channel,
@@ -129,7 +131,7 @@ func (s *Service) PublicParamsManager() api3.PublicParamsManager {
 	return s.PPM
 }
 
-func (s *Service) ConfigManager() api3.ConfigManager {
+func (s *Service) ConfigManager() config.Manager {
 	return s.CM
 }
 

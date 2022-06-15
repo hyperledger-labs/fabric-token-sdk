@@ -20,23 +20,29 @@ var (
 	logger = flogging.MustGetLogger("token-sdk.network")
 )
 
-type ConfigManager interface {
-	// SearchTMS searches for a TMS configuration that matches the given network and channel, and
+// TokenSDKConfig is the configuration for the token SDK
+type TokenSDKConfig interface {
+	// LookupNamespace searches for a TMS configuration that matches the given network and channel, and
 	// return its namespace.
 	// If no matching configuration is found, an error is returned.
 	// If multiple matching configurations are found, an error is returned.
-	SearchTMS(network, channel string) (string, error)
+	LookupNamespace(network, channel string) (string, error)
 }
 
+// Normalizer is a normalizer for token service options
+// Namely, if no network is specified, it will try to find a default network. And so on.
 type Normalizer struct {
-	sp view.ServiceProvider
-	cp ConfigManager
+	sp             view.ServiceProvider
+	tokenSDKConfig TokenSDKConfig
 }
 
-func NewNormalizer(cp ConfigManager, sp view.ServiceProvider) *Normalizer {
-	return &Normalizer{cp: cp, sp: sp}
+// NewNormalizer creates a new Normalizer
+func NewNormalizer(cp TokenSDKConfig, sp view.ServiceProvider) *Normalizer {
+	return &Normalizer{tokenSDKConfig: cp, sp: sp}
 }
 
+// Normalize normalizes the passed options.
+// If no network is specified, it will try to find a default network. And so on.
 func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions {
 	if len(opt.Network) == 0 {
 		if fns := fabric.GetDefaultFNS(n.sp); fns != nil {
@@ -65,7 +71,7 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions 
 	}
 
 	if len(opt.Namespace) == 0 {
-		if ns, err := n.cp.SearchTMS(opt.Network, opt.Channel); err == nil {
+		if ns, err := n.tokenSDKConfig.LookupNamespace(opt.Network, opt.Channel); err == nil {
 			logger.Debugf("No namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
 			opt.Namespace = ns
 		} else {

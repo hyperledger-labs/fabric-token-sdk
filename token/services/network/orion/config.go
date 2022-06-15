@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
 
@@ -18,12 +18,12 @@ type configProvider interface {
 
 type Manager struct {
 	cp    configProvider
-	tms   *driver.TMS
+	tms   *config.TMS
 	index int
 }
 
 func NewManager(cp configProvider, network, channel, namespace string) (*Manager, error) {
-	var tmsConfigs []*driver.TMS
+	var tmsConfigs []*config.TMS
 	if err := cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
 		return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
 	}
@@ -41,7 +41,7 @@ func NewManager(cp configProvider, network, channel, namespace string) (*Manager
 	return nil, errors.Errorf("no token-sdk configuration for network %s, channel %s, namespace %s", network, channel, namespace)
 }
 
-func (m *Manager) TMS() *driver.TMS {
+func (m *Manager) TMS() *config.TMS {
 	return m.tms
 }
 
