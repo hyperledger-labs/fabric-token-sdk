@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
@@ -64,10 +65,12 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
+	tmsConfigManager, err := config.NewManager(configProvider)
+	assert.NoError(err, "Failed to create TMS config manager")
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
 		p.registry,
 		tmsProvider,
-		network2.NewNormalizer(p.registry),
+		network2.NewNormalizer(tmsConfigManager, p.registry),
 		vault.NewVaultProvider(p.registry),
 		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(

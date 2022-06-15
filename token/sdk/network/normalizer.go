@@ -20,12 +20,21 @@ var (
 	logger = flogging.MustGetLogger("token-sdk.network")
 )
 
-type Normalizer struct {
-	sp view.ServiceProvider
+type ConfigManager interface {
+	// SearchTMS searches for a TMS configuration that matches the given network and channel, and
+	// return its namespace.
+	// If no matching configuration is found, an error is returned.
+	// If multiple matching configurations are found, an error is returned.
+	SearchTMS(network, channel string) (string, error)
 }
 
-func NewNormalizer(sp view.ServiceProvider) *Normalizer {
-	return &Normalizer{sp: sp}
+type Normalizer struct {
+	sp view.ServiceProvider
+	cp ConfigManager
+}
+
+func NewNormalizer(cp ConfigManager, sp view.ServiceProvider) *Normalizer {
+	return &Normalizer{cp: cp, sp: sp}
 }
 
 func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions {
@@ -56,7 +65,13 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions 
 	}
 
 	if len(opt.Namespace) == 0 {
-		opt.Namespace = keys.TokenNameSpace
+		if ns, err := n.cp.SearchTMS(opt.Network, opt.Channel); err == nil {
+			logger.Debugf("No namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
+			opt.Namespace = ns
+		} else {
+			logger.Errorf("No namespace specified, and no default namespace found [%s], use default [%s]", err, keys.TokenNameSpace)
+			opt.Namespace = keys.TokenNameSpace
+		}
 	}
 	if opt.PublicParamsFetcher == nil {
 		opt.PublicParamsFetcher = tcc.NewPublicParamsFetcher(n.sp, opt.Network, opt.Channel, opt.Namespace)
