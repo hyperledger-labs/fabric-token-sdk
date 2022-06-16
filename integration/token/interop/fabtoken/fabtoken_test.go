@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken_test
 
 import (
+	"runtime"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
@@ -45,6 +47,29 @@ var _ = Describe("FabToken end to end", func() {
 
 		It("Performed exchange-related basic operations", func() {
 			interop.TestExchangeSingleFabricNetwork(ii)
+		})
+	})
+
+	Describe("Asset Exchange Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			testDir := ""
+			if runtime.GOOS == "darwin" {
+				testDir = "./testdata"
+			}
+			ii, err = integration.New(
+				integration2.FabTokenInteropExchangeTwoFabricNetworks.StartPortForNode(),
+				testDir,
+				interop.AssetExchangeTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed an exchange based atomic swap", func() {
+			interop.TestExchangeTwoFabricNetworks(ii)
 		})
 	})
 

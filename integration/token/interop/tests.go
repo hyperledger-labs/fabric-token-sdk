@@ -10,6 +10,7 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	. "github.com/onsi/gomega"
 )
 
@@ -48,4 +49,18 @@ func TestExchangeSingleFabricNetwork(network *integration.Infrastructure) {
 
 	checkBalance(network, "alice", "", "USD", 120)
 	checkBalance(network, "bob", "", "EUR", 30)
+}
+
+func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {
+	alpha := token.TMSID{Network: "alpha"}
+	beta := token.TMSID{Network: "beta"}
+
+	registerAuditor(network, token.WithTMSID(alpha))
+	registerAuditor(network, token.WithTMSID(beta))
+
+	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice")
+	checkBalance(network, "alice", "", "EUR", 30, token.WithTMSID(alpha))
+
+	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
+	checkBalance(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 }
