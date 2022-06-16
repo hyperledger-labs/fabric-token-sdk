@@ -19,31 +19,53 @@ import (
 	"github.com/pkg/errors"
 )
 
-// todo check lengths
+// Proof is a range proof that  show that an array of token have value < max_value
+// max_value = base^exponent - 1
+// token_value = \sum_{i=0}^exponent v_i base^i and 0=<v_i =<base-1
 type Proof struct {
-	Challenge        *mathlib.Zr
-	EqualityProofs   *EqualityProofs
+	// Challenge used to compute the proof
+	Challenge *mathlib.Zr
+	// EqualityProofs show that for each token in an array of tokens,
+	// token_value = \sum_{i=0}^exponent v_i base^i
+	EqualityProofs *EqualityProofs
+	// MembershipProofs show that  0=<v_i =<base-1
 	MembershipProofs []*MembershipProof
 }
 
+// EqualityProofs show that for each token in an array of tokens,
+// token_value = \sum_{i=0}^exponent v_i base^i
 type EqualityProofs struct {
-	Type                     *mathlib.Zr
-	Value                    []*mathlib.Zr
-	TokenBlindingFactor      []*mathlib.Zr
+	// Type of tokens
+	Type *mathlib.Zr
+	// Value is an array of elements in Zr such that Value[i] is the value of the i^th token
+	Value []*mathlib.Zr
+	// TokenBlindingFactor is an array of elements in Zr such that
+	// TokenBlindingFactor[i] is the blinding factor of the i^th token
+	TokenBlindingFactor []*mathlib.Zr
+	// CommitmentBlindingFactor is an array of elements in Zr such that
+	// CommitmentBlindingFactor[i] is the blinding factor of the i^th commitment
 	CommitmentBlindingFactor []*mathlib.Zr
 }
 
+// MembershipProof shows that committed values 0=<v_i =<base-1, for 1 =< i =< n
 type MembershipProof struct {
-	Commitments     []*mathlib.G1
+	// Commitments is an array of Pedersen commitments
+	Commitments []*mathlib.G1
+	// SignatureProofs is ZK proof that each committed value is signed
+	// using Pointcheval-Sanders signature
 	SignatureProofs [][]byte
 }
 
+// Prover produces a proof that show that values of tokens is < max_value
 type Prover struct {
 	*Verifier
+	// tokenWitness is the opening of a TokenData (type, value, blinding factor)
 	tokenWitness []*token.TokenDataWitness
-	Signatures   []*pssign.Signature
+	// Signatures are an array of Pointcheval-Sanders signatures
+	Signatures []*pssign.Signature
 }
 
+// NewProver returns a Prover
 func NewProver(tw []*token.TokenDataWitness, token []*mathlib.G1, signatures []*pssign.Signature, exponent int, pp []*mathlib.G1, PK []*mathlib.G2, P *mathlib.G1, Q *mathlib.G2, c *mathlib.Curve) *Prover {
 	return &Prover{
 		tokenWitness: tw,
@@ -61,17 +83,26 @@ func NewProver(tw []*token.TokenDataWitness, token []*mathlib.G1, signatures []*
 	}
 }
 
+// Verifier checks the validity of range proofs produced by Prover
 type Verifier struct {
-	Token          []*mathlib.G1
-	Base           uint64
-	Exponent       int
+	// Token is an array of TokenData - commitment to (value, type)
+	Token []*mathlib.G1
+	// max_value = Base^Exponent
+	Base     uint64
+	Exponent int
+	// PedersenParams corresponds to the Pedersen commitment generators
 	PedersenParams []*mathlib.G1
-	Q              *mathlib.G2
-	P              *mathlib.G1
-	PK             []*mathlib.G2
-	Curve          *mathlib.Curve
+	// Q is a random G2 generator
+	Q *mathlib.G2
+	// P is a random G1 generator
+	P *mathlib.G1
+	// PK is the public key of Pointcheval-Sanders signature
+	PK []*mathlib.G2
+	// Curve is an elliptic curve
+	Curve *mathlib.Curve
 }
 
+// NewVerifier returns a range proof Verifier
 func NewVerifier(token []*mathlib.G1, base uint64, exponent int, pp []*mathlib.G1, PK []*mathlib.G2, P *mathlib.G1, Q *mathlib.G2, c *mathlib.Curve) *Verifier {
 	return &Verifier{
 		Token:          token,
@@ -85,6 +116,7 @@ func NewVerifier(token []*mathlib.G1, base uint64, exponent int, pp []*mathlib.G
 	}
 }
 
+// Randomness is the randomness used in the range proof
 type Randomness struct {
 	Type                     *mathlib.Zr
 	Value                    []*mathlib.Zr
@@ -92,11 +124,13 @@ type Randomness struct {
 	CommitmentBlindingFactor []*mathlib.Zr
 }
 
+// Commitment is the commitment to the randomness used in the range proof
 type Commitment struct {
 	Token             []*mathlib.G1
 	CommitmentToValue []*mathlib.G1
 }
 
+// ?
 type commitmentWitnessBlindingFactor struct {
 	commitment     [][]*mathlib.G1
 	witness        [][]*sigproof.MembershipWitness
