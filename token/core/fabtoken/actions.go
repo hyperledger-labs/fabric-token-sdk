@@ -14,6 +14,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Signature struct {
+	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
+}
+
+func (s *Signature) Metadata() map[string][]byte {
+	return s.metadata
+}
+
 // TokenInformation contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
 type TokenInformation struct {

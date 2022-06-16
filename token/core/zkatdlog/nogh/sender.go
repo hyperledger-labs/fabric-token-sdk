@@ -7,11 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"encoding/json"
+
 	math "github.com/IBM/mathlib"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -55,7 +60,28 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			return nil, nil, errors.Errorf("failed to get owner for %dth output: nil owner", i)
 		}
 		owners = append(owners, output.Owner.Raw)
-		ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+		if len(output.Owner.Raw) == 0 { // redeem
+			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+			continue
+		}
+		owner, err := identity.UnmarshallRawOwner(output.Owner.Raw)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to unmarshal owner of the output token")
+		}
+		if owner.Type == identity.SerializedIdentityType {
+			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+			continue
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			script := &exchange.Script{}
+			err := json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return nil, nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+			}
+			ownerIdentities = append(ownerIdentities, script.Recipient)
+		} else {
+			return nil, nil, errors.Errorf("owner's type not recognized [%s]", owner.Type)
+		}
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
@@ -76,7 +102,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := s.identityProvider.GetAuditInfo(output.Owner.Raw)
+		auditInfo, err := s.getOwnerAuditInfo(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -86,7 +112,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for senders
 	var senderAuditInfos [][]byte
 	for _, t := range tokens {
-		auditInfo, err := s.identityProvider.GetAuditInfo(t.Owner)
+		auditInfo, err := s.getOwnerAuditInfo(t.Owner)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}
@@ -163,4 +189,53 @@ func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, 
 		return nil, err
 	}
 	return transfer, nil
+}
+
+type ScriptInfo struct {
+	Sender    []byte
+	Recipient []byte
+}
+
+func (s *Service) getOwnerAuditInfo(raw []byte) ([]byte, error) {
+	if len(raw) == 0 {
+		// this is a redeem
+		return nil, nil
+	}
+
+	owner, err := identity.UnmarshallRawOwner(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
+	}
+	if owner.Type == identity.SerializedIdentityType {
+		auditInfo, err := view2.GetSigService(s.SP).GetAuditInfo(raw)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
+		}
+		return auditInfo, nil
+	}
+	if owner.Type != exchange.ScriptTypeExchange {
+		return nil, errors.Errorf("owner's type not recognized [%s]", owner.Type)
+	}
+	script := &exchange.Script{}
+	err = json.Unmarshal(owner.Identity, script)
+	if err != nil {
+		return nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+	}
+
+	auditInfo := &ScriptInfo{}
+	auditInfo.Sender, err = view2.GetSigService(s.SP).GetAuditInfo(script.Sender)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for exchange script [%s]", view.Identity(raw).String())
+	}
+
+	auditInfo.Recipient, err = view2.GetSigService(s.SP).GetAuditInfo(script.Recipient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for exchange script [%s]", view.Identity(raw).String())
+	}
+	raw, err = json.Marshal(auditInfo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshaling audit info for exchange script")
+	}
+	return raw, nil
+
 }

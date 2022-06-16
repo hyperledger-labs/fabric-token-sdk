@@ -8,18 +8,21 @@ package validator
 
 import (
 	"bytes"
+	"encoding/json"
+	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
@@ -74,6 +77,14 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
+type Signature struct {
+	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
+}
+
+func (s *Signature) Metadata() map[string][]byte {
+	return s.metadata
+}
+
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
@@ -101,6 +112,21 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	}
 	for _, action := range ta {
 		actions = append(actions, action)
+	}
+
+	for _, sig := range signatureProvider.Signatures() {
+		claim := &exchange.ClaimSignature{}
+		if err = json.Unmarshal(sig, claim); err != nil {
+			continue
+		}
+		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
+			continue
+		}
+		actions = append(actions, &Signature{
+			metadata: map[string][]byte{
+				"claimPreimage": claim.Preimage,
+			},
+		})
 	}
 
 	return actions, nil
@@ -231,20 +257,138 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 
 func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferAction) error {
 	action := tr.(*transfer.TransferAction)
-
+	tokens := make([]*token.Token, len(inputTokens))
 	in := make([]*math.G1, len(inputTokens))
 	for i, raw := range inputTokens {
-		tok := &token.Token{}
-		if err := tok.Deserialize(raw); err != nil {
+		tokens[i] = &token.Token{}
+		if err := tokens[i].Deserialize(raw); err != nil {
 			return errors.Wrapf(err, "invalid transfer: failed to deserialize input [%d]", i)
 		}
-		in[i] = tok.GetCommitment()
+		in[i] = tokens[i].GetCommitment()
 	}
 
-	return transfer.NewVerifier(
+	if err := transfer.NewVerifier(
 		in,
 		action.GetOutputCommitments(),
-		v.pp).Verify(action.GetProof())
+		v.pp).Verify(action.GetProof()); err != nil {
+		return err
+	}
+
+	fromScript := false
+	scriptID := identity.SerializedIdentityType
+
+	for _, tok := range tokens {
+		owner, err := identity.UnmarshallRawOwner(tok.Owner)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type != identity.SerializedIdentityType {
+			fromScript = true
+			scriptID = owner.Type
+			break
+		}
+	}
+
+	if !fromScript {
+		err := validateOutputOwners(action)
+		if err != nil {
+			return errors.Wrap(err, "invalid output owner")
+		}
+		return nil
+	}
+
+	if scriptID != exchange.ScriptTypeExchange {
+		return errors.Errorf("invalid owner type in input token: %s", scriptID) // todo check if this ever happens?
+	}
+
+	if err := verifyTransferFromExchangeScript(tokens, action); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func validateOutputOwners(ta driver.TransferAction) error {
+	for _, out := range ta.GetOutputs() {
+		o, ok := out.(*token.Token)
+		if !ok {
+			return errors.Errorf("invalid output")
+		}
+		err := validateOutputOwner(o)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateOutputOwner(out *token.Token) error {
+	if out.IsRedeem() {
+		return nil
+	}
+	owner, err := identity.UnmarshallRawOwner(out.Owner)
+	if err != nil {
+		return err
+	}
+	// todo check validity of public keys
+	if owner.Type == identity.SerializedIdentityType {
+		return nil // todo validate owner
+	} // todo validate owner
+	if owner.Type == exchange.ScriptTypeExchange {
+		script := &exchange.Script{}
+		err = json.Unmarshal(owner.Identity, script)
+		if err != nil {
+			return err
+		}
+		if script.Deadline.Before(time.Now()) {
+			return errors.Errorf("exchange script invalid: expiration date has already passed.")
+		}
+		return nil
+	}
+	return errors.Errorf("invalid output owner type")
+}
+
+func verifyTransferFromExchangeScript(tokens []*token.Token, tr driver.TransferAction) error {
+	err := verifyOwnershipTransfer(tokens, tr)
+	if err != nil {
+		return err
+	}
+	// check that owner field in output is correct
+
+	sender, err := identity.UnmarshallRawOwner(tokens[0].Owner)
+	if err != nil {
+		return err
+	}
+	script := &exchange.Script{}
+	err = json.Unmarshal(sender.Identity, script)
+	if err != nil {
+		return err
+	}
+	out := tr.GetOutputs()[0].(*token.Token)
+
+	if time.Now().Before(script.Deadline) {
+		// this should be a claim
+		if !script.Recipient.Equal(out.Owner) {
+			return errors.Errorf("owner of output token does not correspond to recipient in exchange request")
+		}
+	} else {
+		// this should be a reclaim
+		if !script.Sender.Equal(out.Owner) {
+			return errors.Errorf("owner of output token does not correspond to sender in exchange request")
+		}
+	}
+	return nil
+}
+
+func verifyOwnershipTransfer(tokens []*token.Token, transfer driver.TransferAction) error {
+	if len(tokens) != 1 || len(transfer.GetOutputs()) != 1 {
+		return errors.Errorf("invalid transfer action: a script only transfers the ownership of a token")
+	}
+	out := transfer.GetOutputs()[0].(*token.Token)
+	if tokens[0].Data.Equals(out.Data) {
+		return errors.Errorf("invalid transfer action: content of input does not match content of output")
+	}
+	return nil
 }
 
 type backend struct {
