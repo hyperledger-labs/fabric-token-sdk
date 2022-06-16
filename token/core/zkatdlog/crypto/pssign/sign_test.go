@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package pssign_test
 
 import (
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
