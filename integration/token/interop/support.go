@@ -9,6 +9,7 @@ package interop
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
@@ -37,6 +38,24 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+
+	return common.JSONUnmarshalString(txid)
+}
+
+func tmsIssueCash(network *integration.Infrastructure, tmsID token.TMSID, issuer string, wallet string, typ string, amount uint64, receiver string) string {
+	txid, err := network.Client(issuer).CallView("issue", common.JSONMarshall(&views2.IssueCash{
+		TMSID:        tmsID,
+		IssuerWallet: wallet,
+		TokenType:    typ,
+		Quantity:     amount,
+		Recipient:    network.Identity(receiver),
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	Expect(network.Client(receiver).IsTxFinal(
+		common.JSONUnmarshalString(txid),
+		api.WithNetwork(tmsID.Network),
+		api.WithChannel(tmsID.Channel),
+	)).NotTo(HaveOccurred())
 
 	return common.JSONUnmarshalString(txid)
 }

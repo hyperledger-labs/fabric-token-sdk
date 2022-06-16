@@ -66,3 +66,66 @@ func SingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
+
+func AssetExchangeTopology(tokenSDKDriver string) []api.Topology {
+	// Define two Fabric topologies
+	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
+	f1Topology.EnableIdemix()
+	f1Topology.AddOrganizationsByName("Org1", "Org2")
+	f1Topology.SetNamespaceApproverOrgs("Org1")
+
+	f2Topology := fabric.NewTopologyWithName("beta")
+	f2Topology.EnableIdemix()
+	f2Topology.AddOrganizationsByName("Org3", "Org4")
+	f2Topology.SetNamespaceApproverOrgs("Org3")
+
+	// FSC
+	fscTopology := fsc.NewTopology()
+
+	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org1"),
+		fabric.WithNetworkOrganization("beta", "Org3"),
+		fabric.WithAnonymousIdentity(),
+		token.WithIssuerIdentity("issuer.id1"),
+		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+	)
+	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
+
+	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org1"),
+		fabric.WithNetworkOrganization("beta", "Org3"),
+		fabric.WithAnonymousIdentity(),
+		token.WithAuditorIdentity(),
+	)
+	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+
+	alice := fscTopology.AddNodeByName("alice").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org2"),
+		fabric.WithNetworkOrganization("beta", "Org4"),
+		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+	)
+	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+
+	bob := fscTopology.AddNodeByName("bob").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org2"),
+		fabric.WithNetworkOrganization("beta", "Org4"),
+		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+	)
+	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+
+	tokenTopology := token.NewTopology()
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	tms := tokenTopology.AddTMS(f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
+	tms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(tms, "Org1")
+	tms.AddAuditor(auditor)
+
+	tms = tokenTopology.AddTMS(f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
+	tms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(tms, "Org3")
+	tms.AddAuditor(auditor)
+
+	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
+}
