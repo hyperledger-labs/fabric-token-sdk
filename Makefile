@@ -95,6 +95,11 @@ integration-tests-dvp-fabtoken: docker-images dependencies
 integration-tests-dvp-dlog: docker-images dependencies
 	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
+.PHONY: integration-tests-interop-fabtoken
+integration-tests-nft-dlog: docker-images dependencies
+	cd ./integration/token/interop/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+
 .PHONY: tidy
 tidy:
 	@go mod tidy
@@ -113,6 +118,7 @@ clean:
 	rm -rf ./integration/token/nft/ofabtoken/cmd/
 	rm -rf ./integration/token/dvp/dlog/cmd/
 	rm -rf ./integration/token/dvp/fabtoken/cmd/
+	rm -rf ./integration/token/interop/fabtoken/cmd/
 	rm -rf ./samples/fungible/cmd
 	rm -rf ./samples/nft/cmd
 
