@@ -11,6 +11,7 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -43,7 +44,7 @@ type Service struct {
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
 	QE          QueryEngine
-	CM          driver.ConfigManager
+	CM          config.Manager
 
 	IP             driver.IdentityProvider
 	Deserializer   driver.Deserializer
@@ -62,7 +63,7 @@ func NewService(
 	qe QueryEngine,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
-	cm driver.ConfigManager,
+	cm config.Manager,
 ) *Service {
 	s := &Service{
 		SP:           sp,
@@ -90,6 +91,6 @@ func (s *Service) PublicParamsManager() driver.PublicParamsManager {
 	return s.PPM
 }
 
-func (s *Service) ConfigManager() driver.ConfigManager {
+func (s *Service) ConfigManager() config.Manager {
 	return s.CM
 }

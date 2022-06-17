@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+
 type TokenManagerService interface {
 	IssueService
 	TransferService
@@ -18,7 +20,7 @@ type TokenManagerService interface {
 	IdentityProvider() IdentityProvider
 	Validator() Validator
 	PublicParamsManager() PublicParamsManager
-	ConfigManager() ConfigManager
+	ConfigManager() config.Manager
 }
 
 type TokenManagerServiceProvider interface {

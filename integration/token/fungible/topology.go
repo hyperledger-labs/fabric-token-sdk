@@ -141,6 +141,7 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(backendNetwork, backendChannel, tokenSDKDriver)
+	tms.SetNamespace("token-chaincode")
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
