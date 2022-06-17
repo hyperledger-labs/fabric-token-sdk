@@ -99,7 +99,9 @@ func TestGen(t *testing.T) {
 		testGenRunWithError(gt, tokengen, test.Args, test.ErrMsg)
 	}
 
-	tempOutput := os.TempDir()
+	tempOutput, err := ioutil.TempDir("", "tokengen-test")
+	gt.Expect(err).NotTo(HaveOccurred())
+
 	defer os.RemoveAll(tempOutput)
 	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
 	raw, err := ioutil.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
