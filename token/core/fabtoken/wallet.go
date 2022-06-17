@@ -226,6 +226,10 @@ func (w *ownerWallet) ID() string {
 	return w.id
 }
 
+func (w *ownerWallet) UID() string {
+	return w.identity.UniqueID()
+}
+
 func (w *ownerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity) || w.wrappedID.Equal(identity)
 }
@@ -307,6 +311,10 @@ func (w *issuerWallet) ID() string {
 	return w.id
 }
 
+func (w *issuerWallet) UID() string {
+	return w.identity.UniqueID()
+}
+
 func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
@@ -373,6 +381,10 @@ func newAuditorWallet(tokenService *Service, id string, identity view.Identity) 
 
 func (w *auditorWallet) ID() string {
 	return w.id
+}
+
+func (w *auditorWallet) UID() string {
+	return w.identity.UniqueID()
 }
 
 func (w *auditorWallet) Contains(identity view.Identity) bool {

@@ -147,6 +147,10 @@ func (w *Wallet) ID() string {
 	return w.w.ID()
 }
 
+func (w *Wallet) UID() string {
+	return w.w.UID()
+}
+
 // Contains returns true if the wallet contains the passed identity.
 func (w *Wallet) Contains(identity view.Identity) bool {
 	return w.w.Contains(identity)
@@ -165,6 +169,10 @@ type AuditorWallet struct {
 // ID returns the wallet identifier.
 func (a *AuditorWallet) ID() string {
 	return a.w.ID()
+}
+
+func (a *AuditorWallet) UID() string {
+	return a.w.UID()
 }
 
 // Contains returns true if the wallet contains the passed identity.
@@ -198,6 +206,10 @@ func (a *CertifierWallet) ID() string {
 	return a.w.ID()
 }
 
+func (a *CertifierWallet) UID() string {
+	return a.w.UID()
+}
+
 // Contains returns true if the wallet contains the passed identity.
 func (a *CertifierWallet) Contains(identity view.Identity) bool {
 	return a.w.Contains(identity)
@@ -227,6 +239,10 @@ type OwnerWallet struct {
 // ID returns the wallet identifier.
 func (o *OwnerWallet) ID() string {
 	return o.w.ID()
+}
+
+func (o *OwnerWallet) UID() string {
+	return o.w.UID()
 }
 
 // Contains returns true if the wallet contains the passed identity.
@@ -282,6 +298,10 @@ type IssuerWallet struct {
 // ID returns the wallet identifier.
 func (i *IssuerWallet) ID() string {
 	return i.w.ID()
+}
+
+func (i *IssuerWallet) UID() string {
+	return i.w.UID()
 }
 
 // Contains returns true if the wallet contains the passed identity.

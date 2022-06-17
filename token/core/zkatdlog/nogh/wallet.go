@@ -240,6 +240,15 @@ func (w *wallet) ID() string {
 	return w.id
 }
 
+func (w *wallet) UID() string {
+	if id, err := w.identityInfo.GetIdentity(); err != nil {
+		logger.Error("unable to get identity from identity info for wallet %s : %s", w.id, err.Error())
+		return w.identityInfo.ID
+	} else {
+		return id.UniqueID()
+	}
+}
+
 func (w *wallet) Contains(identity view.Identity) bool {
 	return w.existsRecipientIdentity(identity)
 }
@@ -359,6 +368,10 @@ func (w *issuerWallet) ID() string {
 	return w.id
 }
 
+func (w *issuerWallet) UID() string {
+	return w.identity.UniqueID()
+}
+
 func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
@@ -425,6 +438,10 @@ func newAuditorWallet(tokenService *Service, id string, identity view.Identity) 
 
 func (w *auditorWallet) ID() string {
 	return w.id
+}
+
+func (w *auditorWallet) UID() string {
+	return w.identity.UniqueID()
 }
 
 func (w *auditorWallet) Contains(identity view.Identity) bool {

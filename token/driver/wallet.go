@@ -23,6 +23,9 @@ type Wallet interface {
 	// ID returns the ID of this wallet
 	ID() string
 
+	// UID returns the view.Identity.UniqueID of this wallet
+	UID() string
+
 	// Contains returns true if the passed identity belongs to this wallet
 	Contains(identity view.Identity) bool
 
