@@ -59,7 +59,7 @@ func (t *WalletManager) Wallet(identity view.Identity) *Wallet {
 	if w == nil {
 		return nil
 	}
-	return &Wallet{w: w}
+	return &Wallet{w: w, managementService: t.managementService}
 }
 
 // OwnerWallet returns the owner wallet bound to the passed identifier, if any is available.
@@ -70,7 +70,7 @@ func (t *WalletManager) OwnerWallet(id string) *OwnerWallet {
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{Wallet: &Wallet{w: w}, w: w}
+	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // OwnerWalletByIdentity returns the owner wallet bound to the passed identity, if any is available.
@@ -80,7 +80,7 @@ func (t *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWall
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{Wallet: &Wallet{w: w}, w: w}
+	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // IssuerWallet returns the issuer wallet bound to the passed identifier, if any is available.
@@ -91,7 +91,7 @@ func (t *WalletManager) IssuerWallet(id string) *IssuerWallet {
 	if w == nil {
 		return nil
 	}
-	return &IssuerWallet{Wallet: &Wallet{w: w}, w: w}
+	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // IssuerWalletByIdentity returns the issuer wallet bound to the passed identity, if any is available.
@@ -101,7 +101,7 @@ func (t *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWa
 	if w == nil {
 		return nil
 	}
-	return &IssuerWallet{Wallet: &Wallet{w: w}, w: w}
+	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // AuditorWallet returns the auditor wallet bound to the passed identifier, if any is available.
@@ -112,7 +112,7 @@ func (t *WalletManager) AuditorWallet(id string) *AuditorWallet {
 	if w == nil {
 		return nil
 	}
-	return &AuditorWallet{Wallet: &Wallet{w: w}, w: w}
+	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // CertifierWallet returns the certifier wallet bound to the passed identifier, if any is available.
@@ -123,7 +123,7 @@ func (t *WalletManager) CertifierWallet(id string) *CertifierWallet {
 	if w == nil {
 		return nil
 	}
-	return &CertifierWallet{Wallet: &Wallet{w: w}, w: w}
+	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // CertifierWalletByIdentity returns the certifier wallet bound to the passed identity, if any is available.
@@ -133,7 +133,7 @@ func (t *WalletManager) CertifierWalletByIdentity(identity view.Identity) *Certi
 	if w == nil {
 		return nil
 	}
-	return &CertifierWallet{Wallet: &Wallet{w: w}, w: w}
+	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
