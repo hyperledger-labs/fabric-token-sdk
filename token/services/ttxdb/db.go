@@ -243,7 +243,7 @@ type DB struct {
 	//   (in case the transaction context is received from another node)),
 	//   it holds a read-lock; when Done is called on it, the lock is released.
 	// * an exclusive lock is held when Commit is called.
-	db        driver.DB
+	db        driver.TokenTransactionDB
 	storeLock sync.RWMutex
 
 	eIDsLocks sync.Map
@@ -254,7 +254,7 @@ type DB struct {
 	wg             sync.WaitGroup
 }
 
-func newDB(p driver.DB) *DB {
+func newDB(p driver.TokenTransactionDB) *DB {
 	return &DB{
 		db:         p,
 		eIDsLocks:  sync.Map{},

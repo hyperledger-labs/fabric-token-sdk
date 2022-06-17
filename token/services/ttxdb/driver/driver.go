@@ -134,8 +134,8 @@ type QueryTransactionsParams struct {
 	To *time.Time
 }
 
-// DB defines the interface for a token transactions related database
-type DB interface {
+// TokenTransactionDB defines the interface for a token transactions related database
+type TokenTransactionDB interface {
 	// Close closes the database
 	Close() error
 
@@ -167,5 +167,5 @@ type DB interface {
 // Driver is the interface for a database driver
 type Driver interface {
 	// Open opens a database connection
-	Open(sp view.ServiceProvider, name string) (DB, error)
+	Open(sp view.ServiceProvider, name string) (TokenTransactionDB, error)
 }

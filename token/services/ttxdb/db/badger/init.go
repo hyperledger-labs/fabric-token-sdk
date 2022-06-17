@@ -10,15 +10,19 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.ttxdb.badger")
+
+const (
+	// OptsKey is the key for the opts in the config
+	OptsKey = "token.ttxdb.persistence.opts"
+)
 
 type Opts struct {
 	Path string
@@ -27,9 +31,9 @@ type Opts struct {
 type Driver struct {
 }
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.DB, error) {
+func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	opts := &Opts{}
-	err := view2.GetConfigService(sp).UnmarshalKey("token.ttxdb.persistence.opts", opts)
+	err := view2.GetConfigService(sp).UnmarshalKey(OptsKey, opts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}

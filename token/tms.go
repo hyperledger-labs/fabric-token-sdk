@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
@@ -132,7 +132,7 @@ type ManagementService struct {
 	network   string
 	channel   string
 	namespace string
-	tms       tokenapi.TokenManagerService
+	tms       driver.TokenManagerService
 
 	vaultProvider               VaultProvider
 	certificationClientProvider CertificationClientProvider
@@ -173,7 +173,7 @@ func (t *ManagementService) NewRequestFromBytes(anchor string, actions []byte, m
 
 // NewMetadataFromBytes unmarshals the passed bytes into a Metadata object
 func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) {
-	tokenRequestMetadata := &tokenapi.TokenRequestMetadata{}
+	tokenRequestMetadata := &driver.TokenRequestMetadata{}
 	if err := tokenRequestMetadata.FromBytes(raw); err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func (t *ManagementService) Vault() *Vault {
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{ts: t}
+	return &WalletManager{managementService: t}
 }
 
 // CertificationManager returns the certification manager for this TMS

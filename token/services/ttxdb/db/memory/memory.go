@@ -185,7 +185,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 
 type Driver struct{}
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.DB, error) {
+func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	return &Persistence{}, nil
 }
 
