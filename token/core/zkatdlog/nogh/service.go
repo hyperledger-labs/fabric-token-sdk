@@ -3,20 +3,19 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -54,7 +53,7 @@ type Service struct {
 	TokenCommitmentLoader TokenCommitmentLoader
 	QE                    QueryEngine
 	DeserializerProvider  DeserializerProviderFunc
-	CM                    config.Manager
+	configManager         config.Manager
 
 	identityProvider api3.IdentityProvider
 	OwnerWallets     []*wallet
@@ -74,7 +73,7 @@ func NewTokenService(
 	identityProvider api3.IdentityProvider,
 	deserializerProvider DeserializerProviderFunc,
 	ppLabel string,
-	cm config.Manager,
+	configManager config.Manager,
 ) (*Service, error) {
 	s := &Service{
 		Channel:               channel,
@@ -87,7 +86,7 @@ func NewTokenService(
 		identityProvider:      identityProvider,
 		DeserializerProvider:  deserializerProvider,
 		PPLabel:               ppLabel,
-		CM:                    cm,
+		configManager:         configManager,
 	}
 	return s, nil
 }
@@ -132,7 +131,7 @@ func (s *Service) PublicParamsManager() api3.PublicParamsManager {
 }
 
 func (s *Service) ConfigManager() config.Manager {
-	return s.CM
+	return s.configManager
 }
 
 func (s *Service) PublicParams() *crypto.PublicParams {

@@ -9,10 +9,9 @@ package fabtoken
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

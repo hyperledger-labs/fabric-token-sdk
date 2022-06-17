@@ -48,7 +48,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	}
 	qe := v.TokenVault().QueryEngine()
 
-	cm, err := config.NewTokenSDK(view2.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
+	tmsConfig, err := config.NewTokenSDK(view2.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
@@ -57,7 +57,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	// Otherwise, resort to network local membership
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	mappers := identity.NewMappers()
-	tmsWalletManager := tms.NewWalletManager(sp, cm, lm.DefaultIdentity(), tms.NewSigService(view2.GetSigService(sp)), view2.GetEndpointService(sp))
+	tmsWalletManager := tms.NewWalletManager(sp, tmsConfig, lm.DefaultIdentity(), tms.NewSigService(view2.GetSigService(sp)), view2.GetEndpointService(sp))
 	if err := tmsWalletManager.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to load wallet")
 	}
@@ -93,7 +93,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		identity.NewProvider(sp, eidDeserializer, mappers),
 		desProvider.Deserialize,
 		crypto.DLogPublicParameters,
-		cm,
+		tmsConfig,
 	)
 	if err != nil {
 		return nil, err
