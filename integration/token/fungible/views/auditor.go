@@ -90,10 +90,10 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			fmt.Printf("Cumulative Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
 
 			// load last 10 payments, add diff, and check that it is below the threshold
-			filter, err := aqe.Payments().ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute()
+			filter, err := aqe.NewPaymentsFilter().ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute()
 			assert.NoError(err, "failed retrieving last 10 payments")
 			sumLastPayments := filter.Sum()
-			fmt.Printf("Cumulative Limit: [%s] Last Payments [%s], type [%s]\n", eID, sumLastPayments.Decimal(), tokenType)
+			fmt.Printf("Cumulative Limit: [%s] Last NewPaymentsFilter [%s], type [%s]\n", eID, sumLastPayments.Decimal(), tokenType)
 
 			// R3: The default configuration is customized by a specific organisation (Guarantor)
 			total := sumLastPayments.Add(token2.NewQuantityFromBig64(diff))
@@ -120,7 +120,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			fmt.Printf("Holding Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
 
 			// load current holding, add diff, and check that it is below the threshold
-			filter, err := aqe.Holdings().ByEnrollmentId(eID).ByType(tokenType).Execute()
+			filter, err := aqe.NewHoldingsFilter().ByEnrollmentId(eID).ByType(tokenType).Execute()
 			assert.NoError(err, "failed retrieving holding for [%s][%s]", eIDs, tokenTypes)
 			currentHolding := filter.Sum()
 
@@ -169,7 +169,7 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
 
-	filter, err := aqe.Holdings().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	filter, err := aqe.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
 	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentHolding := filter.Sum()
 	decimal := currentHolding.Decimal()
@@ -207,7 +207,7 @@ func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
 
-	filter, err := aqe.Payments().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	filter, err := aqe.NewPaymentsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
 	assert.NoError(err, "failed retrieving spending for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentSpending := filter.Sum()
 	decimal := currentSpending.Decimal()

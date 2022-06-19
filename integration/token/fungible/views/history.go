@@ -91,7 +91,7 @@ func (i *ListAuditedTransactionsViewFactory) NewView(in []byte) (view.View, erro
 	return f, nil
 }
 
-// ListAcceptedTransactions contains the input to query the list of issued tokens
+// ListAcceptedTransactions contains the input to query the list of accepted tokens
 type ListAcceptedTransactions struct {
 	SenderWallet    string
 	RecipientWallet string
@@ -132,9 +132,9 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 
 type ListAcceptedTransactionsViewFactory struct{}
 
-func (i *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, error) {
-	f := &ListAcceptedTransactionsView{ListAcceptedTransactions: &ListAcceptedTransactions{}}
-	err := json.Unmarshal(in, f.ListAcceptedTransactions)
+func (l *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, error) {
+	v := &ListAcceptedTransactionsView{ListAcceptedTransactions: &ListAcceptedTransactions{}}
+	err := json.Unmarshal(in, v.ListAcceptedTransactions)
 	assert.NoError(err, "failed unmarshalling input")
-	return f, nil
+	return v, nil
 }

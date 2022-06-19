@@ -1,7 +1,7 @@
 # Token Transactions DB
 
-The Token Transactions DB is a database of audit records. It is used to track the
-history of audit events. In particular, it is used to track payments, holdings,
+The Token Transactions DB is a database of audited records. It is used to track the
+history of audited events. In particular, it is used to track payments, holdings,
 and transactions of any business party identified by a unique enrollment ID.
 
 ## Getting Started
@@ -27,6 +27,8 @@ Once a Token Request is assembled, it can be appended to the Token Transactions 
 		return errors.WithMessagef(err, "failed appending audit records for tx [%s]", tx.ID())
 	}
 ```
+
+The above code will extract the movement records and the transaction records from the Token Request and append them to the Token Transactions DB.
 
 It is also possible to append just the transaction records corresponding to a given Token Request as follows:
 
@@ -62,7 +64,8 @@ business party, identified by the corresponding enrollment ID, for a given token
 ## Holdings
 
 The following example shows how to retrieve the current holding of a given token type for a given business party.
-Recall that the current holding is the sum of all inbound and outbound payments.
+Recall that the current holding is equal to the difference between inbound and outbound transactions over
+the entire history.
 
 ```go
     filter := qe.NewHoldingsFilter()
@@ -70,6 +73,7 @@ Recall that the current holding is the sum of all inbound and outbound payments.
     if err != nil {
         return errors.WithMessagef(err, "failed getting holdings for enrollment id [%s] and token type [%s]", eID, tokenType)
     }
+    holding := filter.Sum()
 ```
 
 ## Transaction Records

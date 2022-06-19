@@ -63,7 +63,7 @@ func (t *WalletManager) Wallet(identity view.Identity) *Wallet {
 }
 
 // OwnerWallet returns the owner wallet bound to the passed identifier, if any is available.
-// The identifier can be a label, an identity or a wallet ID.
+// The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (t *WalletManager) OwnerWallet(id string) *OwnerWallet {
 	w := t.managementService.tms.OwnerWallet(id)
@@ -84,7 +84,7 @@ func (t *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWall
 }
 
 // IssuerWallet returns the issuer wallet bound to the passed identifier, if any is available.
-// The identifier can be a label, an identity or a wallet ID.
+// The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (t *WalletManager) IssuerWallet(id string) *IssuerWallet {
 	w := t.managementService.tms.IssuerWallet(id)
@@ -105,7 +105,7 @@ func (t *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWa
 }
 
 // AuditorWallet returns the auditor wallet bound to the passed identifier, if any is available.
-// The identifier can be a label, an identity or a wallet ID.
+// The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (t *WalletManager) AuditorWallet(id string) *AuditorWallet {
 	w := t.managementService.tms.AuditorWallet(id)
@@ -116,7 +116,7 @@ func (t *WalletManager) AuditorWallet(id string) *AuditorWallet {
 }
 
 // CertifierWallet returns the certifier wallet bound to the passed identifier, if any is available.
-// The identifier can be a label, an identity or a wallet ID.
+// The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (t *WalletManager) CertifierWallet(id string) *CertifierWallet {
 	w := t.managementService.tms.CertifierWallet(id)

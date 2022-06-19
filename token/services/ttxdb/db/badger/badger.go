@@ -163,7 +163,7 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 		Id:     next,
 		Record: record,
 	}
-	logger.Debugf("Adding transaction record [%s:%d:%s:%s:%s:%s]", record.TxID, record.TransactionType, record.TokenType, record.SenderEID, record.RecipientEID, record.Amount)
+	logger.Debugf("Adding transaction record [%s:%d:%s:%s:%s:%s]", record.TxID, record.ActionType, record.TokenType, record.SenderEID, record.RecipientEID, record.Amount)
 
 	bytes, err := MarshalTransactionRecord(value)
 	if err != nil {

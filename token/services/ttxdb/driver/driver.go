@@ -8,20 +8,22 @@ package driver
 
 import (
 	"math/big"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 )
 
-// TransactionType is the type of transaction
-type TransactionType int
+// ActionType is the type of transaction
+type ActionType int
 
 const (
-	// Issue is the type of transaction for issuing assets
-	Issue TransactionType = iota
-	// Transfer is the type of transaction for transferring assets
+	// Issue is the action type for issuing tokens.
+	Issue ActionType = iota
+	// Transfer is the action type for transferring tokens.
 	Transfer
-	// Redeem is the type of transaction for redeeming assets
+	// Redeem is the action type for redeeming tokens.
 	Redeem
 )
 
@@ -59,7 +61,11 @@ const (
 	Deleted TxStatus = "Deleted"
 )
 
-// MovementRecord is a record of a movement
+// MovementRecord is a record of a movement of assets.
+// Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
+// and each token type that was transferred.
+// The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
+// in a given token transaction.
 type MovementRecord struct {
 	// TxID is the transaction ID
 	TxID string
@@ -73,12 +79,16 @@ type MovementRecord struct {
 	Status TxStatus
 }
 
-// TransactionRecord is the record of a transaction
+// TransactionRecord is a more finer-grained version of a movement record.
+// Given a Token Transaction, for each token action in the Token Request,
+// a transaction record is created for each unique enrollment ID found in the outputs.
+// The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
+// in that action.
 type TransactionRecord struct {
 	// TxID is the transaction ID
 	TxID string
-	// TransactionType is the type of transaction
-	TransactionType TransactionType
+	// ActionType is the type of action performed by this transaction record
+	ActionType ActionType
 	// SenderEID is the enrollment ID of the account that is sending tokens
 	SenderEID string
 	// RecipientEID is the enrollment ID of the account that is receiving tokens
@@ -93,13 +103,39 @@ type TransactionRecord struct {
 	Status TxStatus
 }
 
+func (t *TransactionRecord) String() string {
+	var s strings.Builder
+	s.WriteString("{")
+	s.WriteString(t.TxID)
+	s.WriteString(" ")
+	s.WriteString(strconv.Itoa(int(t.ActionType)))
+	s.WriteString(" ")
+	s.WriteString(t.SenderEID)
+	s.WriteString(" ")
+	s.WriteString(t.RecipientEID)
+	s.WriteString(" ")
+	s.WriteString(t.TokenType)
+	s.WriteString(" ")
+	s.WriteString(t.Amount.String())
+	s.WriteString(" ")
+	s.WriteString(t.Timestamp.String())
+	s.WriteString(" ")
+	s.WriteString(string(t.Status))
+	s.WriteString("}")
+	return s.String()
+}
+
 // TransactionIterator is an iterator for transactions
 type TransactionIterator interface {
 	Close()
 	Next() (*TransactionRecord, error)
 }
 
-// QueryMovementsParams defines the parameters for querying movements
+// QueryMovementsParams defines the parameters for querying movements.
+// Movement records will be filtered by EnrollmentID, TokenType, and Status.
+// SearchDirection tells if the search should start from the oldest to the newest records or vice versa.
+// MovementDirection which amounts to consider. Sent correspond to a negative amount,
+// Received to a positive amount, and All to both.
 type QueryMovementsParams struct {
 	// EnrollmentIDs is the enrollment IDs of the accounts to query
 	EnrollmentIDs []string
@@ -116,7 +152,8 @@ type QueryMovementsParams struct {
 	NumRecords int
 }
 
-// QueryTransactionsParams defines the parameters for querying transactions
+// QueryTransactionsParams defines the parameters for querying transactions.
+// One can filter by sender, by recipient, and by time range.
 type QueryTransactionsParams struct {
 	// SenderWallet is the wallet of the sender
 	// If empty, any sender is accepted
@@ -134,7 +171,7 @@ type QueryTransactionsParams struct {
 	To *time.Time
 }
 
-// TokenTransactionDB defines the interface for a token transactions related database
+// TokenTransactionDB defines the interface for a token transactions database
 type TokenTransactionDB interface {
 	// Close closes the database
 	Close() error
@@ -151,10 +188,11 @@ type TokenTransactionDB interface {
 	// SetStatus sets the status of a transaction
 	SetStatus(txID string, status TxStatus) error
 
-	// AddMovement adds a movement record to the database
+	// AddMovement adds a movement record to the database.
+	// Each token transaction can be seen as a list of movements.
 	AddMovement(record *MovementRecord) error
 
-	// AddTransaction adds a transaction record to the database
+	// AddTransaction adds a transaction record to the database.
 	AddTransaction(record *TransactionRecord) error
 
 	// QueryTransactions returns a list of transactions that match the given criteria

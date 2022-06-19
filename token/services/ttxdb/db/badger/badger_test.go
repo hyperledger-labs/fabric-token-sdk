@@ -89,14 +89,14 @@ func TestTransaction(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		now := time.Now().UTC()
 		tr1 := &driver.TransactionRecord{
-			TxID:            fmt.Sprintf("%d", i),
-			TransactionType: driver.Issue,
-			SenderEID:       "",
-			RecipientEID:    "alice",
-			TokenType:       "magic",
-			Amount:          big.NewInt(10),
-			Timestamp:       now,
-			Status:          driver.Pending,
+			TxID:         fmt.Sprintf("%d", i),
+			ActionType:   driver.Issue,
+			SenderEID:    "",
+			RecipientEID: "alice",
+			TokenType:    "magic",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
 		}
 		assert.NoError(t, db.AddTransaction(tr1))
 		txs = append(txs, tr1)

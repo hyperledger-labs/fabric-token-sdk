@@ -10,8 +10,6 @@ import (
 	"math/big"
 	"reflect"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -69,7 +67,7 @@ func Drivers() []string {
 }
 
 // TxStatus is the status of a transaction
-type TxStatus string
+type TxStatus = driver.TxStatus
 
 const (
 	// Pending is the status of a transaction that has been submitted to the ledger
@@ -80,73 +78,31 @@ const (
 	Deleted TxStatus = "Deleted"
 )
 
-// TransactionType is the type of transaction
-type TransactionType int
+// ActionType is the type of action performed by a transaction.
+type ActionType = driver.ActionType
 
 const (
-	// Issue is the type of transaction for issuing assets
-	Issue TransactionType = iota
-	// Transfer is the type of transaction for transferring assets
+	// Issue is the action type for issuing tokens.
+	Issue ActionType = iota
+	// Transfer is the action type for transferring tokens.
 	Transfer
-	// Redeem is the type of transaction for redeeming assets
+	// Redeem is the action type for redeeming tokens.
 	Redeem
 )
 
-// MovementRecord is a record of a movement of assets
-type MovementRecord struct {
-	// TxID is the transaction ID
-	TxID string
-	// EnrollmentID is the enrollment ID of the account that is receiving or sendeing
-	EnrollmentID string
-	// TokenType is the type of token
-	TokenType string
-	// Amount is positive if tokens are received. Negative otherwise
-	Amount *big.Int
-	// Status is the status of the transaction
-	Status TxStatus
-}
+// MovementRecord is a record of a movement of assets.
+// Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
+// and each token type that was transferred.
+// The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
+// in a given token transaction.
+type MovementRecord = driver.MovementRecord
 
-// TransactionRecord is a record of a transaction
-type TransactionRecord struct {
-	// TxID is the transaction ID
-	TxID string
-	// TransactionType is the type of transaction
-	TransactionType TransactionType
-	// SenderEID is the enrollment ID of the account that is sending tokens
-	SenderEID string
-	// RecipientEID is the enrollment ID of the account that is receiving tokens
-	RecipientEID string
-	// TokenType is the type of token
-	TokenType string
-	// Amount is positive if tokens are received. Negative otherwise
-	Amount *big.Int
-	// Timestamp is the time the transaction was submitted to the db
-	Timestamp time.Time
-	// Status is the status of the transaction
-	Status TxStatus
-}
-
-func (t *TransactionRecord) String() string {
-	var s strings.Builder
-	s.WriteString("{")
-	s.WriteString(t.TxID)
-	s.WriteString(" ")
-	s.WriteString(strconv.Itoa(int(t.TransactionType)))
-	s.WriteString(" ")
-	s.WriteString(t.SenderEID)
-	s.WriteString(" ")
-	s.WriteString(t.RecipientEID)
-	s.WriteString(" ")
-	s.WriteString(t.TokenType)
-	s.WriteString(" ")
-	s.WriteString(t.Amount.String())
-	s.WriteString(" ")
-	s.WriteString(t.Timestamp.String())
-	s.WriteString(" ")
-	s.WriteString(string(t.Status))
-	s.WriteString("}")
-	return s.String()
-}
+// TransactionRecord is a more finer-grained version of a movement record.
+// Given a Token Transaction, for each token action in the Token Request,
+// a transaction record is created for each unique enrollment ID found in the outputs.
+// The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
+// in that action.
+type TransactionRecord = driver.TransactionRecord
 
 // TransactionIterator is an iterator over transaction records
 type TransactionIterator struct {
@@ -168,16 +124,7 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	if next == nil {
 		return nil, nil
 	}
-	return &TransactionRecord{
-		TxID:            next.TxID,
-		TransactionType: TransactionType(next.TransactionType),
-		SenderEID:       next.SenderEID,
-		RecipientEID:    next.RecipientEID,
-		TokenType:       next.TokenType,
-		Amount:          next.Amount,
-		Timestamp:       next.Timestamp,
-		Status:          TxStatus(next.Status),
-	}, nil
+	return next, nil
 }
 
 // QueryTransactionsParams defines the parameters for querying movements
@@ -262,7 +209,7 @@ func newDB(p driver.TokenTransactionDB) *DB {
 	}
 }
 
-// Append appends send and receive movements, and transaction records corresponding to passed token request
+// Append appends send and receive movements, and transaction records corresponding to the passed token request
 func (db *DB) Append(req *token.Request) error {
 	logger.Debugf("Appending new record... [%d]", db.counter)
 	db.storeLock.Lock()
@@ -505,14 +452,14 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 				}
 
 				if err := db.db.AddTransaction(&driver.TransactionRecord{
-					TxID:            record.Anchor,
-					SenderEID:       inEID,
-					RecipientEID:    outEID,
-					TokenType:       tokenType,
-					Amount:          received,
-					Status:          driver.Pending,
-					TransactionType: tt,
-					Timestamp:       timestamp,
+					TxID:         record.Anchor,
+					SenderEID:    inEID,
+					RecipientEID: outEID,
+					TokenType:    tokenType,
+					Amount:       received,
+					Status:       driver.Pending,
+					ActionType:   tt,
+					Timestamp:    timestamp,
 				}); err != nil {
 					if err1 := db.db.Discard(); err1 != nil {
 						logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())

@@ -29,13 +29,13 @@ type QueryExecutor struct {
 	*ttxdb.QueryExecutor
 }
 
-// Payments returns a filter for payments
-func (a *QueryExecutor) Payments() *ttxdb.PaymentsFilter {
+// NewPaymentsFilter returns a filter for payments
+func (a *QueryExecutor) NewPaymentsFilter() *ttxdb.PaymentsFilter {
 	return a.QueryExecutor.NewPaymentsFilter()
 }
 
-// Holdings returns a filter for holdings
-func (a *QueryExecutor) Holdings() *ttxdb.HoldingsFilter {
+// NewHoldingsFilter returns a filter for holdings
+func (a *QueryExecutor) NewHoldingsFilter() *ttxdb.HoldingsFilter {
 	return a.QueryExecutor.NewHoldingsFilter()
 }
 

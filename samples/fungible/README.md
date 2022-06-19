@@ -1035,8 +1035,8 @@ fabric:
 
 token:
   enabled: true
-  # The Token Transaction DB is a database of audit records. It is used to track the
-  # history of audit events. In particular, it is used to track payments, holdings,
+  # The Token Transaction DB is a database of audited records. It is used to track the
+  # history of audited events. In particular, it is used to track payments, holdings,
   # and transactions of any business party identified by a unique enrollment ID.
   ttxdb:
     persistence:

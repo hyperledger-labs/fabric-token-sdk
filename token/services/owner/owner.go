@@ -30,13 +30,13 @@ type QueryExecutor struct {
 	*ttxdb.QueryExecutor
 }
 
-// Payments returns a filter for payments
-func (a *QueryExecutor) Payments() *ttxdb.PaymentsFilter {
+// NewPaymentsFilter returns a new filter for payments
+func (a *QueryExecutor) NewPaymentsFilter() *ttxdb.PaymentsFilter {
 	return a.QueryExecutor.NewPaymentsFilter()
 }
 
-// Holdings returns a filter for holdings
-func (a *QueryExecutor) Holdings() *ttxdb.HoldingsFilter {
+// NewHoldingsFilter returns a new filter for holdings
+func (a *QueryExecutor) NewHoldingsFilter() *ttxdb.HoldingsFilter {
 	return a.QueryExecutor.NewHoldingsFilter()
 }
 
@@ -68,7 +68,7 @@ func (a *Owner) Append(tx Transaction) error {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
-	// lister to events
+	// listen to events
 	net := network.GetInstance(a.sp, tx.Network(), tx.Channel())
 	if net == nil {
 		return errors.Errorf("failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
