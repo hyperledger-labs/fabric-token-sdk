@@ -11,16 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type signatureRequest struct {
@@ -452,20 +450,14 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
 			}
 
-			// Inform the vault about the transaction
-			backend := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
-			rws, err := backend.GetRWSet(c.tx.ID(), env.Results())
-			if err != nil {
-				return errors.WithMessagef(err, "failed getting rwset for tx [%s]", c.tx.ID())
+			// Store envelope
+			if err := StoreEnvelope(context, c.tx); err != nil {
+				return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
 			}
-			rws.Done()
 
-			rawEnv, err := env.Bytes()
-			if err != nil {
-				return errors.WithMessagef(err, "failed marshalling tx env [%s]", c.tx.ID())
-			}
-			if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
-				return errors.WithMessagef(err, "failed storing tx env [%s]", c.tx.ID())
+			// Store transaction in the token transaction database
+			if err := StoreTransactionRecords(context, c.tx); err != nil {
+				return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 			}
 
 			continue
@@ -633,7 +625,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "received", "env", tx.ID())
 
-	// Process Fabric Envelope
+	// Check the envelope exists
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
@@ -642,28 +634,22 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
 
-	err = tx.storeTransient()
-	if err != nil {
+	// Store transient
+	if err := tx.storeTransient(); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
-	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	rws, err := backend.GetRWSet(tx.ID(), env.Results())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
-	}
-	rws.Done()
-
-	// TODO: remove this
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
-	}
-	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
-		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
+	// Store envelope
+	if err := StoreEnvelope(context, tx); err != nil {
+		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
-	// Send the proposal response back
+	// Store transaction in the token transaction database
+	if err := StoreTransactionRecords(context, tx); err != nil {
+		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
+	}
+
+	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
 	}

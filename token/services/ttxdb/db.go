@@ -4,43 +4,45 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package auditdb
+package ttxdb
 
 import (
 	"math/big"
 	"reflect"
 	"sort"
-	"strconv"
-	"strings"
 	"sync"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.auditor.auditdb")
+const (
+	// PersistenceTypeConfigKey is the key for the persistence type in the config.
+	PersistenceTypeConfigKey = "token.ttxdb.persistence.type"
+)
 
 var (
+	logger    = flogging.MustGetLogger("token-sdk.ttxdb")
 	driversMu sync.RWMutex
 	drivers   = make(map[string]driver.Driver)
 )
 
-// Register makes a AuditDB driver available by the provided name.
+// Register makes a DB driver available by the provided name.
 // If Register is called twice with the same name or if driver is nil,
 // it panics.
 func Register(name string, driver driver.Driver) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
 	if driver == nil {
-		panic("auditor: Register driver is nil")
+		panic("Register driver is nil")
 	}
 	if _, dup := drivers[name]; dup {
-		panic("auditor: Register called twice for driver " + name)
+		panic("Register called twice for driver " + name)
 	}
 	drivers[name] = driver
 }
@@ -65,7 +67,7 @@ func Drivers() []string {
 }
 
 // TxStatus is the status of a transaction
-type TxStatus string
+type TxStatus = driver.TxStatus
 
 const (
 	// Pending is the status of a transaction that has been submitted to the ledger
@@ -76,73 +78,31 @@ const (
 	Deleted TxStatus = "Deleted"
 )
 
-// TransactionType is the type of transaction
-type TransactionType int
+// ActionType is the type of action performed by a transaction.
+type ActionType = driver.ActionType
 
 const (
-	// Issue is the type of transaction for issuing assets
-	Issue TransactionType = iota
-	// Transfer is the type of transaction for transferring assets
+	// Issue is the action type for issuing tokens.
+	Issue ActionType = iota
+	// Transfer is the action type for transferring tokens.
 	Transfer
-	// Redeem is the type of transaction for redeeming assets
+	// Redeem is the action type for redeeming tokens.
 	Redeem
 )
 
-// MovementRecord is a record of a movement of assets
-type MovementRecord struct {
-	// TxID is the transaction ID
-	TxID string
-	// EnrollmentID is the enrollment ID of the account that is receiving or sendeing
-	EnrollmentID string
-	// TokenType is the type of token
-	TokenType string
-	// Amount is positive if tokens are received. Negative otherwise
-	Amount *big.Int
-	// Status is the status of the transaction
-	Status TxStatus
-}
+// MovementRecord is a record of a movement of assets.
+// Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
+// and each token type that was transferred.
+// The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
+// in a given token transaction.
+type MovementRecord = driver.MovementRecord
 
-// TransactionRecord is a record of a transaction
-type TransactionRecord struct {
-	// TxID is the transaction ID
-	TxID string
-	// TransactionType is the type of transaction
-	TransactionType TransactionType
-	// SenderEID is the enrollment ID of the account that is sending tokens
-	SenderEID string
-	// RecipientEID is the enrollment ID of the account that is receiving tokens
-	RecipientEID string
-	// TokenType is the type of token
-	TokenType string
-	// Amount is positive if tokens are received. Negative otherwise
-	Amount *big.Int
-	// Timestamp is the time the transaction was submitted to the auditor
-	Timestamp time.Time
-	// Status is the status of the transaction
-	Status TxStatus
-}
-
-func (t *TransactionRecord) String() string {
-	var s strings.Builder
-	s.WriteString("{")
-	s.WriteString(t.TxID)
-	s.WriteString(" ")
-	s.WriteString(strconv.Itoa(int(t.TransactionType)))
-	s.WriteString(" ")
-	s.WriteString(t.SenderEID)
-	s.WriteString(" ")
-	s.WriteString(t.RecipientEID)
-	s.WriteString(" ")
-	s.WriteString(t.TokenType)
-	s.WriteString(" ")
-	s.WriteString(t.Amount.String())
-	s.WriteString(" ")
-	s.WriteString(t.Timestamp.String())
-	s.WriteString(" ")
-	s.WriteString(string(t.Status))
-	s.WriteString("}")
-	return s.String()
-}
+// TransactionRecord is a more finer-grained version of a movement record.
+// Given a Token Transaction, for each token action in the Token Request,
+// a transaction record is created for each unique enrollment ID found in the outputs.
+// The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
+// in that action.
+type TransactionRecord = driver.TransactionRecord
 
 // TransactionIterator is an iterator over transaction records
 type TransactionIterator struct {
@@ -164,21 +124,15 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	if next == nil {
 		return nil, nil
 	}
-	return &TransactionRecord{
-		TxID:            next.TxID,
-		TransactionType: TransactionType(next.TransactionType),
-		SenderEID:       next.SenderEID,
-		RecipientEID:    next.RecipientEID,
-		TokenType:       next.TokenType,
-		Amount:          next.Amount,
-		Timestamp:       next.Timestamp,
-		Status:          TxStatus(next.Status),
-	}, nil
+	return next, nil
 }
 
-// QueryExecutor executors queries against the audit DB
+// QueryTransactionsParams defines the parameters for querying movements
+type QueryTransactionsParams = driver.QueryTransactionsParams
+
+// QueryExecutor executors queries against the DB
 type QueryExecutor struct {
-	db     *AuditDB
+	db     *DB
 	closed bool
 }
 
@@ -197,9 +151,8 @@ func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
 }
 
 // Transactions returns an iterators of transaction records in the given time internal.
-// If from and to are both nil, all transactions are returned.
-func (qe *QueryExecutor) Transactions(from, to *time.Time) (*TransactionIterator, error) {
-	it, err := qe.db.db.QueryTransactions(from, to)
+func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
+	it, err := qe.db.db.QueryTransactions(params)
 	if err != nil {
 		return nil, errors.Errorf("failed to query transactions: %s", err)
 	}
@@ -216,8 +169,16 @@ func (qe *QueryExecutor) Done() {
 	qe.closed = true
 }
 
-// AuditDB is a database that stores audit information
-type AuditDB struct {
+// Wallet models a wallet
+type Wallet interface {
+	// ID returns the wallet ID
+	ID() string
+	// TMS returns the TMS of the wallet
+	TMS() *token.ManagementService
+}
+
+// DB is a database that stores token transactions related information
+type DB struct {
 	counter atomic.Int32
 
 	// the vault handles access concurrency to the store using storeLock.
@@ -229,7 +190,7 @@ type AuditDB struct {
 	//   (in case the transaction context is received from another node)),
 	//   it holds a read-lock; when Done is called on it, the lock is released.
 	// * an exclusive lock is held when Commit is called.
-	db        driver.AuditDB
+	db        driver.TokenTransactionDB
 	storeLock sync.RWMutex
 
 	eIDsLocks sync.Map
@@ -240,16 +201,16 @@ type AuditDB struct {
 	wg             sync.WaitGroup
 }
 
-func newAuditDB(p driver.AuditDB) *AuditDB {
-	return &AuditDB{
+func newDB(p driver.TokenTransactionDB) *DB {
+	return &DB{
 		db:         p,
 		eIDsLocks:  sync.Map{},
 		pendingTXs: make([]string, 0, 10000),
 	}
 }
 
-// Append appends the passed token request to the audit database
-func (db *AuditDB) Append(req *token.Request) error {
+// Append appends send and receive movements, and transaction records corresponding to the passed token request
+func (db *DB) Append(req *token.Request) error {
 	logger.Debugf("Appending new record... [%d]", db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
@@ -285,8 +246,46 @@ func (db *AuditDB) Append(req *token.Request) error {
 	return nil
 }
 
+// AppendTransactionRecord appends the transaction records corresponding to the passed token request.
+func (db *DB) AppendTransactionRecord(req *token.Request) error {
+	logger.Debugf("Appending new transaction record... [%d]", db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
+
+	ins, err := req.Inputs()
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting inputs for request [%s]", req.Anchor)
+	}
+	outs, err := req.Outputs()
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting outputs for request [%s]", req.Anchor)
+	}
+
+	record := &token.AuditRecord{
+		Anchor:  req.Anchor,
+		Inputs:  ins,
+		Outputs: outs,
+	}
+	if err := db.db.BeginUpdate(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
+	}
+	if err := db.appendTransactions(record); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+	}
+	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
+	}
+
+	logger.Debugf("Appending new completed without errors")
+	return nil
+}
+
 // NewQueryExecutor returns a new query executor
-func (db *AuditDB) NewQueryExecutor() *QueryExecutor {
+func (db *DB) NewQueryExecutor() *QueryExecutor {
 	db.counter.Inc()
 	db.storeLock.RLock()
 
@@ -294,7 +293,7 @@ func (db *AuditDB) NewQueryExecutor() *QueryExecutor {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
+func (db *DB) SetStatus(txID string, status TxStatus) error {
 	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
@@ -310,7 +309,7 @@ func (db *AuditDB) SetStatus(txID string, status TxStatus) error {
 
 // AcquireLocks acquires locks for the passed enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (db *AuditDB) AcquireLocks(eIDs ...string) error {
+func (db *DB) AcquireLocks(eIDs ...string) error {
 	for _, id := range deduplicate(eIDs) {
 		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
@@ -319,7 +318,7 @@ func (db *AuditDB) AcquireLocks(eIDs ...string) error {
 }
 
 // Unlock unlocks the locks for the passed enrollment ids.
-func (db *AuditDB) Unlock(eIDs ...string) {
+func (db *DB) Unlock(eIDs ...string) {
 	for _, id := range deduplicate(eIDs) {
 		lock, ok := db.eIDsLocks.Load(id)
 		if !ok {
@@ -330,7 +329,7 @@ func (db *AuditDB) Unlock(eIDs ...string) {
 	}
 }
 
-func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
+func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
@@ -365,7 +364,7 @@ func (db *AuditDB) appendSendMovements(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *AuditDB) appendReceivedMovements(record *token.AuditRecord) error {
+func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
@@ -401,7 +400,7 @@ func (db *AuditDB) appendReceivedMovements(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *AuditDB) appendTransactions(record *token.AuditRecord) error {
+func (db *DB) appendTransactions(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
@@ -453,14 +452,14 @@ func (db *AuditDB) appendTransactions(record *token.AuditRecord) error {
 				}
 
 				if err := db.db.AddTransaction(&driver.TransactionRecord{
-					TxID:            record.Anchor,
-					SenderEID:       inEID,
-					RecipientEID:    outEID,
-					TokenType:       tokenType,
-					Amount:          received,
-					Status:          driver.Pending,
-					TransactionType: tt,
-					Timestamp:       timestamp,
+					TxID:         record.Anchor,
+					SenderEID:    inEID,
+					RecipientEID: outEID,
+					TokenType:    tokenType,
+					Amount:       received,
+					Status:       driver.Pending,
+					ActionType:   tt,
+					Timestamp:    timestamp,
 				}); err != nil {
 					if err1 := db.db.Discard(); err1 != nil {
 						logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
@@ -477,42 +476,53 @@ func (db *AuditDB) appendTransactions(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *AuditDB) rollback(err error) {
+func (db *DB) rollback(err error) {
 	if err1 := db.db.Discard(); err1 != nil {
 		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 	}
 }
 
-// Manager handles the audit databases
+// Manager handles the databases
 type Manager struct {
 	sp     view2.ServiceProvider
 	driver string
 	mutex  sync.Mutex
-	dbs    map[string]*AuditDB
+	dbs    map[string]*DB
 }
 
-// NewManager creates a new audit manager
+// NewManager creates a new DB manager.
+// The driver is the name of the driver to use.
+// If the driver is not supported, an error is returned.
+// If the driver is not specified, the driver is taken from the configuration.
+// If the configuration is not specified, the default driver is used.
 func NewManager(sp view2.ServiceProvider, driver string) *Manager {
+	if len(driver) == 0 {
+		driver = view2.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
+		if len(driver) == 0 {
+			driver = "memory"
+		}
+	}
+	logger.Debugf("instantiate ttxdb manager using driver [%s]", driver)
 	return &Manager{
 		sp:     sp,
 		driver: driver,
-		dbs:    map[string]*AuditDB{},
+		dbs:    map[string]*DB{},
 	}
 }
 
-// AuditDB returns an AuditDB for the given auditor wallet
-func (cm *Manager) AuditDB(w *token.AuditorWallet) (*AuditDB, error) {
+// DB returns a DB for the given wallet
+func (cm *Manager) DB(w Wallet) (*DB, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	id := w.ID()
+	id := w.TMS().ID().String() + w.ID()
 	c, ok := cm.dbs[id]
 	if !ok {
 		driver, err := drivers[cm.driver].Open(cm.sp, "")
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed instantiating audit db driver")
+			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}
-		c = newAuditDB(driver)
+		c = newDB(driver)
 		cm.dbs[id] = c
 	}
 	return c, nil
@@ -522,21 +532,21 @@ var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
-// GetAuditDB returns the AuditDB for the given auditor wallet.
-// Nil might be returned if the auditor wallet is not found or an error occurred.
-func GetAuditDB(sp view2.ServiceProvider, w *token.AuditorWallet) *AuditDB {
+// Get returns the DB for the given wallet.
+// Nil might be returned if the wallet is not found or an error occurred.
+func Get(sp view2.ServiceProvider, w Wallet) *DB {
 	if w == nil {
-		logger.Debugf("no auditor wallet provided")
+		logger.Debugf("no wallet provided")
 		return nil
 	}
 	s, err := sp.GetService(managerType)
 	if err != nil {
-		logger.Errorf("failed to get audit manager service: [%s]", err)
+		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	c, err := s.(*Manager).AuditDB(w)
+	c, err := s.(*Manager).DB(w)
 	if err != nil {
-		logger.Errorf("failed to get audit db for wallet [%s]: [%s]", w.ID(), err)
+		logger.Errorf("failed to get db for wallet [%s:%s]: [%s]", w.TMS().ID(), w.ID(), err)
 		return nil
 	}
 	return c
