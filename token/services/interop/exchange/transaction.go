@@ -26,6 +26,36 @@ const (
 	defaultDeadlineOffset = time.Hour
 )
 
+func WithHash(hash []byte) token.TransferOption {
+	return func(o *token.TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = map[interface{}]interface{}{}
+		}
+		o.Attributes["exchange.hash"] = hash
+		return nil
+	}
+}
+
+func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
+	return func(o *token.TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = map[interface{}]interface{}{}
+		}
+		o.Attributes["exchange.hashFunc"] = hashFunc
+		return nil
+	}
+}
+
+func WithHashEncoding(encoding encoding.Encoding) token.TransferOption {
+	return func(o *token.TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = map[interface{}]interface{}{}
+		}
+		o.Attributes["exchange.hashEncoding"] = encoding
+		return nil
+	}
+}
+
 func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOptions, error) {
 	txOptions := &token.TransferOptions{}
 	for _, opt := range opts {
@@ -38,6 +68,24 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 
 type Transaction struct {
 	*ttx.Transaction
+}
+
+func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption) (*Transaction, error) {
+	tx, err := ttx.NewTransaction(sp, signer, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{
+		Transaction: tx,
+	}, nil
+}
+
+func (t *Transaction) Outputs() (*OutputStream, error) {
+	outs, err := t.TokenRequest.Outputs()
+	if err != nil {
+		return nil, err
+	}
+	return NewOutputStream(outs), nil
 }
 
 func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, typ string, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error) {
