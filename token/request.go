@@ -829,8 +829,8 @@ func (t *Request) SetApplicationMetadata(k string, v []byte) {
 // FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
 func (t *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 	meta := &Metadata{
-		tms:                  t.TokenService.tms,
-		tokenRequestMetadata: t.Metadata,
+		TMS:                  t.TokenService.tms,
+		TokenRequestMetadata: t.Metadata,
 	}
 	filteredMeta, err := meta.FilterBy(eIDs[0])
 	if err != nil {
@@ -839,7 +839,7 @@ func (t *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 	return &Request{
 		Anchor:       t.Anchor,
 		Actions:      t.Actions,
-		Metadata:     filteredMeta.tokenRequestMetadata,
+		Metadata:     filteredMeta.TokenRequestMetadata,
 		TokenService: t.TokenService,
 	}, nil
 }
@@ -847,8 +847,8 @@ func (t *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 // GetMetadata returns the metadata of the request.
 func (t *Request) GetMetadata() *Metadata {
 	return &Metadata{
-		tms:                  t.TokenService.tms,
-		tokenRequestMetadata: t.Metadata,
+		TMS:                  t.TokenService.tms,
+		TokenRequestMetadata: t.Metadata,
 	}
 }
 
