@@ -81,6 +81,15 @@ type TransferMetadata struct {
 	ReceiverIsSender []bool
 }
 
+// TokenIDAt returns the TokenID at the given index.
+// It returns nil if the index is out of bounds.
+func (tm *TransferMetadata) TokenIDAt(index int) *token2.ID {
+	if index < 0 || index >= len(tm.TokenIDs) {
+		return nil
+	}
+	return tm.TokenIDs[index]
+}
+
 type TokenRequestMetadata struct {
 	Issues      []IssueMetadata
 	Transfers   []TransferMetadata

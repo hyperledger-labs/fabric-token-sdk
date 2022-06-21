@@ -505,7 +505,9 @@ func (t *Request) inputs(failOnMissing bool) (*InputStream, error) {
 			return nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
-		for j, id := range transferMeta.TokenIDs {
+		// Iterate over the transferMeta.SenderAuditInfos because we know that there will be at least one
+		// sender, but it might be that there are not token IDs due to filtering.
+		for j, senderAuditInfo := range transferMeta.SenderAuditInfos {
 			// The recipient might be missing because it has been filtered out. Skip in this case
 			if transferMeta.IsInputAbsent(j) {
 				if failOnMissing {
@@ -514,14 +516,14 @@ func (t *Request) inputs(failOnMissing bool) (*InputStream, error) {
 				continue
 			}
 
-			eID, err := tms.GetEnrollmentID(transferMeta.SenderAuditInfos[j])
+			eID, err := tms.GetEnrollmentID(senderAuditInfo)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
 
 			inputs = append(inputs, &Input{
 				ActionIndex:  i,
-				Id:           id,
+				Id:           transferMeta.TokenIDAt(j),
 				Owner:        transferMeta.Senders[j],
 				EnrollmentID: eID,
 			})

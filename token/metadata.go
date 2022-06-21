@@ -191,6 +191,9 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	if len(m.Senders) != len(m.SenderAuditInfos) {
 		return errors.Errorf("expected [%d] senders and sender audit infos but got [%d]", len(m.Senders), len(m.SenderAuditInfos))
 	}
+	if len(m.Senders) == 0 {
+		return errors.Errorf("expected at least one sender")
+	}
 
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
