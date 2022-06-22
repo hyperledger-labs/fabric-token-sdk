@@ -13,9 +13,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// Test Loading config from a file
-func TestLoadingConfigFromFile(t *testing.T) {
-	// create a new config service
+// TestGetTMSs tests the GetTMSs function
+func TestGetTMSs(t *testing.T) {
+	// create a new config service by loading the config file
 	cp, err := config.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
 
