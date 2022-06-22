@@ -18,8 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
+	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -41,8 +40,16 @@ const (
 	BccspMSPFolder  = "bccsp-folder"
 )
 
+//go:generate counterfeiter -o mock/dm.go -fake-name DeserializerManager . DeserializerManager
+//go:generate counterfeiter -o mock/cm.go -fake-name ConfigManager . ConfigManager
+
 type DeserializerManager interface {
 	AddDeserializer(deserializer sig2.Deserializer)
+}
+
+// ConfigManager models the token config manager
+type ConfigManager interface {
+	config.Manager
 }
 
 type IdentityInfo struct {
@@ -51,7 +58,7 @@ type IdentityInfo struct {
 	GetIdentity  GetIdentityFunc
 }
 
-type GetIdentityFunc func(opts *driver2.IdentityOptions) (view.Identity, []byte, error)
+type GetIdentityFunc func(opts *fdriver.IdentityOptions) (view.Identity, []byte, error)
 
 type Resolver struct {
 	Name         string `yaml:"name,omitempty"`
@@ -62,7 +69,7 @@ type Resolver struct {
 }
 
 type SignerService interface {
-	RegisterSigner(identity view.Identity, signer api2.Signer, verifier api2.Verifier) error
+	RegisterSigner(identity view.Identity, signer fdriver.Signer, verifier fdriver.Verifier) error
 }
 
 type BinderService interface {
@@ -236,7 +243,7 @@ func (lm *LocalMembership) GetAnonymousIdentity(label string, auditInfo []byte) 
 	}
 	return r.Name, r.EnrollmentID,
 		func() (view.Identity, []byte, error) {
-			return r.GetIdentity(&driver2.IdentityOptions{
+			return r.GetIdentity(&fdriver.IdentityOptions{
 				EIDExtension: true,
 				AuditInfo:    auditInfo,
 			})
@@ -299,7 +306,7 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 			IdemixMSP,
 		)
 		if err != nil {
-			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", lm.configManager.TranslatePath(path))
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s:%s]", path, lm.configManager.TranslatePath(path))
 		}
 		curveID, err := StringToCurveID(typeAndMspID[2])
 		if err != nil {
