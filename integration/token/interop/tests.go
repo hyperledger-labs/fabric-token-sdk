@@ -7,7 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package interop
 
 import (
+	"crypto"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -49,6 +51,11 @@ func TestExchangeSingleFabricNetwork(network *integration.Infrastructure) {
 
 	checkBalance(network, "alice", "", "USD", 120)
 	checkBalance(network, "bob", "", "EUR", 30)
+
+	// exchange (lock)
+	exchangeLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
+	time.Sleep(15 * time.Second)
+	checkBalance(network, "alice", "", "USD", 110)
 }
 
 func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {

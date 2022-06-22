@@ -37,7 +37,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropExchange.StartPortForNode(),
 				"",
-				interop.SingleFabricNetworkTopology("fabtoken")...,
+				interop.AssetExchangeSingleFabricNetworkTopology("fabtoken")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -60,7 +60,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropExchangeTwoFabricNetworks.StartPortForNode(),
 				testDir,
-				interop.AssetExchangeTopology("fabtoken")...,
+				interop.AssetExchangeTwoFabricNetworksTopology("fabtoken")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())

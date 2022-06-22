@@ -7,16 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package interop
 
 import (
+	"crypto"
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/exchange"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
-
-	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 )
 
 func registerAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
@@ -81,4 +84,43 @@ func checkBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
+func exchangeLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) ([]byte, []byte) {
+	result, err := network.Client(id).CallView("exchange.lock", common.JSONMarshall(&exchange.Lock{
+		TMSID:               tmsID,
+		ReclamationDeadline: deadline,
+		Wallet:              wallet,
+		Type:                typ,
+		Amount:              amount,
+		Recipient:           network.Identity(receiver),
+		Hash:                hash,
+		HashFunc:            hashFunc,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		lockResult := &exchange.LockResult{}
+		common.JSONUnmarshal(result.([]byte), lockResult)
+
+		Expect(network.Client(receiver).IsTxFinal(
+			lockResult.TxID,
+			api.WithNetwork(tmsID.Network),
+			api.WithChannel(tmsID.Channel),
+		)).NotTo(HaveOccurred())
+		if len(hash) == 0 {
+			Expect(lockResult.PreImage).NotTo(BeNil())
+		}
+		Expect(lockResult.Hash).NotTo(BeNil())
+		if len(hash) != 0 {
+			Expect(lockResult.Hash).To(BeEquivalentTo(hash))
+		}
+		return lockResult.PreImage, lockResult.Hash
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+		return nil, nil
+	}
 }
