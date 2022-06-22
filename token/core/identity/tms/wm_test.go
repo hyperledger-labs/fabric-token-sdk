@@ -52,9 +52,12 @@ func TestRegisterIdentityIdemixGurvy(t *testing.T) {
 	cm.TranslatePathReturnsOnCall(3, "./testdata/idemixGurvy2")
 	cm.TranslatePathReturnsOnCall(4, "./testdata/idemixGurvy2")
 	cm.TranslatePathReturnsOnCall(5, "./testdata/idemixGurvy2")
+	cm.TranslatePathReturnsOnCall(6, "./testdata/idemixGurvy3")
+	cm.TranslatePathReturnsOnCall(7, "./testdata/idemixGurvy3")
+	cm.TranslatePathReturnsOnCall(8, "./testdata/idemixGurvy3")
 
 	// register identities
-	for _, path := range []string{"testdata/idemixGurvy", "testdata/idemixGurvy2"} {
+	for _, path := range []string{"testdata/idemixGurvy", "testdata/idemixGurvy2", "testdata/idemixGurvy3"} {
 		err := lm.RegisterIdentity("pinepple", "idemix:IdemixOrgMSP:BN254", path)
 		assert.NoError(t, err, "Failed to register identity")
 
@@ -62,7 +65,7 @@ func TestRegisterIdentityIdemixGurvy(t *testing.T) {
 		assert.Errorf(t, err, "Should have failed to register identity")
 		assert.Contains(t, err.Error(), "invalid issuer public key: some part of the public key is undefined")
 	}
-	assert.Equal(t, 6, cm.TranslatePathCallCount())
+	assert.Equal(t, 9, cm.TranslatePathCallCount())
 }
 
 func initLocalMembership(t *testing.T) (*tms.LocalMembership, *mock.ConfigManager) {
