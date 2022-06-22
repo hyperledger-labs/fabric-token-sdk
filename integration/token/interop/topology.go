@@ -14,10 +14,11 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/exchange"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func SingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
+func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -49,6 +50,7 @@ func SingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -56,6 +58,7 @@ func SingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -67,7 +70,7 @@ func SingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
 
-func AssetExchangeTopology(tokenSDKDriver string) []api.Topology {
+func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
