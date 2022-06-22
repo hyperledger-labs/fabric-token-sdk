@@ -108,7 +108,7 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 	}
 
 	var hash []byte
-	var hashFunc crypto.Hash
+	hashFunc := crypto.SHA256 // default hash function
 	var hashEncoding encoding.Encoding
 	if options.Attributes != nil {
 		boxed, ok := options.Attributes["exchange.hash"]
@@ -132,9 +132,6 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 				return nil, errors.Errorf("expected exchange.hashEncoding attribute to be Encoding, got [%T]", boxed)
 			}
 		}
-	}
-	if hashFunc == 0 {
-		hashFunc = crypto.SHA256 // default hash function
 	}
 	script, preImage, err := t.recipientAsScript(sender, recipient, deadline, hash, hashFunc, hashEncoding)
 	if err != nil {
@@ -164,19 +161,25 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 		h = hash.Sum(nil)
 		// no need to encode if encoding is none (=0)
 		if hashEncoding != 0 {
-			h = []byte(hashEncoding.New().EncodeToString(h))
+			he := hashEncoding.New()
+			if he == nil {
+				return nil, nil, errors.New("hashEncoding.New() returned nil")
+			}
+			h = []byte(he.EncodeToString(h))
 		}
 	}
 
 	logger.Debugf("pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImage), base64.StdEncoding.EncodeToString(h))
 
 	script := Script{
-		HashFunc:     hashFunc,
-		HashEncoding: hashEncoding,
-		Hash:         h,
-		Deadline:     time.Now().Add(deadline),
-		Recipient:    recipient,
-		Sender:       sender,
+		HashInfo: HashInfo{
+			Hash:         h,
+			HashFunc:     hashFunc,
+			HashEncoding: hashEncoding,
+		},
+		Deadline:  time.Now().Add(deadline),
+		Recipient: recipient,
+		Sender:    sender,
 	}
 	rawScript, err := json.Marshal(script)
 	if err != nil {

@@ -96,7 +96,7 @@ integration-tests-dvp-dlog: docker-images dependencies
 	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-interop-fabtoken
-integration-tests-nft-dlog: docker-images dependencies
+integration-tests-interop-fabtoken: docker-images dependencies
 	cd ./integration/token/interop/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 

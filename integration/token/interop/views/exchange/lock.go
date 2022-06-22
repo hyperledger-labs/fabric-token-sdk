@@ -106,7 +106,7 @@ func (hv *LockView) Call(context view.Context) (interface{}, error) {
 	return &LockResult{
 		TxID:     tx.ID(),
 		PreImage: preImage,
-		Hash:     outputs.ScriptAt(0).Hash,
+		Hash:     outputs.ScriptAt(0).HashInfo.Hash,
 	}, nil
 }
 
@@ -125,7 +125,7 @@ type LockAcceptView struct {
 
 func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	// The recipient of a token responds, as first operation,
-	// to a request for a recipient.
+	// to a request for a recipient identity.
 	// The recipient can do that by using the following code.
 	// The recipient identity will be taken from the default wallet, if not otherwise specified.
 	me, sender, err := ttx.RespondExchangeRecipientIdentities(context)

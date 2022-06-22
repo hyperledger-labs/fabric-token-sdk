@@ -10,6 +10,8 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"strconv"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -46,7 +48,7 @@ func (e Encoding) String() string {
 	}
 }
 
-// New returns a new Encoding.Encoding calculating the given Encoding function. New panics
+// New returns a new Encoding.Encoding calculating the given Encoding function. New returns nil
 // if the Encoding function is not linked into the binary.
 func (e Encoding) New() EncodingFunc {
 	if e < maxEncoding {
@@ -55,7 +57,8 @@ func (e Encoding) New() EncodingFunc {
 			return f()
 		}
 	}
-	panic("exchange: requested Encoding function #" + strconv.Itoa(int(e)) + " is unavailable")
+	logger.Errorf("exchange: requested Encoding function %s is unavailable", strconv.Itoa(int(e)))
+	return nil
 }
 
 // Available reports whether the given Encoding function is linked into the binary.
@@ -66,11 +69,12 @@ func (e Encoding) Available() bool {
 // RegisterEncoding registers a function that returns a new instance of the given
 // Encoding function. This is intended to be called from the init function in
 // packages that implement Encoding functions.
-func RegisterEncoding(e Encoding, f func() EncodingFunc) {
+func RegisterEncoding(e Encoding, f func() EncodingFunc) error {
 	if e >= maxEncoding {
-		panic("RegisterEncoding of unknown Encoding function")
+		return errors.New("RegisterEncoding of unknown Encoding function")
 	}
 	Encodings[e] = f
+	return nil
 }
 
 func init() {
