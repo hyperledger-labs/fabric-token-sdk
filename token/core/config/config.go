@@ -85,3 +85,20 @@ func (m *TokenSDK) GetTMS(network, channel, namespace string) (*TMS, error) {
 
 	return nil, errors.Errorf("no token-sdk configuration for network %s, channel %s, namespace %s", network, channel, namespace)
 }
+
+// GetTMSs returns all TMS configurations.
+func (m *TokenSDK) GetTMSs() ([]*TMS, error) {
+	var tmsConfigs []*config.TMS
+	if err := m.cp.UnmarshalKey("token.tms", &tmsConfigs); err != nil {
+		return nil, errors.WithMessagef(err, "cannot load token-sdk configuration")
+	}
+
+	var tms []*TMS
+	for _, config := range tmsConfigs {
+		tms = append(tms, &TMS{
+			tms: config,
+			cp:  m.cp,
+		})
+	}
+	return tms, nil
+}
