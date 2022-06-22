@@ -300,7 +300,7 @@ func (v *MembershipVerifier) recomputeCommitments(p *MembershipProof) (*Membersh
 		BlindingFactor: p.SigBlindingFactor,
 	}
 	var err error
-	c.Signature, err = psv.RecomputeCommitment(psp)
+	c.Signature, err = psv.recomputeCommitment(psp)
 	if err != nil {
 		return nil, err
 	}

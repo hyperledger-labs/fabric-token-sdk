@@ -251,7 +251,7 @@ func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) 
 
 	sv := &POKVerifier{P: v.P, Q: v.Q, PK: v.PK, Curve: v.Curve}
 
-	c.Signature, err = sv.RecomputeCommitment(sp)
+	c.Signature, err = sv.recomputeCommitment(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to verify signature proof")
 	}

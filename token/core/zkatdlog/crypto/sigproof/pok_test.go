@@ -6,9 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package sigproof_test
 
 import (
-	"encoding/json"
-
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"
@@ -37,13 +35,9 @@ var _ = Describe("ZK proof of PS signature", func() {
 				proof, err := prover.Prove()
 				Expect(err).NotTo(HaveOccurred())
 				Expect(proof).NotTo(BeNil())
-				psp := &sigproof.POK{}
-				err = json.Unmarshal(proof, psp)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(psp.Challenge).NotTo(BeNil())
-				Expect(psp.Signature).NotTo(BeNil())
-				Expect(psp.Messages).NotTo(BeNil())
-				Expect(len(psp.Messages)).To(Equal(3))
+				Expect(proof.Signature).NotTo(BeNil())
+				Expect(proof.Messages).NotTo(BeNil())
+				Expect(len(proof.Messages)).To(Equal(3))
 			})
 		})
 	})
