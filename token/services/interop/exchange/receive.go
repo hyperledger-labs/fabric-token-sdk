@@ -9,11 +9,12 @@ package exchange
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 )
+
+const receiveTimeout = 240 * time.Second
 
 type receiveTransactionView struct {
 	network string
@@ -31,15 +32,15 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 	select {
 	case msg := <-ch:
 		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
+			return nil, errors.Errorf("Received error message %s; with session info %v", string(msg.Payload), context.Session().Info())
 		}
 		tx, err := newTransactionFromBytes(context, f.network, f.channel, msg.Payload)
 		if err != nil {
 			return nil, err
 		}
 		return tx, nil
-	case <-time.After(240 * time.Second):
-		return nil, errors.New("timeout reached")
+	case <-time.After(receiveTimeout):
+		return nil, errors.Errorf("Timeout reached; with session info %v", context.Session().Info())
 	}
 }
 
