@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package orion
+package generators
 
 import (
 	"fmt"
@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -108,13 +107,13 @@ type FSCPlatform interface {
 }
 
 type FabTokenFabricCryptoMaterialGenerator struct {
-	TokenPlatform     tokenPlatform
+	TokenPlatform     TokenPlatform
 	EventuallyTimeout time.Duration
 	colorIndex        int
 	Builder           *Builder
 }
 
-func NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform tokenPlatform, builder api.Builder) *FabTokenFabricCryptoMaterialGenerator {
+func NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform TokenPlatform, builder api.Builder) *FabTokenFabricCryptoMaterialGenerator {
 	return &FabTokenFabricCryptoMaterialGenerator{
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
@@ -126,23 +125,23 @@ func (d *FabTokenFabricCryptoMaterialGenerator) Setup(tms *topology.TMS) (string
 	return "", nil
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []generators.Identity {
+func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []Identity {
 	return d.generate(tms, n, "certifiers", certifiers...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
+func (d *FabTokenFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {
 	return d.generate(tms, n, "owners", owners...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
+func (d *FabTokenFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []Identity {
 	return d.generate(tms, n, "issuers", issuers...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
+func (d *FabTokenFabricCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []Identity {
 	return d.generate(tms, n, "auditors", auditors...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, typ string, names ...string) []generators.Identity {
+func (d *FabTokenFabricCryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, typ string, names ...string) []Identity {
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), typ)
 	orgName := fmt.Sprintf("Org%s", n.ID())
 	mspID := fmt.Sprintf("%sMSP", orgName)
@@ -169,9 +168,9 @@ func (d *FabTokenFabricCryptoMaterialGenerator) generate(tms *topology.TMS, n *n
 	d.GenerateCryptoConfig(output, l)
 	d.GenerateArtifacts(output)
 
-	var identities []generators.Identity
+	var identities []Identity
 	for _, name := range names {
-		identities = append(identities, generators.Identity{
+		identities = append(identities, Identity{
 			ID:   name,
 			Type: "bccsp:" + mspID,
 			Path: filepath.Join(

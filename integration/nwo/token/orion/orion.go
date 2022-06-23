@@ -15,7 +15,6 @@ import (
 	"time"
 
 	math3 "github.com/IBM/mathlib"
-
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
@@ -66,8 +65,8 @@ func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *Netwo
 		EventuallyTimeout: 10 * time.Minute,
 		Entries:           map[string]*Entry{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-			"fabtoken": NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform, builder),
-			"dlog":     NewDLogCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+			"fabtoken": generators.NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform, builder),
+			"dlog":     generators.NewDLogCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
 		},
 	}
 }

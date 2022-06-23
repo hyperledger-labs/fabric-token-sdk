@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package orion
+package generators
 
 type BuilderClient interface {
 	Build(path string) string

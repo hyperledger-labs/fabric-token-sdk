@@ -17,19 +17,17 @@ import (
 	"time"
 
 	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
-
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gexec"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	. "github.com/onsi/gomega"
+	. "github.com/onsi/gomega/gexec"
 )
 
 var logger = flogging.MustGetLogger("integration.token.fabric")
@@ -76,7 +74,7 @@ type NetworkHandler struct {
 	ColorIndex        int
 }
 
-func NewNetworkHandler(tokenPlatform tokenPlatform) *NetworkHandler {
+func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *NetworkHandler {
 	curveID := math3.BN254
 	return &NetworkHandler{
 		TokenPlatform:                     tokenPlatform,
@@ -85,8 +83,8 @@ func NewNetworkHandler(tokenPlatform tokenPlatform) *NetworkHandler {
 		TokenChaincodeParamsReplaceSuffix: DefaultTokenChaincodeParamsReplaceSuffix,
 		Entries:                           map[string]*Entry{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-			"fabtoken": NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform),
-			"dlog":     NewDLogCustomCryptoMaterialGenerator(tokenPlatform, curveID),
+			"fabtoken": generators.NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform, builder),
+			"dlog":     generators.NewDLogCryptoMaterialGenerator(tokenPlatform, curveID, builder),
 		},
 	}
 }

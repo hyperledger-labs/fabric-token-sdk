@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package orion
+package generators
 
 import (
 	"fmt"
@@ -18,8 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric/commands"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/commands"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
@@ -29,7 +28,7 @@ import (
 type DLogCryptoMaterialGenerator struct {
 	*FabTokenFabricCryptoMaterialGenerator
 
-	TokenPlatform     tokenPlatform
+	TokenPlatform     TokenPlatform
 	Curve             string
 	EventuallyTimeout time.Duration
 
@@ -37,7 +36,7 @@ type DLogCryptoMaterialGenerator struct {
 	revocationHandlerIndex int
 }
 
-func NewDLogCryptoMaterialGenerator(tokenPlatform tokenPlatform, curveID math3.CurveID, builder api.Builder) *DLogCryptoMaterialGenerator {
+func NewDLogCryptoMaterialGenerator(tokenPlatform TokenPlatform, curveID math3.CurveID, builder api.Builder) *DLogCryptoMaterialGenerator {
 	return &DLogCryptoMaterialGenerator{
 		FabTokenFabricCryptoMaterialGenerator: NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:                         tokenPlatform,
@@ -63,12 +62,12 @@ func (d *DLogCryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	return output, nil
 }
 
-func (d *DLogCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, certifiers ...string) []generators.Identity {
+func (d *DLogCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, node *node.Node, certifiers ...string) []Identity {
 	return nil
 }
 
-func (d *DLogCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
-	var res []generators.Identity
+func (d *DLogCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {
+	var res []Identity
 	tmsID := tms.ID()
 	for i, owner := range owners {
 		logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
@@ -79,7 +78,7 @@ func (d *DLogCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS,
 		sess, err := d.Idemixgen(commands.SignerConfig{
 			NetworkPrefix: tmsID,
 			CAInput:       filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix"),
-			// CAInput:          d.tokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform).DefaultIdemixOrgMSPDir(),
+			// CAInput:          d.TokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform).DefaultIdemixOrgMSPDir(),
 			Output:           userOutput,
 			OrgUnit:          tmsID + ".example.com",
 			EnrollmentID:     owner,
@@ -89,7 +88,7 @@ func (d *DLogCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS,
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
 
-		res = append(res, generators.Identity{
+		res = append(res, Identity{
 			ID:   owner,
 			Type: "idemix:" + "IdemixOrgMSP" + ":" + d.Curve,
 			Path: userOutput,
@@ -99,11 +98,11 @@ func (d *DLogCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS,
 	return res
 }
 
-func (d *DLogCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
+func (d *DLogCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []Identity {
 	return d.FabTokenFabricCryptoMaterialGenerator.GenerateIssuerIdentities(tms, n, issuers...)
 }
 
-func (d *DLogCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
+func (d *DLogCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []Identity {
 	return d.FabTokenFabricCryptoMaterialGenerator.GenerateAuditorIdentities(tms, n, auditors...)
 }
 
