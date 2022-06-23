@@ -9,15 +9,14 @@ package driver
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.driver.fabtoken")
@@ -54,25 +53,14 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	// Otherwise, resort to network local membership
 	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
 	mappers := identity.NewMappers()
-	tmsWalletManager := tms.NewWalletManager(sp, cm, lm.DefaultIdentity(), tms.NewSigService(view2.GetSigService(sp)), view2.GetEndpointService(sp))
+	tmsWalletManager := msp.NewWalletManager(sp, cm, lm.DefaultIdentity(), msp.NewSigService(view2.GetSigService(sp)), view2.GetEndpointService(sp))
 	if err := tmsWalletManager.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to load wallet")
 	}
 	eidDeserializer := fabtoken.NewEnrollmentIDDeserializer()
-
-	if tmsWalletManager.IsEmpty() {
-		// use network local membership
-		logger.Debugf("using network local membership")
-		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
-		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
-		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
-	} else {
-		// use tms local membership
-		logger.Debugf("using tms local membership")
-		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Issuers()))
-		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Auditors()))
-		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Owners()))
-	}
+	mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Issuers()))
+	mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Auditors()))
+	mappers.SetOwnerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Owners()))
 
 	return fabtoken.NewService(
 		sp,

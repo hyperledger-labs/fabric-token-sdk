@@ -10,9 +10,8 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"go.uber.org/zap/zapcore"
 )
 
 type IdentityType int

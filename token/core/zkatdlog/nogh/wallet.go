@@ -14,10 +14,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -221,7 +221,7 @@ type wallet struct {
 	id           string
 	identityInfo *api2.IdentityInfo
 	prefix       string
-	cache        *tms.WalletIdentityCache
+	cache        *msp.WalletIdentityCache
 }
 
 func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
@@ -231,8 +231,8 @@ func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.Identit
 		identityInfo: identityInfo,
 		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
 	}
-	w.cache = tms.NewWalletIdentityCache(w.getRecipientIdentity, tms.DefaultCacheSize)
-	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID, tms.DefaultCacheSize)
+	w.cache = msp.NewWalletIdentityCache(w.getRecipientIdentity, msp.DefaultCacheSize)
+	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID, msp.DefaultCacheSize)
 	return w
 }
 
