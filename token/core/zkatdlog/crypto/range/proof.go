@@ -53,7 +53,7 @@ type MembershipProof struct {
 	Commitments []*mathlib.G1
 	// SignatureProofs is ZK proof that each committed value is signed
 	// using Pointcheval-Sanders signature
-	SignatureProofs [][]byte
+	SignatureProofs []*sigproof.MembershipProof
 }
 
 // Prover produces a proof that show that values of tokens is < max_value
@@ -156,7 +156,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	for k := 0; k < len(proof.MembershipProofs); k++ {
 		proof.MembershipProofs[k] = &MembershipProof{}
 		proof.MembershipProofs[k].Commitments = make([]*mathlib.G1, p.Exponent)
-		proof.MembershipProofs[k].SignatureProofs = make([][]byte, p.Exponent)
+		proof.MembershipProofs[k].SignatureProofs = make([]*sigproof.MembershipProof, p.Exponent)
 		for i := 0; i < p.Exponent; i++ {
 			proof.MembershipProofs[k].Commitments[i] = preProcessed.commitmentsToValues[k][i]
 			mp := sigproof.NewMembershipProver(preProcessed.membershipWitnesses[k][i], proof.MembershipProofs[k].Commitments[i], p.P, p.Q, p.PK, p.PedersenParams[:2], p.Curve)

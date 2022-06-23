@@ -107,13 +107,18 @@ type MembershipVerifier struct {
 	CommitmentToValue *math.G1
 }
 
-// Prove produces a serialized MembershipProof
-func (p *MembershipProver) Prove() ([]byte, error) {
+// Prove produces a MembershipProof
+func (p *MembershipProver) Prove() (*MembershipProof, error) {
+	if p.Curve == nil {
+		return nil, errors.New("failed to generate membership proof: please initialize curve")
+	}
 	if len(p.PK) != 3 {
-		return nil, errors.Errorf("can't generate membership proof")
+		return nil, errors.New("failed to generate membership proof: please initialize " +
+			"Pointcheval-Sanders public key properly")
 	}
 	if len(p.PedersenParams) != 2 {
-		return nil, errors.Errorf("can't generate membership proof")
+		return nil, errors.New("failed to generate membership proof: please initialize " +
+			" Pedersen parameters properly")
 	}
 	proof := &MembershipProof{}
 	proof.Commitment = p.CommitmentToValue
@@ -122,7 +127,7 @@ func (p *MembershipProver) Prove() ([]byte, error) {
 	// obfuscate Pointcheval-Sanders signature
 	obfuscatedSignature, err := p.obfuscateSignature()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to generate membership proof")
 	}
 	// compute hash of value
 	p.computeHash()
@@ -130,20 +135,23 @@ func (p *MembershipProver) Prove() ([]byte, error) {
 	// compute randomness and commitment to randomness
 	commitment, randomness, err := p.computeCommitment(obfuscatedSignature.randomizedWitnessSignature)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to generate membership proof")
 	}
 
 	// compute challenge
 	proof.Challenge, err = p.computeChallenge(proof.Commitment, commitment, obfuscatedSignature.obfuscatedSig)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to generate membership proof")
 	}
 
+	if p.witness == nil {
+		return nil, errors.New("please initialize witness of membership proof")
+	}
 	// generate ZK proof
 	sp := &common.SchnorrProver{Witness: []*math.Zr{p.witness.value, p.witness.comBlindingFactor, p.witness.hash, obfuscatedSignature.blindingFactor}, Randomness: []*math.Zr{randomness.value, randomness.comBlindingFactor, randomness.hash, randomness.sigBlindingFactor}, Challenge: proof.Challenge, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	proofs, err := sp.Prove()
 	if err != nil {
-		return nil, errors.Wrapf(err, "range proof generation failed")
+		return nil, errors.Wrap(err, "failed to generate membership proof")
 	}
 
 	// instantiate proof
@@ -153,42 +161,37 @@ func (p *MembershipProver) Prove() ([]byte, error) {
 	proof.Hash = proofs[2]
 	proof.SigBlindingFactor = proofs[3]
 
-	// marshal proof
-	return proof.Serialize()
+	return proof, nil
 }
 
 // Verify checks the validity of a serialized MembershipProof
 // Verify returns an error if the serialized MembershipProof is invalid
-func (v *MembershipVerifier) Verify(raw []byte) error {
+func (v *MembershipVerifier) Verify(proof *MembershipProof) error {
+	if v.Curve == nil {
+		return errors.New("can't verify membership proof: please initialize curve")
+	}
 	if len(v.PK) != 3 {
-		return errors.Errorf("can't generate membership proof")
+		return errors.New("can't verify membership proof: please initialize Pointcheval-Sanders signature properly")
 	}
 	if len(v.PedersenParams) != 2 {
-		return errors.Errorf("can't generate membership proof")
-	}
-
-	// un-marshal MembershipProof
-	proof := &MembershipProof{}
-	err := proof.Deserialize(raw)
-	if err != nil {
-		return err
+		return errors.Errorf("can't verify membership proof: please initialize Pedersen parameters properly")
 	}
 
 	// recompute commitments to randomness used in MembershipProof
 	com, err := v.recomputeCommitments(proof)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to verify membership proof")
 	}
 
 	// compute challenge
 	chal, err := v.computeChallenge(proof.Commitment, com, proof.Signature)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to verify membership proof")
 	}
 
 	// check if MembershipProof is valid
 	if !chal.Equals(proof.Challenge) {
-		return errors.Errorf("invalid membership proof")
+		return errors.New("invalid membership proof")
 	}
 	return nil
 }
