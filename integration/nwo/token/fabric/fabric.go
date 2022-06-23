@@ -16,6 +16,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
+
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -83,8 +86,8 @@ func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *Netwo
 		TokenChaincodeParamsReplaceSuffix: DefaultTokenChaincodeParamsReplaceSuffix,
 		Entries:                           map[string]*Entry{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-			"fabtoken": generators.NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform, builder),
-			"dlog":     generators.NewDLogCryptoMaterialGenerator(tokenPlatform, curveID, builder),
+			"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, curveID, builder),
 		},
 	}
 }

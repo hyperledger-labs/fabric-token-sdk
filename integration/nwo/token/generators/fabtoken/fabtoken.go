@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package generators
+package fabtoken
 
 import (
 	"fmt"
@@ -15,6 +15,12 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/components"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -62,6 +68,8 @@ PeerOrgs:{{ range .PeerOrgs }}
 `
 )
 
+var logger = flogging.MustGetLogger("integration.token.generators.fabtoken")
+
 type Organization struct {
 	ID            string
 	MSPID         string
@@ -106,42 +114,42 @@ type FSCPlatform interface {
 	PeerOrgs() []*node.Organization
 }
 
-type FabTokenFabricCryptoMaterialGenerator struct {
-	TokenPlatform     TokenPlatform
+type CryptoMaterialGenerator struct {
+	TokenPlatform     generators.TokenPlatform
 	EventuallyTimeout time.Duration
 	colorIndex        int
-	Builder           *Builder
+	Builder           *components.Builder
 }
 
-func NewFabTokenFabricCryptoMaterialGenerator(tokenPlatform TokenPlatform, builder api.Builder) *FabTokenFabricCryptoMaterialGenerator {
-	return &FabTokenFabricCryptoMaterialGenerator{
+func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, builder api.Builder) *CryptoMaterialGenerator {
+	return &CryptoMaterialGenerator{
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
-		Builder:           &Builder{client: builder},
+		Builder:           components.NewBuilder(builder),
 	}
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
+func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	return "", nil
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []Identity {
+func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []generators.Identity {
 	return d.generate(tms, n, "certifiers", certifiers...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []Identity {
+func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
 	return d.generate(tms, n, "owners", owners...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []Identity {
+func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
 	return d.generate(tms, n, "issuers", issuers...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []Identity {
+func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
 	return d.generate(tms, n, "auditors", auditors...)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, typ string, names ...string) []Identity {
+func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, typ string, names ...string) []generators.Identity {
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), typ)
 	orgName := fmt.Sprintf("Org%s", n.ID())
 	mspID := fmt.Sprintf("%sMSP", orgName)
@@ -168,9 +176,9 @@ func (d *FabTokenFabricCryptoMaterialGenerator) generate(tms *topology.TMS, n *n
 	d.GenerateCryptoConfig(output, l)
 	d.GenerateArtifacts(output)
 
-	var identities []Identity
+	var identities []generators.Identity
 	for _, name := range names {
-		identities = append(identities, Identity{
+		identities = append(identities, generators.Identity{
 			ID:   name,
 			Type: "bccsp:" + mspID,
 			Path: filepath.Join(
@@ -186,7 +194,7 @@ func (d *FabTokenFabricCryptoMaterialGenerator) generate(tms *topology.TMS, n *n
 
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *Layout) {
+func (d *CryptoMaterialGenerator) GenerateCryptoConfig(output string, layout *Layout) {
 	Expect(os.MkdirAll(output, 0770)).NotTo(HaveOccurred())
 	crypto, err := os.Create(filepath.Join(output, "crypto-config.yaml"))
 	Expect(err).NotTo(HaveOccurred())
@@ -199,7 +207,7 @@ func (d *FabTokenFabricCryptoMaterialGenerator) GenerateCryptoConfig(output stri
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) GenerateArtifacts(output string) {
+func (d *CryptoMaterialGenerator) GenerateArtifacts(output string) {
 	sess, err := d.Cryptogen(commands.Generate{
 		Config: filepath.Join(output, "crypto-config.yaml"),
 		Output: output,
@@ -208,12 +216,12 @@ func (d *FabTokenFabricCryptoMaterialGenerator) GenerateArtifacts(output string)
 	Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Session, error) {
+func (d *CryptoMaterialGenerator) Cryptogen(command common.Command) (*gexec.Session, error) {
 	cmd := common.NewCommand(d.Builder.FSCCLI(), command)
 	return d.StartSession(cmd, command.SessionName())
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
+func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
 	ansiColorCode := d.NextColor()
 	fmt.Fprintf(
 		ginkgo.GinkgoWriter,
@@ -236,7 +244,7 @@ func (d *FabTokenFabricCryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name
 	)
 }
 
-func (d *FabTokenFabricCryptoMaterialGenerator) NextColor() string {
+func (d *CryptoMaterialGenerator) NextColor() string {
 	color := d.colorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37

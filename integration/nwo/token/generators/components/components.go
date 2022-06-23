@@ -4,7 +4,7 @@ Copyright IBM Corp All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package generators
+package components
 
 type BuilderClient interface {
 	Build(path string) string
@@ -12,6 +12,10 @@ type BuilderClient interface {
 
 type Builder struct {
 	client BuilderClient
+}
+
+func NewBuilder(client BuilderClient) *Builder {
+	return &Builder{client: client}
 }
 
 func (c *Builder) Build(path string) string {
