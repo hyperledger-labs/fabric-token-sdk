@@ -1122,6 +1122,9 @@ Alice can now transfer some of her tokens to other parties. For example:
 ./fungible view -c ./testdata/fsc/nodes/alice/client-config.yaml -f transfer -i "{\"TokenType\":\"TOK\", \"Quantity\":6, \"Recipient\":\"bob\"}"
 ```
 
+./fungible view -c ~/testdata/fsc/nodes/alice/client-config.yaml -f registerOwnerWallet -i "{\"ID\":\"AliceNEW\", \"Type\":\"idemix:IdemixOrgMSP:BN254\", \"Path\":\"/home/vagrant/go/src/github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms/testdata/idemixGurvy3\"}"
+
+
 The above command instructs Alice's node to perform a transfer of 6 units of tokens `TOK` to `bob`.
 If everything is successful, you will see something like the following:
 

@@ -63,6 +63,7 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("redeem", &views2.RedeemViewFactory{})
 	alice.RegisterViewFactory("swap", &views2.SwapInitiatorViewFactory{})
 	alice.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("registerOwnerWallet", &views2.RegisterOwnerWalletViewFactory{})
 
 	// bob
 	bob := fscTopology.AddNodeByName("bob").AddOptions(

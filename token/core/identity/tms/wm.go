@@ -297,7 +297,7 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 		return errors.Errorf("invalid identity type '%s'", typ)
 	}
 	translatedPath := lm.configManager.TranslatePath(path)
-	logger.Info("Registering identity [%s] of type [%s] from [%s]", id, typ, translatedPath)
+	logger.Infof("Registering identity [%s] of type [%s] from [%s]", id, typ, translatedPath)
 
 	switch typeAndMspID[0] {
 	case IdemixMSP:
@@ -314,7 +314,7 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 		if err != nil {
 			return errors.Errorf("invalid curve ID '%s'", typ)
 		}
-		logger.Info("Registering idemix identity [%s] of type [%s] and curve ID [%d]", id, typ, curveID)
+		logger.Infof("Registering idemix identity [%s] of type [%s] and curve ID [%d]", id, typ, curveID)
 		provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
 		if err != nil {
 			return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
@@ -327,7 +327,7 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 			setDefault,
 			NewIdentityCache(provider.Identity, DefaultCacheSize).Identity,
 		)
-		logger.Debugf("added %s resolver for id %s with cache of size %d", IdemixMSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
+		logger.Infof("added %s resolver for id %s with cache of size %d", IdemixMSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 	case BccspMSP:
 		provider, err := x509.NewProvider(translatedPath, typeAndMspID[1], lm.signerService)
 		if err != nil {
