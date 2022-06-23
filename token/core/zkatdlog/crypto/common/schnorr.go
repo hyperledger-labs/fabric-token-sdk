@@ -34,12 +34,21 @@ type SchnorrVerifier struct {
 // Prove produces an array of Zr elements that match the passed
 // challenge, witnesses and randomness.
 func (p *SchnorrProver) Prove() ([]*math.Zr, error) {
+	if p.Curve == nil || p.Curve.GroupOrder == nil {
+		return nil, errors.New("cannot compute Schnorr proof: please initialize curve properly")
+	}
 	if len(p.Witness) != len(p.Randomness) {
-		return nil, errors.Errorf("cannot compute proof")
+		return nil, errors.New("cannot compute Schnorr proof: please initialize witness and randomness correctly")
+	}
+	if p.Challenge == nil {
+		return nil, errors.New("cannot compute Schnorr proof: please initialize challenge")
 	}
 	proof := make([]*math.Zr, len(p.Witness))
 	// p_i = r_i + c*w_i mod q
 	for i := 0; i < len(proof); i++ {
+		if p.Witness[i] == nil || p.Randomness == nil {
+			return nil, errors.New("cannot compute Schnorr proof: please initialize nil elements")
+		}
 		proof[i] = p.Curve.ModMul(p.Challenge, p.Witness[i], p.Curve.GroupOrder)
 		proof[i] = p.Curve.ModAdd(proof[i], p.Randomness[i], p.Curve.GroupOrder)
 	}

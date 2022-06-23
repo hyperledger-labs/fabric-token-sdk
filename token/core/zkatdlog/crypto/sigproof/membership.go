@@ -109,17 +109,6 @@ type MembershipVerifier struct {
 
 // Prove produces a MembershipProof
 func (p *MembershipProver) Prove() (*MembershipProof, error) {
-	if p.Curve == nil {
-		return nil, errors.New("failed to generate membership proof: please initialize curve")
-	}
-	if len(p.PK) != 3 {
-		return nil, errors.New("failed to generate membership proof: please initialize " +
-			"Pointcheval-Sanders public key properly")
-	}
-	if len(p.PedersenParams) != 2 {
-		return nil, errors.New("failed to generate membership proof: please initialize " +
-			" Pedersen parameters properly")
-	}
 	proof := &MembershipProof{}
 	proof.Commitment = p.CommitmentToValue
 
@@ -130,7 +119,10 @@ func (p *MembershipProver) Prove() (*MembershipProof, error) {
 		return nil, errors.Wrap(err, "failed to generate membership proof")
 	}
 	// compute hash of value
-	p.computeHash()
+	if p.witness.value == nil {
+		return nil, errors.New("failed to generate membership proof: nil value")
+	}
+	p.witness.hash = p.Curve.HashToZr(p.witness.value.Bytes())
 
 	// compute randomness and commitment to randomness
 	commitment, randomness, err := p.computeCommitment(obfuscatedSignature.randomizedWitnessSignature)
@@ -167,16 +159,6 @@ func (p *MembershipProver) Prove() (*MembershipProof, error) {
 // Verify checks the validity of a serialized MembershipProof
 // Verify returns an error if the serialized MembershipProof is invalid
 func (v *MembershipVerifier) Verify(proof *MembershipProof) error {
-	if v.Curve == nil {
-		return errors.New("can't verify membership proof: please initialize curve")
-	}
-	if len(v.PK) != 3 {
-		return errors.New("can't verify membership proof: please initialize Pointcheval-Sanders signature properly")
-	}
-	if len(v.PedersenParams) != 2 {
-		return errors.Errorf("can't verify membership proof: please initialize Pedersen parameters properly")
-	}
-
 	// recompute commitments to randomness used in MembershipProof
 	com, err := v.recomputeCommitments(proof)
 	if err != nil {
@@ -211,9 +193,12 @@ type obfuscatedSignature struct {
 // obfuscateSignature return an obfuscatedSignature to be used used in generating
 // a MembershipProof
 func (p *MembershipProver) obfuscateSignature() (*obfuscatedSignature, error) {
+	if p.Curve == nil {
+		return nil, errors.New("cannot obfuscate signature: please initialize curve")
+	}
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return nil, errors.Errorf("failed to get RNG")
+		return nil, errors.New("failed to get random number generator to obfuscate signature")
 	}
 
 	blindingFactor := p.Curve.NewRandomZr(rand)
@@ -222,7 +207,7 @@ func (p *MembershipProver) obfuscateSignature() (*obfuscatedSignature, error) {
 	randomizedWitnessSignature.Copy(p.witness.signature)
 	err = v.Randomize(randomizedWitnessSignature)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to randomize signature")
 	}
 	sig := &pssign.Signature{}
 	sig.Copy(randomizedWitnessSignature)
@@ -247,14 +232,22 @@ func (p *MembershipProver) computeCommitment(obfuscatedSignature *pssign.Signatu
 	randomness.value = p.Curve.NewRandomZr(rand)
 	randomness.hash = p.Curve.NewRandomZr(rand)
 	randomness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
-
+	if len(p.PK) != 3 {
+		return nil, nil, errors.New("failed to compute commitment: invalid public key")
+	}
 	t := p.PK[1].Mul(randomness.value)
 	t.Add(p.PK[2].Mul(randomness.hash))
 
+	if p.Q == nil || p.P == nil {
+		return nil, nil, errors.New("failed to compute commitment: invalid public parameters")
+	}
 	commitment := &MembershipCommitment{}
 	commitment.Signature = p.Curve.Pairing2(t, obfuscatedSignature.R, p.Q, p.P.Mul(randomness.sigBlindingFactor))
 	commitment.Signature = p.Curve.FExp(commitment.Signature)
 
+	if len(p.PedersenParams) != 2 {
+		return nil, nil, errors.New("failed to compute commitment: invalid Pedersen parameters")
+	}
 	randomness.comBlindingFactor = p.Curve.NewRandomZr(rand)
 	commitment.CommitmentToValue = p.PedersenParams[0].Mul(randomness.value)
 	commitment.CommitmentToValue.Add(p.PedersenParams[1].Mul(randomness.comBlindingFactor))
@@ -280,13 +273,6 @@ func (v *MembershipVerifier) computeChallenge(comToValue *math.G1, com *Membersh
 	raw = append(raw, bytes...)
 
 	return v.Curve.HashToZr(raw), nil
-}
-
-// computeHash computes the hash of committed value
-func (p *MembershipProver) computeHash() {
-	bytes := p.witness.value.Bytes()
-	p.witness.hash = p.Curve.HashToZr(bytes)
-	return
 }
 
 // recomputeCommitments recompute commitments to the randomness used in the MembershipProof
