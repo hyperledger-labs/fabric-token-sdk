@@ -381,22 +381,24 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
 	// }
 
-	txRaw, err := c.tx.Bytes()
-	if err != nil {
-		return errors.Wrap(err, "failed marshalling transaction content")
-	}
-	agent.EmitKey(0, "ttx", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
-
-	// Compress distributionList
+	// Compress distributionList by removing duplicates
 	type distributionListEntry struct {
 		IsMe     bool
 		LongTerm view.Identity
 		ID       view.Identity
+		EID      string
+		Auditor  bool
 	}
 	var distributionListCompressed []distributionListEntry
 	for _, party := range distributionList {
+		// For each party in the distribution list:
+		// - check if it is me
+		// - check if it is an auditor
+		// - extract the corresponding long term identity
+		// If the long term identity has not been added yet, add it to the list.
+		// If the party is me or an auditor, no need to extract the enrollment ID.
 		if party.IsNone() {
-			// In the case of a redeem
+			// This is a redeem, nothing to do here.
 			continue
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -424,10 +426,20 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("adding [%s] to distribution list", party)
 			}
+			eID := ""
+			isAuditor := party.Equal(c.tx.Opts.Auditor)
+			if !isMe && !isAuditor {
+				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
+				if err != nil {
+					return errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
+				}
+			}
 			distributionListCompressed = append(distributionListCompressed, distributionListEntry{
 				IsMe:     isMe,
 				LongTerm: longTermIdentity,
 				ID:       party,
+				EID:      eID,
+				Auditor:  isAuditor,
 			})
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -437,14 +449,18 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("distributed env of size [%d] to num parties", len(txRaw), len(distributionListCompressed))
+		logger.Debugf("distributed tx to num parties [%d]", len(distributionListCompressed))
 	}
 
+	// Distribute the transaction to all parties in the distribution list.
+	// Filter the metadata by Enrollment ID.
+	// The auditor will receive the full set of metadata
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
 		}
 
+		// If it it me, no need to open a remote connection. Just store the envelope locally.
 		if entry.IsMe {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
@@ -463,10 +479,29 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			continue
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("This is not me [%s], ask endorse", entry.ID.UniqueID())
+				logger.Debugf("This is not me [%s:%s], ask endorse", entry.ID.UniqueID(), entry.EID)
 			}
 		}
 
+		// The party is not me, open a connection to the party.
+		// If the party is an auditor, then send the full set of metadata.
+		// Otherwise, filter the metadata by Enrollment ID.
+		var txRaw []byte
+		var err error
+		if entry.Auditor {
+			txRaw, err = c.tx.Bytes()
+			if err != nil {
+				return errors.Wrap(err, "failed marshalling transaction content")
+			}
+		} else {
+			txRaw, err = c.tx.Bytes(entry.EID)
+			if err != nil {
+				return errors.Wrap(err, "failed marshalling transaction content")
+			}
+		}
+		agent.EmitKey(0, "ttx", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
+
+		// Open a session to the party. and send the transaction.
 		session, err := context.GetSession(context.Initiator(), entry.ID)
 		if err != nil {
 			return errors.Wrap(err, "failed getting session")

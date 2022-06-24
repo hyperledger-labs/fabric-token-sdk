@@ -51,7 +51,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("receiver1"),
 					[]byte("receiver2"),
 				},
-				AuditInfos: [][]byte{
+				ReceiversAuditInfos: [][]byte{
 					[]byte("audit_info1"),
 					[]byte("audit_info2"),
 				},

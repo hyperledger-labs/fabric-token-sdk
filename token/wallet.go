@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // ListTokensOptions options for listing tokens
@@ -134,6 +135,15 @@ func (t *WalletManager) CertifierWalletByIdentity(identity view.Identity) *Certi
 		return nil
 	}
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+}
+
+// GetEnrollmentID returns the enrollment ID of passed identity
+func (t *WalletManager) GetEnrollmentID(identity view.Identity) (string, error) {
+	auditInfo, err := t.managementService.tms.IdentityProvider().GetAuditInfo(identity)
+	if err != nil {
+		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
+	}
+	return t.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.

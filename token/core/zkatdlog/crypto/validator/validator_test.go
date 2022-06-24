@@ -448,11 +448,11 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 	metadata := driver.IssueMetadata{}
 	metadata.TokenInfo = marshalledinf
 	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
-	metadata.AuditInfos = make([][]byte, len(issue.OutputTokens))
+	metadata.ReceiversAuditInfos = make([][]byte, len(issue.OutputTokens))
 	for i := 0; i < len(issue.OutputTokens); i++ {
 		metadata.Outputs[i], err = json.Marshal(issue.OutputTokens[i].Data)
 		Expect(err).NotTo(HaveOccurred())
-		metadata.AuditInfos[i], err = auditInfo.Bytes()
+		metadata.ReceiversAuditInfos[i], err = auditInfo.Bytes()
 		Expect(err).NotTo(HaveOccurred())
 	}
 

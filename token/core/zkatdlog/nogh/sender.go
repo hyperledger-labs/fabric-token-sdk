@@ -3,17 +3,17 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
@@ -49,18 +49,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		}
 		values = append(values, q.ToBigInt().Uint64())
 		owners = append(owners, output.Owner.Raw)
-
-		// add owner identity if not present already
-		found := false
-		for _, identity := range ownerIdentities {
-			if identity.Equal(output.Owner.Raw) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
-		}
+		ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 	}
 	transfer, infos, err := sender.GenerateZKTransfer(values, owners)
 	if err != nil {

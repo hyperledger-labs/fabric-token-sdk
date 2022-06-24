@@ -12,11 +12,10 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type Payload struct {
@@ -175,11 +174,13 @@ func (t *Transaction) Request() *token.Request {
 	return t.Payload.TokenRequest
 }
 
-func (t *Transaction) Bytes() ([]byte, error) {
+// Bytes returns the serialized version of the transaction.
+// If eIDs is not nil, then metadata is filtered by the passed eIDs.
+func (t *Transaction) Bytes(eIDs ...string) ([]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("marshalling tx, id [%s]", t.Payload.TxID.String())
+		logger.Debugf("marshalling tx, id [%s], for EIDs [%x]", t.Payload.TxID.String(), eIDs)
 	}
-	return marshal(t)
+	return marshal(t, eIDs...)
 }
 
 // Issue appends a new Issue operation to the TokenRequest inside this transaction
@@ -338,7 +339,7 @@ type TransactionSer struct {
 	Envelope     []byte
 }
 
-func marshal(t *Transaction) ([]byte, error) {
+func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	var err error
 
 	var transientRaw []byte
@@ -351,7 +352,15 @@ func marshal(t *Transaction) ([]byte, error) {
 
 	var tokenRequestRaw []byte
 	if t.Payload.TokenRequest != nil {
-		tokenRequestRaw, err = t.Payload.TokenRequest.Bytes()
+		req := t.Payload.TokenRequest
+		// If eIDs are specified, we only marshal the metadata for the passed eIDs
+		if len(eIDs) != 0 {
+			req, err = t.Payload.TokenRequest.FilterMetadataBy(eIDs...)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to filter metadata")
+			}
+		}
+		tokenRequestRaw, err = req.Bytes()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal token request")
 		}
