@@ -18,12 +18,10 @@ const (
 	CertifierRole
 )
 
-type GetIdentityFunc func() (view.Identity, error)
-
-type IdentityInfo struct {
-	ID           string
-	EnrollmentID string
-	GetIdentity  GetIdentityFunc
+type IdentityInfo interface {
+	ID() string
+	EnrollmentID() string
+	Get() (view.Identity, []byte, error)
 }
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.
@@ -31,7 +29,7 @@ type IdentityProvider interface {
 	LookupIdentifier(usage IdentityUsage, v interface{}) (view.Identity, string)
 
 	// GetIdentityInfo returns the long-term identity info associated to the passed id, nil if not found.
-	GetIdentityInfo(usage IdentityUsage, id string) *IdentityInfo
+	GetIdentityInfo(usage IdentityUsage, id string) IdentityInfo
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)

@@ -149,8 +149,10 @@ func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n
 	return d.generate(tms, n, "auditors", auditors...)
 }
 
-func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, typ string, names ...string) []generators.Identity {
-	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), typ)
+func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []generators.Identity {
+	logger.Infof("generate [%s] identities [%v]", wallet, names)
+
+	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), wallet)
 	orgName := fmt.Sprintf("Org%s", n.ID())
 	mspID := fmt.Sprintf("%sMSP", orgName)
 	domain := fmt.Sprintf("%s.example.com", orgName)

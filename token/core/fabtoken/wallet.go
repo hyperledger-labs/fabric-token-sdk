@@ -89,7 +89,7 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 
 	// Create the wallet
 	if idInfo := s.IP.GetIdentityInfo(driver.OwnerRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
+		id, _, err := idInfo.Get()
 		if err != nil {
 			panic(err)
 		}
@@ -130,7 +130,7 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 
 	// Create the wallet
 	if idInfo := s.IP.GetIdentityInfo(driver.IssuerRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
+		id, _, err := idInfo.Get()
 		if err != nil {
 			panic(err)
 		}
@@ -167,7 +167,7 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 
 	// Create the wallet
 	if idInfo := s.IP.GetIdentityInfo(driver.AuditorRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
+		id, _, err := idInfo.Get()
 		if err != nil {
 			panic(err)
 		}
@@ -207,12 +207,12 @@ func (s *Service) walletID(id string) string {
 type ownerWallet struct {
 	tokenService *Service
 	id           string
-	identityInfo *driver.IdentityInfo
+	identityInfo driver.IdentityInfo
 	identity     view.Identity
 	wrappedID    view.Identity
 }
 
-func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string, identityInfo *driver.IdentityInfo) *ownerWallet {
+func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string, identityInfo driver.IdentityInfo) *ownerWallet {
 	return &ownerWallet{
 		tokenService: tokenService,
 		id:           id,
@@ -286,7 +286,7 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.Unspent
 }
 
 func (w *ownerWallet) EnrollmentID() string {
-	return w.identityInfo.EnrollmentID
+	return w.identityInfo.EnrollmentID()
 }
 
 type issuerWallet struct {

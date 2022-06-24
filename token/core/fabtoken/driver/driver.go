@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/mapper"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -50,7 +49,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
 
-	tmsWalletManager := msp.NewWalletManager(
+	mspWalletManager := msp.NewWalletManager(
 		sp,        // service provider
 		networkID, // network ID
 		tmsConfig, // config manager
@@ -59,11 +58,15 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		msp.NewSigService(view2.GetSigService(sp)),      // signer service
 		view2.GetEndpointService(sp),                    // endpoint service
 	)
-	tmsWalletManager.SetRole(driver.OwnerRole, mapper.LongTermIdentity)
-	tmsWalletManager.SetRole(driver.IssuerRole, mapper.LongTermIdentity)
-	tmsWalletManager.SetRole(driver.AuditorRole, mapper.LongTermIdentity)
-	if err := tmsWalletManager.Load(); err != nil {
+	mspWalletManager.SetRoleIdentityType(driver.OwnerRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.IssuerRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.AuditorRole, msp.LongTermIdentity)
+	if err := mspWalletManager.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to load wallets")
+	}
+	mappers, err := mspWalletManager.Mappers()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get wallet mappers")
 	}
 
 	return fabtoken.NewService(
@@ -77,7 +80,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		}),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
-		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), tmsWalletManager.Mappers()),
+		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), mappers),
 		fabtoken.NewDeserializer(),
 		tmsConfig,
 	), nil

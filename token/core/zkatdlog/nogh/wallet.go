@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"runtime/debug"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -142,7 +143,7 @@ func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
 
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.IssuerRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
+		id, _, err := idInfo.Get()
 		if err != nil {
 			panic(err)
 		}
@@ -179,7 +180,7 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 
 	// Create the wallet
 	if idInfo := s.identityProvider.GetIdentityInfo(api2.AuditorRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
+		id, _, err := idInfo.Get()
 		if err != nil {
 			panic(err)
 		}
@@ -219,20 +220,20 @@ func (s *Service) walletID(id string) string {
 type wallet struct {
 	tokenService *Service
 	id           string
-	identityInfo *api2.IdentityInfo
+	identityInfo api2.IdentityInfo
 	prefix       string
-	cache        *msp.WalletIdentityCache
+	cache        *idemix.WalletIdentityCache
 }
 
-func newOwnerWallet(tokenService *Service, id string, identityInfo *api2.IdentityInfo) *wallet {
+func newOwnerWallet(tokenService *Service, id string, identityInfo api2.IdentityInfo) *wallet {
 	w := &wallet{
 		tokenService: tokenService,
 		id:           id,
 		identityInfo: identityInfo,
 		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
 	}
-	w.cache = msp.NewWalletIdentityCache(w.getRecipientIdentity, msp.DefaultCacheSize)
-	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID, msp.DefaultCacheSize)
+	w.cache = idemix.NewWalletIdentityCache(w.getRecipientIdentity, idemix.DefaultCacheSize)
+	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), idemix.DefaultCacheSize)
 	return w
 }
 
@@ -254,7 +255,7 @@ func (w *wallet) GetRecipientIdentity() (view.Identity, error) {
 
 func (w *wallet) getRecipientIdentity() (view.Identity, error) {
 	// Get a new pseudonym
-	pseudonym, err := w.identityInfo.GetIdentity()
+	pseudonym, _, err := w.identityInfo.Get()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
 	}
@@ -280,7 +281,7 @@ func (w *wallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
 }
 
 func (w *wallet) EnrollmentID() string {
-	return w.identityInfo.EnrollmentID
+	return w.identityInfo.EnrollmentID()
 }
 
 func (w *wallet) GetSigner(identity view.Identity) (api2.Signer, error) {

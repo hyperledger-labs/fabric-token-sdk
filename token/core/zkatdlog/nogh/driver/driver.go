@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/mapper"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
@@ -53,7 +52,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
 
-	tmsWalletManager := msp.NewWalletManager(
+	mspWalletManager := msp.NewWalletManager(
 		sp,        // service provider
 		networkID, // network ID
 		tmsConfig, // config manager
@@ -62,11 +61,15 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		msp.NewSigService(view2.GetSigService(sp)),      // signer service
 		view2.GetEndpointService(sp),                    // endpoint service
 	)
-	tmsWalletManager.SetRole(driver.OwnerRole, mapper.AnonymousIdentity)
-	tmsWalletManager.SetRole(driver.IssuerRole, mapper.LongTermIdentity)
-	tmsWalletManager.SetRole(driver.AuditorRole, mapper.LongTermIdentity)
-	if err := tmsWalletManager.Load(); err != nil {
+	mspWalletManager.SetRoleIdentityType(driver.OwnerRole, msp.AnonymousIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.IssuerRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.AuditorRole, msp.LongTermIdentity)
+	if err := mspWalletManager.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to load wallets")
+	}
+	mappers, err := mspWalletManager.Mappers()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get wallet mappers")
 	}
 
 	desProvider := zkatdlog.NewDeserializerProvider()
@@ -82,7 +85,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
 		v.TokenVault().QueryEngine(),
-		identity.NewProvider(sp, zkatdlog.NewEnrollmentIDDeserializer(), tmsWalletManager.Mappers()),
+		identity.NewProvider(sp, zkatdlog.NewEnrollmentIDDeserializer(), mappers),
 		desProvider.Deserialize,
 		crypto.DLogPublicParameters,
 		tmsConfig,

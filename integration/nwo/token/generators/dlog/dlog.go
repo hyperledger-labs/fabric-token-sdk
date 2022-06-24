@@ -31,7 +31,7 @@ import (
 var logger = flogging.MustGetLogger("integration.token.generators.dlog")
 
 type CryptoMaterialGenerator struct {
-	*fabtoken.CryptoMaterialGenerator
+	fabTokenGenerator *fabtoken.CryptoMaterialGenerator
 
 	TokenPlatform     generators.TokenPlatform
 	Curve             string
@@ -43,10 +43,10 @@ type CryptoMaterialGenerator struct {
 
 func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, curveID math3.CurveID, builder api.Builder) *CryptoMaterialGenerator {
 	return &CryptoMaterialGenerator{
-		CryptoMaterialGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
-		TokenPlatform:           tokenPlatform,
-		EventuallyTimeout:       10 * time.Minute,
-		Curve:                   CurveIDToString(curveID),
+		fabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+		TokenPlatform:     tokenPlatform,
+		EventuallyTimeout: 10 * time.Minute,
+		Curve:             CurveIDToString(curveID),
 	}
 }
 
@@ -72,6 +72,8 @@ func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS,
 }
 
 func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
+	logger.Infof("generate [owners] identities [%v]", owners)
+
 	var res []generators.Identity
 	tmsID := tms.ID()
 	for i, owner := range owners {
@@ -104,11 +106,11 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 }
 
 func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
-	return d.CryptoMaterialGenerator.GenerateIssuerIdentities(tms, n, issuers...)
+	return d.fabTokenGenerator.GenerateIssuerIdentities(tms, n, issuers...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
-	return d.CryptoMaterialGenerator.GenerateAuditorIdentities(tms, n, auditors...)
+	return d.fabTokenGenerator.GenerateAuditorIdentities(tms, n, auditors...)
 }
 
 func (d *CryptoMaterialGenerator) Idemixgen(command common.Command) (*gexec.Session, error) {
