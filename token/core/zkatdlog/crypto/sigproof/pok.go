@@ -193,6 +193,9 @@ func (v *POKVerifier) recomputeCommitment(p *POK) (*math.Gt, error) {
 	if p.Challenge == nil || p.BlindingFactor == nil {
 		return nil, errors.New("nil elements")
 	}
+	if v.Q == nil || v.P == nil {
+		return nil, errors.New("please initialize verifier correctly")
+	}
 	com := v.Curve.Pairing2(v.Q, p.Signature.S.Mul(p.Challenge), pk, p.Signature.R.Mul(p.Challenge))
 	com.Inverse()
 	com.Mul(v.Curve.Pairing2(t, p.Signature.R, v.Q, v.P.Mul(p.BlindingFactor)))

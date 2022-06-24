@@ -12,17 +12,31 @@ import (
 	"github.com/pkg/errors"
 )
 
+// SigProof is a proof of knowledge of Pointcheval-Signature
+// with partial message disclosure
 type SigProof struct {
-	Challenge         *math.Zr
-	Hidden            []*math.Zr
-	Hash              *math.Zr
-	Signature         *pssign.Signature
+	// Challenge is the challenge used in the proof
+	Challenge *math.Zr
+	// Hidden is an array that contains proofs of knowledge of hidden messages
+	Hidden []*math.Zr
+	// Hash is the proof of knowledge of the hash signed in Pointcheval-Sanders signature
+	// If hash is computed as a function of the signed messages, it should never be disclosed
+	// Hash cannot be nil
+	Hash *math.Zr
+	// Signature is an obfuscated Pointcheval-Sanders signature
+	Signature *pssign.Signature
+	// SigBlindingFactor is the proof of knowledge of the randomness used to obfuscate
+	// Pointcheval-Sanders signature
 	SigBlindingFactor *math.Zr
+	// ComBlindingFactor is a proof of knowledge of the randomness used to compute
+	// the Pedersen commitment
 	ComBlindingFactor *math.Zr
-	Commitment        *math.G1 // for hidden values
+	// Commitment is a Pedersen commitment of to the hidden messages
+	Commitment *math.G1 // for hidden values
 }
 
-// commitments how they are computed
+// SigProver produces a proof of knowledge Pointcheval-Sanders signature with partial
+// message disclosure
 type SigProver struct {
 	*SigVerifier
 	witness    *SigWitness
@@ -30,15 +44,22 @@ type SigProver struct {
 	Commitment *SigCommitment
 }
 
+// SigVerifier checks the validity of SigProof
 type SigVerifier struct {
 	*POKVerifier
-	HiddenIndices        []int
-	DisclosedIndices     []int
-	Disclosed            []*math.Zr
-	PedersenParams       []*math.G1
+	// indices of messages to be hidden in the signed vector
+	HiddenIndices []int
+	// indices of messages to be disclosed
+	DisclosedIndices []int
+	// Disclosed contains the content of the disclosed messages
+	Disclosed []*math.Zr
+	// PedersenParams corresponds to Pedersen commitment generators
+	PedersenParams []*math.G1
+	// CommitmentToMessages is a Pedersen commitment to the signed messages
 	CommitmentToMessages *math.G1
 }
 
+// SigWitness is the witness for SigProof
 type SigWitness struct {
 	hidden            []*math.Zr
 	hash              *math.Zr
@@ -47,6 +68,7 @@ type SigWitness struct {
 	comBlindingFactor *math.Zr
 }
 
+// NewSigWitness instantiates a SigWitness with the passed arguments
 func NewSigWitness(hidden []*math.Zr, signature *pssign.Signature, hash, bf *math.Zr) *SigWitness {
 	return &SigWitness{
 		hidden:            hidden,
@@ -56,6 +78,7 @@ func NewSigWitness(hidden []*math.Zr, signature *pssign.Signature, hash, bf *mat
 	}
 }
 
+// NewSigProver returns a SigProver as a function of the passed arguments
 func NewSigProver(hidden, disclosed []*math.Zr, signature *pssign.Signature, hash, bf *math.Zr, com *math.G1, hiddenindices, disclosedindices []int, P *math.G1, Q *math.G2, PK []*math.G2, pp []*math.G1, curve *math.Curve) *SigProver {
 	return &SigProver{
 		witness:     NewSigWitness(hidden, signature, hash, bf),
@@ -63,6 +86,7 @@ func NewSigProver(hidden, disclosed []*math.Zr, signature *pssign.Signature, has
 	}
 }
 
+// NewSigVerifier returns a SigVerifier as a function of the passed arguments
 func NewSigVerifier(hidden, disclosed []int, disclosedInf []*math.Zr, com, P *math.G1, Q *math.G2, PK []*math.G2, pp []*math.G1, curve *math.Curve) *SigVerifier {
 	return &SigVerifier{
 		POKVerifier: &POKVerifier{
@@ -79,6 +103,7 @@ func NewSigVerifier(hidden, disclosed []int, disclosedInf []*math.Zr, com, P *ma
 	}
 }
 
+// SigRandomness represents the randomness used in the SigProof
 type SigRandomness struct {
 	hidden            []*math.Zr
 	hash              *math.Zr
@@ -86,18 +111,15 @@ type SigRandomness struct {
 	comBlindingFactor *math.Zr
 }
 
+// SigCommitment encodes the commitments to the randomness used in the SigProof
 type SigCommitment struct {
 	CommitmentToMessages *math.G1
 	Signature            *math.Gt
 }
 
+// Prove returns a SigProof
 func (p *SigProver) Prove() (*SigProof, error) {
-	if len(p.HiddenIndices) != len(p.witness.hidden) {
-		return nil, errors.Errorf("witness is not of the right size")
-	}
-	if len(p.DisclosedIndices) != len(p.Disclosed) {
-		return nil, errors.Errorf("witness is not of the right size")
-	}
+
 	proof := &SigProof{}
 	var err error
 	// randomize signature
@@ -105,6 +127,8 @@ func (p *SigProver) Prove() (*SigProof, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// generate randomness and compute corresponding commitments
 	err = p.computeCommitment()
 	if err != nil {
 		return nil, err
@@ -119,7 +143,7 @@ func (p *SigProver) Prove() (*SigProof, error) {
 	sp := &common.SchnorrProver{Witness: append(p.witness.hidden, p.witness.comBlindingFactor, p.witness.sigBlindingFactor, p.witness.hash), Randomness: append(p.randomness.hidden, p.randomness.comBlindingFactor, p.randomness.sigBlindingFactor, p.randomness.hash), Challenge: proof.Challenge, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	proofs, err := sp.Prove()
 	if err != nil {
-		return nil, errors.Wrapf(err, "signature proof generation failed")
+		return nil, errors.Wrap(err, "signature proof generation failed")
 	}
 
 	proof.Commitment = p.CommitmentToMessages
@@ -131,18 +155,15 @@ func (p *SigProver) Prove() (*SigProof, error) {
 	return proof, nil
 }
 
+// computeCommitment computes the commitments to the randomness used in the SigProof
 func (p *SigProver) computeCommitment() error {
-	if len(p.PedersenParams) != len(p.HiddenIndices)+1 {
-		return errors.Errorf("size of witness does not match length of Pedersen Parameters")
-	}
-	if len(p.PK) != len(p.HiddenIndices)+len(p.DisclosedIndices)+2 {
-		return errors.Errorf("size of signature public key does not mathc the size of the witness")
-	}
-	// Get RNG
+
+	// Get random number generator
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return errors.Errorf("failed to get RNG")
+		return errors.New("failed to get random number generator")
 	}
+
 	// generate randomness
 	p.randomness = &SigRandomness{}
 	for i := 0; i < len(p.witness.hidden); i++ {
@@ -152,15 +173,35 @@ func (p *SigProver) computeCommitment() error {
 	p.randomness.comBlindingFactor = p.Curve.NewRandomZr(rand)
 	p.randomness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
 
-	// compute commitment
+	if len(p.PedersenParams) != len(p.HiddenIndices)+1 {
+		return errors.New("size of witness does not match length of Pedersen Parameters")
+	}
+
+	// compute commitments to randomness
 	p.Commitment = &SigCommitment{}
+	if p.PedersenParams[len(p.witness.hidden)] == nil {
+		return errors.New("please initialize Pedersen parameters")
+	}
 	p.Commitment.CommitmentToMessages = p.PedersenParams[len(p.witness.hidden)].Mul(p.randomness.comBlindingFactor)
 	for i, r := range p.randomness.hidden {
+		if p.PedersenParams[i] == nil {
+			return errors.New("please initialize Pedersen parameters")
+		}
 		p.Commitment.CommitmentToMessages.Add(p.PedersenParams[i].Mul(r))
 	}
 
+	if len(p.PK) != len(p.HiddenIndices)+len(p.DisclosedIndices)+2 {
+		return errors.Errorf("size of signature public key does not mathc the size of the witness")
+	}
+
+	if p.PK[len(p.Disclosed)+len(p.witness.hidden)+1] == nil {
+		return errors.New("please initialize public keys")
+	}
 	t := p.PK[len(p.Disclosed)+len(p.witness.hidden)+1].Mul(p.randomness.hash)
 	for i, index := range p.HiddenIndices {
+		if p.PK[index+1] == nil {
+			return errors.New("please initialize public keys")
+		}
 		t.Add(p.PK[index+1].Mul(p.randomness.hidden[i]))
 	}
 
@@ -169,10 +210,17 @@ func (p *SigProver) computeCommitment() error {
 	return nil
 }
 
+// obfuscateSignature obfuscates a Pointcheval-Sanders signature
 func (p *SigProver) obfuscateSignature() (*pssign.Signature, error) {
+	if p.Curve == nil {
+		return nil, errors.New("please initialize curve")
+	}
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return nil, errors.Errorf("failed to get RNG")
+		return nil, errors.New("failed to get random number generator")
+	}
+	if p.witness == nil {
+		return nil, errors.New("please initialize witness")
 	}
 
 	p.witness.sigBlindingFactor = p.Curve.NewRandomZr(rand)
@@ -181,6 +229,9 @@ func (p *SigProver) obfuscateSignature() (*pssign.Signature, error) {
 	if err != nil {
 		return nil, err
 	}
+	if p.P == nil {
+		return nil, errors.New("please initialize public parameters")
+	}
 	sig := &pssign.Signature{}
 	sig.Copy(p.witness.signature)
 	sig.S.Add(p.P.Mul(p.witness.sigBlindingFactor))
@@ -188,6 +239,7 @@ func (p *SigProver) obfuscateSignature() (*pssign.Signature, error) {
 	return sig, nil
 }
 
+// computeChallenge returns the challenge for the SigProof
 func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign.Signature, com *SigCommitment) (*math.Zr, error) {
 	g1array, err := common.GetG1Array(v.PedersenParams, []*math.G1{comToMessages, com.CommitmentToMessages,
 		v.P}).Bytes()
@@ -199,11 +251,11 @@ func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign
 		return nil, errors.Wrap(err, "failed to compute challenge")
 	}
 	if com.Signature == nil {
-		return nil, errors.Errorf("failed to compute challenge:commitment is not well formed")
+		return nil, errors.New("failed to compute challenge:commitment is not well formed")
 	}
 	raw := common.GetBytesArray(g1array, g2array, com.Signature.Bytes())
 	if signature == nil {
-		return nil, errors.Errorf("failed to compute challenge: Pointcheval-Sanders signature is nil")
+		return nil, errors.New("failed to compute challenge: Pointcheval-Sanders signature is nil")
 	}
 	bytes, err := signature.Serialize()
 	if err != nil {
@@ -214,21 +266,20 @@ func (v *SigVerifier) computeChallenge(comToMessages *math.G1, signature *pssign
 	return v.Curve.HashToZr(raw), nil
 }
 
-// recompute commitments for verification
+// recomputeCommitments returns the commitments to randomness in the SigProof
 func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) {
-	if p == nil {
-		return nil, errors.Errorf("invalid signature proof")
-	}
-	if len(p.Hidden)+len(v.Disclosed) != len(v.PK)-2 {
-		return nil, errors.Errorf("length of signature public key does not match number of signed messages")
-	}
+
+	/**/
 	c := &SigCommitment{}
 	ver := &common.SchnorrVerifier{PedParams: v.PedersenParams, Curve: v.Curve}
 	zkp := &common.SchnorrProof{Statement: v.CommitmentToMessages, Proof: append(p.Hidden, p.ComBlindingFactor), Challenge: p.Challenge}
 	var err error
 	c.CommitmentToMessages, err = ver.RecomputeCommitment(zkp)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to recompute commitment")
+	}
+	if len(p.Hidden)+len(v.Disclosed) != len(v.PK)-2 {
+		return nil, errors.New("invalid signature proof")
 	}
 	proof := make([]*math.Zr, len(v.PK)-2)
 	for i, index := range v.HiddenIndices {
@@ -236,7 +287,7 @@ func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) 
 	}
 	for i, index := range v.DisclosedIndices {
 		if v.Disclosed[i] == nil || p.Challenge == nil {
-			return nil, errors.Errorf("signature proof is not well formed")
+			return nil, errors.New("signature proof is not well formed")
 		}
 		proof[index] = v.Curve.ModMul(v.Disclosed[i], p.Challenge, v.Curve.GroupOrder)
 	}
@@ -253,14 +304,16 @@ func (v *SigVerifier) recomputeCommitments(p *SigProof) (*SigCommitment, error) 
 
 	c.Signature, err = sv.recomputeCommitment(sp)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to verify signature proof")
+		return nil, errors.Wrap(err, "invalid signature proof")
 	}
 	return c, nil
 }
 
-// verify membership proof
+// Verify returns an error if the passed SigProof is invalid
 func (v *SigVerifier) Verify(p *SigProof) error {
-
+	if p == nil {
+		return errors.New("invalid signature proof")
+	}
 	com, err := v.recomputeCommitments(p)
 	if err != nil {
 		return nil
