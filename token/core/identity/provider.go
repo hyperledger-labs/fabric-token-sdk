@@ -10,6 +10,8 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/mapper"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -21,28 +23,6 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.driver.identity")
 
-type Mappers map[driver.IdentityUsage]mapper
-
-func NewMappers() Mappers {
-	return make(Mappers)
-}
-
-func (m Mappers) Put(usage driver.IdentityUsage, mapper mapper) {
-	m[usage] = mapper
-}
-
-func (m Mappers) SetIssuerRole(mapper mapper) {
-	m[driver.IssuerRole] = mapper
-}
-
-func (m Mappers) SetAuditorRole(mapper mapper) {
-	m[driver.AuditorRole] = mapper
-}
-
-func (m Mappers) SetOwnerRole(mapper mapper) {
-	m[driver.OwnerRole] = mapper
-}
-
 type GetFunc func() (view.Identity, []byte, error)
 
 type Deserializer interface {
@@ -53,23 +33,17 @@ type EnrollmentIDUnmarshaler interface {
 	GetEnrollmentID(auditInfo []byte) (string, error)
 }
 
-type mapper interface {
-	Info(id string) (string, string, GetFunc)
-	Map(v interface{}) (view.Identity, string)
-	RegisterIdentity(id string, typ string, path string) error
-}
-
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers                 map[driver.IdentityUsage]mapper
+	mappers                 mapper.Mappers
 	deserializers           []Deserializer
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
 }
 
-func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers map[driver.IdentityUsage]mapper) *Provider {
+func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers mapper.Mappers) *Provider {
 	return &Provider{
 		sp:                      sp,
 		mappers:                 mappers,

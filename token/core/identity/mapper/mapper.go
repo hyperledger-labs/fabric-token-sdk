@@ -4,15 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identity
+package mapper
 
 import (
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"go.uber.org/zap/zapcore"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.driver.identity.tms")
 
 type IdentityType int
 
@@ -31,15 +34,16 @@ type LocalMembership interface {
 	RegisterIdentity(id string, typ string, path string) error
 }
 
-type Mapper struct {
+// mapper maps identifiers of different sorts to identities
+type mapper struct {
 	networkID       string
 	nodeIdentity    view.Identity
 	localMembership LocalMembership
 	identityType    IdentityType
 }
 
-func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Identity, localMembership LocalMembership) *Mapper {
-	return &Mapper{
+func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Identity, localMembership LocalMembership) *mapper {
+	return &mapper{
 		networkID:       networkID,
 		identityType:    identityType,
 		nodeIdentity:    nodeIdentity,
@@ -47,7 +51,11 @@ func NewMapper(networkID string, identityType IdentityType, nodeIdentity view.Id
 	}
 }
 
-func (i *Mapper) Info(id string) (string, string, GetFunc) {
+// Info get in input an identifier and returns:
+// - The corresponding long term identifier
+// - The corresponding enrollment ID
+// - A function that returns the identity and its audit info.
+func (i *mapper) Info(id string) (string, string, GetFunc) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
 	}
@@ -81,7 +89,7 @@ func (i *Mapper) Info(id string) (string, string, GetFunc) {
 	}
 }
 
-func (i *Mapper) Map(v interface{}) (view.Identity, string) {
+func (i *mapper) Map(v interface{}) (view.Identity, string) {
 	defaultID := i.localMembership.DefaultIdentity()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -261,6 +269,6 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 	}
 }
 
-func (i *Mapper) RegisterIdentity(id string, typ string, path string) error {
+func (i *mapper) RegisterIdentity(id string, typ string, path string) error {
 	return i.localMembership.RegisterIdentity(id, typ, path)
 }

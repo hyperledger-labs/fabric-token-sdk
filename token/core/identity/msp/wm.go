@@ -14,6 +14,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/mapper"
+
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -39,6 +41,13 @@ const (
 	IdemixMSPFolder = "idemix-folder"
 	BccspMSP        = "bccsp"
 	BccspMSPFolder  = "bccsp-folder"
+
+	// OwnerMSPID is the default MSP ID for the owner wallet
+	OwnerMSPID = "OwnerMSPID"
+	// IssuerMSPID is the default MSP ID for the issuer wallet
+	IssuerMSPID = "IssuerMSPID"
+	// AuditorMSPID is the default MSP ID for the auditor wallet
+	AuditorMSPID = "AuditorMSPID"
 )
 
 type DeserializerManager interface {
@@ -74,82 +83,108 @@ type EnrollmentService interface {
 }
 
 type WalletManager struct {
-	sp              view2.ServiceProvider
-	configManager   config.Manager
-	empty           bool
-	defaultIdentity view.Identity
-	signerService   SignerService
-	binderService   BinderService
+	sp                     view2.ServiceProvider
+	networkID              string
+	configManager          config.Manager
+	empty                  bool
+	fscIdentity            view.Identity
+	networkDefaultIdentity view.Identity
+	signerService          SignerService
+	binderService          BinderService
 
+	roles    map[int]mapper.IdentityType
 	owners   *LocalMembership
 	issuers  *LocalMembership
 	auditors *LocalMembership
 }
 
-func NewWalletManager(sp view2.ServiceProvider, configManager config.Manager, defaultIdentity view.Identity, signerService SignerService, binderService BinderService) *WalletManager {
+func NewWalletManager(
+	sp view2.ServiceProvider,
+	networkID string,
+	configManager config.Manager,
+	fscIdentity view.Identity,
+	networkDefaultIdentity view.Identity,
+	signerService SignerService,
+	binderService BinderService,
+) *WalletManager {
 	return &WalletManager{
-		sp:              sp,
-		configManager:   configManager,
-		empty:           true,
-		defaultIdentity: defaultIdentity,
-		signerService:   signerService,
-		binderService:   binderService,
+		sp:                     sp,
+		networkID:              networkID,
+		configManager:          configManager,
+		empty:                  true,
+		fscIdentity:            fscIdentity,
+		networkDefaultIdentity: networkDefaultIdentity,
+		signerService:          signerService,
+		binderService:          binderService,
+		roles:                  map[int]mapper.IdentityType{},
 	}
 }
 
-func (l *WalletManager) Load() error {
+func (wm *WalletManager) Load() error {
 	logger.Debugf("load wallets...")
 	defer logger.Debugf("load wallets...done")
-	if l.configManager.TMS().Wallets == nil {
+	if wm.configManager.TMS().Wallets == nil {
 		logger.Warnf("No wallets found in config")
 		return nil
 	}
 	empty := true
-	owners := NewLocalMembership(l.sp, l.configManager, l.defaultIdentity, l.signerService, l.binderService)
-	if len(l.configManager.TMS().Wallets.Owners) != 0 {
+	owners := NewLocalMembership(wm.sp, wm.configManager, wm.networkDefaultIdentity, wm.signerService, wm.binderService, OwnerMSPID)
+	if len(wm.configManager.TMS().Wallets.Owners) != 0 {
 		empty = false
-		if err := owners.Load(l.configManager.TMS().Wallets.Owners); err != nil {
+		if err := owners.Load(wm.configManager.TMS().Wallets.Owners); err != nil {
 			return errors.WithMessage(err, "failed to load owners")
 		}
 	}
 
-	issuers := NewLocalMembership(l.sp, l.configManager, l.defaultIdentity, l.signerService, l.binderService)
-	if len(l.configManager.TMS().Wallets.Issuers) != 0 {
+	issuers := NewLocalMembership(wm.sp, wm.configManager, wm.networkDefaultIdentity, wm.signerService, wm.binderService, IssuerMSPID)
+	if len(wm.configManager.TMS().Wallets.Issuers) != 0 {
 		empty = false
-		if err := issuers.Load(l.configManager.TMS().Wallets.Issuers); err != nil {
+		if err := issuers.Load(wm.configManager.TMS().Wallets.Issuers); err != nil {
 			return errors.WithMessage(err, "failed to load issuers")
 		}
 	}
 
-	auditors := NewLocalMembership(l.sp, l.configManager, l.defaultIdentity, l.signerService, l.binderService)
-	if len(l.configManager.TMS().Wallets.Auditors) != 0 {
+	auditors := NewLocalMembership(wm.sp, wm.configManager, wm.networkDefaultIdentity, wm.signerService, wm.binderService, AuditorMSPID)
+	if len(wm.configManager.TMS().Wallets.Auditors) != 0 {
 		empty = false
-		if err := auditors.Load(l.configManager.TMS().Wallets.Auditors); err != nil {
+		if err := auditors.Load(wm.configManager.TMS().Wallets.Auditors); err != nil {
 			return errors.WithMessage(err, "failed to load auditors")
 		}
 	}
 
-	l.owners = owners
-	l.issuers = issuers
-	l.auditors = auditors
-	l.empty = empty
+	wm.owners = owners
+	wm.issuers = issuers
+	wm.auditors = auditors
+	wm.empty = empty
 	return nil
 }
 
-func (l *WalletManager) IsEmpty() bool {
-	return l.empty
+func (wm *WalletManager) IsEmpty() bool {
+	return wm.empty
 }
 
-func (l *WalletManager) Owners() *LocalMembership {
-	return l.owners
+func (wm *WalletManager) Owners() *LocalMembership {
+	return wm.owners
 }
 
-func (l *WalletManager) Issuers() *LocalMembership {
-	return l.issuers
+func (wm *WalletManager) Issuers() *LocalMembership {
+	return wm.issuers
 }
 
-func (l *WalletManager) Auditors() *LocalMembership {
-	return l.auditors
+func (wm *WalletManager) Auditors() *LocalMembership {
+	return wm.auditors
+}
+
+func (wm *WalletManager) SetRole(role int, identity mapper.IdentityType) {
+	wm.roles[role] = identity
+}
+
+func (wm *WalletManager) Mappers() mapper.Mappers {
+	mappers := mapper.New()
+	mappers.SetIssuerRole(mapper.NewMapper(wm.networkID, wm.roles[driver.IssuerRole], wm.fscIdentity, wm.Issuers()))
+	mappers.SetAuditorRole(mapper.NewMapper(wm.networkID, wm.roles[driver.AuditorRole], wm.fscIdentity, wm.Auditors()))
+	mappers.SetOwnerRole(mapper.NewMapper(wm.networkID, wm.roles[driver.OwnerRole], wm.fscIdentity, wm.Owners()))
+	return mappers
 }
 
 type LocalMembership struct {
@@ -158,6 +193,7 @@ type LocalMembership struct {
 	defaultFSCIdentity view.Identity
 	signerService      SignerService
 	binderService      BinderService
+	mspID              string
 
 	resolversMutex           sync.RWMutex
 	resolvers                []*Resolver
@@ -167,13 +203,21 @@ type LocalMembership struct {
 	bccspResolversByIdentity map[string]*Resolver
 }
 
-func NewLocalMembership(sp view2.ServiceProvider, configManager config.Manager, defaultFSCIdentity view.Identity, signerService SignerService, binderService BinderService) *LocalMembership {
+func NewLocalMembership(
+	sp view2.ServiceProvider,
+	configManager config.Manager,
+	defaultFSCIdentity view.Identity,
+	signerService SignerService,
+	binderService BinderService,
+	mspID string,
+) *LocalMembership {
 	return &LocalMembership{
 		sp:                       sp,
 		configManager:            configManager,
 		defaultFSCIdentity:       defaultFSCIdentity,
 		signerService:            signerService,
 		binderService:            binderService,
+		mspID:                    mspID,
 		resolversByTypeAndName:   map[string]*Resolver{},
 		bccspResolversByIdentity: map[string]*Resolver{},
 		resolversByEnrollmentID:  map[string]*Resolver{},
@@ -290,16 +334,12 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 		return errors.Errorf("invalid identity type '%s'", typ)
 	}
 
+	translatedPath := lm.configManager.TranslatePath(path)
 	switch typeAndMspID[0] {
 	case IdemixMSP:
-		conf, err := msp.GetLocalMspConfigWithType(
-			lm.configManager.TranslatePath(path),
-			nil,
-			typeAndMspID[1],
-			IdemixMSP,
-		)
+		conf, err := msp.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID, IdemixMSP)
 		if err != nil {
-			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", lm.configManager.TranslatePath(path))
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
 		}
 		curveID, err := StringToCurveID(typeAndMspID[2])
 		if err != nil {
@@ -307,7 +347,7 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 		}
 		provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
 		if err != nil {
-			return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", lm.configManager.TranslatePath(path))
+			return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
 		}
 		dm.AddDeserializer(provider)
 		lm.addResolver(
@@ -319,16 +359,16 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 		)
 		logger.Debugf("added %s resolver for id %s with cache of size %d", IdemixMSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 	case BccspMSP:
-		provider, err := x509.NewProvider(lm.configManager.TranslatePath(path), typeAndMspID[1], lm.signerService)
+		provider, err := x509.NewProvider(translatedPath, lm.mspID, lm.signerService)
 		if err != nil {
-			return errors.Wrapf(err, "failed instantiating x509 msp provider from [%s]", lm.configManager.TranslatePath(path))
+			return errors.Wrapf(err, "failed instantiating x509 msp provider from [%s]", translatedPath)
 		}
 		dm.AddDeserializer(provider)
 		lm.addResolver(id, BccspMSP, provider.EnrollmentID(), setDefault, provider.Identity)
 	case IdemixMSPFolder:
-		entries, err := ioutil.ReadDir(lm.configManager.TranslatePath(path))
+		entries, err := ioutil.ReadDir(translatedPath)
 		if err != nil {
-			logger.Warnf("failed reading from [%s]: [%s]", lm.configManager.TranslatePath(path), err)
+			logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 			return nil
 		}
 		for _, entry := range entries {
@@ -336,14 +376,9 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 				continue
 			}
 			id := entry.Name()
-			conf, err := msp.GetLocalMspConfigWithType(
-				filepath.Join(lm.configManager.TranslatePath(path), id),
-				nil,
-				typeAndMspID[1],
-				IdemixMSP,
-			)
+			conf, err := msp.GetLocalMspConfigWithType(filepath.Join(translatedPath, id), nil, lm.mspID, IdemixMSP)
 			if err != nil {
-				logger.Warnf("failed reading idemix msp configuration from [%s]: [%s]", filepath.Join(lm.configManager.TranslatePath(path), id), err)
+				logger.Warnf("failed reading idemix msp configuration from [%s]: [%s]", filepath.Join(translatedPath, id), err)
 				continue
 			}
 			curveID, err := StringToCurveID(typeAndMspID[2])
@@ -352,7 +387,7 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 			}
 			provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
 			if err != nil {
-				logger.Warnf("failed instantiating idemix msp configuration from [%s]: [%s]", filepath.Join(lm.configManager.TranslatePath(path), id), err)
+				logger.Warnf("failed instantiating idemix msp configuration from [%s]: [%s]", filepath.Join(translatedPath, id), err)
 				continue
 			}
 			logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
@@ -367,9 +402,9 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 			logger.Debugf("added %s resolver for id %s with cache of size %d", IdemixMSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 		}
 	case BccspMSPFolder:
-		entries, err := ioutil.ReadDir(lm.configManager.TranslatePath(path))
+		entries, err := ioutil.ReadDir(translatedPath)
 		if err != nil {
-			logger.Warnf("failed reading from [%s]: [%s]", lm.configManager.TranslatePath(path), err)
+			logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 			return nil
 		}
 		for _, entry := range entries {
@@ -379,23 +414,14 @@ func (lm *LocalMembership) registerIdentity(id string, typ string, path string, 
 			id := entry.Name()
 
 			// Try without "msp"
-			provider, err := x509.NewProvider(
-				filepath.Join(lm.configManager.TranslatePath(path), id),
-				typeAndMspID[1],
-				lm.signerService,
-			)
+			provider, err := x509.NewProvider(filepath.Join(translatedPath, id), lm.mspID, lm.signerService)
 			if err != nil {
-				logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(lm.configManager.TranslatePath(path), id), err)
+				logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath, id), err)
 				// Try with "msp"
-				provider, err = x509.NewProvider(
-					filepath.Join(lm.configManager.TranslatePath(path), id, "msp"),
-					typeAndMspID[1],
-					lm.signerService,
-				)
+				provider, err = x509.NewProvider(filepath.Join(translatedPath, id, "msp"), lm.mspID, lm.signerService)
 				if err != nil {
 					logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
-						filepath.Join(lm.configManager.TranslatePath(path),
-							filepath.Join(lm.configManager.TranslatePath(path), id, "msp")), err,
+						filepath.Join(translatedPath), filepath.Join(translatedPath, id, "msp"), err,
 					)
 					continue
 				}
