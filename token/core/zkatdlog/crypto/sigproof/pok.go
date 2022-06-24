@@ -71,21 +71,24 @@ func (p *POKProver) Prove() (*POK, error) {
 	// generate and compute commitment to randomness that will be used in the proof
 	com, err := p.computeCommitment()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to compute proof of knowledge of Pointcheval-Sanders signature")
+		return nil, errors.Wrap(err, "failed to compute proof of knowledge of Pointcheval-Sanders signature")
 	}
 
 	// compute challenge
 	chal, err := p.computeChallenge(com, sig)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate proof of knowledge of Pointcheval-Sanders signature")
+		return nil, errors.Wrap(err, "failed to generate proof of knowledge of Pointcheval-Sanders signature")
+	}
+	hash, err := HashMessages(p.Witness.Messages, p.Curve)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate proof of knowledge of Pointcheval-Sanders signature")
 	}
 	// generate schnorr proof
-	sprover := &common.SchnorrProver{Witness: common.GetZrArray(p.Witness.Messages, []*math.Zr{HashMessages(p.Witness.Messages, p.Curve), p.Witness.BlindingFactor}), Randomness: common.GetZrArray(p.randomness.messages, []*math.Zr{p.randomness.hash, p.randomness.blindingFactor}), Challenge: chal, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
+	sprover := &common.SchnorrProver{Witness: common.GetZrArray(p.Witness.Messages, []*math.Zr{hash, p.Witness.BlindingFactor}), Randomness: common.GetZrArray(p.randomness.messages, []*math.Zr{p.randomness.hash, p.randomness.blindingFactor}), Challenge: chal, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 	sp, err := sprover.Prove()
 	if err != nil {
-		return nil, errors.Errorf("failed to compute proof of knowledge of Pointcheval-Sanders signature")
+		return nil, errors.Wrap(err, "failed to compute proof of knowledge of Pointcheval-Sanders signature")
 	}
-
 	// return proof of knowledge
 	return &POK{
 		Challenge:      chal,
@@ -95,22 +98,37 @@ func (p *POKProver) Prove() (*POK, error) {
 		BlindingFactor: sp[len(p.Witness.Messages)+1]}, nil
 }
 func (p *POKProver) computeCommitment() (*math.Gt, error) {
+	if p.Curve == nil {
+		return nil, errors.New("please initialize curve")
+	}
 	// Get Random number generator
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return nil, errors.Errorf("failed to get random number generator")
+		return nil, errors.New("failed to get random number generator")
 	}
 	// compute commitment
 	p.randomness = &POKRandomness{}
 	p.randomness.hash = p.Curve.NewRandomZr(rand)
+	if p.PK[len(p.Witness.Messages)+1] == nil || p.randomness.hash == nil {
+		return nil, errors.New("please initialize prover correctly")
+	}
 	t := p.PK[len(p.Witness.Messages)+1].Mul(p.randomness.hash)
 	p.randomness.messages = make([]*math.Zr, len(p.Witness.Messages))
 	for i := 0; i < len(p.Witness.Messages); i++ {
 		p.randomness.messages[i] = p.Curve.NewRandomZr(rand)
+		if p.PK[i+1] == nil {
+			return nil, errors.New("please initialize prover correctly")
+		}
 		t.Add(p.PK[i+1].Mul(p.randomness.messages[i]))
 	}
 
 	p.randomness.blindingFactor = p.Curve.NewRandomZr(rand)
+	if p.Witness == nil || p.Witness.Signature == nil || p.Witness.Signature.R == nil {
+		return nil, errors.New("please initialize prover's witness correctly")
+	}
+	if p.Q == nil || p.P == nil {
+		return nil, errors.New("please initialize prover correctly")
+	}
 	com := p.Curve.Pairing2(t, p.Witness.Signature.R, p.Q, p.P.Mul(p.randomness.blindingFactor))
 
 	return p.Curve.FExp(com), nil
@@ -140,28 +158,40 @@ func (v *POKVerifier) Verify(proof *POK) error {
 
 // recomputeCommitment returns the commitment to the randomness used in the passed POK proof
 func (v *POKVerifier) recomputeCommitment(p *POK) (*math.Gt, error) {
+	if v.Curve == nil {
+		return nil, errors.New("please initialize curve")
+	}
 	if len(v.PK) != len(p.Messages)+2 {
-		return nil, errors.Errorf("length of signature public key does not match size of proof")
+		return nil, errors.New("length of signature public key does not match size of proof")
 	}
 	t := v.Curve.NewG2()
 	for i := 0; i < len(p.Messages); i++ {
 		if p.Messages[i] == nil {
-			return nil, errors.Errorf("invalid pok")
+			return nil, errors.New("nil elements")
+		}
+		if v.PK[i+1] == nil {
+			return nil, errors.New("please initialize verifier correctly")
 		}
 		t.Add(v.PK[i+1].Mul(p.Messages[i]))
 	}
 	if p.Hash == nil {
-		return nil, errors.Errorf("invalid pok")
+		return nil, errors.New("nil hash")
+	}
+	if v.PK[len(p.Messages)+1] == nil {
+		return nil, errors.New("please initialize verifier correctly")
 	}
 	t.Add(v.PK[len(p.Messages)+1].Mul(p.Hash))
 
 	pk := v.Curve.NewG2()
+	if v.PK[0] == nil {
+		return nil, errors.New("please initialize verifier correctly")
+	}
 	pk.Sub(v.PK[0])
 	if p.Signature == nil || p.Signature.R == nil || p.Signature.S == nil {
-		return nil, errors.Errorf("invalid pok")
+		return nil, errors.New("nil elements")
 	}
 	if p.Challenge == nil || p.BlindingFactor == nil {
-		return nil, errors.Errorf("invalid pok")
+		return nil, errors.New("nil elements")
 	}
 	com := v.Curve.Pairing2(v.Q, p.Signature.S.Mul(p.Challenge), pk, p.Signature.R.Mul(p.Challenge))
 	com.Inverse()
@@ -171,14 +201,17 @@ func (v *POKVerifier) recomputeCommitment(p *POK) (*math.Gt, error) {
 }
 
 // HashMessages returns a hash of the passed array of messages
-func HashMessages(m []*math.Zr, c *math.Curve) *math.Zr {
+func HashMessages(m []*math.Zr, c *math.Curve) (*math.Zr, error) {
 	var bytesToHash []byte
 	for i := 0; i < len(m); i++ {
+		if m[i] == nil {
+			return nil, errors.New("can't compute hash: nil elements")
+		}
 		bytes := m[i].Bytes()
 		bytesToHash = append(bytesToHash, bytes...)
 	}
 
-	return c.HashToZr(bytesToHash)
+	return c.HashToZr(bytesToHash), nil
 }
 
 // obfuscateSignature returns an obfuscated Pointcheval-Sanders signature
@@ -198,6 +231,12 @@ func (p *POKProver) obfuscateSignature() (*pssign.Signature, error) {
 	}
 	sig := &pssign.Signature{}
 	sig.Copy(p.Witness.Signature)
+	if sig.S == nil {
+		return nil, errors.New("invalid witness signature")
+	}
+	if p.P == nil {
+		return nil, errors.New("please initialize prover correctly")
+	}
 	sig.S.Add(p.P.Mul(p.Witness.BlindingFactor))
 
 	return sig, nil
