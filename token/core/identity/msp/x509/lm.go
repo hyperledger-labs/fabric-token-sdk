@@ -263,7 +263,7 @@ func (lm *LM) addResolver(id string, eID string, defaultID bool, IdentityGetter 
 	}
 	identity, _, err := IdentityGetter(nil)
 	if err != nil {
-		panic(fmt.Sprintf("cannot get identity for [%s,%s,%s][%s]", id, eID, err))
+		panic(fmt.Sprintf("cannot get identity for [%s,%s][%s]", id, eID, err))
 	}
 	lm.bccspResolversByIdentity[identity.String()] = resolver
 	lm.resolversByTypeAndName[BccspMSP+id] = resolver
