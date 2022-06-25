@@ -16,7 +16,6 @@ import (
 
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 
-	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -30,8 +29,6 @@ import (
 )
 
 const (
-	DefaultLabel = "default"
-
 	BccspMSP       = "bccsp"
 	BccspMSPFolder = "bccsp-folder"
 )
@@ -63,12 +60,12 @@ type DeserializerManager interface {
 }
 
 type LM struct {
-	sp                 view2.ServiceProvider
-	configManager      config.Manager
-	defaultFSCIdentity view.Identity
-	signerService      SignerService
-	binderService      BinderService
-	mspID              string
+	sp              view2.ServiceProvider
+	configManager   config.Manager
+	fscNodeIdentity view.Identity
+	signerService   SignerService
+	binderService   BinderService
+	mspID           string
 
 	resolversMutex           sync.RWMutex
 	resolvers                []*Resolver
@@ -89,7 +86,7 @@ func NewLocalMembership(
 	return &LM{
 		sp:                       sp,
 		configManager:            configManager,
-		defaultFSCIdentity:       defaultFSCIdentity,
+		fscNodeIdentity:          defaultFSCIdentity,
 		signerService:            signerService,
 		binderService:            binderService,
 		mspID:                    mspID,
@@ -117,11 +114,22 @@ func (lm *LM) Load(identities []*config.Identity) error {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 	}
+
+	// if no default identity, use the first one
+	if len(lm.GetDefaultIdentifier()) == 0 {
+		logger.Warnf("no default identity, use the first one available")
+		if len(lm.resolvers) > 0 {
+			logger.Warnf("set default identity to %s", lm.resolvers[0].Name)
+			lm.resolvers[0].Default = true
+		} else {
+			logger.Warnf("cannot set default identity, no identity available")
+		}
+	}
 	return nil
 }
 
-func (lm *LM) DefaultIdentity() view.Identity {
-	return lm.defaultFSCIdentity
+func (lm *LM) FSCNodeIdentity() view.Identity {
+	return lm.fscNodeIdentity
 }
 
 func (lm *LM) IsMe(id view.Identity) bool {
@@ -133,24 +141,30 @@ func (lm *LM) GetIdentifier(id view.Identity) (string, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get identity info by label [%s]", label)
 	}
-	r := lm.getLongTermResolver(label)
+	r := lm.getResolver(label)
 	if r == nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
 		}
 		return "", errors.New("not found")
 	}
-	if r.Default {
-		return DefaultLabel, nil
-	}
 	return r.Name, nil
+}
+
+func (lm *LM) GetDefaultIdentifier() string {
+	for _, resolver := range lm.resolvers {
+		if resolver.Default {
+			return resolver.Name
+		}
+	}
+	return ""
 }
 
 func (lm *LM) GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get identity info by label [%s]", label)
 	}
-	r := lm.getLongTermResolver(label)
+	r := lm.getResolver(label)
 	if r == nil {
 		return nil, errors.Errorf("identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
 	}
@@ -165,7 +179,8 @@ func (lm *LM) GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityIn
 }
 
 func (lm *LM) RegisterIdentity(id string, typ string, path string) error {
-	return lm.registerIdentity(id, typ, path, false)
+	setDefault := lm.GetDefaultIdentifier() == ""
+	return lm.registerIdentity(id, typ, path, setDefault)
 }
 
 func (lm *LM) registerIdentity(id string, typ string, path string, setDefault bool) error {
@@ -187,7 +202,7 @@ func (lm *LM) registerIdentity(id string, typ string, path string, setDefault bo
 			return errors.Wrapf(err, "failed instantiating x509 msp provider from [%s]", translatedPath)
 		}
 		dm.AddDeserializer(provider)
-		lm.addResolver(id, BccspMSP, provider.EnrollmentID(), setDefault, provider.Identity)
+		lm.addResolver(id, provider.EnrollmentID(), setDefault, provider.Identity)
 	case BccspMSPFolder:
 		entries, err := ioutil.ReadDir(translatedPath)
 		if err != nil {
@@ -216,7 +231,7 @@ func (lm *LM) registerIdentity(id string, typ string, path string, setDefault bo
 
 			logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
 			dm.AddDeserializer(provider)
-			lm.addResolver(id, BccspMSP, provider.EnrollmentID(), false, provider.Identity)
+			lm.addResolver(id, provider.EnrollmentID(), false, provider.Identity)
 		}
 	default:
 		logger.Warnf("msp type [%s] not recognized, skipping", typeAndMspID[0])
@@ -225,44 +240,41 @@ func (lm *LM) registerIdentity(id string, typ string, path string, setDefault bo
 	return nil
 }
 
-func (lm *LM) addResolver(Name string, Type string, EnrollmentID string, defaultID bool, IdentityGetter GetIdentityFunc) {
-	logger.Debugf("Adding resolver [%s:%s:%s]", Name, Type, EnrollmentID)
+func (lm *LM) addResolver(id string, eID string, defaultID bool, IdentityGetter GetIdentityFunc) {
+	logger.Debugf("Adding resolver [%s:%s]", id, eID)
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if Type == BccspMSP && lm.binderService != nil {
+	if lm.binderService != nil {
 		id, _, err := IdentityGetter(nil)
 		if err != nil {
-			panic(fmt.Sprintf("cannot get identity for [%s,%s,%s][%s]", Name, Type, EnrollmentID, err))
+			panic(fmt.Sprintf("cannot get identity for [%s,%s][%s]", id, eID, err))
 		}
-		if err := lm.binderService.Bind(lm.defaultFSCIdentity, id); err != nil {
-			panic(fmt.Sprintf("cannot bing identity for [%s,%s,%s][%s]", Name, Type, EnrollmentID, err))
+		if err := lm.binderService.Bind(lm.fscNodeIdentity, id); err != nil {
+			panic(fmt.Sprintf("cannot bing identity for [%s,%s][%s]", id, eID, err))
 		}
 	}
 
 	resolver := &Resolver{
-		Name:         Name,
+		Name:         id,
 		Default:      defaultID,
-		Type:         Type,
-		EnrollmentID: EnrollmentID,
+		EnrollmentID: eID,
 		GetIdentity:  IdentityGetter,
 	}
-	if Type == BccspMSP {
-		id, _, err := IdentityGetter(nil)
-		if err != nil {
-			panic(fmt.Sprintf("cannot get identity for [%s,%s,%s][%s]", Name, Type, EnrollmentID, err))
-		}
-		lm.bccspResolversByIdentity[id.String()] = resolver
+	identity, _, err := IdentityGetter(nil)
+	if err != nil {
+		panic(fmt.Sprintf("cannot get identity for [%s,%s,%s][%s]", id, eID, err))
 	}
-	lm.resolversByTypeAndName[Type+Name] = resolver
-	lm.resolversByName[Name] = resolver
-	if len(EnrollmentID) != 0 {
-		lm.resolversByEnrollmentID[EnrollmentID] = resolver
+	lm.bccspResolversByIdentity[identity.String()] = resolver
+	lm.resolversByTypeAndName[BccspMSP+id] = resolver
+	lm.resolversByName[id] = resolver
+	if len(eID) != 0 {
+		lm.resolversByEnrollmentID[eID] = resolver
 	}
 	lm.resolvers = append(lm.resolvers, resolver)
 }
 
-func (lm *LM) getLongTermResolver(label string) *Resolver {
+func (lm *LM) getResolver(label string) *Resolver {
 	lm.resolversMutex.RLock()
 	defer lm.resolversMutex.RUnlock()
 
@@ -281,13 +293,6 @@ func (lm *LM) getLongTermResolver(label string) *Resolver {
 		return r
 	}
 
-	if label == DefaultLabel {
-		for _, resolver := range lm.resolvers {
-			if resolver.Type == BccspMSP && resolver.Default {
-				return resolver
-			}
-		}
-	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("identity info not found for label [%s][%v]", label, lm.bccspResolversByIdentity)
 	}
@@ -300,19 +305,6 @@ func (lm *LM) deserializerManager() DeserializerManager {
 		panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
 	}
 	return dm.(DeserializerManager)
-}
-
-func StringToCurveID(id string) (math3.CurveID, error) {
-	switch id {
-	case "BN254":
-		return math3.BN254, nil
-	case "FP256BN_AMCL":
-		return math3.FP256BN_AMCL, nil
-	case "FP256BN_AMCL_MIRACL":
-		return math3.FP256BN_AMCL_MIRACL, nil
-	default:
-		return math3.CurveID(0), errors.Errorf("unknown curve [%s]", id)
-	}
 }
 
 type Info struct {

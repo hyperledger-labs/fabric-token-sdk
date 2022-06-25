@@ -17,7 +17,7 @@ type lm struct {
 	ip IdentityProvider
 }
 
-func (n *lm) DefaultIdentity() view.Identity {
+func (n *lm) FSCNodeIdentity() view.Identity {
 	return n.ip.DefaultIdentity()
 }
 

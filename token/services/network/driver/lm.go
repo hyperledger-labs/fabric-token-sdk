@@ -15,7 +15,7 @@ type GetFunc func() (view.Identity, []byte, error)
 // LocalMembership models the local membership service
 type LocalMembership interface {
 	// DefaultIdentity returns the default identity
-	DefaultIdentity() view.Identity
+	FSCNodeIdentity() view.Identity
 
 	// AnonymousIdentity returns a fresh anonymous identity
 	AnonymousIdentity() view.Identity

@@ -177,8 +177,8 @@ type LocalMembership struct {
 	lm driver.LocalMembership
 }
 
-func (l *LocalMembership) DefaultIdentity() view.Identity {
-	return l.lm.DefaultIdentity()
+func (l *LocalMembership) FSCNodeIdentity() view.Identity {
+	return l.lm.FSCNodeIdentity()
 }
 
 func (l *LocalMembership) AnonymousIdentity() view.Identity {

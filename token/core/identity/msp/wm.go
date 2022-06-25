@@ -42,10 +42,11 @@ const (
 
 type LocalMembership interface {
 	Load(owners []*config.Identity) error
-	DefaultIdentity() view.Identity
+	FSCNodeIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
+	GetDefaultIdentifier() string
 	RegisterIdentity(id string, typ string, path string) error
 }
 

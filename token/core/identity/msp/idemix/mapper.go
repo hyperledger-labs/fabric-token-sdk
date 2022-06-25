@@ -15,10 +15,11 @@ import (
 )
 
 type localMembership interface {
-	DefaultIdentity() view.Identity
+	FSCNodeIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
+	GetDefaultIdentifier() string
 	RegisterIdentity(id string, typ string, path string) error
 }
 
@@ -57,7 +58,8 @@ func (i *mapper) GetIdentityInfo(id string) driver.IdentityInfo {
 }
 
 func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
-	defaultID := i.localMembership.DefaultIdentity()
+	defaultID := i.localMembership.FSCNodeIdentity()
+	defaultIdentifier := i.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
@@ -80,22 +82,22 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed empty identity")
 			}
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case id.Equal(defaultID):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed default identity")
 			}
-			return nil, DefaultLabel
-		case string(id) == DefaultLabel:
+			return nil, defaultIdentifier
+		case string(id) == defaultIdentifier:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed 'idemix' identity")
 			}
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case id.Equal(i.nodeIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is the node identity (same bytes)")
 			}
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case i.localMembership.IsMe(id):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is me")
@@ -121,19 +123,19 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 		}
 		switch {
 		case len(label) == 0:
-			return nil, DefaultLabel
-		case label == DefaultLabel:
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
+		case label == defaultIdentifier:
+			return nil, defaultIdentifier
 		case label == defaultID.UniqueID():
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case label == string(defaultID):
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case defaultID.Equal(view.Identity(label)):
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case i.nodeIdentity.Equal(view.Identity(label)):
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		case i.localMembership.IsMe(view.Identity(label)):
-			return nil, DefaultLabel
+			return nil, defaultIdentifier
 		}
 
 		if idIdentifier, err := i.localMembership.GetIdentifier(view.Identity(label)); err == nil {

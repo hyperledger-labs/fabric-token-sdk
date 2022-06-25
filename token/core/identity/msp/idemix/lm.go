@@ -30,8 +30,6 @@ import (
 )
 
 const (
-	DefaultLabel = "idemix"
-
 	MSP       = "idemix"
 	MSPFolder = "idemix-folder"
 )
@@ -63,12 +61,12 @@ type DeserializerManager interface {
 }
 
 type LocalMembership struct {
-	sp                 view2.ServiceProvider
-	configManager      config.Manager
-	defaultFSCIdentity view.Identity
-	signerService      SignerService
-	binderService      BinderService
-	mspID              string
+	sp              view2.ServiceProvider
+	configManager   config.Manager
+	fscNodeIdentity view.Identity
+	signerService   SignerService
+	binderService   BinderService
+	mspID           string
 
 	resolversMutex          sync.RWMutex
 	resolvers               []*Resolver
@@ -88,7 +86,7 @@ func NewLocalMembership(
 	return &LocalMembership{
 		sp:                      sp,
 		configManager:           configManager,
-		defaultFSCIdentity:      defaultFSCIdentity,
+		fscNodeIdentity:         defaultFSCIdentity,
 		signerService:           signerService,
 		binderService:           binderService,
 		mspID:                   mspID,
@@ -115,11 +113,23 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 	}
+
+	// if no default identity, use the first one
+	if len(lm.GetDefaultIdentifier()) == 0 {
+		logger.Warnf("no default identity, use the first one available")
+		if len(lm.resolvers) > 0 {
+			logger.Warnf("set default identity to %s", lm.resolvers[0].Name)
+			lm.resolvers[0].Default = true
+		} else {
+			logger.Warnf("cannot set default identity, no identity available")
+		}
+	}
+
 	return nil
 }
 
-func (lm *LocalMembership) DefaultIdentity() view.Identity {
-	return lm.defaultFSCIdentity
+func (lm *LocalMembership) FSCNodeIdentity() view.Identity {
+	return lm.fscNodeIdentity
 }
 
 func (lm *LocalMembership) IsMe(id view.Identity) bool {
@@ -138,11 +148,16 @@ func (lm *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
 		}
 		return "", errors.New("not found")
 	}
-	if r.Default {
-		// TODO: do we still need this?
-		return DefaultLabel, nil
-	}
 	return r.Name, nil
+}
+
+func (lm *LocalMembership) GetDefaultIdentifier() string {
+	for _, resolver := range lm.resolvers {
+		if resolver.Default {
+			return resolver.Name
+		}
+	}
+	return ""
 }
 
 func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error) {
@@ -167,7 +182,8 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, typ string, path string) error {
-	return lm.registerIdentity(id, typ, path, false)
+	setDefault := lm.GetDefaultIdentifier() == ""
+	return lm.registerIdentity(id, typ, path, setDefault)
 }
 
 func (lm *LocalMembership) registerIdentity(id string, typ string, path string, setDefault bool) error {
@@ -275,14 +291,6 @@ func (lm *LocalMembership) getResolver(label string) *Resolver {
 	r, ok := lm.resolversByTypeAndName[MSP+label]
 	if ok {
 		return r
-	}
-
-	if label == DefaultLabel {
-		for _, resolver := range lm.resolvers {
-			if resolver.Type == MSP && resolver.Default {
-				return resolver
-			}
-		}
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {

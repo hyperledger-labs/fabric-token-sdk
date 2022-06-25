@@ -238,7 +238,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		ids, mine := r.ownership.IsMine(tms, tok)
 		if mine {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], found a token and it is mine", txID)
+				logger.Debugf("transaction [%s], found a token and it is mine under ids [%v]", txID, ids)
 			}
 			// Add a lookup key to identity quickly that this token belongs to this
 			mineTokenID, err := keys.CreateTokenMineKey(components[0], index)

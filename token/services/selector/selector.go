@@ -87,7 +87,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 
 	i := 0
 	for {
-		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
+		logger.Debugf("start token selection, iteration [%d/%d] with id [%s]", i, s.numRetry, id)
 		unspentTokens, err := s.queryService.UnspentTokensIteratorBy(id, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
@@ -112,8 +112,10 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				return nil, nil, errors.Wrap(err, "token selection failed")
 			}
 			if t == nil {
+				logger.Debugf("token selection: no more tokens")
 				break
 			}
+			logger.Debugf("token selection: token [%s:%s]", t.Type, t.Quantity)
 
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
@@ -247,9 +249,11 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 				return nil, nil, errors.Wrap(err, "token selection failed")
 			}
 			if t == nil {
+				logger.Debugf("token selection: no more tokens")
 				break
 			}
 
+			logger.Debugf("token selection: token [%s:%s]", t.Type, t.Quantity)
 			q, err := token2.ToQuantity(t.Quantity, s.precision)
 			if err != nil {
 				s.locker.UnlockIDs(toBeSpent...)

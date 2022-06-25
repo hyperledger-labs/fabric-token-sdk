@@ -15,10 +15,11 @@ import (
 )
 
 type LocalMembership interface {
-	DefaultIdentity() view.Identity
+	FSCNodeIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
+	GetDefaultIdentifier() string
 	RegisterIdentity(id string, typ string, path string) error
 }
 
@@ -57,7 +58,8 @@ func (i *mapper) GetIdentityInfo(id string) driver.IdentityInfo {
 }
 
 func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
-	defaultID := i.localMembership.DefaultIdentity()
+	defaultID := i.localMembership.FSCNodeIdentity()
+	defaultIdentifier := i.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
@@ -81,11 +83,11 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 		id := vv
 		switch {
 		case id.IsNone():
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case id.Equal(defaultID):
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case id.Equal(i.nodeIdentity):
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case i.localMembership.IsMe(id):
 			if idIdentifier, err := i.localMembership.GetIdentifier(id); err == nil {
 				return id, idIdentifier
@@ -94,8 +96,8 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 			}
 			return id, ""
-		case string(id) == DefaultLabel:
-			return defaultID, DefaultLabel
+		case string(id) == defaultIdentifier:
+			return defaultID, defaultIdentifier
 		}
 
 		label := string(id)
@@ -124,17 +126,17 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 		}
 		switch {
 		case len(label) == 0:
-			return defaultID, DefaultLabel
-		case label == DefaultLabel:
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
+		case label == defaultIdentifier:
+			return defaultID, defaultIdentifier
 		case label == defaultID.UniqueID():
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case label == string(defaultID):
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case defaultID.Equal(view.Identity(label)):
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case i.nodeIdentity.Equal(view.Identity(label)):
-			return defaultID, DefaultLabel
+			return defaultID, defaultIdentifier
 		case i.localMembership.IsMe(view.Identity(label)):
 			id := view.Identity(label)
 			if idIdentifier, err := i.localMembership.GetIdentifier(id); err == nil {

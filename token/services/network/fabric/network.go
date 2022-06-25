@@ -37,7 +37,7 @@ type lm struct {
 	lm *fabric.LocalMembership
 }
 
-func (n *lm) DefaultIdentity() view.Identity {
+func (n *lm) FSCNodeIdentity() view.Identity {
 	return n.lm.DefaultIdentity()
 }
 
