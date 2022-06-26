@@ -37,7 +37,7 @@ type lm struct {
 	lm *fabric.LocalMembership
 }
 
-func (n *lm) FSCNodeIdentity() view.Identity {
+func (n *lm) DefaultIdentity() view.Identity {
 	return n.lm.DefaultIdentity()
 }
 
@@ -61,13 +61,6 @@ func (n *lm) GetAnonymousIdentity(label string, auditInfo []byte) (string, strin
 		}, nil
 	}
 	return "", "", nil, errors.New("not found")
-}
-
-func (n *lm) GetAnonymousIdentifier(label string) (string, error) {
-	if idInfo := n.lm.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
-		return idInfo.ID, nil
-	}
-	return "", errors.New("not found")
 }
 
 func (n *lm) GetLongTermIdentity(label string) (string, string, view.Identity, error) {

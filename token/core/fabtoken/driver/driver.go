@@ -54,7 +54,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		networkID, // network ID
 		tmsConfig, // config manager
 		view2.GetIdentityProvider(sp).DefaultIdentity(), // FSC identity
-		networkLocalMembership.FSCNodeIdentity(),        // network default identity
+		networkLocalMembership.DefaultIdentity(),        // network default identity
 		msp.NewSigService(view2.GetSigService(sp)),      // signer service
 		view2.GetEndpointService(sp),                    // endpoint service
 	)

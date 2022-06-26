@@ -177,8 +177,8 @@ type LocalMembership struct {
 	lm driver.LocalMembership
 }
 
-func (l *LocalMembership) FSCNodeIdentity() view.Identity {
-	return l.lm.FSCNodeIdentity()
+func (l *LocalMembership) DefaultIdentity() view.Identity {
+	return l.lm.DefaultIdentity()
 }
 
 func (l *LocalMembership) AnonymousIdentity() view.Identity {
@@ -187,30 +187,6 @@ func (l *LocalMembership) AnonymousIdentity() view.Identity {
 
 func (l *LocalMembership) IsMe(id view.Identity) bool {
 	return l.lm.IsMe(id)
-}
-
-func (l *LocalMembership) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
-	return l.lm.GetLongTermIdentity(label)
-}
-
-func (l *LocalMembership) GetLongTermIdentifier(id view.Identity) (string, error) {
-	return l.lm.GetLongTermIdentifier(id)
-}
-
-func (l *LocalMembership) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, GetFunc, error) {
-	id, eID, getFunc, err := l.lm.GetAnonymousIdentity(label, auditInfo)
-	if err != nil {
-		return "", "", nil, err
-	}
-	return id, eID, GetFunc(getFunc), nil
-}
-
-func (l *LocalMembership) GetAnonymousIdentifier(label string) (string, error) {
-	return l.lm.GetAnonymousIdentifier(label)
-}
-
-func (l *LocalMembership) RegisterIdentity(id string, typ string, path string) error {
-	return l.lm.RegisterIdentity(id, typ, path)
 }
 
 // Network provides access to the remote network
