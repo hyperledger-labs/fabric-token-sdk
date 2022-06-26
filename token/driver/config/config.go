@@ -17,7 +17,6 @@ type Certification struct {
 type Identity struct {
 	ID      string `yaml:"id"`
 	Default bool   `yaml:"default,omitempty"`
-	Type    string `yaml:"type"`
 	Path    string `yaml:"path"`
 }
 

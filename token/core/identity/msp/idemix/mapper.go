@@ -20,7 +20,7 @@ type localMembership interface {
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
 	GetDefaultIdentifier() string
-	RegisterIdentity(id string, typ string, path string) error
+	RegisterIdentity(id string, path string) error
 }
 
 // mapper maps identifiers of different sorts to identities
@@ -150,6 +150,6 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 	}
 }
 
-func (i *mapper) RegisterIdentity(id string, typ string, path string) error {
-	return i.localMembership.RegisterIdentity(id, typ, path)
+func (i *mapper) RegisterIdentity(id string, path string) error {
+	return i.localMembership.RegisterIdentity(id, path)
 }

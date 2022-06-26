@@ -11,17 +11,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"reflect"
-	"strings"
 	"sync"
 
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger/fabric/msp"
@@ -30,57 +28,29 @@ import (
 )
 
 const (
-	MSP       = "idemix"
-	MSPFolder = "idemix-folder"
+	MSP = "idemix"
 )
-
-type GetIdentityFunc func(opts *driver2.IdentityOptions) (view.Identity, []byte, error)
-
-type Resolver struct {
-	Name         string `yaml:"name,omitempty"`
-	Type         string `yaml:"type,omitempty"`
-	EnrollmentID string
-	GetIdentity  GetIdentityFunc
-	Default      bool
-}
-
-type SignerService interface {
-	RegisterSigner(identity view.Identity, signer api2.Signer, verifier api2.Verifier) error
-}
-
-type BinderService interface {
-	Bind(longTerm view.Identity, ephemeral view.Identity) error
-}
-
-type EnrollmentService interface {
-	GetEnrollmentID(auditInfo []byte) (string, error)
-}
-
-type DeserializerManager interface {
-	AddDeserializer(deserializer sig2.Deserializer)
-}
 
 type LocalMembership struct {
 	sp              view2.ServiceProvider
 	configManager   config.Manager
 	fscNodeIdentity view.Identity
-	signerService   SignerService
-	binderService   BinderService
+	signerService   common.SignerService
+	binderService   common.BinderService
 	mspID           string
 
 	resolversMutex          sync.RWMutex
-	resolvers               []*Resolver
-	resolversByName         map[string]*Resolver
-	resolversByEnrollmentID map[string]*Resolver
-	resolversByTypeAndName  map[string]*Resolver
+	resolvers               []*common.Resolver
+	resolversByName         map[string]*common.Resolver
+	resolversByEnrollmentID map[string]*common.Resolver
 }
 
 func NewLocalMembership(
 	sp view2.ServiceProvider,
 	configManager config.Manager,
 	defaultFSCIdentity view.Identity,
-	signerService SignerService,
-	binderService BinderService,
+	signerService common.SignerService,
+	binderService common.BinderService,
 	mspID string,
 ) *LocalMembership {
 	return &LocalMembership{
@@ -90,9 +60,8 @@ func NewLocalMembership(
 		signerService:           signerService,
 		binderService:           binderService,
 		mspID:                   mspID,
-		resolversByTypeAndName:  map[string]*Resolver{},
-		resolversByEnrollmentID: map[string]*Resolver{},
-		resolversByName:         map[string]*Resolver{},
+		resolversByEnrollmentID: map[string]*common.Resolver{},
+		resolversByName:         map[string]*common.Resolver{},
 	}
 }
 
@@ -109,7 +78,7 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 
 	for _, identityConfig := range identities {
 		logger.Debugf("loadWallet: %+v", identityConfig)
-		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Type, identityConfig.Path, identityConfig.Default); err != nil {
+		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 	}
@@ -144,7 +113,7 @@ func (lm *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
 	r := lm.getResolver(label)
 	if r == nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+			logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
 		}
 		return "", errors.New("not found")
 	}
@@ -166,114 +135,81 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 	}
 	r := lm.getResolver(label)
 	if r == nil {
-		return nil, errors.Errorf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+		return nil, errors.Errorf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 
-	return &Info{
-		id:  r.Name,
-		eid: r.EnrollmentID,
-		getIdentity: func() (view.Identity, []byte, error) {
+	return common.NewInfo(
+		r.Name,
+		r.EnrollmentID,
+		func() (view.Identity, []byte, error) {
 			return r.GetIdentity(&driver2.IdentityOptions{
 				EIDExtension: true,
 				AuditInfo:    auditInfo,
 			})
 		},
-	}, nil
+	), nil
 }
 
-func (lm *LocalMembership) RegisterIdentity(id string, typ string, path string) error {
-	setDefault := lm.GetDefaultIdentifier() == ""
-	return lm.registerIdentity(id, typ, path, setDefault)
+func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
+	return lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "")
 }
 
-func (lm *LocalMembership) registerIdentity(id string, typ string, path string, setDefault bool) error {
-	dm := lm.deserializerManager()
-
-	// split type in type and msp id
-	typeAndMspID := strings.Split(typ, ":")
-	if len(typeAndMspID) < 2 {
-		return errors.Errorf("invalid identity type '%s'", typ)
-	}
-
+func (lm *LocalMembership) registerIdentity(id string, path string, setDefault bool) error {
+	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(path)
-	switch typeAndMspID[0] {
-	case MSP:
-		conf, err := msp.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID, MSP)
-		if err != nil {
-			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
+	curveID := math3.BN254
+	if err := lm.registerMSPProvider(id, translatedPath, curveID, setDefault); err != nil {
+		// Does path correspond to a holder containing multiple MSP identities?
+		if err := lm.registerMSPProviders(translatedPath, curveID); err != nil {
+			return errors.WithMessage(err, "failed to register MSP provider")
 		}
-		curveID, err := StringToCurveID(typeAndMspID[2])
-		if err != nil {
-			return errors.Errorf("invalid curve ID '%s'", typ)
-		}
-		provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
-		if err != nil {
-			return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
-		}
-		dm.AddDeserializer(provider)
-		lm.addResolver(
-			id,
-			MSP,
-			provider.EnrollmentID(),
-			setDefault,
-			NewIdentityCache(provider.Identity, DefaultCacheSize).Identity,
-		)
-		logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
-	case MSPFolder:
-		entries, err := ioutil.ReadDir(translatedPath)
-		if err != nil {
-			logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
-			return nil
-		}
-		for _, entry := range entries {
-			if !entry.IsDir() {
-				continue
-			}
-			id := entry.Name()
-			conf, err := msp.GetLocalMspConfigWithType(filepath.Join(translatedPath, id), nil, lm.mspID, MSP)
-			if err != nil {
-				logger.Warnf("failed reading idemix msp configuration from [%s]: [%s]", filepath.Join(translatedPath, id), err)
-				continue
-			}
-			curveID, err := StringToCurveID(typeAndMspID[2])
-			if err != nil {
-				return errors.Errorf("invalid curve ID '%s'", typ)
-			}
-			provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
-			if err != nil {
-				logger.Warnf("failed instantiating idemix msp configuration from [%s]: [%s]", filepath.Join(translatedPath, id), err)
-				continue
-			}
-			logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
-			dm.AddDeserializer(provider)
-			lm.addResolver(
-				id,
-				MSP,
-				provider.EnrollmentID(),
-				false,
-				NewIdentityCache(provider.Identity, DefaultCacheSize).Identity,
-			)
-			logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
-		}
-	default:
-		logger.Warnf("msp type [%s] not recognized, skipping", typeAndMspID[0])
 	}
-
 	return nil
 }
 
-func (lm *LocalMembership) addResolver(Name string, Type string, EnrollmentID string, defaultID bool, IdentityGetter GetIdentityFunc) {
+func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveID math3.CurveID, setDefault bool) error {
+	conf, err := msp.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID, MSP)
+	if err != nil {
+		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
+	}
+	provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
+	if err != nil {
+		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
+	}
+	lm.deserializerManager().AddDeserializer(provider)
+	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, DefaultCacheSize).Identity)
+	logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
+	return nil
+}
+
+func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID math3.CurveID) error {
+	entries, err := ioutil.ReadDir(translatedPath)
+	if err != nil {
+		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
+		return nil
+	}
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		id := entry.Name()
+		if err := lm.registerMSPProvider(id, filepath.Join(translatedPath, id), curveID, false); err != nil {
+			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
+		}
+	}
+	return nil
+}
+
+func (lm *LocalMembership) addResolver(Name string, EnrollmentID string, defaultID bool, IdentityGetter common.GetIdentityFunc) {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	resolver := &Resolver{
+	resolver := &common.Resolver{
 		Name:         Name,
 		Default:      defaultID,
-		Type:         Type,
 		EnrollmentID: EnrollmentID,
 		GetIdentity:  IdentityGetter,
 	}
-	lm.resolversByTypeAndName[Type+Name] = resolver
 	lm.resolversByName[Name] = resolver
 	if len(EnrollmentID) != 0 {
 		lm.resolversByEnrollmentID[EnrollmentID] = resolver
@@ -281,63 +217,28 @@ func (lm *LocalMembership) addResolver(Name string, Type string, EnrollmentID st
 	lm.resolvers = append(lm.resolvers, resolver)
 }
 
-func (lm *LocalMembership) getResolver(label string) *Resolver {
+func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 	lm.resolversMutex.RLock()
 	defer lm.resolversMutex.RUnlock()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get anonymous identity info by label [%s]", label)
 	}
-	r, ok := lm.resolversByTypeAndName[MSP+label]
+	r, ok := lm.resolversByName[label]
 	if ok {
 		return r
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByTypeAndName)
+		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 	return nil
 }
 
-func (lm *LocalMembership) deserializerManager() DeserializerManager {
-	dm, err := lm.sp.GetService(reflect.TypeOf((*DeserializerManager)(nil)))
+func (lm *LocalMembership) deserializerManager() common.DeserializerManager {
+	dm, err := lm.sp.GetService(reflect.TypeOf((*common.DeserializerManager)(nil)))
 	if err != nil {
 		panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
 	}
-	return dm.(DeserializerManager)
-}
-
-func StringToCurveID(id string) (math3.CurveID, error) {
-	switch id {
-	case "BN254":
-		return math3.BN254, nil
-	case "FP256BN_AMCL":
-		return math3.FP256BN_AMCL, nil
-	case "FP256BN_AMCL_MIRACL":
-		return math3.FP256BN_AMCL_MIRACL, nil
-	default:
-		return math3.CurveID(0), errors.Errorf("unknown curve [%s]", id)
-	}
-}
-
-type Info struct {
-	id          string
-	eid         string
-	getIdentity func() (view.Identity, []byte, error)
-}
-
-func (i *Info) ID() string {
-	return i.id
-}
-
-func (i *Info) EnrollmentID() string {
-	return i.eid
-}
-
-func (i *Info) Get() (view.Identity, []byte, error) {
-	id, ai, err := i.getIdentity()
-	if err != nil {
-		return nil, nil, err
-	}
-	return id, ai, nil
+	return dm.(common.DeserializerManager)
 }

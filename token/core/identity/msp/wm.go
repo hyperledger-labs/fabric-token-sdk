@@ -47,7 +47,7 @@ type LocalMembership interface {
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
 	GetDefaultIdentifier() string
-	RegisterIdentity(id string, typ string, path string) error
+	RegisterIdentity(id string, path string) error
 }
 
 type DeserializerManager interface {
@@ -149,7 +149,7 @@ func (wm *WalletManager) SetRoleIdentityType(role int, identityType IdentityType
 }
 
 func (wm *WalletManager) Mappers() (identity.Mappers, error) {
-	mappers := identity.New()
+	mappers := identity.NewMappers()
 	// issuers
 	m, err := wm.newMapper(driver.IssuerRole, wm.issuers)
 	if err != nil {

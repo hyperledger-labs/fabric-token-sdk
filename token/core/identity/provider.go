@@ -29,6 +29,7 @@ type EnrollmentIDUnmarshaler interface {
 	GetEnrollmentID(auditInfo []byte) (string, error)
 }
 
+// Provider implements the driver.IdentityProvider interface
 type Provider struct {
 	sp view2.ServiceProvider
 
@@ -39,6 +40,7 @@ type Provider struct {
 	isMeCache               map[string]bool
 }
 
+// NewProvider creates a new identity provider
 func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers Mappers) *Provider {
 	return &Provider{
 		sp:                      sp,
@@ -49,7 +51,7 @@ func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDU
 	}
 }
 
-func (p *Provider) GetIdentityInfo(usage driver.IdentityUsage, id string) driver.IdentityInfo {
+func (p *Provider) GetIdentityInfo(usage driver.IdentityRole, id string) driver.IdentityInfo {
 	mapper, ok := p.mappers[usage]
 	if !ok {
 		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
@@ -61,7 +63,7 @@ func (p *Provider) GetIdentityInfo(usage driver.IdentityUsage, id string) driver
 	return &Info{IdentityInfo: info, Provider: p}
 }
 
-func (p *Provider) LookupIdentifier(usage driver.IdentityUsage, v interface{}) (view.Identity, string) {
+func (p *Provider) LookupIdentifier(usage driver.IdentityRole, v interface{}) (view.Identity, string) {
 	mapper, ok := p.mappers[usage]
 	if !ok {
 		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
@@ -170,20 +172,14 @@ func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return p.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
 }
 
-func (p *Provider) RegisterOwnerWallet(id string, typ string, path string) error {
-	return p.mappers[driver.OwnerRole].RegisterIdentity(id, typ, path)
+func (p *Provider) RegisterOwnerWallet(id string, path string) error {
+	return p.mappers[driver.OwnerRole].RegisterIdentity(id, path)
 }
 
-func (p *Provider) RegisterIssuerWallet(id string, typ string, path string) error {
-	return p.mappers[driver.IssuerRole].RegisterIdentity(id, typ, path)
+func (p *Provider) RegisterIssuerWallet(id string, path string) error {
+	return p.mappers[driver.IssuerRole].RegisterIdentity(id, path)
 }
 
-func (p *Provider) AddDeserializer(d Deserializer) {
-	p.deserializers = append(p.deserializers, d)
-}
-
-// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
-// identity is associated to id.
 func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	sigService := view2.GetSigService(p.sp)
 
@@ -229,6 +225,12 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	return nil
 }
 
+func (p *Provider) AddDeserializer(d Deserializer) {
+	p.deserializers = append(p.deserializers, d)
+}
+
+// Info wraps a driver.IdentityInfo to further register the audit info,
+// and bind the new identity to the default FSC node identity
 type Info struct {
 	driver.IdentityInfo
 	Provider *Provider
@@ -243,13 +245,16 @@ func (i *Info) EnrollmentID() string {
 }
 
 func (i *Info) Get() (view.Identity, []byte, error) {
+	// get the identity
 	id, ai, err := i.IdentityInfo.Get()
 	if err != nil {
 		return nil, nil, err
 	}
+	// register the audit info
 	if err := i.Provider.RegisterAuditInfo(id, ai); err != nil {
 		return nil, nil, err
 	}
+	// bind the identity to the default FSC node identity
 	if err := view2.GetEndpointService(i.Provider.sp).Bind(view2.GetIdentityProvider(i.Provider.sp).DefaultIdentity(), id); err != nil {
 		return nil, nil, err
 	}

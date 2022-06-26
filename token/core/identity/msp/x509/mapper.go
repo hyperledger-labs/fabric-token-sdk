@@ -14,23 +14,23 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type LocalMembership interface {
+type localMembership interface {
 	FSCNodeIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
 	GetDefaultIdentifier() string
-	RegisterIdentity(id string, typ string, path string) error
+	RegisterIdentity(id string, path string) error
 }
 
 // mapper maps identifiers of different sorts to identities
 type mapper struct {
 	networkID       string
 	nodeIdentity    view.Identity
-	localMembership LocalMembership
+	localMembership localMembership
 }
 
-func NewMapper(networkID string, nodeIdentity view.Identity, localMembership LocalMembership) *mapper {
+func NewMapper(networkID string, nodeIdentity view.Identity, localMembership localMembership) *mapper {
 	return &mapper{
 		networkID:       networkID,
 		nodeIdentity:    nodeIdentity,
@@ -167,6 +167,6 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 	}
 }
 
-func (i *mapper) RegisterIdentity(id string, typ string, path string) error {
-	return i.localMembership.RegisterIdentity(id, typ, path)
+func (i *mapper) RegisterIdentity(id string, path string) error {
+	return i.localMembership.RegisterIdentity(id, path)
 }

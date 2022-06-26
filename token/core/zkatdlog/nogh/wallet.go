@@ -23,8 +23,8 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *Service) RegisterOwnerWallet(id string, typ string, path string) error {
-	return s.identityProvider.RegisterOwnerWallet(id, typ, path)
+func (s *Service) RegisterOwnerWallet(id string, path string) error {
+	return s.identityProvider.RegisterOwnerWallet(id, path)
 }
 
 func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {
