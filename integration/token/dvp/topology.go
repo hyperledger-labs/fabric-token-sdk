@@ -82,7 +82,6 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	buyer.RegisterResponder(&cash.AcceptCashView{}, &cash.IssueCashView{})
 	buyer.RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{})
 	buyer.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
-	buyer.RegisterViewFactory("printVault", &views2.PrintVaultKeysViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)

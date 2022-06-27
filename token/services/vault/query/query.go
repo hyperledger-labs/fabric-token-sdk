@@ -472,7 +472,7 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 		}
 		if len(next.V()) == 0 {
 			// TODO: remove this keys from the vault
-			//logger.Debugf("nil content for key [%s]", next.K())
+			// logger.Debugf("nil content for key [%s]", next.K())
 			continue
 		}
 

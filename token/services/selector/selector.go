@@ -87,6 +87,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 
 	i := 0
 	for {
+		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
 		unspentTokens, err := s.queryService.UnspentTokensIteratorBy(id, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")

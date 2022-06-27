@@ -30,7 +30,6 @@ func TestAll(network *integration.Infrastructure) {
 	queryHouse(network, "buyer", houseID, "5th Avenue", "failed loading house with id")
 	checkBalance(network, "buyer", "", "USD", 10)
 	checkBalance(network, "seller", "", "USD", 0)
-	printVault(network)
 	sellHouse(network, houseID)
 	queryHouse(network, "buyer", houseID, "5th Avenue")
 	queryHouse(network, "seller", houseID, "5th Avenue", "failed loading house with id")
@@ -64,11 +63,6 @@ func issueHouse(network *integration.Infrastructure, valuation uint64) string {
 	Expect(err).NotTo(HaveOccurred())
 	time.Sleep(5 * time.Second)
 	return common.JSONUnmarshalString(houseIDBoxed)
-}
-
-func printVault(network *integration.Infrastructure) {
-	_, err := network.Client("buyer").CallView("printVault", nil)
-	Expect(err).NotTo(HaveOccurred())
 }
 
 func sellHouse(network *integration.Infrastructure, houseID string) {

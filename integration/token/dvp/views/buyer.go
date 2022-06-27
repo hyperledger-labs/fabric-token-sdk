@@ -7,13 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
-	"fmt"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
@@ -74,45 +70,4 @@ func (b *BuyHouseView) Call(context view.Context) (interface{}, error) {
 
 	// Wait for confirmation
 	return context.RunView(ttx.NewFinalityView(tx))
-}
-
-type PrintVaultKeysView struct{}
-
-func (p *PrintVaultKeysView) Call(context view.Context) (interface{}, error) {
-	// print all the keys in the vault
-	fns := fabric.GetDefaultFNS(context)
-	assert.NotNil(fns, "failed to get default FNS")
-
-	ch, err := fns.Channel("")
-	assert.NoError(err, "failed to get default channel")
-
-	qe, err := ch.Vault().NewQueryExecutor()
-	assert.NoError(err, "failed to get query executor")
-	defer qe.Done()
-
-	tms := token.GetManagementService(context)
-	assert.NotNil(tms, "failed to get token management service")
-
-	it, err := qe.GetStateRangeScanIterator(tms.Namespace(), "", "")
-	assert.NoError(err, "failed to get state range scan iterator")
-	defer it.Close()
-	// iterate over the and print the keys
-	for {
-		r, err := it.Next()
-		assert.NoError(err, "failed to get next state")
-
-		if r == nil {
-			break
-		}
-		// print key
-		fmt.Printf("found key [%s]\n", r.Key)
-	}
-	return nil, nil
-}
-
-type PrintVaultKeysViewFactory struct{}
-
-func (s PrintVaultKeysViewFactory) NewView(in []byte) (view.View, error) {
-	f := &PrintVaultKeysView{}
-	return f, nil
 }
