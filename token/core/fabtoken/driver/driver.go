@@ -45,7 +45,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	qe := v.TokenVault().QueryEngine()
 	lm := n.LocalMembership()
 
-	cm, err := config.NewManager(view2.GetConfigService(sp), networkID, channel, namespace)
+	cm, err := config.NewTokenSDK(view2.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}

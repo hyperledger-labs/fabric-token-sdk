@@ -159,7 +159,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 
 		// Update the Endpoint Resolver
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("update endpoint resolver for [%s], bind to [%]", recipientData.Identity, f.Other)
+			logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, f.Other)
 		}
 		if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {

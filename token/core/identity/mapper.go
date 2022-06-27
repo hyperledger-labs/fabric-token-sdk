@@ -8,7 +8,6 @@ package identity
 
 import (
 	"fmt"
-	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"go.uber.org/zap/zapcore"
@@ -137,7 +136,7 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return id, idIdentifier
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[LongTermIdentity] cannot match view.Identity string [%s] to identifier [%s]", vv, debug.Stack())
+				logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", vv)
 			}
 
 			return id, ""
@@ -174,7 +173,7 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return longTermID, label
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[LongTermIdentity] cannot match string [%s] to identifier [%s]", vv, debug.Stack())
+				logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", vv)
 			}
 			return nil, label
 		default:
@@ -223,7 +222,7 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return nil, idIdentifier
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[AnonymousIdentity] cannot match view.Identity string [%s] to identifier [%s]", vv, debug.Stack())
+				logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", vv)
 			}
 			return nil, string(id)
 		case string:
@@ -252,7 +251,7 @@ func (i *Mapper) Map(v interface{}) (view.Identity, string) {
 				return nil, idIdentifier
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[AnonymousIdentity] cannot match string [%s] to identifier [%s]", vv, debug.Stack())
+				logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", vv)
 			}
 			return nil, label
 		default:

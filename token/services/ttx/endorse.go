@@ -11,16 +11,14 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type signatureRequest struct {
@@ -383,22 +381,24 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
 	// }
 
-	txRaw, err := c.tx.Bytes()
-	if err != nil {
-		return errors.Wrap(err, "failed marshalling transaction content")
-	}
-	agent.EmitKey(0, "ttx", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
-
-	// Compress distributionList
+	// Compress distributionList by removing duplicates
 	type distributionListEntry struct {
 		IsMe     bool
 		LongTerm view.Identity
 		ID       view.Identity
+		EID      string
+		Auditor  bool
 	}
 	var distributionListCompressed []distributionListEntry
 	for _, party := range distributionList {
+		// For each party in the distribution list:
+		// - check if it is me
+		// - check if it is an auditor
+		// - extract the corresponding long term identity
+		// If the long term identity has not been added yet, add it to the list.
+		// If the party is me or an auditor, no need to extract the enrollment ID.
 		if party.IsNone() {
-			// In the case of a redeem
+			// This is a redeem, nothing to do here.
 			continue
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -426,10 +426,20 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("adding [%s] to distribution list", party)
 			}
+			eID := ""
+			isAuditor := party.Equal(c.tx.Opts.Auditor)
+			if !isMe && !isAuditor {
+				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
+				if err != nil {
+					return errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
+				}
+			}
 			distributionListCompressed = append(distributionListCompressed, distributionListEntry{
 				IsMe:     isMe,
 				LongTerm: longTermIdentity,
 				ID:       party,
+				EID:      eID,
+				Auditor:  isAuditor,
 			})
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -439,42 +449,59 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("distributed env of size [%d] to num parties", len(txRaw), len(distributionListCompressed))
+		logger.Debugf("distributed tx to num parties [%d]", len(distributionListCompressed))
 	}
 
+	// Distribute the transaction to all parties in the distribution list.
+	// Filter the metadata by Enrollment ID.
+	// The auditor will receive the full set of metadata
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
 		}
 
+		// If it it me, no need to open a remote connection. Just store the envelope locally.
 		if entry.IsMe {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
 			}
 
-			// Inform the vault about the transaction
-			backend := network.GetInstance(context, c.tx.Network(), c.tx.Channel())
-			rws, err := backend.GetRWSet(c.tx.ID(), env.Results())
-			if err != nil {
-				return errors.WithMessagef(err, "failed getting rwset for tx [%s]", c.tx.ID())
+			// Store envelope
+			if err := StoreEnvelope(context, c.tx); err != nil {
+				return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
 			}
-			rws.Done()
 
-			rawEnv, err := env.Bytes()
-			if err != nil {
-				return errors.WithMessagef(err, "failed marshalling tx env [%s]", c.tx.ID())
-			}
-			if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
-				return errors.WithMessagef(err, "failed storing tx env [%s]", c.tx.ID())
+			// Store transaction in the token transaction database
+			if err := StoreTransactionRecords(context, c.tx); err != nil {
+				return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
 			}
 
 			continue
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("This is not me [%s], ask endorse", entry.ID.UniqueID())
+				logger.Debugf("This is not me [%s:%s], ask endorse", entry.ID.UniqueID(), entry.EID)
 			}
 		}
 
+		// The party is not me, open a connection to the party.
+		// If the party is an auditor, then send the full set of metadata.
+		// Otherwise, filter the metadata by Enrollment ID.
+		var txRaw []byte
+		var err error
+		if entry.Auditor {
+			txRaw, err = c.tx.Bytes()
+			if err != nil {
+				return errors.Wrap(err, "failed marshalling transaction content")
+			}
+		} else {
+			txRaw, err = c.tx.Bytes(entry.EID)
+			if err != nil {
+				return errors.Wrap(err, "failed marshalling transaction content")
+			}
+		}
+		agent.EmitKey(0, "ttx", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
+
+		// Open a session to the party. and send the transaction.
 		session, err := context.GetSession(context.Initiator(), entry.ID)
 		if err != nil {
 			return errors.Wrap(err, "failed getting session")
@@ -633,7 +660,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "received", "env", tx.ID())
 
-	// Process Fabric Envelope
+	// Check the envelope exists
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
@@ -642,28 +669,22 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
 
-	err = tx.storeTransient()
-	if err != nil {
+	// Store transient
+	if err := tx.storeTransient(); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
-	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	rws, err := backend.GetRWSet(tx.ID(), env.Results())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
-	}
-	rws.Done()
-
-	// TODO: remove this
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
-	}
-	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
-		return nil, errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
+	// Store envelope
+	if err := StoreEnvelope(context, tx); err != nil {
+		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
-	// Send the proposal response back
+	// Store transaction in the token transaction database
+	if err := StoreTransactionRecords(context, tx); err != nil {
+		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
+	}
+
+	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
 	}

@@ -15,13 +15,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -30,6 +28,9 @@ import (
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -64,10 +65,11 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
+	// Register the token management service provider
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
 		p.registry,
 		tmsProvider,
-		network2.NewNormalizer(p.registry),
+		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
 		vault.NewVaultProvider(p.registry),
 		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(
@@ -84,12 +86,8 @@ func (p *SDK) Install() error {
 	// Network provider
 	assert.NoError(p.registry.RegisterService(network.NewProvider(p.registry)))
 
-	// AuditDB
-	driverName := view2.GetConfigService(p.registry).GetString("token.auditor.auditdb.persistence.type")
-	if len(driverName) == 0 {
-		driverName = "memory"
-	}
-	assert.NoError(p.registry.RegisterService(auditdb.NewManager(p.registry, driverName)))
+	// Token Transaction DB, use the driver from the configuration
+	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
 
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)

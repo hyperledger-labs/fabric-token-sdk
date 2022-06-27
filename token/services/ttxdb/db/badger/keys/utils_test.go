@@ -3,13 +3,15 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package keys_test
 
 import (
 	"testing"
 	"unicode/utf8"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/db/badger/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger/keys"
+
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )

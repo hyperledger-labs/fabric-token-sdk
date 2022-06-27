@@ -13,14 +13,13 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
@@ -271,16 +270,16 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 		if &md == nil {
 			return nil, errors.Errorf("invalid issue metadata: it is nil")
 		}
-		if len(ia.OutputTokens) != len(md.AuditInfos) || len(ia.OutputTokens) != len(md.TokenInfo) {
+		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.TokenInfo) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
-		for i := 0; i < len(md.AuditInfos); i++ {
+		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
 			ti := &token.TokenInformation{}
 			err := json.Unmarshal(md.TokenInfo[i], ti)
 			if err != nil {
 				return nil, err
 			}
-			matcher, err := des.GetOwnerMatcher(md.AuditInfos[i])
+			matcher, err := des.GetOwnerMatcher(md.ReceiversAuditInfos[i])
 			if err != nil {
 				return nil, err
 			}

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package badger
 
 import (
@@ -15,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMovements(t *testing.T) {
@@ -54,11 +55,13 @@ func TestMovements(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, db.Commit())
 
-	records, err := db.QueryMovements(nil, nil, []driver.TxStatus{driver.Pending}, driver.FromLast, driver.Received, 2)
+	records, err := db.QueryMovements(driver.QueryMovementsParams{
+		TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 2,
+	})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 
-	records, err = db.QueryMovements(nil, nil, []driver.TxStatus{driver.Pending}, driver.FromLast, driver.Received, 3)
+	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 3)
 
@@ -66,7 +69,7 @@ func TestMovements(t *testing.T) {
 	assert.NoError(t, db.SetStatus("2", driver.Confirmed))
 	assert.NoError(t, db.Commit())
 
-	records, err = db.QueryMovements(nil, nil, []driver.TxStatus{driver.Pending}, driver.FromLast, driver.Received, 3)
+	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 }
@@ -86,14 +89,14 @@ func TestTransaction(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		now := time.Now().UTC()
 		tr1 := &driver.TransactionRecord{
-			TxID:            fmt.Sprintf("%d", i),
-			TransactionType: driver.Issue,
-			SenderEID:       "",
-			RecipientEID:    "alice",
-			TokenType:       "magic",
-			Amount:          big.NewInt(10),
-			Timestamp:       now,
-			Status:          driver.Pending,
+			TxID:         fmt.Sprintf("%d", i),
+			ActionType:   driver.Issue,
+			SenderEID:    "",
+			RecipientEID: "alice",
+			TokenType:    "magic",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
 		}
 		assert.NoError(t, db.AddTransaction(tr1))
 		txs = append(txs, tr1)
@@ -101,7 +104,7 @@ func TestTransaction(t *testing.T) {
 	assert.NoError(t, db.Commit())
 	t1 := time.Now().UTC()
 
-	it, err := db.QueryTransactions(&t0, &t1)
+	it, err := db.QueryTransactions(driver.QueryTransactionsParams{From: &t0, To: &t1})
 	assert.NoError(t, err)
 	for i := 0; i < 20; i++ {
 		tr, err := it.Next()

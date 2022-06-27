@@ -7,11 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package memory
 
 import (
-	"time"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor/auditdb/driver"
 )
 
 type Persistence struct {
@@ -19,11 +18,11 @@ type Persistence struct {
 	transactionRecords []*driver.TransactionRecord
 }
 
-func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string, txStatuses []driver.TxStatus, searchDirection driver.SearchDirection, movementDirection driver.MovementDirection, numRecords int) ([]*driver.MovementRecord, error) {
+func (p *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*driver.MovementRecord, error) {
 	var res []*driver.MovementRecord
 
 	var cursor int
-	switch searchDirection {
+	switch params.SearchDirection {
 	case driver.FromBeginning:
 		cursor = -1
 	case driver.FromLast:
@@ -33,7 +32,7 @@ func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string
 	}
 	counter := 0
 	for {
-		switch searchDirection {
+		switch params.SearchDirection {
 		case driver.FromBeginning:
 			cursor++
 		case driver.FromLast:
@@ -44,9 +43,9 @@ func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string
 		}
 
 		record := p.movementRecords[cursor]
-		if len(enrollmentIDs) != 0 {
+		if len(params.EnrollmentIDs) != 0 {
 			found := false
-			for _, id := range enrollmentIDs {
+			for _, id := range params.EnrollmentIDs {
 				if record.EnrollmentID == id {
 					found = true
 					break
@@ -56,9 +55,9 @@ func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string
 				continue
 			}
 		}
-		if len(tokenTypes) != 0 {
+		if len(params.TokenTypes) != 0 {
 			found := false
-			for _, typ := range tokenTypes {
+			for _, typ := range params.TokenTypes {
 				if record.TokenType == typ {
 					found = true
 					break
@@ -68,9 +67,9 @@ func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string
 				continue
 			}
 		}
-		if len(txStatuses) != 0 {
+		if len(params.TxStatuses) != 0 {
 			found := false
-			for _, st := range txStatuses {
+			for _, st := range params.TxStatuses {
 				if record.Status == st {
 					found = true
 					break
@@ -86,14 +85,14 @@ func (p *Persistence) QueryMovements(enrollmentIDs []string, tokenTypes []string
 			}
 		}
 
-		if numRecords != 0 && counter+1 > numRecords {
+		if params.NumRecords != 0 && counter+1 > params.NumRecords {
 			break
 		}
 
-		if movementDirection == driver.Sent && record.Amount.Sign() > 0 {
+		if params.MovementDirection == driver.Sent && record.Amount.Sign() > 0 {
 			continue
 		}
-		if movementDirection == driver.Received && record.Amount.Sign() < 0 {
+		if params.MovementDirection == driver.Received && record.Amount.Sign() < 0 {
 			continue
 		}
 
@@ -110,14 +109,17 @@ func (p *Persistence) AddMovement(record *driver.MovementRecord) error {
 	return nil
 }
 
-func (p *Persistence) QueryTransactions(from, to *time.Time) (driver.TransactionIterator, error) {
+func (p *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	// search over the transaction for those whose timestamp is between from and to
 	var subset []*driver.TransactionRecord
 	for _, record := range p.transactionRecords {
-		if from != nil && record.Timestamp.Before(*from) {
+		if params.From != nil && record.Timestamp.Before(*params.From) {
 			continue
 		}
-		if to != nil && record.Timestamp.After(*to) {
+		if params.To != nil && record.Timestamp.After(*params.To) {
+			continue
+		}
+		if len(params.SenderWallet) != 0 && record.SenderEID != params.SenderWallet {
 			continue
 		}
 		subset = append(subset, record)
@@ -183,10 +185,10 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 
 type Driver struct{}
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.AuditDB, error) {
+func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	return &Persistence{}, nil
 }
 
 func init() {
-	auditdb.Register("memory", &Driver{})
+	ttxdb.Register("memory", &Driver{})
 }

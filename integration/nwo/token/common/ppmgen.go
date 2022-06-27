@@ -12,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 
+	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 )
 

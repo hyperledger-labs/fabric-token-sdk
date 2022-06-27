@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package driver
+package config
 
 type InteractiveCertification struct {
 	IDs []string `yaml:"ids,omitempty"`
@@ -41,7 +41,7 @@ type Token struct {
 	TMS     []*TMS `yaml:"tms,omitempty"`
 }
 
-type ConfigManager interface {
+type Manager interface {
 	TMS() *TMS
 	TranslatePath(path string) string
 }

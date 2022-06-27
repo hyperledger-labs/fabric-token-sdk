@@ -8,14 +8,12 @@ package token
 
 import (
 	"fmt"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
-	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
-	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -28,7 +26,7 @@ type TMSID struct {
 }
 
 // String returns a string representation of the TMSID
-func (t *TMSID) String() string {
+func (t TMSID) String() string {
 	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
 }
 
@@ -134,7 +132,7 @@ type ManagementService struct {
 	network   string
 	channel   string
 	namespace string
-	tms       tokenapi.TokenManagerService
+	tms       driver.TokenManagerService
 
 	vaultProvider               VaultProvider
 	certificationClientProvider CertificationClientProvider
@@ -175,13 +173,13 @@ func (t *ManagementService) NewRequestFromBytes(anchor string, actions []byte, m
 
 // NewMetadataFromBytes unmarshals the passed bytes into a Metadata object
 func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) {
-	tokenRequestMetadata := &tokenapi.TokenRequestMetadata{}
+	tokenRequestMetadata := &driver.TokenRequestMetadata{}
 	if err := tokenRequestMetadata.FromBytes(raw); err != nil {
 		return nil, err
 	}
 	return &Metadata{
-		queryService:         t.tms,
-		tokenRequestMetadata: tokenRequestMetadata,
+		TMS:                  t.tms,
+		TokenRequestMetadata: tokenRequestMetadata,
 	}, nil
 }
 
@@ -197,7 +195,7 @@ func (t *ManagementService) Vault() *Vault {
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{ts: t.tms}
+	return &WalletManager{managementService: t}
 }
 
 // CertificationManager returns the certification manager for this TMS

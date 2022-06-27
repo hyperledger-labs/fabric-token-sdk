@@ -51,9 +51,9 @@ orion-server-images:
 
 .PHONY: dependencies
 dependencies:
-	go get -u github.com/onsi/ginkgo/ginkgo
-	go get -u github.com/gordonklaus/ineffassign
-	go get -u github.com/google/addlicense
+	go install github.com/onsi/ginkgo/ginkgo
+	go install github.com/gordonklaus/ineffassign
+	go install github.com/google/addlicense
 
 .PHONY: integration-tests-dlog-fabric
 integration-tests-dlog-fabric: docker-images dependencies
@@ -97,7 +97,7 @@ integration-tests-dvp-dlog: docker-images dependencies
 
 .PHONY: tidy
 tidy:
-	@go mod tidy
+	@go mod tidy -compat=1.17
 
 .PHONY: clean
 clean:
