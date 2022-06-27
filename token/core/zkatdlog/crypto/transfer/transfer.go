@@ -11,7 +11,6 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rangeproof "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
@@ -29,14 +28,14 @@ type Proof struct {
 
 // Verifier verifies if a TransferAction is valid
 type Verifier struct {
-	WellFormedness   common.Verifier
-	RangeCorrectness common.Verifier
+	WellFormedness   *WellFormednessVerifier
+	RangeCorrectness *rangeproof.Verifier
 }
 
 // Prover produces a proof that a TransferAction is valid
 type Prover struct {
-	WellFormedness   common.Prover
-	RangeCorrectness common.Prover
+	WellFormedness   *WellFormednessProver
+	RangeCorrectness *rangeproof.Prover
 }
 
 // NewProver returns a TransferAction Prover that corresponds to the passed arguments
@@ -152,26 +151,4 @@ func (v *Verifier) Verify(proof []byte) error {
 	}
 
 	return rangeErr
-}
-
-// GetInValues returns input values
-func (w *WellFormednessWitness) GetInValues() []*math.Zr {
-	return w.inValues
-}
-
-// GetOutValues returns output values
-func (w *WellFormednessWitness) GetOutValues() []*math.Zr {
-	return w.outValues
-}
-
-// GetOutBlindingFactors returns the randomness used in the Pedersen
-// commitments in the outputs
-func (w *WellFormednessWitness) GetOutBlindingFactors() []*math.Zr {
-	return w.outBlindingFactors
-}
-
-// GetInBlindingFactors returns the randomness used in the Pedersen
-// commitments in the inputs 
-func (w *WellFormednessWitness) GetInBlindingFactors() []*math.Zr {
-	return w.inBlindingFactors
 }
