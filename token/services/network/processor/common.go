@@ -140,7 +140,6 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 			continue
 		}
 
-		logger.Debugf("extended key with id [%s:%s]", id, tok.Type)
 		outputID, err := keys.CreateExtendedFabTokenKey(id, tok.Type, txID, index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %s", err)

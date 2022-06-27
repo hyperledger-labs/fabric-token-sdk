@@ -7,17 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 	"sync"
+
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -32,12 +31,13 @@ const (
 )
 
 type LocalMembership struct {
-	sp              view2.ServiceProvider
-	configManager   config.Manager
-	fscNodeIdentity view.Identity
-	signerService   common.SignerService
-	binderService   common.BinderService
-	mspID           string
+	sp                     view2.ServiceProvider
+	configManager          config.Manager
+	defaultNetworkIdentity view.Identity
+	signerService          common.SignerService
+	binderService          common.BinderService
+	deserializerManager    common.DeserializerManager
+	mspID                  string
 
 	resolversMutex          sync.RWMutex
 	resolvers               []*common.Resolver
@@ -48,17 +48,19 @@ type LocalMembership struct {
 func NewLocalMembership(
 	sp view2.ServiceProvider,
 	configManager config.Manager,
-	defaultFSCIdentity view.Identity,
+	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	binderService common.BinderService,
+	deserializerManager common.DeserializerManager,
 	mspID string,
 ) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
 		configManager:           configManager,
-		fscNodeIdentity:         defaultFSCIdentity,
+		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,
 		binderService:           binderService,
+		deserializerManager:     deserializerManager,
 		mspID:                   mspID,
 		resolversByEnrollmentID: map[string]*common.Resolver{},
 		resolversByName:         map[string]*common.Resolver{},
@@ -97,12 +99,12 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	return nil
 }
 
-func (lm *LocalMembership) FSCNodeIdentity() view.Identity {
-	return lm.fscNodeIdentity
+func (lm *LocalMembership) DefaultNetworkIdentity() view.Identity {
+	return lm.defaultNetworkIdentity
 }
 
 func (lm *LocalMembership) IsMe(id view.Identity) bool {
-	return view2.GetSigService(lm.sp).IsMe(id)
+	return lm.signerService.IsMe(id)
 }
 
 func (lm *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
@@ -138,7 +140,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 		return nil, errors.Errorf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 
-	return common.NewInfo(
+	return common.NewIdentityInfo(
 		r.Name,
 		r.EnrollmentID,
 		func() (view.Identity, []byte, error) {
@@ -172,11 +174,12 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 	if err != nil {
 		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
 	}
+	// TODO: remove the need for ServiceProvider
 	provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
 	}
-	lm.deserializerManager().AddDeserializer(provider)
+	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, DefaultCacheSize).Identity)
 	logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 	return nil
@@ -233,12 +236,4 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 	return nil
-}
-
-func (lm *LocalMembership) deserializerManager() common.DeserializerManager {
-	dm, err := lm.sp.GetService(reflect.TypeOf((*common.DeserializerManager)(nil)))
-	if err != nil {
-		panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
-	}
-	return dm.(common.DeserializerManager)
 }

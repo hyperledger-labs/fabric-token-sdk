@@ -20,6 +20,10 @@ func NewSigService(sigService *view.SigService) *SigService {
 	return &SigService{sigService: sigService}
 }
 
+func (s *SigService) IsMe(identity view2.Identity) bool {
+	return s.sigService.IsMe(identity)
+}
+
 func (s *SigService) RegisterSigner(identity view2.Identity, signer api2.Signer, verifier api2.Verifier) error {
 	return s.sigService.RegisterSigner(identity, signer, verifier)
 }

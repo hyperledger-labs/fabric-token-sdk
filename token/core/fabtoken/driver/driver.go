@@ -61,12 +61,13 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	mspWalletManager.SetRoleIdentityType(driver.OwnerRole, msp.LongTermIdentity)
 	mspWalletManager.SetRoleIdentityType(driver.IssuerRole, msp.LongTermIdentity)
 	mspWalletManager.SetRoleIdentityType(driver.AuditorRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.CertifierRole, msp.LongTermIdentity)
 	if err := mspWalletManager.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to load wallets")
 	}
-	mappers, err := mspWalletManager.Mappers()
+	wallets, err := mspWalletManager.Wallets()
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get wallet mappers")
+		return nil, errors.WithMessage(err, "failed to get wallets")
 	}
 
 	return fabtoken.NewService(
@@ -80,7 +81,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		}),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
-		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), mappers),
+		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		fabtoken.NewDeserializer(),
 		tmsConfig,
 	), nil

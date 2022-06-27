@@ -64,12 +64,13 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	mspWalletManager.SetRoleIdentityType(driver.OwnerRole, msp.AnonymousIdentity)
 	mspWalletManager.SetRoleIdentityType(driver.IssuerRole, msp.LongTermIdentity)
 	mspWalletManager.SetRoleIdentityType(driver.AuditorRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.CertifierRole, msp.LongTermIdentity)
 	if err := mspWalletManager.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to load wallets")
 	}
-	mappers, err := mspWalletManager.Mappers()
+	wallets, err := mspWalletManager.Wallets()
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get wallet mappers")
+		return nil, errors.WithMessage(err, "failed to get wallets")
 	}
 
 	desProvider := zkatdlog.NewDeserializerProvider()
@@ -85,7 +86,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
 		v.TokenVault().QueryEngine(),
-		identity.NewProvider(sp, zkatdlog.NewEnrollmentIDDeserializer(), mappers),
+		identity.NewProvider(sp, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		desProvider.Deserialize,
 		crypto.DLogPublicParameters,
 		tmsConfig,

@@ -10,12 +10,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
-	"reflect"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -25,12 +23,12 @@ import (
 )
 
 type LocalMembership struct {
-	sp              view2.ServiceProvider
-	configManager   config.Manager
-	fscNodeIdentity view.Identity
-	signerService   common.SignerService
-	binderService   common.BinderService
-	mspID           string
+	configManager          config.Manager
+	defaultNetworkIdentity view.Identity
+	signerService          common.SignerService
+	binderService          common.BinderService
+	deserializerManager    common.DeserializerManager
+	mspID                  string
 
 	resolversMutex           sync.RWMutex
 	resolvers                []*common.Resolver
@@ -40,19 +38,19 @@ type LocalMembership struct {
 }
 
 func NewLocalMembership(
-	sp view2.ServiceProvider,
 	configManager config.Manager,
-	defaultFSCIdentity view.Identity,
+	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	binderService common.BinderService,
+	deserializerManager common.DeserializerManager,
 	mspID string,
 ) *LocalMembership {
 	return &LocalMembership{
-		sp:                       sp,
 		configManager:            configManager,
-		fscNodeIdentity:          defaultFSCIdentity,
+		defaultNetworkIdentity:   defaultNetworkIdentity,
 		signerService:            signerService,
 		binderService:            binderService,
+		deserializerManager:      deserializerManager,
 		mspID:                    mspID,
 		bccspResolversByIdentity: map[string]*common.Resolver{},
 		resolversByEnrollmentID:  map[string]*common.Resolver{},
@@ -91,12 +89,12 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	return nil
 }
 
-func (lm *LocalMembership) FSCNodeIdentity() view.Identity {
-	return lm.fscNodeIdentity
+func (lm *LocalMembership) DefaultNetworkIdentity() view.Identity {
+	return lm.defaultNetworkIdentity
 }
 
 func (lm *LocalMembership) IsMe(id view.Identity) bool {
-	return view2.GetSigService(lm.sp).IsMe(id)
+	return lm.signerService.IsMe(id)
 }
 
 func (lm *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
@@ -132,7 +130,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 		return nil, errors.Errorf("identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 
-	return common.NewInfo(r.Name, r.EnrollmentID, func() (view.Identity, []byte, error) {
+	return common.NewIdentityInfo(r.Name, r.EnrollmentID, func() (view.Identity, []byte, error) {
 		return r.GetIdentity(nil)
 	}), nil
 }
@@ -154,8 +152,6 @@ func (lm *LocalMembership) registerIdentity(id string, path string, setDefault b
 }
 
 func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, setDefault bool) error {
-	dm := lm.deserializerManager()
-
 	// Try without "msp"
 	provider, err := x509.NewProvider(filepath.Join(translatedPath), lm.mspID, lm.signerService)
 	if err != nil {
@@ -171,7 +167,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, setDef
 	}
 
 	logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
-	dm.AddDeserializer(provider)
+	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, provider.Identity)
 
 	return nil
@@ -205,7 +201,7 @@ func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, Id
 		if err != nil {
 			panic(fmt.Sprintf("cannot get identity for [%s,%s][%s]", id, eID, err))
 		}
-		if err := lm.binderService.Bind(lm.fscNodeIdentity, id); err != nil {
+		if err := lm.binderService.Bind(lm.defaultNetworkIdentity, id); err != nil {
 			panic(fmt.Sprintf("cannot bing identity for [%s,%s][%s]", id, eID, err))
 		}
 	}
@@ -246,12 +242,4 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 		logger.Debugf("identity info not found for label [%s][%v]", label, lm.bccspResolversByIdentity)
 	}
 	return nil
-}
-
-func (lm *LocalMembership) deserializerManager() common.DeserializerManager {
-	dm, err := lm.sp.GetService(reflect.TypeOf((*common.DeserializerManager)(nil)))
-	if err != nil {
-		panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
-	}
-	return dm.(common.DeserializerManager)
 }

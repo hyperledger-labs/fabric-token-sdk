@@ -21,11 +21,15 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.driver.identity")
 
+// Deserializer is an interface for deserializing identities
 type Deserializer interface {
+	// DeserializeSigner deserializes a signer from its bytes representation
 	DeserializeSigner(raw []byte) (driver.Signer, error)
 }
 
+// EnrollmentIDUnmarshaler decodes an enrollment ID form an audit info
 type EnrollmentIDUnmarshaler interface {
+	// GetEnrollmentID returns the enrollment ID from the audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
 }
 
@@ -33,7 +37,7 @@ type EnrollmentIDUnmarshaler interface {
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers                 Mappers
+	wallets                 Wallets
 	deserializers           []Deserializer
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
@@ -41,10 +45,10 @@ type Provider struct {
 }
 
 // NewProvider creates a new identity provider
-func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers Mappers) *Provider {
+func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, wallets Wallets) *Provider {
 	return &Provider{
 		sp:                      sp,
-		mappers:                 mappers,
+		wallets:                 wallets,
 		deserializers:           []Deserializer{},
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
@@ -52,11 +56,11 @@ func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDU
 }
 
 func (p *Provider) GetIdentityInfo(usage driver.IdentityRole, id string) driver.IdentityInfo {
-	mapper, ok := p.mappers[usage]
+	wallet, ok := p.wallets[usage]
 	if !ok {
-		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
+		panic(fmt.Sprintf("wallet not found for usage [%d]", usage))
 	}
-	info := mapper.GetIdentityInfo(id)
+	info := wallet.GetIdentityInfo(id)
 	if info == nil {
 		return nil
 	}
@@ -64,11 +68,11 @@ func (p *Provider) GetIdentityInfo(usage driver.IdentityRole, id string) driver.
 }
 
 func (p *Provider) LookupIdentifier(usage driver.IdentityRole, v interface{}) (view.Identity, string) {
-	mapper, ok := p.mappers[usage]
+	wallet, ok := p.wallets[usage]
 	if !ok {
-		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
+		panic(fmt.Sprintf("wallet not found for usage [%d]", usage))
 	}
-	id, label := mapper.MapToID(v)
+	id, label := wallet.MapToID(v)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
 	}
@@ -173,11 +177,11 @@ func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 }
 
 func (p *Provider) RegisterOwnerWallet(id string, path string) error {
-	return p.mappers[driver.OwnerRole].RegisterIdentity(id, path)
+	return p.wallets[driver.OwnerRole].RegisterIdentity(id, path)
 }
 
 func (p *Provider) RegisterIssuerWallet(id string, path string) error {
-	return p.mappers[driver.IssuerRole].RegisterIdentity(id, path)
+	return p.wallets[driver.IssuerRole].RegisterIdentity(id, path)
 }
 
 func (p *Provider) Bind(id view.Identity, to view.Identity) error {

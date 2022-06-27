@@ -468,7 +468,6 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 			return nil, err
 		}
 		if next == nil {
-			logger.Debugf("no more unspent tokens")
 			return nil, nil
 		}
 		if len(next.V()) == 0 {

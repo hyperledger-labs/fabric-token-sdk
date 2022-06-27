@@ -15,7 +15,7 @@ import (
 )
 
 type localMembership interface {
-	FSCNodeIdentity() view.Identity
+	DefaultNetworkIdentity() view.Identity
 	IsMe(id view.Identity) bool
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
@@ -23,15 +23,15 @@ type localMembership interface {
 	RegisterIdentity(id string, path string) error
 }
 
-// mapper maps identifiers of different sorts to identities
-type mapper struct {
+// wallet maps identifiers of different sorts to identities
+type wallet struct {
 	networkID       string
 	nodeIdentity    view.Identity
 	localMembership localMembership
 }
 
-func NewMapper(networkID string, nodeIdentity view.Identity, localMembership localMembership) *mapper {
-	return &mapper{
+func NewWallet(networkID string, nodeIdentity view.Identity, localMembership localMembership) *wallet {
+	return &wallet{
 		networkID:       networkID,
 		nodeIdentity:    nodeIdentity,
 		localMembership: localMembership,
@@ -42,7 +42,7 @@ func NewMapper(networkID string, nodeIdentity view.Identity, localMembership loc
 // - The corresponding long term identifier
 // - The corresponding enrollment ID
 // - A function that returns the identity and its audit info.
-func (i *mapper) GetIdentityInfo(id string) driver.IdentityInfo {
+func (i *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
 	}
@@ -57,8 +57,8 @@ func (i *mapper) GetIdentityInfo(id string) driver.IdentityInfo {
 	return info
 }
 
-func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
-	defaultID := i.localMembership.FSCNodeIdentity()
+func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
+	defaultID := i.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := i.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -150,6 +150,6 @@ func (i *mapper) MapToID(v interface{}) (view.Identity, string) {
 	}
 }
 
-func (i *mapper) RegisterIdentity(id string, path string) error {
+func (i *wallet) RegisterIdentity(id string, path string) error {
 	return i.localMembership.RegisterIdentity(id, path)
 }
