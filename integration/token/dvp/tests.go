@@ -28,8 +28,6 @@ func TestAll(network *integration.Infrastructure) {
 	houseID := issueHouse(network, 4)
 	queryHouse(network, "seller", houseID, "5th Avenue")
 	queryHouse(network, "buyer", houseID, "5th Avenue", "failed loading house with id")
-	checkBalance(network, "buyer", "", "USD", 10)
-	checkBalance(network, "seller", "", "USD", 0)
 	sellHouse(network, houseID)
 	queryHouse(network, "buyer", houseID, "5th Avenue")
 	queryHouse(network, "seller", houseID, "5th Avenue", "failed loading house with id")
