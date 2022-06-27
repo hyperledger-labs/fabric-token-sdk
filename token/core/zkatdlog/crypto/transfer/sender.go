@@ -49,28 +49,30 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf
 // GenerateZKTransfer produces a TransferAction and an array of TokenInformation
 // that corresponds to the openings of the newly created outputs
 func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.TokenInformation, error) {
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, math.Curves[s.PublicParams.Curve])
-	if err != nil {
-		return nil, nil, errors.New("failed to get witness of tokens")
+	if len(values) != len(owners) {
+		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
 	}
-
 	in := getTokenData(s.Inputs)
 	intw := make([]*token.TokenDataWitness, len(s.InputInformation))
 	for i := 0; i < len(s.InputInformation); i++ {
 		if s.InputInformation[0].Type != s.InputInformation[i].Type {
-			return nil, nil, errors.New("please choose inputs of the same token type")
+			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
 		}
 		intw[i] = &token.TokenDataWitness{Value: s.InputInformation[i].Value, Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
+	}
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, math.Curves[s.PublicParams.Curve])
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
 	prover := NewProver(intw, outtw, in, out, s.PublicParams)
 	proof, err := prover.Prove()
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to generate zero-knowledge proof for transfer")
+		return nil, nil, errors.Wrap(err, "cannot generate zero-knowledge proof for transfer")
 	}
 
 	transfer, err := NewTransfer(s.InputIDs, in, out, owners, proof)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to produce transfer action")
+		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}
 	inf := make([]*token.TokenInformation, len(owners))
 	for i := 0; i < len(inf); i++ {
@@ -86,13 +88,13 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 
 // SignTokenActions produces a signature for each input spent by the Sender
 func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
-	//todo check token actions
+	//todo check token actions (is this still needed?)
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to sign token requests")
+			return nil, errors.Wrap(err, "failed to sign token requests")
 		}
 	}
 	return signatures, nil
@@ -113,10 +115,10 @@ type TransferAction struct {
 // NewTransfer returns the TransferAction that matches the passed arguments
 func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G1, owners [][]byte, proof []byte) (*TransferAction, error) {
 	if len(outputs) != len(owners) {
-		return nil, errors.New("number of owners does not match number of tokens")
+		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(outputs), len(owners))
 	}
 	if len(inputs) != len(inputCommitments) {
-		return nil, errors.New("number of inputs does not match number of inputCommitments")
+		return nil, errors.Errorf("number of inputs [%d] does not match number of inputCommitments [%d]", len(inputs), len(inputCommitments))
 	}
 	tokens := make([]*token.Token, len(owners))
 	for i, o := range outputs {

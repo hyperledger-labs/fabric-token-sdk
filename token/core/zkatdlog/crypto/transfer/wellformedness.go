@@ -199,7 +199,11 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 // parseProof returns an arrary of Schnorr proofs
 func (v *WellFormednessVerifier) parseProof(tokens []*math.G1, values []*math.Zr, randomness []*math.Zr, ttype *math.Zr, sum *math.Zr) ([]*crypto.SchnorrProof, error) {
 	if len(values) != len(tokens) || len(randomness) != len(tokens) {
-		return nil, errors.Errorf("failed to parse wellformedness proof ")
+		return nil, errors.New("failed to parse wellformedness proof ")
+	}
+	if v.Curve == nil {
+		return nil, errors.New("failed to parse wellformedness proof: please initialize curve")
+
 	}
 	zkps := make([]*crypto.SchnorrProof, len(tokens)+1)
 	// aggregate is the sum of tokens
@@ -302,18 +306,24 @@ func (p *WellFormednessProver) computeProof(randomness *WellFormednessRandomness
 // computeCommitments returns the randomness used in WellFormedness proof and the corresponding commitments
 func (p *WellFormednessProver) computeCommitments() (*WellFormednessCommitments, *WellFormednessRandomness, error) {
 	if len(p.PedParams) != 3 {
-		return nil, nil, errors.Errorf("proof generation failed: invalid public parameters")
+		return nil, nil, errors.New("invalid public parameters")
 	}
 
+	if p.Curve == nil {
+		return nil, nil, errors.New("please initialize curve")
+	}
 	rand, err := p.Curve.Rand()
 	if err != nil {
-		return nil, nil, errors.Errorf("proof generation failed: failed to get random generator")
+		return nil, nil, errors.New("failed to get random generator")
 	}
 
 	// produce randomness for the WellFormedness proof
 	randomness := &WellFormednessRandomness{}
 	randomness.Type = p.Curve.NewRandomZr(rand) // randomness to prove token type
-	Q := p.PedParams[0].Mul(randomness.Type)    // commitment to randomness for type
+	if p.PedParams[0] == nil || p.PedParams[1] == nil || p.PedParams[2] == nil {
+		return nil, nil, errors.New("please provide non-nil Pedersen parameters")
+	}
+	Q := p.PedParams[0].Mul(randomness.Type) // commitment to randomness for type
 
 	// for inputs
 	randomness.inValues = make([]*math.Zr, len(p.Inputs))

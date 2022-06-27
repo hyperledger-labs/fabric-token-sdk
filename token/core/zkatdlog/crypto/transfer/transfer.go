@@ -125,7 +125,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	tp := *&Proof{}
 	err := tp.Deserialize(proof)
 	if err != nil {
-		return errors.Wrapf(err, "invalid transfer proof: cannot parse proof")
+		return errors.Wrap(err, "invalid transfer proof")
 	}
 
 	var wg sync.WaitGroup
@@ -147,7 +147,7 @@ func (v *Verifier) Verify(proof []byte) error {
 	wg.Wait()
 
 	if wfErr != nil {
-		return wfErr
+		return errors.Wrap(wfErr, "invalid transfer proof")
 	}
 
 	return rangeErr
