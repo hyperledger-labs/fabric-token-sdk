@@ -15,27 +15,35 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Token encodes Type, Value, Owner
 type Token struct {
-	Owner []byte   // this could either be msp identity or an idemix identity
-	Data  *math.G1 // Commitments to type and value
+	// this could be either an msp identity or an idemix identity
+	Owner []byte
+	// Pedersen commitment to type and value
+	Data *math.G1
 }
 
+// IsRedeem returns true if the token has an empty owner field
 func (t *Token) IsRedeem() bool {
 	return len(t.Owner) == 0
 }
 
+// Serialize marshals Token
 func (t *Token) Serialize() ([]byte, error) {
 	return json.Marshal(t)
 }
 
+// Deserialize unmarshals Token
 func (t *Token) Deserialize(bytes []byte) error {
 	return json.Unmarshal(bytes, t)
 }
 
+// GetCommitment returns the Pedersen commitment in Token
 func (t *Token) GetCommitment() *math.G1 {
 	return t.Data
 }
 
+// GetTokenInTheClear returns Token information in the clear
 func (t *Token) GetTokenInTheClear(inf *TokenInformation, pp *crypto.PublicParams) (*token2.Token, error) {
 	com, err := common.ComputePedersenCommitment([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(inf.Type)), inf.Value, inf.BlindingFactor}, pp.ZKATPedParams, math.Curves[pp.Curve])
 	if err != nil {
@@ -86,7 +94,7 @@ func GetTokensWithWitness(values []uint64, ttype string, pp []*math.G1, c *math.
 	return tokens, tw, nil
 }
 
-// information underlying token: this includes owner and token data witness
+// TokenInformation is used to produce privacy-preserving transfers
 type TokenInformation struct {
 	Type           string
 	Value          *math.Zr
@@ -95,21 +103,24 @@ type TokenInformation struct {
 	Issuer         []byte
 }
 
+// Deserialize unmarshals TokenInformation
 func (inf *TokenInformation) Deserialize(b []byte) error {
 	return json.Unmarshal(b, inf)
 }
 
+// Serialize unmarshals TokenInformation
 func (inf *TokenInformation) Serialize() ([]byte, error) {
 	return json.Marshal(inf)
 }
 
-// witness of token data
+// TokenDataWitness contains the opening of Data in Token
 type TokenDataWitness struct {
 	Type           string
 	Value          *math.Zr
 	BlindingFactor *math.Zr
 }
 
+// Clone produces a copy of TokenDataWitness
 func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
 	return &TokenDataWitness{
 		Type:           tdw.Type,
@@ -118,7 +129,7 @@ func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
 	}
 }
 
-// NewTokenDataWitness returns an array of TokenDataWitness
+// NewTokenDataWitness returns an array of TokenDataWitness that corresponds to the passed argumments
 func NewTokenDataWitness(ttype string, values, bfs []*math.Zr) []*TokenDataWitness {
 	witness := make([]*TokenDataWitness, len(values))
 	for i, v := range values {
