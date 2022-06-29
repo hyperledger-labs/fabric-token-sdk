@@ -114,7 +114,7 @@ func (i *IssueAction) GetMetadata() []byte {
 // TransferAction encodes a fabtoken transfer
 type TransferAction struct {
 	// sender's ecdsa public key
-	// a transfer action has a single sender (//todo check is this needs top be changed)
+	// a transfer action has a single sender (//todo check is this needs to be changed)
 	Sender view.Identity
 	// identifier of token to be transferred
 	Inputs []string
