@@ -50,14 +50,17 @@ func (v *PublicParamsManager) ForceFetch() error {
 	return nil
 }
 
+// AuditorIdentity returns the identity of the auditor
 func (v *PublicParamsManager) AuditorIdentity() view.Identity {
 	return v.PublicParams().Auditor
 }
 
+// Issuers returns the array of admissible issuers
 func (v *PublicParamsManager) Issuers() [][]byte {
 	return v.PublicParams().Issuers
 }
 
+// PublicParams returns the system public parameters
 func (v *PublicParamsManager) PublicParams() *PublicParams {
 	if v.pp == nil {
 		if v.publicParamsLoader == nil {
