@@ -31,6 +31,12 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator
 }
 
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
+	if v.pp == nil || v.deserializer == nil{
+		return nil, errors.New("please initialize validator")
+	}
+	if signatureProvider == nil{
+		return nil, errors.New("please provide a non-nil signature provider")
+	}
 	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
@@ -102,7 +108,7 @@ func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignaturePro
 	if v.pp.AuditorIdentity() != nil {
 		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.AuditorIdentity())
 		if err != nil {
-			return errors.Errorf("failed to deserialize auditor's public key")
+			return errors.New("failed to deserialize auditor's public key")
 		}
 
 		return signatureProvider.HasBeenSignedBy(v.pp.AuditorIdentity(), verifier)
@@ -161,6 +167,7 @@ func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*Tra
 	return nil
 }
 
+// verifyIssue checks if all outputs in IssueAction are well-formed (no zero-value outputs)
 func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	if issue.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")
@@ -179,6 +186,8 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	return nil
 }
 
+// VerifyTransfer checks that sum of inputTokens in TransferAction equals sum of outputs in TransferAction
+// It also checks that all outputs and inputs have the same type
 func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
 	if tr.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")
@@ -229,6 +238,9 @@ type backend struct {
 	signatures [][]byte
 }
 
+// HasBeenSignedBy checks if a given message has been signed by the signing identity matching
+// the passed verifier
+// todo shall we remove id from the parameters
 func (b *backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) error {
 	if b.index >= len(b.signatures) {
 		return errors.Errorf("invalid state, insufficient number of signatures")
@@ -283,6 +295,7 @@ func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
 	return res, nil
 }
 
+// CheckSendersSignatures verify if a TokenRequest was signed by the owners of the inputs in the TokenRequest
 func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIndex int, signatureProvider driver.SignatureProvider) error {
 	for _, tok := range inputTokens {
 		logger.Debugf("check sender [%d][%s]", actionIndex, view.Identity(tok.Owner.Raw).UniqueID())
