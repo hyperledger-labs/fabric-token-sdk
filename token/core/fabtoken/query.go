@@ -29,7 +29,6 @@ func (s *Service) HistoryIssuedTokens() (*token2.IssuedTokens, error) {
 	return s.QE.ListHistoryIssuedTokens()
 }
 
-
 // DeserializeToken returns a deserialized token and the identity of its issuer
 func (s *Service) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error) {
 	tok := &token2.Token{}

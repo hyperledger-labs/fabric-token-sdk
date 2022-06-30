@@ -56,14 +56,16 @@ func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	panic("not supported")
 }
 
+// enrollmentService returns enrollment IDs behind the owners of token
 type enrollmentService struct {
 }
 
+// NewEnrollmentIDDeserializer returns an enrollmentService
 func NewEnrollmentIDDeserializer() *enrollmentService {
 	return &enrollmentService{}
 }
 
-// GetEnrollmentID returns the enrollementID associated with the identity matched to the passed auditInfo
+// GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
 func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return string(auditInfo), nil
 }
