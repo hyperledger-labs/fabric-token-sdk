@@ -12,15 +12,20 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+// PublicParamsManager loads fabtoken public parameters
 type PublicParamsManager struct {
-	pp                 *PublicParams
+	// fabtoken public parameters
+	pp *PublicParams
+	// a loader for fabric public parameters
 	publicParamsLoader PublicParamsLoader
 }
 
+// NewPublicParamsManager initializes a PublicParamsManager with the passed PublicParamsLoader
 func NewPublicParamsManager(publicParamsLoader PublicParamsLoader) *PublicParamsManager {
 	return &PublicParamsManager{publicParamsLoader: publicParamsLoader}
 }
 
+// NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
 func NewPublicParamsManagerFromParams(pp *PublicParams) *PublicParamsManager {
 	if pp == nil {
 		panic("public parameters must be non-nil")
@@ -28,14 +33,19 @@ func NewPublicParamsManagerFromParams(pp *PublicParams) *PublicParamsManager {
 	return &PublicParamsManager{pp: pp}
 }
 
+// PublicParameters returns the public parameters of PublicParamsManager
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.PublicParams()
 }
 
+// NewCertifierKeyPair returns the key pair of a certifier, in this instantiation, the method panics
+// fabtoken does not support token certification
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
 	panic("NewCertifierKeyPair cannot be called from fabtoken")
 }
 
+// ForceFetch sets the public parameters of the PublicParamsManager to the public parameters
+// associated with its PublicParamsLoader
 func (v *PublicParamsManager) ForceFetch() error {
 	if v.publicParamsLoader == nil {
 		return errors.New("public parameters loader not set")
@@ -60,7 +70,7 @@ func (v *PublicParamsManager) Issuers() [][]byte {
 	return v.PublicParams().Issuers
 }
 
-// PublicParams returns the system public parameters
+// PublicParams returns the fabtoken public parameters
 func (v *PublicParamsManager) PublicParams() *PublicParams {
 	if v.pp == nil {
 		if v.publicParamsLoader == nil {
