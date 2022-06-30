@@ -18,11 +18,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// Validator checks the validity of fabtoken TokenRequest
 type Validator struct {
-	pp           *PublicParams
+	// fabtoken public parameters
+	pp *PublicParams
+	// deserializer for identities used in fabtoken
 	deserializer driver.Deserializer
 }
 
+// NewValidator initializes a Validator with the passed parameters
 func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator {
 	return &Validator{
 		pp:           pp,
@@ -30,6 +34,7 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator
 	}
 }
 
+// VerifyTokenRequest validates the passed token request against data in the ledger, the signature provided and the binding
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if v.pp == nil || v.deserializer == nil {
 		return nil, errors.New("please initialize validator")
@@ -37,17 +42,21 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	if signatureProvider == nil {
 		return nil, errors.New("please provide a non-nil signature provider")
 	}
+	// check if the token request is signed by the authorized auditor
 	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
+	// get issue and transfer actions from the token request
 	ia, ta, err := UnmarshalIssueTransferActions(tr, binding)
 	if err != nil {
 		return nil, err
 	}
+	// verify issue actions
 	err = v.VerifyIssues(ia, signatureProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", binding)
 	}
+	// verify transfer actions
 	err = v.VerifyTransfers(ledger, ta, signatureProvider)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", binding)
@@ -60,14 +69,16 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	for _, action := range ta {
 		actions = append(actions, action)
 	}
-
+	// actions are returned and will be used later to update the ledger
 	return actions, nil
 }
 
+// VerifyTokenRequestFromRaw validates the raw token request
 func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
 	if len(raw) == 0 {
 		return nil, errors.New("empty token request")
 	}
+	// un-marshal token request
 	tr := &driver.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
@@ -89,6 +100,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	}
 	signed := append(bytes, []byte(binding)...)
 	var signatures [][]byte
+	// audit is enabled
 	if len(v.pp.AuditorIdentity()) != 0 {
 		signatures = append(signatures, tr.AuditorSignatures...)
 		signatures = append(signatures, tr.Signatures...)
@@ -104,6 +116,8 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
+// VerifyAuditorSignature checks if the content of the token request concatenated with the binding
+// was signed by the authorized auditor
 func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
 	if v.pp.AuditorIdentity() != nil {
 		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.AuditorIdentity())
@@ -116,15 +130,18 @@ func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignaturePro
 	return nil
 }
 
+// VerifyIssues check if the issued tokens are valid and if the content of the token request concatenated
+// with the binding was signed by one of the authorized issuers
 func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
+		// verify that issue is valid
 		if err := v.verifyIssue(issue); err != nil {
-			return errors.Wrapf(err, "failed to verify issue action")
+			return errors.Wrap(err, "failed to verify issue action")
 		}
 
 		issuers := v.pp.Issuers
 		if len(issuers) != 0 {
-			// Check that issue.Issuers is in issuers
+			// check that issuer of this issue action is authorized
 			found := false
 			for _, issuer := range issuers {
 				if bytes.Equal(issue.Issuer, issuer) {
@@ -137,10 +154,12 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 			}
 		}
 
+		// deserialize verifier for the issuer
 		verifier, err := v.deserializer.GetIssuerVerifier(issue.Issuer)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
 		}
+		// verify if the token request concatenated with the binding was signed by the issuer
 		if err := signatureProvider.HasBeenSignedBy(issue.Issuer, verifier); err != nil {
 			return errors.Wrapf(err, "failed verifying signature")
 		}
@@ -148,26 +167,35 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 	return nil
 }
 
+// VerifyTransfers check if the created output tokens are valid and if the content of the token request concatenated
+// with the binding was signed by the owners of the input tokens
 func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
 	for i, t := range transferActions {
+		// get inputs used in the current transfer action
 		inputTokens, err := RetrieveInputsFromTransferAction(t, ledger)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed to retrieve input from transfer action at index %d", i)
 		}
+		// verify if the token request concatenated with the binding was signed by the owners of the inputs
+		// in the current transfer action
 		err = v.CheckSendersSignatures(inputTokens, i, signatureProvider)
 		if err != nil {
 			return err
 		}
+		// verify if input tokens and output tokens in the current transfer action have the same type
+		// verify if sum of input tokens  in the current transfer action equals the sum of output tokens
+		// in the current transfer action
 		if err := v.VerifyTransfer(inputTokens, t); err != nil {
-			return errors.Wrapf(err, "failed to verify transfer action")
+			return errors.Wrapf(err, "failed to verify transfer action at index %d", i)
 		}
 	}
 	return nil
 }
 
-// verifyIssue checks if all outputs in IssueAction are well-formed (no zero-value outputs)
+// verifyIssue checks if all outputs in IssueAction are valid (no zero-value outputs)
+// todo shall we add restrictions on max value?
 func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	if issue.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")
@@ -210,6 +238,7 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
 		}
 		inputSum.Add(q)
+		// check that all inputs have the same type
 		if input.Type != typ {
 			return errors.Errorf("input type %s does not match type %s", input.Type, typ)
 		}
@@ -221,10 +250,12 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
 		}
 		outputSum.Add(q)
+		// check that all outputs have the same type and it is the same type as inputs
 		if out.Type != typ {
 			return errors.Errorf("output type %s does not match type %s", out.Type, typ)
 		}
 	}
+	// check equality of sum of inputs and outputs
 	if inputSum.Cmp(outputSum) != 0 {
 		return errors.Errorf("input sum %v does not match output sum %v", inputSum, outputSum)
 	}
@@ -232,9 +263,11 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 }
 
 type backend struct {
-	getState   driver.GetStateFnc
-	message    []byte
-	index      int
+	getState driver.GetStateFnc
+	// signed message
+	message []byte
+	index   int
+	// signatures on message
 	signatures [][]byte
 }
 
@@ -259,6 +292,7 @@ func (b *backend) Signatures() [][]byte {
 	return b.signatures
 }
 
+// UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in the passed TokenRequest
 func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
 	ia, err := unmarshalIssueActions(tr.Issues)
 	if err != nil {
@@ -271,6 +305,7 @@ func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*
 	return ia, ta, nil
 }
 
+// unmarshalTransferActions returns an array of deserialized TransferAction from raw bytes
 func unmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
 	res := make([]*TransferAction, len(raw))
 	for i := 0; i < len(raw); i++ {
@@ -283,6 +318,7 @@ func unmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
 	return res, nil
 }
 
+// unmarshalIssueActions returns an array of deserialized IssueAction from raw bytes
 func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
 	res := make([]*IssueAction, len(raw))
 	for i := 0; i < len(raw); i++ {
@@ -311,11 +347,12 @@ func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIn
 	return nil
 }
 
+// RetrieveInputsFromTransferAction retrieves from the passed ledger the inputs identified in TransferAction
 func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) ([]*token2.Token, error) {
 	var inputTokens []*token2.Token
 	inputs, err := t.GetInputs()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to retrieve input IDs")
+		return nil, errors.Wrap(err, "failed to retrieve input IDs")
 	}
 	for _, in := range inputs {
 		bytes, err := ledger.GetState(in)
