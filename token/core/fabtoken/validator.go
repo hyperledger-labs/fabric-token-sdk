@@ -31,10 +31,10 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator
 }
 
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
-	if v.pp == nil || v.deserializer == nil{
+	if v.pp == nil || v.deserializer == nil {
 		return nil, errors.New("please initialize validator")
 	}
-	if signatureProvider == nil{
+	if signatureProvider == nil {
 		return nil, errors.New("please provide a non-nil signature provider")
 	}
 	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {

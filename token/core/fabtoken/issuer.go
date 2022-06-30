@@ -54,6 +54,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		nil
 }
 
+// VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
 func (s *Service) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
 	// TODO:
 	return nil
