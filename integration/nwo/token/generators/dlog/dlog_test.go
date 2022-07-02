@@ -10,14 +10,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog/mock"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/onsi/gomega"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 )
 
 //go:generate counterfeiter -o mock/token_platform.go -fake-name TokenPlatform . tokenPlatform
