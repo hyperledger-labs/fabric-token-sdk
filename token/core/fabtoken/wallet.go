@@ -78,7 +78,11 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID, _ := s.IP.LookupIdentifier(driver.OwnerRole, id)
+	identity, walletID, err := s.IP.LookupIdentifier(driver.OwnerRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup owner wallet for [%s]: %s", id, err)
+		return nil
+	}
 	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
 		if w.Contains(identity) || w.ID() == wID {
@@ -124,7 +128,11 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID, _ := s.IP.LookupIdentifier(driver.IssuerRole, id)
+	identity, walletID, err := s.IP.LookupIdentifier(driver.IssuerRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup issuer wallet for [%s]: %s", id, err)
+		return nil
+	}
 	for _, w := range s.IssuerWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found issuer wallet [%s]", identity.String())
@@ -163,7 +171,11 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID, _ := s.IP.LookupIdentifier(driver.AuditorRole, id)
+	identity, walletID, err := s.IP.LookupIdentifier(driver.AuditorRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup auditor wallet for [%s]: %s", id, err)
+		return nil
+	}
 	for _, w := range s.AuditorWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found auditor wallet [%s]", identity.String())

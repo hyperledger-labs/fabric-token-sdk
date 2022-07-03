@@ -96,7 +96,11 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID, _ := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
+	identity, walletID, err := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup onwer wallet [%s]: %s", id, err)
+		return nil
+	}
 	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
 		if w.ID() == wID || (len(identity) != 0 && w.Contains(identity)) {
@@ -131,7 +135,11 @@ func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID, _ := s.identityProvider.LookupIdentifier(api2.IssuerRole, id)
+	identity, walletID, err := s.identityProvider.LookupIdentifier(api2.IssuerRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup issuer wallet [%s]: %s", id, err)
+		return nil
+	}
 	for _, w := range s.IssuerWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found issuer wallet [%s:%s]", identity, walletID)
@@ -170,7 +178,11 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID, _ := s.identityProvider.LookupIdentifier(api2.AuditorRole, id)
+	identity, walletID, err := s.identityProvider.LookupIdentifier(api2.AuditorRole, id)
+	if err != nil {
+		logger.Errorf("failed to get auditor wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
+	}
 	for _, w := range s.AuditorWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found auditor wallet [%s:%s]", identity, walletID)
