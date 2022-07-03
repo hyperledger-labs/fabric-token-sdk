@@ -58,11 +58,11 @@ func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDU
 func (p *Provider) GetIdentityInfo(role driver.IdentityRole, id string) (driver.IdentityInfo, error) {
 	wallet, ok := p.wallets[role]
 	if !ok {
-		return nil, fmt.Errorf("wallet not found for role [%d]", role)
+		return nil, errors.Errorf("wallet not found for role [%d]", role)
 	}
 	info := wallet.GetIdentityInfo(id)
 	if info == nil {
-		return nil, nil
+		return nil, errors.Errorf("identity info not found for id [%s]", id)
 	}
 	return &Info{IdentityInfo: info, Provider: p}, nil
 }
