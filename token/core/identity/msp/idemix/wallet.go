@@ -23,7 +23,7 @@ type localMembership interface {
 	RegisterIdentity(id string, path string) error
 }
 
-// wallet maps identifiers of different sorts to identities
+// wallet maps an identifier to an identity
 type wallet struct {
 	networkID       string
 	nodeIdentity    view.Identity
@@ -38,36 +38,34 @@ func NewWallet(networkID string, nodeIdentity view.Identity, localMembership loc
 	}
 }
 
-// GetIdentityInfo get in input an identifier and returns:
-// - The corresponding long term identifier
-// - The corresponding enrollment ID
-// - A function that returns the identity and its audit info.
-func (i *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
+// GetIdentityInfo returns the identity information for the given identity identifier
+func (w *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
+		logger.Debugf("[%s] getting info for [%s]", w.networkID, id)
 	}
 
-	info, err := i.localMembership.GetIdentityInfo(id, nil)
+	info, err := w.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", i.networkID, id, err)
+			logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", w.networkID, id, err)
 		}
 		return nil
 	}
 	return info
 }
 
-func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
-	defaultID := i.localMembership.DefaultNetworkIdentity()
-	defaultIdentifier := i.localMembership.GetDefaultIdentifier()
+// MapToID returns the identity for the given argument
+func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
+	defaultID := w.localMembership.DefaultNetworkIdentity()
+	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
-			i.networkID,
+			w.networkID,
 			v,
 			string(defaultID),
 			defaultID.String(),
-			i.nodeIdentity.String(),
+			w.nodeIdentity.String(),
 		)
 	}
 
@@ -93,12 +91,12 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 				logger.Debugf("[AnonymousIdentity] passed 'idemix' identity")
 			}
 			return nil, defaultIdentifier
-		case id.Equal(i.nodeIdentity):
+		case id.Equal(w.nodeIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is the node identity (same bytes)")
 			}
 			return nil, defaultIdentifier
-		case i.localMembership.IsMe(id):
+		case w.localMembership.IsMe(id):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is me")
 			}
@@ -109,7 +107,7 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 			logger.Debugf("[AnonymousIdentity] looking up identifier for identity as label [%d,%s]", label)
 		}
 
-		if idIdentifier, err := i.localMembership.GetIdentifier(id); err == nil {
+		if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
 			return nil, idIdentifier
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -132,13 +130,13 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 			return nil, defaultIdentifier
 		case defaultID.Equal(view.Identity(label)):
 			return nil, defaultIdentifier
-		case i.nodeIdentity.Equal(view.Identity(label)):
+		case w.nodeIdentity.Equal(view.Identity(label)):
 			return nil, defaultIdentifier
-		case i.localMembership.IsMe(view.Identity(label)):
+		case w.localMembership.IsMe(view.Identity(label)):
 			return nil, defaultIdentifier
 		}
 
-		if idIdentifier, err := i.localMembership.GetIdentifier(view.Identity(label)); err == nil {
+		if idIdentifier, err := w.localMembership.GetIdentifier(view.Identity(label)); err == nil {
 			return nil, idIdentifier
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -150,6 +148,7 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 	}
 }
 
-func (i *wallet) RegisterIdentity(id string, path string) error {
-	return i.localMembership.RegisterIdentity(id, path)
+// RegisterIdentity registers the given identity
+func (w *wallet) RegisterIdentity(id string, path string) error {
+	return w.localMembership.RegisterIdentity(id, path)
 }

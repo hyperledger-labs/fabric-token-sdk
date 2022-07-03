@@ -38,7 +38,8 @@ type IdentityType int
 const (
 	// LongTermIdentity is the type of the long term identity (x509)
 	LongTermIdentity IdentityType = iota
-	// AnonymousIdentity is the type of the anonymous identity (Idemix
+	// AnonymousIdentity is the type of the long term anonymous identity from
+	// which anonymous and unlikable pseudonyms are derived (Idemix)
 	AnonymousIdentity
 )
 

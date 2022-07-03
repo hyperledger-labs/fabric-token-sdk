@@ -8,7 +8,6 @@ package nogh
 
 import (
 	"fmt"
-	"runtime/debug"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -97,7 +96,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
+	identity, walletID, _ := s.identityProvider.LookupIdentifier(api2.OwnerRole, id)
 	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
 		if w.ID() == wID || (len(identity) != 0 && w.Contains(identity)) {
@@ -107,15 +106,16 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 	}
 
 	// Create the wallet
-	if idInfo := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID); idInfo != nil {
-		w := newOwnerWallet(s, wID, idInfo)
-		s.OwnerWallets = append(s.OwnerWallets, w)
-		logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
-		return w
+	idInfo, err := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID)
+	if err != nil {
+		logger.Errorf("failed to get owner wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
 	}
 
-	logger.Debugf("no owner wallet found for [%s:%s:%s] [%s]", id, identity, walletID, debug.Stack())
-	return nil
+	w := newOwnerWallet(s, wID, idInfo)
+	s.OwnerWallets = append(s.OwnerWallets, w)
+	logger.Debugf("created owner wallet [%s:%s]", identity, walletID)
+	return w
 }
 
 func (s *Service) IssuerWallet(id string) api2.IssuerWallet {
@@ -131,7 +131,7 @@ func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID := s.identityProvider.LookupIdentifier(api2.IssuerRole, id)
+	identity, walletID, _ := s.identityProvider.LookupIdentifier(api2.IssuerRole, id)
 	for _, w := range s.IssuerWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found issuer wallet [%s:%s]", identity, walletID)
@@ -140,19 +140,21 @@ func (s *Service) issuerWallet(id interface{}) api2.IssuerWallet {
 	}
 
 	// Create the wallet
-	if idInfo := s.identityProvider.GetIdentityInfo(api2.IssuerRole, walletID); idInfo != nil {
-		id, _, err := idInfo.Get()
-		if err != nil {
-			panic(err)
-		}
-		w := newIssuerWallet(s, walletID, id)
-		s.IssuerWallets = append(s.IssuerWallets, w)
-		logger.Debugf("created issuer wallet [%s:%s]", identity, walletID)
-		return w
+	idInfo, err := s.identityProvider.GetIdentityInfo(api2.IssuerRole, walletID)
+	if err != nil {
+		logger.Errorf("failed to get issuer wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
 	}
 
-	logger.Debugf("no issuer wallet found for [%s:%s]", identity, walletID)
-	return nil
+	idInfoIdentity, _, err := idInfo.Get()
+	if err != nil {
+		logger.Errorf("failed to get issuer wallet identity for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
+	}
+	w := newIssuerWallet(s, walletID, idInfoIdentity)
+	s.IssuerWallets = append(s.IssuerWallets, w)
+	logger.Debugf("created issuer wallet [%s:%s]", identity, walletID)
+	return w
 }
 
 func (s *Service) AuditorWallet(id string) api2.AuditorWallet {
@@ -168,7 +170,7 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID := s.identityProvider.LookupIdentifier(api2.AuditorRole, id)
+	identity, walletID, _ := s.identityProvider.LookupIdentifier(api2.AuditorRole, id)
 	for _, w := range s.AuditorWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found auditor wallet [%s:%s]", identity, walletID)
@@ -177,19 +179,20 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 	}
 
 	// Create the wallet
-	if idInfo := s.identityProvider.GetIdentityInfo(api2.AuditorRole, walletID); idInfo != nil {
-		id, _, err := idInfo.Get()
-		if err != nil {
-			panic(err)
-		}
-		w := newAuditorWallet(s, walletID, id)
-		s.AuditorWallets = append(s.AuditorWallets, w)
-		logger.Debugf("created auditor wallet [%s:%s]", identity, walletID)
-		return w
+	idInfo, err := s.identityProvider.GetIdentityInfo(api2.AuditorRole, walletID)
+	if err != nil {
+		logger.Errorf("failed to get auditor wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
 	}
 
-	logger.Debugf("no auditor wallet found for [%s:%s]", identity, walletID)
-	return nil
+	idInfoIdentity, _, err := idInfo.Get()
+	if err != nil {
+		logger.Errorf("failed to get auditor wallet identity for [%s:%s]: %s", walletID, identity.String(), err)
+	}
+	w := newAuditorWallet(s, walletID, idInfoIdentity)
+	s.AuditorWallets = append(s.AuditorWallets, w)
+	logger.Debugf("created auditor wallet [%s:%s]", identity, walletID)
+	return w
 }
 
 func (s *Service) CertifierWallet(id string) api2.CertifierWallet {

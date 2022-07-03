@@ -13,7 +13,7 @@ import (
 
 // Wallet helps to find identity identifiers and retrieve the corresponding identities
 type Wallet interface {
-	// MapToID returns the identity identifier for the given argument
+	// MapToID returns the identity for the given argument
 	MapToID(v interface{}) (view.Identity, string)
 	// GetIdentityInfo returns the identity information for the given identity identifier
 	GetIdentityInfo(id string) driver.IdentityInfo
@@ -29,7 +29,7 @@ func NewWallets() Wallets {
 	return make(Wallets)
 }
 
-// Put associated a wallet to a given identity role
+// Put associates a wallet to a given identity role
 func (m Wallets) Put(usage driver.IdentityRole, wallet Wallet) {
 	m[usage] = wallet
 }

@@ -24,7 +24,7 @@ const (
 	CertifierRole
 )
 
-// IdentityInfo models and Identity inside the Identity Provider
+// IdentityInfo models an Identity inside the Identity Provider
 type IdentityInfo interface {
 	// ID returns the ID of the Identity
 	ID() string
@@ -37,10 +37,10 @@ type IdentityInfo interface {
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.
 type IdentityProvider interface {
-	LookupIdentifier(role IdentityRole, v interface{}) (view.Identity, string)
+	LookupIdentifier(role IdentityRole, v interface{}) (view.Identity, string, error)
 
 	// GetIdentityInfo returns the long-term identity info associated to the passed id, nil if not found.
-	GetIdentityInfo(role IdentityRole, id string) IdentityInfo
+	GetIdentityInfo(role IdentityRole, id string) (IdentityInfo, error)
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)

@@ -34,106 +34,106 @@ type WalletManager struct {
 	managementService *ManagementService
 }
 
-func (t *WalletManager) IsMe(id view.Identity) bool {
-	s, err := t.managementService.tms.IdentityProvider().GetSigner(id)
+func (wm *WalletManager) IsMe(id view.Identity) bool {
+	s, err := wm.managementService.tms.IdentityProvider().GetSigner(id)
 	return err == nil && s != nil
 }
 
 // RegisterOwnerWallet registers a new owner wallet with type passed id
-func (t *WalletManager) RegisterOwnerWallet(id string, path string) error {
-	return t.managementService.tms.RegisterOwnerWallet(id, path)
+func (wm *WalletManager) RegisterOwnerWallet(id string, path string) error {
+	return wm.managementService.tms.RegisterOwnerWallet(id, path)
 }
 
 // RegisterRecipientIdentity registers a new recipient identity
-func (t *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
-	if err := t.managementService.tms.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
+func (wm *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
+	if err := wm.managementService.tms.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
 		return err
 	}
-	return t.managementService.tms.RegisterRecipientIdentity(id, auditInfo, metadata)
+	return wm.managementService.tms.RegisterRecipientIdentity(id, auditInfo, metadata)
 }
 
 // Wallet returns the wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) Wallet(identity view.Identity) *Wallet {
-	w := t.managementService.tms.Wallet(identity)
+func (wm *WalletManager) Wallet(identity view.Identity) *Wallet {
+	w := wm.managementService.tms.Wallet(identity)
 	if w == nil {
 		return nil
 	}
-	return &Wallet{w: w, managementService: t.managementService}
+	return &Wallet{w: w, managementService: wm.managementService}
 }
 
 // OwnerWallet returns the owner wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) OwnerWallet(id string) *OwnerWallet {
-	w := t.managementService.tms.OwnerWallet(id)
+func (wm *WalletManager) OwnerWallet(id string) *OwnerWallet {
+	w := wm.managementService.tms.OwnerWallet(id)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // OwnerWalletByIdentity returns the owner wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWallet {
-	w := t.managementService.tms.OwnerWalletByIdentity(identity)
+func (wm *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWallet {
+	w := wm.managementService.tms.OwnerWalletByIdentity(identity)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // IssuerWallet returns the issuer wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) IssuerWallet(id string) *IssuerWallet {
-	w := t.managementService.tms.IssuerWallet(id)
+func (wm *WalletManager) IssuerWallet(id string) *IssuerWallet {
+	w := wm.managementService.tms.IssuerWallet(id)
 	if w == nil {
 		return nil
 	}
-	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // IssuerWalletByIdentity returns the issuer wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWallet {
-	w := t.managementService.tms.IssuerWalletByIdentity(identity)
+func (wm *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWallet {
+	w := wm.managementService.tms.IssuerWalletByIdentity(identity)
 	if w == nil {
 		return nil
 	}
-	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // AuditorWallet returns the auditor wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) AuditorWallet(id string) *AuditorWallet {
-	w := t.managementService.tms.AuditorWallet(id)
+func (wm *WalletManager) AuditorWallet(id string) *AuditorWallet {
+	w := wm.managementService.tms.AuditorWallet(id)
 	if w == nil {
 		return nil
 	}
-	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // CertifierWallet returns the certifier wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) CertifierWallet(id string) *CertifierWallet {
-	w := t.managementService.tms.CertifierWallet(id)
+func (wm *WalletManager) CertifierWallet(id string) *CertifierWallet {
+	w := wm.managementService.tms.CertifierWallet(id)
 	if w == nil {
 		return nil
 	}
-	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // CertifierWalletByIdentity returns the certifier wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
-func (t *WalletManager) CertifierWalletByIdentity(identity view.Identity) *CertifierWallet {
-	w := t.managementService.tms.CertifierWalletByIdentity(identity)
+func (wm *WalletManager) CertifierWalletByIdentity(identity view.Identity) *CertifierWallet {
+	w := wm.managementService.tms.CertifierWalletByIdentity(identity)
 	if w == nil {
 		return nil
 	}
-	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: t.managementService}, w: w}
+	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.

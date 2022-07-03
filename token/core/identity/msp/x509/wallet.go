@@ -23,7 +23,7 @@ type localMembership interface {
 	RegisterIdentity(id string, path string) error
 }
 
-// wallet maps identifiers of different sorts to identities
+// wallet maps an identifier to an identity
 type wallet struct {
 	networkID       string
 	nodeIdentity    view.Identity
@@ -38,36 +38,34 @@ func NewWallet(networkID string, nodeIdentity view.Identity, localMembership loc
 	}
 }
 
-// GetIdentityInfo get in input an identifier and returns:
-// - The corresponding long term identifier
-// - The corresponding enrollment ID
-// - A function that returns the identity and its audit info.
-func (i *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
+// GetIdentityInfo returns the identity information for the given identity identifier
+func (w *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] getting info for [%s]", i.networkID, id)
+		logger.Debugf("[%s] getting info for [%s]", w.networkID, id)
 	}
 
-	info, err := i.localMembership.GetIdentityInfo(id, nil)
+	info, err := w.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] failed to get long term identity for [%s]: %s", i.networkID, id, err)
+			logger.Debugf("[%s] failed to get long term identity for [%s]: %s", w.networkID, id, err)
 		}
 		return nil
 	}
 	return info
 }
 
-func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
-	defaultID := i.localMembership.DefaultNetworkIdentity()
-	defaultIdentifier := i.localMembership.GetDefaultIdentifier()
+// MapToID returns the identity for the given argument
+func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
+	defaultID := w.localMembership.DefaultNetworkIdentity()
+	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
-			i.networkID,
+			w.networkID,
 			v,
 			string(defaultID),
 			defaultID.String(),
-			i.nodeIdentity.String(),
+			w.nodeIdentity.String(),
 		)
 	}
 
@@ -86,10 +84,10 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 			return defaultID, defaultIdentifier
 		case id.Equal(defaultID):
 			return defaultID, defaultIdentifier
-		case id.Equal(i.nodeIdentity):
+		case id.Equal(w.nodeIdentity):
 			return defaultID, defaultIdentifier
-		case i.localMembership.IsMe(id):
-			if idIdentifier, err := i.localMembership.GetIdentifier(id); err == nil {
+		case w.localMembership.IsMe(id):
+			if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
 				return id, idIdentifier
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -101,7 +99,7 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 		}
 
 		label := string(id)
-		if info, err := i.localMembership.GetIdentityInfo(label, nil); err == nil {
+		if info, err := w.localMembership.GetIdentityInfo(label, nil); err == nil {
 			id, _, err := info.Get()
 			if err != nil {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -111,7 +109,7 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 			}
 			return id, label
 		}
-		if idIdentifier, err := i.localMembership.GetIdentifier(id); err == nil {
+		if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -135,11 +133,11 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 			return defaultID, defaultIdentifier
 		case defaultID.Equal(view.Identity(label)):
 			return defaultID, defaultIdentifier
-		case i.nodeIdentity.Equal(view.Identity(label)):
+		case w.nodeIdentity.Equal(view.Identity(label)):
 			return defaultID, defaultIdentifier
-		case i.localMembership.IsMe(view.Identity(label)):
+		case w.localMembership.IsMe(view.Identity(label)):
 			id := view.Identity(label)
-			if idIdentifier, err := i.localMembership.GetIdentifier(id); err == nil {
+			if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
 				return id, idIdentifier
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -148,7 +146,7 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 			return id, ""
 		}
 
-		if info, err := i.localMembership.GetIdentityInfo(label, nil); err == nil {
+		if info, err := w.localMembership.GetIdentityInfo(label, nil); err == nil {
 			id, _, err := info.Get()
 			if err != nil {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -167,6 +165,7 @@ func (i *wallet) MapToID(v interface{}) (view.Identity, string) {
 	}
 }
 
-func (i *wallet) RegisterIdentity(id string, path string) error {
-	return i.localMembership.RegisterIdentity(id, path)
+// RegisterIdentity registers the given identity
+func (w *wallet) RegisterIdentity(id string, path string) error {
+	return w.localMembership.RegisterIdentity(id, path)
 }

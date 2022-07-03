@@ -55,28 +55,28 @@ func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDU
 	}
 }
 
-func (p *Provider) GetIdentityInfo(usage driver.IdentityRole, id string) driver.IdentityInfo {
-	wallet, ok := p.wallets[usage]
+func (p *Provider) GetIdentityInfo(role driver.IdentityRole, id string) (driver.IdentityInfo, error) {
+	wallet, ok := p.wallets[role]
 	if !ok {
-		panic(fmt.Sprintf("wallet not found for usage [%d]", usage))
+		return nil, fmt.Errorf("wallet not found for role [%d]", role)
 	}
 	info := wallet.GetIdentityInfo(id)
 	if info == nil {
-		return nil
+		return nil, nil
 	}
-	return &Info{IdentityInfo: info, Provider: p}
+	return &Info{IdentityInfo: info, Provider: p}, nil
 }
 
-func (p *Provider) LookupIdentifier(usage driver.IdentityRole, v interface{}) (view.Identity, string) {
-	wallet, ok := p.wallets[usage]
+func (p *Provider) LookupIdentifier(role driver.IdentityRole, v interface{}) (view.Identity, string, error) {
+	wallet, ok := p.wallets[role]
 	if !ok {
-		panic(fmt.Sprintf("wallet not found for usage [%d]", usage))
+		return nil, "", fmt.Errorf("wallet not found for role [%d]", role)
 	}
 	id, label := wallet.MapToID(v)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
 	}
-	return id, label
+	return id, label, nil
 }
 
 func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
@@ -234,7 +234,7 @@ func (p *Provider) AddDeserializer(d Deserializer) {
 }
 
 // Info wraps a driver.IdentityInfo to further register the audit info,
-// and bind the new identity to the default FSC node identity
+// and binds the new identity to the default FSC node identity
 type Info struct {
 	driver.IdentityInfo
 	Provider *Provider
