@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.core.identity")
+var logger = flogging.MustGetLogger("token-sdk.core.identity.msp.x509")
 
 // MSPIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
 type MSPIdentityDeserializer struct{}

@@ -24,7 +24,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.idemix")
+var logger = flogging.MustGetLogger("token-sdk.core.identity.msp.idemix")
 
 type Deserializer struct {
 	*Common
