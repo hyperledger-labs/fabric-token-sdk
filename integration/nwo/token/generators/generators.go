@@ -24,7 +24,7 @@ type TokenPlatform interface {
 	PublicParameters(tms *topology.TMS) []byte
 	// PublicParametersFile returns the path to the public parameters file of the given TMS
 	PublicParametersFile(tms *topology.TMS) string
-	// PublicParametersDir return the path to the directory containing the public parameters
+	// PublicParametersDir returns the path to the directory containing the public parameters
 	PublicParametersDir() string
 	// GetContext returns the NWO context
 	GetContext() api2.Context
