@@ -7,6 +7,7 @@ package fabtoken
 
 import (
 	"encoding/json"
+
 	"github.com/pkg/errors"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
