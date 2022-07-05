@@ -13,11 +13,13 @@ import (
 	"encoding/json"
 	"time"
 
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -143,6 +145,51 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 	}
 
 	return preImage, nil
+}
+
+func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error {
+	// TODO: handle this properly
+	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
+	}
+	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	if err != nil {
+		return err
+	}
+	if owner.Type != ScriptTypeExchange {
+		return errors.Errorf("invalid owner type, expected exchange script")
+	}
+	script := &Script{}
+	err = json.Unmarshal(owner.Identity, script)
+	if err != nil {
+		return errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+	}
+
+	// Register the signer for the reclaim
+	sigService := t.TokenService().SigService()
+	signer, err := sigService.GetSigner(script.Sender)
+	if err != nil {
+		return err
+	}
+	verifier, err := sigService.OwnerVerifier(script.Sender)
+	if err != nil {
+		return err
+	}
+	logger.Debugf("registering signer for reclaim...")
+	if err := sigService.RegisterSigner(
+		tok.Owner.Raw,
+		signer,
+		verifier,
+	); err != nil {
+		return err
+	}
+
+	if err := view2.GetEndpointService(t.SP).Bind(script.Sender, tok.Owner.Raw); err != nil {
+		return err
+	}
+
+	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Sender}, token.WithTokenIDs(tok.Id))
 }
 
 func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, error) {

@@ -51,6 +51,7 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
+	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),

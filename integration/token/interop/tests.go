@@ -52,10 +52,12 @@ func TestExchangeSingleFabricNetwork(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "USD", 120)
 	checkBalance(network, "bob", "", "EUR", 30)
 
-	// exchange (lock)
+	// exchange (lock, reclaim)
 	exchangeLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
 	time.Sleep(15 * time.Second)
 	checkBalance(network, "alice", "", "USD", 110)
+	exchangeReclaimAll(network, "alice", "")
+	checkBalance(network, "alice", "", "USD", 120)
 }
 
 func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {

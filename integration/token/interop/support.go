@@ -124,3 +124,19 @@ func exchangeLock(network *integration.Infrastructure, tmsID token.TMSID, id str
 		return nil, nil
 	}
 }
+
+func exchangeReclaimAll(network *integration.Infrastructure, id string, wallet string, errorMsgs ...string) {
+	txID, err := network.Client(id).CallView("exchange.reclaimAll", common.JSONMarshall(&exchange.ReclaimAll{
+		Wallet: wallet,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(id).IsTxFinal(common.JSONUnmarshalString(txID))).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
