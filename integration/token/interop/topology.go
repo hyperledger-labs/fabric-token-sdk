@@ -60,6 +60,7 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
+	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

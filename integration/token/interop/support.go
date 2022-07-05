@@ -140,3 +140,25 @@ func exchangeReclaimAll(network *integration.Infrastructure, id string, wallet s
 		time.Sleep(5 * time.Second)
 	}
 }
+
+func exchangeClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
+	txID, err := network.Client(id).CallView("exchange.claim", common.JSONMarshall(&exchange.Claim{
+		TMSID:    tmsID,
+		Wallet:   wallet,
+		PreImage: preImage,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(id).IsTxFinal(
+			common.JSONUnmarshalString(txID),
+			api.WithNetwork(tmsID.Network),
+			api.WithChannel(tmsID.Channel),
+		)).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+}

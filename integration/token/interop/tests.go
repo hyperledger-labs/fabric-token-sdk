@@ -58,6 +58,14 @@ func TestExchangeSingleFabricNetwork(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "USD", 110)
 	exchangeReclaimAll(network, "alice", "")
 	checkBalance(network, "alice", "", "USD", 120)
+
+	// exchange (lock, claim)
+	defaultTMSID := token.TMSID{}
+	preImage, _ := exchangeLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
+	exchangeClaim(network, defaultTMSID, "bob", "", preImage)
+	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
+	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(defaultTMSID))
 }
 
 func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {

@@ -192,6 +192,64 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Sender}, token.WithTokenIDs(tok.Id))
 }
 
+func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error {
+	// TODO: handle this properly
+	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
+	if err != nil {
+		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
+	}
+
+	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	if err != nil {
+		return err
+	}
+	script := &Script{}
+	switch owner.Type {
+	case ScriptTypeExchange:
+		err := json.Unmarshal(owner.Identity, script)
+		if err != nil {
+			return errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+		}
+
+		// TODO: does the pre-image match?
+
+		// Register the signer for the claim
+		logger.Debugf("registering signer for claim...")
+		sigService := t.TokenService().SigService()
+		recipientSigner, err := sigService.GetSigner(script.Recipient)
+		if err != nil {
+			return err
+		}
+		recipientVerifier, err := sigService.OwnerVerifier(script.Recipient)
+		if err != nil {
+			return err
+		}
+		if err := sigService.RegisterSigner(
+			tok.Owner.Raw,
+			&ClaimSigner{
+				Recipient: recipientSigner,
+				Preimage:  preImage,
+			},
+			&ClaimVerifier{
+				Recipient:    recipientVerifier,
+				Hash:         script.HashInfo.Hash,
+				HashFunc:     script.HashInfo.HashFunc,
+				HashEncoding: script.HashInfo.HashEncoding,
+			},
+		); err != nil {
+			return err
+		}
+
+		if err := view2.GetEndpointService(t.SP).Bind(script.Recipient, tok.Owner.Raw); err != nil {
+			return err
+		}
+	default:
+		return errors.Errorf("invalid owner type, expecgted exchange script")
+	}
+
+	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Recipient}, token.WithTokenIDs(tok.Id))
+}
+
 func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, error) {
 	// sample pre-image and its hash
 	var preImage []byte
