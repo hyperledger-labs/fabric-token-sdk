@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/pkg/errors"
@@ -49,7 +50,7 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 			n,
 			namespace,
 			p.sp,
-			network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}),
+			network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}, &exchange.ScriptOwnership{}),
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 		),
 	); err != nil {

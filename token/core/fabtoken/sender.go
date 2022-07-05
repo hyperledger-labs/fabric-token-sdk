@@ -7,8 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -55,7 +59,24 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	// assemble transfer metadata
 	var receivers []view.Identity
 	for _, output := range outs {
-		receivers = append(receivers, output.Output.Owner.Raw)
+		owner, err := identity.UnmarshallRawOwner(output.Output.Owner.Raw)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type == identity.SerializedIdentityType {
+			receivers = append(receivers, output.Output.Owner.Raw)
+			continue
+		}
+		if owner.Type == ScriptTypeExchange {
+			script := &exchange.Script{}
+			err := json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return nil, nil, errors.Errorf("failed to unmarshal RawOwner as a exchange script")
+			}
+			receivers = append(receivers, script.Recipient)
+		} else {
+			return nil, nil, errors.Errorf("owner's type not recognized [%s]", owner.Type)
+		}
 	}
 
 	var senderAuditInfos [][]byte
