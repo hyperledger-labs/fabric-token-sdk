@@ -15,9 +15,6 @@ import (
 )
 
 const (
-	Coin = uint64(1000000000)
-	// MaxMoney is the max value a token can hold
-	MaxMoney = uint64(21000000) * Coin
 	// PublicParameters is the key to be used to look up fabtoken parameters
 	PublicParameters = "fabtoken"
 	DefaultPrecision = uint64(64)
@@ -26,8 +23,6 @@ const (
 type PublicParams struct {
 	// This indicates that this is the public parameters for fabtoken driver
 	Label string
-	// The maximum quantity a token can hold
-	MTV uint64
 	// The precision of token quantities
 	QuantityPrecision uint64
 	// This is set when audit is enabled
@@ -73,7 +68,7 @@ func (pp *PublicParams) GraphHiding() bool {
 
 // MaxTokenValue returns the maximum value that a token can hold according to PublicParams
 func (pp *PublicParams) MaxTokenValue() uint64 {
-	return pp.MTV
+	return 2 ^ pp.Precision() - 1
 }
 
 // Bytes marshals PublicParams
@@ -134,7 +129,6 @@ func (pp *PublicParams) Precision() uint64 {
 // Setup initializes PublicParams
 func Setup() (*PublicParams, error) {
 	return &PublicParams{
-		MTV:               MaxMoney,
 		Label:             PublicParameters,
 		QuantityPrecision: DefaultPrecision,
 	}, nil

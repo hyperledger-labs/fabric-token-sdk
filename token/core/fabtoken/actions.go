@@ -7,6 +7,7 @@ package fabtoken
 
 import (
 	"encoding/json"
+
 	"github.com/pkg/errors"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -79,7 +80,7 @@ func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
 		}
 		ser, err := output.Serialize()
 		if err != nil {
-			return nil, err
+			return nil, errors.Errorf("failed to serialize output [%d] in issue action", k)
 		}
 		res = append(res, ser)
 	}
@@ -113,9 +114,6 @@ func (i *IssueAction) GetMetadata() []byte {
 
 // TransferAction encodes a fabtoken transfer
 type TransferAction struct {
-	// sender's ecdsa public key
-	// a transfer action has a single sender (//todo check is this needs to be changed)
-	Sender view.Identity
 	// identifier of token to be transferred
 	Inputs []string
 	// outputs to be created as a result of the transfer
@@ -141,7 +139,7 @@ func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 		}
 		ser, err := output.Serialize()
 		if err != nil {
-			return nil, err
+			return nil, errors.Errorf("failed to serialize output [%d] in transfer action", k)
 		}
 		res = append(res, ser)
 	}
@@ -170,7 +168,7 @@ func (t *TransferAction) IsGraphHiding() bool {
 // SerializeOutputAt marshals the output at the specified index in TransferAction
 func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
 	if t.Outputs[index] == nil {
-		return nil, errors.New("failed to serialize output")
+		return nil, errors.Errorf("failed to serialize output in transfer action: nil output at index [%d]", index)
 	}
 	return t.Outputs[index].Serialize()
 }
@@ -185,7 +183,7 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
-// GetMetadata  return nil, indicating that fabtoken TransferAction carries no metadata
+// GetMetadata returns nil, indicating that fabtoken TransferAction carries no metadata
 func (t *TransferAction) GetMetadata() []byte {
 	return nil
 }

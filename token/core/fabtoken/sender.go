@@ -16,12 +16,6 @@ import (
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	//
-	id, err := wallet.GetRecipientIdentity()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting sender identity")
-	}
-
 	// select inputs
 	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(ids)
 	if err != nil {
@@ -49,9 +43,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	}
 
 	// assemble transfer action
-	// todo check if we need sender
 	transfer := &TransferAction{
-		Sender:  id,
 		Inputs:  inputIDs,
 		Outputs: outs,
 	}

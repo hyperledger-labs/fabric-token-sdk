@@ -33,6 +33,7 @@ type VaultPublicParamsLoader struct {
 }
 
 // Load returns the PublicParams associated with fabtoken
+// Load first checks if PublicParams are cached, if not, then Load fetches them
 func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
 	if s.TokenVault == nil {
 		return nil, errors.New("failed to retrieve public parameters: please initialize TokenVault")
