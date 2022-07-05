@@ -130,7 +130,7 @@ func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignaturePro
 	return nil
 }
 
-// VerifyIssues check if the issued tokens are valid and if the content of the token request concatenated
+// VerifyIssues checks if the issued tokens are valid and if the content of the token request concatenated
 // with the binding was signed by one of the authorized issuers
 func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
@@ -167,7 +167,7 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 	return nil
 }
 
-// VerifyTransfers check if the created output tokens are valid and if the content of the token request concatenated
+// VerifyTransfers checks if the created output tokens are valid and if the content of the token request concatenated
 // with the binding was signed by the owners of the input tokens
 func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
 	logger.Debugf("check sender start...")
@@ -331,7 +331,7 @@ func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
 	return res, nil
 }
 
-// CheckSendersSignatures verify if a TokenRequest was signed by the owners of the inputs in the TokenRequest
+// CheckSendersSignatures verifies if a TokenRequest was signed by the owners of the inputs in the TokenRequest
 func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIndex int, signatureProvider driver.SignatureProvider) error {
 	for _, tok := range inputTokens {
 		logger.Debugf("check sender [%d][%s]", actionIndex, view.Identity(tok.Owner.Raw).UniqueID())
