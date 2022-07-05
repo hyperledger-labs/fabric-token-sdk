@@ -9,13 +9,15 @@ package x509
 import (
 	ecdsa2 "crypto/ecdsa"
 
+	"github.com/IBM/idemix/common/flogging"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.core.identity.msp.x509")
 
 // MSPIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
 type MSPIdentityDeserializer struct{}

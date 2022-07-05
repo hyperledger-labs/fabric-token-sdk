@@ -9,18 +9,17 @@ package driver
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/tms"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
@@ -41,7 +40,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
 	}
-	lm := n.LocalMembership()
+	networkLocalMembership := n.LocalMembership()
 	v, err := n.Vault(namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
@@ -53,28 +52,25 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
 
-	// if the tms comes equipped with wallets, then use those wallets.
-	// Otherwise, resort to network local membership
-	nodeIdentity := view2.GetIdentityProvider(sp).DefaultIdentity()
-	mappers := identity.NewMappers()
-	tmsWalletManager := tms.NewWalletManager(sp, tmsConfig, lm.DefaultIdentity(), tms.NewSigService(view2.GetSigService(sp)), view2.GetEndpointService(sp))
-	if err := tmsWalletManager.Load(); err != nil {
-		return nil, errors.WithMessage(err, "failed to load wallet")
+	mspWalletManager := msp.NewWalletManager(
+		sp,        // service provider
+		networkID, // network ID
+		tmsConfig, // config manager
+		view2.GetIdentityProvider(sp).DefaultIdentity(), // FSC identity
+		networkLocalMembership.DefaultIdentity(),        // network default identity
+		msp.NewSigService(view2.GetSigService(sp)),      // signer service
+		view2.GetEndpointService(sp),                    // endpoint service
+	)
+	mspWalletManager.SetRoleIdentityType(driver.OwnerRole, msp.AnonymousIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.IssuerRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.AuditorRole, msp.LongTermIdentity)
+	mspWalletManager.SetRoleIdentityType(driver.CertifierRole, msp.LongTermIdentity)
+	if err := mspWalletManager.Load(); err != nil {
+		return nil, errors.WithMessage(err, "failed to load wallets")
 	}
-	eidDeserializer := zkatdlog.NewEnrollmentIDDeserializer()
-
-	if tmsWalletManager.IsEmpty() {
-		// use network local membership
-		logger.Debugf("using network local membership")
-		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
-		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, lm))
-		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.AnonymousIdentity, nodeIdentity, lm))
-	} else {
-		// use tms local membership
-		logger.Debugf("using tms local membership")
-		mappers.SetIssuerRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Issuers()))
-		mappers.SetAuditorRole(identity.NewMapper(networkID, identity.LongTermIdentity, nodeIdentity, tmsWalletManager.Auditors()))
-		mappers.SetOwnerRole(identity.NewMapper(networkID, identity.AnonymousIdentity, nodeIdentity, tmsWalletManager.Owners()))
+	wallets, err := mspWalletManager.Wallets()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get wallets")
 	}
 
 	desProvider := zkatdlog.NewDeserializerProvider()
@@ -90,7 +86,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
 		v.TokenVault().QueryEngine(),
-		identity.NewProvider(sp, eidDeserializer, mappers),
+		identity.NewProvider(sp, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		desProvider.Deserialize,
 		crypto.DLogPublicParameters,
 		tmsConfig,

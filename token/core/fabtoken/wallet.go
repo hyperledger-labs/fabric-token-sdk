@@ -16,8 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func (s *Service) RegisterOwnerWallet(id string, typ string, path string) error {
-	return s.IP.RegisterOwnerWallet(id, typ, path)
+func (s *Service) RegisterOwnerWallet(id string, path string) error {
+	return s.IP.RegisterOwnerWallet(id, path)
 }
 
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
@@ -78,7 +78,11 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID := s.IP.LookupIdentifier(driver.OwnerRole, id)
+	identity, walletID, err := s.IP.LookupIdentifier(driver.OwnerRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup owner wallet for [%s]: %s", id, err)
+		return nil
+	}
 	wID := s.walletID(walletID)
 	for _, w := range s.OwnerWallets {
 		if w.Contains(identity) || w.ID() == wID {
@@ -88,23 +92,27 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 	}
 
 	// Create the wallet
-	if idInfo := s.IP.GetIdentityInfo(driver.OwnerRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
-		if err != nil {
-			panic(err)
-		}
-		wrappedID, err := s.wrapWalletIdentity(id)
-		if err != nil {
-			panic(err)
-		}
-
-		w := newOwnerWallet(s, id, wrappedID, wID, idInfo)
-		s.OwnerWallets = append(s.OwnerWallets, w)
-		logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, walletID)
-		return w
+	idInfo, err := s.IP.GetIdentityInfo(driver.OwnerRole, walletID)
+	if err != nil {
+		logger.Errorf("failed to get owner wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
 	}
 
-	return nil
+	idInfoIdentity, _, err := idInfo.Get()
+	if err != nil {
+		logger.Errorf("failed to get owner wallet identity for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
+	}
+	wrappedID, err := s.wrapWalletIdentity(idInfoIdentity)
+	if err != nil {
+		logger.Errorf("failed to wrap owner wallet identity for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
+	}
+
+	w := newOwnerWallet(s, idInfoIdentity, wrappedID, wID, idInfo)
+	s.OwnerWallets = append(s.OwnerWallets, w)
+	logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, walletID)
+	return w
 }
 
 func (s *Service) IssuerWallet(id string) driver.IssuerWallet {
@@ -120,7 +128,11 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID := s.IP.LookupIdentifier(driver.IssuerRole, id)
+	identity, walletID, err := s.IP.LookupIdentifier(driver.IssuerRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup issuer wallet for [%s]: %s", id, err)
+		return nil
+	}
 	for _, w := range s.IssuerWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found issuer wallet [%s]", identity.String())
@@ -129,19 +141,21 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 	}
 
 	// Create the wallet
-	if idInfo := s.IP.GetIdentityInfo(driver.IssuerRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
-		if err != nil {
-			panic(err)
-		}
-		w := newIssuerWallet(s, walletID, id)
-		s.IssuerWallets = append(s.IssuerWallets, w)
-		logger.Debugf("created issuer wallet [%s]", identity.String())
-		return w
+	idInfo, err := s.IP.GetIdentityInfo(driver.IssuerRole, walletID)
+	if err != nil {
+		logger.Errorf("failed to get issuer wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
 	}
 
-	logger.Debugf("no issuer wallet found for [%s]", identity.String())
-	return nil
+	idInfoIdentity, _, err := idInfo.Get()
+	if err != nil {
+		logger.Errorf("failed to get issuer wallet identity for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
+	}
+	w := newIssuerWallet(s, walletID, idInfoIdentity)
+	s.IssuerWallets = append(s.IssuerWallets, w)
+	logger.Debugf("created issuer wallet [%s]", identity.String())
+	return w
 }
 
 func (s *Service) AuditorWallet(id string) driver.AuditorWallet {
@@ -157,7 +171,11 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 	defer s.WalletsLock.Unlock()
 
 	// check if there is already a wallet
-	identity, walletID := s.IP.LookupIdentifier(driver.AuditorRole, id)
+	identity, walletID, err := s.IP.LookupIdentifier(driver.AuditorRole, id)
+	if err != nil {
+		logger.Errorf("failed to lookup auditor wallet for [%s]: %s", id, err)
+		return nil
+	}
 	for _, w := range s.AuditorWallets {
 		if w.Contains(identity) || w.ID() == walletID {
 			logger.Debugf("found auditor wallet [%s]", identity.String())
@@ -166,19 +184,21 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 	}
 
 	// Create the wallet
-	if idInfo := s.IP.GetIdentityInfo(driver.AuditorRole, walletID); idInfo != nil {
-		id, err := idInfo.GetIdentity()
-		if err != nil {
-			panic(err)
-		}
-		w := newAuditorWallet(s, walletID, id)
-		s.AuditorWallets = append(s.AuditorWallets, w)
-		logger.Debugf("created auditor wallet [%s]", identity.String())
-		return w
+	idInfo, err := s.IP.GetIdentityInfo(driver.AuditorRole, walletID)
+	if err != nil {
+		logger.Errorf("failed to get auditor wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		return nil
 	}
 
-	logger.Debugf("no auditor wallet found for [%s]", identity.String())
-	return nil
+	idInfoIdentity, _, err := idInfo.Get()
+	if err != nil {
+		logger.Errorf("failed to get auditor wallet identity for [%s:%s]", walletID, identity.String())
+		return nil
+	}
+	w := newAuditorWallet(s, walletID, idInfoIdentity)
+	s.AuditorWallets = append(s.AuditorWallets, w)
+	logger.Debugf("created auditor wallet [%s]", identity.String())
+	return w
 }
 
 func (s *Service) CertifierWallet(id string) driver.CertifierWallet {
@@ -207,12 +227,12 @@ func (s *Service) walletID(id string) string {
 type ownerWallet struct {
 	tokenService *Service
 	id           string
-	identityInfo *driver.IdentityInfo
+	identityInfo driver.IdentityInfo
 	identity     view.Identity
 	wrappedID    view.Identity
 }
 
-func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string, identityInfo *driver.IdentityInfo) *ownerWallet {
+func newOwnerWallet(tokenService *Service, identity, wrappedID view.Identity, id string, identityInfo driver.IdentityInfo) *ownerWallet {
 	return &ownerWallet{
 		tokenService: tokenService,
 		id:           id,
@@ -286,7 +306,7 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.Unspent
 }
 
 func (w *ownerWallet) EnrollmentID() string {
-	return w.identityInfo.EnrollmentID
+	return w.identityInfo.EnrollmentID()
 }
 
 type issuerWallet struct {

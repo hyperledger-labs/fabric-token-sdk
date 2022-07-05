@@ -14,7 +14,7 @@ type GetFunc func() (view.Identity, []byte, error)
 
 // LocalMembership models the local membership service
 type LocalMembership interface {
-	// DefaultIdentity returns the default identity
+	// DefaultIdentity returns the default FSC node identity
 	DefaultIdentity() view.Identity
 
 	// AnonymousIdentity returns a fresh anonymous identity
@@ -22,14 +22,4 @@ type LocalMembership interface {
 
 	// IsMe returns true if the given identity belongs to the caller
 	IsMe(id view.Identity) bool
-
-	GetAnonymousIdentifier(label string) (string, error)
-
-	GetAnonymousIdentity(label string, auditInfo []byte) (string, string, GetFunc, error)
-
-	GetLongTermIdentifier(id view.Identity) (string, error)
-
-	GetLongTermIdentity(label string) (string, string, view.Identity, error)
-
-	RegisterIdentity(id string, typ string, path string) error
 }

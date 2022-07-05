@@ -63,13 +63,6 @@ func (n *lm) GetAnonymousIdentity(label string, auditInfo []byte) (string, strin
 	return "", "", nil, errors.New("not found")
 }
 
-func (n *lm) GetAnonymousIdentifier(label string) (string, error) {
-	if idInfo := n.lm.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
-		return idInfo.ID, nil
-	}
-	return "", errors.New("not found")
-}
-
 func (n *lm) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
 	if idInfo := n.lm.GetIdentityInfoByLabel(BccspMSP, label); idInfo != nil {
 		id, _, err := idInfo.GetIdentity()

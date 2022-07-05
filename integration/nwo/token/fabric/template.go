@@ -30,7 +30,6 @@ token:
       certifiers: {{ range Wallets.Certifiers }}
       - id: {{ .ID }}
         default: {{ .Default }}
-        type: {{ .Type }}
         path: {{ .Path }}
       {{ end }}
     {{ end }}{{ if Wallets.Issuers }}
@@ -38,7 +37,6 @@ token:
       issuers: {{ range Wallets.Issuers }}
       - id: {{ .ID }}
         default: {{ .Default }}
-        type: {{ .Type }}
         path: {{ .Path }}
       {{ end }}
     {{ end }}{{ if Wallets.Owners }}
@@ -46,7 +44,6 @@ token:
       owners: {{ range Wallets.Owners }}
       - id: {{ .ID }}
         default: {{ .Default }}
-        type: {{ .Type }}
         path: {{ .Path }}
       {{ end }}
     {{ end }}{{ if Wallets.Auditors }}
@@ -54,7 +51,6 @@ token:
       auditors: {{ range Wallets.Auditors }}
       - id: {{ .ID }}
         default: {{ .Default }}
-        type: {{ .Type }}
         path: {{ .Path }}
       {{ end }}
     {{ end }}

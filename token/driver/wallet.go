@@ -97,8 +97,8 @@ type WalletService interface {
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(identity view.Identity) Wallet
 
-	// RegisterOwnerWallet registers the passed wallet as the wallet of the passed recipient identity
-	RegisterOwnerWallet(id string, typ string, path string) error
+	// RegisterOwnerWallet registers an owner wallet
+	RegisterOwnerWallet(id string, path string) error
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.

@@ -8,9 +8,8 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/fabric/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 

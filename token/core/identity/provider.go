@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package identity
 
 import (
@@ -13,144 +14,100 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.driver.identity")
 
-type Mappers map[driver.IdentityUsage]mapper
-
-func NewMappers() Mappers {
-	return make(Mappers)
-}
-
-func (m Mappers) Put(usage driver.IdentityUsage, mapper mapper) {
-	m[usage] = mapper
-}
-
-func (m Mappers) SetIssuerRole(mapper mapper) {
-	m[driver.IssuerRole] = mapper
-}
-
-func (m Mappers) SetAuditorRole(mapper mapper) {
-	m[driver.AuditorRole] = mapper
-}
-
-func (m Mappers) SetOwnerRole(mapper mapper) {
-	m[driver.OwnerRole] = mapper
-}
-
-type GetFunc func() (view.Identity, []byte, error)
-
+// Deserializer is an interface for deserializing identities
 type Deserializer interface {
+	// DeserializeSigner deserializes a signer from its bytes representation
 	DeserializeSigner(raw []byte) (driver.Signer, error)
 }
 
+// EnrollmentIDUnmarshaler decodes an enrollment ID form an audit info
 type EnrollmentIDUnmarshaler interface {
+	// GetEnrollmentID returns the enrollment ID from the audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
 }
 
-type mapper interface {
-	Info(id string) (string, string, GetFunc)
-	Map(v interface{}) (view.Identity, string)
-	RegisterIdentity(id string, typ string, path string) error
-}
-
+// Provider implements the driver.IdentityProvider interface
 type Provider struct {
 	sp view2.ServiceProvider
 
-	mappers                 map[driver.IdentityUsage]mapper
+	wallets                 Wallets
 	deserializers           []Deserializer
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
 }
 
-func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, mappers map[driver.IdentityUsage]mapper) *Provider {
+// NewProvider creates a new identity provider
+func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, wallets Wallets) *Provider {
 	return &Provider{
 		sp:                      sp,
-		mappers:                 mappers,
+		wallets:                 wallets,
 		deserializers:           []Deserializer{},
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
 	}
 }
 
-func (i *Provider) GetIdentityInfo(usage driver.IdentityUsage, id string) *driver.IdentityInfo {
-	mapper, ok := i.mappers[usage]
+func (p *Provider) GetIdentityInfo(role driver.IdentityRole, id string) (driver.IdentityInfo, error) {
+	wallet, ok := p.wallets[role]
 	if !ok {
-		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
+		return nil, errors.Errorf("wallet not found for role [%d]", role)
 	}
-	id, eid, getIdentity := mapper.Info(id)
-	if getIdentity == nil {
-		return nil
+	info := wallet.GetIdentityInfo(id)
+	if info == nil {
+		return nil, errors.Errorf("identity info not found for id [%s]", id)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("info for [%v] is [%s,%s]", id, id, eid)
-	}
-	return &driver.IdentityInfo{
-		ID:           id,
-		EnrollmentID: eid,
-		GetIdentity: func() (view.Identity, error) {
-			id, ai, err := getIdentity()
-			if err != nil {
-				return nil, err
-			}
-			if err := i.RegisterAuditInfo(id, ai); err != nil {
-				return nil, err
-			}
-			if err := view2.GetEndpointService(i.sp).Bind(view2.GetIdentityProvider(i.sp).DefaultIdentity(), id); err != nil {
-				return nil, err
-			}
-			return id, nil
-		},
-	}
+	return &Info{IdentityInfo: info, Provider: p}, nil
 }
 
-func (i *Provider) LookupIdentifier(usage driver.IdentityUsage, v interface{}) (view.Identity, string) {
-	mapper, ok := i.mappers[usage]
+func (p *Provider) LookupIdentifier(role driver.IdentityRole, v interface{}) (view.Identity, string, error) {
+	wallet, ok := p.wallets[role]
 	if !ok {
-		panic(fmt.Sprintf("mapper not found for usage [%d]", usage))
+		return nil, "", fmt.Errorf("wallet not found for role [%d]", role)
 	}
-	id, label := mapper.Map(v)
+	id, label := wallet.MapToID(v)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
 	}
-	return id, label
+	return id, label, nil
 }
 
-func (i *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
-	auditInfo, err := view2.GetSigService(i.sp).GetAuditInfo(identity)
+func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
+	auditInfo, err := view2.GetSigService(p.sp).GetAuditInfo(identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", identity.String())
 	}
 	return auditInfo, nil
 }
 
-func (i *Provider) GetIdentityMetadata(identity view.Identity) ([]byte, error) {
+func (p *Provider) GetIdentityMetadata(identity view.Identity) ([]byte, error) {
 	panic("implement me")
 }
 
-func (i *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
-	return view2.GetSigService(i.sp).RegisterSigner(identity, signer, verifier)
+func (p *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
+	return view2.GetSigService(p.sp).RegisterSigner(identity, signer, verifier)
 }
 
-func (i *Provider) IsMe(identity view.Identity) bool {
-	isMe := view2.GetSigService(i.sp).IsMe(identity)
+func (p *Provider) IsMe(identity view.Identity) bool {
+	isMe := view2.GetSigService(p.sp).IsMe(identity)
 	if !isMe {
 		// check cache
-		i.isMeCacheLock.RLock()
-		isMe, ok := i.isMeCache[identity.String()]
-		i.isMeCacheLock.RUnlock()
+		p.isMeCacheLock.RLock()
+		isMe, ok := p.isMeCache[identity.String()]
+		p.isMeCacheLock.RUnlock()
 		if ok {
 			return isMe
 		}
 
 		// try to get the signer
-		signer, err := i.GetSigner(identity)
+		signer, err := p.GetSigner(identity)
 		if err != nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("failed to get signer for identity [%s]", identity.String())
@@ -162,21 +119,21 @@ func (i *Provider) IsMe(identity view.Identity) bool {
 	return true
 }
 
-func (i *Provider) RegisterRecipientIdentity(id view.Identity) error {
-	i.isMeCacheLock.Lock()
-	i.isMeCache[id.String()] = false
-	i.isMeCacheLock.Unlock()
+func (p *Provider) RegisterRecipientIdentity(id view.Identity) error {
+	p.isMeCacheLock.Lock()
+	p.isMeCache[id.String()] = false
+	p.isMeCacheLock.Unlock()
 	return nil
 }
 
-func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
+func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	found := false
 	defer func() {
-		i.isMeCacheLock.Lock()
-		i.isMeCache[identity.String()] = found
-		i.isMeCacheLock.Unlock()
+		p.isMeCacheLock.Lock()
+		p.isMeCache[identity.String()] = found
+		p.isMeCacheLock.Unlock()
 	}()
-	signer, err := view2.GetSigService(i.sp).GetSigner(identity)
+	signer, err := view2.GetSigService(p.sp).GetSigner(identity)
 	if err == nil {
 		found = true
 		return signer, nil
@@ -189,7 +146,7 @@ func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 		return nil, errors.Wrapf(err, "failed to unmarshal raw owner for identity [%s]", identity.String())
 	}
 
-	signer, err = view2.GetSigService(i.sp).GetSigner(ro.Identity)
+	signer, err = view2.GetSigService(p.sp).GetSigner(ro.Identity)
 	if err == nil {
 		found = true
 		return signer, nil
@@ -197,7 +154,7 @@ func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 	// give it a third chance
 	// deserializer using the provider's deserializers
-	for _, d := range i.deserializers {
+	for _, d := range p.deserializers {
 		signer, err = d.DeserializeSigner(ro.Identity)
 		if err == nil {
 			found = true
@@ -208,36 +165,30 @@ func (i *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 }
 
-func (i *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := view2.GetSigService(i.sp).RegisterAuditInfo(id, auditInfo); err != nil {
+func (p *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
+	if err := view2.GetSigService(p.sp).RegisterAuditInfo(id, auditInfo); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (i *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
-	return i.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
+func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
 }
 
-func (i *Provider) RegisterOwnerWallet(id string, typ string, path string) error {
-	return i.mappers[driver.OwnerRole].RegisterIdentity(id, typ, path)
+func (p *Provider) RegisterOwnerWallet(id string, path string) error {
+	return p.wallets[driver.OwnerRole].RegisterIdentity(id, path)
 }
 
-func (i *Provider) RegisterIssuerWallet(id string, typ string, path string) error {
-	return i.mappers[driver.IssuerRole].RegisterIdentity(id, typ, path)
+func (p *Provider) RegisterIssuerWallet(id string, path string) error {
+	return p.wallets[driver.IssuerRole].RegisterIdentity(id, path)
 }
 
-func (i *Provider) AddDeserializer(d Deserializer) {
-	i.deserializers = append(i.deserializers, d)
-}
-
-// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
-// identity is associated to id.
-func (i *Provider) Bind(id view.Identity, to view.Identity) error {
-	sigService := view2.GetSigService(i.sp)
+func (p *Provider) Bind(id view.Identity, to view.Identity) error {
+	sigService := view2.GetSigService(p.sp)
 
 	setSV := true
-	signer, err := i.GetSigner(to)
+	signer, err := p.GetSigner(to)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed getting signer for [%s][%s][%s]", to, err, debug.Stack())
@@ -272,8 +223,44 @@ func (i *Provider) Bind(id view.Identity, to view.Identity) error {
 		}
 	}
 
-	if err := view2.GetEndpointService(i.sp).Bind(to, id); err != nil {
+	if err := view2.GetEndpointService(p.sp).Bind(to, id); err != nil {
 		return err
 	}
 	return nil
+}
+
+func (p *Provider) AddDeserializer(d Deserializer) {
+	p.deserializers = append(p.deserializers, d)
+}
+
+// Info wraps a driver.IdentityInfo to further register the audit info,
+// and binds the new identity to the default FSC node identity
+type Info struct {
+	driver.IdentityInfo
+	Provider *Provider
+}
+
+func (i *Info) ID() string {
+	return i.IdentityInfo.ID()
+}
+
+func (i *Info) EnrollmentID() string {
+	return i.IdentityInfo.EnrollmentID()
+}
+
+func (i *Info) Get() (view.Identity, []byte, error) {
+	// get the identity
+	id, ai, err := i.IdentityInfo.Get()
+	if err != nil {
+		return nil, nil, err
+	}
+	// register the audit info
+	if err := i.Provider.RegisterAuditInfo(id, ai); err != nil {
+		return nil, nil, err
+	}
+	// bind the identity to the default FSC node identity
+	if err := view2.GetEndpointService(i.Provider.sp).Bind(view2.GetIdentityProvider(i.Provider.sp).DefaultIdentity(), id); err != nil {
+		return nil, nil, err
+	}
+	return id, ai, nil
 }

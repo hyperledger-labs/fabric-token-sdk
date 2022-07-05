@@ -52,8 +52,8 @@ orion-server-images:
 .PHONY: dependencies
 dependencies:
 	go install github.com/onsi/ginkgo/ginkgo
-	go install github.com/gordonklaus/ineffassign
-	go install github.com/google/addlicense
+	go install github.com/gordonklaus/ineffassign@4cc7213b9bc8b868b2990c372f6fa057fa88b91c
+	go install github.com/google/addlicense@2fe3ee94479d08be985a84861de4e6b06a1c7208
 
 .PHONY: integration-tests-dlog-fabric
 integration-tests-dlog-fabric: docker-images dependencies

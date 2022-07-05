@@ -9,7 +9,6 @@ package orion
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
 
 type lm struct {
@@ -26,25 +25,5 @@ func (n *lm) AnonymousIdentity() view.Identity {
 }
 
 func (n *lm) IsMe(id view.Identity) bool {
-	panic("implement me")
-}
-
-func (n *lm) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, driver.GetFunc, error) {
-	panic("implement me")
-}
-
-func (n *lm) GetAnonymousIdentifier(label string) (string, error) {
-	panic("implement me")
-}
-
-func (n *lm) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
-	panic("implement me")
-}
-
-func (n *lm) GetLongTermIdentifier(id view.Identity) (string, error) {
-	panic("implement me")
-}
-
-func (n *lm) RegisterIdentity(id string, typ string, path string) error {
 	panic("implement me")
 }
