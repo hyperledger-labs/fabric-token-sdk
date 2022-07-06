@@ -23,13 +23,11 @@ var (
 	Driver string
 	// OutputDir is the directory to output the generated files
 	OutputDir string
-	// GenerateCCPackage is whether to generate the chaincode package
+	// GenerateCCPackage indicates whether to generate the chaincode package
 	GenerateCCPackage bool
-	// Issuers is the list of issuers to include in the public parameters.
-	// Each issuer should be specified in the form of <MSP-Dir>
+	// Issuers is the list of issuer MSP directories containing the corresponding issuer certificate
 	Issuers []string
-	// Auditors is the list of auditors to include in the public parameters.
-	// Each auditor should be specified in the form of <MSP-Dir>
+	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
 )
 
@@ -39,8 +37,8 @@ func Cmd() *cobra.Command {
 	flags := cobraCommand.Flags()
 	flags.StringVarP(&OutputDir, "output", "o", ".", "output folder")
 	flags.BoolVarP(&GenerateCCPackage, "cc", "", false, "generate chaincode package")
-	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor keys in the form of <MSP-Dir>")
-	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer keys in the form of <MSP-Dir>")
+	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
+	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	return cobraCommand
 }
 
@@ -77,13 +75,11 @@ var cobraCommand = &cobra.Command{
 type GeneratorArgs struct {
 	// OutputDir is the directory to output the generated files
 	OutputDir string
-	// GenerateCCPackage is whether to generate the chaincode package
+	// GenerateCCPackage indicates whether to generate the chaincode package
 	GenerateCCPackage bool
-	// Issuers is the list of issuers to include in the public parameters.
-	// Each issuer should be specified in the form of <MSP-Dir>
+	// Issuers is the list of issuer MSP directories containing the corresponding issuer certificate
 	Issuers []string
-	// Auditors is the list of auditors to include in the public parameters.
-	// Each auditor should be specified in the form of <MSP-Dir>
+	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
 }
 
