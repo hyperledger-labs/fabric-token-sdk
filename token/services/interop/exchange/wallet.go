@@ -32,6 +32,7 @@ type OwnerWallet struct {
 	queryService QueryService
 }
 
+// ListExpired returns a list of tokens with a passed deadline whose sender id is contained within the wallet
 func (w *OwnerWallet) ListExpired() ([]*token2.UnspentToken, error) {
 	unspentTokens, err := w.queryService.ListUnspentTokens()
 	if err != nil {
@@ -73,6 +74,7 @@ func (w *OwnerWallet) ListExpired() ([]*token2.UnspentToken, error) {
 	return res, nil
 }
 
+// ListByPreImage returns a list of tokens with a matching preimage
 func (w *OwnerWallet) ListByPreImage(preImage []byte) ([]*token2.UnspentToken, error) {
 	unspentTokens, err := w.queryService.ListUnspentTokens()
 	if err != nil {

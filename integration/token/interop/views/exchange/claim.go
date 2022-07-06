@@ -21,7 +21,7 @@ import (
 type Claim struct {
 	TMSID    token.TMSID
 	Wallet   string
-	PreImage []byte // PreImage of the exchange script to spend
+	PreImage []byte // preimage of the hash encoded in the exchange script in the token to be claimed
 }
 
 type ClaimView struct {
@@ -33,7 +33,7 @@ func (r *ClaimView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(claimWallet, "wallet [%s] not found", r.Wallet)
 
 	matched, err := exchange.Wallet(context, claimWallet, token.WithTMSID(r.TMSID)).ListByPreImage(r.PreImage)
-	assert.NoError(err, "cannot retrieve list of expired exchange")
+	assert.NoError(err, "exchange script has expired")
 	assert.True(len(matched) == 1, "expected only one exchange script to match, got [%d]", len(matched))
 
 	tx, err := exchange.NewTransaction(
@@ -42,14 +42,14 @@ func (r *ClaimView) Call(context view.Context) (interface{}, error) {
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)
-	assert.NoError(err, "failed created an exchange transaction")
+	assert.NoError(err, "failed to create an exchange transaction")
 	assert.NoError(tx.Claim(claimWallet, matched[0], r.PreImage), "failed adding a claim for [%s]", matched[0].Id)
 
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx.Transaction))
 	assert.NoError(err, "failed to collect endorsements on exchange transaction")
 
 	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx.Transaction))
-	assert.NoError(err, "failed to commit issue transaction")
+	assert.NoError(err, "failed to commit exchange transaction")
 
 	return tx.ID(), nil
 }

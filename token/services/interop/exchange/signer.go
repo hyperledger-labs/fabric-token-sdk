@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabtoken
+package exchange
 
 import (
 	"bytes"
@@ -13,24 +13,22 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	"github.com/pkg/errors"
 )
 
-// ClaimSignature encodes the exchange claim signature
+// ClaimSignature is the claim signature of an exchange script
 type ClaimSignature struct {
 	RecipientSignature []byte
 	Preimage           []byte
 }
 
-// ClaimSigner is the signer for an exchange claim
+// ClaimSigner is the signer for the claim of an exchange script
 type ClaimSigner struct {
 	Recipient driver.Signer
 	Preimage  []byte
 }
 
 func (cs *ClaimSigner) Sign(tokenRequestAndTxID []byte) ([]byte, error) {
-	//tokenRequest []byte, txID string
 	msg := concatTokenRequestTxIDPreimage(tokenRequestAndTxID, cs.Preimage)
 	sigma, err := cs.Recipient.Sign(msg)
 	if err != nil {
@@ -51,10 +49,10 @@ func concatTokenRequestTxIDPreimage(tokenRequestAndTxID []byte, preImage []byte)
 	return msg
 }
 
-// ClaimVerifier is the verifier of an exchange claim
+// ClaimVerifier is the verifier of a ClaimSignature
 type ClaimVerifier struct {
 	Recipient driver.Verifier
-	HashInfo  exchange.HashInfo
+	HashInfo  HashInfo
 }
 
 func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) error {
@@ -83,17 +81,17 @@ func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) erro
 	return nil
 }
 
-// ExchangeVerifier is the verifier of an exchange script signature
+// ExchangeVerifier checks if an exchange script can be claimed or reclaimed
 type ExchangeVerifier struct {
 	Recipient driver.Verifier
 	Sender    driver.Verifier
 	Deadline  time.Time
-	HashInfo  exchange.HashInfo
+	HashInfo  HashInfo
 }
 
 func (v *ExchangeVerifier) Verify(msg []byte, sigma []byte) error {
 	if time.Now().Before(v.Deadline) {
-		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: exchange.HashInfo{
+		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: HashInfo{
 			Hash:         v.HashInfo.Hash,
 			HashFunc:     v.HashInfo.HashFunc,
 			HashEncoding: v.HashInfo.HashEncoding,

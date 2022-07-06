@@ -14,7 +14,7 @@ import (
 )
 
 type Signature struct {
-	metadata map[string][]byte
+	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
 }
 
 func (s *Signature) Metadata() map[string][]byte {

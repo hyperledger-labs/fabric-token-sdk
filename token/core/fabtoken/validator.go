@@ -58,7 +58,7 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 		actions = append(actions, action)
 	}
 	for _, sig := range signatureProvider.Signatures() {
-		claim := &ClaimSignature{}
+		claim := &exchange.ClaimSignature{}
 		if err = json.Unmarshal(sig, claim); err != nil {
 			continue
 		}
@@ -254,7 +254,7 @@ func verifyInteropTransferIfExists(inputTokens []*token2.Token, ta driver.Transf
 	}
 	if !fromScript {
 		if err := validateOutputOwners(ta); err != nil {
-			return errors.Wrap(err, "invalid issuer in pledge script")
+			return errors.Wrap(err, "invalid owner")
 		}
 		return nil
 	}
@@ -338,7 +338,7 @@ func verifyTransferFromExchangeScript(tokens []*token2.Token, tr driver.Transfer
 
 func verifyOwnershipTransfer(tokens []*token2.Token, transfer driver.TransferAction) error {
 	if len(tokens) != 1 || len(transfer.GetOutputs()) != 1 {
-		return errors.Errorf("invalid transfer action: a script only transfers the ownership of a token")
+		return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
 	}
 	out := transfer.GetOutputs()[0].(*TransferOutput).Output
 	if tokens[0].Type != out.Type {

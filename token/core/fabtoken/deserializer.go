@@ -55,16 +55,16 @@ func (d *deserializer) getExchangeVerifier(raw []byte) (driver.Verifier, error) 
 	script := &exchange.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as a pledge script")
+		return nil, errors.Errorf("failed to unmarshal RawOwner as a exchange script")
 	}
-	v := &ExchangeVerifier{}
+	v := &exchange.ExchangeVerifier{}
 	v.Sender, err = d.ownerDeserializer.DeserializeVerifier(script.Sender)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the sender")
+		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the exchange script")
 	}
 	v.Recipient, err = d.ownerDeserializer.DeserializeVerifier(script.Recipient)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the issuer")
+		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the exchange script")
 	}
 	v.Deadline = script.Deadline
 	v.HashInfo.Hash = script.HashInfo.Hash

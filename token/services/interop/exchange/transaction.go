@@ -231,10 +231,12 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 				Preimage:  preImage,
 			},
 			&ClaimVerifier{
-				Recipient:    recipientVerifier,
-				Hash:         script.HashInfo.Hash,
-				HashFunc:     script.HashInfo.HashFunc,
-				HashEncoding: script.HashInfo.HashEncoding,
+				Recipient: recipientVerifier,
+				HashInfo: HashInfo{
+					Hash:         script.HashInfo.Hash,
+					HashFunc:     script.HashInfo.HashFunc,
+					HashEncoding: script.HashInfo.HashEncoding,
+				},
 			},
 		); err != nil {
 			return err
