@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/pkg/errors"
 )
 
@@ -22,13 +23,21 @@ type PP interface {
 	AddIssuer(raw view.Identity)
 }
 
-// GetMSPIdentity returns the MSP identity from the passed entry formatted as <MSPConfigPath>:<MSPID>
-func GetMSPIdentity(entry string) (view.Identity, error) {
+// GetMSPIdentity returns the MSP identity from the passed entry formatted as <MSPConfigPath>:<MSPID>.
+// If mspID is not empty, it will be used instead of the MSPID in the entry.
+func GetMSPIdentity(entry string, mspID string) (view.Identity, error) {
 	entries := strings.Split(entry, ":")
-	if len(entries) != 2 {
-		return nil, errors.Errorf("invalid input [%s]", entry)
+	if len(mspID) == 0 {
+		if len(entries) != 2 {
+			return nil, errors.Errorf("invalid input [%s], expected <MSPConfigPath>:<MSPID>", entry)
+		}
+		mspID = entries[1]
+	} else {
+		if len(entries) <= 0 || len(entries) > 2 {
+			return nil, errors.Errorf("invalid input [%s], expected <MSPConfigPath>:<MSPID> or <MSPConfigPath>", entry)
+		}
 	}
-	provider, err := x509.NewProvider(entries[0], entries[1], nil)
+	provider, err := x509.NewProvider(entries[0], mspID, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", entry)
 	}
@@ -43,7 +52,7 @@ func GetMSPIdentity(entry string) (view.Identity, error) {
 func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 	// Auditors
 	for _, auditor := range Auditors {
-		id, err := GetMSPIdentity(auditor)
+		id, err := GetMSPIdentity(auditor, msp.AuditorMSPID)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get auditor identity [%s]", auditor)
 		}
@@ -51,7 +60,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 	}
 	// Issuers
 	for _, issuer := range Issuers {
-		id, err := GetMSPIdentity(issuer)
+		id, err := GetMSPIdentity(issuer, msp.IssuerMSPID)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get issuer identity [%s]", issuer)
 		}

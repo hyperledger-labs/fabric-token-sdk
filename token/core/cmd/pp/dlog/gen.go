@@ -28,10 +28,10 @@ type GeneratorArgs struct {
 	// GenerateCCPackage is whether to generate the chaincode package
 	GenerateCCPackage bool
 	// Issuers is the list of issuers to include in the public parameters.
-	// Each issuer should be specified in the form of <MSP-Dir>:<MSP-ID>
+	// Each issuer should be specified in the form of <MSP-Dir>
 	Issuers []string
 	// Auditors is the list of auditors to include in the public parameters.
-	// Each auditor should be specified in the form of <MSP-Dir>:<MSP-ID>
+	// Each auditor should be specified in the form of <MSP-Dir>
 	Auditors []string
 	// Base is a dlog driver related parameter
 	Base int64
@@ -47,10 +47,10 @@ var (
 	// GenerateCCPackage is whether to generate the chaincode package
 	GenerateCCPackage bool
 	// Issuers is the list of issuers to include in the public parameters.
-	// Each issuer should be specified in the form of <MSP-Dir>:<MSP-ID>
+	// Each issuer should be specified in the form of <MSP-Dir>
 	Issuers []string
 	// Auditors is the list of auditors to include in the public parameters.
-	// Each auditor should be specified in the form of <MSP-Dir>:<MSP-ID>
+	// Each auditor should be specified in the form of <MSP-Dir>
 	Auditors []string
 	// Base is a dlog driver related parameter.
 	// It is used to define the maximum quantity a token can contain as Base^Exponent
@@ -66,8 +66,8 @@ func Cmd() *cobra.Command {
 	flags := cobraCommand.Flags()
 	flags.StringVarP(&OutputDir, "output", "o", ".", "output folder")
 	flags.BoolVarP(&GenerateCCPackage, "cc", "", false, "generate chaincode package")
-	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor keys in the form of <MSP-Dir>:<MSP-ID>")
-	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer keys in the form of <MSP-Dir>:<MSP-ID>")
+	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor keys in the form of <MSP-Dir>")
+	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer keys in the form of <MSP-Dir>")
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
 	flags.Int64VarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
 	flags.IntVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")

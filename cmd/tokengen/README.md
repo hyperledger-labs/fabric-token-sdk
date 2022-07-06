@@ -58,10 +58,10 @@ Usage:
   tokengen gen fabtoken [flags]
 
 Flags:
-  -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>:<MSP-ID>
+  -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>
       --cc                 generate chaincode package
   -h, --help               help for fabtoken
-  -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>:<MSP-ID>
+  -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>
   -o, --output string      output folder (default ".")
 
 ```
@@ -75,13 +75,13 @@ Usage:
   tokengen gen dlog [flags]
 
 Flags:
-  -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>:<MSP-ID>
+  -a, --auditors strings   list of auditor keys in the form of <MSP-Dir>
   -b, --base int           base is used to define the maximum quantity a token can contain as Base^Exponent (default 100)
       --cc                 generate chaincode package
   -e, --exponent int       exponent is used to define the maximum quantity a token can contain as Base^Exponent (default 2)
   -h, --help               help for dlog
   -i, --idemix string      idemix msp dir
-  -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>:<MSP-ID>
+  -s, --issuers strings    list of issuer keys in the form of <MSP-Dir>
   -o, --output string      output folder (default ".")
 ``` 
 
