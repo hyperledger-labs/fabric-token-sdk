@@ -126,6 +126,9 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 			if !ok {
 				return nil, errors.Errorf("expected exchange.hashFunc attribute to be crypto.Hash, got [%T]", boxed)
 			}
+			if hashFunc == 0 {
+				hashFunc = crypto.SHA256 // default hash function
+			}
 		}
 		boxed, ok = options.Attributes["exchange.hashEncoding"]
 		if ok {

@@ -80,4 +80,35 @@ func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {
 
 	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
 	checkBalance(network, "bob", "", "USD", 30, token.WithTMSID(beta))
+
+	preImage, hash := exchangeLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
+	exchangeLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
+
+	exchangeClaim(network, beta, "alice", "", preImage)
+	exchangeClaim(network, alpha, "bob", "", preImage)
+
+	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
+	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
+	checkBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
+	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
+
+	// Try to claim again and get an error
+
+	exchangeClaim(network, beta, "alice", "", preImage, "expected only one exchange script to match")
+	exchangeClaim(network, alpha, "bob", "", preImage, "expected only one exchange script to match")
+
+	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
+	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
+	checkBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
+	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
+
+	// Try to claim without locking
+
+	exchangeClaim(network, beta, "alice", "", nil, "expected only one exchange script to match")
+	exchangeClaim(network, alpha, "bob", "", nil, "expected only one exchange script to match")
+
+	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
+	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
+	checkBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
+	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
 }

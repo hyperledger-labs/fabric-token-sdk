@@ -111,6 +111,10 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
+	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
+	alice.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
+	alice.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -119,6 +123,11 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	bob.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
+	bob.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
+	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
+	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
