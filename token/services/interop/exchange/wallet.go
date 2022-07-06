@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type QueryService interface {
@@ -109,10 +110,12 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte) ([]*token2.UnspentToken, e
 			h := hash.Sum(nil)
 			h = []byte(script.HashInfo.HashEncoding.New().EncodeToString(h))
 
-			logger.Debugf("searching for script matching (pre-image, image) = (%s,%s)",
-				base64.StdEncoding.EncodeToString(preImage),
-				base64.StdEncoding.EncodeToString(h),
-			)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("searching for script matching (pre-image, image) = (%s,%s)",
+					base64.StdEncoding.EncodeToString(preImage),
+					base64.StdEncoding.EncodeToString(h),
+				)
+			}
 
 			// does the preimage match?
 			logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity,
