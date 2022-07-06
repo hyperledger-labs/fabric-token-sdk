@@ -24,6 +24,8 @@ import (
 
 // IssueCash contains the input information to issue a token
 type IssueCash struct {
+	// Anonymous set to true if the transaction is anonymous, false otherwise
+	Anonymous bool
 	// IssuerWallet is the issuer's wallet to use
 	IssuerWallet string
 	// TokenType is the type of token to issue
@@ -65,14 +67,25 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
-	// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
-	// and specify the auditor that must be contacted to approve the operation
-	tx, err := ttx.NewAnonymousTransaction(
-		context,
-		ttx.WithAuditor(
-			view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
-		),
-	)
+	// The issuer creates a new token transaction and specify the auditor that must be contacted to approve the operation.
+	var tx *ttx.Transaction
+	if p.Anonymous {
+		tx, err = ttx.NewAnonymousTransaction(
+			context,
+			ttx.WithAuditor(
+				view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			),
+		)
+	} else {
+		// use the default identity
+		tx, err = ttx.NewTransaction(
+			context,
+			nil,
+			ttx.WithAuditor(
+				view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+			),
+		)
+	}
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue", []byte("issue"))
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta", []byte("meta"))
 	assert.NoError(err, "failed creating issue transaction")
