@@ -91,8 +91,8 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 
 	wfw, in, out := prepareInputsForZKTransfer(pp)
 
-	inBF := wfw.GetInBlindingFators()
-	outBF := wfw.GetOutBlindingFators()
+	inBF := wfw.GetInBlindingFactors()
+	outBF := wfw.GetOutBlindingFactors()
 
 	inValues := wfw.GetInValues()
 	outValues := wfw.GetOutValues()
@@ -119,8 +119,8 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 
 	wfw, in, out := prepareInvalidInputsForZKTransfer(pp)
 
-	inBF := wfw.GetInBlindingFators()
-	outBF := wfw.GetOutBlindingFators()
+	inBF := wfw.GetInBlindingFactors()
+	outBF := wfw.GetOutBlindingFactors()
 
 	inValues := wfw.GetInValues()
 	outValues := wfw.GetOutValues()
@@ -148,8 +148,8 @@ func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) 
 
 	wfw, in, out := prepareInputsForZKTransfer(pp)
 
-	inBF := wfw.GetInBlindingFators()
-	outBF := wfw.GetOutBlindingFators()
+	inBF := wfw.GetInBlindingFactors()
+	outBF := wfw.GetOutBlindingFactors()
 
 	inValues := wfw.GetInValues()
 	outValues := wfw.GetOutValues()
@@ -270,8 +270,8 @@ func prepareOwnershipTransfer() (*transfer.Prover, *transfer.Verifier) {
 
 	wfw, in, out := prepareInputsForOwnershipTransfer(pp)
 
-	inBF := wfw.GetInBlindingFators()
-	outBF := wfw.GetOutBlindingFators()
+	inBF := wfw.GetInBlindingFactors()
+	outBF := wfw.GetOutBlindingFactors()
 
 	inValues := wfw.GetInValues()
 	outValues := wfw.GetOutValues()

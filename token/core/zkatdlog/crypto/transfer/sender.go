@@ -17,46 +17,62 @@ import (
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
-// signing identity
+// SigningIdentity signs TokenRequest
 type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
+// Sender produces a signed TokenRequest
 type Sender struct {
-	Signers          []driver.Signer
-	Inputs           []*token.Token
-	InputIDs         []string
-	InputInformation []*token.TokenInformation // contains the opening of the inputs to be spent
-	PublicParams     *crypto.PublicParams
+	// Signers is an array of Signer that matches the owners of the inputs
+	// to be spent in the transfer action
+	Signers []driver.Signer
+	// Inputs to be spent in the transfer
+	Inputs []*token.Token
+	// InputIDs is the identifiers of the Inputs to be spent
+	InputIDs []string
+	// contains the opening of the inputs to be spent
+	InputInformation []*token.TokenInformation
+	// PublicParams refers to the public cryptographic parameters to be used
+	// to produce the TokenRequest
+	PublicParams *crypto.PublicParams
 }
 
+// NewSender returns a Sender
 func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.TokenInformation, pp *crypto.PublicParams) (*Sender, error) {
-	if len(signers) != len(tokens) || len(tokens) != len(inf) {
+	if len(signers) != len(tokens) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
+// GenerateZKTransfer produces a TransferAction and an array of TokenInformation
+// that corresponds to the openings of the newly created outputs
 func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.TokenInformation, error) {
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, math.Curves[s.PublicParams.Curve])
-	if err != nil {
-		return nil, nil, err
+	if len(values) != len(owners) {
+		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
 	}
-
 	in := getTokenData(s.Inputs)
 	intw := make([]*token.TokenDataWitness, len(s.InputInformation))
 	for i := 0; i < len(s.InputInformation); i++ {
+		if s.InputInformation[0].Type != s.InputInformation[i].Type {
+			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
+		}
 		intw[i] = &token.TokenDataWitness{Value: s.InputInformation[i].Value, Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
+	}
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, math.Curves[s.PublicParams.Curve])
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
 	prover := NewProver(intw, outtw, in, out, s.PublicParams)
 	proof, err := prover.Prove()
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to generate zero-knowledge proof for transfer request")
+		return nil, nil, errors.Wrap(err, "cannot generate zero-knowledge proof for transfer")
 	}
 
 	transfer, err := NewTransfer(s.InputIDs, in, out, owners, proof)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to generate transfer")
+		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}
 	inf := make([]*token.TokenInformation, len(owners))
 	for i := 0; i < len(inf); i++ {
@@ -70,33 +86,39 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 	return transfer, inf, nil
 }
 
+// SignTokenActions produces a signature for each input spent by the Sender
 func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
-	//todo check token actions
+	//todo check token actions (is this still needed?)
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to sign token requests")
+			return nil, errors.Wrap(err, "failed to sign token requests")
 		}
 	}
 	return signatures, nil
 }
 
-// Transfer specifies a transfer of one or more tokens
+// TransferAction specifies a transfer of one or more tokens
 type TransferAction struct {
-	// Inputs specify the identifiers in the rwset of the tokens to be transferred
-	Inputs           []string
+	// Inputs specify the identifiers in of the tokens to be spent
+	Inputs []string
+	// InputCommitments are the PedersenCommitments in the inputs
 	InputCommitments []*math.G1
 	// OutputTokens are the new tokens resulting from the transfer
 	OutputTokens []*token.Token
-	// ZK Proof
+	// ZK Proof that shows that the transfer is correct
 	Proof []byte
 }
 
+// NewTransfer returns the TransferAction that matches the passed arguments
 func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G1, owners [][]byte, proof []byte) (*TransferAction, error) {
 	if len(outputs) != len(owners) {
-		return nil, errors.Errorf("number of owners does not match number of tokens")
+		return nil, errors.Errorf("number of recipients [%d] does not match number of outputs [%d]", len(outputs), len(owners))
+	}
+	if len(inputs) != len(inputCommitments) {
+		return nil, errors.Errorf("number of inputs [%d] does not match number of inputCommitments [%d]", len(inputs), len(inputCommitments))
 	}
 	tokens := make([]*token.Token, len(owners))
 	for i, o := range outputs {
@@ -109,14 +131,17 @@ func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G
 		Proof:            proof}, nil
 }
 
+// GetInputs returns the inputs in the TransferAction
 func (t *TransferAction) GetInputs() ([]string, error) {
 	return t.Inputs, nil
 }
 
+// NumOutputs returns the number of outputs in the TransferAction
 func (t *TransferAction) NumOutputs() int {
 	return len(t.OutputTokens)
 }
 
+// GetOutputs returns the outputs in the TransferAction
 func (t *TransferAction) GetOutputs() []driver.Output {
 	var res []driver.Output
 	for _, outputToken := range t.OutputTokens {
@@ -125,26 +150,32 @@ func (t *TransferAction) GetOutputs() []driver.Output {
 	return res
 }
 
+// IsRedeemAt checks if output in the TransferAction at the passed index is redeemed
 func (t *TransferAction) IsRedeemAt(index int) bool {
 	return t.OutputTokens[index].IsRedeem()
 }
 
+// SerializeOutputAt marshals the output in the TransferAction at the passed index
 func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
 	return t.OutputTokens[index].Serialize()
 }
 
+// Serialize marshals the TransferAction
 func (t *TransferAction) Serialize() ([]byte, error) {
 	return json.Marshal(t)
 }
 
+// GetProof returns the proof in the TransferAction
 func (t *TransferAction) GetProof() []byte {
 	return t.Proof
 }
 
+// Deserialize unmarshals the TransferAction
 func (t *TransferAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
+// GetSerializedOutputs returns the outputs in the TransferAction serialized
 func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 	var res [][]byte
 	for _, token := range t.OutputTokens {
@@ -157,6 +188,7 @@ func (t *TransferAction) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
+// GetOutputCommitments returns the Pedersen commitments in the TransferAction
 func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 	com := make([]*math.G1, len(t.OutputTokens))
 	for i := 0; i < len(com); i++ {
@@ -165,10 +197,14 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 	return com
 }
 
+// IsGraphHiding returns false
+// zkatdlog is not graph hiding
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }
 
+// GetMetadata returns metadata of the TransferAction
+// zkatdlog TransferAction does not carry any metadata
 func (t *TransferAction) GetMetadata() []byte {
 	return nil
 }

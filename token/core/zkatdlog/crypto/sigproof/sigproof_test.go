@@ -42,7 +42,8 @@ func getSignatureProver() *sigproof.SigProver {
 	messages = append(messages, curve.NewRandomZr(rand), curve.NewRandomZr(rand), curve.NewRandomZr(rand), curve.NewRandomZr(rand))
 	sig, err := signer.Sign(messages)
 	Expect(err).NotTo(HaveOccurred())
-	hash := sigproof.HashMessages(messages, curve)
+	hash, err := sigproof.HashMessages(messages, curve)
+	Expect(err).NotTo(HaveOccurred())
 	err = signer.SignVerifier.Verify(append(messages, hash), sig)
 	Expect(err).NotTo(HaveOccurred())
 

@@ -8,46 +8,53 @@ package issue
 import (
 	"encoding/json"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
-// Issue specifies an issue of one or more tokens
+// IssueAction specifies an issue of one or more tokens
 type IssueAction struct {
+	// Identity of issuer
 	Issuer []byte
 	// OutputTokens are the newly issued tokens
 	OutputTokens []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
-	// ZK proof
+	// Proof carries the ZKP of IssueAction validity
 	Proof []byte
-	// flag to indicate type of issue
+	// flag to indicate whether the Issuer is anonymous or not
 	Anonymous bool
 }
 
+// GetProof returns IssueAction ZKP
 func (i *IssueAction) GetProof() []byte {
 	return i.Proof
 }
 
+// GetMetadata returns IssueAction metadata if there is any.
+// In this case, IssueAction does not carry metadata
 func (i *IssueAction) GetMetadata() []byte {
 	return nil
 }
 
+// IsAnonymous returns a Boolean. True if IssueAction is anonymous, and False otherwise.
 func (i *IssueAction) IsAnonymous() bool {
 	return i.Anonymous
 }
 
+// Serialize marshal IssueAction
 func (i *IssueAction) Serialize() ([]byte, error) {
 	return json.Marshal(i)
 }
 
+// NumOutputs returns the number of outputs in IssueAction
 func (i *IssueAction) NumOutputs() int {
 	return len(i.OutputTokens)
 }
 
+// GetOutputs returns the OutputTokens in IssueAction
 func (i *IssueAction) GetOutputs() []driver.Output {
 	var res []driver.Output
 	for _, token := range i.OutputTokens {
@@ -56,9 +63,13 @@ func (i *IssueAction) GetOutputs() []driver.Output {
 	return res
 }
 
+// GetSerializedOutputs returns the serialization of OutputTokens
 func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
 	var res [][]byte
 	for _, token := range i.OutputTokens {
+		if token == nil {
+			return nil, errors.New("invalid issue: there is a nil output")
+		}
 		r, err := token.Serialize()
 		if err != nil {
 			return nil, err
@@ -68,26 +79,32 @@ func (i *IssueAction) GetSerializedOutputs() ([][]byte, error) {
 	return res, nil
 }
 
+// GetIssuer returns the Issuer of IssueAction
 func (i *IssueAction) GetIssuer() []byte {
 	return i.Issuer
 }
 
+// Deserialize un-marshals IssueAction
 func (i *IssueAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, i)
 }
 
-func (i *IssueAction) GetCommitments() []*math.G1 {
+// GetCommitments return the Pedersen commitment of (type, value) in the OutputTokens
+func (i *IssueAction) GetCommitments() ([]*math.G1, error) {
 	com := make([]*math.G1, len(i.OutputTokens))
 	for j := 0; j < len(com); j++ {
+		if i.OutputTokens[j] == nil {
+			return nil, errors.New("invalid issue: there is a nil output")
+		}
 		com[j] = i.OutputTokens[j].Data
 	}
-	return com
+	return com, nil
 }
 
-// Initialize Issue
+// NewIssue instantiates an IssueAction given the passed arguments
 func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
 	if len(owners) != len(coms) {
-		return nil, errors.Errorf("number of owners does not match number of tokens")
+		return nil, errors.New("number of owners does not match number of tokens")
 	}
 
 	outputs := make([]*token.Token, len(coms))
@@ -103,32 +120,31 @@ func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, ano
 	}, nil
 }
 
-// zkat proof in Issue
+// Proof poves that an IssueAction is valid
 type Proof struct {
-	WellFormedness   []byte // proof that issued tokens are well-formed
-	RangeCorrectness []byte // proof that issued tokens have value in the authorized range
+	// proof that issued tokens are well-formed
+	// tokens contain a commitment to type and value
+	WellFormedness []byte
+	// proof that issued tokens have value in the authorized range
+	RangeCorrectness []byte
 }
 
-// verifier for zkat issue
-type Verifier struct {
-	WellFormedness   *WellFormednessVerifier
-	RangeCorrectness common.Verifier
-}
-
-// prover for zkat issue
-type Prover struct {
-	WellFormedness   *WellFormednessProver
-	RangeCorrectness common.Prover
-}
-
-// serialize
+// Serialize marshals Proof
 func (p *Proof) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-// deserialize
+// Deserialize unmarshals Proof
 func (p *Proof) Deserialize(bytes []byte) error {
 	return json.Unmarshal(bytes, p)
+}
+
+// Prover produces a proof of validity of an IssueAction
+type Prover struct {
+	// WellFormedness encodes the WellFormedness Prover
+	WellFormedness *WellFormednessProver
+	// RangeCorrectness encodes the range proof Prover
+	RangeCorrectness *rp.Prover
 }
 
 func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Prover {
@@ -141,21 +157,19 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, 
 	return p
 }
 
-func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
-	v := &Verifier{}
-	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams, math.Curves[pp.Curve])
-	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
-	return v
-}
-
+// Prove produces a Proof for an IssueAction
 func (p *Prover) Prove() ([]byte, error) {
-	// well-formedness proof
+	// checks
+	if p.WellFormedness == nil || p.RangeCorrectness == nil {
+		return nil, errors.New("please initialize issue action prover correctly")
+	}
+	// WellFormedness proof
 	wf, err := p.WellFormedness.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate issue proof")
 	}
 
-	// range proof
+	// RangeCorrectness proof
 	rc, err := p.RangeCorrectness.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate range proof for issue")
@@ -168,18 +182,41 @@ func (p *Prover) Prove() ([]byte, error) {
 	return proof.Serialize()
 }
 
+// Verifier checks if Proof is valid
+type Verifier struct {
+	// WellFormedness encodes the WellFormedness Verifier
+	WellFormedness *WellFormednessVerifier
+	// RangeCorrectness encodes the range proof verifier
+	RangeCorrectness *rp.Verifier
+}
+
+func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
+	v := &Verifier{}
+	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams, math.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	return v
+}
+
+// Verify returns an error if Proof of an IssueAction is invalid
 func (v *Verifier) Verify(proof []byte) error {
+	if v.RangeCorrectness == nil || v.WellFormedness == nil {
+		return errors.New("please initialize issue action verifier correctly")
+	}
 	ip := &Proof{}
+	// unmarshal proof
 	err := ip.Deserialize(proof)
 	if err != nil {
 		return err
 	}
-	// verify well-formedness proof
+	// verify WellFormedness proof
 	err = v.WellFormedness.Verify(ip.WellFormedness)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "invalid issue proof")
 	}
-
-	// verify range proof
-	return v.RangeCorrectness.Verify(ip.RangeCorrectness)
+	// verify RangeCorrectness proof
+	err = v.RangeCorrectness.Verify(ip.RangeCorrectness)
+	if err != nil {
+		return errors.Wrapf(err, "invalid issue proof")
+	}
+	return nil
 }

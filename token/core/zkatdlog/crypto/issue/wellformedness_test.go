@@ -62,7 +62,7 @@ func PrepareTokenWitness(pp []*math.G1) ([]*token.TokenDataWitness, []*math.G1, 
 	values[1] = curve.NewZrFromInt(50)
 
 	tokens := PrepareTokens(values, bF, ttype, pp)
-	return issue.NewTokenDataWitness(ttype, values, bF), tokens, bF
+	return token.NewTokenDataWitness(ttype, values, bF), tokens, bF
 }
 
 func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1) []*math.G1 {

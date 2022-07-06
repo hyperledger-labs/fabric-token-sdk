@@ -61,9 +61,13 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 
 func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error {
 	action := ia.(*issue.IssueAction)
-
+	coms, err := action.GetCommitments()
+	if err != nil {
+		return errors.New("failed to verify issue")
+	}
+	// todo check tokenInfo
 	return issue.NewVerifier(
-		action.GetCommitments(),
+		coms,
 		action.IsAnonymous(),
 		s.PublicParams()).Verify(action.GetProof())
 }

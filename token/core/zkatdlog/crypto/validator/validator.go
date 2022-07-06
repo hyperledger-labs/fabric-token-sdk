@@ -8,6 +8,7 @@ package validator
 
 import (
 	"bytes"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -218,9 +219,12 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driv
 
 func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	action := issue.(*issue2.IssueAction)
-
+	coms, err := action.GetCommitments()
+	if err != nil {
+		return errors.New("failed to verify issue")
+	}
 	return issue2.NewVerifier(
-		action.GetCommitments(),
+		coms,
 		action.IsAnonymous(),
 		v.pp).Verify(action.GetProof())
 }

@@ -11,30 +11,34 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	rangeproof "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
 )
 
-// zkat proof of transfer correctness
+// Proof is a zero-knowledge proof that shows that a TransferAction is valid
 type Proof struct {
-	WellFormedness   []byte // input output correctness proof
-	RangeCorrectness []byte // range correctness proof
+	// proof that inputs and outputs in a Transfer Action are well formed
+	// inputs and outputs have the same total value
+	// inputs and outputs have the same type
+	WellFormedness []byte
+	// Proof that the outputs have value in the authorized range
+	RangeCorrectness []byte
 }
 
-// verifier for zkat transfer
+// Verifier verifies if a TransferAction is valid
 type Verifier struct {
-	WellFormedness   common.Verifier
-	RangeCorrectness common.Verifier
+	WellFormedness   *WellFormednessVerifier
+	RangeCorrectness *rangeproof.Verifier
 }
 
-// prover for zkat transfer
+// Prover produces a proof that a TransferAction is valid
 type Prover struct {
-	WellFormedness   common.Prover
-	RangeCorrectness common.Prover
+	WellFormedness   *WellFormednessProver
+	RangeCorrectness *rangeproof.Prover
 }
 
+// NewProver returns a TransferAction Prover that corresponds to the passed arguments
 func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, outputs []*math.G1, pp *crypto.PublicParams) *Prover {
 	p := &Prover{}
 
@@ -48,6 +52,8 @@ func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, ou
 	for i := 0; i < len(outputwitness); i++ {
 		outW[i] = outputwitness[i].Clone()
 	}
+	// check if this is an ownership transfer
+	// if so, skip range proof, well-formedness proof is enough
 	if len(inputwitness) != 1 || len(outputwitness) != 1 {
 		p.RangeCorrectness = rangeproof.NewProver(outW, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 	}
@@ -56,8 +62,11 @@ func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, ou
 	return p
 }
 
+// NewVerifier returns a TransferAction Verifier as a function of the passed parameters
 func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
+	// check if this is an ownership transfer
+	// if so, skip range proof, well-formedness proof is enough
 	if len(inputs) != 1 || len(outputs) != 1 {
 		v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 	}
@@ -66,14 +75,17 @@ func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier 
 	return v
 }
 
+// Serialize marshals Proof
 func (p *Proof) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
+// Deserialize unmarshals Proof
 func (p *Proof) Deserialize(bytes []byte) error {
 	return json.Unmarshal(bytes, p)
 }
 
+// Prove produces a serialized Proof
 func (p *Prover) Prove() ([]byte, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -108,11 +120,12 @@ func (p *Prover) Prove() ([]byte, error) {
 	return proof.Serialize()
 }
 
+// Verify checks validity of serialized Proof
 func (v *Verifier) Verify(proof []byte) error {
 	tp := *&Proof{}
 	err := tp.Deserialize(proof)
 	if err != nil {
-		return errors.Wrapf(err, "invalid transfer proof: cannot parse proof")
+		return errors.Wrap(err, "invalid transfer proof")
 	}
 
 	var wg sync.WaitGroup
@@ -134,24 +147,8 @@ func (v *Verifier) Verify(proof []byte) error {
 	wg.Wait()
 
 	if wfErr != nil {
-		return wfErr
+		return errors.Wrap(wfErr, "invalid transfer proof")
 	}
 
 	return rangeErr
-}
-
-func (w *WellFormednessWitness) GetInValues() []*math.Zr {
-	return w.inValues
-}
-
-func (w *WellFormednessWitness) GetOutValues() []*math.Zr {
-	return w.outValues
-}
-
-func (w *WellFormednessWitness) GetOutBlindingFators() []*math.Zr {
-	return w.outBlindingFactors
-}
-
-func (w *WellFormednessWitness) GetInBlindingFators() []*math.Zr {
-	return w.inBlindingFactors
 }
