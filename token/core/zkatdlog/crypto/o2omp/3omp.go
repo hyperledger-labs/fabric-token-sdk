@@ -16,7 +16,7 @@ import (
 
 // Prover produces a one-out-of-many proof
 // A one-out-of-many proof allows a prover who is given a list of commitments
-// (c_1, ..., c_n) shows that they know that there is i \in [N] and r_i \in Z_p
+// (c_1, ..., c_n) to show that they know that there is i \in [N] and r_i \in Z_p
 // such that c_i = Q^r_i (i.e., c_i is commitment to 0)
 type Prover struct {
 	*Verifier

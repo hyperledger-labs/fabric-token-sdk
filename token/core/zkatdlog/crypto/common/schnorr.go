@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SchnorrProof carries a ZKP for statement (w_1, ..., w_n): Com = \prod_{i=1}^n P_i^w_i
+// SchnorrProof carries a ZKP for statement (w_1, ..., w_n): Com = \Prod_{j=1}^n P_i^w_i
 type SchnorrProof struct {
 	Statement *math.G1
 	Proof     []*math.Zr
@@ -78,7 +78,7 @@ func ComputePedersenCommitment(opening []*math.Zr, base []*math.G1, c *math.Curv
 func (v *SchnorrVerifier) RecomputeCommitment(zkp *SchnorrProof) (*math.G1, error) {
 	// safety checks
 	if zkp.Challenge == nil || zkp.Statement == nil {
-		return nil, errors.Errorf("invalid zero-knowledge proof")
+		return nil, errors.Errorf("invalid zero-knowledge proof: nil challenge or statement")
 	}
 	if v.Curve == nil {
 		return nil, errors.New("please initialize curve")
@@ -87,18 +87,18 @@ func (v *SchnorrVerifier) RecomputeCommitment(zkp *SchnorrProof) (*math.G1, erro
 		return nil, errors.Errorf("please initialize Pedersen parameters correctly")
 	}
 	com := v.Curve.NewG1()
-	// compute commitment
+	// compute commitment com = \Prod_{i=1}^n P_i^{proof_i}/Statement^{challenge}
 	for i, p := range zkp.Proof {
 		// more safety checks
 		if v.PedParams == nil {
 			return nil, errors.New("please initialize Pedersen parameters")
 		}
 		if p == nil {
-			return nil, errors.Errorf("invalid zero-knowledge proof")
+			return nil, errors.New("invalid zero-knowledge proof: nil proof")
 		}
 		com.Add(v.PedParams[i].Mul(p))
 	}
-
+	// subtract Statement^{challenge}
 	com.Sub(zkp.Statement.Mul(zkp.Challenge))
 	return com, nil
 }
@@ -110,7 +110,7 @@ func (v *SchnorrVerifier) RecomputeCommitments(zkps []*SchnorrProof, challenge *
 		zkp.Challenge = challenge
 		commitments[i], err = v.RecomputeCommitment(zkp)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "failed to compute commitment at index [%d]", i)
 		}
 	}
 	return commitments, nil
