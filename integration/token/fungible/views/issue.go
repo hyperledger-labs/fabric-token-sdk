@@ -86,9 +86,9 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 			),
 		)
 	}
+	assert.NoError(err, "failed creating issue transaction")
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue", []byte("issue"))
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta", []byte("meta"))
-	assert.NoError(err, "failed creating issue transaction")
 
 	// The issuer adds a new issue operation to the transaction following the instruction received
 	err = tx.Issue(

@@ -28,7 +28,7 @@ var _ = Describe("Orion EndToEnd", func() {
 	Describe("Orion FabToken", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", fungible.Topology("orion", "fabtoken")...)
+			network, err = integration.New(StartPortDlog(), "", fungible.Topology("orion", "fabtoken", false)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

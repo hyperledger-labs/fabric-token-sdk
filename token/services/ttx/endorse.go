@@ -63,7 +63,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	// Store transient
 	err := c.tx.storeTransient()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed storing transient")
+		return nil, errors.WithMessagef(err, "failed storing transient")
 	}
 
 	// 1. First collect signatures on the token request
@@ -71,43 +71,39 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 
 	parties, err := c.requestSignaturesOnIssues(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed requesting signatures on issues")
 	}
 	distributionList = append(distributionList, parties...)
 
 	parties, err = c.requestSignaturesOnTransfers(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed requesting signatures on transfers")
 	}
 	distributionList = append(distributionList, parties...)
 
 	// 2. Audit
-	if !c.tx.Opts.Auditor.IsNone() {
-		_, err := context.RunView(newAuditingViewInitiator(c.tx))
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
-		}
+	auditors, err := c.requestAudit(context)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed requesting auditing")
+	}
+	if len(auditors) != 0 {
 		distributionList = append(distributionList, c.tx.Opts.Auditor)
 	}
 
 	// 3. Endorse and return the transaction envelope
 	env, err := c.requestApproval(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed requesting approval")
 	}
 
 	// Distribute Env to all parties
 	if err := c.distributeEnv(context, env, distributionList); err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
 
-	// Cleanup
-	if !c.tx.Opts.Auditor.IsNone() {
-		session, err := context.GetSession(nil, c.tx.Opts.Auditor)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed getting auditor's session")
-		}
-		session.Close()
+	// Cleanup audit
+	if err := c.cleanupAudit(context); err != nil {
+		return nil, errors.WithMessage(err, "failed cleaning up audit")
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -365,6 +361,34 @@ func (c *collectEndorsementsView) requestApproval(context view.Context) (*networ
 	}
 
 	return env, nil
+}
+
+func (c *collectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
+	if !c.tx.Opts.Auditor.IsNone() {
+		// am I the auditor?
+		if view2.GetSigService(context).IsMe(c.tx.Opts.Auditor) {
+			//
+		} else {
+			// connect to the remote auditor
+			_, err := context.RunView(newAuditingViewInitiator(c.tx))
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
+			}
+		}
+		return []view.Identity{c.tx.Opts.Auditor}, nil
+	}
+	return nil, nil
+}
+
+func (c *collectEndorsementsView) cleanupAudit(context view.Context) error {
+	if !c.tx.Opts.Auditor.IsNone() {
+		session, err := context.GetSession(nil, c.tx.Opts.Auditor)
+		if err != nil {
+			return errors.Wrap(err, "failed getting auditor's session")
+		}
+		session.Close()
+	}
+	return nil
 }
 
 func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity) error {
