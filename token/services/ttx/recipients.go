@@ -178,9 +178,19 @@ type RespondRequestRecipientIdentityView struct {
 
 // RespondRequestRecipientIdentity executes the RespondRequestRecipientIdentityView.
 // The recipient sends back the identity to receive ownership of tokens.
-// The identity is taken from the wallet
+// The identity is taken from the default wallet.
+// If the wallet is not found, an error is returned.
 func RespondRequestRecipientIdentity(context view.Context) (view.Identity, error) {
-	id, err := context.RunView(&RespondRequestRecipientIdentityView{})
+	return RespondRequestRecipientIdentityUsingWallet(context, "")
+}
+
+// RespondRequestRecipientIdentityUsingWallet executes the RespondRequestRecipientIdentityView.
+// The recipient sends back the identity to receive ownership of tokens.
+// The identity is taken from the passed wallet.
+// If the wallet is not found, an error is returned.
+// If the wallet is the empty string, the identity is taken from the default wallet.
+func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet string) (view.Identity, error) {
+	id, err := context.RunView(&RespondRequestRecipientIdentityView{Wallet: wallet})
 	if err != nil {
 		return nil, err
 	}
