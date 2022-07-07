@@ -85,4 +85,23 @@ var _ = Describe("FabToken end to end", func() {
 		})
 	})
 
+	Describe("Asset Exchange No Cross Claim Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropExchangeSwapNoCrossTwoFabricNetworks.StartPortForNode(),
+				"",
+				interop.AssetExchangeNoCrossClaimTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed an exchange based atomic swap", func() {
+			interop.TestExchangeNoCrossClaimTwoFabricNetworks(ii)
+		})
+	})
+
 })

@@ -85,4 +85,22 @@ var _ = Describe("DLog end to end", func() {
 		})
 	})
 
+	Describe("Asset Exchange No Cross Claim Two Fabric Networks", func() {
+		BeforeEach(func() {
+			ii, err := integration.New(
+				integration2.ZKATDLogInteropExchangeSwapNoCrossTwoFabricNetworks.StartPortForNode(),
+				"",
+				interop.AssetExchangeNoCrossClaimTopology("dlog")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed an exchange based atomic swap", func() {
+			interop.TestExchangeNoCrossClaimTwoFabricNetworks(ii)
+		})
+	})
+
 })

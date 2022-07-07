@@ -147,3 +147,78 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
+
+func AssetExchangeNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
+	// Define two Fabric topologies
+	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
+	f1Topology.EnableIdemix()
+	f1Topology.AddOrganizationsByName("Org1", "Org2")
+	f1Topology.SetNamespaceApproverOrgs("Org1")
+
+	f2Topology := fabric.NewTopologyWithName("beta")
+	f2Topology.EnableIdemix()
+	f2Topology.AddOrganizationsByName("Org3", "Org4")
+	f2Topology.SetNamespaceApproverOrgs("Org3")
+
+	// FSC
+	fscTopology := fsc.NewTopology()
+
+	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org1"),
+		fabric.WithNetworkOrganization("beta", "Org3"),
+		fabric.WithAnonymousIdentity(),
+		token.WithIssuerIdentity("issuer.id1"),
+		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+	)
+	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
+
+	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org1"),
+		fabric.WithNetworkOrganization("beta", "Org3"),
+		fabric.WithAnonymousIdentity(),
+		token.WithAuditorIdentity(),
+	)
+	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+
+	alice := fscTopology.AddNodeByName("alice").AddOptions(
+		fabric.WithNetworkOrganization("alpha", "Org2"),
+		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity(tokenSDKDriver, "alice.id2"),
+	)
+	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
+	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
+	alice.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
+	alice.RegisterViewFactory("exchange.fastExchange", &exchange.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("exchange.scan", &exchange.ScanViewFactory{})
+	alice.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
+
+	bob := fscTopology.AddNodeByName("bob").AddOptions(
+		fabric.WithNetworkOrganization("beta", "Org4"),
+		fabric.WithAnonymousIdentity(),
+		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithOwnerIdentity(tokenSDKDriver, "bob.id2"),
+	)
+	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
+	bob.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
+	bob.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
+	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
+	bob.RegisterViewFactory("exchange.scan", &exchange.ScanViewFactory{})
+	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
+	bob.RegisterResponder(&exchange.FastExchangeResponderView{}, &exchange.FastExchangeInitiatorView{})
+
+	tokenTopology := token.NewTopology()
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	tms := tokenTopology.AddTMS(f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
+	tms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(tms, "Org1")
+	tms.AddAuditor(auditor)
+
+	tms = tokenTopology.AddTMS(f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
+	tms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(tms, "Org3")
+	tms.AddAuditor(auditor)
+
+	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
+}

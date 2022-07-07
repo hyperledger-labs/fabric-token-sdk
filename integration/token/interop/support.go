@@ -177,3 +177,16 @@ func fastExchange(network *integration.Infrastructure, id string, recipient stri
 	Expect(err).NotTo(HaveOccurred())
 	time.Sleep(5 * time.Second)
 }
+
+func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, opts ...token.ServiceOption) {
+	options, err := token.CompileServiceOptions(opts...)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = network.Client(id).CallView("exchange.scan", common.JSONMarshall(&exchange.Scan{
+		TMSID:    options.TMSID(),
+		Timeout:  30 * time.Second,
+		Hash:     hash,
+		HashFunc: hashFunc,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}

@@ -113,6 +113,33 @@ func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
 }
 
+func TestExchangeNoCrossClaimTwoFabricNetworks(network *integration.Infrastructure) {
+	alpha := token.TMSID{Network: "alpha"}
+	beta := token.TMSID{Network: "beta"}
+
+	registerAuditor(network, token.WithTMSID(alpha))
+	registerAuditor(network, token.WithTMSID(beta))
+
+	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
+	checkBalance(network, "alice", "alice.id1", "EUR", 30, token.WithTMSID(alpha))
+
+	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob.id1")
+	checkBalance(network, "bob", "bob.id1", "USD", 30, token.WithTMSID(beta))
+
+	preImage, hash := exchangeLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
+	exchangeLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
+
+	go func() { exchangeClaim(network, alpha, "alice", "alice.id2", preImage) }()
+	go func() { exchangeClaim(network, beta, "bob", "bob.id2", preImage) }()
+	scan(network, "alice", hash, crypto.SHA256, token.WithTMSID(alpha))
+	scan(network, "bob", hash, crypto.SHA256, token.WithTMSID(beta))
+
+	checkBalance(network, "alice", "alice.id1", "EUR", 20, token.WithTMSID(alpha))
+	checkBalance(network, "alice", "alice.id2", "EUR", 10, token.WithTMSID(alpha))
+	checkBalance(network, "bob", "bob.id1", "USD", 20, token.WithTMSID(beta))
+	checkBalance(network, "bob", "bob.id2", "USD", 10, token.WithTMSID(beta))
+}
+
 func TestFastExchange(network *integration.Infrastructure) {
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
