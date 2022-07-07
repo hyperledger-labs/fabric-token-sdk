@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package sigproof_test
 
 import (
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/sigproof"
 	. "github.com/onsi/ginkgo"

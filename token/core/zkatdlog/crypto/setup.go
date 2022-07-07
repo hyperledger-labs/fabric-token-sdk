@@ -9,6 +9,7 @@ package crypto
 import (
 	"crypto/sha256"
 	"encoding/json"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
