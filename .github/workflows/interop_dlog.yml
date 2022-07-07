@@ -1,4 +1,4 @@
-name: Fungible Tokens with DLOG Driver (Fabric)
+name: Interop with DLog Driver
 
 on:
   push:
@@ -31,4 +31,4 @@ jobs:
       run: make checks
 
     - name: Integration Tests
-      run: make integration-tests-dlog-fabric
+      run: make integration-tests-interop-dlog

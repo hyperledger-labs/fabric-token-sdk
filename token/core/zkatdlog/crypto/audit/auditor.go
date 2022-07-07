@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	"github.com/pkg/errors"
 )
 
@@ -39,12 +40,13 @@ type Deserializer interface {
 // AuditableToken contains a zkat token and the information that allows
 // an auditor to learn its content.
 type AuditableToken struct {
-	Token *token.Token
-	data  *tokenDataOpening
-	owner *ownerOpening
+	Token     *token.Token
+	data      *tokenDataOpening
+	owner     *ownerOpening
+	auditInfo []byte
 }
 
-func NewAuditableToken(token *token.Token, matcher driver.Matcher, ttype string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
+func NewAuditableToken(token *token.Token, auditInfo []byte, matcher driver.Matcher, ttype string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
 	return &AuditableToken{
 		Token: token,
 		owner: &ownerOpening{
@@ -55,6 +57,7 @@ func NewAuditableToken(token *token.Token, matcher driver.Matcher, ttype string,
 			value: value,
 			bf:    bf,
 		},
+		auditInfo: auditInfo,
 	}, nil
 }
 
@@ -174,25 +177,12 @@ func (a *Auditor) checkIssueRequests(outputsFromIssue [][]*AuditableToken, txID 
 // inspectOutputs verifies that the commitments in an array of outputs match the information provided in the clear.
 func (a *Auditor) inspectOutputs(tokens []*AuditableToken) error {
 	for i, t := range tokens {
-		err := a.inspectOutput(t, i)
-		if err != nil {
-			return errors.Wrapf(err, "failed inspecting output [%d]", i)
-		}
 		if t == nil || t.Token == nil {
 			return errors.Errorf("failed to inspect nil output [%d]", i)
 		}
-		if !t.Token.IsRedeem() { // this is not a redeemed output
-			owner, err := a.rawOwner(t.Token.Owner)
-			if err != nil {
-				return errors.Errorf("output owner at index [%d] cannot be unwrapped", i)
-			}
-			if t.owner.ownerInfo == nil {
-				return errors.Errorf("failed to inspect owner of output [%d]: owner info is nil", i)
-			}
-			err = t.owner.ownerInfo.Match(owner)
-			if err != nil {
-				return errors.Wrapf(err, "output at index [%d] does not match the provided opening", i)
-			}
+		err := a.inspectOutput(t, i)
+		if err != nil {
+			return errors.Wrapf(err, "failed inspecting output [%d]", i)
 		}
 	}
 
@@ -212,11 +202,17 @@ func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
 	if err != nil {
 		return err
 	}
+	if output.Token == nil {
+		return errors.Errorf("output at index [%d] in invalid", index)
+	}
 	if output.Token == nil || output.Token.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
 	if !t.Equals(output.Token.Data) {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
+	}
+	if !output.Token.IsRedeem() {
+		return a.inspectTokenOwner(output, index)
 	}
 	return nil
 }
@@ -241,7 +237,71 @@ func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
 				return errors.Errorf("input at index [%d] does not match the provided opening", i)
 			}
 		}
+			if err := a.inspectTokenOwner(input, i); err != nil {
+				return errors.Errorf("invalid input token owner at index [%d]", i)
+			}
+		}
+	return nil
+}
+
+type ScriptInfo struct {
+	Sender    []byte
+	Recipient []byte
+}
+
+func (a *Auditor) inspectTokenOwner(token *AuditableToken, index int) error {
+	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
+	if err != nil {
+		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
 	}
+	if owner.Type == identity.SerializedIdentityType {
+		owner, err := a.rawOwner(token.Token.Owner)
+		if err != nil {
+			return errors.Errorf("input owner at index [%d] cannot be unwrapped", index)
+		}
+		if err := token.owner.ownerInfo.Match(owner); err != nil {
+			return errors.Errorf("owner at index [%d] does not match the provided opening", index)
+		}
+		return nil
+	}
+	if owner.Type != exchange.ScriptTypeExchange {
+		return errors.Errorf("invalid owner in token")
+	}
+
+	scriptInf := &ScriptInfo{}
+	if err := json.Unmarshal(token.auditInfo, scriptInf); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal exchange info")
+	}
+	script := &exchange.Script{}
+	err = json.Unmarshal(owner.Identity, script)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal exchange script")
+	}
+
+	sender, err := a.Des.GetOwnerMatcher(scriptInf.Sender)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
+	}
+	ro, err := identity.UnmarshallRawOwner(script.Sender)
+	if err != nil {
+		return errors.Wrapf(err, "failed to retrieve raw owner from sender in exchange script")
+	}
+	if err := sender.Match(ro.Identity); err != nil {
+		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
+	}
+
+	recipient, err := a.Des.GetOwnerMatcher(scriptInf.Recipient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
+	}
+	ro, err = identity.UnmarshallRawOwner(script.Recipient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in exchange script")
+	}
+	if err := recipient.Match(ro.Identity); err != nil {
+		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Recipient))
+	}
+
 	return nil
 }
 
@@ -289,7 +349,7 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 			if ia.OutputTokens[i].IsRedeem() {
 				return nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			ao, err := NewAuditableToken(ia.OutputTokens[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
+			ao, err := NewAuditableToken(ia.OutputTokens[i], md.ReceiversAuditInfos[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, err
 			}
@@ -326,7 +386,7 @@ func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []d
 					return nil, nil, err
 				}
 			}
-			ai, err := NewAuditableToken(inputs[k][i], matcher, "", nil, nil)
+			ai, err := NewAuditableToken(inputs[k][i], tr.SenderAuditInfos[i], matcher, "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -357,7 +417,7 @@ func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []d
 					return nil, nil, err
 				}
 			}
-			ao, err := NewAuditableToken(ta.OutputTokens[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
+			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.ReceiverAuditInfos[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}
