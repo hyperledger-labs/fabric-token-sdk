@@ -66,4 +66,23 @@ var _ = Describe("FabToken end to end", func() {
 		})
 	})
 
+	Describe("Fast Exchange Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
+				"",
+				interop.AssetExchangeTwoFabricNetworksTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed a fast exchange", func() {
+			interop.TestFastExchange(ii)
+		})
+	})
+
 })

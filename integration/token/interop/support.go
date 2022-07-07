@@ -162,3 +162,18 @@ func exchangeClaim(network *integration.Infrastructure, tmsID token.TMSID, id st
 		time.Sleep(5 * time.Second)
 	}
 }
+
+func fastExchange(network *integration.Infrastructure, id string, recipient string, tmsID1 token.TMSID, typ1 string, amount1 uint64, tmsID2 token.TMSID, typ2 string, amount2 uint64, deadline time.Duration) {
+	_, err := network.Client(id).CallView("exchange.fastExchange", common.JSONMarshall(&exchange.FastExchange{
+		Recipient:           network.Identity(recipient),
+		TMSID1:              tmsID1,
+		Type1:               typ1,
+		Amount1:             amount1,
+		TMSID2:              tmsID2,
+		Type2:               typ2,
+		Amount2:             amount2,
+		ReclamationDeadline: deadline,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	time.Sleep(5 * time.Second)
+}

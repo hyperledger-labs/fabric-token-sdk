@@ -52,6 +52,7 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
 	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
+	alice.RegisterViewFactory("exchange.fastExchange", &exchange.FastExchangeInitiatorViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -61,6 +62,7 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
 	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
+	bob.RegisterResponder(&exchange.FastExchangeResponderView{}, &exchange.FastExchangeInitiatorView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -115,6 +117,7 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
 	alice.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
 	alice.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
+	alice.RegisterViewFactory("exchange.fastExchange", &exchange.FastExchangeInitiatorViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -128,6 +131,7 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 	bob.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
 	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
 	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
+	bob.RegisterResponder(&exchange.FastExchangeResponderView{}, &exchange.FastExchangeInitiatorView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

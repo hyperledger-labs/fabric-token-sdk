@@ -66,4 +66,23 @@ var _ = Describe("DLog end to end", func() {
 		})
 	})
 
+	Describe("Fast Exchange Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
+				"",
+				interop.AssetExchangeTwoFabricNetworksTopology("dlog")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed a fast exchange", func() {
+			interop.TestFastExchange(ii)
+		})
+	})
+
 })

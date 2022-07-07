@@ -112,3 +112,25 @@ func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
 }
+
+func TestFastExchange(network *integration.Infrastructure) {
+	alpha := token.TMSID{Network: "alpha"}
+	beta := token.TMSID{Network: "beta"}
+
+	registerAuditor(network, token.WithTMSID(alpha))
+	registerAuditor(network, token.WithTMSID(beta))
+
+	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice")
+	checkBalance(network, "alice", "", "EUR", 30, token.WithTMSID(alpha))
+
+	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
+	checkBalance(network, "bob", "", "USD", 30, token.WithTMSID(beta))
+
+	fastExchange(network, "alice", "bob", alpha, "EUR", 10, beta, "USD", 10, 1*time.Hour)
+
+	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
+	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
+
+	checkBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
+	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
+}
