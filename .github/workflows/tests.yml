@@ -4,7 +4,7 @@ on: [push, pull_request]
 
 env:
   GOPATH: ${{ github.workspace }}
-  FSC_PATH: "${{ github.workspace }}/src/github.com/hyperledger-labs/fabric-smart-client"
+  FTS_PATH: "${{ github.workspace }}/src/github.com/hyperledger-labs/fabric-token-sdk"
 
 jobs:
 
@@ -15,19 +15,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          path: ${{ env.FSC_PATH }}
+          path: ${{ env.FTS_PATH }}
 
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: "${{ env.FSC_PATH }}/go.mod"
+          go-version-file: "${{ env.FTS_PATH }}/go.mod"
 
       - name: Set up tools
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
       - name: Run checks
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make checks
 
   utest:
@@ -41,19 +41,19 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          path: ${{ env.FSC_PATH }}
+          path: ${{ env.FTS_PATH }}
 
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: "${{ env.FSC_PATH }}/go.mod"
+          go-version-file: "${{ env.FTS_PATH }}/go.mod"
 
       - name: Set up tools
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
       - name: Run ${{ matrix.tests }}
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make ${{ matrix.tests }}
 
   itest:
@@ -78,21 +78,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         with:
-          path: ${{ env.FSC_PATH }}
+          path: ${{ env.FTS_PATH }}
 
       - name: Set up Go
         uses: actions/setup-go@v3
         with:
-          go-version-file: "${{ env.FSC_PATH }}/go.mod"
+          go-version-file: "${{ env.FTS_PATH }}/go.mod"
 
       - name: Set up tools
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
       - name: Docker
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make docker-images
 
       - name: Run ${{ matrix.tests }}
-        working-directory: ${{ env.FSC_PATH }}
+        working-directory: ${{ env.FTS_PATH }}
         run: make integration-tests-${{ matrix.tests }}
