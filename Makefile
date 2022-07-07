@@ -1,3 +1,6 @@
+# pinned versions
+FABRIC_VERSION=2.2
+
 TOP = .
 
 all: install-tools checks unit-tests #integration-tests
