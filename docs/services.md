@@ -8,7 +8,7 @@ To build our Fabric token infrastructure, we will need the following building bl
 - On the Fabric-side, we will define a `Token Namespace` that will contain all information that is needed to make
   sense of the tokens stored in the namespace. The namespace's endorsement policy depends on the specific use case.
   As a general guideline, we can say it should reflect the majority of the partners in the blockchain consortium.
-  Last but not least, a chiancode, the `Token Chaincode`. It is deployed to create the token namespace.
+  Last but not least, a chaincode, the `Token Chaincode`. It is deployed to create the token namespace.
   The token chaincode provides various functionalities to the applications.
   We will explore these functions in more details later.
 - On the Client-side, we need
@@ -80,7 +80,7 @@ for a new transactions.
 ## The Token Namespace and Chaincode
 
 In the previous Section, we have seen that part of the lifecycle of a Token Transaction is the invocation of the
-`Token Chaincode` that is assosiated to the `Token Namespace`.
+`Token Chaincode` that is associated to the `Token Namespace`.
 
 The `Token Namespace` contains the tokens and any additional information needed to make sense out of them
 in a key-value format. Attached to the namespace we have:

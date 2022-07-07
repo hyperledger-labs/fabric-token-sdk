@@ -196,7 +196,7 @@ func (v *WellFormednessVerifier) Verify(p []byte) error {
 	return nil
 }
 
-// parseProof returns an arrary of Schnorr proofs
+// parseProof returns an array of Schnorr proofs
 func (v *WellFormednessVerifier) parseProof(tokens []*math.G1, values []*math.Zr, randomness []*math.Zr, ttype *math.Zr, sum *math.Zr) ([]*crypto.SchnorrProof, error) {
 	if len(values) != len(tokens) || len(randomness) != len(tokens) {
 		return nil, errors.New("failed to parse wellformedness proof ")
