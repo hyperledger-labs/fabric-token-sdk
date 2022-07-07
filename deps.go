@@ -24,5 +24,4 @@ import (
 	_ "github.com/hyperledger/fabric/core/ledger/pvtdatastorage"
 	_ "github.com/hyperledger/fabric/core/operations"
 	_ "github.com/libp2p/go-libp2p-core/network"
-	_ "github.com/maxbrunsfeld/counterfeiter/v6"
 )

@@ -1,0 +1,98 @@
+name: Tests
+
+on: [push, pull_request]
+
+env:
+  GOPATH: ${{ github.workspace }}
+  FSC_PATH: "${{ github.workspace }}/src/github.com/hyperledger-labs/fabric-smart-client"
+
+jobs:
+
+  checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.FSC_PATH }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: "${{ env.FSC_PATH }}/go.mod"
+
+      - name: Set up tools
+        working-directory: ${{ env.FSC_PATH }}
+        run: make install-tools
+
+      - name: Run checks
+        working-directory: ${{ env.FSC_PATH }}
+        run: make checks
+
+  utest:
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tests: [unit-tests, unit-tests-race]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.FSC_PATH }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: "${{ env.FSC_PATH }}/go.mod"
+
+      - name: Set up tools
+        working-directory: ${{ env.FSC_PATH }}
+        run: make install-tools
+
+      - name: Run ${{ matrix.tests }}
+        working-directory: ${{ env.FSC_PATH }}
+        run: make ${{ matrix.tests }}
+
+  itest:
+    needs: checks
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        tests: [
+          dlog-fabric,
+          fabtoken-fabric,
+          dlog-orion,
+          fabtoken-orion ,
+          nft-dlog,
+          nft-fabtoken,
+          nft-dlog-orion,
+          nft-fabtoken-orion,
+          dvp-fabtoken,
+          dvp-dlog
+        ]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          path: ${{ env.FSC_PATH }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version-file: "${{ env.FSC_PATH }}/go.mod"
+
+      - name: Set up tools
+        working-directory: ${{ env.FSC_PATH }}
+        run: make install-tools
+
+      - name: Docker
+        working-directory: ${{ env.FSC_PATH }}
+        run: make docker-images
+
+      - name: Run ${{ matrix.tests }}
+        working-directory: ${{ env.FSC_PATH }}
+        run: make integration-tests-${{ matrix.tests }}
