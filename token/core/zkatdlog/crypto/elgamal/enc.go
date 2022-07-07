@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package elgamal
 
 import (
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
 

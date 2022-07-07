@@ -6,14 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 package vault
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
-	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 

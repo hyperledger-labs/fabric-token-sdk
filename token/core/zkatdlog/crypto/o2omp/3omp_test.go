@@ -8,7 +8,7 @@ package o2omp_test
 import (
 	"io"
 
-	"github.com/IBM/mathlib"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/o2omp"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
