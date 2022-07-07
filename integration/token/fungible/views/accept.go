@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -21,7 +22,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// to a request for a recipient.
 	// The recipient can do that by using the following code.
 	// The recipient identity will be taken from the default wallet (ttx.MyWallet(context)), if not otherwise specified.
-	id, err := ttx.RespondRequestRecipientIdentity(context)
+	id, err := ttx.RespondRequestRecipientIdentityUsingWallet(context, "")
 	assert.NoError(err, "failed to respond to identity request")
 
 	// At some point, the recipient receives the token transaction that in the mean time has been assembled
