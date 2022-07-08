@@ -60,7 +60,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("issuer")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 
