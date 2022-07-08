@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -24,8 +25,13 @@ import (
 
 // IssueCash contains the input information to issue a token
 type IssueCash struct {
+<<<<<<< HEAD
 	// Anonymous set to true if the transaction is anonymous, false otherwise
 	Anonymous bool
+=======
+	// Auditor is the name of the auditor identity
+	Auditor string
+>>>>>>> 7e6f392 (auditor=issuer completed)
 	// IssuerWallet is the issuer's wallet to use
 	IssuerWallet string
 	// TokenType is the type of token to issue
@@ -67,10 +73,26 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
+<<<<<<< HEAD
 	// The issuer creates a new token transaction and specifies the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
 	auditorOpt := ttx.WithAuditor(
 		view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+=======
+	// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+	// and specify the auditor that must be contacted to approve the operation
+	var auditorID view.Identity
+	if len(p.Auditor) == 0 {
+		auditorID = view2.GetIdentityProvider(context).DefaultIdentity()
+	} else {
+		auditorID = view2.GetIdentityProvider(context).Identity(p.Auditor)
+	}
+	tx, err := ttx.NewAnonymousTransaction(
+		context,
+		ttx.WithAuditor(
+			auditorID, // Retrieve the auditor's FSC node identity
+		),
+>>>>>>> 7e6f392 (auditor=issuer completed)
 	)
 	if p.Anonymous {
 		tx, err = ttx.NewAnonymousTransaction(context, auditorOpt)

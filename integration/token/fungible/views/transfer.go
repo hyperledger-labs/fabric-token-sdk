@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -24,6 +25,8 @@ import (
 
 // Transfer contains the input information for a transfer
 type Transfer struct {
+	// Auditor is the name of the auditor that must be contacted to approve the operation
+	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
@@ -147,7 +150,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("issuer")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 

@@ -254,13 +254,10 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
-			// if I'm also an auditor, store the audit entry
-			if r.ownership.AmIAnAuditor(tms) {
-				if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
-					return err
-				}
-			}
-		} else {
+		}
+
+		// if I'm an auditor, store the audit entry
+		if r.ownership.AmIAnAuditor(tms) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}

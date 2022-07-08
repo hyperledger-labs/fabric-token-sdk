@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -21,6 +22,8 @@ import (
 
 // Redeem contains the input information for a redeem
 type Redeem struct {
+	// Auditor is the name of the auditor that must be contacted to approve the operation
+	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to redeem
 	Wallet string
 	// TokenIDs contains a list of token ids to redeem. If empty, tokens are selected on the spot.
@@ -41,7 +44,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("issuer")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 
