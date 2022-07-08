@@ -87,7 +87,8 @@ var _ = Describe("DLog end to end", func() {
 
 	Describe("Asset Exchange No Cross Claim Two Fabric Networks", func() {
 		BeforeEach(func() {
-			ii, err := integration.New(
+			var err error
+			ii, err = integration.New(
 				integration2.ZKATDLogInteropExchangeSwapNoCrossTwoFabricNetworks.StartPortForNode(),
 				"",
 				interop.AssetExchangeNoCrossClaimTopology("dlog")...,

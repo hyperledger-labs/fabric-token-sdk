@@ -1,194 +1,0 @@
-Running Suite: EndToEnd Interop (DLOG) Suite
-============================================
-Random Seed: [1m1657191018[0m
-Will run [1m1[0m of [1m2[0m specs
-
-[36mS[0m[34m2022-07-07 13:50:27.749 IDT [fsc.integration] Generate -> INFO 001[0m Generate Configuration...
-[34m2022-07-07 13:50:27.779 IDT [nwo.builder] gBuild -> INFO 002[0m building [github.com/hyperledger-labs/fabric-smart-client/cmd/fsccli,[]] 
-[34m2022-07-07 13:50:33.473 IDT [nwo.builder] gBuild -> INFO 003[0m building [github.com/hyperledger/fabric/cmd/idemixgen,[]] 
-[34m2022-07-07 13:50:34.933 IDT [nwo.builder] gBuild -> INFO 004[0m building [github.com/hyperledger/fabric/cmd/configtxgen,[]] 
-[34m2022-07-07 13:50:37.178 IDT [nwo.builder] gBuild -> INFO 005[0m building [github.com/IBM/idemix/tools/idemixgen,[]] 
-[34m2022-07-07 13:50:45.787 IDT [fsc.integration] Generate -> INFO 006[0m Generate Configuration...done!
-[34m2022-07-07 13:50:45.789 IDT [fsc.integration] Start -> INFO 007[0m Starting...
-[34m2022-07-07 13:50:45.789 IDT [fsc.integration] Start -> INFO 008[0m Collect members...
-[34m2022-07-07 13:50:45.789 IDT [fsc.integration] Start -> INFO 009[0m From [fabric]...
-[34m2022-07-07 13:50:45.789 IDT [nwo.builder] gBuild -> INFO 00a[0m building [github.com/hyperledger/fabric/cmd/orderer,[]] 
-[34m2022-07-07 13:50:47.325 IDT [nwo.builder] gBuild -> INFO 00b[0m building [github.com/hyperledger/fabric/cmd/peer,[]] 
-[34m2022-07-07 13:50:52.226 IDT [fsc.integration] Start -> INFO 00c[0m Adding member [fabric.alpha.orderers]
-[34m2022-07-07 13:50:52.226 IDT [fsc.integration] Start -> INFO 00d[0m Adding member [fabric.alpha.peers]
-[34m2022-07-07 13:50:52.226 IDT [fsc.integration] Start -> INFO 00e[0m From [fabric]...
-[34m2022-07-07 13:50:52.227 IDT [fsc.integration] Start -> INFO 00f[0m Adding member [fabric.beta.orderers]
-[34m2022-07-07 13:50:52.227 IDT [fsc.integration] Start -> INFO 010[0m Adding member [fabric.beta.peers]
-[34m2022-07-07 13:50:52.227 IDT [fsc.integration] Start -> INFO 011[0m From [token]...
-[34m2022-07-07 13:50:52.227 IDT [fsc.integration] Start -> INFO 012[0m From [fsc]...
-[34m2022-07-07 13:50:52.228 IDT [nwo.builder] gBuild -> INFO 013[0m building [github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/cmd/issuer,[]] 
-[34m2022-07-07 13:50:57.689 IDT [nwo.builder] gBuild -> INFO 014[0m building [github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/cmd/auditor,[]] 
-[34m2022-07-07 13:51:03.073 IDT [nwo.builder] gBuild -> INFO 015[0m building [github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/cmd/alice,[]] 
-[34m2022-07-07 13:51:08.449 IDT [nwo.builder] gBuild -> INFO 016[0m building [github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/cmd/bob,[]] 
-[34m2022-07-07 13:51:13.848 IDT [fsc.integration] Start -> INFO 017[0m Adding member [fsc.issuer]
-[34m2022-07-07 13:51:13.848 IDT [fsc.integration] Start -> INFO 018[0m Adding member [fsc.auditor]
-[34m2022-07-07 13:51:13.848 IDT [fsc.integration] Start -> INFO 019[0m Adding member [fsc.alice]
-[34m2022-07-07 13:51:13.848 IDT [fsc.integration] Start -> INFO 01a[0m Adding member [fsc.bob]
-[34m2022-07-07 13:51:13.849 IDT [fsc.integration] Start -> INFO 01b[0m Run nodes...
-[34m2022-07-07 13:51:13.850 IDT [nwo.runner] Run -> INFO 01c[0m running fabric.alpha-OrdererOrg.orderer with ginkgo stdout/stderr
-[34m2022-07-07 13:51:15.400 IDT [nwo.runner] Run -> INFO 01d[0m running fabric.alpha-Org1.Org1_peer_0 with ginkgo stdout/stderr
-[34m2022-07-07 13:51:15.400 IDT [nwo.runner] Run -> INFO 01e[0m running fabric.alpha-Org2.Org2_peer_0 with ginkgo stdout/stderr
-[34m2022-07-07 13:51:19.130 IDT [nwo.runner] Run -> INFO 01f[0m running fabric.beta-OrdererOrg.orderer with ginkgo stdout/stderr
-[34m2022-07-07 13:51:19.468 IDT [nwo.runner] Run -> INFO 021[0m running fabric.beta-Org4.Org4_peer_0 with ginkgo stdout/stderr
-[34m2022-07-07 13:51:19.468 IDT [nwo.runner] Run -> INFO 020[0m running fabric.beta-Org3.Org3_peer_0 with ginkgo stdout/stderr
-[34m2022-07-07 13:51:22.159 IDT [fsc.integration] Start -> INFO 022[0m Post execution for nodes...
-[34m2022-07-07 13:51:22.159 IDT [fsc.integration.fabric] PostRun -> INFO 023[0m Post execution [fabric.alpha]...
-[34m2022-07-07 13:53:59.278 IDT [fsc.integration.fabric] PostRun -> INFO 024[0m Post execution [fabric.alpha]...done.
-[34m2022-07-07 13:53:59.279 IDT [fsc.integration.fabric] PostRun -> INFO 025[0m Post execution [fabric.beta]...
-[34m2022-07-07 13:56:41.634 IDT [fsc.integration.fabric] PostRun -> INFO 026[0m Post execution [fabric.beta]...done.
-[34m2022-07-07 13:56:41.637 IDT [fsc.integration] Start -> INFO 027[0m Run FSC nodes...
-[34m2022-07-07 13:56:41.637 IDT [fsc.integration] Start -> INFO 028[0m Run FSC node [fsc.issuer]...
-[34m2022-07-07 13:56:41.638 IDT [nwo.runner] Run -> INFO 029[0m running fsc.issuer with ginkgo stdout/stderr
-[34m2022-07-07 13:56:44.444 IDT [fsc.integration] Start -> INFO 02a[0m Run FSC node [fsc.auditor]...
-[34m2022-07-07 13:56:44.444 IDT [nwo.runner] Run -> INFO 02b[0m running fsc.auditor with ginkgo stdout/stderr
-[34m2022-07-07 13:56:46.894 IDT [fsc.integration] Start -> INFO 02c[0m Run FSC node [fsc.alice]...
-[34m2022-07-07 13:56:46.894 IDT [nwo.runner] Run -> INFO 02d[0m running fsc.alice with ginkgo stdout/stderr
-[34m2022-07-07 13:56:49.603 IDT [fsc.integration] Start -> INFO 02e[0m Run FSC node [fsc.bob]...
-[34m2022-07-07 13:56:49.603 IDT [nwo.runner] Run -> INFO 02f[0m running fsc.bob with ginkgo stdout/stderr
-[34m2022-07-07 13:56:52.304 IDT [fsc.integration] Start -> INFO 030[0m Post execution for FSC nodes...
-[34m2022-07-07 13:56:52.319 IDT [view-sdk.client] CallView -> INFO 031[0m Calling view [register] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""}}]
-[34m2022-07-07 13:56:52.362 IDT [view-sdk.client] CallView -> INFO 032[0m Calling view [register] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""}}]
-[34m2022-07-07 13:56:52.372 IDT [view-sdk.client] CallView -> INFO 033[0m Calling view [issue] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"IssuerWallet":"","TokenType":"EUR","Quantity":30,"Recipient":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNqRENDQWpPZ0F3SUJBZ0lSQUtEdG5iUFo4b0FtKzZHRXlWMS9xdjB3Q2dZSUtvWkl6ajBFQXdJd2NURUwKTUFrR0ExVUVCaE1DVlZNeEV6QVJCZ05WQkFnVENrTmhiR2xtYjNKdWFXRXhGakFVQmdOVkJBY1REVk5oYmlCRwpjbUZ1WTJselkyOHhHREFXQmdOVkJBb1REMlp6WXk1bGVHRnRjR3hsTG1OdmJURWJNQmtHQTFVRUF4TVNZMkV1ClpuTmpMbVY0WVcxd2JHVXVZMjl0TUI0WERUSXlNRGN3TnpFd05EWXdNRm9YRFRNeU1EY3dOREV3TkRZd01Gb3cKV2pFTE1Ba0dBMVVFQmhNQ1ZWTXhFekFSQmdOVkJBZ1RDa05oYkdsbWIzSnVhV0V4RmpBVUJnTlZCQWNURFZOaApiaUJHY21GdVkybHpZMjh4SGpBY0JnTlZCQU1URldGc2FXTmxMbVp6WXk1bGVHRnRjR3hsTG1OdmJUQlpNQk1HCkJ5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEEwSUFCTStKa2ZtVWlqUDhrcXZqUWI0ZXI1VnptS2hDYlJUWHYwdU8KTU53d3AvQTVicGg2Y1c0L0xyTzliUkhtbHVFaWxtRzl3MzVGOGJ6NVlmMkhwMWxYOVdlamdjSXdnYjh3RGdZRApWUjBQQVFIL0JBUURBZ2VBTUF3R0ExVWRFd0VCL3dRQ01BQXdLd1lEVlIwakJDUXdJb0FnclVucTBrYXNOeGJzCjdvVy8yYjBCZXFSSEdZeE9ZWVJmb2dKUWxIeTY5d0V3Y2dZSUtnTUVCUVlIQ0FFRVpuc2lZWFIwY25NaU9uc2kKYUdZdVFXWm1hV3hwWVhScGIyNGlPaUlpTENKb1ppNUZibkp2Ykd4dFpXNTBTVVFpT2lKaGJHbGpaUzVtYzJNdQpaWGhoYlhCc1pTNWpiMjBpTENKb1ppNVVlWEJsSWpvaUlpd2ljbVZzWVhraU9pSm1ZV3h6WlNKOWZUQUtCZ2dxCmhrak9QUVFEQWdOSEFEQkVBaUFFSGRGOXhoaU1UTERsYm9nbCtPUk9jTUM4V1NEMlN5V0pHZmhtcVAySlV3SWcKREhEb3EyWUt5eVlwczM0U3k0c0kzWjhrZVJyOEtKUFhyK3hwR0x5dkViTT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo="}]
-[34m2022-07-07 13:56:54.215 IDT [view-sdk.client] CallView -> INFO 034[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:56:54.226 IDT [view-sdk.client] CallView -> INFO 035[0m Calling view [issue] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"IssuerWallet":"","TokenType":"USD","Quantity":30,"Recipient":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNoekNDQWk2Z0F3SUJBZ0lRV0xzTktaVWtVempoenBtOStEOVI0VEFLQmdncWhrak9QUVFEQWpCeE1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVlNQllHQTFVRUNoTVBabk5qTG1WNFlXMXdiR1V1WTI5dE1Sc3dHUVlEVlFRREV4SmpZUzVtCmMyTXVaWGhoYlhCc1pTNWpiMjB3SGhjTk1qSXdOekEzTVRBME5qQXdXaGNOTXpJd056QTBNVEEwTmpBd1dqQlkKTVFzd0NRWURWUVFHRXdKVlV6RVRNQkVHQTFVRUNCTUtRMkZzYVdadmNtNXBZVEVXTUJRR0ExVUVCeE1OVTJGdQpJRVp5WVc1amFYTmpiekVjTUJvR0ExVUVBeE1UWW05aUxtWnpZeTVsZUdGdGNHeGxMbU52YlRCWk1CTUdCeXFHClNNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJQanBTQkROUHprUkJLK3plbTN1SlVBMEhqRTRpUTBvQnEyVWgyM3kKUDVZdVpRcElIS0pkdkdFWHpBRW9uU3dzMlBhTFNVWDV0bTVOWG44RGZMSndQUldqZ2NBd2diMHdEZ1lEVlIwUApBUUgvQkFRREFnZUFNQXdHQTFVZEV3RUIvd1FDTUFBd0t3WURWUjBqQkNRd0lvQWdyVW5xMGthc054YnM3b1cvCjJiMEJlcVJIR1l4T1lZUmZvZ0pRbEh5Njl3RXdjQVlJS2dNRUJRWUhDQUVFWkhzaVlYUjBjbk1pT25zaWFHWXUKUVdabWFXeHBZWFJwYjI0aU9pSWlMQ0pvWmk1RmJuSnZiR3h0Wlc1MFNVUWlPaUppYjJJdVpuTmpMbVY0WVcxdwpiR1V1WTI5dElpd2lhR1l1Vkhsd1pTSTZJaUlzSW5KbGJHRjVJam9pWm1Gc2MyVWlmWDB3Q2dZSUtvWkl6ajBFCkF3SURSd0F3UkFJZ1RhQlpwdmV5Rlk5M2RyZ0g0NFNmSHFBNGQweHRuK1o1OUxmNG1EU2t0b3dDSUVxV2p3V0UKUVNBZldBOHcyMXpBemlnVkJJQ1lQU0lvdGt5Y2Y4a0JlcDBPCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"}]
-[34m2022-07-07 13:56:55.918 IDT [view-sdk.client] CallView -> INFO 036[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:56:55.929 IDT [view-sdk.client] CallView -> INFO 037[0m Calling view [exchange.lock] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"ReclamationDeadline":3600000000000,"Wallet":"","Type":"EUR","Amount":10,"Recipient":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNoekNDQWk2Z0F3SUJBZ0lRV0xzTktaVWtVempoenBtOStEOVI0VEFLQmdncWhrak9QUVFEQWpCeE1Rc3cKQ1FZRFZRUUdFd0pWVXpFVE1CRUdBMVVFQ0JNS1EyRnNhV1p2Y201cFlURVdNQlFHQTFVRUJ4TU5VMkZ1SUVaeQpZVzVqYVhOamJ6RVlNQllHQTFVRUNoTVBabk5qTG1WNFlXMXdiR1V1WTI5dE1Sc3dHUVlEVlFRREV4SmpZUzVtCmMyTXVaWGhoYlhCc1pTNWpiMjB3SGhjTk1qSXdOekEzTVRBME5qQXdXaGNOTXpJd056QTBNVEEwTmpBd1dqQlkKTVFzd0NRWURWUVFHRXdKVlV6RVRNQkVHQTFVRUNCTUtRMkZzYVdadmNtNXBZVEVXTUJRR0ExVUVCeE1OVTJGdQpJRVp5WVc1amFYTmpiekVjTUJvR0ExVUVBeE1UWW05aUxtWnpZeTVsZUdGdGNHeGxMbU52YlRCWk1CTUdCeXFHClNNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJQanBTQkROUHprUkJLK3plbTN1SlVBMEhqRTRpUTBvQnEyVWgyM3kKUDVZdVpRcElIS0pkdkdFWHpBRW9uU3dzMlBhTFNVWDV0bTVOWG44RGZMSndQUldqZ2NBd2diMHdEZ1lEVlIwUApBUUgvQkFRREFnZUFNQXdHQTFVZEV3RUIvd1FDTUFBd0t3WURWUjBqQkNRd0lvQWdyVW5xMGthc054YnM3b1cvCjJiMEJlcVJIR1l4T1lZUmZvZ0pRbEh5Njl3RXdjQVlJS2dNRUJRWUhDQUVFWkhzaVlYUjBjbk1pT25zaWFHWXUKUVdabWFXeHBZWFJwYjI0aU9pSWlMQ0pvWmk1RmJuSnZiR3h0Wlc1MFNVUWlPaUppYjJJdVpuTmpMbVY0WVcxdwpiR1V1WTI5dElpd2lhR1l1Vkhsd1pTSTZJaUlzSW5KbGJHRjVJam9pWm1Gc2MyVWlmWDB3Q2dZSUtvWkl6ajBFCkF3SURSd0F3UkFJZ1RhQlpwdmV5Rlk5M2RyZ0g0NFNmSHFBNGQweHRuK1o1OUxmNG1EU2t0b3dDSUVxV2p3V0UKUVNBZldBOHcyMXpBemlnVkJJQ1lQU0lvdGt5Y2Y4a0JlcDBPCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K","Hash":null,"HashFunc":0}]
-[34m2022-07-07 13:56:57.493 IDT [view-sdk.client] CallView -> INFO 038[0m Calling view [exchange.lock] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"ReclamationDeadline":3600000000000,"Wallet":"","Type":"USD","Amount":10,"Recipient":"LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSUNqRENDQWpPZ0F3SUJBZ0lSQUtEdG5iUFo4b0FtKzZHRXlWMS9xdjB3Q2dZSUtvWkl6ajBFQXdJd2NURUwKTUFrR0ExVUVCaE1DVlZNeEV6QVJCZ05WQkFnVENrTmhiR2xtYjNKdWFXRXhGakFVQmdOVkJBY1REVk5oYmlCRwpjbUZ1WTJselkyOHhHREFXQmdOVkJBb1REMlp6WXk1bGVHRnRjR3hsTG1OdmJURWJNQmtHQTFVRUF4TVNZMkV1ClpuTmpMbVY0WVcxd2JHVXVZMjl0TUI0WERUSXlNRGN3TnpFd05EWXdNRm9YRFRNeU1EY3dOREV3TkRZd01Gb3cKV2pFTE1Ba0dBMVVFQmhNQ1ZWTXhFekFSQmdOVkJBZ1RDa05oYkdsbWIzSnVhV0V4RmpBVUJnTlZCQWNURFZOaApiaUJHY21GdVkybHpZMjh4SGpBY0JnTlZCQU1URldGc2FXTmxMbVp6WXk1bGVHRnRjR3hsTG1OdmJUQlpNQk1HCkJ5cUdTTTQ5QWdFR0NDcUdTTTQ5QXdFSEEwSUFCTStKa2ZtVWlqUDhrcXZqUWI0ZXI1VnptS2hDYlJUWHYwdU8KTU53d3AvQTVicGg2Y1c0L0xyTzliUkhtbHVFaWxtRzl3MzVGOGJ6NVlmMkhwMWxYOVdlamdjSXdnYjh3RGdZRApWUjBQQVFIL0JBUURBZ2VBTUF3R0ExVWRFd0VCL3dRQ01BQXdLd1lEVlIwakJDUXdJb0FnclVucTBrYXNOeGJzCjdvVy8yYjBCZXFSSEdZeE9ZWVJmb2dKUWxIeTY5d0V3Y2dZSUtnTUVCUVlIQ0FFRVpuc2lZWFIwY25NaU9uc2kKYUdZdVFXWm1hV3hwWVhScGIyNGlPaUlpTENKb1ppNUZibkp2Ykd4dFpXNTBTVVFpT2lKaGJHbGpaUzVtYzJNdQpaWGhoYlhCc1pTNWpiMjBpTENKb1ppNVVlWEJsSWpvaUlpd2ljbVZzWVhraU9pSm1ZV3h6WlNKOWZUQUtCZ2dxCmhrak9QUVFEQWdOSEFEQkVBaUFFSGRGOXhoaU1UTERsYm9nbCtPUk9jTUM4V1NEMlN5V0pHZmhtcVAySlV3SWcKREhEb3EyWUt5eVlwczM0U3k0c0kzWjhrZVJyOEtKUFhyK3hwR0x5dkViTT0KLS0tLS1FTkQgQ0VSVElGSUNBVEUtLS0tLQo=","Hash":"aEGbCuvJdfs9BrMFp5uY+E1vDmm3PD5rXhiubf7cw00=","HashFunc":0}]
-[34m2022-07-07 13:56:59.054 IDT [view-sdk.client] CallView -> INFO 039[0m Calling view [exchange.claim] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","PreImage":"6DP6F+xSSjt/yumXr8738HJUHBSdCDNn"}]
-[34m2022-07-07 13:57:00.512 IDT [view-sdk.client] CallView -> INFO 03a[0m Calling view [exchange.claim] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","PreImage":"6DP6F+xSSjt/yumXr8738HJUHBSdCDNn"}]
-[34m2022-07-07 13:57:01.917 IDT [view-sdk.client] CallView -> INFO 03b[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:57:01.926 IDT [view-sdk.client] CallView -> INFO 03c[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:57:01.939 IDT [view-sdk.client] CallView -> INFO 03d[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:57:01.950 IDT [view-sdk.client] CallView -> INFO 03e[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:57:01.962 IDT [view-sdk.client] CallView -> INFO 03f[0m Calling view [exchange.claim] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","PreImage":"6DP6F+xSSjt/yumXr8738HJUHBSdCDNn"}]
-[31m2022-07-07 13:57:01.977 IDT [view-sdk.client] processCommand -> ERRO 040[0m error from view during process command: failed running view [exchange.claim], err                         	Error Trace:	claim.go:37
-			wrapper.go:125
-			manager.go:145
-			manager.go:122
-			manager.go:51
-			view.go:91
-			impl.go:85
-			service.pb.go:149
-			server.go:92
-			chain.go:25
-			chain.go:34
-			service.pb.go:151
-			server.go:1293
-			server.go:1618
-			server.go:941
-			asm_amd64.s:1571
-	Error:		Should be true
-	Messages:	expected only one exchange script to match, got [0]
-
-[34m2022-07-07 13:57:06.979 IDT [view-sdk.client] CallView -> INFO 041[0m Calling view [exchange.claim] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","PreImage":"6DP6F+xSSjt/yumXr8738HJUHBSdCDNn"}]
-[31m2022-07-07 13:57:06.991 IDT [view-sdk.client] processCommand -> ERRO 042[0m error from view during process command: failed running view [exchange.claim], err                         	Error Trace:	claim.go:37
-			wrapper.go:125
-			manager.go:145
-			manager.go:122
-			manager.go:51
-			view.go:91
-			impl.go:85
-			service.pb.go:149
-			server.go:92
-			chain.go:25
-			chain.go:34
-			service.pb.go:151
-			server.go:1293
-			server.go:1618
-			server.go:941
-			asm_amd64.s:1571
-	Error:		Should be true
-	Messages:	expected only one exchange script to match, got [0]
-
-[34m2022-07-07 13:57:11.992 IDT [view-sdk.client] CallView -> INFO 043[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:57:12.002 IDT [view-sdk.client] CallView -> INFO 044[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:57:12.012 IDT [view-sdk.client] CallView -> INFO 045[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:57:12.021 IDT [view-sdk.client] CallView -> INFO 046[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:57:12.031 IDT [view-sdk.client] CallView -> INFO 047[0m Calling view [exchange.claim] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","PreImage":null}]
-[31m2022-07-07 13:57:12.042 IDT [view-sdk.client] processCommand -> ERRO 048[0m error from view during process command: failed running view [exchange.claim], err                         	Error Trace:	claim.go:37
-			wrapper.go:125
-			manager.go:145
-			manager.go:122
-			manager.go:51
-			view.go:91
-			impl.go:85
-			service.pb.go:149
-			server.go:92
-			chain.go:25
-			chain.go:34
-			service.pb.go:151
-			server.go:1293
-			server.go:1618
-			server.go:941
-			asm_amd64.s:1571
-	Error:		Should be true
-	Messages:	expected only one exchange script to match, got [0]
-
-[34m2022-07-07 13:57:17.043 IDT [view-sdk.client] CallView -> INFO 049[0m Calling view [exchange.claim] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","PreImage":null}]
-[31m2022-07-07 13:57:17.053 IDT [view-sdk.client] processCommand -> ERRO 04a[0m error from view during process command: failed running view [exchange.claim], err                         	Error Trace:	claim.go:37
-			wrapper.go:125
-			manager.go:145
-			manager.go:122
-			manager.go:51
-			view.go:91
-			impl.go:85
-			service.pb.go:149
-			server.go:92
-			chain.go:25
-			chain.go:34
-			service.pb.go:151
-			server.go:1293
-			server.go:1618
-			server.go:941
-			asm_amd64.s:1571
-	Error:		Should be true
-	Messages:	expected only one exchange script to match, got [0]
-
-[34m2022-07-07 13:57:22.054 IDT [view-sdk.client] CallView -> INFO 04b[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:57:22.064 IDT [view-sdk.client] CallView -> INFO 04c[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"alpha","Channel":"","Namespace":""},"Wallet":"","Type":"EUR"}]
-[34m2022-07-07 13:57:22.071 IDT [view-sdk.client] CallView -> INFO 04d[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:57:22.077 IDT [view-sdk.client] CallView -> INFO 04e[0m Calling view [zkat.balance.query] on input [{"TMSID":{"Network":"beta","Channel":"","Namespace":""},"Wallet":"","Type":"USD"}]
-[34m2022-07-07 13:57:22.084 IDT [fsc.integration] Stop -> INFO 04f[0m Stopping...
-[34m2022-07-07 13:57:22.084 IDT [fsc.integration] Stop -> INFO 050[0m Sending sigterm signal...
-[34m2022-07-07 13:57:22.657 IDT [fsc.integration] Stop -> INFO 051[0m Cleanup...
-[34m2022-07-07 13:57:22.688 IDT [fsc.integration.fabric] Cleanup -> INFO 052[0m cleanup image [iosdvbuxdzen3kn276k5ktln4m-org1_peer_0.org1.example.com-zkat-55535f4e76e8699e3a19b164b088dc90829084d17ca619b9ce2f021004b19488-9e165875b4e91370c58994a647df2d4033cd2c8a8ba7e322a6842ee38d067ee4:latest]
-[34m2022-07-07 13:57:22.785 IDT [fsc.integration.fabric] Cleanup -> INFO 053[0m cleanup image [rtger6nn2bbrdf75bw352glrce-org3_peer_0.org3.example.com-zkat-38cc7e4ed890da1e4ede6478d2a48493626b6a18d04675b334ab9b10c27a916d-56411ec0d70db342cbe69ff0cf54565ba0e7498eae0b42c4857d9ee4c3c19751:latest]
-[34m2022-07-07 13:57:22.911 IDT [fsc.integration] Stop -> INFO 054[0m Stopping...done!
-
-[90m------------------------------[0m
-[32m• [SLOW TEST:415.448 seconds][0m
-DLog end to end
-[90m/Users/hagarmeir/golang/src/github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/dlog_test.go:18[0m
-  Asset Exchange Two Fabric Networks
-  [90m/Users/hagarmeir/golang/src/github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/dlog_test.go:50[0m
-    Performed an exchange based atomic swap
-    [90m/Users/hagarmeir/golang/src/github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/dlog/dlog_test.go:64[0m
-[90m------------------------------[0m
-
-[1m[32mRan 1 of 2 Specs in 415.452 seconds[0m
-[1m[32mSUCCESS![0m -- [32m[1m1 Passed[0m | [91m[1m0 Failed[0m | [33m[1m0 Pending[0m | [36m[1m1 Skipped[0m
-
-[38;5;228mYou're using deprecated Ginkgo functionality:[0m
-[38;5;228m=============================================[0m
-[1m[38;5;10mGinkgo 2.0[0m is under active development and will introduce several new features, improvements, and a small handful of breaking changes.
-A release candidate for 2.0 is now available and 2.0 should GA in Fall 2021.  [1mPlease give the RC a try and send us feedback![0m
-  - To learn more, view the migration guide at [38;5;14m[4mhttps://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md[0m
-  - For instructions on using the Release Candidate visit [38;5;14m[4mhttps://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md#using-the-beta[0m
-  - To comment, chime in at [38;5;14m[4mhttps://github.com/onsi/ginkgo/issues/711[0m
-
-  [38;5;11mGinkgoParallelNode is deprecated and will be removed in Ginkgo V2.  Please use GinkgoParallelProcess instead.[0m
-  [1mLearn more at:[0m [38;5;14m[4mhttps://github.com/onsi/ginkgo/blob/ver2/docs/MIGRATING_TO_V2.md#renamed-ginkgoparallelnode[0m
-    [38;5;243m/Users/hagarmeir/golang/src/github.com/hyperledger-labs/fabric-token-sdk/integration/ports.go:50[0m
-
-[38;5;243mTo silence deprecations that can be silenced set the following environment variable:[0m
-  [38;5;243mACK_GINKGO_DEPRECATIONS=1.16.5[0m
-
-PASS
-
-Ginkgo ran 1 suite in 7m4.817018625s
-Test Suite Passed
