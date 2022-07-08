@@ -68,7 +68,7 @@ func NewLocalMembership(
 }
 
 func (lm *LocalMembership) Load(identities []*config.Identity) error {
-	logger.Debugf("loadWallets: %+v", identities)
+	logger.Debugf("Load Idemix Wallets: [%+q]", identities)
 
 	type Provider interface {
 		EnrollmentID() string

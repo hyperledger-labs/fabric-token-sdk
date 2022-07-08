@@ -13,6 +13,7 @@ import (
 
 type Ownership interface {
 	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
+	AmIAnAuditor(tms *token.ManagementService) bool
 }
 
 // WalletOwnership is an owner wallet-based ownership checker
@@ -25,6 +26,19 @@ func (w *WalletOwnership) IsMine(tms *token.ManagementService, tok *token2.Token
 		return nil, false
 	}
 	return []string{wallet.ID()}, true
+}
+
+func (w *WalletOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
+	logger.Debugf("WalletOwnership.AmIAnAuditor...")
+	for _, identity := range tms.PublicParametersManager().Auditors() {
+		logger.Debugf("WalletOwnership.AmIAnAuditor: identity [%s]", identity.String())
+		if tms.WalletManager().AuditorWalletByIdentity(identity) != nil {
+			logger.Debugf("WalletOwnership.AmIAnAuditor: identity [%s], yes", identity.String())
+			return true
+		}
+	}
+	logger.Debugf("WalletOwnership.AmIAnAuditor: no")
+	return false
 }
 
 // OwnershipMultiplexer iterates over multiple ownership checker
@@ -46,4 +60,14 @@ func (o *OwnershipMultiplexer) IsMine(tms *token.ManagementService, tok *token2.
 		}
 	}
 	return nil, false
+}
+
+func (o *OwnershipMultiplexer) AmIAnAuditor(tms *token.ManagementService) bool {
+	for _, ownership := range o.ownerships {
+		yes := ownership.AmIAnAuditor(tms)
+		if yes {
+			return true
+		}
+	}
+	return false
 }

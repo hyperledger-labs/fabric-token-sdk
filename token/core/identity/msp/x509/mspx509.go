@@ -9,8 +9,8 @@ package x509
 import (
 	ecdsa2 "crypto/ecdsa"
 
-	"github.com/IBM/idemix/common/flogging"
 	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger/fabric-protos-go/msp"

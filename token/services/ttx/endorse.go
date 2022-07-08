@@ -87,9 +87,6 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting auditing")
 	}
-	if len(auditors) != 0 {
-		distributionList = append(distributionList, c.tx.Opts.Auditor)
-	}
 
 	// 3. Endorse and return the transaction envelope
 	env, err := c.requestApproval(context)
@@ -98,7 +95,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	// Distribute Env to all parties
-	if err := c.distributeEnv(context, env, distributionList); err != nil {
+	if err := c.distributeEnv(context, env, distributionList, auditors); err != nil {
 		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
 
@@ -388,7 +385,7 @@ func (c *collectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
-func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity) error {
+func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "start", "distributeEnv", c.tx.ID())
 	defer agent.EmitKey(0, "ttx", "end", "distributeEnv", c.tx.ID())
@@ -448,8 +445,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				logger.Debugf("adding [%s] to distribution list", party)
 			}
 			eID := ""
-			isAuditor := party.Equal(c.tx.Opts.Auditor)
-			if !isMe && !isAuditor {
+			if !isMe {
 				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
 				if err != nil {
 					return errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
@@ -460,13 +456,26 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				LongTerm: longTermIdentity,
 				ID:       party,
 				EID:      eID,
-				Auditor:  isAuditor,
+				Auditor:  false,
 			})
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("skip adding [%s] to distribution list, already added", party)
 			}
 		}
+	}
+
+	// check the auditors
+	for _, party := range auditors {
+		isMe := c.tx.TokenService().SigService().IsMe(party)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
+		}
+		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
+			IsMe:    isMe,
+			ID:      party,
+			Auditor: true,
+		})
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {

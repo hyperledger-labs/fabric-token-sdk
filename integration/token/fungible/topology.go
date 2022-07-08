@@ -53,7 +53,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
-	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("historyIssuedToken", &views.ListIssuedTokensViewFactory{})
 	issuer.RegisterViewFactory("issuedTokenQuery", &views.ListIssuedTokensViewFactory{})
 	issuer.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	issuer.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
@@ -66,7 +66,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 			fsc.WithAlias("auditor"),
 		)
 		issuer.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
-		issuer.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
+		issuer.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		issuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		issuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
 		auditor = issuer
@@ -78,7 +78,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 			token.WithAuditorIdentity(),
 		)
 		auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
-		auditor.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
+		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
 	}

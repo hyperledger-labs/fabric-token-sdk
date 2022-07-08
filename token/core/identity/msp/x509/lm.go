@@ -59,7 +59,7 @@ func NewLocalMembership(
 }
 
 func (lm *LocalMembership) Load(identities []*config.Identity) error {
-	logger.Debugf("loadWallets: %+v", identities)
+	logger.Debugf("Load x509 Wallets: [%+q]", identities)
 
 	type Provider interface {
 		EnrollmentID() string
@@ -70,7 +70,7 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	}
 
 	for _, identityConfig := range identities {
-		logger.Debugf("loadWallet: %+v", identityConfig)
+		logger.Debugf("Load x509 Wallet: [%v]", identityConfig)
 		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
@@ -166,7 +166,12 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, setDef
 		}
 	}
 
-	logger.Debugf("Adding resolver [%s:%s]", id, provider.EnrollmentID())
+	walletId, _, err := provider.Identity(nil)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", id, translatedPath)
+	}
+
+	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", id, provider.EnrollmentID(), walletId.String())
 	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, provider.Identity)
 

@@ -116,6 +116,14 @@ func (wm *WalletManager) AuditorWallet(id string) *AuditorWallet {
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
+func (wm *WalletManager) AuditorWalletByIdentity(id view.Identity) *AuditorWallet {
+	w := wm.managementService.tms.AuditorWalletByIdentity(id)
+	if w == nil {
+		return nil
+	}
+	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
+}
+
 // CertifierWallet returns the certifier wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
@@ -138,12 +146,12 @@ func (wm *WalletManager) CertifierWalletByIdentity(identity view.Identity) *Cert
 }
 
 // GetEnrollmentID returns the enrollment ID of passed identity
-func (t *WalletManager) GetEnrollmentID(identity view.Identity) (string, error) {
-	auditInfo, err := t.managementService.tms.IdentityProvider().GetAuditInfo(identity)
+func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error) {
+	auditInfo, err := wm.managementService.tms.IdentityProvider().GetAuditInfo(identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
-	return t.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
+	return wm.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.

@@ -206,8 +206,8 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 	},
 }
 
-func TestAll(network *integration.Infrastructure) {
-	RegisterAuditor(network)
+func TestAll(network *integration.Infrastructure, auditor string) {
+	RegisterAuditor(network, auditor)
 
 	t0 := time.Now()
 	// Rest of the test
@@ -347,7 +347,7 @@ func TestAll(network *integration.Infrastructure) {
 	time.Sleep(3 * time.Second)
 	network.StartFSCNode("auditor")
 	time.Sleep(5 * time.Second)
-	RegisterAuditor(network)
+	RegisterAuditor(network, auditor)
 
 	CheckBalance(network, "issuer", "", "USD", 110)
 	CheckBalance(network, "issuer", "", "EUR", 150)
@@ -533,8 +533,8 @@ func TestAll(network *integration.Infrastructure) {
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17)
 }
 
-func RegisterAuditor(network *integration.Infrastructure) {
-	_, err := network.Client("auditor").CallView("register", nil)
+func RegisterAuditor(network *integration.Infrastructure, id string) {
+	_, err := network.Client(id).CallView("register", nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -568,7 +568,7 @@ func IssueCashFail(network *integration.Infrastructure, typ string, amount uint6
 }
 
 func CheckAuditedTransactions(network *integration.Infrastructure, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
-	txsBoxed, err := network.Client("auditor").CallView("history", common.JSONMarshall(&views.ListAuditedTransactions{
+	txsBoxed, err := network.Client("auditor").CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
 		From: start,
 		To:   end,
 	}))
@@ -666,7 +666,7 @@ func CheckSpending(network *integration.Infrastructure, id string, wallet string
 }
 
 func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
-	res, err := network.Client("issuer").CallView("history", common.JSONMarshall(&views.ListIssuedTokens{
+	res, err := network.Client("issuer").CallView("historyIssuedToken", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
 	}))

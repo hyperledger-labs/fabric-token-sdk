@@ -41,7 +41,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("issuer")),
 	)
 	assert.NoError(err, "failed creating transaction")
 

@@ -73,7 +73,7 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 	case view.Identity:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf(
-				"[LongTermIdentity] looking up identifier for identity [%d,%s], default identity [%s]",
+				"[LongTermIdentity] looking up identifier for identity [%s], default identity [%s]",
 				vv.String(),
 				defaultID.String(),
 			)
