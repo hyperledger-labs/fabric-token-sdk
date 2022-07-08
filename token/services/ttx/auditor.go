@@ -76,38 +76,36 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
-	view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{})
+	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
+		return nil, errors.Wrapf(err, "failed to register auditor view")
+	}
 
 	return nil, nil
 }
 
 type AuditingViewInitiator struct {
-	tx *Transaction
+	tx    *Transaction
+	local bool
 }
 
-func newAuditingViewInitiator(tx *Transaction) *AuditingViewInitiator {
-	return &AuditingViewInitiator{tx: tx}
+func newAuditingViewInitiator(tx *Transaction, local bool) *AuditingViewInitiator {
+	return &AuditingViewInitiator{tx: tx, local: local}
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
-	session, err := context.GetSession(a, a.tx.Opts.Auditor)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed getting session")
+	var err error
+	var session view.Session
+	if a.local {
+		session, err = a.startLocal(context)
+	} else {
+		session, err = a.startRemote(context)
 	}
-
-	// Send transaction
-	txRaw, err := a.tx.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed starting auditing session")
 	}
-	err = session.Send(txRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed sending transaction")
-	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "sent", "auditing", a.tx.ID())
 
 	// Receive signature
+	agent := metrics.Get(context)
 	ch := session.Receive()
 	var msg *view.Message
 	select {
@@ -153,7 +151,64 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 	}
 	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
-	return nil, nil
+
+	return session, nil
+}
+
+func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session, error) {
+	logger.Debugf("Starting remote auditing session with [%s] for [%s]", a.tx.Opts.Auditor.UniqueID(), a.tx.ID())
+	session, err := context.GetSession(a, a.tx.Opts.Auditor)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting session")
+	}
+
+	// Send transaction
+	txRaw, err := a.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	err = session.Send(txRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed sending transaction")
+	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttx", "sent", "auditing", a.tx.ID())
+
+	return session, nil
+}
+
+func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, error) {
+	logger.Debugf("Starting local auditing for %s", a.tx.ID())
+
+	// TOODO: Prepare the communication session with first message the transaction.
+	// Given to the responder view the RL channel, and keep for
+	// AuditingViewInitiator the LR channel.
+	session, err := newSelfSession("", context.ID(), "", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating session")
+	}
+	// Send transaction
+	txRaw, err := a.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	err = session.Send(txRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed sending transaction")
+	}
+
+	// execute the auditor responder using the fake communication session
+	responderView, err := view2.GetRegistry(context).GetResponder(&AuditingViewInitiator{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get auditor view")
+	}
+	// TODO: Run the view in a new goroutine and wait for the result
+	_, err = context.RunView(responderView, view.AsResponder(session))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed running view")
+	}
+
+	return session, nil
 }
 
 type AuditApproveView struct {

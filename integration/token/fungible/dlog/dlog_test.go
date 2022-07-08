@@ -27,7 +27,22 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", fungible.Topology("fabric", "dlog")...)
+			network, err = integration.New(StartPortDlog(), "", fungible.Topology("fabric", "dlog", false)...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
+		It("succeeded", func() {
+			fungible.TestAll(network)
+		})
+	})
+
+	Describe("Fungible with Auditor = Issuer", func() {
+		BeforeEach(func() {
+			var err error
+			network, err = integration.New(StartPortDlog(), "", fungible.Topology("fabric", "dlog", true)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

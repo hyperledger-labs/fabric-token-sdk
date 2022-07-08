@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
@@ -17,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 )
 
-func Topology(backend string, tokenSDKDriver string) []api.Topology {
+func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch backend {
@@ -57,16 +58,30 @@ func Topology(backend string, tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	issuer.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 
-	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
-	)
-	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
-	auditor.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
-	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
-	auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
+	var auditor *node.Node
+	if auditorAsIssuer {
+		issuer.AddOptions(
+			orion.WithRole("auditor"),
+			token.WithAuditorIdentity(),
+			fsc.WithAlias("auditor"),
+		)
+		issuer.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+		issuer.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
+		issuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+		issuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
+		auditor = issuer
+	} else {
+		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			orion.WithRole("auditor"),
+			token.WithAuditorIdentity(),
+		)
+		auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+		auditor.RegisterViewFactory("history", &views.ListAuditedTransactionsViewFactory{})
+		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+		auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
+	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
