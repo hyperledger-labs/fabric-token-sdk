@@ -67,24 +67,16 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
-	// The issuer creates a new token transaction and specify the auditor that must be contacted to approve the operation.
+	// The issuer creates a new token transaction and specifies the auditor that must be contacted to approve the operation.
 	var tx *ttx.Transaction
+	auditorOpt := ttx.WithAuditor(
+		view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
+	)
 	if p.Anonymous {
-		tx, err = ttx.NewAnonymousTransaction(
-			context,
-			ttx.WithAuditor(
-				view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
-			),
-		)
+		tx, err = ttx.NewAnonymousTransaction(context, auditorOpt)
 	} else {
 		// use the default identity
-		tx, err = ttx.NewTransaction(
-			context,
-			nil,
-			ttx.WithAuditor(
-				view2.GetIdentityProvider(context).Identity("auditor"), // Retrieve the auditor's FSC node identity
-			),
-		)
+		tx, err = ttx.NewTransaction(context, nil, auditorOpt)
 	}
 	assert.NoError(err, "failed creating issue transaction")
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue", []byte("issue"))
