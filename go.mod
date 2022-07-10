@@ -36,8 +36,6 @@ require (
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	go.uber.org/atomic v1.7.0
 	go.uber.org/zap v1.19.1
-	golang.org/x/sys v0.0.0-20220614162138-6c1b26c55098 // indirect
-	golang.org/x/tools v0.1.11 // indirect
 	gopkg.in/yaml.v2 v2.4.0
 )
 
@@ -143,6 +141,7 @@ require (
 	github.com/libp2p/go-libp2p-peerstore v0.6.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.1.3 // indirect
 	github.com/libp2p/go-libp2p-resource-manager v0.3.0 // indirect
+	github.com/libp2p/go-libp2p-swarm v0.10.0 // indirect
 	github.com/libp2p/go-msgio v0.2.0 // indirect
 	github.com/libp2p/go-nat v0.1.0 // indirect
 	github.com/libp2p/go-netroute v0.2.0 // indirect
@@ -167,7 +166,6 @@ require (
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.3.2 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
-	github.com/mmcloughlin/mathfmt v0.0.0-20220522181454-158b2c02b865 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect
 	github.com/moby/sys/mountinfo v0.4.1 // indirect
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
@@ -215,7 +213,7 @@ require (
 	github.com/subosito/gotenv v1.2.0 // indirect
 	github.com/sykesm/zap-logfmt v0.0.4 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954 // indirect
-	github.com/test-go/testify v1.1.4 // indirect
+	github.com/test-go/testify v1.1.4
 	github.com/whyrusleeping/go-keyspace v0.0.0-20160322163242-5b898ac5add1 // indirect
 	github.com/whyrusleeping/multiaddr-filter v0.0.0-20160516205228-e903e4adabd7 // indirect
 	github.com/willf/bitset v1.1.11 // indirect
