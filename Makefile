@@ -1,25 +1,18 @@
-.PHONY: checks
-checks: dependencies
-	@test -z $(shell gofmt -l -s $(shell go list -f '{{.Dir}}' ./...) | tee /dev/stderr) || (echo "Fix formatting issues"; exit 1)
-	find . -name '*.go' | xargs addlicense -check || (echo "Missing license headers"; exit 1)
-	@go vet -all $(shell go list -f '{{.Dir}}' ./...)
-	@ineffassign $(shell go list -f '{{.Dir}}' ./...)
+# pinned versions
+FABRIC_VERSION=2.2
 
-.PHONY: lint
-lint:
-	@golint $(shell go list -f '{{.Dir}}' ./...)
+TOP = .
 
-.PHONY: gocyclo
-gocyclo:
-	@gocyclo -over 15 $(shell go list -f '{{.Dir}}' ./...)
+all: install-tools checks unit-tests #integration-tests
 
-.PHONY: ineffassign
-ineffassign:
-	@ineffassign $(shell go list -f '{{.Dir}}' ./...)
+.PHONY: install-tools
+install-tools:
+# Thanks for great inspiration https://marcofranssen.nl/manage-go-tools-via-go-modules
+	@echo Installing tools from tools/tools.go
+	@cd tools; cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
 
-.PHONY: misspell
-misspell:
-	@misspell $(shell go list -f '{{.Dir}}' ./...)
+# include the checks target
+include $(TOP)/checks.mk
 
 .PHONY: unit-tests
 unit-tests:
@@ -32,11 +25,14 @@ unit-tests-race:
 	cd integration/nwo/; go test -cover ./...
 
 .PHONY: docker-images
-docker-images:
-	docker pull hyperledger/fabric-baseos:2.2
-	docker image tag hyperledger/fabric-baseos:2.2 hyperledger/fabric-baseos:latest
-	docker pull hyperledger/fabric-ccenv:2.2
-	docker image tag hyperledger/fabric-ccenv:2.2 hyperledger/fabric-ccenv:latest
+docker-images: fabric-docker-images orion-server-images monitoring-docker-images
+
+.PHONY: fabric-docker-images
+fabric-docker-images:
+	docker pull hyperledger/fabric-baseos:$(FABRIC_VERSION)
+	docker image tag hyperledger/fabric-baseos:$(FABRIC_VERSION) hyperledger/fabric-baseos:latest
+	docker pull hyperledger/fabric-ccenv:$(FABRIC_VERSION)
+	docker image tag hyperledger/fabric-ccenv:$(FABRIC_VERSION) hyperledger/fabric-ccenv:latest
 
 .PHONY: monitoring-docker-images
 monitoring-docker-images:
@@ -49,50 +45,44 @@ monitoring-docker-images:
 orion-server-images:
 	docker pull orionbcdb/orion-server:latest
 
-.PHONY: dependencies
-dependencies:
-	go install github.com/onsi/ginkgo/ginkgo
-	go install github.com/gordonklaus/ineffassign@4cc7213b9bc8b868b2990c372f6fa057fa88b91c
-	go install github.com/google/addlicense@2fe3ee94479d08be985a84861de4e6b06a1c7208
-
 .PHONY: integration-tests-dlog-fabric
-integration-tests-dlog-fabric: docker-images dependencies
+integration-tests-dlog-fabric:
 	cd ./integration/token/fungible/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-fabtoken-fabric
-integration-tests-fabtoken-fabric: docker-images dependencies
+integration-tests-fabtoken-fabric:
 	cd ./integration/token/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-dlog-orion
-integration-tests-dlog-orion: docker-images orion-server-images dependencies
+integration-tests-dlog-orion:
 	cd ./integration/token/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-fabtoken-orion
-integration-tests-fabtoken-orion: docker-images orion-server-images dependencies
+integration-tests-fabtoken-orion:
 	cd ./integration/token/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-nft-dlog
-integration-tests-nft-dlog: docker-images dependencies
+integration-tests-nft-dlog:
 	cd ./integration/token/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-nft-fabtoken
-integration-tests-nft-fabtoken: docker-images dependencies
+integration-tests-nft-fabtoken:
 	cd ./integration/token/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-nft-dlog-orion
-integration-tests-nft-dlog-orion: docker-images orion-server-images dependencies
+integration-tests-nft-dlog-orion:
 	cd ./integration/token/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-nft-fabtoken-orion
-integration-tests-nft-fabtoken-orion: docker-images orion-server-images dependencies
+integration-tests-nft-fabtoken-orion:
 	cd ./integration/token/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-dvp-fabtoken
-integration-tests-dvp-fabtoken: docker-images dependencies
+integration-tests-dvp-fabtoken:
 	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: integration-tests-dvp-dlog
-integration-tests-dvp-dlog: docker-images dependencies
+integration-tests-dvp-dlog:
 	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
 .PHONY: tidy
