@@ -20,6 +20,10 @@ type Identity struct {
 	Path    string `yaml:"path"`
 }
 
+func (i *Identity) String() string {
+	return i.ID
+}
+
 type Wallets struct {
 	Certifiers []*Identity `yaml:"certifiers,omitempty"`
 	Owners     []*Identity `yaml:"owners,omitempty"`

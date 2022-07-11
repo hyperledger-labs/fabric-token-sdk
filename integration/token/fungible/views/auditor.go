@@ -20,35 +20,47 @@ import (
 type AuditView struct{}
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
+	logger.Debugf("AuditView: [%s]", context.ID())
 	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed receiving transaction")
+	logger.Debugf("AuditView: [%s]", tx.ID())
 
 	w := ttx.MyAuditorWallet(context)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Validate
+	logger.Debugf("AuditView: get auditor [%s]", tx.ID())
 	auditor := ttx.NewAuditor(context, w)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
+	logger.Debugf("AuditView: get auditor done [%s]", tx.ID())
 
 	// Check Metadata
+	logger.Debugf("AuditView: check metadata [%s]", tx.ID())
 	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
 	if len(opRaw) != 0 {
 		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
 		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta")
 		assert.Equal([]byte("meta"), metaRaw, "expected 'meta' application metadata")
 	}
+	logger.Debugf("AuditView: check metadata done [%s]", tx.ID())
 
 	// Check limits
 
 	// extract inputs and outputs
+	logger.Debugf("AuditView: audit [%s]", tx.ID())
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
+	logger.Debugf("AuditView: audit done [%s]", tx.ID())
 
 	// acquire locks on inputs and outputs' enrollment IDs
+	logger.Debugf("AuditView: acquire locks [%s]", tx.ID())
 	assert.NoError(auditor.AcquireLocks(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...)...), "failed acquiring locks")
 	defer auditor.Unlock(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...))
+	logger.Debugf("AuditView: acquire locks done [%s]", tx.ID())
 
+	logger.Debugf("AuditView: [%s] get query executor... ", tx.ID())
 	aqe := auditor.NewQueryExecutor()
+	logger.Debugf("AuditView: [%s] get query executor...done", tx.ID())
 	defer aqe.Done()
 
 	// R1: Default payment limit is set to 200. All payments of an amount less than or equal to Default Payment Limit is valid.
@@ -132,7 +144,10 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	}
 	aqe.Done()
 
-	return context.RunView(ttx.NewAuditApproveView(w, tx))
+	logger.Debugf("AuditView: Approve... [%s]", tx.ID())
+	res, err := context.RunView(ttx.NewAuditApproveView(w, tx))
+	logger.Debugf("AuditView: Approve...done [%s]", tx.ID())
+	return res, err
 }
 
 type RegisterAuditorView struct{}

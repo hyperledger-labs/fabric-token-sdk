@@ -10,7 +10,6 @@ import (
 	"io/ioutil"
 	"path/filepath"
 	"strconv"
-	"strings"
 
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
@@ -18,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/pkg/errors"
 )
@@ -40,8 +40,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			types := strings.Split(auditor.Type, ":")
-			provider, err := x509.NewProvider(auditor.Path, types[1], nil)
+			provider, err := x509.NewProvider(auditor.Path, msp2.AuditorMSPID, nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
@@ -114,8 +113,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			types := strings.Split(auditor.Type, ":")
-			provider, err := x509.NewProvider(auditor.Path, types[1], nil)
+			provider, err := x509.NewProvider(auditor.Path, msp2.AuditorMSPID, nil)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}

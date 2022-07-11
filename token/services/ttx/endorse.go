@@ -32,7 +32,8 @@ func (sr *signatureRequest) MessageToSign() []byte {
 }
 
 type collectEndorsementsView struct {
-	tx *Transaction
+	tx       *Transaction
+	sessions map[string]view.Session
 }
 
 // NewCollectEndorsementsView returns an instance of the collectEndorsementsView struct.
@@ -44,7 +45,7 @@ type collectEndorsementsView struct {
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
 func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
-	return &collectEndorsementsView{tx: tx}
+	return &collectEndorsementsView{tx: tx, sessions: map[string]view.Session{}}
 }
 
 // Call executes the view.
@@ -63,7 +64,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	// Store transient
 	err := c.tx.storeTransient()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed storing transient")
+		return nil, errors.WithMessagef(err, "failed storing transient")
 	}
 
 	// 1. First collect signatures on the token request
@@ -71,43 +72,36 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 
 	parties, err := c.requestSignaturesOnIssues(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed requesting signatures on issues")
 	}
 	distributionList = append(distributionList, parties...)
 
 	parties, err = c.requestSignaturesOnTransfers(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed requesting signatures on transfers")
 	}
 	distributionList = append(distributionList, parties...)
 
 	// 2. Audit
-	if !c.tx.Opts.Auditor.IsNone() {
-		_, err := context.RunView(newAuditingViewInitiator(c.tx))
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
-		}
-		distributionList = append(distributionList, c.tx.Opts.Auditor)
+	auditors, err := c.requestAudit(context)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed requesting auditing")
 	}
 
 	// 3. Endorse and return the transaction envelope
 	env, err := c.requestApproval(context)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed requesting approval")
 	}
 
 	// Distribute Env to all parties
-	if err := c.distributeEnv(context, env, distributionList); err != nil {
-		return nil, err
+	if err := c.distributeEnv(context, env, distributionList, auditors); err != nil {
+		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
 
-	// Cleanup
-	if !c.tx.Opts.Auditor.IsNone() {
-		session, err := context.GetSession(nil, c.tx.Opts.Auditor)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed getting auditor's session")
-		}
-		session.Close()
+	// Cleanup audit
+	if err := c.cleanupAudit(context); err != nil {
+		return nil, errors.WithMessage(err, "failed cleaning up audit")
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -367,7 +361,31 @@ func (c *collectEndorsementsView) requestApproval(context view.Context) (*networ
 	return env, nil
 }
 
-func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity) error {
+func (c *collectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
+	if !c.tx.Opts.Auditor.IsNone() {
+		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
+		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed requesting auditing from [%s]", c.tx.Opts.Auditor.String())
+		}
+		c.sessions[c.tx.Opts.Auditor.String()] = sessionBoxed.(view.Session)
+		return []view.Identity{c.tx.Opts.Auditor}, nil
+	}
+	return nil, nil
+}
+
+func (c *collectEndorsementsView) cleanupAudit(context view.Context) error {
+	if !c.tx.Opts.Auditor.IsNone() {
+		session, err := c.getSession(context, c.tx.Opts.Auditor)
+		if err != nil {
+			return errors.Wrap(err, "failed getting auditor's session")
+		}
+		session.Close()
+	}
+	return nil
+}
+
+func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "start", "distributeEnv", c.tx.ID())
 	defer agent.EmitKey(0, "ttx", "end", "distributeEnv", c.tx.ID())
@@ -427,8 +445,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				logger.Debugf("adding [%s] to distribution list", party)
 			}
 			eID := ""
-			isAuditor := party.Equal(c.tx.Opts.Auditor)
-			if !isMe && !isAuditor {
+			if !isMe {
 				eID, err = c.tx.TokenService().WalletManager().GetEnrollmentID(party)
 				if err != nil {
 					return errors.Wrapf(err, "failed getting enrollment ID for [%s]", party.UniqueID())
@@ -439,13 +456,26 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				LongTerm: longTermIdentity,
 				ID:       party,
 				EID:      eID,
-				Auditor:  isAuditor,
+				Auditor:  false,
 			})
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("skip adding [%s] to distribution list, already added", party)
 			}
 		}
+	}
+
+	// check the auditors
+	for _, party := range auditors {
+		isMe := c.tx.TokenService().SigService().IsMe(party)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
+		}
+		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
+			IsMe:    isMe,
+			ID:      party,
+			Auditor: true,
+		})
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -460,8 +490,8 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
 		}
 
-		// If it it me, no need to open a remote connection. Just store the envelope locally.
-		if entry.IsMe {
+		// If it is me, no need to open a remote connection. Just store the envelope locally.
+		if entry.IsMe && !entry.Auditor {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
 			}
@@ -502,7 +532,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		agent.EmitKey(0, "ttx", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
 
 		// Open a session to the party. and send the transaction.
-		session, err := context.GetSession(context.Initiator(), entry.ID)
+		session, err := c.getSession(context, entry.ID)
 		if err != nil {
 			return errors.Wrap(err, "failed getting session")
 		}
@@ -543,6 +573,15 @@ func (c *collectEndorsementsView) requestBytes() ([]byte, error) {
 	return c.tx.TokenRequest.MarshallToSign()
 }
 
+func (c *collectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
+	s, ok := c.sessions[p.UniqueID()]
+	if ok {
+		logger.Debugf("getSession: found session for [%s]", p.UniqueID())
+		return s, nil
+	}
+	return context.GetSession(context.Initiator(), p)
+}
+
 type receiveTransactionView struct {
 	network string
 	channel string
@@ -561,6 +600,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
+		logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
 		tx, err := NewTransactionFromBytes(context, f.network, f.channel, msg.Payload)
 		if err != nil {
 			return nil, err

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -10,20 +11,19 @@ import (
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // Transfer contains the input information for a transfer
 type Transfer struct {
+	// Auditor is the name of the auditor that must be contacted to approve the operation
+	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
@@ -57,7 +57,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 
@@ -147,7 +147,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
+		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
 	)
 	assert.NoError(err, "failed creating transaction")
 

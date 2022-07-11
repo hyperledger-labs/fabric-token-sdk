@@ -178,8 +178,7 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 	var identities []generators.Identity
 	for _, name := range names {
 		identities = append(identities, generators.Identity{
-			ID:   name,
-			Type: "bccsp:" + mspID,
+			ID: name,
 			Path: filepath.Join(
 				output,
 				"peerOrganizations",

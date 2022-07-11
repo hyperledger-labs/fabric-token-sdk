@@ -219,6 +219,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 	if len(wallet) == 0 && len(recipientRequest.WalletID) != 0 {
 		wallet = string(recipientRequest.WalletID)
 	}
+	logger.Debugf("Respond request recipient identity using wallet [%s]", wallet)
 	w := GetWallet(
 		context,
 		wallet,

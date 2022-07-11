@@ -180,7 +180,7 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 	// check if there is already a wallet
 	identity, walletID, err := s.identityProvider.LookupIdentifier(api2.AuditorRole, id)
 	if err != nil {
-		logger.Errorf("failed to get auditor wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		logger.Errorf("failed to get auditor wallet identifier for [%s:%s:%s]: %s", walletID, identity.String(), id, err)
 		return nil
 	}
 	for _, w := range s.AuditorWallets {
@@ -193,13 +193,13 @@ func (s *Service) auditorWallet(id interface{}) api2.AuditorWallet {
 	// Create the wallet
 	idInfo, err := s.identityProvider.GetIdentityInfo(api2.AuditorRole, walletID)
 	if err != nil {
-		logger.Errorf("failed to get auditor wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		logger.Errorf("failed to get auditor wallet identity info for [%s:%s:%s]: %s", walletID, identity.String(), id, err)
 		return nil
 	}
 
 	idInfoIdentity, _, err := idInfo.Get()
 	if err != nil {
-		logger.Errorf("failed to get auditor wallet identity for [%s:%s]: %s", walletID, identity.String(), err)
+		logger.Errorf("failed to get auditor wallet identity for [%s:%s:%s]: %s", walletID, identity.String(), id, err)
 	}
 	w := newAuditorWallet(s, walletID, idInfoIdentity)
 	s.AuditorWallets = append(s.AuditorWallets, w)

@@ -114,6 +114,9 @@ type WalletService interface {
 	// IssuerWalletByIdentity returns an instance of the IssuerWallet interface that contains the passed identity.
 	IssuerWalletByIdentity(identity view.Identity) IssuerWallet
 
+	// AuditorWalletByIdentity returns an instance of the AuditorWallet interface that contains the passed identity.
+	AuditorWalletByIdentity(identity view.Identity) AuditorWallet
+
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	AuditorWallet(id string) AuditorWallet

@@ -31,12 +31,12 @@ type RWSetProcessor struct {
 	network    net
 	nss        []string
 	sp         view2.ServiceProvider
-	ownership  network.Ownership
+	ownership  network.Authorization
 	issued     network.Issued
 	tokenStore processor.TokenStore
 }
 
-func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Ownership, issued network.Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:    network,
 		nss:        []string{ns},
@@ -254,7 +254,10 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
-		} else {
+		}
+
+		// if I'm an auditor, store the audit entry
+		if r.ownership.AmIAnAuditor(tms) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}

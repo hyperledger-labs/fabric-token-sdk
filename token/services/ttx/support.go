@@ -54,3 +54,23 @@ func StoreEnvelope(context view.Context, tx *Transaction) error {
 func StoreTransactionRecords(context view.Context, tx *Transaction) error {
 	return NewOwner(context, tx.TokenRequest.TokenService).Append(tx)
 }
+
+// RunView runs passed view within the passed context and using the passed options in a separate goroutine
+func RunView(context view.Context, view view.View, opts ...view.RunViewOption) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Debugf("panic in RunView: %v", r)
+		}
+	}()
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Debugf("panic in RunView: %v", r)
+			}
+		}()
+		_, err := context.RunView(view, opts...)
+		if err != nil {
+			logger.Errorf("failed to run view: %s", err)
+		}
+	}()
+}

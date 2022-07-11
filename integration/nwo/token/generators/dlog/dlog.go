@@ -97,7 +97,6 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 
 		res = append(res, generators.Identity{
 			ID:   owner,
-			Type: "idemix:" + "IdemixOrgMSP" + ":" + d.Curve,
 			Path: userOutput,
 		})
 	}

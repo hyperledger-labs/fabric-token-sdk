@@ -76,44 +76,43 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
-	view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{})
+	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
+		return nil, errors.Wrapf(err, "failed to register auditor view")
+	}
 
 	return nil, nil
 }
 
 type AuditingViewInitiator struct {
-	tx *Transaction
+	tx    *Transaction
+	local bool
 }
 
-func newAuditingViewInitiator(tx *Transaction) *AuditingViewInitiator {
-	return &AuditingViewInitiator{tx: tx}
+func newAuditingViewInitiator(tx *Transaction, local bool) *AuditingViewInitiator {
+	return &AuditingViewInitiator{tx: tx, local: local}
 }
 
 func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) {
-	session, err := context.GetSession(a, a.tx.Opts.Auditor)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed getting session")
+	var err error
+	var session view.Session
+	if a.local {
+		session, err = a.startLocal(context)
+	} else {
+		session, err = a.startRemote(context)
 	}
-
-	// Send transaction
-	txRaw, err := a.tx.Bytes()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed starting auditing session")
 	}
-	err = session.Send(txRaw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed sending transaction")
-	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "sent", "auditing", a.tx.ID())
 
 	// Receive signature
+	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
+	agent := metrics.Get(context)
 	ch := session.Receive()
 	var msg *view.Message
 	select {
 	case msg = <-ch:
 		agent.EmitKey(0, "ttx", "received", "auditingAck", a.tx.ID())
-		logger.Debug("reply received from %s", a.tx.Opts.Auditor)
+		logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
 	case <-time.After(60 * time.Second):
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.Auditor)
 	}
@@ -153,7 +152,76 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 	}
 	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
-	return nil, nil
+
+	logger.Debug("Auditor signature verified")
+	return session, nil
+}
+
+func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session, error) {
+	logger.Debugf("Starting remote auditing session with [%s] for [%s]", a.tx.Opts.Auditor.UniqueID(), a.tx.ID())
+	session, err := context.GetSession(a, a.tx.Opts.Auditor)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting session")
+	}
+
+	// Send transaction
+	txRaw, err := a.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	err = session.Send(txRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed sending transaction")
+	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttx", "sent", "auditing", a.tx.ID())
+
+	return session, nil
+}
+
+func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, error) {
+	logger.Debugf("Starting local auditing for %s", a.tx.ID())
+
+	// This code is executed everytime the auditor is the same as the
+	// initiator of a token transaction.
+	// For example, if an issuer is also an auditor, then when the issuer asks
+	// for auditing, the issuer is essentially talking to itself.
+	// FSC does not yet support opening communication session to itself,
+	// therefore we create a fake bidirectional communication channel between
+	// the AuditingViewInitiator view and its registered responder.
+	// Notice also the use of view.AsResponder(right) to run the responder
+	// using a predefined session.
+	// This code can be removed once FSC supports opening communication session to self.
+
+	// Prepare a bidirectional channel
+	// Give to the responder view the right channel, and keep for
+	// AuditingViewInitiator the left channel.
+	biChannel, err := NewLocalBidirectionalChannel("", context.ID(), "", nil)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed creating session")
+	}
+	left := biChannel.LeftSession()
+	right := biChannel.RightSession()
+
+	// Send transaction
+	txRaw, err := a.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	err = left.Send(txRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed sending transaction")
+	}
+
+	// execute the auditor responder using the fake communication session
+	responderView, err := view2.GetRegistry(context).GetResponder(&AuditingViewInitiator{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get auditor view")
+	}
+	// Run the view in a new goroutine
+	RunView(context, responderView, view.AsResponder(right))
+
+	return left, nil
 }
 
 type AuditApproveView struct {
@@ -179,6 +247,7 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 }
 
 func (a *AuditApproveView) signAndSendBack(context view.Context) error {
+	logger.Debugf("Signing and sending back transaction... [%s]", a.tx.ID())
 	// Sign
 	aid, err := a.w.GetAuditorIdentity()
 	if err != nil {
@@ -209,6 +278,8 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "sent", "auditingAck", a.tx.ID())
 
+	logger.Debugf("Signing and sending back transaction...done [%s]", a.tx.ID())
+
 	if err := a.waitFabricEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
 	}
@@ -216,10 +287,12 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 }
 
 func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
+	logger.Debugf("Waiting for fabric envelope... [%s]", a.tx.ID())
 	tx, err := ReceiveTransaction(context)
 	if err != nil {
 		return errors.Wrapf(err, "failed receiving transaction")
 	}
+	logger.Debugf("Waiting for fabric envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -251,6 +324,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	}
 
 	// Send the proposal response back
+	logger.Debugf("Sending back proposal response... [%s]", tx.ID())
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
 	}
@@ -260,6 +334,8 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	}
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
+
+	logger.Debugf("Waiting for fabric envelope...done [%s]", a.tx.ID())
 
 	return nil
 }

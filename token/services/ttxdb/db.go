@@ -310,6 +310,7 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 // AcquireLocks acquires locks for the passed enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
 func (db *DB) AcquireLocks(eIDs ...string) error {
+	logger.Debugf("Acquire locks for [% x] enrollment ids", eIDs)
 	for _, id := range deduplicate(eIDs) {
 		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
@@ -319,6 +320,7 @@ func (db *DB) AcquireLocks(eIDs ...string) error {
 
 // Unlock unlocks the locks for the passed enrollment ids.
 func (db *DB) Unlock(eIDs ...string) {
+	logger.Debugf("Unlock locks for [% x] enrollment ids", eIDs)
 	for _, id := range deduplicate(eIDs) {
 		lock, ok := db.eIDsLocks.Load(id)
 		if !ok {
@@ -518,7 +520,7 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 	id := w.TMS().ID().String() + w.ID()
 	c, ok := cm.dbs[id]
 	if !ok {
-		driver, err := drivers[cm.driver].Open(cm.sp, "")
+		driver, err := drivers[cm.driver].Open(cm.sp, id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}

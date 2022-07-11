@@ -179,6 +179,7 @@ func (wm *WalletManager) newLocalMembership(role driver.IdentityRole, mspID stri
 	var lm localMembership
 	switch r.IdentityType {
 	case AnonymousIdentity:
+		logger.Debugf("New Idemix local membership for role [%d] and MSP ID [%s]", role, mspID)
 		lm = idemix.NewLocalMembership(
 			wm.sp,
 			wm.configManager,
@@ -189,6 +190,7 @@ func (wm *WalletManager) newLocalMembership(role driver.IdentityRole, mspID stri
 			mspID,
 		)
 	case LongTermIdentity:
+		logger.Debugf("New x509 local membership for role [%d] and MSP ID [%s]", role, mspID)
 		lm = x509.NewLocalMembership(
 			wm.configManager,
 			wm.networkDefaultIdentity,
@@ -200,6 +202,7 @@ func (wm *WalletManager) newLocalMembership(role driver.IdentityRole, mspID stri
 	default:
 		return nil, errors.Errorf("unknown identity type %d", r.IdentityType)
 	}
+	logger.Debugf("Load local membership for role [%d] and MSP ID [%s] with identities [%+q]", role, mspID, identities)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
