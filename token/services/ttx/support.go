@@ -78,11 +78,14 @@ func RunView(context view.Context, view view.View, opts ...view.RunViewOption) {
 	}()
 }
 
+// LocalBidirectionalChannel is a bidirectional channel that is used to simulate
+// a session between two views (let's call them L and R) running in the same process.
 type LocalBidirectionalChannel struct {
 	left  view.Session
 	right view.Session
 }
 
+// NewLocalBidirectionalChannel creates a new bidirectional channel
 func NewLocalBidirectionalChannel(caller string, contextID string, endpoint string, pkid []byte) (*LocalBidirectionalChannel, error) {
 	ID, err := comm.GetRandomNonce()
 	if err != nil {
@@ -119,14 +122,18 @@ func NewLocalBidirectionalChannel(caller string, contextID string, endpoint stri
 	}, nil
 }
 
+// LeftSession returns the session from the L to R
 func (c *LocalBidirectionalChannel) LeftSession() view.Session {
 	return c.left
 }
 
+// RightSession returns the session from the R to L
 func (c *LocalBidirectionalChannel) RightSession() view.Session {
 	return c.right
 }
 
+// localSession is a local session that is used to simulate a session between two views.
+// It has a read channel and a write channel.
 type localSession struct {
 	name         string
 	contextID    string
