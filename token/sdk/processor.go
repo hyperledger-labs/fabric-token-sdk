@@ -34,7 +34,7 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 				ons,
 				namespace,
 				p.sp,
-				network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}),
+				network2.NewOwnershipMultiplexer(&network2.TMSAuthorization{}),
 				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 			),
 		); err != nil {
@@ -49,7 +49,7 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 			n,
 			namespace,
 			p.sp,
-			network2.NewOwnershipMultiplexer(&network2.WalletOwnership{}),
+			network2.NewOwnershipMultiplexer(&network2.TMSAuthorization{}),
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 		),
 	); err != nil {

@@ -29,12 +29,12 @@ type RWSetProcessor struct {
 	network    ONS
 	nss        []string
 	sp         view2.ServiceProvider
-	ownership  network.Ownership
+	ownership  network.Authorization
 	issued     network.Issued
 	tokenStore processor.TokenStore
 }
 
-func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Ownership, issued network.Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:    network,
 		nss:        []string{ns},
