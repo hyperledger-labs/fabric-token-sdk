@@ -49,8 +49,8 @@ type AuthorizationMultiplexer struct {
 	ownerships []Authorization
 }
 
-// NewOwnershipMultiplexer returns a new AuthorizationMultiplexer for the passed ownership checkers
-func NewOwnershipMultiplexer(ownerships ...Authorization) *AuthorizationMultiplexer {
+// NewAuthorizationMultiplexer returns a new AuthorizationMultiplexer for the passed ownership checkers
+func NewAuthorizationMultiplexer(ownerships ...Authorization) *AuthorizationMultiplexer {
 	return &AuthorizationMultiplexer{ownerships: ownerships}
 }
 
