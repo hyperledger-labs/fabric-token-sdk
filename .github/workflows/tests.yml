@@ -64,6 +64,7 @@ jobs:
     needs: checks
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         tests: [
           dlog-fabric,
