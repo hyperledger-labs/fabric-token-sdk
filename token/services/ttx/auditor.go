@@ -182,6 +182,17 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 func (a *AuditingViewInitiator) startLocal(context view.Context) (view.Session, error) {
 	logger.Debugf("Starting local auditing for %s", a.tx.ID())
 
+	// This code is executed everytime the auditor is the same as the
+	// initiator of a token transaction.
+	// For example, if an issuer is also an auditor, then when the issuer asks
+	// for auditing, the issuer is essentially talking to itself.
+	// FSC does not yet support opening communication session to itself,
+	// therefore we create a fake bidirectional communication channel between
+	// the AuditingViewInitiator view and its registered responder.
+	// Notice also the use of view.AsResponder(right) to run the responder
+	// using a predefined session.
+	// This code can be removed once FSC supports opening communication session to self.
+
 	// Prepare a bidirectional channel
 	// Give to the responder view the right channel, and keep for
 	// AuditingViewInitiator the left channel.
