@@ -28,6 +28,7 @@ const (
 	defaultDeadlineOffset = time.Hour
 )
 
+// WithHash sets a hash attribute to be used to customize the transfer command
 func WithHash(hash []byte) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
@@ -38,6 +39,7 @@ func WithHash(hash []byte) token.TransferOption {
 	}
 }
 
+// WithHashFunc sets a hash function attribute to be used to customize the transfer command
 func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
@@ -48,6 +50,7 @@ func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 	}
 }
 
+// WithHashEncoding sets a hash encoding attribute to be used to customize the transfer command
 func WithHashEncoding(encoding encoding.Encoding) token.TransferOption {
 	return func(o *token.TransferOptions) error {
 		if o.Attributes == nil {
@@ -68,10 +71,12 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 	return txOptions, nil
 }
 
+// Transaction holds a ttx transaction
 type Transaction struct {
 	*ttx.Transaction
 }
 
+// NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer
 func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption) (*Transaction, error) {
 	tx, err := ttx.NewTransaction(sp, signer, opts...)
 	if err != nil {
@@ -82,6 +87,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	}, nil
 }
 
+// NewTransactionFromBytes returns a new transaction from the passed bytes
 func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []byte) (*Transaction, error) {
 	tx, err := ttx.NewTransactionFromBytes(ctx, network, channel, raw)
 	if err != nil {
@@ -92,23 +98,7 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 	}, nil
 }
 
-func ReceiveTransaction(context view.Context) (*Transaction, error) {
-	logger.Debugf("receive a new transaction...")
-
-	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
-	if err != nil {
-		return nil, err
-	}
-
-	cctx, ok := txBoxed.(*Transaction)
-	if !ok {
-		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
-	}
-	logger.Debugf("received transaction with id [%s]", cctx.ID())
-
-	return cctx, nil
-}
-
+// Outputs returns a new OutputStream of the transaction's outputs
 func (t *Transaction) Outputs() (*OutputStream, error) {
 	outs, err := t.TokenRequest.Outputs()
 	if err != nil {
@@ -117,6 +107,7 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 	return NewOutputStream(outs), nil
 }
 
+// Exchange appends an exchange (transfer) action to the token request of the transaction
 func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, typ string, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error) {
 	options, err := compileTransferOptions(opts...)
 	if err != nil {
@@ -177,6 +168,7 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 	return preImage, nil
 }
 
+// Reclaim appends a reclaim (transfer) action to the token request of the transaction
 func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error {
 	// TODO: handle this properly
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
@@ -222,6 +214,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Sender}, token.WithTokenIDs(tok.Id))
 }
 
+// Claim appends a claim (transfer) action to the token request of the transaction
 func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error {
 	// TODO: handle this properly
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
@@ -333,7 +326,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	return raw, preImage, nil
 }
 
-// CreateNonce generates a nonce using the common/crypto package.
+// CreateNonce generates a nonce using the common/crypto package
 func CreateNonce() ([]byte, error) {
 	nonce, err := getRandomNonce()
 	return nonce, errors.WithMessage(err, "error generating random nonce")

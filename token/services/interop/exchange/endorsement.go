@@ -14,6 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// NewCollectEndorsementsView returns an instance of the ttx collectEndorsementsView struct
 func NewCollectEndorsementsView(tx *Transaction) view.View {
 	return ttx.NewCollectEndorsementsView(tx.Transaction)
 }
@@ -23,6 +24,7 @@ type receiveTransactionView struct {
 	channel string
 }
 
+// NewReceiveTransactionView returns an instance of receiveTransactionView struct
 func NewReceiveTransactionView(network string) *receiveTransactionView {
 	return &receiveTransactionView{network: network}
 }
@@ -44,4 +46,22 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 	case <-time.After(240 * time.Second):
 		return nil, errors.New("timeout reached")
 	}
+}
+
+// ReceiveTransaction executes the receiveTransactionView and returns the received transaction
+func ReceiveTransaction(context view.Context) (*Transaction, error) {
+	logger.Debugf("receive a new transaction...")
+
+	txBoxed, err := context.RunView(NewReceiveTransactionView(""))
+	if err != nil {
+		return nil, err
+	}
+
+	cctx, ok := txBoxed.(*Transaction)
+	if !ok {
+		return nil, errors.Errorf("received transaction of wrong type [%T]", cctx)
+	}
+	logger.Debugf("received transaction with id [%s]", cctx.ID())
+
+	return cctx, nil
 }

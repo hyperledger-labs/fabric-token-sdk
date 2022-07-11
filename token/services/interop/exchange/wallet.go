@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
@@ -25,13 +26,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type QueryService interface {
-	ListUnspentTokens() (*token2.UnspentTokens, error)
-}
-
+// OwnerWallet is a combination of a wallet and a query service
 type OwnerWallet struct {
 	wallet       *token.OwnerWallet
-	queryService QueryService
+	queryService interactive.QueryEngine
 }
 
 // ListExpired returns a list of tokens with a passed deadline whose sender id is contained within the wallet
@@ -130,13 +128,12 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte) ([]*token2.UnspentToken, e
 	return res, nil
 }
 
-// GetWallet returns the wallet whose id is the passed id.
-// If the passed id is empty, GetWallet has the same behaviour of MyWallet.
-// It returns nil, if no wallet is found.
+// GetWallet returns the wallet whose id is the passed id
 func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
 	return ttx.GetWallet(sp, id, opts...)
 }
 
+// Wallet returns an OwnerWallet which contains a wallet and a query service
 func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet, opts ...token.ServiceOption) *OwnerWallet {
 	tms := token.GetManagementService(sp, opts...)
 	ch := fabric.GetChannel(sp, tms.Network(), tms.Channel())
