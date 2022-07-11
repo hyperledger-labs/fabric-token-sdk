@@ -1,7 +1,7 @@
 # Fabric Token SDK
 [![License](https://img.shields.io/badge/license-Apache%202-blue)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/hyperledger-labs/fabric-token-sdk)](https://goreportcard.com/badge/github.com/hyperledger-labs/fabric-token-sdk)
-[![Go](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/go.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/go.yml)
+[![Go](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/go.yml)
 [![CodeQL](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/codeql-analysis.yml)
 
 The `Fabric Token SDK` is a set of API and services that let developers create 
