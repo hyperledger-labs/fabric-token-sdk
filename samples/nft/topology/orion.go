@@ -21,7 +21,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("grpc=error:debug", "")
+	//fscTopology.SetLogging("grpc=error:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		orion.WithRole("issuer"),

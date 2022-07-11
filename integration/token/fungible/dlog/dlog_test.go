@@ -11,7 +11,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 )

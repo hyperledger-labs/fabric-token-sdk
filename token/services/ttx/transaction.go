@@ -51,6 +51,9 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 	)
 }
 
+// NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer.
+// A valid signer is a signer that the target network recognizes as so. For example, in case of fabric, the signer must be a valid fabric identity.
+// If the passed signer is nil, then the default identity is used.
 func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
 	txOpts, err := compile(opts...)
 	if err != nil {
@@ -64,8 +67,12 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 		token.WithNamespace(txOpts.Namespace),
 	)
 
+	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
+	if signer.IsNone() {
+		signer = nw.LocalMembership().DefaultIdentity()
+	}
 	txID := &network.TxID{Creator: signer}
-	id := network.GetInstance(sp, tms.Network(), tms.Channel()).ComputeTxID(txID)
+	id := nw.ComputeTxID(txID)
 	tr, err := tms.NewRequest(id)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
