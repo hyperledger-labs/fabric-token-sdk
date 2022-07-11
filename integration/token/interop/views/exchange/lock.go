@@ -21,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
+// Lock contains the input information to exchange a token
 type Lock struct {
 	// TMSID identifies the TMS to use to perform the token operation
 	TMSID token.TMSID

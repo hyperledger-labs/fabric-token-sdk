@@ -18,12 +18,14 @@ import (
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// HashInfo contains the information regarding the hashing
 type HashInfo struct {
 	Hash         []byte
 	HashFunc     crypto.Hash
 	HashEncoding encoding.Encoding
 }
 
+// Script contains the details of an exchange
 type Script struct {
 	Sender    view.Identity
 	Recipient view.Identity
@@ -31,8 +33,15 @@ type Script struct {
 	HashInfo  HashInfo
 }
 
+// ScriptOwnership implements the Ownership interface for scripts
 type ScriptOwnership struct{}
 
+// AmIAnAuditor returns false for script ownership
+func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
+	return false
+}
+
+// IsMine returns true it there exists an owner wallet for the token's owner
 func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
 	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
 	if err != nil {

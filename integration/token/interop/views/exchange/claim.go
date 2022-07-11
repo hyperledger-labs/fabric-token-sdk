@@ -18,10 +18,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
+// Claim contains the input information to claim a token
 type Claim struct {
-	TMSID    token.TMSID
-	Wallet   string
-	PreImage []byte // preimage of the hash encoded in the exchange script in the token to be claimed
+	// TMSID identifies the TMS to use to perform the token operation
+	TMSID token.TMSID
+	// Wallet is the identifier of the wallet to use
+	Wallet string
+	// PreImage of the hash encoded in the exchange script in the token to be claimed
+	PreImage []byte
 }
 
 type ClaimView struct {

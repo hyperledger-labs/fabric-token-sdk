@@ -16,6 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Terms contains the details of the exchange to be examined
 type Terms struct {
 	ReclamationDeadline time.Duration
 	TMSID1              token.TMSID
@@ -26,19 +27,23 @@ type Terms struct {
 	Amount2             uint64
 }
 
+// Bytes serializes the terms
 func (t *Terms) Bytes() ([]byte, error) {
 	return json.Marshal(t)
 }
 
+// FromBytes unmarshals terms
 func (t *Terms) FromBytes(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
+// DistributeTermsView holds the terms and the recipient identity to be used by the view
 type DistributeTermsView struct {
 	recipient view.Identity
 	terms     *Terms
 }
 
+// NewDistributeTermsView creates a view which distributes the terms to the recipient
 func NewDistributeTermsView(recipient view.Identity, terms *Terms) *DistributeTermsView {
 	return &DistributeTermsView{
 		recipient: recipient,
@@ -64,6 +69,7 @@ func (v *DistributeTermsView) Call(context view.Context) (interface{}, error) {
 
 type termsReceiverView struct{}
 
+// ReceiveTerms runs the termsReceiverView and returns the received terms
 func ReceiveTerms(context view.Context) (*Terms, error) {
 	terms, err := context.RunView(&termsReceiverView{})
 	if err != nil {

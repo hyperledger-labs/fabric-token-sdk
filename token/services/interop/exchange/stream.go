@@ -13,18 +13,22 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 )
 
+// OutputStream models a stream over a set of outputs
 type OutputStream struct {
 	*token.OutputStream
 }
 
+// NewOutputStream creates a new OutputStream for the passed outputs
 func NewOutputStream(outputs *token.OutputStream) *OutputStream {
 	return &OutputStream{OutputStream: outputs}
 }
 
+// Filter filters the OutputStream to only include outputs that match the passed predicate
 func (o *OutputStream) Filter(f func(t *token.Output) bool) *OutputStream {
 	return NewOutputStream(o.OutputStream.Filter(f))
 }
 
+// ByScript filters the OutputStream to only include outputs that are owned by an exchange script
 func (o *OutputStream) ByScript() *OutputStream {
 	return o.Filter(func(t *token.Output) bool {
 		owner, err := identity.UnmarshallRawOwner(t.Owner)
@@ -39,6 +43,7 @@ func (o *OutputStream) ByScript() *OutputStream {
 	})
 }
 
+// ScriptAt returns an exchange script that is the owner of the output at the passed index of the OutputStream
 func (o *OutputStream) ScriptAt(i int) *Script {
 	tok := o.OutputStream.At(i)
 	owner, err := identity.UnmarshallRawOwner(tok.Owner)

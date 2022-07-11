@@ -11,9 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
-// NewFinalityView returns an instance of the finalityView.
-// The view does the following: It waits for the finality of the passed transaction.
-// If the transaction is final, the vault is updated.
+// NewFinalityView returns an instance of the ttx finalityView
 func NewFinalityView(tx *Transaction) view.View {
 	return ttx.NewFinalityView(tx.Transaction)
 }

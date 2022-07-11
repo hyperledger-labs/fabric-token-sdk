@@ -18,14 +18,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 )
 
+// Scan contains the input information for a scan
 type Scan struct {
-	// TMSID identifies the TMS to use to perform the token operation.
+	// TMSID identifies the TMS to use to perform the token operation
 	TMSID token.TMSID
-	// Timeout
+	// Timeout of the scan
 	Timeout time.Duration
-	// Hash is the hash to use in the script, if nil, a fresh one is generated
+	// Hash is the hash to use in the scan
 	Hash []byte
-	// HashFunc is the hash function to use in the script
+	// HashFunc is the hash function to use in the scan
 	HashFunc crypto.Hash
 }
 

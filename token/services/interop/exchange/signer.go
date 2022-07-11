@@ -28,6 +28,7 @@ type ClaimSigner struct {
 	Preimage  []byte
 }
 
+// Sign returns a signature of the recipient over the token request and preimage
 func (cs *ClaimSigner) Sign(tokenRequestAndTxID []byte) ([]byte, error) {
 	msg := concatTokenRequestTxIDPreimage(tokenRequestAndTxID, cs.Preimage)
 	sigma, err := cs.Recipient.Sign(msg)
@@ -55,6 +56,7 @@ type ClaimVerifier struct {
 	HashInfo  HashInfo
 }
 
+// Verify verifies that the passed signature is valid and that the contained preimage matches the hash info
 func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) error {
 	sig := &ClaimSignature{}
 	err := json.Unmarshal(claimSignature, sig)
@@ -89,6 +91,7 @@ type ExchangeVerifier struct {
 	HashInfo  HashInfo
 }
 
+// Verify verifies the claim signature, if the deadline hasn't passed, or the reclaim signature
 func (v *ExchangeVerifier) Verify(msg []byte, sigma []byte) error {
 	if time.Now().Before(v.Deadline) {
 		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: HashInfo{

@@ -20,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
+// FastExchange contains the input information to fast exchange a token
 type FastExchange struct {
 	// Recipient is the identity of the recipient's FSC node
 	Recipient view.Identity
@@ -154,9 +155,6 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 
 		_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit issue transaction")
-
-		// _, err = context.RunView(exchange.NewDistributePreImageView(preImage, recipient))
-		// assert.NoError(err, "failed to distribute preImage")
 
 		return nil, nil
 	})

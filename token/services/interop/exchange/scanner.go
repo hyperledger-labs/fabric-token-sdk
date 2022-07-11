@@ -19,8 +19,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
+	"go.uber.org/zap/zapcore"
 )
 
+// ScanForPreImage scans for a preimage of the passed image, taking into account the timeout
 func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	logger.Debugf("scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
 
@@ -81,10 +83,12 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 
 				// found
 				preImage = v
-				logger.Debugf("preimage of [%s] found [%s]",
-					base64.StdEncoding.EncodeToString(image),
-					base64.StdEncoding.EncodeToString(v),
-				)
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("preimage of [%s] found [%s]",
+						base64.StdEncoding.EncodeToString(image),
+						base64.StdEncoding.EncodeToString(v),
+					)
+				}
 				return true, nil
 			}
 		}
@@ -94,11 +98,13 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 		return nil, err
 	}
 
-	logger.Debugf("scanning for preimage of [%s] with timeout [%s] found, [%s]",
-		base64.StdEncoding.EncodeToString(image),
-		timeout,
-		base64.StdEncoding.EncodeToString(preImage),
-	)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("scanning for preimage of [%s] with timeout [%s] found, [%s]",
+			base64.StdEncoding.EncodeToString(image),
+			timeout,
+			base64.StdEncoding.EncodeToString(preImage),
+		)
+	}
 
 	return preImage, nil
 }
