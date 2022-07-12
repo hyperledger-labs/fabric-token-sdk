@@ -195,7 +195,6 @@ func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*Tra
 }
 
 // verifyIssue checks if all outputs in IssueAction are valid (no zero-value outputs)
-// todo shall we add restrictions on max value?
 func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	if issue.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")
