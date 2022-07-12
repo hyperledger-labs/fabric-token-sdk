@@ -15,8 +15,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+// Issue returns an IssueAction as a function of the passed arguments
+// Issue also returns a serialization TokenInformation associated with issued tokens
+// and the identity of the issuer
 func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
+		// a recipient cannot be empty
 		if len(owner) == 0 {
 			return nil, nil, nil, errors.Errorf("all recipients should be defined")
 		}
@@ -27,22 +31,22 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		return nil, nil, nil, err
 	}
 
+	pp, err := s.PublicParams()
+	if err != nil {
+		return nil, nil, nil, errors.Wrap(err, "failed to get public parameters")
+	}
 	issuer := &nonanonym.Issuer{}
 	issuer.New(typ, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
-	}, s.PublicParams())
+	}, pp)
 
 	issue, infos, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	//if err := s.registerIssuerSigner(issuer.Signer); err != nil {
-	//	return nil, nil, nil, errors.WithMessage(err, "failed registering zkat issuer")
-	//}
-
-	infoRaws := [][]byte{}
+	var infoRaws [][]byte
 	for _, information := range infos {
 		raw, err := information.Serialize()
 		if err != nil {
@@ -59,8 +63,16 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 	return issue, infoRaws, fid, err
 }
 
+// VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
 func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error {
 	action := ia.(*issue.IssueAction)
+	if action == nil {
+		return errors.New("failed to verify issue: nil issue action")
+	}
+	pp, err := s.PublicParams()
+	if err != nil {
+		return errors.Wrap(err, "failed to verify issue: can't get public parameters")
+	}
 	coms, err := action.GetCommitments()
 	if err != nil {
 		return errors.New("failed to verify issue")
@@ -69,14 +81,15 @@ func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error 
 	return issue.NewVerifier(
 		coms,
 		action.IsAnonymous(),
-		s.PublicParams()).Verify(action.GetProof())
+		pp).Verify(action.GetProof())
 }
 
+// DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
 func (s *Service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &issue.IssueAction{}
 	err := issue.Deserialize(raw)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to deserialize issue action")
 	}
 	return issue, nil
 }

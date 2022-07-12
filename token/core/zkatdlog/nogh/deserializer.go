@@ -20,14 +20,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// VerifierDES deserializes verifiers
+// A verifier checks the validity of a signature against the identity
+// associated with the verifier
 type VerifierDES interface {
 	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
 }
 
+// AuditDES deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
 type AuditDES interface {
 	DeserializeAuditInfo(raw []byte) (driver.Matcher, error)
 }
 
+// deserializer deserializes verifiers associated with issuers, owners, and auditors
 type deserializer struct {
 	auditorDeserializer VerifierDES
 	ownerDeserializer   VerifierDES
@@ -35,7 +40,11 @@ type deserializer struct {
 	auditDeserializer   AuditDES
 }
 
+// NewDeserializer returns a deserializer
 func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
+	if pp == nil {
+		return nil, errors.New("failed to get deserializer: nil public parameters")
+	}
 	idemixDes, err := idemix.NewDeserializer(pp.IdemixPK, pp.IdemixCurve)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params")
@@ -49,32 +58,51 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 	}, nil
 }
 
+// GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
+	if d.ownerDeserializer == nil {
+		return nil, errors.New("failed to get owner verifier: nil owner deserializer")
+	}
 	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
+// GetIssuerVerifier deserializes the verifier for the passed issuer identity
 func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
+	if d.issuerDeserializer == nil {
+		return nil, errors.New("failed to get issuer verifier: nil issuer deserializer")
+	}
 	return d.issuerDeserializer.DeserializeVerifier(id)
 }
 
+// GetAuditorVerifier deserializes the verifier for the passed auditor identity
 func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
+	if d.auditorDeserializer == nil {
+		return nil, errors.New("failed to get auditor verifier: nil auditor deserializer")
+	}
 	return d.auditorDeserializer.DeserializeVerifier(id)
 }
 
+// GetOwnerMatcher returns a matcher that allows auditors to match an identity to an enrollment ID
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	if d.auditDeserializer == nil {
+		return nil, errors.New("failed to get owner matcher: nil audit deserializer")
+	}
 	return d.auditDeserializer.DeserializeAuditInfo(raw)
 }
 
+// DeserializerProvider provides the deserializer matching zkatdlog public parameters
 type DeserializerProvider struct {
 	oldHash []byte
 	des     *deserializer
 	mux     sync.Mutex
 }
 
+// NewDeserializerProvider returns a DeserializerProvider
 func NewDeserializerProvider() *DeserializerProvider {
 	return &DeserializerProvider{}
 }
 
+// Deserialize returns the deserializer matching the passed public parameters
 func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.Deserializer, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
@@ -93,13 +121,16 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 	return des, nil
 }
 
+// enrollmentService returns enrollment IDs behind the owners of token
 type enrollmentService struct {
 }
 
+// NewEnrollmentIDDeserializer returns an enrollmentService
 func NewEnrollmentIDDeserializer() *enrollmentService {
 	return &enrollmentService{}
 }
 
+// GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
 func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	ai := &idemix2.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
