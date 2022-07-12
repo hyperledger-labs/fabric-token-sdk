@@ -36,6 +36,7 @@ type Script struct {
 // ScriptOwnership implements the Ownership interface for scripts
 type ScriptOwnership struct{}
 
+// AmIAnAuditor returns false for script ownership
 func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
 	return false
 }
