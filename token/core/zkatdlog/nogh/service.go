@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"github.com/pkg/errors"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
