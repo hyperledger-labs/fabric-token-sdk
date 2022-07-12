@@ -36,6 +36,10 @@ type Script struct {
 // ScriptOwnership implements the Ownership interface for scripts
 type ScriptOwnership struct{}
 
+func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
+	return false
+}
+
 // IsMine returns true it there exists an owner wallet for the token's owner
 func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
 	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
