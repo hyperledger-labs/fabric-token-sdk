@@ -18,8 +18,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
+// ReclaimAll contains the input information to reclaim tokens
 type ReclaimAll struct {
-	// TMSID identifies the TMS to use to perform the token operation.
+	// TMSID identifies the TMS to use to perform the token operation
 	TMSID token.TMSID
 	// Wallet is the identifier of the wallet that owns the tokens to reclaim
 	Wallet string

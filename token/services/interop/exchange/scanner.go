@@ -22,7 +22,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// ScanForPreImage scans for a preimage of the passed image with the passed timeout
+// ScanForPreImage scans for a preimage of the passed image, taking into account the timeout
 func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	logger.Debugf("scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
 

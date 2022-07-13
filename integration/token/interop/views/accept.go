@@ -15,14 +15,14 @@ import (
 type AcceptCashView struct{}
 
 func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
-	// The recipient of a token (issued or transfer) responds, as first operation,
+	// The recipient of a token (issued or transferred) responds, as first operation,
 	// to a request for a recipient identity.
 	// The recipient can do that by using the following code.
 	// The recipient identity will be taken from the default wallet (ttx.MyWallet(context)), if not otherwise specified.
 	_, err := ttx.RespondRequestRecipientIdentity(context)
 	assert.NoError(err, "failed to respond to identity request")
 
-	// At some point, the recipient receives the token transaction that in the mean time has been assembled
+	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed to receive tokens")
 
