@@ -63,6 +63,7 @@ func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
 }
 
 // ForceFetch returns the PublicParams associated with fabtoken
+// ForceFetch does not look into cache, unlike Load.
 func (s *VaultPublicParamsLoader) ForceFetch() (*PublicParams, error) {
 	logger.Debugf("force public parameters fetch")
 	raw, err := s.PublicParamsFetcher.Fetch()

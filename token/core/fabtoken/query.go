@@ -9,11 +9,9 @@ package fabtoken
 import (
 	"encoding/json"
 
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // ListTokens returns the list of unspent tokens
