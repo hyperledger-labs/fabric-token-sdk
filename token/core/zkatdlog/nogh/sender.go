@@ -20,7 +20,9 @@ import (
 // It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
-
+	if s.TokenLoader == nil {
+		return nil, nil, errors.New("can't transfer: please initialize token vault")
+	}
 	var signers []driver.Signer
 	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
@@ -31,6 +33,9 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	pp, err := s.PublicParams()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to get public parameters")
+	}
+	if s.IdentityProvider == nil {
+		return nil, nil, errors.New("can't transfer: please initialize identity provider")
 	}
 	for _, id := range signerIds {
 		// get signers for each input token
@@ -77,7 +82,10 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	}
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
-	for _, output := range outputTokens {
+	for i, output := range outputTokens {
+		if output.Owner == nil {
+			return nil, nil, errors.Errorf("failed to get audit info for %dth output: nil owner", i)
+		}
 		auditInfo, err := s.identityProvider.GetAuditInfo(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())

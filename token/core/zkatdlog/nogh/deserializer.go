@@ -60,33 +60,21 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	if d.ownerDeserializer == nil {
-		return nil, errors.New("failed to get owner verifier: nil owner deserializer")
-	}
 	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
 func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
-	if d.issuerDeserializer == nil {
-		return nil, errors.New("failed to get issuer verifier: nil issuer deserializer")
-	}
 	return d.issuerDeserializer.DeserializeVerifier(id)
 }
 
 // GetAuditorVerifier deserializes the verifier for the passed auditor identity
 func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
-	if d.auditorDeserializer == nil {
-		return nil, errors.New("failed to get auditor verifier: nil auditor deserializer")
-	}
 	return d.auditorDeserializer.DeserializeVerifier(id)
 }
 
 // GetOwnerMatcher returns a matcher that allows auditors to match an identity to an enrollment ID
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	if d.auditDeserializer == nil {
-		return nil, errors.New("failed to get owner matcher: nil audit deserializer")
-	}
 	return d.auditDeserializer.DeserializeAuditInfo(raw)
 }
 

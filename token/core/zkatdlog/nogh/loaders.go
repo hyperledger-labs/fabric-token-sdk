@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
@@ -58,7 +59,9 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	var inputIDs []string
 	var inputInf []*token.TokenInformation
 	var signerIds []view.Identity
-
+	if s.TokenVault == nil {
+		return nil, nil, nil, nil, errors.New("can't load tokens: please initialize token vault")
+	}
 	// return token commitments and the corresponding opening
 	if err := s.TokenVault.GetTokenInfoAndCommitments(ids, func(id *token3.ID, key string, comm, info []byte) error {
 		if len(comm) == 0 {
@@ -102,6 +105,12 @@ type VaultPublicParamsLoader struct {
 // Load retrieves the public parameters. It first checks if the public parameters are cached.
 // If not Load fetches the parameters from the ledger
 func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
+	if s.TokenVault == nil {
+		return nil, errors.New("can't load public parameters: please initialize token vault")
+	}
+	if s.PublicParamsFetcher == nil {
+		return nil, errors.New("can't load public parameters: please initialize public parameters fetcher")
+	}
 	raw, err := s.TokenVault.PublicParams()
 	if err != nil {
 		return nil, err
@@ -129,6 +138,9 @@ func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
 // ForceFetch retrieves the public parameters from the ledger
 func (s *VaultPublicParamsLoader) ForceFetch() (*crypto.PublicParams, error) {
 	logger.Debugf("force public parameters fetch")
+	if s.PublicParamsFetcher == nil {
+		return nil, errors.New("can't fetch public parameters: please initialize public parameters fetcher")
+	}
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
 		logger.Errorf("failed retrieving public params [%s]", err)

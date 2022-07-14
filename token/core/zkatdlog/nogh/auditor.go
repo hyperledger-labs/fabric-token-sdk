@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
@@ -21,7 +22,10 @@ func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMeta
 		return errors.New("failed to perform auditor check: nil token commitment loader")
 	}
 	var inputTokens [][]*token.Token
-	for _, transfer := range tokenRequestMetadata.Transfers {
+	for i, transfer := range tokenRequestMetadata.Transfers {
+		if &transfer == nil {
+			return errors.Errorf("failed to perform auditor check: nil transfer at index %d", i)
+		}
 		inputs, err := s.TokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting token commitments to perform auditor check")
