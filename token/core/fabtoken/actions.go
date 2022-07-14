@@ -41,6 +41,7 @@ func (t *TransferOutput) Serialize() ([]byte, error) {
 }
 
 // IsRedeem returns true if the owner of a TransferOutput is empty
+// todo update interface to account for nil t.Output.Owner and nil t.Output
 func (t *TransferOutput) IsRedeem() bool {
 	return len(t.Output.Owner.Raw) == 0
 }
@@ -153,6 +154,7 @@ func (t *TransferAction) GetOutputs() []driver.Output {
 }
 
 // IsRedeemAt returns true if the output at the specified index is a redeemed output
+// todo update interface to account for nil t.outputs[index]
 func (t *TransferAction) IsRedeemAt(index int) bool {
 	return t.Outputs[index].IsRedeem()
 }
@@ -164,6 +166,9 @@ func (t *TransferAction) IsGraphHiding() bool {
 
 // SerializeOutputAt marshals the output at the specified index in TransferAction
 func (t *TransferAction) SerializeOutputAt(index int) ([]byte, error) {
+	if index >= len(t.Outputs) {
+		return nil, errors.Errorf("failed to serialize output in transfer action: it does not exist")
+	}
 	if t.Outputs[index] == nil {
 		return nil, errors.Errorf("failed to serialize output in transfer action: nil output at index [%d]", index)
 	}

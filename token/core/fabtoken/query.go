@@ -17,6 +17,9 @@ import (
 // ListTokens returns the list of unspent tokens
 // An UnspentToken consists of the token's unique identifier and information (type, value, owner)
 func (s *Service) ListTokens() (*token2.UnspentTokens, error) {
+	if s.QE == nil {
+		return nil, errors.New("can't list tokens: please initialize query engine")
+	}
 	return s.QE.ListUnspentTokens()
 }
 
@@ -24,6 +27,9 @@ func (s *Service) ListTokens() (*token2.UnspentTokens, error) {
 // An IssuedToken consists of the identity of the token issuer, the token unique identifier
 // and information
 func (s *Service) HistoryIssuedTokens() (*token2.IssuedTokens, error) {
+	if s.QE == nil {
+		return nil, errors.New("can't list issued tokens: please initialize query engine")
+	}
 	return s.QE.ListHistoryIssuedTokens()
 }
 

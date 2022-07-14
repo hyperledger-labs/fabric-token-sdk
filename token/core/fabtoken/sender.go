@@ -16,6 +16,9 @@ import (
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2.ID, Outputs []*token2.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	if s.TokenLoader == nil {
+		return nil, nil, errors.New("transfer failed: please initialize token loader")
+	}
 	// select inputs
 	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(ids)
 	if err != nil {
@@ -50,11 +53,17 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 	// assemble transfer metadata
 	var receivers []view.Identity
-	for _, output := range outs {
+	for i, output := range outs {
+		if output.Output == nil || output.Output.Owner == nil {
+			return nil, nil, errors.Errorf("failed to transfer: invalid output at index %d", i)
+		}
 		receivers = append(receivers, output.Output.Owner.Raw)
 	}
 
 	var senderAuditInfos [][]byte
+	if s.IP == nil {
+		return nil, nil, errors.New("failed to transfer: please initialize identity provider")
+	}
 	for _, t := range inputTokens {
 		auditInfo, err := s.IP.GetAuditInfo(t.Owner.Raw)
 		if err != nil {

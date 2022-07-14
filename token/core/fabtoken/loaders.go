@@ -22,6 +22,9 @@ type VaultTokenLoader struct {
 // GetTokens takes an array of token identifiers (txID, index) and returns the keys of the identified tokens
 // in the vault and the content of the tokens
 func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token, error) {
+	if s.TokenVault == nil {
+		return nil, nil, errors.New("failed to get tokens: please initialize vault")
+	}
 	return s.TokenVault.GetTokens(ids...)
 }
 
@@ -37,6 +40,9 @@ type VaultPublicParamsLoader struct {
 func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
 	if s.TokenVault == nil {
 		return nil, errors.New("failed to retrieve public parameters: please initialize TokenVault")
+	}
+	if s.PublicParamsFetcher == nil {
+		return nil, errors.New("failed to retrieve public parameters: please initialize public parameters fetcher")
 	}
 	raw, err := s.TokenVault.PublicParams()
 	if err != nil {
