@@ -16,9 +16,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	"github.com/pkg/errors"
 )
 
@@ -62,39 +62,7 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := identity.UnmarshallRawOwner(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal RawOwner")
-	}
-	if si.Type == identity.SerializedIdentityType {
-		return d.ownerDeserializer.DeserializeVerifier(id)
-	}
-	if si.Type == exchange.ScriptTypeExchange {
-		return d.getExchangeVerifier(si.Identity)
-	}
-	return nil, errors.Errorf("failed to deserialize RawOwner: Unknown owner type %s", si.Type)
-}
-
-func (d *deserializer) getExchangeVerifier(raw []byte) (driver.Verifier, error) {
-	script := &exchange.Script{}
-	err := json.Unmarshal(raw, script)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as a exchange script")
-	}
-	v := &exchange.ExchangeVerifier{}
-	v.Sender, err = d.ownerDeserializer.DeserializeVerifier(script.Sender)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the exchange script")
-	}
-	v.Recipient, err = d.ownerDeserializer.DeserializeVerifier(script.Recipient)
-	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the exchange script")
-	}
-	v.Deadline = script.Deadline
-	v.HashInfo.Hash = script.HashInfo.Hash
-	v.HashInfo.HashFunc = script.HashInfo.HashFunc
-	v.HashInfo.HashEncoding = script.HashInfo.HashEncoding
-	return v, nil
+	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
@@ -159,7 +127,7 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	}
 
 	// Try to unmarshal it as ScriptInfo
-	si := &ScriptInfo{}
+	si := &interop.ScriptInfo{}
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {
