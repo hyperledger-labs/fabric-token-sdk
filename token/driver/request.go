@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // TokenRequest is a collection of Token Action:
@@ -97,84 +98,123 @@ type TokenRequestMetadata struct {
 	Application map[string][]byte
 }
 
-func (m *TokenRequestMetadata) TokenInfos() [][]byte {
+func (m *TokenRequestMetadata) TokenInfos() ([][]byte, error) {
 	var res [][]byte
-	for _, issue := range m.Issues {
+	for j, issue := range m.Issues {
+		if &issue == nil {
+			return nil, errors.Errorf("cannot get token info: nil issue index [%d]", j)
+		}
 		res = append(res, issue.TokenInfo...)
 	}
-	for _, transfer := range m.Transfers {
+	for j, transfer := range m.Transfers {
+		if &transfer == nil {
+			return nil, errors.Errorf("cannot get token info: nil transfer index [%d]", j)
+		}
 		res = append(res, transfer.TokenInfo...)
 	}
-	return res
+	return res, nil
 }
 
-func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
-	for _, issue := range m.Issues {
+func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) ([]byte, error) {
+	for j, issue := range m.Issues {
+		if &issue == nil {
+			return nil, errors.Errorf("cannot get token info: nil issue index [%d]", j)
+		}
 		for i, output := range issue.Outputs {
 			if bytes.Equal(output, tokenRaw) {
-				return issue.TokenInfo[i]
+				return issue.TokenInfo[i], nil
 			}
 		}
 	}
-	for _, transfer := range m.Transfers {
+	for j, transfer := range m.Transfers {
+		if &transfer == nil {
+			return nil, errors.Errorf("cannot get token info: nil transfer index [%d]", j)
+		}
 		for i, output := range transfer.Outputs {
 			if bytes.Equal(output, tokenRaw) {
-				return transfer.TokenInfo[i]
+				return transfer.TokenInfo[i], nil
 			}
 		}
 	}
-	return nil
+	return nil, nil
 }
 
-func (m *TokenRequestMetadata) Recipients() [][]byte {
+func (m *TokenRequestMetadata) Recipients() ([][]byte, error) {
 	var res [][]byte
-	for _, issue := range m.Issues {
-		for _, r := range issue.Receivers {
+	for j, issue := range m.Issues {
+		if &issue == nil {
+			return nil, errors.Errorf("cannot get recipients: nil issue index [%d]", j)
+		}
+		for i, r := range issue.Receivers {
+			if r == nil {
+				return nil, errors.Errorf("cannot serialize [%dth] recipient in issue at index [%d]: nil recipient", i, j)
+			}
 			res = append(res, r.Bytes())
 		}
 	}
-	for _, transfer := range m.Transfers {
-		for _, r := range transfer.Receivers {
+	for j, transfer := range m.Transfers {
+		if &transfer == nil {
+			return nil, errors.Errorf("cannot get recipients: nil transfer index [%d]", j)
+		}
+		for i, r := range transfer.Receivers {
+			if r == nil {
+				return nil, errors.Errorf("cannot serialize [%dth] recipient in transfer at index [%d]: nil recipient", i, j)
+			}
 			res = append(res, r.Bytes())
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (m *TokenRequestMetadata) Senders() [][]byte {
+func (m *TokenRequestMetadata) Senders() ([][]byte, error) {
 	var res [][]byte
-	for _, transfer := range m.Transfers {
-		for _, s := range transfer.Senders {
+	for j, transfer := range m.Transfers {
+		if &transfer == nil {
+			return nil, errors.Errorf("cannot get senders: nil transfer index [%d]", j)
+		}
+		for i, s := range transfer.Senders {
+			if s == nil {
+				return nil, errors.Errorf("cannot serialize [%dth] sender in transfer at index [%d]: nil sender", i, j)
+			}
 			res = append(res, s.Bytes())
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (m *TokenRequestMetadata) Issuers() [][]byte {
+func (m *TokenRequestMetadata) Issuers() ([][]byte, error) {
 	var res [][]byte
-	for _, issue := range m.Issues {
+	for j, issue := range m.Issues {
+		if &issue == nil {
+			return nil, errors.Errorf("cannot get issuers: nil issue index [%d]", j)
+		}
 		res = append(res, issue.Issuer)
 	}
-	return res
+	return res, nil
 }
 
-func (m *TokenRequestMetadata) Inputs() []*token2.ID {
+func (m *TokenRequestMetadata) Inputs() ([]*token2.ID, error) {
 	var res []*token2.ID
-	for _, transfer := range m.Transfers {
+	for j, transfer := range m.Transfers {
+		if &transfer == nil {
+			return nil, errors.Errorf("cannot get senders: nil transfer index [%d]", j)
+		}
 		res = append(res, transfer.TokenIDs...)
 	}
-	return res
+	return res, nil
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 	meta, err := MarshalMeta(m.Application)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("cannot marshal token request metadata: failed to marshal application metadata")
 	}
 
 	transfers := make([]TransferMetadataSer, len(m.Transfers))
 	for i, transfer := range m.Transfers {
+		if &transfer == nil {
+			return nil, errors.Errorf("cannot get senders: nil transfer index [%d]", i)
+		}
 		TokenIDs := make([]TokenIDSer, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {
 			TokenIDs[j].TxId = tokenID.TxId
@@ -204,14 +244,20 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	ser := &tokenRequestMetadataSer{}
 	_, err := asn1.Unmarshal(raw, ser)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal token request metadata")
 	}
 
 	m.Issues = ser.Issues
 	m.Transfers = make([]TransferMetadata, len(ser.Transfers))
 	for i, transfer := range ser.Transfers {
+		if &transfer == nil {
+			return errors.Errorf("failed to unmarshal token request metadata: nil transfer at index [%d]", i)
+		}
 		TokenIDs := make([]*token2.ID, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {
+			if &tokenID == nil {
+				return errors.Errorf("failed to unmarshal token request metadata: nil token ID at index [%d]", j)
+			}
 			TokenIDs[j] = &token2.ID{
 				TxId:  tokenID.TxId,
 				Index: uint64(tokenID.Index),
@@ -231,7 +277,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	}
 	m.Application, err = UnmarshalMeta(ser.Application)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal token request metadata: cannot unmarshal application metadata")
 	}
 	return nil
 }
