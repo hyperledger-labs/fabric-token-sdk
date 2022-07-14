@@ -258,7 +258,7 @@ func verifyInteropTransferIfExists(inputTokens []*token2.Token, ta driver.Transf
 		}
 		return nil
 	}
-	if scriptID == ScriptTypeExchange {
+	if scriptID == exchange.ScriptTypeExchange {
 		return verifyTransferFromExchangeScript(inputTokens, ta)
 	}
 	return errors.Errorf("invalid owner in input token")
@@ -290,7 +290,7 @@ func validateOutputOwner(out *TransferOutput) error {
 	if owner.Type == identity.SerializedIdentityType {
 		return nil // todo validate owner
 	}
-	if owner.Type == ScriptTypeExchange {
+	if owner.Type == exchange.ScriptTypeExchange {
 		script := &exchange.Script{}
 		err = json.Unmarshal(owner.Identity, script)
 		if err != nil {
