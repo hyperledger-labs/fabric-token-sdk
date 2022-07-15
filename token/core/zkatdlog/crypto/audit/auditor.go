@@ -22,53 +22,63 @@ import (
 	"github.com/pkg/errors"
 )
 
-//go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
-
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog.audit")
 
-// signing identity
+//go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
+
+// SigningIdentity models a signing identity
 type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
-// deserializer
+// Deserializer deserialize audit information
 type Deserializer interface {
-	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
+	// GetOwnerMatcher returns the owner matcher for the given audit info
+	GetOwnerMatcher(auditInfo []byte) (driver.Matcher, error)
 }
+
+// InspectTokenOwnerFunc models a function to inspect the owner field
+type InspectTokenOwnerFunc = func(des Deserializer, token *AuditableToken, index int) error
+
+// GetAuditInfoForIssuesFunc models a function to get auditable tokens from issue actions
+type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error)
+
+// GetAuditInfoForTransfersFunc models a function to get auditable tokens from transfer actions
+type GetAuditInfoForTransfersFunc = func(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error)
 
 // AuditableToken contains a zkat token and the information that allows
 // an auditor to learn its content.
 type AuditableToken struct {
 	Token *token.Token
-	data  *tokenDataOpening
-	owner *ownerOpening
+	Data  *TokenDataOpening
+	Owner *OwnerOpening
 }
 
-func NewAuditableToken(token *token.Token, matcher driver.Matcher, ttype string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
+func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType string, value *math.Zr, bf *math.Zr) (*AuditableToken, error) {
 	return &AuditableToken{
 		Token: token,
-		owner: &ownerOpening{
-			ownerInfo: matcher,
+		Owner: &OwnerOpening{
+			OwnerInfo: ownerInfo,
 		},
-		data: &tokenDataOpening{
-			ttype: ttype,
-			value: value,
-			bf:    bf,
+		Data: &TokenDataOpening{
+			TokenType: tokenType,
+			Value:     value,
+			BF:        bf,
 		},
 	}, nil
 }
 
-// tokenDataOpening contains the opening of the TokenData.
-// TokenData is a Pedersen commitment to token type and value.
-type tokenDataOpening struct {
-	ttype string
-	value *math.Zr
-	bf    *math.Zr
+// TokenDataOpening contains the opening of the TokenData.
+// TokenData is a Pedersen commitment to token type and Value.
+type TokenDataOpening struct {
+	TokenType string
+	Value     *math.Zr
+	BF        *math.Zr
 }
 
 // OwnerOpening contains the information that allows the auditor to identify the owner.
-type ownerOpening struct {
-	ownerInfo driver.Matcher
+type OwnerOpening struct {
+	OwnerInfo []byte
 }
 
 // Auditor inspects zkat tokens and their owners.
@@ -83,16 +93,25 @@ type Auditor struct {
 	NYMParams []byte
 	// Elliptic curve
 	Curve *math.Curve
+
+	// InspectTokenOwnerFunc is a function that inspects the owner field
+	InspectTokenOwnerFunc        InspectTokenOwnerFunc
+	GetAuditInfoForIssuesFunc    GetAuditInfoForIssuesFunc
+	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
 func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
-	return &Auditor{
+	a := &Auditor{
 		Des:            des,
 		PedersenParams: pp,
 		NYMParams:      nymparams,
 		Signer:         signer,
 		Curve:          c,
 	}
+	a.InspectTokenOwnerFunc = InspectTokenOwner
+	a.GetAuditInfoForIssuesFunc = GetAuditInfoForIssues
+	a.GetAuditInfoForTransfersFunc = GetAuditInfoForTransfers
+	return a
 }
 
 // Endorse is called to sign a valid token request
@@ -117,40 +136,40 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 // Check validates TokenRequest against TokenRequestMetadata
 func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
 	// De-obfuscate issue requests
-	outputsFromIssue, err := getAuditInfoForIssues(a.Des, tokenRequest.Issues, tokenRequestMetadata.Issues)
+	outputsFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for issues")
 	}
 	// check validity of issue requests
-	err = a.checkIssueRequests(outputsFromIssue, txID)
+	err = a.CheckIssueRequests(outputsFromIssue, txID)
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues")
 	}
 	// De-odfuscate transfer requests
-	auditableInputs, outputsFromTransfer, err := getAuditInfoForTransfers(a.Des, tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
+	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfersFunc(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers")
 	}
 	// check validity of transfer requests
-	if err := a.checkTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
+	if err := a.CheckTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
 		return errors.Wrapf(err, "failed checking transfers")
 	}
 
 	return nil
 }
 
-// checkTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
-func (a *Auditor) checkTransferRequests(inputs [][]*AuditableToken, outputsFromTransfer [][]*AuditableToken, txID string) error {
+// CheckTransferRequests verifies that the commitments in transfer inputs and outputs match the information provided in the clear.
+func (a *Auditor) CheckTransferRequests(inputs [][]*AuditableToken, outputsFromTransfer [][]*AuditableToken, txID string) error {
 
 	for k, transferred := range outputsFromTransfer {
-		err := a.inspectOutputs(transferred)
+		err := a.InspectOutputs(transferred)
 		if err != nil {
 			return errors.Wrapf(err, "audit of %d th transfer in tx [%s] failed", k, txID)
 		}
 	}
 
 	for k, i := range inputs {
-		err := a.inspectInputs(i)
+		err := a.InspectInputs(i)
 		if err != nil {
 			return errors.Wrapf(err, "audit of %d th transfer in tx [%s] failed", k, txID)
 		}
@@ -159,11 +178,11 @@ func (a *Auditor) checkTransferRequests(inputs [][]*AuditableToken, outputsFromT
 	return nil
 }
 
-// checkTransferRequests verifies that the commitments in issue outputs match the information provided in the clear.
-func (a *Auditor) checkIssueRequests(outputsFromIssue [][]*AuditableToken, txID string) error {
+// CheckIssueRequests verifies that the commitments in issue outputs match the information provided in the clear.
+func (a *Auditor) CheckIssueRequests(outputsFromIssue [][]*AuditableToken, txID string) error {
 	// Inspect
 	for k, issued := range outputsFromIssue {
-		err := a.inspectOutputs(issued)
+		err := a.InspectOutputs(issued)
 		if err != nil {
 			return errors.Wrapf(err, "audit of %d th issue in tx [%s] failed", k, txID)
 		}
@@ -171,92 +190,91 @@ func (a *Auditor) checkIssueRequests(outputsFromIssue [][]*AuditableToken, txID 
 	return nil
 }
 
-// inspectOutputs verifies that the commitments in an array of outputs match the information provided in the clear.
-func (a *Auditor) inspectOutputs(tokens []*AuditableToken) error {
+// InspectOutputs verifies that the commitments in an array of outputs matches the information provided in the clear.
+func (a *Auditor) InspectOutputs(tokens []*AuditableToken) error {
 	for i, t := range tokens {
-		err := a.inspectOutput(t, i)
+		err := a.InspectOutput(t, i)
 		if err != nil {
 			return errors.Wrapf(err, "failed inspecting output [%d]", i)
-		}
-		if t == nil || t.Token == nil {
-			return errors.Errorf("failed to inspect nil output [%d]", i)
-		}
-		if !t.Token.IsRedeem() { // this is not a redeemed output
-			owner, err := a.rawOwner(t.Token.Owner)
-			if err != nil {
-				return errors.Errorf("output owner at index [%d] cannot be unwrapped", i)
-			}
-			if t.owner.ownerInfo == nil {
-				return errors.Errorf("failed to inspect owner of output [%d]: owner info is nil", i)
-			}
-			err = t.owner.ownerInfo.Match(owner)
-			if err != nil {
-				return errors.Wrapf(err, "output at index [%d] does not match the provided opening", i)
-			}
 		}
 	}
 
 	return nil
 }
 
-// inspectOutput verifies that the commitments in an output token of a given index
+// InspectOutput verifies that the commitments in an output token of a given index
 // match the information provided in the clear.
-func (a *Auditor) inspectOutput(output *AuditableToken, index int) error {
+func (a *Auditor) InspectOutput(output *AuditableToken, index int) error {
 	if len(a.PedersenParams) != 3 {
 		return errors.Errorf("length of Pedersen basis != 3")
 	}
-	if output == nil || output.data == nil {
+	if output == nil || output.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
-	t, err := common.ComputePedersenCommitment([]*math.Zr{a.Curve.HashToZr([]byte(output.data.ttype)), output.data.value, output.data.bf}, a.PedersenParams, a.Curve)
+	tokenComm, err := common.ComputePedersenCommitment([]*math.Zr{a.Curve.HashToZr([]byte(output.Data.TokenType)), output.Data.Value, output.Data.BF}, a.PedersenParams, a.Curve)
 	if err != nil {
 		return err
 	}
 	if output.Token == nil || output.Token.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
-	if !t.Equals(output.Token.Data) {
+	if !tokenComm.Equals(output.Token.Data) {
 		return errors.Errorf("output at index [%d] does not match the provided opening", index)
 	}
+
+	if !output.Token.IsRedeem() { // this is not a redeemed output
+		if err := a.InspectTokenOwnerFunc(a.Des, output, index); err != nil {
+			return errors.Wrapf(err, "failed inspecting output at index [%d]", index)
+		}
+	}
+
 	return nil
 }
 
-// inspectInputs verifies that the commitments in an array of inputs match the information provided in the clear.
-func (a *Auditor) inspectInputs(inputs []*AuditableToken) error {
+// InspectInputs verifies that the commitments in an array of inputs matches the information provided in the clear.
+func (a *Auditor) InspectInputs(inputs []*AuditableToken) error {
 	for i, input := range inputs {
 		if input == nil || input.Token == nil {
 			return errors.Errorf("invalid input at index [%d]", i)
 		}
 
 		if !input.Token.IsRedeem() {
-			owner, err := a.rawOwner(input.Token.Owner)
-			if err != nil {
-				return errors.Errorf("input owner at index [%d] cannot be unwrapped", i)
-			}
-			// this is not a redeem
-			if input.owner.ownerInfo == nil {
-				return errors.Errorf("invalid input at index [%d]: owner info is nil", i)
-			}
-			if err := input.owner.ownerInfo.Match(owner); err != nil {
-				return errors.Errorf("input at index [%d] does not match the provided opening", i)
+			if err := a.InspectTokenOwnerFunc(a.Des, input, i); err != nil {
+				return errors.Wrapf(err, "failed inspecting input at index [%d]", i)
 			}
 		}
 	}
 	return nil
 }
 
-// rawOwner unmarshal a series of bytes into an raw owner
-func (a *Auditor) rawOwner(raw []byte) ([]byte, error) {
-	si, err := identity.UnmarshallRawOwner(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to identity.RawOwner{}")
+// InspectTokenOwner verifies that the audit info matches the token owner
+func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error {
+	if token.Token.IsRedeem() {
+		return errors.Errorf("token at index [%d] is a redeem token, cannot inspect ownership", index)
 	}
-	return si.Identity, nil
+	if len(token.Owner.OwnerInfo) == 0 {
+		return errors.Errorf("failed to inspect owner at index [%d]: owner info is nil", index)
+	}
+	ro, err := identity.UnmarshallRawOwner(token.Token.Owner)
+	if err != nil {
+		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
+	}
+	if ro.Type != identity.SerializedIdentityType {
+		return errors.Errorf("owner at index [%d] is not a serialized identity", index)
+	}
+	matcher, err := des.GetOwnerMatcher(token.Owner.OwnerInfo)
+	if err != nil {
+		return errors.Errorf("failed to get owner matcher for output [%d]", index)
+	}
+	if err := matcher.Match(ro.Identity); err != nil {
+		return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
+	}
+	return nil
 }
 
-// getAuditInfoForIssues returns an array of AuditableToken for each issue action
+// GetAuditInfoForIssues returns an array of AuditableToken for each issue action
 // It takes a deserializer, an array of serialized issue actions and an array of issue metadata.
-func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
+func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error) {
 	if len(issues) != len(metadata) {
 		return nil, errors.Errorf("number of issues does not match number of provided metadata")
 	}
@@ -279,17 +297,13 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 			if err != nil {
 				return nil, err
 			}
-			matcher, err := des.GetOwnerMatcher(md.ReceiversAuditInfos[i])
-			if err != nil {
-				return nil, err
-			}
 			if ia.OutputTokens[i] == nil {
 				return nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
 			if ia.OutputTokens[i].IsRedeem() {
 				return nil, errors.Errorf("issue cannot redeem tokens")
 			}
-			ao, err := NewAuditableToken(ia.OutputTokens[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
+			ao, err := NewAuditableToken(ia.OutputTokens[i], md.ReceiversAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, err
 			}
@@ -299,9 +313,9 @@ func getAuditInfoForIssues(des Deserializer, issues [][]byte, metadata []driver.
 	return outputs, nil
 }
 
-// getAuditInfoForTransfers returns an array of AuditableToken for each transfer action.
+// GetAuditInfoForTransfers returns an array of AuditableToken for each transfer action.
 // It takes a deserializer, an array of serialized transfer actions and an array of transfer metadata.
-func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
+func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMetadata, inputs [][]*token.Token) ([][]*AuditableToken, [][]*AuditableToken, error) {
 	if len(transfers) != len(metadata) {
 		return nil, nil, errors.Errorf("number of transfers does not match the number of provided metadata")
 	}
@@ -315,18 +329,11 @@ func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []d
 			return nil, nil, errors.Errorf("number of inputs does not match the number of senders")
 		}
 		for i := 0; i < len(tr.SenderAuditInfos); i++ {
-			var matcher driver.Matcher
 			var err error
 			if inputs[k][i] == nil {
 				return nil, nil, errors.Errorf("input[%d][%d] is nil", k, i)
 			}
-			if !inputs[k][i].IsRedeem() {
-				matcher, err = des.GetOwnerMatcher(tr.SenderAuditInfos[i])
-				if err != nil {
-					return nil, nil, err
-				}
-			}
-			ai, err := NewAuditableToken(inputs[k][i], matcher, "", nil, nil)
+			ai, err := NewAuditableToken(inputs[k][i], tr.SenderAuditInfos[i], "", nil, nil)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -347,17 +354,10 @@ func getAuditInfoForTransfers(des Deserializer, transfers [][]byte, metadata []d
 				return nil, nil, err
 			}
 
-			var matcher driver.Matcher
 			if ta.OutputTokens[i] == nil {
 				return nil, nil, errors.Errorf("output token at index [%d] is nil", i)
 			}
-			if !ta.OutputTokens[i].IsRedeem() {
-				matcher, err = des.GetOwnerMatcher(tr.ReceiverAuditInfos[i])
-				if err != nil {
-					return nil, nil, err
-				}
-			}
-			ao, err := NewAuditableToken(ta.OutputTokens[i], matcher, ti.Type, ti.Value, ti.BlindingFactor)
+			ao, err := NewAuditableToken(ta.OutputTokens[i], tr.ReceiverAuditInfos[i], ti.Type, ti.Value, ti.BlindingFactor)
 			if err != nil {
 				return nil, nil, err
 			}

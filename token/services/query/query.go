@@ -10,10 +10,13 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.tms.zkat.balance")
 
 type BalanceQuery struct {
 	TMSID  token.TMSID
