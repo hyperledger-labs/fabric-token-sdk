@@ -952,7 +952,7 @@ func (t *Request) AuditOutputs() (*OutputStream, error) {
 // ApplicationMetadata returns the application metadata corresponding to the given key
 func (t *Request) ApplicationMetadata(k string) ([]byte, error) {
 	if t.Metadata == nil {
-		return nil, errors.Errorf("can't get application metadata at index [%d]: nil metadata", k)
+		return nil, errors.Errorf("can't get application metadata at index [%s]: nil metadata", k)
 	}
 	if len(t.Metadata.Application) == 0 {
 		return nil, nil
