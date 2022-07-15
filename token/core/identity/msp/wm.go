@@ -190,6 +190,17 @@ func (wm *WalletManager) SetLocalMembershipProvider(it IdentityType, provider Ne
 	wm.lmProviders[it] = provider
 }
 
+func (wm *WalletManager) GetLocalMembership(role driver.IdentityRole) (LocalMembership, error) {
+	roleInfo, ok := wm.roles[role]
+	if !ok {
+		return nil, errors.Errorf("role [%d] not found", role)
+	}
+	if roleInfo.LocalMembership == nil {
+		return nil, errors.Errorf("local membership for role [%d] not found", role)
+	}
+	return roleInfo.LocalMembership, nil
+}
+
 func (wm *WalletManager) newWallet(role driver.IdentityRole) (identity.Wallet, error) {
 	r, ok := wm.roles[role]
 	if !ok {
