@@ -29,13 +29,9 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-
 	pp, err := s.PublicParams()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to get public parameters")
-	}
-	if s.IdentityProvider == nil {
-		return nil, nil, errors.New("can't transfer: please initialize identity provider")
 	}
 	for _, id := range signerIds {
 		// get signers for each input token
