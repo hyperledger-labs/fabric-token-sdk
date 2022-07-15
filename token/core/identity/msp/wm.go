@@ -43,7 +43,8 @@ const (
 	AnonymousIdentity
 )
 
-type localMembership interface {
+// LocalMembership is the interface for local membership
+type LocalMembership interface {
 	Load(owners []*config.Identity) error
 	DefaultNetworkIdentity() view.Identity
 	IsMe(id view.Identity) bool
@@ -53,10 +54,20 @@ type localMembership interface {
 	RegisterIdentity(id string, path string) error
 }
 
+type NewLocalMembershipFunc = func(
+	sp view2.ServiceProvider,
+	configManager config.Manager,
+	defaultNetworkIdentity view.Identity,
+	signerService common.SignerService,
+	binderService common.BinderService,
+	deserializerManager common.DeserializerManager,
+	mspID string,
+) (LocalMembership, error)
+
 // Role contains information about an identity role
 type Role struct {
 	IdentityType    IdentityType
-	LocalMembership localMembership
+	LocalMembership LocalMembership
 }
 
 // WalletManager is a manager of wallets.
@@ -72,7 +83,8 @@ type WalletManager struct {
 	signerService          common.SignerService
 	binderService          common.BinderService
 
-	roles map[driver.IdentityRole]*Role
+	roles       map[driver.IdentityRole]*Role
+	lmProviders map[IdentityType]NewLocalMembershipFunc
 }
 
 // NewWalletManager creates a new wallet manager
@@ -94,7 +106,31 @@ func NewWalletManager(
 		signerService:          signerService,
 		binderService:          binderService,
 		roles:                  map[driver.IdentityRole]*Role{},
+		lmProviders: map[IdentityType]NewLocalMembershipFunc{
+			LongTermIdentity: func(sp view2.ServiceProvider, configManager config.Manager, defaultNetworkIdentity view.Identity, signerService common.SignerService, binderService common.BinderService, deserializerManager common.DeserializerManager, mspID string) (LocalMembership, error) {
+				return x509.NewLocalMembership(
+					configManager,
+					networkDefaultIdentity,
+					signerService,
+					binderService,
+					deserializerManager,
+					mspID,
+				), nil
+			},
+			AnonymousIdentity: func(sp view2.ServiceProvider, configManager config.Manager, defaultNetworkIdentity view.Identity, signerService common.SignerService, binderService common.BinderService, deserializerManager common.DeserializerManager, mspID string) (LocalMembership, error) {
+				return idemix.NewLocalMembership(
+					sp,
+					configManager,
+					networkDefaultIdentity,
+					signerService,
+					binderService,
+					deserializerManager,
+					mspID,
+				), nil
+			},
+		},
 	}
+
 }
 
 // Load loads the wallets defined in the configuration
@@ -149,6 +185,11 @@ func (wm *WalletManager) Wallets() (identity.Wallets, error) {
 	return wallets, nil
 }
 
+func (wm *WalletManager) SetLocalMembershipProvider(it IdentityType, provider NewLocalMembershipFunc) {
+	// update the provider for the given identity type
+	wm.lmProviders[it] = provider
+}
+
 func (wm *WalletManager) newWallet(role driver.IdentityRole) (identity.Wallet, error) {
 	r, ok := wm.roles[role]
 	if !ok {
@@ -170,37 +211,27 @@ func (wm *WalletManager) newWallet(role driver.IdentityRole) (identity.Wallet, e
 	return m, nil
 }
 
-func (wm *WalletManager) newLocalMembership(role driver.IdentityRole, mspID string, identities []*config.Identity) (localMembership, error) {
+func (wm *WalletManager) newLocalMembership(role driver.IdentityRole, mspID string, identities []*config.Identity) (LocalMembership, error) {
 	r, ok := wm.roles[role]
 	if !ok {
 		return nil, errors.Errorf("missing role %d", role)
 	}
 
-	var lm localMembership
-	switch r.IdentityType {
-	case AnonymousIdentity:
-		logger.Debugf("New Idemix local membership for role [%d] and MSP ID [%s]", role, mspID)
-		lm = idemix.NewLocalMembership(
-			wm.sp,
-			wm.configManager,
-			wm.networkDefaultIdentity,
-			wm.signerService,
-			wm.binderService,
-			common.GetDeserializerManager(wm.sp),
-			mspID,
-		)
-	case LongTermIdentity:
-		logger.Debugf("New x509 local membership for role [%d] and MSP ID [%s]", role, mspID)
-		lm = x509.NewLocalMembership(
-			wm.configManager,
-			wm.networkDefaultIdentity,
-			wm.signerService,
-			wm.binderService,
-			common.GetDeserializerManager(wm.sp),
-			mspID,
-		)
-	default:
-		return nil, errors.Errorf("unknown identity type %d", r.IdentityType)
+	localMembershipProvider, ok := wm.lmProviders[r.IdentityType]
+	if !ok {
+		return nil, errors.Errorf("missing local membership provider for identity type %d", r.IdentityType)
+	}
+	lm, err := localMembershipProvider(
+		wm.sp,
+		wm.configManager,
+		wm.networkDefaultIdentity,
+		wm.signerService,
+		wm.binderService,
+		common.GetDeserializerManager(wm.sp),
+		mspID,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create local membership for role [%d]", role)
 	}
 	logger.Debugf("Load local membership for role [%d] and MSP ID [%s] with identities [%+q]", role, mspID, identities)
 	if err := lm.Load(identities); err != nil {
