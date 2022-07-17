@@ -27,15 +27,6 @@ type RawOwner struct {
 	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 }
 
-// UnmarshallRawOwnerIdentity unmarshal a series of bytes into a raw owner
-func UnmarshallRawOwnerIdentity(raw []byte) ([]byte, error) {
-	si, err := UnmarshallRawOwner(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to identity.RawOwner{}")
-	}
-	return si.Identity, nil
-}
-
 func UnmarshallRawOwner(id view.Identity) (*RawOwner, error) {
 	si := &RawOwner{}
 	_, err := asn1.Unmarshal(id, si)

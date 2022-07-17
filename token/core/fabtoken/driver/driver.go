@@ -49,7 +49,9 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
 
-	mspWalletManager := msp.NewWalletManager(
+	// Prepare wallets
+	wallets := identity.NewWallets()
+	mspWalletFactory := msp.NewWalletFactory(
 		sp,        // service provider
 		networkID, // network ID
 		tmsConfig, // config manager
@@ -58,17 +60,26 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		msp.NewSigService(view2.GetSigService(sp)),      // signer service
 		view2.GetEndpointService(sp),                    // endpoint service
 	)
-	mspWalletManager.SetRoleIdentityType(driver.OwnerRole, msp.LongTermIdentity)
-	mspWalletManager.SetRoleIdentityType(driver.IssuerRole, msp.LongTermIdentity)
-	mspWalletManager.SetRoleIdentityType(driver.AuditorRole, msp.LongTermIdentity)
-	mspWalletManager.SetRoleIdentityType(driver.CertifierRole, msp.LongTermIdentity)
-	if err := mspWalletManager.Load(); err != nil {
-		return nil, errors.WithMessage(err, "failed to load wallets")
-	}
-	wallets, err := mspWalletManager.Wallets()
+	wallet, err := mspWalletFactory.NewX509Wallet(driver.OwnerRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get wallets")
+		return nil, errors.WithMessage(err, "failed to create owner wallet")
 	}
+	wallets.Put(driver.OwnerRole, wallet)
+	wallet, err = mspWalletFactory.NewX509Wallet(driver.IssuerRole)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create issuer wallet")
+	}
+	wallets.Put(driver.IssuerRole, wallet)
+	wallet, err = mspWalletFactory.NewX509Wallet(driver.AuditorRole)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create auditor wallet")
+	}
+	wallets.Put(driver.AuditorRole, wallet)
+	wallet, err = mspWalletFactory.NewX509Wallet(driver.CertifierRole)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create certifier wallet")
+	}
+	wallets.Put(driver.CertifierRole, wallet)
 
 	return fabtoken.NewService(
 		sp,

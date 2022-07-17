@@ -126,8 +126,14 @@ type Issue struct {
 // Transfer contains information about a transfer operation.
 // In particular, it carries the identities of the senders and the receivers
 type Transfer struct {
-	Senders   []view.Identity
+	// Senders is the list of identities of the senders
+	Senders []view.Identity
+	// Receivers is the list of identities of the receivers
 	Receivers []view.Identity
+	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
+	// This field is to be used by the token drivers to list any additional identities that must
+	// sign the token request.
+	ExtraSigners []view.Identity
 }
 
 // Request aggregates token operations that must be performed atomically.
@@ -670,6 +676,7 @@ func (t *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 	}
 
 	for i := range t.Actions.Transfers {
+		// senders
 		for _, eid := range t.Metadata.Transfers[i].Senders {
 			if w := t.TokenService.WalletManager().Wallet(eid); w != nil {
 				// this is me, skip
@@ -680,6 +687,20 @@ func (t *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
+
+		// extra signers
+		for _, eid := range t.Metadata.Transfers[i].ExtraSigners {
+			if w := t.TokenService.WalletManager().Wallet(eid); w != nil {
+				// this is me, skip
+				continue
+			}
+			logger.Debugf("bind extra sginer [%s] to [%s]", eid, party)
+			if err := resolver.Bind(longTermIdentity, eid); err != nil {
+				return errors.Wrap(err, "failed binding sender identities")
+			}
+		}
+
+		// receivers
 		receivers := t.Metadata.Transfers[i].Receivers
 		for j, b := range t.Metadata.Transfers[i].ReceiverIsSender {
 			if b {
@@ -716,8 +737,9 @@ func (t *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
 	for _, transfer := range t.Metadata.Transfers {
 		transfers = append(transfers, &Transfer{
-			Senders:   transfer.Senders,
-			Receivers: transfer.Receivers,
+			Senders:      transfer.Senders,
+			Receivers:    transfer.Receivers,
+			ExtraSigners: transfer.ExtraSigners,
 		})
 	}
 	return transfers

@@ -230,12 +230,16 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 		distributionList = append(distributionList, transfer.Senders...)
 		distributionList = append(distributionList, transfer.Receivers...)
 
+		// contact signer and ask for the signature unless it is me
+		var signers []view.Identity
+		signers = append(signers, transfer.Senders...)
+		signers = append(signers, transfer.ExtraSigners...)
+
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collecting signature on [%d]-th request transfer, signers [%d]", i, len(transfer.Senders))
+			logger.Debugf("collecting signature on [%d]-th request transfer, signers [%d]", i, len(signers))
 		}
 
-		// contact transfer and ask for the signature unless it is me
-		for _, party := range transfer.Senders {
+		for _, party := range signers {
 			signatureRequest := &signatureRequest{
 				Request: requestRaw,
 				TxID:    []byte(c.tx.ID()),
@@ -741,6 +745,11 @@ func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 	var res []*token.Transfer
 	for _, transfer := range s.tx.TokenRequest.Transfers() {
 		for _, sender := range transfer.Senders {
+			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
+				res = append(res, transfer)
+			}
+		}
+		for _, sender := range transfer.ExtraSigners {
 			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
 				res = append(res, transfer)
 			}
