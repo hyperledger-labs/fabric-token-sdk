@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -349,46 +350,17 @@ func validateOutputOwner(out *token.Token) error {
 }
 
 func verifyTransferFromExchangeScript(tokens []*token.Token, tr driver.TransferAction) error {
-	err := verifyOwnershipTransfer(tokens, tr)
-	if err != nil {
-		return err
-	}
-	// check that owner field in output is correct
-
-	sender, err := identity.UnmarshallRawOwner(tokens[0].Owner)
-	if err != nil {
-		return err
-	}
-	script := &exchange.Script{}
-	err = json.Unmarshal(sender.Identity, script)
-	if err != nil {
-		return err
-	}
-	out := tr.GetOutputs()[0].(*token.Token)
-
-	if time.Now().Before(script.Deadline) {
-		// this should be a claim
-		if !script.Recipient.Equal(out.Owner) {
-			return errors.Errorf("owner of output token does not correspond to recipient in exchange request")
-		}
-	} else {
-		// this should be a reclaim
-		if !script.Sender.Equal(out.Owner) {
-			return errors.Errorf("owner of output token does not correspond to sender in exchange request")
-		}
-	}
-	return nil
-}
-
-func verifyOwnershipTransfer(tokens []*token.Token, transfer driver.TransferAction) error {
-	if len(tokens) != 1 || len(transfer.GetOutputs()) != 1 {
+	if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
 		return errors.Errorf("invalid transfer action: a script only transfers the ownership of a token")
 	}
-	out := transfer.GetOutputs()[0].(*token.Token)
+
+	out := tr.GetOutputs()[0].(*token.Token)
 	if tokens[0].Data.Equals(out.Data) {
 		return errors.Errorf("invalid transfer action: content of input does not match content of output")
 	}
-	return nil
+
+	// check that owner field in output is correct
+	return interop.VerifyTransferFromExchangeScript(tokens[0].Owner, out.Owner)
 }
 
 type backend struct {
