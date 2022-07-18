@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -300,7 +301,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 			}
 
 			sigma := msg.Payload
-
+			fmt.Println("successful till receiving sigma", string(sigma))
 			verifier, err := c.tx.TokenService().SigService().OwnerVerifier(party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
@@ -558,7 +559,39 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if msg.Status == view.ERROR {
 			return errors.New(string(msg.Payload))
 		}
+		sigma := msg.Payload
+		fmt.Println("sigma  --------->", string(sigma))
+		requestBytesRaw, err := c.requestBytes()
+		if err != nil {
+			return err
+		}
+		signatureRequest := &signatureRequest{
+			Request: requestBytesRaw,
+			TxID:    []byte(c.tx.ID()),
+			Signer:  entry.ID,
+		}
+		fmt.Println("msg------>", string(signatureRequest.MessageToSign()))
+		verifier, err := c.tx.TokenService().SigService().OwnerVerifier(entry.ID)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
+		}
+		err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
+		if err != nil {
+			return errors.Wrapf(err, "failed verifying signature from [%s]", entry.ID)
+		}
+		c.tx.TokenRequest.AppendSignature(sigma)
+		// Store envelope
+		if err := StoreEnvelope(context, c.tx); err != nil {
+			return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
+		}
+
+		// Store transaction in the token transaction database
+		if err := StoreTransactionRecords(context, c.tx); err != nil {
+			return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
+		}
+
 		// TODO: Check ack
+		fmt.Println("message from accept view----->", string(sigma))
 		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {

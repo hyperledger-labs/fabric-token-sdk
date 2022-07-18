@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -51,10 +53,24 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("send back ack")
 	}
+
+	rawRequest, err := s.requestBytes()
+	if err != nil {
+		return nil, err
+	}
+	var sigma []byte
+	fmt.Println("accept msg---", string(append(rawRequest, []byte(s.tx.ID())...)))
+	if signer, err := s.tx.TokenService().SigService().GetSigner(context.Me()); err == nil {
+		sigma, err = signer.Sign(append(rawRequest, []byte(s.tx.ID())...))
+		if err != nil {
+			return nil, err
+		}
+	}
 	// Ack for distribution
 	session := context.Session()
-	// Send the proposal response back
-	err = session.Send([]byte("ack"))
+	// Send the signature back
+	fmt.Println("sigma from accept", string(sigma))
+	err = session.Send(sigma)
 	if err != nil {
 		return nil, err
 	}
@@ -65,4 +81,8 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 
 func NewAcceptView(tx *Transaction) *acceptView {
 	return &acceptView{tx: tx}
+}
+
+func (s *acceptView) requestBytes() ([]byte, error) {
+	return s.tx.TokenRequest.MarshallToSign()
 }
