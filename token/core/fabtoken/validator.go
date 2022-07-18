@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -364,49 +365,20 @@ func validateOutputOwner(out *TransferOutput) error {
 }
 
 func verifyTransferFromExchangeScript(tokens []*token2.Token, tr driver.TransferAction) error {
-	err := verifyOwnershipTransfer(tokens, tr)
-	if err != nil {
-		return err
-	}
-
-	// check that owner field in output is correct
-	sender, err := identity.UnmarshallRawOwner(tokens[0].Owner.Raw)
-	if err != nil {
-		return err
-	}
-	script := &exchange.Script{}
-	err = json.Unmarshal(sender.Identity, script)
-	if err != nil {
-		return err
-	}
-	out := tr.GetOutputs()[0].(*TransferOutput).Output
-
-	if time.Now().Before(script.Deadline) {
-		// this should be a claim
-		if !script.Recipient.Equal(out.Owner.Raw) {
-			return errors.Errorf("owner of output token does not correspond to recipient in exchange request")
-		}
-	} else {
-		// this should be a reclaim
-		if !script.Sender.Equal(out.Owner.Raw) {
-			return errors.Errorf("owner of output token does not correspond to sender in exchange request")
-		}
-	}
-	return nil
-}
-
-func verifyOwnershipTransfer(tokens []*token2.Token, transfer driver.TransferAction) error {
-	if len(tokens) != 1 || len(transfer.GetOutputs()) != 1 {
+	if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
 		return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
 	}
-	out := transfer.GetOutputs()[0].(*TransferOutput).Output
+
+	out := tr.GetOutputs()[0].(*TransferOutput).Output
 	if tokens[0].Type != out.Type {
 		return errors.Errorf("invalid transfer action: type of input does not match type of output")
 	}
 	if tokens[0].Quantity != out.Quantity {
 		return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
 	}
-	return nil
+
+	// check that owner field in output is correct
+	return interop.VerifyTransferFromExchangeScript(tokens[0].Owner.Raw, out.Owner.Raw)
 }
 
 type backend struct {
