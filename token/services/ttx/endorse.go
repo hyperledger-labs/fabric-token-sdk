@@ -547,6 +547,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 		agent.EmitKey(0, "ttx", "sent", "tx", c.tx.ID())
 
+		// Wait the ack as a signature over txRaw
 		var msg *view.Message
 		select {
 		case msg = <-ch:
@@ -560,38 +561,16 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			return errors.New(string(msg.Payload))
 		}
 		sigma := msg.Payload
-		fmt.Println("sigma  --------->", string(sigma))
-		requestBytesRaw, err := c.requestBytes()
+		logger.Debugf("received ack from [%s] [%s]", entry.ID, hash.Hashable(sigma).String())
+		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 		if err != nil {
-			return err
+			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.LongTerm)
 		}
-		signatureRequest := &signatureRequest{
-			Request: requestBytesRaw,
-			TxID:    []byte(c.tx.ID()),
-			Signer:  entry.ID,
-		}
-		fmt.Println("msg------>", string(signatureRequest.MessageToSign()))
-		verifier, err := c.tx.TokenService().SigService().OwnerVerifier(entry.ID)
-		if err != nil {
-			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
-		}
-		err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
+		err = verifier.Verify(txRaw, sigma)
 		if err != nil {
 			return errors.Wrapf(err, "failed verifying signature from [%s]", entry.ID)
 		}
-		c.tx.TokenRequest.AppendSignature(sigma)
-		// Store envelope
-		if err := StoreEnvelope(context, c.tx); err != nil {
-			return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
-		}
-
-		// Store transaction in the token transaction database
-		if err := StoreTransactionRecords(context, c.tx); err != nil {
-			return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
-		}
-
-		// TODO: Check ack
-		fmt.Println("message from accept view----->", string(sigma))
+		// TODO: store this signature
 		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {

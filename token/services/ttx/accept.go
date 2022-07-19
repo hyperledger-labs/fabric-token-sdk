@@ -7,7 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"fmt"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -18,6 +20,10 @@ import (
 type acceptView struct {
 	tx *Transaction
 	id view.Identity
+}
+
+func NewAcceptView(tx *Transaction) *acceptView {
+	return &acceptView{tx: tx}
 }
 
 func (s *acceptView) Call(context view.Context) (interface{}, error) {
@@ -54,33 +60,28 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		logger.Debugf("send back ack")
 	}
 
-	rawRequest, err := s.requestBytes()
+	rawRequest, err := s.tx.Bytes()
 	if err != nil {
 		return nil, err
 	}
 	var sigma []byte
-	fmt.Println("accept msg---", string(append(rawRequest, []byte(s.tx.ID())...)))
-	if signer, err := s.tx.TokenService().SigService().GetSigner(context.Me()); err == nil {
-		sigma, err = signer.Sign(append(rawRequest, []byte(s.tx.ID())...))
+	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
+	if signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity()); err == nil {
+		sigma, err = signer.Sign(rawRequest)
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessage(err, "failed to sign ack response")
 		}
 	}
 	// Ack for distribution
-	session := context.Session()
 	// Send the signature back
-	fmt.Println("sigma from accept", string(sigma))
-	err = session.Send(sigma)
-	if err != nil {
-		return nil, err
+	session := context.Session()
+	logger.Debugf("ack response: %s", hash.Hashable(sigma))
+	if err := session.Send(sigma); err != nil {
+		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
 
 	return s.tx, nil
-}
-
-func NewAcceptView(tx *Transaction) *acceptView {
-	return &acceptView{tx: tx}
 }
 
 func (s *acceptView) requestBytes() ([]byte, error) {
