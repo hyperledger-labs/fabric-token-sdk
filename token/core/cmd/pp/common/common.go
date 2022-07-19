@@ -7,12 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/pem"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
+	msp3 "github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
+)
+
+const (
+	signcerts = "signcerts"
 )
 
 // PP defines an interface shared by all public parameters
@@ -37,13 +45,20 @@ func GetMSPIdentity(entry string, mspID string) (view.Identity, error) {
 			return nil, errors.Errorf("invalid input [%s], expected <MSPConfigPath>:<MSPID> or <MSPConfigPath>", entry)
 		}
 	}
-	provider, err := x509.NewProvider(entries[0], mspID, nil)
+
+	// read certificate from entries[0]/signcerts
+	signcertDir := filepath.Join(entries[0], signcerts)
+	content, err := GetCertificatesFromDir(signcertDir)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", entry)
+		return nil, errors.Wrapf(err, "failed to load certificates from %s", signcertDir)
 	}
-	id, _, err := provider.Identity(nil)
+	if len(content) == 0 {
+		return nil, errors.Errorf("no certificates found in %s", signcertDir)
+	}
+
+	id, err := msp3.NewSerializedIdentity(mspID, content[0])
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get identity [%s]", entry)
+		return nil, errors.WithMessagef(err, "failed to create x509 identity for [%s]", entry)
 	}
 	return id, nil
 }
@@ -67,4 +82,56 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		pp.AddIssuer(id)
 	}
 	return nil
+}
+
+// ReadSingleCertificateFromFile reads the passed file and checks that it contains only one
+// certificate in the PEM format.
+// It returns an error if the file contains more than one certificate.
+func ReadSingleCertificateFromFile(file string) ([]byte, error) {
+	bytes, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, errors.Wrapf(err, "reading from file %s failed", file)
+	}
+
+	b, rest := pem.Decode(bytes)
+	if b == nil {
+		return nil, errors.Errorf("no pem content for file %s", file)
+	}
+	if len(rest) != 0 {
+		return nil, errors.Errorf("extra content after pem file %s", file)
+	}
+	if b.Type != "CERTIFICATE" {
+		return nil, errors.Errorf("pem file %s is not a certificate", file)
+	}
+
+	return bytes, nil
+}
+
+// GetCertificatesFromDir returns the PEM-encoded certificates from the given directory.
+func GetCertificatesFromDir(dir string) ([][]byte, error) {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		return nil, err
+	}
+	var content [][]byte
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read directory %s", dir)
+	}
+	for _, f := range files {
+		fullName := filepath.Join(dir, f.Name())
+		f, err := os.Stat(fullName)
+		if err != nil {
+			continue
+		}
+		if f.IsDir() {
+			continue
+		}
+		item, err := ReadSingleCertificateFromFile(fullName)
+		if err != nil {
+			continue
+		}
+		content = append(content, item)
+	}
+	return content, nil
 }
