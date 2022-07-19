@@ -48,15 +48,12 @@ func GetMSPIdentity(entry string, mspID string) (view.Identity, error) {
 
 	// read certificate from entries[0]/signcerts
 	signcertDir := filepath.Join(entries[0], signcerts)
-	content, err := GetPemMaterialFromDir(signcertDir)
+	content, err := GetCertificatesFromDir(signcertDir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to load certificates from %s", signcertDir)
 	}
 	if len(content) == 0 {
 		return nil, errors.Errorf("no certificates found in %s", signcertDir)
-	}
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", entry)
 	}
 
 	id, err := msp3.NewSerializedIdentity(mspID, content[0])
@@ -87,17 +84,11 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 	return nil
 }
 
-func ReadFile(file string) ([]byte, error) {
-	fileCont, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read file %s", file)
-	}
-
-	return fileCont, nil
-}
-
-func ReadPemFile(file string) ([]byte, error) {
-	bytes, err := ReadFile(file)
+// ReadSingleCertificateFromFile reads the passed file and checks that it contains only one
+// certificate in the PEM format.
+// It returns an error if the file contains more than one certificate.
+func ReadSingleCertificateFromFile(file string) ([]byte, error) {
+	bytes, err := ioutil.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading from file %s failed", file)
 	}
@@ -116,7 +107,8 @@ func ReadPemFile(file string) ([]byte, error) {
 	return bytes, nil
 }
 
-func GetPemMaterialFromDir(dir string) ([][]byte, error) {
+// GetCertificatesFromDir returns the PEM-encoded certificates from the given directory.
+func GetCertificatesFromDir(dir string) ([][]byte, error) {
 	_, err := os.Stat(dir)
 	if os.IsNotExist(err) {
 		return nil, err
@@ -135,7 +127,7 @@ func GetPemMaterialFromDir(dir string) ([][]byte, error) {
 		if f.IsDir() {
 			continue
 		}
-		item, err := ReadPemFile(fullName)
+		item, err := ReadSingleCertificateFromFile(fullName)
 		if err != nil {
 			continue
 		}
