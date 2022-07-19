@@ -108,7 +108,7 @@ func TestGenFailure(t *testing.T) {
 					driver,
 					"--auditors", "aOrg1MSP,b:Org2MSP",
 				},
-				ErrMsg: "Error: failed to generate public parameters: failed to get auditor identity [aOrg1MSP]: failed to create x509 provider for [aOrg1MSP]: could not load a valid signer certificate from directory aOrg1MSP/signcerts: stat aOrg1MSP/signcerts: no such file or directory",
+				ErrMsg: "Error: failed to generate public parameters: failed to get auditor identity [aOrg1MSP]: failed to load certificates from aOrg1MSP/signcerts: stat aOrg1MSP/signcerts: no such file or directory",
 			},
 			{
 				Args: []string{
@@ -124,7 +124,7 @@ func TestGenFailure(t *testing.T) {
 					driver,
 					"--issuers", "aOrg1MSP,b:Org2MSP",
 				},
-				ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: failed to create x509 provider for [aOrg1MSP]: could not load a valid signer certificate from directory aOrg1MSP/signcerts: stat aOrg1MSP/signcerts: no such file or directory",
+				ErrMsg: "Error: failed to generate public parameters: failed to get issuer identity [aOrg1MSP]: failed to load certificates from aOrg1MSP/signcerts: stat aOrg1MSP/signcerts: no such file or directory",
 			},
 		}...,
 		)
