@@ -624,10 +624,8 @@ func (t *Request) IsValid() error {
 	if err != nil {
 		return errors.Wrapf(err, "failed extracting tokens")
 	}
-	tis, err := t.Metadata.TokenInfos()
-	if err != nil {
-		return errors.Wrap(err, "failed to get token info")
-	}
+	tis := t.Metadata.TokenInfos()
+
 	if numTokens != len(tis) {
 		return errors.Errorf("invalid transaction, the number of tokens differs from the number of token info [%d],[%d]", numTokens, len(tis))
 	}
@@ -815,10 +813,7 @@ func (t *Request) Issues() ([]*Issue, error) {
 		return nil, errors.New("failed to retrieve the list of issues: nil metadata")
 	}
 	var issues []*Issue
-	for j, issue := range t.Metadata.Issues {
-		if &issue == nil {
-			return nil, errors.Errorf("failed to retrieve the list of issues: nil issue at index [%d]", j)
-		}
+	for _, issue := range t.Metadata.Issues {
 		issues = append(issues, &Issue{
 			Issuer:    issue.Issuer,
 			Receivers: issue.Receivers,
@@ -833,10 +828,7 @@ func (t *Request) Transfers() ([]*Transfer, error) {
 		return nil, errors.New("failed to retrieve the list of transfers: nil metadata")
 	}
 	var transfers []*Transfer
-	for j, transfer := range t.Metadata.Transfers {
-		if &transfers == nil {
-			return nil, errors.Errorf("failed to retrieve the list of transfers: nil transfer at index [%d]", j)
-		}
+	for _, transfer := range t.Metadata.Transfers {
 		transfers = append(transfers, &Transfer{
 			Senders:      transfer.Senders,
 			Receivers:    transfer.Receivers,
@@ -910,6 +902,9 @@ func (t *Request) AuditRecord() (*AuditRecord, error) {
 
 // AuditInputs is like Inputs but in addition Type and Quantity are included.
 func (t *Request) AuditInputs() (*InputStream, error) {
+	if t.TokenService == nil || t.TokenService.Vault() == nil || t.TokenService.Vault().NewQueryEngine() == nil {
+		return nil, errors.New("failed to audit inputs: invalid token service")
+	}
 	// get the input stream
 	inputs, err := t.inputs(true)
 	if err != nil {
@@ -918,7 +913,6 @@ func (t *Request) AuditInputs() (*InputStream, error) {
 
 	// load the tokens corresponding to the input token ids
 	ids := inputs.IDs()
-	// todo check token service
 	toks, err := t.TokenService.Vault().NewQueryEngine().ListAuditTokens(ids...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed retrieving inputs for auditing")

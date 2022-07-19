@@ -33,12 +33,9 @@ func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, er
 		return nil, nil, nil, errors.New("failed to get token: nil metadata")
 	}
 	if m.TMS == nil {
-		return nil, nil, nil, errors.New("failed to get token: initialized the token service")
+		return nil, nil, nil, errors.New("failed to get token: nil token service")
 	}
-	tokenInfoRaw, err := m.TokenRequestMetadata.GetTokenInfo(raw)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to get token")
-	}
+	tokenInfoRaw := m.TokenRequestMetadata.GetTokenInfo(raw)
 	if len(tokenInfoRaw) == 0 {
 		logger.Debugf("metadata for [%s] not found", hash.Hashable(raw).String())
 		return nil, nil, nil, errors.Errorf("metadata for [%s] not found", hash.Hashable(raw).String())
@@ -56,10 +53,7 @@ func (m *Metadata) SpentTokenID() ([]*token.ID, error) {
 	if m.TokenRequestMetadata == nil {
 		return nil, errors.New("can't get spent token ID: nil metadata")
 	}
-	for i, transfer := range m.TokenRequestMetadata.Transfers {
-		if &transfer == nil {
-			return nil, errors.Errorf("can't get spent token ID: nil transfer at index [%d]", i)
-		}
+	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		res = append(res, transfer.TokenIDs...)
 	}
 	return res, nil
@@ -76,7 +70,7 @@ func (m *Metadata) SpentTokenID() ([]*token.ID, error) {
 // Application metadata is always included
 func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	if m.TMS == nil || m.TokenRequestMetadata == nil {
-		return nil, errors.New("can't filter metadata by eID: invalid metadata")
+		return nil, errors.New("can't filter metadata by eID: nil TMS or nil token request metadata")
 	}
 	res := &Metadata{
 		TMS:                  m.TMS,
@@ -85,16 +79,13 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 	// filter issues
 	for j, issue := range m.TokenRequestMetadata.Issues {
-		if &issue == nil {
-			return nil, errors.Errorf("can't filer metadata by eID: issue at index [%d] is nil", j)
-		}
 		issueRes := driver.IssueMetadata{
 			Issuer: issue.Issuer,
 		}
 
 		if len(issue.ReceiversAuditInfos) != len(issue.Outputs) || len(issue.ReceiversAuditInfos) != len(issue.TokenInfo) ||
 			len(issue.ReceiversAuditInfos) != len(issue.Receivers) {
-			return nil, errors.Errorf("can't filer metadata by eID: issue at index [%d] is invalid", j)
+			return nil, errors.Errorf("can't filter metadata by eID: issue at index [%d] is invalid", j)
 		}
 		for i, auditInfo := range issue.ReceiversAuditInfos {
 			// If the receiver has the given enrollment ID, add it
@@ -127,6 +118,8 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 	// filter transfers
 	for j, transfer := range m.TokenRequestMetadata.Transfers {
+		transferRes := driver.TransferMetadata{}
+
 		transferRes := driver.TransferMetadata{
 			ExtraSigners: transfer.ExtraSigners,
 		}
@@ -147,7 +140,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 			if len(transfer.Outputs) != len(transfer.ReceiverAuditInfos) || len(transfer.TokenInfo) != len(transfer.ReceiverAuditInfos) ||
 				len(transfer.Receivers) != len(transfer.ReceiverAuditInfos) || len(transfer.ReceiverIsSender) != len(transfer.ReceiverAuditInfos) {
-				return nil, errors.Errorf("can't filer metadata by eID: transfer at index [%d] is invalid", j)
+				return nil, errors.Errorf("can't filter metadata by eID: transfer at index [%d] is invalid", j)
 			}
 
 			if search(eIDs, recipientEID) != -1 {
@@ -226,7 +219,6 @@ type IssueMetadata struct {
 }
 
 // Match returns true if the given action matches this metadata
-// todo is match a good name for this?
 func (m *IssueMetadata) Match(action *IssueAction) error {
 	if action == nil {
 		return errors.New("can't match issue metadata to issue action: nil issue action")

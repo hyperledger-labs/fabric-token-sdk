@@ -114,7 +114,8 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 
 	issues, err := c.tx.TokenRequest.Issues()
 	if err != nil {
-		return nil, errors.Wrap(err, "requestSignaturesOnIssues failed")
+		return nil, errors.Wrap(err, "requesting signatures on issues failed: cannot get issue "+
+			"actions from token request")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request issue", len(issues))
@@ -216,7 +217,8 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Context) ([]view.Identity, error) {
 	transfers, err := c.tx.TokenRequest.Transfers()
 	if err != nil {
-		return nil, errors.Wrap(err, "request signatures on transfers failed")
+		return nil, errors.Wrap(err, "requesting signatures on transfers failed: cannot get "+
+			"transfer actions from token request")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request transfer", len(transfers))
