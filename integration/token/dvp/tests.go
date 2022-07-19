@@ -21,6 +21,11 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure) {
+	// Give some time for the network to start
+	// TODO: remove this in the future by makings sure that the FSC nodes are connected to the p2p network.
+	time.Sleep(10 * time.Second)
+
+	// Ready to go
 	registerAuditor(network)
 	issueCash(network)
 	checkBalance(network, "buyer", "", "USD", 10)
