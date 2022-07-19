@@ -13,10 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	msp3 "github.com/hyperledger/fabric/msp"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
+	msp3 "github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 )
 
@@ -103,9 +102,15 @@ func ReadPemFile(file string) ([]byte, error) {
 		return nil, errors.Wrapf(err, "reading from file %s failed", file)
 	}
 
-	b, _ := pem.Decode(bytes)
-	if b == nil { // TODO: also check that the type is what we expect (cert vs key..)
+	b, rest := pem.Decode(bytes)
+	if b == nil {
 		return nil, errors.Errorf("no pem content for file %s", file)
+	}
+	if len(rest) != 0 {
+		return nil, errors.Errorf("extra content after pem file %s", file)
+	}
+	if b.Type != "CERTIFICATE" {
+		return nil, errors.Errorf("pem file %s is not a certificate", file)
 	}
 
 	return bytes, nil
@@ -116,7 +121,7 @@ func GetPemMaterialFromDir(dir string) ([][]byte, error) {
 	if os.IsNotExist(err) {
 		return nil, err
 	}
-	content := make([][]byte, 0)
+	var content [][]byte
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read directory %s", dir)
