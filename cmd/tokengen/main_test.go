@@ -13,6 +13,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/common"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
@@ -27,7 +33,56 @@ func TestCompile(t *testing.T) {
 	defer gexec.CleanupBuildArtifacts()
 }
 
-func TestGen(t *testing.T) {
+func TestGenFullSuccess(t *testing.T) {
+	gt := NewGomegaWithT(t)
+	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
+	gt.Expect(err).NotTo(HaveOccurred())
+	defer gexec.CleanupBuildArtifacts()
+
+	tempOutput, err := ioutil.TempDir("", "tokengen-test")
+	gt.Expect(err).NotTo(HaveOccurred())
+	defer os.RemoveAll(tempOutput)
+
+	testGenRun(
+		gt,
+		tokengen,
+		[]string{
+			"gen",
+			"dlog",
+			"--idemix",
+			"./testdata/idemix",
+			"--issuers",
+			"./testdata/issuers/msp",
+			"--auditors",
+			"./testdata/auditors/msp",
+			"--output",
+			tempOutput,
+		},
+	)
+
+	// Check output
+	ppRaw, err := ioutil.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
+	gt.Expect(err).NotTo(HaveOccurred())
+
+	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, crypto.DLogPublicParameters)
+	gt.Expect(err).NotTo(HaveOccurred())
+
+	auditors := pp.Auditors()
+	auditor, err := common.GetMSPIdentity("./testdata/auditors/msp", msp.AuditorMSPID)
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(auditors[0]).To(Equal(auditor))
+
+	issuers := pp.Issuers
+	issuer, err := common.GetMSPIdentity("./testdata/issuers/msp", msp.IssuerMSPID)
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(issuers[0]).To(BeEquivalentTo(issuer))
+
+	idemixPK, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixPK))
+}
+
+func TestGenFailure(t *testing.T) {
 	gt := NewGomegaWithT(t)
 	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
 	gt.Expect(err).NotTo(HaveOccurred())

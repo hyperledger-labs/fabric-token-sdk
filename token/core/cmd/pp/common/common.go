@@ -7,12 +7,21 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/pem"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
+	msp3 "github.com/hyperledger/fabric/msp"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/pkg/errors"
+)
+
+const (
+	signcerts = "signcerts"
 )
 
 // PP defines an interface shared by all public parameters
@@ -37,13 +46,23 @@ func GetMSPIdentity(entry string, mspID string) (view.Identity, error) {
 			return nil, errors.Errorf("invalid input [%s], expected <MSPConfigPath>:<MSPID> or <MSPConfigPath>", entry)
 		}
 	}
-	provider, err := x509.NewProvider(entries[0], mspID, nil)
+
+	// read certificate from entries[0]/signcerts
+	signcertDir := filepath.Join(entries[0], signcerts)
+	content, err := GetPemMaterialFromDir(signcertDir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to load certificates from %s", signcertDir)
+	}
+	if len(content) == 0 {
+		return nil, errors.Errorf("no certificates found in %s", signcertDir)
+	}
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create x509 provider for [%s]", entry)
 	}
-	id, _, err := provider.Identity(nil)
+
+	id, err := msp3.NewSerializedIdentity(mspID, content[0])
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get identity [%s]", entry)
+		return nil, errors.WithMessagef(err, "failed to create x509 identity for [%s]", entry)
 	}
 	return id, nil
 }
@@ -67,4 +86,55 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 		pp.AddIssuer(id)
 	}
 	return nil
+}
+
+func ReadFile(file string) ([]byte, error) {
+	fileCont, err := ioutil.ReadFile(file)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read file %s", file)
+	}
+
+	return fileCont, nil
+}
+
+func ReadPemFile(file string) ([]byte, error) {
+	bytes, err := ReadFile(file)
+	if err != nil {
+		return nil, errors.Wrapf(err, "reading from file %s failed", file)
+	}
+
+	b, _ := pem.Decode(bytes)
+	if b == nil { // TODO: also check that the type is what we expect (cert vs key..)
+		return nil, errors.Errorf("no pem content for file %s", file)
+	}
+
+	return bytes, nil
+}
+
+func GetPemMaterialFromDir(dir string) ([][]byte, error) {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		return nil, err
+	}
+	content := make([][]byte, 0)
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not read directory %s", dir)
+	}
+	for _, f := range files {
+		fullName := filepath.Join(dir, f.Name())
+		f, err := os.Stat(fullName)
+		if err != nil {
+			continue
+		}
+		if f.IsDir() {
+			continue
+		}
+		item, err := ReadPemFile(fullName)
+		if err != nil {
+			continue
+		}
+		content = append(content, item)
+	}
+	return content, nil
 }
