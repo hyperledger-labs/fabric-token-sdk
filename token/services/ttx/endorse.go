@@ -693,38 +693,22 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Receive transaction with envelope
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Receive transaction with envelope...")
-	}
-	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
-	tx, err := ReceiveTransaction(context)
-	if err != nil {
+	if err := s.receiveTransaction(context); err != nil {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
-	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "received", "env", tx.ID())
-
-	// Check the envelope exists
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
-	}
-	env := tx.Payload.Envelope
-	if env == nil {
-		return nil, errors.Errorf("expected fabric envelope")
 	}
 
 	// Store transient
-	if err := tx.storeTransient(); err != nil {
+	if err := s.tx.storeTransient(); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
 	// Store envelope
-	if err := StoreEnvelope(context, tx); err != nil {
+	if err := StoreEnvelope(context, s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
 	// Store transaction in the token transaction database
-	if err := StoreTransactionRecords(context, tx); err != nil {
+	if err := StoreTransactionRecords(context, s.tx); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
 
@@ -736,9 +720,10 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
 
-	return tx, nil
+	return s.tx, nil
 }
 
 func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
@@ -756,4 +741,28 @@ func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 		}
 	}
 	return res, nil
+}
+
+func (s *endorseView) receiveTransaction(context view.Context) error {
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Receive transaction with envelope...")
+	}
+	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
+	tx, err := ReceiveTransaction(context)
+	if err != nil {
+		return errors.Wrapf(err, "failed receiving transaction")
+	}
+	agent := metrics.Get(context)
+	agent.EmitKey(0, "ttx", "received", "env", tx.ID())
+
+	// Check the envelope exists
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
+	}
+	env := tx.Payload.Envelope
+	if env == nil {
+		return errors.Errorf("expected fabric envelope")
+	}
+	s.tx.Payload.Envelope = tx.Payload.Envelope
+	return nil
 }
