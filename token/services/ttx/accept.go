@@ -66,16 +66,18 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	}
 	var sigma []byte
 	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
-	if signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity()); err == nil {
-		sigma, err = signer.Sign(rawRequest)
-		if err != nil {
-			return nil, errors.WithMessage(err, "failed to sign ack response")
-		}
+	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
+	}
+	sigma, err = signer.Sign(rawRequest)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
 	// Ack for distribution
 	// Send the signature back
 	session := context.Session()
-	logger.Debugf("ack response: %s", hash.Hashable(sigma))
+	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}

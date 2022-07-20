@@ -472,10 +472,15 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
+		longTermIdentity, _, _, err := view2.GetEndpointService(context).Resolve(party)
+		if err != nil {
+			return errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+		}
 		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
-			IsMe:    isMe,
-			ID:      party,
-			Auditor: true,
+			IsMe:     isMe,
+			ID:       party,
+			Auditor:  true,
+			LongTerm: longTermIdentity,
 		})
 	}
 
@@ -561,14 +566,14 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			return errors.New(string(msg.Payload))
 		}
 		sigma := msg.Payload
-		logger.Debugf("received ack from [%s] [%s]", entry.ID, hash.Hashable(sigma).String())
+		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
+			hash.Hashable(txRaw).String())
 		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.LongTerm)
 		}
-		err = verifier.Verify(txRaw, sigma)
-		if err != nil {
-			return errors.Wrapf(err, "failed verifying signature from [%s]", entry.ID)
+		if err := verifier.Verify(txRaw, sigma); err != nil {
+			return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
 		}
 		// TODO: store this signature
 		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
@@ -740,9 +745,25 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
 	}
-	err = session.Send([]byte("ack"))
+	rawRequest, err := tx.Bytes()
 	if err != nil {
 		return nil, err
+	}
+	var sigma []byte
+	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
+	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
+	}
+	sigma, err = signer.Sign(rawRequest)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to sign ack response")
+	}
+	// Ack for distribution
+	// Send the signature back
+	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	if err := session.Send(sigma); err != nil {
+		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
 
