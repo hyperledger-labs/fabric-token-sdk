@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"fmt"
 	"strconv"
 	"time"
 
@@ -300,7 +301,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 			}
 
 			sigma := msg.Payload
-
+			fmt.Println("successful till receiving sigma", string(sigma))
 			verifier, err := c.tx.TokenService().SigService().OwnerVerifier(party)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
@@ -471,10 +472,15 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
+		longTermIdentity, _, _, err := view2.GetEndpointService(context).Resolve(party)
+		if err != nil {
+			return errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+		}
 		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
-			IsMe:    isMe,
-			ID:      party,
-			Auditor: true,
+			IsMe:     isMe,
+			ID:       party,
+			Auditor:  true,
+			LongTerm: longTermIdentity,
 		})
 	}
 
@@ -546,6 +552,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 		agent.EmitKey(0, "ttx", "sent", "tx", c.tx.ID())
 
+		// Wait the ack as a signature over txRaw
 		var msg *view.Message
 		select {
 		case msg = <-ch:
@@ -558,7 +565,17 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if msg.Status == view.ERROR {
 			return errors.New(string(msg.Payload))
 		}
-		// TODO: Check ack
+		sigma := msg.Payload
+		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
+			hash.Hashable(txRaw).String())
+		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.LongTerm)
+		}
+		if err := verifier.Verify(txRaw, sigma); err != nil {
+			return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
+		}
+		// TODO: store this signature
 		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -728,9 +745,25 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
 	}
-	err = session.Send([]byte("ack"))
+	rawRequest, err := tx.Bytes()
 	if err != nil {
 		return nil, err
+	}
+	var sigma []byte
+	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
+	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
+	}
+	sigma, err = signer.Sign(rawRequest)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to sign ack response")
+	}
+	// Ack for distribution
+	// Send the signature back
+	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	if err := session.Send(sigma); err != nil {
+		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
 

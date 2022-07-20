@@ -323,14 +323,28 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
-	// Send the proposal response back
-	logger.Debugf("Sending back proposal response... [%s]", tx.ID())
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Send the ack")
-	}
-	err = context.Session().Send([]byte("ack"))
+	// Ack for distribution
+	// Send the signature back
+	rawRequest, err := tx.Bytes()
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
+	}
+	var sigma []byte
+	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
+	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting signing identity for [%s]", view2.GetIdentityProvider(context).DefaultIdentity())
+	}
+	sigma, err = signer.Sign(rawRequest)
+	if err != nil {
+		return errors.WithMessage(err, "failed to sign ack response")
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	}
+	session := context.Session()
+	if err := session.Send(sigma); err != nil {
+		return errors.WithMessage(err, "failed sending ack")
 	}
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
