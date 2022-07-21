@@ -74,6 +74,70 @@ type ownerOpening struct {
 	ownerInfo driver.Matcher
 }
 
+var defaultInspections = []InspectTokenOwner{SerializedIdentityTypeInspection, ScriptTypeExchangeInspection}
+
+type InspectTokenOwner func(token *AuditableToken, index int, des Deserializer) error
+
+func SerializedIdentityTypeInspection(token *AuditableToken, index int, des Deserializer) error {
+	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
+	if err != nil {
+		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
+	}
+	if owner.Type == identity.SerializedIdentityType {
+		owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
+		if err != nil {
+			return errors.Errorf("input owner at index [%d] cannot be unwrapped", index)
+		}
+		if err := token.owner.ownerInfo.Match(owner.Identity); err != nil {
+			return errors.Errorf("owner at index [%d] does not match the provided opening", index)
+		}
+		return nil
+	}
+	return nil
+}
+
+func ScriptTypeExchangeInspection(token *AuditableToken, index int, des Deserializer) error {
+	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
+	if err != nil {
+		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
+	}
+	scriptInf := &ScriptInfo{}
+	if err := json.Unmarshal(token.auditInfo, scriptInf); err != nil {
+		return errors.Wrapf(err, "failed to unmarshal exchange info")
+	}
+	script := &exchange.Script{}
+	err = json.Unmarshal(owner.Identity, script)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal exchange script")
+	}
+
+	sender, err := des.GetOwnerMatcher(scriptInf.Sender)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
+	}
+	ro, err := identity.UnmarshallRawOwner(script.Sender)
+	if err != nil {
+		return errors.Wrapf(err, "failed to retrieve raw owner from sender in exchange script")
+	}
+	if err := sender.Match(ro.Identity); err != nil {
+		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
+	}
+
+	recipient, err := des.GetOwnerMatcher(scriptInf.Recipient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
+	}
+	ro, err = identity.UnmarshallRawOwner(script.Recipient)
+	if err != nil {
+		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in exchange script")
+	}
+	if err := recipient.Match(ro.Identity); err != nil {
+		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Recipient))
+	}
+
+	return nil
+}
+
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
 	// Owner Identity Deserializer
@@ -85,16 +149,21 @@ type Auditor struct {
 	// SigningIdentity parameters (e.g., pseudonym parameters)
 	NYMParams []byte
 	// Elliptic curve
-	Curve *math.Curve
+	Curve       *math.Curve
+	inspections []InspectTokenOwner
 }
 
-func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve, inspections ...InspectTokenOwner) *Auditor {
+	for _, f := range inspections {
+		defaultInspections = append(defaultInspections, f)
+	}
 	return &Auditor{
 		Des:            des,
 		PedersenParams: pp,
 		NYMParams:      nymparams,
 		Signer:         signer,
 		Curve:          c,
+		inspections:    inspections,
 	}
 }
 
@@ -237,58 +306,11 @@ type ScriptInfo struct {
 }
 
 func (a *Auditor) inspectTokenOwner(token *AuditableToken, index int) error {
-	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
-	if err != nil {
-		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
-	}
-	if owner.Type == identity.SerializedIdentityType {
-		owner, err := a.rawOwner(token.Token.Owner)
-		if err != nil {
-			return errors.Errorf("input owner at index [%d] cannot be unwrapped", index)
+	for _, i := range a.inspections {
+		if err := i(token, index, a.Des); err != nil {
+			return err
 		}
-		if err := token.owner.ownerInfo.Match(owner); err != nil {
-			return errors.Errorf("owner at index [%d] does not match the provided opening", index)
-		}
-		return nil
 	}
-	if owner.Type != exchange.ScriptTypeExchange {
-		return errors.Errorf("invalid owner in token")
-	}
-
-	scriptInf := &ScriptInfo{}
-	if err := json.Unmarshal(token.auditInfo, scriptInf); err != nil {
-		return errors.Wrapf(err, "failed to unmarshal exchange info")
-	}
-	script := &exchange.Script{}
-	err = json.Unmarshal(owner.Identity, script)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal exchange script")
-	}
-
-	sender, err := a.Des.GetOwnerMatcher(scriptInf.Sender)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
-	}
-	ro, err := identity.UnmarshallRawOwner(script.Sender)
-	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve raw owner from sender in exchange script")
-	}
-	if err := sender.Match(ro.Identity); err != nil {
-		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
-	}
-
-	recipient, err := a.Des.GetOwnerMatcher(scriptInf.Recipient)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
-	}
-	ro, err = identity.UnmarshallRawOwner(script.Recipient)
-	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in exchange script")
-	}
-	if err := recipient.Match(ro.Identity); err != nil {
-		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Recipient))
-	}
-
 	return nil
 }
 
