@@ -22,25 +22,93 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeExchangeExtraValidator}
+
+type ValidateTransfer func(inputTokens []*token2.Token, tr driver.TransferAction) error
+
+func SerializedIdentityTypeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
+	// noting else to validate
+	return nil
+}
+
+func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
+	for _, in := range inputTokens {
+		owner, err := identity.UnmarshallRawOwner(in.Owner.Raw)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			if len(inputTokens) != 1 || len(tr.GetOutputs()) != 1 {
+				return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
+			}
+
+			out := tr.GetOutputs()[0].(*TransferOutput).Output
+			if inputTokens[0].Type != out.Type {
+				return errors.Errorf("invalid transfer action: type of input does not match type of output")
+			}
+			if inputTokens[0].Quantity != out.Quantity {
+				return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
+			}
+
+			// check that owner field in output is correct
+			if err := interop.VerifyTransferFromExchangeScript(inputTokens[0].Owner.Raw, out.Owner.Raw); err != nil {
+				return errors.Wrap(err, "failed to verify transfer from exchange script")
+			}
+		}
+	}
+
+	for _, o := range tr.GetOutputs() {
+		out, ok := o.(*TransferOutput)
+		if !ok {
+			return errors.Errorf("invalid output")
+		}
+		if out.IsRedeem() {
+			return nil
+		}
+		owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
+		if err != nil {
+			return err
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			script := &exchange.Script{}
+			err = json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return err
+			}
+			if script.Deadline.Before(time.Now()) {
+				return errors.Errorf("exchange script invalid: expiration date has already passed")
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
 // Validator checks the validity of fabtoken TokenRequest
 type Validator struct {
 	// fabtoken public parameters
 	pp *PublicParams
 	// deserializer for identities used in fabtoken
 	deserializer driver.Deserializer
+	// extraValidators for performing additional validation
+	extraValidators []ValidateTransfer
 }
 
 // NewValidator initializes a Validator with the passed parameters
-func NewValidator(pp *PublicParams, deserializer driver.Deserializer) (*Validator, error) {
+func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransfer) (*Validator, error) {
 	if pp == nil {
 		return nil, errors.New("please provide a non-nil public parameters")
 	}
 	if deserializer == nil {
 		return nil, errors.New("please provide a non-nil deserializer")
 	}
+	for _, f := range extraValidators {
+		defaultValidators = append(defaultValidators, f)
+	}
 	return &Validator{
 		pp:           pp,
 		deserializer: deserializer,
+		extraValidators: defaultValidators,
 	}, nil
 }
 
@@ -295,90 +363,12 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 	if inputSum.Cmp(outputSum) != 0 {
 		return errors.Errorf("input sum %v does not match output sum %v", inputSum, outputSum)
 	}
-	return verifyInteropTransferIfExists(inputTokens, tr)
-}
-
-func verifyInteropTransferIfExists(inputTokens []*token2.Token, ta driver.TransferAction) error {
-	fromScript := false
-	scriptID := identity.SerializedIdentityType
-	for _, in := range inputTokens {
-		owner, err := identity.UnmarshallRawOwner(in.Owner.Raw)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal owner of input token")
-		}
-		if owner.Type != identity.SerializedIdentityType {
-			fromScript = true
-			scriptID = owner.Type
-			break
-		}
-	}
-	if !fromScript {
-		if err := validateOutputOwners(ta); err != nil {
-			return errors.Wrap(err, "invalid owner")
-		}
-		return nil
-	}
-	if scriptID == exchange.ScriptTypeExchange {
-		return verifyTransferFromExchangeScript(inputTokens, ta)
-	}
-	return errors.Errorf("invalid owner in input token")
-}
-
-func validateOutputOwners(ta driver.TransferAction) error {
-	for _, out := range ta.GetOutputs() {
-		o, ok := out.(*TransferOutput)
-		if !ok {
-			return errors.Errorf("invalid output")
-		}
-		err := validateOutputOwner(o)
-		if err != nil {
+	for _, v := range v.extraValidators {
+		if err := v(inputTokens, tr); err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-func validateOutputOwner(out *TransferOutput) error {
-	if out.IsRedeem() {
-		return nil
-	}
-	owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
-	if err != nil {
-		return err
-	}
-	// todo check validity of public keys
-	if owner.Type == identity.SerializedIdentityType {
-		return nil // todo validate owner
-	}
-	if owner.Type == exchange.ScriptTypeExchange {
-		script := &exchange.Script{}
-		err = json.Unmarshal(owner.Identity, script)
-		if err != nil {
-			return err
-		}
-		if script.Deadline.Before(time.Now()) {
-			return errors.Errorf("exchange script invalid: expiration date has already passed.")
-		}
-		return nil
-	}
-	return errors.Errorf("invalid output owner type")
-}
-
-func verifyTransferFromExchangeScript(tokens []*token2.Token, tr driver.TransferAction) error {
-	if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
-		return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
-	}
-
-	out := tr.GetOutputs()[0].(*TransferOutput).Output
-	if tokens[0].Type != out.Type {
-		return errors.Errorf("invalid transfer action: type of input does not match type of output")
-	}
-	if tokens[0].Quantity != out.Quantity {
-		return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
-	}
-
-	// check that owner field in output is correct
-	return interop.VerifyTransferFromExchangeScript(tokens[0].Owner.Raw, out.Owner.Raw)
 }
 
 type backend struct {
