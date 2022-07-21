@@ -76,6 +76,10 @@ type TransferMetadata struct {
 	ReceiverAuditInfos [][]byte
 	// ReceiverIsSender indicates if the receiver is a sender in this very same action
 	ReceiverIsSender []bool
+
+	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
+	// but needs to sign the request
+	ExtraSigners []view.Identity
 }
 
 // TokenIDAt returns the TokenID at the given index.
@@ -185,6 +189,7 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 			Receivers:          transfer.Receivers,
 			ReceiverIsSender:   transfer.ReceiverIsSender,
 			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
+			ExtraSigners:       transfer.ExtraSigners,
 		}
 	}
 	ser := tokenRequestMetadataSer{
@@ -221,6 +226,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 			Receivers:          transfer.Receivers,
 			ReceiverIsSender:   transfer.ReceiverIsSender,
 			ReceiverAuditInfos: transfer.ReceiverAuditInfos,
+			ExtraSigners:       transfer.ExtraSigners,
 		}
 	}
 	m.Application, err = UnmarshalMeta(ser.Application)
@@ -244,6 +250,7 @@ type TransferMetadataSer struct {
 	Receivers          []view.Identity
 	ReceiverIsSender   []bool
 	ReceiverAuditInfos [][]byte
+	ExtraSigners       []view.Identity
 }
 
 type tokenRequestMetadataSer struct {

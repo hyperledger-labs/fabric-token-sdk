@@ -151,11 +151,6 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 	return nil
 }
 
-type collectActionsResponderView struct {
-	tx     *Transaction
-	action *ActionTransfer
-}
-
 type receiveActionsView struct{}
 
 // ReceiveAction runs the receiveActionsView.
@@ -194,6 +189,11 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	unmarshalOrPanic(payload, action)
 
 	return []interface{}{cctx, action}, nil
+}
+
+type collectActionsResponderView struct {
+	tx     *Transaction
+	action *ActionTransfer
 }
 
 // NewCollectActionsResponderView returns an instance of the collectActionsResponderView.

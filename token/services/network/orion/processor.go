@@ -115,6 +115,9 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 	if tms.PublicParametersManager().GraphHiding() {
 		// Delete inputs
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, metadata.SpentTokenID())
+		}
 		for _, id := range metadata.SpentTokenID() {
 			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
 				return err
@@ -181,6 +184,9 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 		// This is a delete, add a delete for fabtoken
 		if len(val) == 0 {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
+			}
 			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
 				return err
 			}
