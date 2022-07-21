@@ -32,9 +32,6 @@ func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, er
 	if m.TokenRequestMetadata == nil {
 		return nil, nil, nil, errors.New("failed to get token: nil metadata")
 	}
-	if m.TMS == nil {
-		return nil, nil, nil, errors.New("failed to get token: nil token service")
-	}
 	tokenInfoRaw := m.TokenRequestMetadata.GetTokenInfo(raw)
 	if len(tokenInfoRaw) == 0 {
 		logger.Debugf("metadata for [%s] not found", hash.Hashable(raw).String())
@@ -69,8 +66,8 @@ func (m *Metadata) SpentTokenID() ([]*token.ID, error) {
 // - The senders are included if and only if there is at least one output whose owner has the given enrollment IDs.
 // Application metadata is always included
 func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
-	if m.TMS == nil || m.TokenRequestMetadata == nil {
-		return nil, errors.New("can't filter metadata by eID: nil TMS or nil token request metadata")
+	if m.TokenRequestMetadata == nil {
+		return nil, errors.New("can't filter metadata by eID: nil token request metadata")
 	}
 	res := &Metadata{
 		TMS:                  m.TMS,
@@ -117,9 +114,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	}
 
 	// filter transfers
-	for j, transfer := range m.TokenRequestMetadata.Transfers {
-		transferRes := driver.TransferMetadata{}
-
+	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		transferRes := driver.TransferMetadata{
 			ExtraSigners: transfer.ExtraSigners,
 		}
@@ -137,11 +132,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			var Receivers view.Identity
 			var ReceiverIsSender bool
 			var ReceiverAuditInfos []byte
-
-			if len(transfer.Outputs) != len(transfer.ReceiverAuditInfos) || len(transfer.TokenInfo) != len(transfer.ReceiverAuditInfos) ||
-				len(transfer.Receivers) != len(transfer.ReceiverAuditInfos) || len(transfer.ReceiverIsSender) != len(transfer.ReceiverAuditInfos) {
-				return nil, errors.Errorf("can't filter metadata by eID: transfer at index [%d] is invalid", j)
-			}
 
 			if search(eIDs, recipientEID) != -1 {
 				logger.Debugf("keeping transfer for [%s]", recipientEID)
@@ -166,9 +156,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		// Therefore, no metadata should be given to the passed enrollment IDs.
 		// if skip = false, it means that this transfer contains at least one output for the given enrollment IDs.
 		// Append the senders to the transfer metadata.
-		if len(transfer.Senders) != len(transfer.SenderAuditInfos) {
-			return nil, errors.Errorf("can't filer metadata by eID: transfer at index [%d] is invalid", j)
-		}
 		if !skip {
 			for i, sender := range transfer.Senders {
 				transferRes.Senders = append(transferRes.Senders, sender)

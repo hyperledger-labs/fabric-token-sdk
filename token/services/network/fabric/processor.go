@@ -151,7 +151,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		// Delete inputs
 		ids, err := metadata.SpentTokenID()
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to retrieve identifies of spent tokens")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
