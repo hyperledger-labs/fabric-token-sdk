@@ -28,15 +28,79 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
 
-type Validator struct {
-	pp           *crypto.PublicParams
-	deserializer driver.Deserializer
+var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeExchangeExtraValidator}
+
+type ValidateTransfer func(tokens []*token.Token, tr *transfer.TransferAction) error
+
+func SerializedIdentityTypeExtraValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
+	// noting else to validate
+	return nil
 }
 
-func New(pp *crypto.PublicParams, deserializer driver.Deserializer) *Validator {
+func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
+	for _, in := range tokens {
+		owner, err := identity.UnmarshallRawOwner(in.Owner)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
+				return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
+			}
+
+			out := tr.GetOutputs()[0].(*token.Token)
+			if tokens[0].Data.Equals(out.Data) {
+				return errors.Errorf("invalid transfer action: content of input does not match content of output")
+			}
+
+			// check that owner field in output is correct
+			if err := interop.VerifyTransferFromExchangeScript(tokens[0].Owner, out.Owner); err != nil {
+				return errors.Wrap(err, "failed to verify transfer from exchange script")
+			}
+		}
+	}
+
+	for _, o := range tr.GetOutputs() {
+		out, ok := o.(*token.Token)
+		if !ok {
+			return errors.Errorf("invalid output")
+		}
+		if out.IsRedeem() {
+			return nil
+		}
+		owner, err := identity.UnmarshallRawOwner(out.Owner)
+		if err != nil {
+			return err
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			script := &exchange.Script{}
+			err = json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return err
+			}
+			if script.Deadline.Before(time.Now()) {
+				return errors.Errorf("exchange script invalid: expiration date has already passed")
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+type Validator struct {
+	pp              *crypto.PublicParams
+	deserializer    driver.Deserializer
+	extraValidators []ValidateTransfer
+}
+
+func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransfer) *Validator {
+	for _, f := range extraValidators {
+		defaultValidators = append(defaultValidators, f)
+	}
 	return &Validator{
-		pp:           pp,
-		deserializer: deserializer,
+		pp:              pp,
+		deserializer:    deserializer,
+		extraValidators: defaultValidators,
 	}
 }
 
@@ -275,92 +339,13 @@ func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferActio
 		return err
 	}
 
-	fromScript := false
-	scriptID := identity.SerializedIdentityType
-
-	for _, tok := range tokens {
-		owner, err := identity.UnmarshallRawOwner(tok.Owner)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal owner of input token")
-		}
-		if owner.Type != identity.SerializedIdentityType {
-			fromScript = true
-			scriptID = owner.Type
-			break
-		}
-	}
-
-	if !fromScript {
-		err := validateOutputOwners(action)
-		if err != nil {
-			return errors.Wrap(err, "invalid output owner")
-		}
-		return nil
-	}
-
-	if scriptID != exchange.ScriptTypeExchange {
-		return errors.Errorf("invalid owner type in input token: %s", scriptID) // todo check if this ever happens?
-	}
-
-	if err := verifyTransferFromExchangeScript(tokens, action); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func validateOutputOwners(ta driver.TransferAction) error {
-	for _, out := range ta.GetOutputs() {
-		o, ok := out.(*token.Token)
-		if !ok {
-			return errors.Errorf("invalid output")
-		}
-		err := validateOutputOwner(o)
-		if err != nil {
+	for _, v := range v.extraValidators {
+		if err := v(tokens, action); err != nil {
 			return err
 		}
 	}
+
 	return nil
-}
-
-func validateOutputOwner(out *token.Token) error {
-	if out.IsRedeem() {
-		return nil
-	}
-	owner, err := identity.UnmarshallRawOwner(out.Owner)
-	if err != nil {
-		return err
-	}
-	// todo check validity of public keys
-	if owner.Type == identity.SerializedIdentityType {
-		return nil // todo validate owner
-	} // todo validate owner
-	if owner.Type == exchange.ScriptTypeExchange {
-		script := &exchange.Script{}
-		err = json.Unmarshal(owner.Identity, script)
-		if err != nil {
-			return err
-		}
-		if script.Deadline.Before(time.Now()) {
-			return errors.Errorf("exchange script invalid: expiration date has already passed.")
-		}
-		return nil
-	}
-	return errors.Errorf("invalid output owner type")
-}
-
-func verifyTransferFromExchangeScript(tokens []*token.Token, tr driver.TransferAction) error {
-	if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
-		return errors.Errorf("invalid transfer action: a script only transfers the ownership of a token")
-	}
-
-	out := tr.GetOutputs()[0].(*token.Token)
-	if tokens[0].Data.Equals(out.Data) {
-		return errors.Errorf("invalid transfer action: content of input does not match content of output")
-	}
-
-	// check that owner field in output is correct
-	return interop.VerifyTransferFromExchangeScript(tokens[0].Owner, out.Owner)
 }
 
 type backend struct {
