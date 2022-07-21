@@ -32,6 +32,8 @@ type RWSet interface {
 }
 
 type TokenStore interface {
+	// DeleteFabToken adds to the passed rws the deletion of the passed token
+	// TODO: we should delete also the extra tokens for the ids
 	DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error
 	StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error
 	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error

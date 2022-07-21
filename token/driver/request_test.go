@@ -94,6 +94,10 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("receiver_audit_info1"),
 					[]byte("receiver_audit_info2"),
 				},
+				ExtraSigners: []view.Identity{
+					[]byte("extra_signer1"),
+					[]byte("extra_signer2"),
+				},
 			},
 		},
 		Application: map[string][]byte{

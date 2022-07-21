@@ -103,7 +103,9 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 	// filter transfers
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
-		transferRes := driver.TransferMetadata{}
+		transferRes := driver.TransferMetadata{
+			ExtraSigners: transfer.ExtraSigners,
+		}
 
 		// Filter outputs
 		// if the receiver has the given enrollment ID, add it. Otherwise, add empty entries
@@ -216,7 +218,7 @@ type TransferMetadata struct {
 
 // Match returns true if the given action matches this metadata
 func (m *TransferMetadata) Match(action *TransferAction) error {
-	if len(m.TokenIDs) != 0 && len(m.TokenIDs) != len(m.Senders) {
+	if len(m.TokenIDs) != 0 && len(m.Senders) != len(m.TokenIDs) {
 		return errors.Errorf("expected [%d] token IDs and senders but got [%d]", len(m.TokenIDs), len(m.Senders))
 	}
 	if len(m.Senders) != len(m.SenderAuditInfos) {
