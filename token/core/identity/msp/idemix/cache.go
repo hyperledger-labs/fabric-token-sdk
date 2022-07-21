@@ -102,13 +102,16 @@ func NewWalletIdentityCache(backed WalletIdentityCacheBackendFunc, size int) *Wa
 }
 
 func (c *WalletIdentityCache) Identity() (view.Identity, error) {
+	timeout := time.NewTimer(c.timeout)
+	defer timeout.Stop()
+
 	select {
 	case entry := <-c.ch:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("fetch identity from producer channel done [%s][%d]", entry)
 		}
 		return entry, nil
-	case <-time.After(c.timeout):
+	case <-timeout.C:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("fetch identity from producer channel timeout")
 		}

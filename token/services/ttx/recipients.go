@@ -139,12 +139,16 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 		// Wait to receive a view identity
 		ch := session.Receive()
 		var payload []byte
+
+		timeout := time.NewTimer(time.Minute)
+		defer timeout.Stop()
+
 		select {
 		case msg := <-ch:
 			payload = msg.Payload
 			agent.EmitKey(0, "ttx", "received", "responseRecipientIdentity", session.Info().ID)
-		case <-time.After(60 * time.Second):
-			return nil, errors.New("time out reached")
+		case <-timeout.C:
+			return nil, errors.New("timeout reached")
 		}
 
 		recipientData := &RecipientData{}

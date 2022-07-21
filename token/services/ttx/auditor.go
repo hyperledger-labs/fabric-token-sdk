@@ -104,6 +104,9 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.WithMessage(err, "failed starting auditing session")
 	}
 
+	timeout := time.NewTimer(time.Minute)
+	defer timeout.Stop()
+
 	// Receive signature
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
 	agent := metrics.Get(context)
@@ -113,7 +116,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	case msg = <-ch:
 		agent.EmitKey(0, "ttx", "received", "auditingAck", a.tx.ID())
 		logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
-	case <-time.After(60 * time.Second):
+	case <-timeout.C:
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.Auditor)
 	}
 	if msg.Status == view.ERROR {
