@@ -51,7 +51,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	for i, output := range outputTokens {
 		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output")
+			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output", i)
 		}
 		values = append(values, q.ToBigInt().Uint64())
 		if output.Owner == nil {
