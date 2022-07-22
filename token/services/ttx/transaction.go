@@ -225,7 +225,7 @@ func (t *Transaction) IsValid() error {
 }
 
 func (t *Transaction) MarshallToAudit() ([]byte, error) {
-	return t.TokenRequest.MarshallToAudit()
+	return t.TokenRequest.MarshalToAudit()
 }
 
 // Selector returns the default token selector for this transaction
@@ -257,7 +257,7 @@ func (t *Transaction) TokenService() *token.ManagementService {
 	)
 }
 
-func (t *Transaction) ApplicationMetadata(k string) []byte {
+func (t *Transaction) ApplicationMetadata(k string) ([]byte, error) {
 	return t.TokenRequest.ApplicationMetadata(k)
 }
 

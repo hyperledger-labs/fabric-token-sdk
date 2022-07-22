@@ -12,6 +12,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // TokenRequest is a collection of Token Action:
@@ -126,29 +127,39 @@ func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 	return nil
 }
 
-func (m *TokenRequestMetadata) Recipients() [][]byte {
+func (m *TokenRequestMetadata) Recipients() ([][]byte, error) {
 	var res [][]byte
-	for _, issue := range m.Issues {
-		for _, r := range issue.Receivers {
+	for j, issue := range m.Issues {
+		for i, r := range issue.Receivers {
+			if r.IsNone() {
+				return nil, errors.Errorf("cannot serialize [%dth] receiver in issue at index [%d]: nil recipient", i, j)
+			}
 			res = append(res, r.Bytes())
 		}
 	}
 	for _, transfer := range m.Transfers {
 		for _, r := range transfer.Receivers {
+			if r.IsNone() {
+				// this is potentially the receiver of a redeemed output
+				res = append(res, []byte{})
+			}
 			res = append(res, r.Bytes())
 		}
 	}
-	return res
+	return res, nil
 }
 
-func (m *TokenRequestMetadata) Senders() [][]byte {
+func (m *TokenRequestMetadata) Senders() ([][]byte, error) {
 	var res [][]byte
-	for _, transfer := range m.Transfers {
-		for _, s := range transfer.Senders {
+	for j, transfer := range m.Transfers {
+		for i, s := range transfer.Senders {
+			if s.IsNone() {
+				return nil, errors.Errorf("cannot serialize [%dth] sender in transfer at index [%d]: nil sender", i, j)
+			}
 			res = append(res, s.Bytes())
 		}
 	}
-	return res
+	return res, nil
 }
 
 func (m *TokenRequestMetadata) Issuers() [][]byte {
@@ -170,7 +181,7 @@ func (m *TokenRequestMetadata) Inputs() []*token2.ID {
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 	meta, err := MarshalMeta(m.Application)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("cannot marshal token request metadata: failed to marshal application metadata")
 	}
 
 	transfers := make([]TransferMetadataSer, len(m.Transfers))
@@ -204,7 +215,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	ser := &tokenRequestMetadataSer{}
 	_, err := asn1.Unmarshal(raw, ser)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal token request metadata")
 	}
 
 	m.Issues = ser.Issues
@@ -231,7 +242,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	}
 	m.Application, err = UnmarshalMeta(ser.Application)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to unmarshal token request metadata: cannot unmarshal application metadata")
 	}
 	return nil
 }

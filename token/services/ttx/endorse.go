@@ -112,7 +112,11 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 
 func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context) ([]view.Identity, error) {
 
-	issues := c.tx.TokenRequest.Issues()
+	issues, err := c.tx.TokenRequest.Issues()
+	if err != nil {
+		return nil, errors.Wrap(err, "requesting signatures on issues failed: cannot get issue "+
+			"actions from token request")
+	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request issue", len(issues))
 	}
@@ -211,7 +215,11 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 }
 
 func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Context) ([]view.Identity, error) {
-	transfers := c.tx.TokenRequest.Transfers()
+	transfers, err := c.tx.TokenRequest.Transfers()
+	if err != nil {
+		return nil, errors.Wrap(err, "requesting signatures on transfers failed: cannot get "+
+			"transfer actions from token request")
+	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request transfer", len(transfers))
 	}
@@ -586,7 +594,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 }
 
 func (c *collectEndorsementsView) requestBytes() ([]byte, error) {
-	return c.tx.TokenRequest.MarshallToSign()
+	return c.tx.TokenRequest.MarshalToSign()
 }
 
 func (c *collectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
@@ -748,7 +756,11 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 
 func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 	var res []*token.Transfer
-	for _, transfer := range s.tx.TokenRequest.Transfers() {
+	transfers, err := s.tx.TokenRequest.Transfers()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get transfers to be signed")
+	}
+	for _, transfer := range transfers {
 		for _, sender := range transfer.Senders {
 			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
 				res = append(res, transfer)
