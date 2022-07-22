@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
@@ -14,21 +15,28 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+// AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
 func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMetadata *api3.TokenRequestMetadata, txID string) error {
 	logger.Debugf("check token request validity...")
 	var inputTokens [][]*token.Token
 	for _, transfer := range tokenRequestMetadata.Transfers {
 		inputs, err := s.TokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
 		if err != nil {
-			return errors.Wrapf(err, "failed getting token commitments")
+			return errors.Wrapf(err, "failed getting token commitments to perform auditor check")
 		}
 		inputTokens = append(inputTokens, inputs)
 	}
 
-	pp := s.PublicParams()
 	des, err := s.Deserializer()
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting deserializer")
+		return errors.WithMessagef(err, "failed getting deserializer for auditor check")
+	}
+	pp, err := s.PublicParams()
+	if err != nil {
+		return errors.Wrap(err, "failed to get public parameters for auditor check")
+	}
+	if pp == nil {
+		panic("failed to perform auditor check: nil public parameters")
 	}
 	if err := audit.NewAuditor(des, pp.ZKATPedParams, pp.IdemixPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
@@ -36,7 +44,7 @@ func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMeta
 		inputTokens,
 		txID,
 	); err != nil {
-		return errors.WithMessagef(err, "failed checking transaction")
+		return errors.WithMessagef(err, "failed to perform auditor check")
 	}
 	return nil
 }

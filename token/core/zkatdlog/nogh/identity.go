@@ -9,7 +9,6 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
-// signing identity
 type SigningIdentity interface {
 	driver.SigningIdentity
 }
