@@ -15,9 +15,10 @@ type Certification struct {
 }
 
 type Identity struct {
-	ID      string `yaml:"id"`
-	Default bool   `yaml:"default,omitempty"`
-	Path    string `yaml:"path"`
+	ID        string `yaml:"id"`
+	Default   bool   `yaml:"default,omitempty"`
+	Path      string `yaml:"path"`
+	CacheSize int    `yaml:"cacheSize"`
 }
 
 func (i *Identity) String() string {

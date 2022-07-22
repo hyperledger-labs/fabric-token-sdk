@@ -11,13 +11,13 @@ import (
 	"path/filepath"
 	"sync"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
@@ -179,8 +179,14 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
 	}
+
+	cacheSize, err := lm.cacheSizeForID(id)
+	if err != nil {
+		return err
+	}
+
 	lm.deserializerManager.AddDeserializer(provider)
-	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, DefaultCacheSize).Identity)
+	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, cacheSize).Identity)
 	logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
 	return nil
 }
@@ -236,4 +242,24 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 	return nil
+}
+
+func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
+	tmss, err := config2.NewTokenSDK(view2.GetConfigService(lm.sp)).GetTMSs()
+	if err != nil {
+		return 0, errors.WithMessage(err, "failed to obtain token management system instances")
+	}
+
+	for _, tms := range tmss {
+		for _, owner := range tms.TMS().Wallets.Owners {
+			if owner.ID == id {
+				logger.Debugf("Cache size for %s is set to be %d", id, owner.CacheSize)
+				return owner.CacheSize, nil
+			}
+		}
+	}
+
+	logger.Debugf("cache size for %s not configured, using default (%d)", id, DefaultCacheSize)
+
+	return DefaultCacheSize, nil
 }
