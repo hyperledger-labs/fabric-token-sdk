@@ -176,13 +176,17 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 			return nil, errors.Wrap(err, "failed sending transaction content")
 		}
 
+		timeout := time.NewTimer(time.Minute)
+
 		var msg *view.Message
 		select {
 		case msg = <-ch:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("collect signatures on issue: reply received from [%s]", party)
 			}
-		case <-time.After(60 * time.Second):
+			timeout.Stop()
+		case <-timeout.C:
+			timeout.Stop()
 			return nil, errors.Errorf("Timeout from party %s", party)
 		}
 		if msg.Status == view.ERROR {
@@ -290,13 +294,17 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 				return nil, errors.Wrap(err, "failed sending transaction content")
 			}
 
+			timeout := time.NewTimer(time.Minute)
+
 			var msg *view.Message
 			select {
 			case msg = <-ch:
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("collect signatures on transfer: reply received from [%s]", party)
 				}
-			case <-time.After(60 * time.Second):
+				timeout.Stop()
+			case <-timeout.C:
+				timeout.Stop()
 				return nil, errors.Errorf("Timeout from party %s", party)
 			}
 			if msg.Status == view.ERROR {
@@ -550,13 +558,17 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 		agent.EmitKey(0, "ttx", "sent", "tx", c.tx.ID())
 
+		timeout := time.NewTimer(time.Minute * 4)
+
 		var msg *view.Message
 		select {
 		case msg = <-ch:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("collect ack on distributed env: reply received from [%s]", entry.ID)
 			}
-		case <-time.After(240 * time.Second):
+			timeout.Stop()
+		case <-timeout.C:
+			timeout.Stop()
 			return errors.Errorf("Timeout from party %s", entry.ID)
 		}
 		if msg.Status == view.ERROR {
@@ -599,6 +611,9 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 	// Wait to receive a transaction back
 	ch := context.Session().Receive()
 
+	timeout := time.NewTimer(time.Minute * 4)
+	defer timeout.Stop()
+
 	select {
 	case msg := <-ch:
 		if msg.Status == view.ERROR {
@@ -610,7 +625,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 			return nil, err
 		}
 		return tx, nil
-	case <-time.After(240 * time.Second):
+	case <-timeout.C:
 		return nil, errors.New("timeout reached")
 	}
 }
@@ -649,12 +664,17 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Receiving signature request...")
 		}
+
+		timeout := time.NewTimer(time.Minute)
+
 		sessionChannel := session.Receive()
 		var msg *view.Message
 		select {
 		case msg = <-sessionChannel:
 			logger.Debug("message received from %s", session.Info().Caller)
-		case <-time.After(60 * time.Second):
+			timeout.Stop()
+		case <-timeout.C:
+			timeout.Stop()
 			return nil, errors.Errorf("Timeout from party %s", session.Info().Caller)
 		}
 		if msg.Status == view.ERROR {
