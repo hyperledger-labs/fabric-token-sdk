@@ -22,9 +22,6 @@ type VaultTokenLoader struct {
 // GetTokens takes an array of token identifiers (txID, index) and returns the keys of the identified tokens
 // in the vault and the content of the tokens
 func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token, error) {
-	if s.TokenVault == nil {
-		return nil, nil, errors.New("failed to get tokens: please initialize vault")
-	}
 	return s.TokenVault.GetTokens(ids...)
 }
 
@@ -38,12 +35,6 @@ type VaultPublicParamsLoader struct {
 // Load returns the PublicParams associated with fabtoken
 // Load first checks if PublicParams are cached, if not, then Load fetches them
 func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
-	if s.TokenVault == nil {
-		return nil, errors.New("failed to retrieve public parameters: please initialize TokenVault")
-	}
-	if s.PublicParamsFetcher == nil {
-		return nil, errors.New("failed to retrieve public parameters: please initialize public parameters fetcher")
-	}
 	raw, err := s.TokenVault.PublicParams()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve public parameters")
@@ -62,7 +53,7 @@ func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
 	pp.Label = s.PPLabel
 	err = pp.Deserialize(raw)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
 	logger.Debugf("unmarshal public parameters done")
 	return pp, nil
@@ -83,7 +74,7 @@ func (s *VaultPublicParamsLoader) ForceFetch() (*PublicParams, error) {
 	pp.Label = s.PPLabel
 	err = pp.Deserialize(raw)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
 	logger.Debugf("unmarshal public parameters done")
 	return pp, nil

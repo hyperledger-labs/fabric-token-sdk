@@ -16,9 +16,6 @@ import (
 )
 
 func (s *Service) RegisterOwnerWallet(id string, path string) error {
-	if s.IP == nil {
-		return errors.New("can't register owner wallet: please initialize identity provider")
-	}
 	return s.IP.RegisterOwnerWallet(id, path)
 }
 
