@@ -117,7 +117,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		// Delete inputs
 		ids, err := metadata.SpentTokenID()
 		if err != nil {
-			return errors.Wrap(err, "failed to retrieve identifies of spent tokens")
+			return errors.Wrap(err, "failed to retrieve identifiers of spent tokens")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
