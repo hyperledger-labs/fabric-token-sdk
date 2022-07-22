@@ -20,9 +20,6 @@ import (
 // It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
-	if s.TokenLoader == nil {
-		return nil, nil, errors.New("can't transfer: please initialize token vault")
-	}
 	var signers []driver.Signer
 	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
@@ -51,12 +48,15 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	var owners [][]byte
 	var ownerIdentities []view.Identity
 	// get values and owners of outputs
-	for _, output := range outputTokens {
+	for i, output := range outputTokens {
 		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output")
 		}
 		values = append(values, q.ToBigInt().Uint64())
+		if output.Owner == nil {
+			return nil, nil, errors.Errorf("failed to get owner for %dth output: nil owner", i)
+		}
 		owners = append(owners, output.Owner.Raw)
 		ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 	}
@@ -78,10 +78,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	}
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
-	for i, output := range outputTokens {
-		if output.Owner == nil {
-			return nil, nil, errors.Errorf("failed to get audit info for %dth output: nil owner", i)
-		}
+	for _, output := range outputTokens {
 		auditInfo, err := s.identityProvider.GetAuditInfo(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
@@ -125,9 +122,12 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
 func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]byte) error {
+	if action == nil {
+		return errors.New("failed to verify transfer: nil transfer action")
+	}
 	tr, ok := action.(*transfer.TransferAction)
 	if !ok {
-		return errors.New("expected *zkatdlog.Transfer")
+		return errors.New("failed to verify transfer: expected *zkatdlog.TransferAction")
 	}
 
 	// get commitments from outputs

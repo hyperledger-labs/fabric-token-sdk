@@ -65,9 +65,12 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
 func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error {
-	action := ia.(*issue.IssueAction)
-	if action == nil {
+	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
+	}
+	action, ok := ia.(*issue.IssueAction)
+	if !ok {
+		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
 	pp, err := s.PublicParams()
 	if err != nil {

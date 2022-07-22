@@ -154,16 +154,10 @@ func (s *Service) ConfigManager() config.Manager {
 
 // PublicParams returns the public parameters associated with the service
 func (s *Service) PublicParams() (*crypto.PublicParams, error) {
-	if s.PPM == nil {
-		return nil, errors.New("failed to get public parameters: nil PublicParamsManager")
-	}
 	return s.PPM.PublicParams(), nil
 }
 
 func (s *Service) FetchPublicParams() error {
-	if s.PPM == nil {
-		return errors.New("failed to get public parameters: nil PublicParamsManager")
-	}
 	return s.PPM.ForceFetch()
 }
 

@@ -59,9 +59,7 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	var inputIDs []string
 	var inputInf []*token.TokenInformation
 	var signerIds []view.Identity
-	if s.TokenVault == nil {
-		return nil, nil, nil, nil, errors.New("can't load tokens: please initialize token vault")
-	}
+
 	// return token commitments and the corresponding opening
 	if err := s.TokenVault.GetTokenInfoAndCommitments(ids, func(id *token3.ID, key string, comm, info []byte) error {
 		if len(comm) == 0 {

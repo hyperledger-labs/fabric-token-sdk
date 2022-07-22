@@ -18,14 +18,8 @@ import (
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
 func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMetadata *api3.TokenRequestMetadata, txID string) error {
 	logger.Debugf("check token request validity...")
-	if s.TokenCommitmentLoader == nil {
-		return errors.New("failed to perform auditor check: nil token commitment loader")
-	}
 	var inputTokens [][]*token.Token
-	for i, transfer := range tokenRequestMetadata.Transfers {
-		if &transfer == nil {
-			return errors.Errorf("failed to perform auditor check: nil transfer at index %d", i)
-		}
+	for _, transfer := range tokenRequestMetadata.Transfers {
 		inputs, err := s.TokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting token commitments to perform auditor check")
@@ -42,7 +36,7 @@ func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMeta
 		return errors.Wrap(err, "failed to get public parameters for auditor check")
 	}
 	if pp == nil {
-		return errors.New("failed to perform auditor check: nil public parameters")
+		panic("failed to perform auditor check: nil public parameters")
 	}
 	if err := audit.NewAuditor(des, pp.ZKATPedParams, pp.IdemixPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
