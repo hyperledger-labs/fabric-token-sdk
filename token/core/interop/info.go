@@ -63,6 +63,7 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 	return raw, nil
 }
 
+// GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
 func GetScriptSenderAndRecipient(ro *identity.RawOwner) (sender, recipient view.Identity, err error) {
 	if ro.Type == exchange.ScriptTypeExchange {
 		script := &exchange.Script{}
