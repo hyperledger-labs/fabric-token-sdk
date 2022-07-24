@@ -40,28 +40,38 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 		}
 		return auditInfo, nil
 	}
-	if owner.Type != exchange.ScriptTypeExchange {
-		return nil, errors.Errorf("owner's type not recognized [%s]", owner.Type)
-	}
-	script := &exchange.Script{}
-	err = json.Unmarshal(owner.Identity, script)
+
+	sender, recipient, err := GetScriptSenderAndRecipient(owner)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+		return nil, errors.Wrapf(err, "failed getting script sender and recipient")
 	}
 
 	auditInfo := &ScriptInfo{}
-	auditInfo.Sender, err = view2.GetSigService(s).GetAuditInfo(script.Sender)
+	auditInfo.Sender, err = view2.GetSigService(s).GetAuditInfo(sender)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for exchange script [%s]", view.Identity(raw).String())
 	}
 
-	auditInfo.Recipient, err = view2.GetSigService(s).GetAuditInfo(script.Recipient)
+	auditInfo.Recipient, err = view2.GetSigService(s).GetAuditInfo(recipient)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for exchange script [%s]", view.Identity(raw).String())
+		return nil, errors.Wrapf(err, "failed getting audit info for script [%s]", view.Identity(raw).String())
 	}
 	raw, err = json.Marshal(auditInfo)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshaling audit info for exchange script")
+		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
 	}
 	return raw, nil
+}
+
+// GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
+func GetScriptSenderAndRecipient(ro *identity.RawOwner) (sender, recipient view.Identity, err error) {
+	if ro.Type == exchange.ScriptTypeExchange {
+		script := &exchange.Script{}
+		err = json.Unmarshal(ro.Identity, script)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to unmarshal exchange script")
+		}
+		return script.Sender, script.Recipient, nil
+	}
+	return nil, nil, errors.New("unknown identity type")
 }

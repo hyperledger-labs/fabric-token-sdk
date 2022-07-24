@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"encoding/json"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -16,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -72,16 +69,11 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 			continue
 		}
-		if owner.Type == exchange.ScriptTypeExchange {
-			script := &exchange.Script{}
-			err := json.Unmarshal(owner.Identity, script)
-			if err != nil {
-				return nil, nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
-			}
-			ownerIdentities = append(ownerIdentities, script.Recipient)
-		} else {
-			return nil, nil, errors.Errorf("owner's type not recognized [%s]", owner.Type)
+		_, recipient, err := interop.GetScriptSenderAndRecipient(owner)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed getting script sender and recipient")
 		}
+		ownerIdentities = append(ownerIdentities, recipient)
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
