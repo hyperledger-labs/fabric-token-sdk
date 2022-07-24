@@ -9,6 +9,8 @@ package nogh
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -49,7 +51,23 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		}
 		values = append(values, q.ToBigInt().Uint64())
 		owners = append(owners, output.Owner.Raw)
-		ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+		if len(output.Owner.Raw) == 0 { // redeem
+			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+			continue
+		}
+		owner, err := identity.UnmarshallRawOwner(output.Owner.Raw)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to unmarshal owner of the output token")
+		}
+		if owner.Type == identity.SerializedIdentityType {
+			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+			continue
+		}
+		_, recipient, err := interop.GetScriptSenderAndRecipient(owner)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed getting script sender and recipient")
+		}
+		ownerIdentities = append(ownerIdentities, recipient)
 	}
 	transfer, infos, err := sender.GenerateZKTransfer(values, owners)
 	if err != nil {
@@ -68,7 +86,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := s.identityProvider.GetAuditInfo(output.Owner.Raw)
+		auditInfo, err := interop.GetOwnerAuditInfo(output.Owner.Raw, s.SP)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -77,7 +95,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 	var senderAuditInfos [][]byte
 	for _, t := range tokens {
-		auditInfo, err := s.identityProvider.GetAuditInfo(t.Owner)
+		auditInfo, err := interop.GetOwnerAuditInfo(t.Owner, s.SP)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}

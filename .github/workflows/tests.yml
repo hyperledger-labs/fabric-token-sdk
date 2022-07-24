@@ -76,7 +76,9 @@ jobs:
           nft-dlog-orion,
           nft-fabtoken-orion,
           dvp-fabtoken,
-          dvp-dlog
+          dvp-dlog,
+          interop-fabtoken,
+          interop-dlog
         ]
 
     steps:

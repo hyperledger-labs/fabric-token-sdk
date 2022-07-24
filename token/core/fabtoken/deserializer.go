@@ -7,9 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -32,7 +35,7 @@ func NewDeserializer() *deserializer {
 }
 
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.ownerDeserializer.DeserializeVerifier(id)
+	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
 }
 
 func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
@@ -55,5 +58,18 @@ func NewEnrollmentIDDeserializer() *enrollmentService {
 }
 
 func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+	if len(auditInfo) == 0 {
+		return "", nil
+	}
+
+	// Try to unmarshal it as ScriptInfo
+	si := &interop.ScriptInfo{}
+	err := json.Unmarshal(auditInfo, si)
+	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
+		if len(si.Recipient) != 0 {
+			return string(si.Recipient), nil
+		}
+		return "", nil
+	}
 	return string(auditInfo), nil
 }

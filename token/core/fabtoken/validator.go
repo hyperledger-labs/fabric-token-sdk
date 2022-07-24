@@ -9,24 +9,95 @@ package fabtoken
 import (
 	"bytes"
 	"encoding/json"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-type Validator struct {
-	pp           *PublicParams
-	deserializer driver.Deserializer
+var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeExchangeExtraValidator}
+
+type ValidateTransfer func(inputTokens []*token2.Token, tr driver.TransferAction) error
+
+func SerializedIdentityTypeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
+	// noting else to validate
+	return nil
 }
 
-func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator {
+func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
+	for _, in := range inputTokens {
+		owner, err := identity.UnmarshallRawOwner(in.Owner.Raw)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			if len(inputTokens) != 1 || len(tr.GetOutputs()) != 1 {
+				return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
+			}
+
+			out := tr.GetOutputs()[0].(*TransferOutput).Output
+			if inputTokens[0].Type != out.Type {
+				return errors.Errorf("invalid transfer action: type of input does not match type of output")
+			}
+			if inputTokens[0].Quantity != out.Quantity {
+				return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
+			}
+
+			// check that owner field in output is correct
+			if err := interop.VerifyTransferFromExchangeScript(inputTokens[0].Owner.Raw, out.Owner.Raw); err != nil {
+				return errors.Wrap(err, "failed to verify transfer from exchange script")
+			}
+		}
+	}
+
+	for _, o := range tr.GetOutputs() {
+		out, ok := o.(*TransferOutput)
+		if !ok {
+			return errors.Errorf("invalid output")
+		}
+		if out.IsRedeem() {
+			return nil
+		}
+		owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
+		if err != nil {
+			return err
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			script := &exchange.Script{}
+			err = json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return err
+			}
+			if script.Deadline.Before(time.Now()) {
+				return errors.Errorf("exchange script invalid: expiration date has already passed")
+			}
+			return nil
+		}
+	}
+	return nil
+}
+
+type Validator struct {
+	pp              *PublicParams
+	deserializer    driver.Deserializer
+	extraValidators []ValidateTransfer
+}
+
+func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransfer) *Validator {
+	for _, f := range extraValidators {
+		defaultValidators = append(defaultValidators, f)
+	}
 	return &Validator{
-		pp:           pp,
-		deserializer: deserializer,
+		pp:              pp,
+		deserializer:    deserializer,
+		extraValidators: defaultValidators,
 	}
 }
 
@@ -54,7 +125,20 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	for _, action := range ta {
 		actions = append(actions, action)
 	}
-
+	for _, sig := range signatureProvider.Signatures() {
+		claim := &exchange.ClaimSignature{}
+		if err = json.Unmarshal(sig, claim); err != nil {
+			continue
+		}
+		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
+			continue
+		}
+		actions = append(actions, &Signature{
+			metadata: map[string][]byte{
+				"claimPreimage": claim.Preimage,
+			},
+		})
+	}
 	return actions, nil
 }
 
@@ -218,6 +302,11 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 	}
 	if inputSum.Cmp(outputSum) != 0 {
 		return errors.Errorf("input sum %v does not match output sum %v", inputSum, outputSum)
+	}
+	for _, v := range v.extraValidators {
+		if err := v(inputTokens, tr); err != nil {
+			return err
+		}
 	}
 	return nil
 }
