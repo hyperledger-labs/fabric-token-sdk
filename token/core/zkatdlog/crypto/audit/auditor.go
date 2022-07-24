@@ -20,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 	"github.com/pkg/errors"
 )
 
@@ -271,13 +270,10 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 		}
 		return nil
 	}
-	if ro.Type == exchange.ScriptTypeExchange {
-		return inspectTokenOwnerOfExchangeScript(des, token, index)
-	}
-	return errors.Errorf("invalid owner type at index [%d]", index)
+	return inspectTokenOwnerOfScript(des, token, index)
 }
 
-func inspectTokenOwnerOfExchangeScript(des Deserializer, token *AuditableToken, index int) error {
+func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
 	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
@@ -286,19 +282,18 @@ func inspectTokenOwnerOfExchangeScript(des Deserializer, token *AuditableToken, 
 	if err := json.Unmarshal(token.Owner.OwnerInfo, scriptInf); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal exchange info")
 	}
-	script := &exchange.Script{}
-	err = json.Unmarshal(owner.Identity, script)
+	scriptSender, scriptRecipient, err := interop.GetScriptSenderAndRecipient(owner)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal exchange script")
+		return errors.Wrap(err, "failed getting script sender and recipient")
 	}
 
 	sender, err := des.GetOwnerMatcher(scriptInf.Sender)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
 	}
-	ro, err := identity.UnmarshallRawOwner(script.Sender)
+	ro, err := identity.UnmarshallRawOwner(scriptSender)
 	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve raw owner from sender in exchange script")
+		return errors.Wrapf(err, "failed to retrieve raw owner from sender in script")
 	}
 	if err := sender.Match(ro.Identity); err != nil {
 		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Sender))
@@ -308,9 +303,9 @@ func inspectTokenOwnerOfExchangeScript(des Deserializer, token *AuditableToken, 
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
 	}
-	ro, err = identity.UnmarshallRawOwner(script.Recipient)
+	ro, err = identity.UnmarshallRawOwner(scriptRecipient)
 	if err != nil {
-		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in exchange script")
+		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in script")
 	}
 	if err := recipient.Match(ro.Identity); err != nil {
 		return errors.Wrapf(err, "token at index [%d] does not match the provided opening [%s]", index, string(scriptInf.Recipient))
