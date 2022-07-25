@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	. "github.com/onsi/gomega"
 )
@@ -66,6 +67,9 @@ func TestExchangeSingleFabricNetwork(network *integration.Infrastructure) {
 	exchangeClaim(network, defaultTMSID, "bob", "", preImage)
 	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(defaultTMSID))
+
+	// payment limit reached
+	exchangeLock(network, defaultTMSID, "alice", "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
 }
 
 func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {

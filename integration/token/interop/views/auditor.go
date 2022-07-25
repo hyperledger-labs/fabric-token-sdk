@@ -8,12 +8,16 @@ package views
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
+
+var Limit = 50
 
 type AuditView struct{}
 
@@ -28,8 +32,37 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	auditor := ttx.NewAuditor(context, w)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
-	_, _, err = auditor.Audit(tx)
+	// Check limits
+
+	// extract inputs and outputs
+	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
+
+	// acquire locks on inputs and outputs' enrollment IDs
+	assert.NoError(auditor.AcquireLocks(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...)...), "failed acquiring locks")
+	defer auditor.Unlock(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...))
+
+	// For example, all payments of an amount less than or equal to payment limit is valid
+	eIDs := inputs.EnrollmentIDs()
+	tokenTypes := inputs.TokenTypes()
+	fmt.Printf("Limits on inputs [%v][%v]\n", eIDs, tokenTypes)
+	for _, eID := range eIDs {
+		assert.NotEmpty(eID, "enrollment id should not be empty")
+		for _, tokenType := range tokenTypes {
+			// compute the payment done in the transaction
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			fmt.Printf("Payment Limit: [%s] Sent [%d], Received [%d], type [%s]\n", eID, sent.Int64(), received.Int64(), tokenType)
+
+			diff := big.NewInt(0).Sub(sent, received)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				continue
+			}
+			fmt.Printf("Payment Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
+
+			assert.True(diff.Cmp(big.NewInt(int64(Limit))) <= 0, "payment limit reached [%s][%s][%s]", eID, tokenType, diff.Text(10))
+		}
+	}
 
 	return context.RunView(ttx.NewAuditApproveView(w, tx))
 }
