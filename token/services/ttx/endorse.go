@@ -13,6 +13,7 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -582,19 +583,30 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		sigma := msg.Payload
 		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
 			hash.Hashable(txRaw).String())
+
+		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
 		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 		if err != nil {
-			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.LongTerm)
+			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
 		}
 		if err := verifier.Verify(txRaw, sigma); err != nil {
 			return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
 		}
-		// TODO: store this signature
-		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("collectEndorsementsView: collected signature from %s", entry.ID)
 		}
+		//store signature
+		k := kvs.GetService(context)
+		ackKey, err := kvs.CreateCompositeKey("ttx.endorse.ack", []string{c.tx.ID(), entry.ID.UniqueID()})
+		if err != nil {
+			return errors.Wrap(err, "failed creating composite key")
+		}
+		if err := k.Put(ackKey, sigma); err != nil {
+			return errors.WithMessagef(err, "failed storing ack for [%s:%s]", c.tx.ID(), entry.ID)
+		}
+		agent.EmitKey(0, "ttx", "stored", "signature", c.tx.ID())
+
 	}
 
 	return nil
@@ -733,6 +745,11 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
 
+	rawRequest, err := s.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
 	// Store transient
 	if err := s.tx.storeTransient(); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
@@ -751,10 +768,6 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
-	}
-	rawRequest, err := s.tx.Bytes()
-	if err != nil {
-		return nil, err
 	}
 
 	var sigma []byte
