@@ -825,10 +825,6 @@ func (s *endorseView) receiveTransaction(context view.Context) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
-	env := tx.Payload.Envelope
-	if env == nil {
-		return errors.Errorf("expected fabric envelope")
-	}
-	s.tx.Payload.Envelope = tx.Payload.Envelope
+	s.tx = tx
 	return nil
 }
