@@ -33,6 +33,9 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 }
 
 func (s *Service) registerIssuerSigner(signer SigningIdentity) error {
+	if signer == nil {
+		return errors.New("can't register issuer signer: nil signer")
+	}
 	fID, err := signer.Serialize()
 	if err != nil {
 		return errors.Wrapf(err, "failed serializing signer")

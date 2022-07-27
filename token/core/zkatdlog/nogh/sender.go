@@ -16,18 +16,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Transfer returns a TransferAction as a function of the passed arguments
+// It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
-
 	var signers []driver.Signer
+	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-
 	pp := s.PublicParams()
 	for _, id := range signerIds {
-		// Signer
+		// get signers for each input token
 		si, err := s.identityProvider.GetSigner(id)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
@@ -35,6 +36,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		signers = append(signers, si)
 	}
 
+	// get sender
 	sender, err := transfer.NewSender(signers, tokens, inputIDs, inputInf, pp)
 	if err != nil {
 		return nil, nil, err
@@ -42,30 +44,36 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	var values []uint64
 	var owners [][]byte
 	var ownerIdentities []view.Identity
-	for _, output := range outputTokens {
+	// get values and owners of outputs
+	for i, output := range outputTokens {
 		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, errors.Wrapf(err, "failed to get value for %dth output", i)
 		}
 		values = append(values, q.ToBigInt().Uint64())
+		if output.Owner == nil {
+			return nil, nil, errors.Errorf("failed to get owner for %dth output: nil owner", i)
+		}
 		owners = append(owners, output.Owner.Raw)
 		ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 	}
+	// produce zkatdlog transfer action
+	// return for each output its information in the clear
 	transfer, infos, err := sender.GenerateZKTransfer(values, owners)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed generating zkat proof for txid [%s]", txID)
+		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
 
-	// Prepare metadata
-	infoRaws := [][]byte{}
+	// prepare metadata
+	var infoRaws [][]byte
 	for _, information := range infos {
 		raw, err := information.Serialize()
 		if err != nil {
-			return nil, nil, errors.WithMessage(err, "failed serializing token info")
+			return nil, nil, errors.WithMessage(err, "failed serializing token info for zkatdlog transfer action")
 		}
 		infoRaws = append(infoRaws, raw)
 	}
-
+	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
 		auditInfo, err := s.identityProvider.GetAuditInfo(output.Owner.Raw)
@@ -75,6 +83,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo)
 	}
 
+	// audit info for senders
 	var senderAuditInfos [][]byte
 	for _, t := range tokens {
 		auditInfo, err := s.identityProvider.GetAuditInfo(t.Owner)
@@ -108,10 +117,14 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	return transfer, metadata, nil
 }
 
+// VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
 func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]byte) error {
+	if action == nil {
+		return errors.New("failed to verify transfer: nil transfer action")
+	}
 	tr, ok := action.(*transfer.TransferAction)
 	if !ok {
-		return errors.Errorf("expected *zkatdlog.Transfer")
+		return errors.New("failed to verify transfer: expected *zkatdlog.TransferAction")
 	}
 
 	// get commitments from outputs
@@ -124,13 +137,16 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]by
 			continue
 		}
 		// TODO: complete this check...
+		// token information in cleartext
 		ti := &token.TokenInformation{}
 		if err := ti.Deserialize(tokenInfos[i]); err != nil {
-			return errors.Wrapf(err, "failed unmarshalling token information")
+			return errors.Wrap(err, "failed unmarshalling token information")
 		}
+
+		// check that token info matches output. If so, return token in cleartext. Else return an error.
 		tok, err := tr.OutputTokens[i].GetTokenInTheClear(ti, pp)
 		if err != nil {
-			return errors.Wrapf(err, "failed getting token in the clear")
+			return errors.Wrap(err, "failed getting token in the clear")
 		}
 		logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 	}
@@ -138,6 +154,8 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]by
 	return transfer.NewVerifier(tr.InputCommitments, com, pp).Verify(tr.Proof)
 }
 
+// DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
+// DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	transfer := &transfer.TransferAction{}
 	err := transfer.Deserialize(raw)

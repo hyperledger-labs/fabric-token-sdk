@@ -17,6 +17,7 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type TokenCommitmentLoader interface {
@@ -91,49 +92,60 @@ func NewTokenService(
 	return s, nil
 }
 
+// DeserializeToken un-marshals a token and token info from raw bytes
+// It checks if the un-marshalled token matches the token info. If not, it returns
+// an error. Else it returns the token in cleartext and the identity of its issuer
 func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, view.Identity, error) {
+	// get zkatdlog token
 	output := &token.Token{}
 	if err := output.Deserialize(tok); err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to deserialize zkatdlog token")
 	}
 
+	// get token info
 	ti := &token.TokenInformation{}
 	err := ti.Deserialize(infoRaw)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to deserialize token information")
 	}
-
-	to, err := output.GetTokenInTheClear(ti, s.PublicParams())
+	pp := s.PublicParams()
+	to, err := output.GetTokenInTheClear(ti, pp)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, errors.Wrap(err, "failed to deserialize token")
 	}
 
 	return to, ti.Issuer, nil
 }
 
+// IdentityProvider returns the identity provider associated with the service
 func (s *Service) IdentityProvider() api3.IdentityProvider {
 	return s.identityProvider
 }
 
+// Validator returns the validator associated with the service
 func (s *Service) Validator() api3.Validator {
 	d, err := s.Deserializer()
 	if err != nil {
 		panic(err)
 	}
+	pp := s.PublicParams()
 	return validator.New(
-		s.PublicParams(),
+		pp,
 		d,
 	)
 }
 
+// PublicParamsManager returns the manager of the public parameters associated with the service
 func (s *Service) PublicParamsManager() api3.PublicParamsManager {
 	return s.PPM
 }
 
+// ConfigManager returns the configuration manager associated with the service
 func (s *Service) ConfigManager() config.Manager {
 	return s.configManager
 }
 
+// PublicParams returns the public parameters associated with the service
 func (s *Service) PublicParams() *crypto.PublicParams {
 	return s.PPM.PublicParams()
 }
@@ -143,9 +155,10 @@ func (s *Service) FetchPublicParams() error {
 }
 
 func (s *Service) Deserializer() (api3.Deserializer, error) {
-	d, err := s.DeserializerProvider(s.PublicParams())
+	pp := s.PublicParams()
+	d, err := s.DeserializerProvider(pp)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to get deserializer")
 	}
 	return d, nil
 }

@@ -89,11 +89,11 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		channel,
 		namespace,
 		sp,
-		ppm.New(&zkatdlog.VaultPublicParamsLoader{
-			TokenVault:          qe,
-			PublicParamsFetcher: publicParamsFetcher,
-			PPLabel:             crypto.DLogPublicParameters,
-		}),
+		ppm.New(zkatdlog.NewVaultPublicParamsLoader(
+			qe,
+			publicParamsFetcher,
+			crypto.DLogPublicParameters,
+		)),
 		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
 		v.TokenVault().QueryEngine(),
@@ -103,7 +103,10 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		tmsConfig,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessage(err, "failed to create token service")
+	}
+	if err := service.FetchPublicParams(); err != nil {
+		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 
 	return service, err
@@ -126,7 +129,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return ppm.NewFromParams(pp), nil
+	return ppm.NewFromParams(pp)
 }
 
 func init() {

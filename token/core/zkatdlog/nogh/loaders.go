@@ -3,17 +3,17 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type TokenVault interface {
@@ -26,6 +26,7 @@ type VaultTokenCommitmentLoader struct {
 	TokenVault TokenVault
 }
 
+// GetTokenCommitments takes an array of token identifiers (txID, index) and returns the corresponding tokens
 func (s *VaultTokenCommitmentLoader) GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error) {
 	var tokens []*token.Token
 	if err := s.TokenVault.GetTokenCommitments(ids, func(id *token3.ID, bytes []byte) error {
@@ -48,12 +49,17 @@ type VaultTokenLoader struct {
 	TokenVault TokenVault
 }
 
+// LoadTokens takes an array of token identifiers (txID, index) and returns the keys in the vault
+// matching the token identifiers, the corresponding zkatdlog tokens, the information of the
+// tokens in clear text and the identities of their owners
+// LoadToken returns an error in case of failure
 func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Token, []*token.TokenInformation, []view.Identity, error) {
 	var tokens []*token.Token
 	var inputIDs []string
 	var inputInf []*token.TokenInformation
 	var signerIds []view.Identity
 
+	// return token commitments and the corresponding opening
 	if err := s.TokenVault.GetTokenInfoAndCommitments(ids, func(id *token3.ID, key string, comm, info []byte) error {
 		if len(comm) == 0 {
 			return errors.Errorf("failed getting state for id [%v], nil comm value", id)
@@ -93,6 +99,12 @@ type VaultPublicParamsLoader struct {
 	PPLabel             string
 }
 
+func NewVaultPublicParamsLoader(tokenVault TokenVault, publicParamsFetcher api2.PublicParamsFetcher, PPLabel string) *VaultPublicParamsLoader {
+	return &VaultPublicParamsLoader{TokenVault: tokenVault, PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
+}
+
+// Load retrieves the public parameters. It first checks if the public parameters are cached.
+// If not Load fetches the parameters from the ledger
 func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
 	raw, err := s.TokenVault.PublicParams()
 	if err != nil {
@@ -118,6 +130,7 @@ func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
 	return pp, nil
 }
 
+// ForceFetch retrieves the public parameters from the ledger
 func (s *VaultPublicParamsLoader) ForceFetch() (*crypto.PublicParams, error) {
 	logger.Debugf("force public parameters fetch")
 	raw, err := s.PublicParamsFetcher.Fetch()

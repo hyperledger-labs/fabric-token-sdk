@@ -81,7 +81,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	}
 	wallets.Put(driver.CertifierRole, wallet)
 
-	return fabtoken.NewService(
+	service := fabtoken.NewService(
 		sp,
 		channel,
 		namespace,
@@ -95,7 +95,11 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		fabtoken.NewDeserializer(),
 		tmsConfig,
-	), nil
+	)
+	if err := service.PPM.ForceFetch(); err != nil {
+		return nil, errors.WithMessage(err, "failed to fetch public parameters")
+	}
+	return service, nil
 }
 
 func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {

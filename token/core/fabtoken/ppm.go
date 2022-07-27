@@ -59,15 +59,5 @@ func (v *PublicParamsManager) Issuers() [][]byte {
 }
 
 func (v *PublicParamsManager) PublicParams() *PublicParams {
-	if v.pp == nil {
-		if v.publicParamsLoader == nil {
-			panic("public parameters loaded not set")
-		}
-		var err error
-		v.pp, err = v.publicParamsLoader.Load()
-		if err != nil {
-			panic(err)
-		}
-	}
 	return v.pp
 }
