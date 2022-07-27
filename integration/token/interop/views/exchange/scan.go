@@ -18,7 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
 )
 
-// Scan contains the input information for a scan
+// Scan contains the input information for a scan of a matching preimage
 type Scan struct {
 	// TMSID identifies the TMS to use to perform the token operation
 	TMSID token.TMSID

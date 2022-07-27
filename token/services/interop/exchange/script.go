@@ -41,7 +41,7 @@ func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
 	return false
 }
 
-// IsMine returns true it there exists an owner wallet for the token's owner
+// IsMine returns true if one is either a sender or a recipient of an exchange script
 func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
 	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
 	if err != nil {

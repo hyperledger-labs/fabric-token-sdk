@@ -63,7 +63,7 @@ func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.Tra
 			return errors.Errorf("invalid output")
 		}
 		if out.IsRedeem() {
-			return nil
+			continue
 		}
 		owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
 		if err != nil {
@@ -78,7 +78,7 @@ func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.Tra
 			if script.Deadline.Before(time.Now()) {
 				return errors.Errorf("exchange script invalid: expiration date has already passed")
 			}
-			return nil
+			continue
 		}
 	}
 	return nil
@@ -106,8 +106,8 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 		defaultValidators = append(defaultValidators, f)
 	}
 	return &Validator{
-		pp:           pp,
-		deserializer: deserializer,
+		pp:              pp,
+		deserializer:    deserializer,
 		extraValidators: defaultValidators,
 	}, nil
 }

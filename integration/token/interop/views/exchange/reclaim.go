@@ -26,7 +26,7 @@ type ReclaimAll struct {
 	Wallet string
 }
 
-// ReclaimAllView is the initiation view of a party who wants to reclaim all reclaimable exchange
+// ReclaimAllView is the view of a party who wants to reclaim all previously locked tokens with an expired timeout
 type ReclaimAllView struct {
 	*ReclaimAll
 }
@@ -37,7 +37,7 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", r.Wallet)
 
 	expired, err := exchange.Wallet(context, senderWallet, token.WithTMSID(r.TMSID)).ListExpired()
-	assert.NoError(err, "cannot retrieve list of expired exchange")
+	assert.NoError(err, "cannot retrieve list of expired exchanges")
 	assert.True(len(expired) > 0, "no exchange script has expired")
 
 	tx, err := exchange.NewTransaction(
@@ -46,7 +46,7 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)
-	assert.NoError(err, "failed created an exchange transaction")
+	assert.NoError(err, "failed to create an exchange transaction")
 	for _, id := range expired {
 		assert.NoError(tx.Reclaim(senderWallet, id), "failed adding a reclaim for [%s]", id)
 	}
@@ -60,7 +60,7 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 
 	// Last but not least, the transaction is sent for ordering, and we wait for transaction finality.
 	_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
-	assert.NoError(err, "failed to commit issue transaction")
+	assert.NoError(err, "failed to commit exchange transaction")
 
 	return tx.ID(), nil
 }

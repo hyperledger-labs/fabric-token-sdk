@@ -91,8 +91,9 @@ type ExchangeVerifier struct {
 	HashInfo  HashInfo
 }
 
-// Verify verifies the claim signature, if the deadline hasn't passed, or the reclaim signature
+// Verify verifies the claim or reclaim signature
 func (v *ExchangeVerifier) Verify(msg []byte, sigma []byte) error {
+	// if timeout has not elapsed, only claim is allowed
 	if time.Now().Before(v.Deadline) {
 		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: HashInfo{
 			Hash:         v.HashInfo.Hash,
@@ -104,6 +105,7 @@ func (v *ExchangeVerifier) Verify(msg []byte, sigma []byte) error {
 		}
 		return nil
 	}
+	// if timeout has elapsed, only a reclaim is possible
 	if err := v.Sender.Verify(msg, sigma); err != nil {
 		return errors.WithMessagef(err, "failed verifying exchange reclaim signature")
 	}

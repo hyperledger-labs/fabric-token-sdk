@@ -41,7 +41,7 @@ type Lock struct {
 	HashFunc crypto.Hash
 }
 
-type LockResult struct {
+type LockInfo struct {
 	TxID     string
 	PreImage []byte
 	Hash     []byte
@@ -52,9 +52,9 @@ type LockView struct {
 }
 
 func (hv *LockView) Call(context view.Context) (interface{}, error) {
-	// As a first step operation, the sender contacts the recipient's FSC node
+	// As a first step, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
-	// Notice that, this step would not be required if the sender knew already which
+	// Notice that, this step would not be required if the sender knows already which
 	// identity the recipient wants to use.
 	me, recipient, err := exchange.ExchangeRecipientIdentities(context, "", hv.Recipient, token.WithTMSID(hv.TMSID))
 	assert.NoError(err, "failed getting recipient identity")
@@ -95,16 +95,16 @@ func (hv *LockView) Call(context view.Context) (interface{}, error) {
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the exchange transaction valid.
 	_, err = context.RunView(exchange.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to collect endorsements on exchange transaction")
+	assert.NoError(err, "failed to collect endorsements for exchange transaction")
 
 	// Last but not least, the locker sends the transaction for ordering and waits for transaction finality.
 	_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
-	assert.NoError(err, "failed to commit issue transaction")
+	assert.NoError(err, "failed to commit exchange transaction")
 
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 
-	return &LockResult{
+	return &LockInfo{
 		TxID:     tx.ID(),
 		PreImage: preImage,
 		Hash:     outputs.ScriptAt(0).HashInfo.Hash,

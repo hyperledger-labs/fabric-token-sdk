@@ -25,7 +25,7 @@ type IssueCash struct {
 	IssuerWallet string
 	// TokenType is the type of token to issue
 	TokenType string
-	// Quantity represent the number of units of a certain token type to issue
+	// Quantity represents the number of units of a certain token type to issue
 	Quantity uint64
 	// Recipient is the identity of the recipient's FSC node
 	Recipient view.Identity
@@ -38,7 +38,7 @@ type IssueCashView struct {
 func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// As a first step operation, the issuer contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
-	// Notice that, this step would not be required if the issuer knew already which
+	// Notice that, this step would not be required if the issuer knows already which
 	// identity the recipient wants to use.
 	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed getting recipient identity")

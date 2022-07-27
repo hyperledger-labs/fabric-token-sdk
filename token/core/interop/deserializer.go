@@ -46,7 +46,7 @@ func (d *Deserializer) getExchangeVerifier(raw []byte) (driver.Verifier, error) 
 	script := &exchange.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as a exchange script")
+		return nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
 	}
 	v := &exchange.ExchangeVerifier{}
 	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)

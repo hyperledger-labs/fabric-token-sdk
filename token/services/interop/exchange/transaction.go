@@ -123,7 +123,7 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 	if sender == nil {
 		sender, err = wallet.GetRecipientIdentity()
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed getting owner identity")
+			return nil, errors.WithMessagef(err, "failed getting sender identity")
 		}
 	}
 

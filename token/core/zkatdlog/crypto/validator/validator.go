@@ -66,7 +66,7 @@ func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.Transf
 			return errors.Errorf("invalid output")
 		}
 		if out.IsRedeem() {
-			return nil
+			continue
 		}
 		owner, err := identity.UnmarshallRawOwner(out.Owner)
 		if err != nil {
@@ -81,7 +81,7 @@ func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.Transf
 			if script.Deadline.Before(time.Now()) {
 				return errors.Errorf("exchange script invalid: expiration date has already passed")
 			}
-			return nil
+			continue
 		}
 	}
 	return nil

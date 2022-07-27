@@ -99,7 +99,7 @@ func exchangeLock(network *integration.Infrastructure, tmsID token.TMSID, id str
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		lockResult := &exchange.LockResult{}
+		lockResult := &exchange.LockInfo{}
 		common.JSONUnmarshal(result.([]byte), lockResult)
 
 		Expect(network.Client(receiver).IsTxFinal(

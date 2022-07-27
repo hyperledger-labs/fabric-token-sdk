@@ -39,6 +39,7 @@ type FastExchange struct {
 	ReclamationDeadline time.Duration
 }
 
+// FastExchangeInitiatorView is the view of a party who wants to perform an exchange with a single view
 type FastExchangeInitiatorView struct {
 	*FastExchange
 }
@@ -51,11 +52,11 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	// 4. Initiator claims
 	// 5. Responder retrieves pre-images and claims
 
-	// We assume that the initiator and the responder are on the both networks
+	// We assume that the initiator and the responder are on both networks
 	me1, recipient, err := exchange.ExchangeRecipientIdentities(context, "", v.Recipient, token.WithTMSID(v.TMSID1))
-	assert.NoError(err, "failed getting recipient identity")
+	assert.NoError(err, "failed getting recipient identity of participants in the first network")
 	me2, sender, err := exchange.ExchangeRecipientIdentities(context, "", v.Recipient, token.WithTMSID(v.TMSID2))
-	assert.NoError(err, "failed getting recipient identity 2")
+	assert.NoError(err, "failed getting recipient identity of participants in the second network")
 
 	_, err = context.RunView(exchange.NewDistributeTermsView(recipient, &exchange.Terms{
 		ReclamationDeadline: v.ReclamationDeadline,
@@ -77,7 +78,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID1),
 		)
-		assert.NoError(err, "failed created an exchange transaction")
+		assert.NoError(err, "failed to create an exchange transaction")
 
 		wallet := exchange.GetWallet(context, "", token.WithTMSID(v.TMSID1))
 		assert.NotNil(wallet, "wallet not found")
@@ -94,7 +95,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 		assert.NoError(err, "failed adding exchange")
 
 		_, err = context.RunView(exchange.NewCollectEndorsementsView(tx))
-		assert.NoError(err, "failed to collect endorsements on exchange transaction")
+		assert.NoError(err, "failed to collect endorsements for exchange transaction")
 
 		_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
 		assert.NoError(err, "failed to commit exchange transaction")
@@ -147,14 +148,14 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID2),
 		)
-		assert.NoError(err, "failed created an exchange transaction")
+		assert.NoError(err, "failed to create an exchange transaction")
 		assert.NoError(tx.Claim(wallet, matched[0], preImage), "failed adding a claim for [%s]", matched[0].Id)
 
 		_, err = context.RunView(exchange.NewCollectEndorsementsView(tx))
-		assert.NoError(err, "failed to collect endorsements on exchange transaction")
+		assert.NoError(err, "failed to collect endorsements for exchange transaction")
 
 		_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
-		assert.NoError(err, "failed to commit issue transaction")
+		assert.NoError(err, "failed to commit exchange transaction")
 
 		return nil, nil
 	})
@@ -180,10 +181,10 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	// 1. Exchange recipient identities
 	// 2. Agree on the terms
 	me1, sender, err := exchange.RespondExchangeRecipientIdentities(context)
-	assert.NoError(err, "failed to respond to identity request")
+	assert.NoError(err, "failed to respond to identity request in the first network")
 
 	me2, recipient, err := exchange.RespondExchangeRecipientIdentities(context)
-	assert.NoError(err, "failed to respond to identity request 2")
+	assert.NoError(err, "failed to respond to identity request in the second network")
 
 	terms, err := exchange.ReceiveTerms(context)
 	assert.NoError(err, "failed to receive the terms")
@@ -224,7 +225,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID2),
 		)
-		assert.NoError(err, "failed created an exchange transaction")
+		assert.NoError(err, "failed to create an exchange transaction")
 
 		wallet := exchange.GetWallet(context, "", token.WithTMSID(terms.TMSID2))
 		assert.NotNil(wallet, "wallet not found")
@@ -244,7 +245,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.NoError(err, "failed to collect endorsements on exchange transaction")
 
 		_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
-		assert.NoError(err, "failed to commit issue transaction")
+		assert.NoError(err, "failed to commit exchange transaction")
 
 		return nil, nil
 	})
@@ -274,14 +275,14 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID1),
 		)
-		assert.NoError(err, "failed created an exchange transaction")
+		assert.NoError(err, "failed to create an exchange transaction")
 		assert.NoError(tx.Claim(wallet, matched[0], preImage), "failed adding a claim for [%s]", matched[0].Id)
 
 		_, err = context.RunView(exchange.NewCollectEndorsementsView(tx))
-		assert.NoError(err, "failed to collect endorsements on exchange transaction")
+		assert.NoError(err, "failed to collect endorsements for exchange transaction")
 
 		_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
-		assert.NoError(err, "failed to commit issue transaction")
+		assert.NoError(err, "failed to commit exchange transaction")
 
 		return nil, nil
 	})
