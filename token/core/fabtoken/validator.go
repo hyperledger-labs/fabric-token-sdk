@@ -27,21 +27,34 @@ type Validator struct {
 }
 
 // NewValidator initializes a Validator with the passed parameters
-func NewValidator(pp *PublicParams, deserializer driver.Deserializer) *Validator {
+func NewValidator(pp *PublicParams, deserializer driver.Deserializer) (*Validator, error) {
+	if pp == nil {
+		return nil, errors.New("please provide a non-nil public parameters")
+	}
+	if deserializer == nil {
+		return nil, errors.New("please provide a non-nil deserializer")
+	}
 	return &Validator{
 		pp:           pp,
 		deserializer: deserializer,
-	}
+	}, nil
 }
 
 // VerifyTokenRequest validates the passed token request against data in the ledger, the signature provided and the binding
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
-	if v.pp == nil || v.deserializer == nil {
-		return nil, errors.New("please initialize validator")
+	if ledger == nil {
+		return nil, errors.New("please provide a non-nil ledger")
 	}
 	if signatureProvider == nil {
 		return nil, errors.New("please provide a non-nil signature provider")
 	}
+	if len(binding) == 0 {
+		return nil, errors.New("please provide a non-empty binding")
+	}
+	if tr == nil {
+		return nil, errors.New("please provide a non-nil token request")
+	}
+
 	// check if the token request is signed by the authorized auditor
 	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
@@ -75,6 +88,12 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 
 // VerifyTokenRequestFromRaw validates the raw token request
 func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
+	if getState == nil {
+		return nil, errors.New("please provide a non-nil get state function")
+	}
+	if len(binding) == 0 {
+		return nil, errors.New("please provide a non-empty binding")
+	}
 	if len(raw) == 0 {
 		return nil, errors.New("empty token request")
 	}

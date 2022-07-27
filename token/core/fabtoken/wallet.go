@@ -21,9 +21,6 @@ func (s *Service) RegisterOwnerWallet(id string, path string) error {
 
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
-	if s.Deserializer == nil {
-		return errors.New("can't register recipient identity: please initialize deserializer")
-	}
 	// recognize identity and register it
 	v, err := s.Deserializer.GetOwnerVerifier(id)
 	if err != nil {
