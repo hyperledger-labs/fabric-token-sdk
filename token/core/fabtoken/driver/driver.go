@@ -107,7 +107,7 @@ func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator,
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewValidator(pp, fabtoken.NewDeserializer()), nil
+	return fabtoken.NewValidator(pp, fabtoken.NewDeserializer())
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
