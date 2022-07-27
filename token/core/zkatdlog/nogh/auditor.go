@@ -8,11 +8,10 @@ package nogh
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
@@ -31,13 +30,7 @@ func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMeta
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting deserializer for auditor check")
 	}
-	pp, err := s.PublicParams()
-	if err != nil {
-		return errors.Wrap(err, "failed to get public parameters for auditor check")
-	}
-	if pp == nil {
-		panic("failed to perform auditor check: nil public parameters")
-	}
+	pp := s.PublicParams()
 	if err := audit.NewAuditor(des, pp.ZKATPedParams, pp.IdemixPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
 		tokenRequestMetadata,

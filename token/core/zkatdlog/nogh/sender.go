@@ -26,10 +26,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-	pp, err := s.PublicParams()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get public parameters")
-	}
+	pp := s.PublicParams()
 	for _, id := range signerIds {
 		// get signers for each input token
 		si, err := s.identityProvider.GetSigner(id)
@@ -131,10 +128,7 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]by
 	}
 
 	// get commitments from outputs
-	pp, err := s.PublicParams()
-	if err != nil {
-		return errors.Wrap(err, "failed to get public parameters")
-	}
+	pp := s.PublicParams()
 	com := make([]*math.G1, len(tr.OutputTokens))
 	for i := 0; i < len(tr.OutputTokens); i++ {
 		com[i] = tr.OutputTokens[i].Data

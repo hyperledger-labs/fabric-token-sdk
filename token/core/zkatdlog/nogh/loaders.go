@@ -9,12 +9,11 @@ package nogh
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type TokenVault interface {
@@ -100,15 +99,13 @@ type VaultPublicParamsLoader struct {
 	PPLabel             string
 }
 
+func NewVaultPublicParamsLoader(tokenVault TokenVault, publicParamsFetcher api2.PublicParamsFetcher, PPLabel string) *VaultPublicParamsLoader {
+	return &VaultPublicParamsLoader{TokenVault: tokenVault, PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
+}
+
 // Load retrieves the public parameters. It first checks if the public parameters are cached.
 // If not Load fetches the parameters from the ledger
 func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
-	if s.TokenVault == nil {
-		return nil, errors.New("can't load public parameters: please initialize token vault")
-	}
-	if s.PublicParamsFetcher == nil {
-		return nil, errors.New("can't load public parameters: please initialize public parameters fetcher")
-	}
 	raw, err := s.TokenVault.PublicParams()
 	if err != nil {
 		return nil, err
@@ -136,9 +133,6 @@ func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
 // ForceFetch retrieves the public parameters from the ledger
 func (s *VaultPublicParamsLoader) ForceFetch() (*crypto.PublicParams, error) {
 	logger.Debugf("force public parameters fetch")
-	if s.PublicParamsFetcher == nil {
-		return nil, errors.New("can't fetch public parameters: please initialize public parameters fetcher")
-	}
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
 		logger.Errorf("failed retrieving public params [%s]", err)

@@ -3,16 +3,16 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 // Issue returns an IssueAction as a function of the passed arguments
@@ -31,10 +31,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		return nil, nil, nil, err
 	}
 
-	pp, err := s.PublicParams()
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "failed to get public parameters")
-	}
+	pp := s.PublicParams()
 	issuer := &nonanonym.Issuer{}
 	issuer.New(typ, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
@@ -72,10 +69,7 @@ func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error 
 	if !ok {
 		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
-	pp, err := s.PublicParams()
-	if err != nil {
-		return errors.Wrap(err, "failed to verify issue: can't get public parameters")
-	}
+	pp := s.PublicParams()
 	coms, err := action.GetCommitments()
 	if err != nil {
 		return errors.New("failed to verify issue")

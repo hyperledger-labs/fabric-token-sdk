@@ -9,8 +9,6 @@ package nogh
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -19,6 +17,7 @@ import (
 	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type TokenCommitmentLoader interface {
@@ -109,10 +108,7 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token information")
 	}
-	pp, err := s.PublicParams()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to get public parameters")
-	}
+	pp := s.PublicParams()
 	to, err := output.GetTokenInTheClear(ti, pp)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token")
@@ -132,10 +128,7 @@ func (s *Service) Validator() api3.Validator {
 	if err != nil {
 		panic(err)
 	}
-	pp, err := s.PublicParams()
-	if err != nil {
-		panic(err)
-	}
+	pp := s.PublicParams()
 	return validator.New(
 		pp,
 		d,
@@ -153,8 +146,8 @@ func (s *Service) ConfigManager() config.Manager {
 }
 
 // PublicParams returns the public parameters associated with the service
-func (s *Service) PublicParams() (*crypto.PublicParams, error) {
-	return s.PPM.PublicParams(), nil
+func (s *Service) PublicParams() *crypto.PublicParams {
+	return s.PPM.PublicParams()
 }
 
 func (s *Service) FetchPublicParams() error {
@@ -162,10 +155,7 @@ func (s *Service) FetchPublicParams() error {
 }
 
 func (s *Service) Deserializer() (api3.Deserializer, error) {
-	pp, err := s.PublicParams()
-	if err != nil {
-		return nil, errors.New("failed to get deserializer: public parameters unavailable")
-	}
+	pp := s.PublicParams()
 	d, err := s.DeserializerProvider(pp)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get deserializer")
