@@ -214,18 +214,14 @@ func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs()
 }
 
-// Verify checks that the transaction is well-formed.
+// IsValid checks that the transaction is well-formed.
 // This means checking that the embedded TokenRequest is valid.
-func (t *Transaction) Verify() error {
-	return t.TokenRequest.Verify()
-}
-
 func (t *Transaction) IsValid() error {
 	return t.TokenRequest.IsValid()
 }
 
 func (t *Transaction) MarshallToAudit() ([]byte, error) {
-	return t.TokenRequest.MarshallToAudit()
+	return t.TokenRequest.MarshalToAudit()
 }
 
 // Selector returns the default token selector for this transaction

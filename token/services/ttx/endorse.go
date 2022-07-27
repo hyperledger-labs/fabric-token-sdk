@@ -111,7 +111,6 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 }
 
 func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context) ([]view.Identity, error) {
-
 	issues := c.tx.TokenRequest.Issues()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request issue", len(issues))
@@ -407,7 +406,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	}
 
 	// double check that the transaction is valid
-	// if err := c.tx.Verify(); err != nil {
+	// if err := c.tx.IsValid(); err != nil {
 	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
 	// }
 
@@ -586,7 +585,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 }
 
 func (c *collectEndorsementsView) requestBytes() ([]byte, error) {
-	return c.tx.TokenRequest.MarshallToSign()
+	return c.tx.TokenRequest.MarshalToSign()
 }
 
 func (c *collectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
@@ -622,7 +621,11 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
 		tx, err := NewTransactionFromBytes(context, f.network, f.channel, msg.Payload)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed unmarshalling transaction")
+		}
+		// Check that the transaction is valid
+		if err := tx.IsValid(); err != nil {
+			return nil, errors.WithMessagef(err, "invalid transaction %s", tx.ID())
 		}
 		return tx, nil
 	case <-timeout.C:
@@ -748,7 +751,8 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 
 func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 	var res []*token.Transfer
-	for _, transfer := range s.tx.TokenRequest.Transfers() {
+	transfers := s.tx.TokenRequest.Transfers()
+	for _, transfer := range transfers {
 		for _, sender := range transfer.Senders {
 			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
 				res = append(res, transfer)

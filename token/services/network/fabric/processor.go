@@ -148,11 +148,11 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	wrappedRWS := &rwsWrapper{RWSet: rws}
 
 	if tms.PublicParametersManager().GraphHiding() {
-		// Delete inputs
+		ids := metadata.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, metadata.SpentTokenID())
+			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
-		for _, id := range metadata.SpentTokenID() {
+		for _, id := range ids {
 			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
 				return err
 			}

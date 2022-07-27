@@ -36,9 +36,9 @@ func TestRequestSerialization(t *testing.T) {
 
 	assert.Equal(t, raw, raw2)
 
-	mRaw, err := r.MarshallToAudit()
+	mRaw, err := r.MarshalToAudit()
 	assert.NoError(t, err)
-	mRaw2, err := r2.MarshallToAudit()
+	mRaw2, err := r2.MarshalToAudit()
 	assert.NoError(t, err)
 
 	assert.Equal(t, mRaw, mRaw2)

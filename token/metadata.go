@@ -7,12 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type TMS interface {
@@ -139,6 +138,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, ReceiverAuditInfos)
 			transferRes.TokenInfo = append(transferRes.TokenInfo, TokenInfo)
 		}
+
 		// if skip = true, it means that this transfer does not contain any output for the given enrollment IDs.
 		// Therefore, no metadata should be given to the passed enrollment IDs.
 		// if skip = false, it means that this transfer contains at least one output for the given enrollment IDs.
@@ -188,6 +188,9 @@ type IssueMetadata struct {
 
 // Match returns true if the given action matches this metadata
 func (m *IssueMetadata) Match(action *IssueAction) error {
+	if action == nil {
+		return errors.New("can't match issue metadata to issue action: nil issue action")
+	}
 	if len(m.Outputs) != 1 {
 		return errors.Errorf("expected one output, got [%d]", len(m.Outputs))
 	}
@@ -218,13 +221,15 @@ type TransferMetadata struct {
 
 // Match returns true if the given action matches this metadata
 func (m *TransferMetadata) Match(action *TransferAction) error {
+	if action == nil {
+		return errors.New("can't match transfer metadata to transfer action: nil issue action")
+	}
 	if len(m.TokenIDs) != 0 && len(m.Senders) != len(m.TokenIDs) {
 		return errors.Errorf("expected [%d] token IDs and senders but got [%d]", len(m.TokenIDs), len(m.Senders))
 	}
 	if len(m.Senders) != len(m.SenderAuditInfos) {
 		return errors.Errorf("expected [%d] senders and sender audit infos but got [%d]", len(m.Senders), len(m.SenderAuditInfos))
 	}
-
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
 	}
@@ -245,11 +250,17 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 
 // IsOutputAbsent returns true if the given output's metadata is absent
 func (m *TransferMetadata) IsOutputAbsent(j int) bool {
+	if j >= len(m.TokenInfo) {
+		return true
+	}
 	return len(m.TokenInfo[j]) == 0
 }
 
 // IsInputAbsent returns true if the given input's metadata is absent
 func (m *TransferMetadata) IsInputAbsent(j int) bool {
+	if j >= len(m.Senders) {
+		return true
+	}
 	return m.Senders[j].IsNone()
 }
 
