@@ -86,7 +86,3 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 
 	return s.tx, nil
 }
-
-func (s *acceptView) requestBytes() ([]byte, error) {
-	return s.tx.TokenRequest.MarshallToSign()
-}

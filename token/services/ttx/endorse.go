@@ -618,7 +618,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 		//store signature
 		k := kvs.GetService(context)
-		ackKey, err := kvs.CreateCompositeKey("ttx.endorse.ack", []string{c.tx.ID(), entry.ID.UniqueID()})
+		ackKey, err := kvs.CreateCompositeKey("ttx.endorse.ack", []string{c.tx.ID(), entry.LongTerm.String()})
 		if err != nil {
 			return errors.Wrap(err, "failed creating composite key")
 		}

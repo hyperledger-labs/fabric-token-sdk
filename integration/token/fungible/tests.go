@@ -533,6 +533,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	// the previous call should not keep the token locked if release is successful
 	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
+
+	//Transfer Cash and check recipient signature
+	TransferCashAndCheckRecepientSignature(network, "issuer", "", "USD", 1, "manager", auditor)
 }
 
 func RegisterAuditor(network *integration.Infrastructure, id string) {
@@ -715,6 +718,51 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 		}
 		time.Sleep(5 * time.Second)
 	}
+}
+func TransferCashAndCheckRecepientSignature(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, errorMsgs ...string) {
+	fmt.Println("TransferCashAndCheckRecepientSignature")
+
+	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
+		Auditor:   auditor,
+		Wallet:    wallet,
+		Type:      typ,
+		Amount:    amount,
+		Recipient: network.Identity(receiver),
+	}))
+
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+	CheckRecipientSignature(network, id, common.JSONUnmarshalString(txid), receiver)
+}
+func CheckRecipientSignature(network *integration.Infrastructure, id string, txnId string, receiver string, errorMsgs ...string) {
+
+	message, err := network.Client(id).CallView("signature", common.JSONMarshall(&views.Signature{
+		ObjectType:       "ttx.endorse.ack",
+		TransactionID:    txnId,
+		LongTermIdentity: network.Identity(receiver),
+	}))
+
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(common.JSONUnmarshalString(message)).To(Equal("Key Exist"))
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+
 }
 
 func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, auditor string, failToRelease bool, errorMsgs ...string) string {

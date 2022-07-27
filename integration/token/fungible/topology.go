@@ -50,6 +50,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
+	issuer.RegisterViewFactory("signature", &views.SignatureViewFactory{})
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	issuer.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	issuer.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
