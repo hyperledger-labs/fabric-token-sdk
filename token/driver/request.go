@@ -98,17 +98,6 @@ type TokenRequestMetadata struct {
 	Application map[string][]byte
 }
 
-func (m *TokenRequestMetadata) TokenInfos() [][]byte {
-	var res [][]byte
-	for _, issue := range m.Issues {
-		res = append(res, issue.TokenInfo...)
-	}
-	for _, transfer := range m.Transfers {
-		res = append(res, transfer.TokenInfo...)
-	}
-	return res
-}
-
 func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 	for _, issue := range m.Issues {
 		for i, output := range issue.Outputs {

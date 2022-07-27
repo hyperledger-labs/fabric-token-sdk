@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 // IssueOptions models the options that can be passed to the issue command
@@ -229,9 +228,6 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	if err != nil {
 		return nil, err
 	}
-	if r.Actions == nil {
-		return nil, errors.New("failed to complete issue: nil actions in token request")
-	}
 	r.Actions.Issues = append(r.Actions.Issues, raw)
 	outputs, err := issue.GetSerializedOutputs()
 	if err != nil {
@@ -294,20 +290,17 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		// double check
-		if err := ts.VerifyTransfer(transfer, transferMetadata.TokenInfo); err != nil {
-			return nil, errors.Wrap(err, "failed checking generated proof")
-		}
+	//if logger.IsEnabledFor(zapcore.DebugLevel) {
+	// double check
+	if err := ts.VerifyTransfer(transfer, transferMetadata.TokenInfo); err != nil {
+		return nil, errors.Wrap(err, "failed checking generated proof")
 	}
+	//}
 
 	// Append
 	raw, err := transfer.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing transfer action")
-	}
-	if r.Actions == nil || r.Metadata == nil {
-		return nil, errors.New("failed to complete transfer: nil actions or metadata in token request")
 	}
 	r.Actions.Transfers = append(r.Actions.Transfers, raw)
 	r.Metadata.Transfers = append(r.Metadata.Transfers, *transferMetadata)
@@ -357,9 +350,6 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 		return errors.Wrap(err, "failed serializing transfer action")
 	}
 
-	if r.Actions == nil || r.Metadata == nil {
-		return errors.New("failed to complete redeem: nil actions or metadata in token request")
-	}
 	r.Actions.Transfers = append(r.Actions.Transfers, raw)
 	r.Metadata.Transfers = append(r.Metadata.Transfers, *transferMetadata)
 
@@ -377,9 +367,6 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	meta, err := r.GetMetadata()
 	if err != nil {
 		return nil, err
-	}
-	if r.Actions == nil {
-		return nil, errors.New("can'r get outputs: nil action in request")
 	}
 	var outputs []*Output
 	for i, issue := range r.Actions.Issues {
@@ -521,10 +508,6 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 	if err != nil {
 		return nil, err
 	}
-	if r.Actions == nil {
-		return nil, errors.New("can'r get inputs: nil actions in request")
-	}
-
 	var inputs []*Input
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
@@ -573,62 +556,73 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 	return NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
 }
 
-func (r *Request) Verify() error {
-
-	ts := r.TokenService.tms
-	if r.Actions == nil || r.Metadata == nil {
-		return errors.New("can'r verify request: invalid actions or metadata")
+// IsValid checks that the request is valid.
+func (r *Request) IsValid() error {
+	// check request fields
+	if r.TokenService == nil {
+		return errors.New("invalid token service in request")
 	}
+	if r.Actions == nil {
+		return errors.New("invalid actions in request")
+	}
+	if r.Metadata == nil {
+		return errors.New("invalid metadata in request")
+	}
+
+	// can we get the inputs?
+	if _, err := r.Inputs(); err != nil {
+		return errors.WithMessagef(err, "failed verifying inputs")
+	}
+
+	// can we get the outputs?
+	if _, err := r.Outputs(); err != nil {
+		return errors.WithMessagef(err, "failed verifying outputs")
+	}
+
+	// verify issue actions
+	ts := r.TokenService.tms
 	for i, issue := range r.Actions.Issues {
 		action, err := ts.DeserializeIssueAction(issue)
 		if err != nil {
 			return errors.WithMessagef(err, "failed deserializing issue action")
 		}
-		if &r.Metadata.Issues[i] == nil {
-			errors.Errorf("can'r verify request: issue metadata at index [%d] is nil", i)
+		meta := r.Metadata.Issues[i]
+		outputs := action.GetOutputs()
+		if len(outputs) != len(meta.TokenInfo) || len(meta.ReceiversAuditInfos) != len(outputs) {
+			return errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		if err := ts.VerifyIssue(action, r.Metadata.Issues[i].TokenInfo); err != nil {
+		for j, output := range outputs {
+			if output == nil {
+				return errors.Errorf("%d^th output in issue action [%d] is nil", j, i)
+			}
+		}
+		if err := ts.VerifyIssue(action, meta.TokenInfo); err != nil {
 			return errors.WithMessagef(err, "failed verifying issue action")
 		}
 	}
+
+	// verify transfer actions
 	for i, transfer := range r.Actions.Transfers {
 		action, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return errors.WithMessagef(err, "failed deserializing transfer action")
 		}
-		if &r.Metadata.Transfers[i] == nil {
-			errors.Errorf("can'r verify request: transfer metadata at index [%d] is nil", i)
+		meta := r.Metadata.Transfers[i]
+		outputs := action.GetOutputs()
+		if len(outputs) != len(meta.TokenInfo) || len(meta.ReceiverAuditInfos) != len(outputs) {
+			return errors.Errorf("failed matching transfer action with its metadata [%d]: invalid metadata", i)
+		}
+		for j, output := range outputs {
+			if output == nil {
+				return errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
+			}
 		}
 		if err := ts.VerifyTransfer(action, r.Metadata.Transfers[i].TokenInfo); err != nil {
 			return errors.WithMessagef(err, "failed verifying transfer action")
 		}
 	}
 
-	if _, err := r.Inputs(); err != nil {
-		return errors.WithMessagef(err, "failed verifying inputs")
-	}
-
-	if _, err := r.Outputs(); err != nil {
-		return errors.WithMessagef(err, "failed verifying outputs")
-	}
-
 	return nil
-}
-
-func (r *Request) IsValid() error {
-	if r.Actions == nil || r.Metadata == nil {
-		return errors.New("invalid token request: nil actions or nil metadata")
-	}
-	numTokens, err := r.countOutputs()
-	if err != nil {
-		return errors.Wrapf(err, "invalid token request: failed counting tokens")
-	}
-	tis := r.Metadata.TokenInfos()
-	if numTokens != len(tis) {
-		return errors.Errorf("invalid token request, the number of tokens differs from the number of token info [%d],[%d]", numTokens, len(tis))
-	}
-
-	return r.Verify()
 }
 
 // MarshalToAudit marshals the request to a message suitable for audit signature.
@@ -699,17 +693,11 @@ func (r *Request) FromBytes(request []byte) error {
 	}
 	r.Anchor = req.TxID
 	if len(req.Actions) > 0 {
-		if r.Actions == nil {
-			return errors.New("failed unmarshalling request: actions in request are nil")
-		}
 		if err := r.Actions.FromBytes(req.Actions); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling actions")
 		}
 	}
 	if len(req.Metadata) > 0 {
-		if r.Metadata == nil {
-			return errors.New("failed unmarshalling request: metadata in request are nil")
-		}
 		if err := r.Metadata.FromBytes(req.Metadata); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling metadata")
 		}
@@ -718,21 +706,15 @@ func (r *Request) FromBytes(request []byte) error {
 }
 
 // AddAuditorSignature adds an auditor signature to the request.
-func (r *Request) AddAuditorSignature(sigma []byte) error {
-	if r.Actions == nil {
-		return errors.New("failed adding auditor signature to request: actions in request are nil")
-	}
+func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
-	return nil
+	return
 }
 
 // AppendSignature appends a signature to the request.
-func (r *Request) AppendSignature(sigma []byte) error {
-	if r.Actions == nil {
-		return errors.New("failed appending signature to request: actions in request are nil")
-	}
+func (r *Request) AppendSignature(sigma []byte) {
 	r.Actions.Signatures = append(r.Actions.Signatures, sigma)
-	return nil
+	return
 }
 
 // SetTokenService sets the token service.
@@ -748,17 +730,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 		return errors.Wrap(err, "cannot resolve identity")
 	}
 
-	if r.Actions == nil {
-		return errors.New("failed to bind transfers' senders and receivers: actions in request are nil")
-	}
-	if r.Metadata == nil {
-		return errors.New("failed to bind transfers' senders and receivers: metadata in request is nil")
-	}
-
 	for i := range r.Actions.Transfers {
-		if &r.Metadata.Transfers[i] == nil {
-			return errors.Errorf("failed to bind transfers' senders and receivers: metadata %dth transfer is nil", i)
-		}
 		// senders
 		for _, eid := range r.Metadata.Transfers[i].Senders {
 			if w := r.TokenService.WalletManager().Wallet(eid); w != nil {
@@ -803,10 +775,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 }
 
 // Issues returns the list of issued tokens.
-func (r *Request) Issues() ([]*Issue, error) {
-	if r.Metadata == nil {
-		return nil, errors.New("failed to retrieve the list of issues: nil metadata")
-	}
+func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range r.Metadata.Issues {
 		issues = append(issues, &Issue{
@@ -814,14 +783,11 @@ func (r *Request) Issues() ([]*Issue, error) {
 			Receivers: issue.Receivers,
 		})
 	}
-	return issues, nil
+	return issues
 }
 
 // Transfers returns the list of transfers.
-func (r *Request) Transfers() ([]*Transfer, error) {
-	if r.Metadata == nil {
-		return nil, errors.New("failed to retrieve the list of transfers: nil metadata")
-	}
+func (r *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
 	for _, transfer := range r.Metadata.Transfers {
 		transfers = append(transfers, &Transfer{
@@ -830,7 +796,7 @@ func (r *Request) Transfers() ([]*Transfer, error) {
 			ExtraSigners: transfer.ExtraSigners,
 		})
 	}
-	return transfers, nil
+	return transfers
 }
 
 // Import imports the actions and metadata from the passed request.
@@ -862,9 +828,9 @@ func (r *Request) Import(request *Request) error {
 }
 
 // AuditCheck performs the audit check of the request in addition to
-// the checks of the token request itself via Verify.
+// the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck() error {
-	if err := r.Verify(); err != nil {
+	if err := r.IsValid(); err != nil {
 		return err
 	}
 	return r.TokenService.tms.AuditorCheck(
@@ -933,14 +899,11 @@ func (r *Request) AuditOutputs() (*OutputStream, error) {
 }
 
 // ApplicationMetadata returns the application metadata corresponding to the given key
-func (r *Request) ApplicationMetadata(k string) ([]byte, error) {
-	if r.Metadata == nil {
-		return nil, errors.Errorf("can'r get application metadata at index [%s]: nil metadata", k)
-	}
+func (r *Request) ApplicationMetadata(k string) []byte {
 	if len(r.Metadata.Application) == 0 {
-		return nil, nil
+		return nil
 	}
-	return r.Metadata.Application[k], nil
+	return r.Metadata.Application[k]
 }
 
 // SetApplicationMetadata sets application metadata in terms of key-value pairs.

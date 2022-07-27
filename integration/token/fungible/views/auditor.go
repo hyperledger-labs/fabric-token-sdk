@@ -36,12 +36,10 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	// Check Metadata
 	logger.Debugf("AuditView: check metadata [%s]", tx.ID())
-	opRaw, err := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
-	assert.NoError(err)
+	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
 	if len(opRaw) != 0 {
 		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
-		metaRaw, err := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta")
-		assert.NoError(err)
+		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta")
 		assert.Equal([]byte("meta"), metaRaw, "expected 'meta' application metadata")
 	}
 	logger.Debugf("AuditView: check metadata done [%s]", tx.ID())

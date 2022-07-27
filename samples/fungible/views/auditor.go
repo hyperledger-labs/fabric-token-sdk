@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package views
 
 import (
@@ -30,12 +31,10 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
 	// Check Metadata
-	opRaw, err := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
-	assert.NoError(err)
+	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
 	if len(opRaw) != 0 {
 		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
-		metaRaw, err := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta")
-		assert.NoError(err)
+		metaRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/meta")
 		assert.Equal([]byte("meta"), metaRaw, "expected 'meta' application metadata")
 	}
 

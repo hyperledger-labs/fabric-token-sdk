@@ -29,9 +29,6 @@ type Metadata struct {
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
 func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, error) {
-	if m.TokenRequestMetadata == nil {
-		return nil, nil, nil, errors.New("failed to get token: nil metadata")
-	}
 	tokenInfoRaw := m.TokenRequestMetadata.GetTokenInfo(raw)
 	if len(tokenInfoRaw) == 0 {
 		logger.Debugf("metadata for [%s] not found", hash.Hashable(raw).String())
@@ -45,15 +42,12 @@ func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, er
 }
 
 // SpentTokenID returns the token IDs of the tokens that were spent by the Token Request this metadata is associated with.
-func (m *Metadata) SpentTokenID() ([]*token.ID, error) {
+func (m *Metadata) SpentTokenID() []*token.ID {
 	var res []*token.ID
-	if m.TokenRequestMetadata == nil {
-		return nil, errors.New("can't get spent token ID: nil metadata")
-	}
 	for _, transfer := range m.TokenRequestMetadata.Transfers {
 		res = append(res, transfer.TokenIDs...)
 	}
-	return res, nil
+	return res
 }
 
 // FilterBy returns a new Metadata containing only the metadata that matches the given enrollment IDs.
@@ -66,24 +60,17 @@ func (m *Metadata) SpentTokenID() ([]*token.ID, error) {
 // - The senders are included if and only if there is at least one output whose owner has the given enrollment IDs.
 // Application metadata is always included
 func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
-	if m.TokenRequestMetadata == nil {
-		return nil, errors.New("can't filter metadata by eID: nil token request metadata")
-	}
 	res := &Metadata{
 		TMS:                  m.TMS,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{},
 	}
 
 	// filter issues
-	for j, issue := range m.TokenRequestMetadata.Issues {
+	for _, issue := range m.TokenRequestMetadata.Issues {
 		issueRes := driver.IssueMetadata{
 			Issuer: issue.Issuer,
 		}
 
-		if len(issue.ReceiversAuditInfos) != len(issue.Outputs) || len(issue.ReceiversAuditInfos) != len(issue.TokenInfo) ||
-			len(issue.ReceiversAuditInfos) != len(issue.Receivers) {
-			return nil, errors.Errorf("can't filter metadata by eID: issue at index [%d] is invalid", j)
-		}
 		for i, auditInfo := range issue.ReceiversAuditInfos {
 			// If the receiver has the given enrollment ID, add it
 			recipientEID, err := m.TMS.GetEnrollmentID(auditInfo)
@@ -180,9 +167,6 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 // Issue returns the i-th issue metadata, if present
 func (m *Metadata) Issue(i int) (*IssueMetadata, error) {
-	if m.TokenRequestMetadata == nil {
-		return nil, errors.Errorf("can't get issue at index [%d]: nil token request metadata", i)
-	}
 	if i >= len(m.TokenRequestMetadata.Issues) {
 		return nil, errors.Errorf("index [%d] out of range [0:%d]", i, len(m.TokenRequestMetadata.Issues))
 	}
@@ -191,9 +175,6 @@ func (m *Metadata) Issue(i int) (*IssueMetadata, error) {
 
 // Transfer returns the i-th transfer metadata, if present
 func (m *Metadata) Transfer(i int) (*TransferMetadata, error) {
-	if m.TokenRequestMetadata == nil {
-		return nil, errors.Errorf("can't get transfer at index [%d]: nil token request metadata", i)
-	}
 	if i >= len(m.TokenRequestMetadata.Transfers) {
 		return nil, errors.Errorf("index [%d] out of range [0:%d]", i, len(m.TokenRequestMetadata.Transfers))
 	}

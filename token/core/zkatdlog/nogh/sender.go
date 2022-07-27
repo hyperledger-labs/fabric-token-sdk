@@ -118,19 +118,23 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]by
 	pp := s.PublicParams()
 	com := make([]*math.G1, len(tr.OutputTokens))
 	for i := 0; i < len(tr.OutputTokens); i++ {
+		com[i] = tr.OutputTokens[i].Data
 
+		if len(tokenInfos[i]) == 0 {
+			continue
+		}
+		// TODO: complete this check...
 		ti := &token.TokenInformation{}
 		if err := ti.Deserialize(tokenInfos[i]); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling token information")
 		}
-
-		com[i] = tr.OutputTokens[i].Data
 		tok, err := tr.OutputTokens[i].GetTokenInTheClear(ti, pp)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting token in the clear")
 		}
 		logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 	}
+
 	return transfer.NewVerifier(tr.InputCommitments, com, pp).Verify(tr.Proof)
 }
 

@@ -82,7 +82,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed collecting actions")
 
 	// A doubles check that the content of the transaction is the one expected.
-	assert.NoError(tx.Verify(), "failed verifying transaction")
+	assert.NoError(tx.IsValid(), "failed verifying transaction")
 
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")

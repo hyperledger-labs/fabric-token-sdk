@@ -115,10 +115,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 	if tms.PublicParametersManager().GraphHiding() {
 		// Delete inputs
-		ids, err := metadata.SpentTokenID()
-		if err != nil {
-			return errors.Wrap(err, "failed to retrieve identifiers of spent tokens")
-		}
+		ids := metadata.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
