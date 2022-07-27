@@ -306,6 +306,12 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	if env == nil {
 		return errors.Errorf("expected fabric envelope")
 	}
+	// Ack for distribution
+	// Send the signature back
+	rawRequest, err := tx.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
+	}
 
 	err = tx.storeTransient()
 	if err != nil {
@@ -327,12 +333,6 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
-	// Ack for distribution
-	// Send the signature back
-	rawRequest, err := tx.Bytes()
-	if err != nil {
-		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
-	}
 	var sigma []byte
 	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())

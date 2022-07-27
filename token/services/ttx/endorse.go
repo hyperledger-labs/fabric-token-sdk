@@ -439,9 +439,16 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
-		longTermIdentity, _, _, err := view2.GetEndpointService(context).Resolve(party)
-		if err != nil {
-			return errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
+		var longTermIdentity view.Identity
+		var err error
+		// if it is me, no need to resolve, get directly the default identity
+		if isMe {
+			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+		} else {
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			if err != nil {
+				return errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
+			}
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("searching for long term identity [%s]", longTermIdentity)
@@ -484,9 +491,16 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
-		longTermIdentity, _, _, err := view2.GetEndpointService(context).Resolve(party)
-		if err != nil {
-			return errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+		var longTermIdentity view.Identity
+		var err error
+		// if it is me, no need to resolve, get directly the default identity
+		if isMe {
+			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+		} else {
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			if err != nil {
+				return errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+			}
 		}
 		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
 			IsMe:     isMe,
@@ -538,11 +552,17 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		var txRaw []byte
 		var err error
 		if entry.Auditor {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("This is an auditor [%s], send the full set of metadata", entry.ID.UniqueID())
+			}
 			txRaw, err = c.tx.Bytes()
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
 			}
 		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("This is not an auditor [%s], send the filtered metadata", entry.ID.UniqueID())
+			}
 			txRaw, err = c.tx.Bytes(entry.EID)
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")

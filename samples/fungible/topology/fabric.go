@@ -24,11 +24,11 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	fabricTopology.EnableGRPCLogging()
 	fabricTopology.EnableLogPeersToFile()
 	fabricTopology.EnableLogOrderersToFile()
-	fabricTopology.SetLogging("debug", "")
+	fabricTopology.SetLogging("info", "")
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("info", "")
 	fscTopology.EnableLogToFile()
 	fscTopology.EnablePrometheusMetrics()
 
