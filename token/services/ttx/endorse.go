@@ -13,7 +13,6 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -518,6 +517,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// Distribute the transaction to all parties in the distribution list.
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
+	owner := NewOwner(context, c.tx.TokenService())
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
@@ -605,6 +605,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			hash.Hashable(txRaw).String())
 
 		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
+
 		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
@@ -616,17 +617,12 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("collectEndorsementsView: collected signature from %s", entry.ID)
 		}
-		//store signature
-		k := kvs.GetService(context)
-		ackKey, err := kvs.CreateCompositeKey("ttx.endorse.ack", []string{c.tx.ID(), entry.LongTerm.String()})
-		if err != nil {
-			return errors.Wrap(err, "failed creating composite key")
-		}
-		if err := k.Put(ackKey, sigma); err != nil {
-			return errors.WithMessagef(err, "failed storing ack for [%s:%s]", c.tx.ID(), entry.ID)
-		}
-		agent.EmitKey(0, "ttx", "stored", "signature", c.tx.ID())
 
+		if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
+			return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
+		}
+
+		agent.EmitKey(0, "ttx", "stored", "signature", c.tx.ID())
 	}
 
 	return nil
@@ -788,24 +784,26 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
+		logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
 	}
-
-	var sigma []byte
-	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
-	sigma, err = signer.Sign(rawRequest)
+	sigma, err := signer.Sign(rawRequest)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
+
 	// Ack for distribution
 	// Send the signature back
-	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	}
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
+
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
 

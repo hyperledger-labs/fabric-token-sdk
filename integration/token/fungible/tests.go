@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
@@ -533,9 +534,6 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	// the previous call should not keep the token locked if release is successful
 	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
-
-	//Transfer Cash and check recipient signature
-	TransferCashAndCheckRecepientSignature(network, "issuer", "", "USD", 1, "manager", auditor)
 }
 
 func RegisterAuditor(network *integration.Infrastructure, id string) {
@@ -700,7 +698,7 @@ func ListUnspentTokens(network *integration.Infrastructure, id string, wallet st
 }
 
 func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, errorMsgs ...string) {
-	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
+	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Auditor:   auditor,
 		Wallet:    wallet,
 		Type:      typ,
@@ -709,8 +707,20 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txidBoxed))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txidBoxed))).NotTo(HaveOccurred())
+
+		signers := []string{auditor}
+		if !strings.HasPrefix(receiver, id) {
+			signers = append(signers, strings.Split(receiver, ".")[0])
+		}
+		txInfo := GetTransactionInfo(network, id, common.JSONUnmarshalString(txidBoxed))
+		for _, identity := range signers {
+			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
+			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
+			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		}
+		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
@@ -719,50 +729,15 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 		time.Sleep(5 * time.Second)
 	}
 }
-func TransferCashAndCheckRecepientSignature(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, errorMsgs ...string) {
-	fmt.Println("TransferCashAndCheckRecepientSignature")
 
-	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
+func GetTransactionInfo(network *integration.Infrastructure, id string, txnId string) *ttx.TransactionInfo {
+	boxed, err := network.Client(id).CallView("transactionInfo", common.JSONMarshall(&views.TransactionInfo{
+		TransactionID: txnId,
 	}))
-
-	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-
-	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
-		}
-		time.Sleep(5 * time.Second)
-	}
-	CheckRecipientSignature(network, id, common.JSONUnmarshalString(txid), receiver)
-}
-func CheckRecipientSignature(network *integration.Infrastructure, id string, txnId string, receiver string, errorMsgs ...string) {
-
-	message, err := network.Client(id).CallView("signature", common.JSONMarshall(&views.Signature{
-		ObjectType:       "ttx.endorse.ack",
-		TransactionID:    txnId,
-		LongTermIdentity: network.Identity(receiver),
-	}))
-
-	if len(errorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		Expect(common.JSONUnmarshalString(message)).To(Equal("Key Exist"))
-	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range errorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
-		}
-		time.Sleep(5 * time.Second)
-	}
-
+	Expect(err).NotTo(HaveOccurred())
+	info := &ttx.TransactionInfo{}
+	common.JSONUnmarshal(boxed.([]byte), info)
+	return info
 }
 
 func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, auditor string, failToRelease bool, errorMsgs ...string) string {

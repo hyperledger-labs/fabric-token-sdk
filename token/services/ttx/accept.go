@@ -7,10 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
@@ -65,16 +63,16 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		logger.Debugf("send back ack")
 	}
 
-	var sigma []byte
 	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
-	sigma, err = signer.Sign(rawRequest)
+	sigma, err := signer.Sign(rawRequest)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
+
 	// Ack for distribution
 	// Send the signature back
 	session := context.Session()
@@ -82,6 +80,7 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	if err := session.Send(sigma); err != nil {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
+
 	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
 
 	return s.tx, nil
