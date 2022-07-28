@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
@@ -67,7 +66,7 @@ func (v *PublicParamsManager) ForceFetch() error {
 }
 
 func (v *PublicParamsManager) PublicParams() *crypto.PublicParams {
-	v.mutex.Lock()
-	defer v.mutex.Unlock()
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return v.pp
 }
