@@ -6,10 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"sync"
+
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
-	"sync"
 )
 
 // PublicParamsManager loads fabtoken public parameters
