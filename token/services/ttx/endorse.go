@@ -437,9 +437,16 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
-		longTermIdentity, _, _, err := view2.GetEndpointService(context).Resolve(party)
-		if err != nil {
-			return errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
+		var longTermIdentity view.Identity
+		var err error
+		// if it is me, no need to resolve, get directly the default identity
+		if isMe {
+			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+		} else {
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			if err != nil {
+				return errors.Wrapf(err, "cannot resolve long term identity for [%s]", party.UniqueID())
+			}
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("searching for long term identity [%s]", longTermIdentity)
@@ -482,11 +489,24 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
+		var longTermIdentity view.Identity
+		var err error
+		// if it is me, no need to resolve, get directly the default identity
+		if isMe {
+			longTermIdentity = view2.GetIdentityProvider(context).DefaultIdentity()
+		} else {
+			longTermIdentity, _, _, err = view2.GetEndpointService(context).Resolve(party)
+			if err != nil {
+				return errors.Wrapf(err, "cannot resolve long term auitor identity for [%s]", party.UniqueID())
+			}
+		}
 		distributionListCompressed = append(distributionListCompressed, distributionListEntry{
-			IsMe:    isMe,
-			ID:      party,
-			Auditor: true,
+			IsMe:     isMe,
+			ID:       party,
+			Auditor:  true,
+			LongTerm: longTermIdentity,
 		})
+
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -496,6 +516,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// Distribute the transaction to all parties in the distribution list.
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
+	owner := NewOwner(context, c.tx.TokenService())
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
@@ -530,11 +551,17 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		var txRaw []byte
 		var err error
 		if entry.Auditor {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("This is an auditor [%s], send the full set of metadata", entry.ID.UniqueID())
+			}
 			txRaw, err = c.tx.Bytes()
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
 			}
 		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("This is not an auditor [%s], send the filtered metadata", entry.ID.UniqueID())
+			}
 			txRaw, err = c.tx.Bytes(entry.EID)
 			if err != nil {
 				return errors.Wrap(err, "failed marshalling transaction content")
@@ -549,7 +576,6 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 		// Wait to receive a content back
 		ch := session.Receive()
-
 		// Send the content
 		err = session.Send(txRaw)
 		if err != nil {
@@ -573,12 +599,29 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if msg.Status == view.ERROR {
 			return errors.New(string(msg.Payload))
 		}
-		// TODO: Check ack
+		sigma := msg.Payload
+		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
+			hash.Hashable(txRaw).String())
+
 		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
+
+		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
+		}
+		if err := verifier.Verify(txRaw, sigma); err != nil {
+			return errors.Wrapf(err, "failed verifying ack signature from [%s]", entry.ID)
+		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("collectEndorsementsView: collected signature from %s", entry.ID)
 		}
+
+		if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
+			return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
+		}
+
+		agent.EmitKey(0, "ttx", "stored", "signature", c.tx.ID())
 	}
 
 	return nil
@@ -695,6 +738,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		if tms == nil {
 			return nil, errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
 		}
+
 		if !tms.WalletManager().IsMe(signatureRequest.Signer) {
 			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
@@ -720,6 +764,11 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
 	}
 
+	rawRequest, err := s.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
+
 	// Store transient
 	if err := s.tx.storeTransient(); err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
@@ -738,11 +787,26 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Send the ack")
+		logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
 	}
-	err = session.Send([]byte("ack"))
+	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
 	}
+	sigma, err := signer.Sign(rawRequest)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to sign ack response")
+	}
+
+	// Ack for distribution
+	// Send the signature back
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	}
+	if err := session.Send(sigma); err != nil {
+		return nil, errors.WithMessage(err, "failed sending ack")
+	}
+
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
 
@@ -783,10 +847,6 @@ func (s *endorseView) receiveTransaction(context view.Context) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
-	env := tx.Payload.Envelope
-	if env == nil {
-		return errors.Errorf("expected fabric envelope")
-	}
-	s.tx.Payload.Envelope = tx.Payload.Envelope
+	s.tx = tx
 	return nil
 }

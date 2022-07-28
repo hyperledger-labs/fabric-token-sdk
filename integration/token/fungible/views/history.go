@@ -138,3 +138,29 @@ func (l *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, err
 	assert.NoError(err, "failed unmarshalling input")
 	return v, nil
 }
+
+// TransactionInfo contains the input information to search for transaction info
+type TransactionInfo struct {
+	TransactionID string
+}
+
+type TransactionInfoView struct {
+	*TransactionInfo
+}
+
+func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
+	owner := ttx.NewOwner(context, token.GetManagementService(context))
+	info, err := owner.TransactionInfo(t.TransactionID)
+	assert.NoError(err, "failed getting transaction info")
+
+	return info, nil
+}
+
+type TransactionInfoViewFactory struct{}
+
+func (p *TransactionInfoViewFactory) NewView(in []byte) (view.View, error) {
+	f := &TransactionInfoView{TransactionInfo: &TransactionInfo{}}
+	err := json.Unmarshal(in, f.TransactionInfo)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
