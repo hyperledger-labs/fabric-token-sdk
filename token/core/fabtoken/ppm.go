@@ -6,9 +6,12 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"sync"
+
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 // PublicParamsManager loads fabtoken public parameters
@@ -17,11 +20,13 @@ type PublicParamsManager struct {
 	pp *PublicParams
 	// a loader for fabric public parameters
 	publicParamsLoader PublicParamsLoader
+
+	mutex sync.RWMutex
 }
 
 // NewPublicParamsManager initializes a PublicParamsManager with the passed PublicParamsLoader
 func NewPublicParamsManager(publicParamsLoader PublicParamsLoader) *PublicParamsManager {
-	return &PublicParamsManager{publicParamsLoader: publicParamsLoader}
+	return &PublicParamsManager{publicParamsLoader: publicParamsLoader, mutex: sync.RWMutex{}}
 }
 
 // NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
@@ -29,7 +34,7 @@ func NewPublicParamsManagerFromParams(pp *PublicParams) *PublicParamsManager {
 	if pp == nil {
 		panic("public parameters must be non-nil")
 	}
-	return &PublicParamsManager{pp: pp}
+	return &PublicParamsManager{pp: pp, mutex: sync.RWMutex{}}
 }
 
 // PublicParameters returns the public parameters of PublicParamsManager
@@ -46,6 +51,9 @@ func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
 // ForceFetch sets the public parameters of the PublicParamsManager to the public parameters
 // associated with its PublicParamsLoader
 func (v *PublicParamsManager) ForceFetch() error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+
 	if v.publicParamsLoader == nil {
 		return errors.New("public parameters loader not set")
 	}
@@ -71,5 +79,7 @@ func (v *PublicParamsManager) Issuers() [][]byte {
 
 // PublicParams returns the fabtoken public parameters
 func (v *PublicParamsManager) PublicParams() *PublicParams {
+	v.mutex.RLock()
+	defer v.mutex.RUnlock()
 	return v.pp
 }
