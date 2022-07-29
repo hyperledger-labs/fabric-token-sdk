@@ -28,7 +28,6 @@ type Executor interface {
 	Done()
 	GetState(namespace string, key string) ([]byte, error)
 	GetStateRangeScanIterator(namespace string, s string, e string) (Iterator, error)
-	GetCachedStateRangeScanIterator(namespace string, s string, e string) (Iterator, error)
 	GetStateMetadata(namespace string, id string) (map[string][]byte, error)
 }
 

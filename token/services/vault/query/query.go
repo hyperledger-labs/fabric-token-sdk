@@ -85,7 +85,7 @@ func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensI
 	defer qe.Done()
 
 	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
-	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
+	iterator, err := qe.GetStateRangeScanIterator(e.namespace, startKey, endKey)
 	if err != nil {
 		return nil, err
 	}
@@ -108,7 +108,7 @@ func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) 
 	defer qe.Done()
 
 	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
-	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
+	iterator, err := qe.GetStateRangeScanIterator(e.namespace, startKey, endKey)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 	defer qe.Done()
 
 	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
-	iterator, err := qe.GetCachedStateRangeScanIterator(e.namespace, startKey, endKey)
+	iterator, err := qe.GetStateRangeScanIterator(e.namespace, startKey, endKey)
 	if err != nil {
 		return nil, err
 	}
