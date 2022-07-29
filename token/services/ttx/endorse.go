@@ -844,6 +844,8 @@ func (s *endorseView) receiveTransaction(context view.Context) (*Transaction, []
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
 
+	logger.Debugf("Comparing with existing transaction, diff [%s]", s.tx.Diff(tx))
+
 	// Set the envelope
 	s.tx.Envelope = tx.Envelope
 
