@@ -844,6 +844,9 @@ func (s *endorseView) receiveTransaction(context view.Context) (*Transaction, []
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
 
+	// Set the envelope
+	s.tx.Envelope = tx.Envelope
+
 	raw, err := tx.Bytes()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting bytes for transaction %s", tx.ID())
