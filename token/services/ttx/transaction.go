@@ -8,11 +8,6 @@ package ttx
 
 import (
 	"encoding/asn1"
-	"fmt"
-	"reflect"
-
-	"github.com/davecgh/go-spew/spew"
-	"github.com/pmezard/go-difflib/difflib"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
@@ -332,62 +327,6 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	//	}
 	// }
 	// return nil
-}
-
-func (t *Transaction) Diff(tx *Transaction) string {
-	// Compute the different between the two transactions
-	anchor := diff(t.TokenRequest.Anchor, tx.TokenRequest.Anchor)
-	actions := diff(t.TokenRequest.Actions, tx.TokenRequest.Actions)
-	meta := diff(t.TokenRequest.Metadata, tx.TokenRequest.Metadata)
-
-	return fmt.Sprintf("anchor: %s\nactions: %s\nmetadata: %s", anchor, actions, meta)
-}
-
-// From testify@v1.1.4
-func typeAndKind(v interface{}) (reflect.Type, reflect.Kind) {
-	t := reflect.TypeOf(v)
-	k := t.Kind()
-
-	if k == reflect.Ptr {
-		t = t.Elem()
-		k = t.Kind()
-	}
-	return t, k
-}
-
-// diff returns a diff of both values as long as both are of the same type and
-// are a struct, map, slice or array. Otherwise it returns an empty string.
-// From testify@v1.1.4
-func diff(expected interface{}, actual interface{}) string {
-	if expected == nil || actual == nil {
-		return ""
-	}
-
-	et, ek := typeAndKind(expected)
-	at, _ := typeAndKind(actual)
-
-	if et != at {
-		return ""
-	}
-
-	if ek != reflect.Struct && ek != reflect.Map && ek != reflect.Slice && ek != reflect.Array {
-		return ""
-	}
-
-	e := spew.Sdump(expected)
-	a := spew.Sdump(actual)
-
-	diff, _ := difflib.GetUnifiedDiffString(difflib.UnifiedDiff{
-		A:        difflib.SplitLines(e),
-		B:        difflib.SplitLines(a),
-		FromFile: "Expected",
-		FromDate: "",
-		ToFile:   "Actual",
-		ToDate:   "",
-		Context:  1,
-	})
-
-	return "\n\nDiff:\n" + diff
 }
 
 type TransactionSer struct {

@@ -759,15 +759,15 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
+	// Store transient
+	if err := s.tx.storeTransient(); err != nil {
+		return nil, errors.Wrapf(err, "failed storing transient")
+	}
+
 	// Receive transaction with envelope
 	_, rawRequest, err := s.receiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
-	}
-
-	// Store transient
-	if err := s.tx.storeTransient(); err != nil {
-		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
 	// Store envelope
@@ -793,9 +793,6 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to sign ack response")
 	}
-
-	// Ack for distribution
-	// Send the signature back
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
@@ -844,10 +841,8 @@ func (s *endorseView) receiveTransaction(context view.Context) (*Transaction, []
 		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
 	}
 
-	logger.Debugf("Comparing with existing transaction, diff [%s]", s.tx.Diff(tx))
-
 	// Set the envelope
-	s.tx.Envelope = tx.Envelope
+	s.tx = tx
 
 	raw, err := tx.Bytes()
 	if err != nil {
