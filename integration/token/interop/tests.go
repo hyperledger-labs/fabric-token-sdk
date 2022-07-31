@@ -51,25 +51,44 @@ func TestExchangeSingleFabricNetwork(network *integration.Infrastructure) {
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
 
 	checkBalance(network, "alice", "", "USD", 120)
+	checkBalance(network, "alice", "", "EUR", 0)
 	checkBalance(network, "bob", "", "EUR", 30)
+	checkBalance(network, "bob", "", "USD", 0)
 
 	// exchange (lock, reclaim)
 	exchangeLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
 	time.Sleep(15 * time.Second)
 	checkBalance(network, "alice", "", "USD", 110)
+	checkBalance(network, "alice", "", "EUR", 0)
+	checkBalance(network, "bob", "", "EUR", 30)
+	checkBalance(network, "bob", "", "USD", 0)
+
 	exchangeReclaimAll(network, "alice", "")
 	checkBalance(network, "alice", "", "USD", 120)
+	checkBalance(network, "alice", "", "EUR", 0)
+	checkBalance(network, "bob", "", "EUR", 30)
+	checkBalance(network, "bob", "", "USD", 0)
 
 	// exchange (lock, claim)
 	defaultTMSID := token.TMSID{}
 	preImage, _ := exchangeLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
+	checkBalance(network, "alice", "", "EUR", 0)
+	checkBalance(network, "bob", "", "EUR", 30)
+	checkBalance(network, "bob", "", "USD", 0)
+
 	exchangeClaim(network, defaultTMSID, "bob", "", preImage)
 	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
+	checkBalance(network, "alice", "", "EUR", 0)
+	checkBalance(network, "bob", "", "EUR", 30)
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(defaultTMSID))
 
 	// payment limit reached
 	exchangeLock(network, defaultTMSID, "alice", "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
+	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
+	checkBalance(network, "alice", "", "EUR", 0)
+	checkBalance(network, "bob", "", "EUR", 30)
+	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(defaultTMSID))
 }
 
 func TestExchangeTwoFabricNetworks(network *integration.Infrastructure) {
