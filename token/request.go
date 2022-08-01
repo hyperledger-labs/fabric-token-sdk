@@ -189,6 +189,9 @@ func (r *Request) ID() string {
 // The action issues to the receiver a token of the passed type and quantity.
 // Additional options can be passed to customize the action.
 func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
+	if wallet == nil {
+		return nil, errors.Errorf("wallet is nil")
+	}
 	if typ == "" {
 		return nil, errors.Errorf("type is empty")
 	}
