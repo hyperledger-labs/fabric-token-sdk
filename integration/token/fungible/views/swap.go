@@ -118,6 +118,18 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
+	// Check that the tokens are in the vault
+	qe := vault.TokenVault().QueryEngine()
+	assert.NoError(err, "failed getting outputs")
+	for _, output := range outputs.ByRecipient(me).Outputs() {
+		tokenID := &token2.ID{TxId: tx.ID(), Index: output.Index}
+		_, toks, err := qe.GetTokens(tokenID)
+		assert.NoError(err, "failed to retrieve token [%s]", tokenID)
+		assert.Equal(1, len(toks), "expected one token")
+		assert.Equal(output.Quantity.Hex(), toks[0].Quantity, "token quantity mismatch")
+		assert.Equal(output.Type, toks[0].Type, "token type mismatch")
+	}
+
 	return tx.ID(), nil
 }
 
@@ -136,7 +148,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	// As a first step, To responds to the request to exchange token recipient identities.
 	// To takes his token recipient identity from the default wallet (ttx.MyWallet(context)),
 	// if not otherwise specified.
-	_, _, err := ttx.RespondExchangeRecipientIdentities(context)
+	me, _, err := ttx.RespondExchangeRecipientIdentities(context)
 	assert.NoError(err, "failed getting identity")
 
 	// To respond to a call from the CollectActionsView, the first thing to do is to receive
@@ -183,6 +195,19 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	vc, err = vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+
+	// Check that the tokens are in the vault
+	qe := vault.TokenVault().QueryEngine()
+	outputs, err := tx.Outputs()
+	assert.NoError(err, "failed getting outputs")
+	for _, output := range outputs.ByRecipient(me).Outputs() {
+		tokenID := &token2.ID{TxId: tx.ID(), Index: output.Index}
+		_, toks, err := qe.GetTokens(tokenID)
+		assert.NoError(err, "failed to retrieve token [%s]", tokenID)
+		assert.Equal(1, len(toks), "expected one token")
+		assert.Equal(output.Quantity.Hex(), toks[0].Quantity, "token quantity mismatch")
+		assert.Equal(output.Type, toks[0].Type, "token type mismatch")
+	}
 
 	return tx.ID(), nil
 }
