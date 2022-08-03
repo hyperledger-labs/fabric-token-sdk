@@ -9,10 +9,9 @@ package ttx
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type orderingView struct {
@@ -34,8 +33,16 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	agent.EmitKey(0, "ttx", "start", "orderingView", o.tx.ID())
 	defer agent.EmitKey(0, "ttx", "end", "orderingView", o.tx.ID())
 
+	if o.tx.Payload.Envelope == nil {
+		return nil, errors.Errorf("envelope is nil for token transaction [%s]", o.tx.ID())
+	}
+
+	if len(o.tx.Payload.Envelope.TxID()) == 0 {
+		return nil, errors.Errorf("txID is empty for token transaction [%s]", o.tx.ID())
+	}
+
 	if err := network.GetInstance(context, o.tx.Network(), "").Broadcast(o.tx.Payload.Envelope); err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 	return nil, nil
 }
@@ -70,12 +77,21 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
 	}
+
+	if o.tx.Payload.Envelope == nil {
+		return nil, errors.Errorf("envelope is nil for token transaction [%s]", o.tx.ID())
+	}
+
+	if len(o.tx.Payload.Envelope.TxID()) == 0 {
+		return nil, errors.Errorf("txID is empty for token transaction [%s]", o.tx.ID())
+	}
+
 	env := o.tx.Payload.Envelope
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		rawEnv, err := env.Bytes()
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessagef(err, "failed to marshal envelope for token transaction [%s]", o.tx.ID())
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
@@ -83,7 +99,7 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 	}
 
 	if err := nw.Broadcast(env); err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 
 	return nil, nw.IsFinal(o.tx.ID())
