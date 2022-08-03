@@ -711,13 +711,11 @@ func (r *Request) FromBytes(request []byte) error {
 // AddAuditorSignature adds an auditor signature to the request.
 func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
-	return
 }
 
 // AppendSignature appends a signature to the request.
 func (r *Request) AppendSignature(sigma []byte) {
 	r.Actions.Signatures = append(r.Actions.Signatures, sigma)
-	return
 }
 
 // SetTokenService sets the token service.

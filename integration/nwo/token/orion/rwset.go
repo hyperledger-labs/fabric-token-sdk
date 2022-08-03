@@ -49,7 +49,6 @@ func (r *RWSWrapper) Bytes() ([]byte, error) {
 }
 
 func (r *RWSWrapper) Done() {
-	return
 }
 
 func (r *RWSWrapper) Equals(right interface{}, namespace string) error {
