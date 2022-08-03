@@ -29,9 +29,7 @@ func (c *Validator) UnmarshallAndVerify(ledger Ledger, binding string, raw []byt
 		return nil, err
 	}
 
-	var res []interface{}
-	for _, action := range actions {
-		res = append(res, action)
-	}
+	res := make([]interface{}, len(actions))
+	copy(res, actions)
 	return res, nil
 }
