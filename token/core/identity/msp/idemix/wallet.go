@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"fmt"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"go.uber.org/zap/zapcore"
@@ -144,7 +142,7 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 		}
 		return nil, label
 	default:
-		panic(fmt.Sprintf("[AnonymousIdentity] identifier not recognised, expected []byte or view.Identity"))
+		panic("[AnonymousIdentity] identifier not recognised, expected []byte or view.Identity")
 	}
 }
 

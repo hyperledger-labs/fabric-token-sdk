@@ -101,7 +101,7 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 	)
 	Expect(err).ToNot(HaveOccurred())
 
-	cc.Chaincode.Ctor = fmt.Sprintf(`{"Args":["init"]}`)
+	cc.Chaincode.Ctor = `{"Args":["init"]}`
 	cc.Chaincode.PackageFile = packageFile
 
 	return cc, port
