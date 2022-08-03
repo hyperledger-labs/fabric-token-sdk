@@ -52,6 +52,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 		}
 	}
 
+	//lint:ignore SA9003 To-Do pending
 	if len(tms.Issuers) != 0 {
 		// TODO:
 	}
@@ -125,6 +126,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		}
 	}
 
+	//lint:ignore SA9003 To-Do pending
 	if len(tms.Issuers) != 0 {
 		// TODO
 	}
