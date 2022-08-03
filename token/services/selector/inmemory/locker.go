@@ -206,7 +206,7 @@ func (d *locker) scan() {
 			switch status {
 			case Valid:
 				// remove only if elapsed enough time from last access, to avoid concurrency issue
-				if time.Now().Sub(entry.LastAccess) > d.validTxEvictionTimeout {
+				if time.Since(entry.LastAccess) > d.validTxEvictionTimeout {
 					removeList = append(removeList, id)
 					if logger.IsEnabledFor(zapcore.DebugLevel) {
 						logger.Debugf("token [%s] locked by [%s] in status [%s], time elapsed, remove", id, entry, status)

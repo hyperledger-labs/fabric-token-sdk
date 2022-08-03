@@ -189,8 +189,7 @@ func (q *UInt64Quantity) Add(b Quantity) Quantity {
 	}
 
 	// Check overflow
-	var sum uint64
-	sum = q.Value + bq.Value
+	var sum = q.Value + bq.Value
 
 	if sum < q.Value {
 		panic(fmt.Sprintf("%d < %d", q.Value, bq.Value))
