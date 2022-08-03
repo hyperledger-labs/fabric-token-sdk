@@ -30,7 +30,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gexec"
+	"github.com/onsi/gomega/gexec"
 )
 
 var logger = flogging.MustGetLogger("integration.token.fabric")
@@ -50,7 +50,7 @@ type fabricPlatform interface {
 }
 
 type tokenPlatform interface {
-	TokenGen(keygen common.Command) (*Session, error)
+	TokenGen(keygen common.Command) (*gexec.Session, error)
 	PublicParametersFile(tms *topology2.TMS) string
 	GetContext() api2.Context
 	PublicParameters(tms *topology2.TMS) []byte
