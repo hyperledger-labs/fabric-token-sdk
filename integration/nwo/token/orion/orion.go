@@ -207,9 +207,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 
 		ids := cmGenerator.GenerateIssuerIdentities(tms, node, issuers...)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Issuers = append(wallet.Issuers, id)
-			}
+			wallet.Issuers = append(wallet.Issuers, ids...)
 			wallet.Issuers[index].Default = true
 		}
 	}
@@ -233,9 +231,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 		}
 		ids := cmGenerator.GenerateOwnerIdentities(tms, node, owners...)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Owners = append(wallet.Owners, id)
-			}
+			wallet.Owners = append(wallet.Owners, ids...)
 			wallet.Owners[index].Default = true
 		}
 	}
@@ -244,9 +240,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if opts.Auditor() {
 		ids := cmGenerator.GenerateAuditorIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Auditors = append(wallet.Auditors, id)
-			}
+			wallet.Auditors = append(wallet.Auditors, ids...)
 			wallet.Auditors[len(wallet.Auditors)-1].Default = true
 		}
 	}
@@ -255,9 +249,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if opts.Certifier() {
 		ids := cmGenerator.GenerateCertifierIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Certifiers = append(wallet.Certifiers, id)
-			}
+			wallet.Certifiers = append(wallet.Certifiers, ids...)
 			wallet.Certifiers[len(wallet.Certifiers)-1].Default = true
 		}
 	}

@@ -815,18 +815,10 @@ func (r *Request) Import(request *Request) error {
 		r.Metadata = &driver.TokenRequestMetadata{}
 	}
 
-	for _, issue := range request.Actions.Issues {
-		r.Actions.Issues = append(r.Actions.Issues, issue)
-	}
-	for _, transfer := range request.Actions.Transfers {
-		r.Actions.Transfers = append(r.Actions.Transfers, transfer)
-	}
-	for _, issue := range request.Metadata.Issues {
-		r.Metadata.Issues = append(r.Metadata.Issues, issue)
-	}
-	for _, transfer := range request.Metadata.Transfers {
-		r.Metadata.Transfers = append(r.Metadata.Transfers, transfer)
-	}
+	r.Actions.Issues = append(r.Actions.Issues, request.Actions.Issues...)
+	r.Actions.Transfers = append(r.Actions.Transfers, request.Actions.Transfers...)
+	r.Metadata.Issues = append(r.Metadata.Issues, request.Metadata.Issues...)
+	r.Metadata.Transfers = append(r.Metadata.Transfers, request.Metadata.Transfers...)
 	return nil
 }
 
