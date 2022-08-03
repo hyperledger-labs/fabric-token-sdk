@@ -101,7 +101,6 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 		potentialSumWithNonCertified = token2.NewZeroQuantity(s.precision)
 		toBeSpent = nil
 		var toBeCertified []*token2.ID
-		var locked []*token2.ID
 
 		reclaim := s.numRetry == 1 || i > 0
 		numNext := 0
@@ -124,7 +123,6 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 
 			// lock the token
 			if _, err := s.locker.Lock(t.Id, s.txID, reclaim); err != nil {
-				locked = append(locked, t.Id)
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -238,7 +236,6 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 		potentialSumWithNonCertified = token2.NewZeroQuantity(s.precision)
 		toBeSpent = nil
 		var toBeCertified []*token2.ID
-		var locked []*token2.ID
 
 		reclaim := s.numRetry == 1 || i > 0
 		for {
@@ -276,7 +273,6 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 
 			// lock the token
 			if _, err := s.locker.Lock(t.Id, s.txID, reclaim); err != nil {
-				locked = append(locked, t.Id)
 				potentialSumWithLocked = potentialSumWithLocked.Add(q)
 
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
