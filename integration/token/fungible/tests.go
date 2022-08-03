@@ -364,6 +364,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	tx2 := PrepareTransferCash(network, "alice", "", "PINE", 55, "bob", auditor, tokenIDPine)
 	BroadcastPreparedTransferCash(network, "alice", tx1, false)
 	BroadcastPreparedTransferCash(network, "alice", tx2, true, "is not valid")
+	CheckBalance(network, "alice", "", "PINE", 0)
+	CheckBalance(network, "bob", "", "PINE", 55)
 
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
 	CheckBalance(network, "issuer", "", "USD", 110)
