@@ -13,7 +13,6 @@ import (
 	idemix "github.com/IBM/idemix/bccsp"
 	"github.com/IBM/idemix/bccsp/keystore"
 	bccsp "github.com/IBM/idemix/bccsp/schemes"
-	csp "github.com/IBM/idemix/bccsp/schemes"
 	idemix2 "github.com/IBM/idemix/bccsp/schemes/dlog/crypto"
 	"github.com/IBM/idemix/bccsp/schemes/dlog/crypto/translator/amcl"
 	math "github.com/IBM/mathlib"
@@ -57,11 +56,11 @@ func newDeserializer(ipk []byte, verType bccsp.VerificationType, nymEID []byte, 
 	}
 
 	// Import Issuer Public Key
-	var issuerPublicKey csp.Key
+	var issuerPublicKey bccsp.Key
 	if len(ipk) != 0 {
 		issuerPublicKey, err = cryptoProvider.KeyImport(
 			ipk,
-			&csp.IdemixIssuerPublicKeyImportOpts{
+			&bccsp.IdemixIssuerPublicKeyImportOpts{
 				Temporary: true,
 				AttributeNames: []string{
 					msp.AttributeNameOU,
@@ -156,7 +155,7 @@ func (v *Verifier) Verify(message, sigma []byte) error {
 		v.NymPK,
 		sigma,
 		message,
-		&csp.IdemixNymSignerOpts{
+		&bccsp.IdemixNymSignerOpts{
 			IssuerPK: v.IPK,
 		},
 	)

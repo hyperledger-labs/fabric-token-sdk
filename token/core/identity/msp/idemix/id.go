@@ -12,7 +12,6 @@ import (
 	"time"
 
 	bccsp "github.com/IBM/idemix/bccsp/schemes"
-	csp "github.com/IBM/idemix/bccsp/schemes"
 	"github.com/golang/protobuf/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	m "github.com/hyperledger/fabric-protos-go/msp"
@@ -100,7 +99,7 @@ func (id *Identity) Verify(msg []byte, sig []byte) error {
 		id.NymPublicKey,
 		sig,
 		msg,
-		&csp.IdemixNymSignerOpts{
+		&bccsp.IdemixNymSignerOpts{
 			IssuerPK: id.Common.IssuerPublicKey,
 		},
 	)
@@ -152,9 +151,9 @@ func (id *Identity) Serialize() ([]byte, error) {
 
 func (id *Identity) verifyProof() error {
 	// Verify signature
-	var metadata *csp.IdemixSignerMetadata
+	var metadata *bccsp.IdemixSignerMetadata
 	if len(id.Common.NymEID) != 0 {
-		metadata = &csp.IdemixSignerMetadata{
+		metadata = &bccsp.IdemixSignerMetadata{
 			NymEID: id.Common.NymEID,
 		}
 	}
@@ -163,13 +162,13 @@ func (id *Identity) verifyProof() error {
 		id.Common.IssuerPublicKey,
 		id.AssociationProof,
 		nil,
-		&csp.IdemixSignerOpts{
+		&bccsp.IdemixSignerOpts{
 			RevocationPublicKey: id.Common.RevocationPK,
-			Attributes: []csp.IdemixAttribute{
-				{Type: csp.IdemixBytesAttribute, Value: []byte(id.OU.OrganizationalUnitIdentifier)},
-				{Type: csp.IdemixIntAttribute, Value: getIdemixRoleFromMSPRole(id.Role)},
-				{Type: csp.IdemixHiddenAttribute},
-				{Type: csp.IdemixHiddenAttribute},
+			Attributes: []bccsp.IdemixAttribute{
+				{Type: bccsp.IdemixBytesAttribute, Value: []byte(id.OU.OrganizationalUnitIdentifier)},
+				{Type: bccsp.IdemixIntAttribute, Value: getIdemixRoleFromMSPRole(id.Role)},
+				{Type: bccsp.IdemixHiddenAttribute},
+				{Type: bccsp.IdemixHiddenAttribute},
 			},
 			RhIndex:          RHIndex,
 			EidIndex:         EIDIndex,
@@ -199,7 +198,7 @@ func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	sig, err := id.Common.CSP.Sign(
 		id.UserKey,
 		msg,
-		&csp.IdemixNymSignerOpts{
+		&bccsp.IdemixNymSignerOpts{
 			Nym:      id.NymKey,
 			IssuerPK: id.Common.IssuerPublicKey,
 		},
