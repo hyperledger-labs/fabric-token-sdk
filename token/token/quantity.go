@@ -113,7 +113,7 @@ func NewQuantityFromUInt64(q uint64) Quantity {
 
 func NewQuantityFromBig64(q *big.Int) Quantity {
 	if q.BitLen() > 64 {
-		panic(fmt.Sprintf("invalid precision, expected at most 64 bits"))
+		panic("invalid precision, expected at most 64 bits")
 	}
 	return &UInt64Quantity{Value: q.Uint64()}
 }
