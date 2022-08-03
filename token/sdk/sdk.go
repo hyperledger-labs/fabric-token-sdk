@@ -24,8 +24,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -92,11 +91,11 @@ func (p *SDK) Install() error {
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)
 
-	enabled, err := orion2.IsCustodian(view2.GetConfigService(p.registry))
+	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))
 	assert.NoError(err, "failed to get custodian status")
 	logger.Infof("Orion Custodian enabled: %t", enabled)
 	if enabled {
-		assert.NoError(orion2.InstallViews(p.registry), "failed to install custodian views")
+		assert.NoError(orion.InstallViews(p.registry), "failed to install custodian views")
 	}
 
 	return nil
