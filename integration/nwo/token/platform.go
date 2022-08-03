@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	. "github.com/onsi/gomega/gexec"
+	"github.com/onsi/gomega/gexec"
 	"github.com/tedsuo/ifrit/grouper"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -143,7 +143,7 @@ func (p *Platform) GetBuilder() api2.Builder {
 	return p.Builder
 }
 
-func (p *Platform) TokenGen(command common.Command) (*Session, error) {
+func (p *Platform) TokenGen(command common.Command) (*gexec.Session, error) {
 	cmd := common.NewCommand(p.Builder.Build(p.TokenGenPath), command)
 	return p.StartSession(cmd, command.SessionName())
 }
@@ -201,7 +201,7 @@ func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	p.Context.AddExtension(node.Name, TopologyName, ext.String())
 }
 
-func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
+func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {
 	ansiColorCode := p.nextColor()
 	fmt.Fprintf(
 		ginkgo.GinkgoWriter,
@@ -211,13 +211,13 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*Session, error) {
 		filepath.Base(cmd.Args[0]),
 		strings.Join(cmd.Args[1:], " "),
 	)
-	return Start(
+	return gexec.Start(
 		cmd,
-		NewPrefixedWriter(
+		gexec.NewPrefixedWriter(
 			fmt.Sprintf("\x1b[32m[o]\x1b[%s[%s]\x1b[0m ", ansiColorCode, name),
 			ginkgo.GinkgoWriter,
 		),
-		NewPrefixedWriter(
+		gexec.NewPrefixedWriter(
 			fmt.Sprintf("\x1b[91m[e]\x1b[%s[%s]\x1b[0m ", ansiColorCode, name),
 			ginkgo.GinkgoWriter,
 		),
