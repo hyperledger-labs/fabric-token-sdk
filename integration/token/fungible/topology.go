@@ -101,6 +101,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	alice.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 	alice.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
+	alice.RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{})
+	alice.RegisterViewFactory("broadcastPreparedTransfer", &views.BroadcastPreparedTransferViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -112,6 +114,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	bob.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})

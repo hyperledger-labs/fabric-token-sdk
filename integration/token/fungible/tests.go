@@ -354,6 +354,17 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalance(network, "issuer", "", "EUR", 150)
 	CheckBalance(network, "issuer", "issuer.owner", "EUR", 10)
 
+	// Check double spending
+	txIDPine := IssueCash(network, "", "PINE", 55, "alice", auditor, true)
+	tokenIDPine := &token2.ID{
+		TxId:  txIDPine,
+		Index: 0,
+	}
+	tx1 := PrepareTransferCash(network, "alice", "", "PINE", 55, "bob", auditor, tokenIDPine)
+	tx2 := PrepareTransferCash(network, "alice", "", "PINE", 55, "bob", auditor, tokenIDPine)
+	BroadcastPreparedTransferCash(network, "alice", tx1, false)
+	BroadcastPreparedTransferCash(network, "alice", tx2, true, "is not valid")
+
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
 	CheckBalance(network, "issuer", "", "USD", 110)
 	CheckBalance(network, "issuer", "", "EUR", 150)
@@ -723,6 +734,44 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
 	} else {
 		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token2.ID, errorMsgs ...string) []byte {
+	txBoxed, err := network.Client(id).CallView("prepareTransfer", common.JSONMarshall(&views.Transfer{
+		Auditor:   auditor,
+		Wallet:    wallet,
+		TokenIDs:  []*token2.ID{tokenID},
+		Type:      typ,
+		Amount:    amount,
+		Recipient: network.Identity(receiver),
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return txBoxed.([]byte)
+}
+
+func BroadcastPreparedTransferCash(network *integration.Infrastructure, id string, tx []byte, finality bool, errorMsgs ...string) {
+	_, err := network.Client(id).CallView("broadcastPreparedTransfer", common.JSONMarshall(&views.BroadcastPreparedTransfer{
+		Tx:       tx,
+		Finality: finality,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		fmt.Println("Failed to broadcast ", err)
 		for _, msg := range errorMsgs {
 			Expect(err.Error()).To(ContainSubstring(msg))
 		}
