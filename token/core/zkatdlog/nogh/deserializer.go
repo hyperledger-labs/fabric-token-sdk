@@ -8,6 +8,7 @@ package nogh
 
 import (
 	"bytes"
+	"encoding/json"
 	"sync"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -15,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -60,7 +62,7 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.ownerDeserializer.DeserializeVerifier(id)
+	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
@@ -120,6 +122,25 @@ func NewEnrollmentIDDeserializer() *enrollmentService {
 
 // GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
 func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+	if len(auditInfo) == 0 {
+		return "", nil
+	}
+
+	// Try to unmarshal it as ScriptInfo
+	si := &interop.ScriptInfo{}
+	err := json.Unmarshal(auditInfo, si)
+	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
+		if len(si.Recipient) != 0 {
+			ai := &idemix2.AuditInfo{}
+			if err := ai.FromBytes(si.Recipient); err != nil {
+				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+			}
+			return ai.EnrollmentID(), nil
+		}
+
+		return "", nil
+	}
+
 	ai := &idemix2.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)

@@ -48,7 +48,7 @@ func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {
 }
 
 func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
-	return string(auditInfo), nil
+	return s.IP.GetEnrollmentID(auditInfo)
 }
 
 func (s *Service) Wallet(identity view.Identity) driver.Wallet {

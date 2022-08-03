@@ -8,31 +8,99 @@ package validator
 
 import (
 	"bytes"
+	"encoding/json"
+	"time"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/pkg/errors"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
 
-type Validator struct {
-	pp           *crypto.PublicParams
-	deserializer driver.Deserializer
+var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeExchangeExtraValidator}
+
+type ValidateTransfer func(tokens []*token.Token, tr *transfer.TransferAction) error
+
+func SerializedIdentityTypeExtraValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
+	// noting else to validate
+	return nil
 }
 
-func New(pp *crypto.PublicParams, deserializer driver.Deserializer) *Validator {
+func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
+	for _, in := range tokens {
+		owner, err := identity.UnmarshallRawOwner(in.Owner)
+		if err != nil {
+			return errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
+				return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
+			}
+
+			out := tr.GetOutputs()[0].(*token.Token)
+			if tokens[0].Data.Equals(out.Data) {
+				return errors.Errorf("invalid transfer action: content of input does not match content of output")
+			}
+
+			// check that owner field in output is correct
+			if err := interop.VerifyTransferFromExchangeScript(tokens[0].Owner, out.Owner); err != nil {
+				return errors.Wrap(err, "failed to verify transfer from exchange script")
+			}
+		}
+	}
+
+	for _, o := range tr.GetOutputs() {
+		out, ok := o.(*token.Token)
+		if !ok {
+			return errors.Errorf("invalid output")
+		}
+		if out.IsRedeem() {
+			continue
+		}
+		owner, err := identity.UnmarshallRawOwner(out.Owner)
+		if err != nil {
+			return err
+		}
+		if owner.Type == exchange.ScriptTypeExchange {
+			script := &exchange.Script{}
+			err = json.Unmarshal(owner.Identity, script)
+			if err != nil {
+				return err
+			}
+			if script.Deadline.Before(time.Now()) {
+				return errors.Errorf("exchange script invalid: expiration date has already passed")
+			}
+			continue
+		}
+	}
+	return nil
+}
+
+type Validator struct {
+	pp              *crypto.PublicParams
+	deserializer    driver.Deserializer
+	extraValidators []ValidateTransfer
+}
+
+func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransfer) *Validator {
+	for _, f := range extraValidators {
+		defaultValidators = append(defaultValidators, f)
+	}
 	return &Validator{
-		pp:           pp,
-		deserializer: deserializer,
+		pp:              pp,
+		deserializer:    deserializer,
+		extraValidators: defaultValidators,
 	}
 }
 
@@ -74,6 +142,14 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
+type Signature struct {
+	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
+}
+
+func (s *Signature) Metadata() map[string][]byte {
+	return s.metadata
+}
+
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
@@ -101,6 +177,21 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	}
 	for _, action := range ta {
 		actions = append(actions, action)
+	}
+
+	for _, sig := range signatureProvider.Signatures() {
+		claim := &exchange.ClaimSignature{}
+		if err = json.Unmarshal(sig, claim); err != nil {
+			continue
+		}
+		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
+			return nil, errors.New("expected a valid claim preImage and recipient signature")
+		}
+		actions = append(actions, &Signature{
+			metadata: map[string][]byte{
+				"claimPreimage": claim.Preimage,
+			},
+		})
 	}
 
 	return actions, nil
@@ -231,20 +322,30 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 
 func (v *Validator) verifyTransfer(inputTokens [][]byte, tr driver.TransferAction) error {
 	action := tr.(*transfer.TransferAction)
-
+	tokens := make([]*token.Token, len(inputTokens))
 	in := make([]*math.G1, len(inputTokens))
 	for i, raw := range inputTokens {
-		tok := &token.Token{}
-		if err := tok.Deserialize(raw); err != nil {
+		tokens[i] = &token.Token{}
+		if err := tokens[i].Deserialize(raw); err != nil {
 			return errors.Wrapf(err, "invalid transfer: failed to deserialize input [%d]", i)
 		}
-		in[i] = tok.GetCommitment()
+		in[i] = tokens[i].GetCommitment()
 	}
 
-	return transfer.NewVerifier(
+	if err := transfer.NewVerifier(
 		in,
 		action.GetOutputCommitments(),
-		v.pp).Verify(action.GetProof())
+		v.pp).Verify(action.GetProof()); err != nil {
+		return err
+	}
+
+	for _, v := range v.extraValidators {
+		if err := v(tokens, action); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 type backend struct {

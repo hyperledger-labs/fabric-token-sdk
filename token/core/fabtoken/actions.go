@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package fabtoken
 
 import (
@@ -10,9 +11,19 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
+
+// Signature contains metadata
+type Signature struct {
+	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
+}
+
+// Metadata returns the contained metadata
+func (s *Signature) Metadata() map[string][]byte {
+	return s.metadata
+}
 
 // TokenInformation contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
@@ -32,7 +43,7 @@ func (inf *TokenInformation) Serialize() ([]byte, error) {
 
 // TransferOutput carries the output of a TransferAction
 type TransferOutput struct {
-	Output *token2.Token
+	Output *token.Token
 }
 
 // Serialize marshals a TransferOutput

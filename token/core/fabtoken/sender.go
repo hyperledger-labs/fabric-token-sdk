@@ -8,6 +8,8 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -54,12 +56,28 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		if output.Output == nil || output.Output.Owner == nil {
 			return nil, nil, errors.Errorf("failed to transfer: invalid output at index %d", i)
 		}
-		receivers = append(receivers, output.Output.Owner.Raw)
+		if len(output.Output.Owner.Raw) == 0 { // redeem
+			receivers = append(receivers, output.Output.Owner.Raw)
+			continue
+		}
+		owner, err := identity.UnmarshallRawOwner(output.Output.Owner.Raw)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed to unmarshal owner of input token")
+		}
+		if owner.Type == identity.SerializedIdentityType {
+			receivers = append(receivers, output.Output.Owner.Raw)
+			continue
+		}
+		_, recipient, err := interop.GetScriptSenderAndRecipient(owner)
+		if err != nil {
+			return nil, nil, errors.Wrap(err, "failed getting script sender and recipient")
+		}
+		receivers = append(receivers, recipient)
 	}
 
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
-		auditInfo, err := s.IP.GetAuditInfo(t.Owner.Raw)
+		auditInfo, err := interop.GetOwnerAuditInfo(t.Owner.Raw, s.SP)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner.Raw).String())
 		}
@@ -68,7 +86,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 	var receiverAuditInfos [][]byte
 	for _, output := range outs {
-		auditInfo, err := s.IP.GetAuditInfo(output.Output.Owner.Raw)
+		auditInfo, err := interop.GetOwnerAuditInfo(output.Output.Owner.Raw, s.SP)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Output.Owner.Raw).String())
 		}

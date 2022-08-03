@@ -85,6 +85,14 @@ integration-tests-dvp-fabtoken:
 integration-tests-dvp-dlog:
 	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
 
+.PHONY: integration-tests-interop-fabtoken
+integration-tests-interop-fabtoken:
+	cd ./integration/token/interop/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+
+.PHONY: integration-tests-interop-dlog
+integration-tests-interop-dlog:
+	cd ./integration/token/interop/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+
 .PHONY: tidy
 tidy:
 	@go mod tidy -compat=1.17
@@ -103,6 +111,8 @@ clean:
 	rm -rf ./integration/token/nft/ofabtoken/cmd/
 	rm -rf ./integration/token/dvp/dlog/cmd/
 	rm -rf ./integration/token/dvp/fabtoken/cmd/
+	rm -rf ./integration/token/interop/fabtoken/cmd/
+	rm -rf ./integration/token/interop/dlog/cmd/
 	rm -rf ./samples/fungible/cmd
 	rm -rf ./samples/nft/cmd
 

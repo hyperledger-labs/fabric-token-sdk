@@ -399,6 +399,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 
 			// is the j-th meta present? It might have been filtered out
 			if issueMeta.IsOutputAbsent(j) {
+				logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
 				if failOnMissing {
 					return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
 				}
@@ -459,6 +460,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 
 			// is the j-th meta present? It might have been filtered out
 			if transferMeta.IsOutputAbsent(j) {
+				logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
 				if failOnMissing {
 					return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
 				}
