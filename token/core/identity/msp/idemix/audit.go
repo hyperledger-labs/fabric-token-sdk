@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 
 	csp "github.com/IBM/idemix/bccsp/schemes"
-	"github.com/golang/protobuf/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
