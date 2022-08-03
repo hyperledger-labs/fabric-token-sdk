@@ -160,7 +160,7 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 			continue
 		}
 		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
-			continue
+			return nil, errors.New("expected a valid claim preImage and recipient signature")
 		}
 		actions = append(actions, &Signature{
 			metadata: map[string][]byte{

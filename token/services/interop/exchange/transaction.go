@@ -227,49 +227,50 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 	script := &Script{}
-	switch owner.Type {
-	case ScriptTypeExchange:
-		err := json.Unmarshal(owner.Identity, script)
-		if err != nil {
-			return errors.Errorf("failed to unmarshal RawOwner as an exchange script")
-		}
+	if owner.Type != ScriptTypeExchange {
+		return errors.New("invalid owner type, expected exchange script")
+	}
+	if err := json.Unmarshal(owner.Identity, script); err != nil {
+		return errors.New("failed to unmarshal RawOwner as an exchange script")
+	}
 
-		// TODO: does the pre-image match?
+	if preImage == nil {
+		return errors.New("preImage is nil")
+	}
 
-		// Register the signer for the claim
-		logger.Debugf("registering signer for claim...")
-		sigService := t.TokenService().SigService()
-		recipientSigner, err := sigService.GetSigner(script.Recipient)
-		if err != nil {
-			return err
-		}
-		recipientVerifier, err := sigService.OwnerVerifier(script.Recipient)
-		if err != nil {
-			return err
-		}
-		if err := sigService.RegisterSigner(
-			tok.Owner.Raw,
-			&ClaimSigner{
-				Recipient: recipientSigner,
-				Preimage:  preImage,
+	// TODO: does the pre-image match?
+
+	// Register the signer for the claim
+	logger.Debugf("registering signer for claim...")
+	sigService := t.TokenService().SigService()
+	recipientSigner, err := sigService.GetSigner(script.Recipient)
+	if err != nil {
+		return err
+	}
+	recipientVerifier, err := sigService.OwnerVerifier(script.Recipient)
+	if err != nil {
+		return err
+	}
+	if err := sigService.RegisterSigner(
+		tok.Owner.Raw,
+		&ClaimSigner{
+			Recipient: recipientSigner,
+			Preimage:  preImage,
+		},
+		&ClaimVerifier{
+			Recipient: recipientVerifier,
+			HashInfo: HashInfo{
+				Hash:         script.HashInfo.Hash,
+				HashFunc:     script.HashInfo.HashFunc,
+				HashEncoding: script.HashInfo.HashEncoding,
 			},
-			&ClaimVerifier{
-				Recipient: recipientVerifier,
-				HashInfo: HashInfo{
-					Hash:         script.HashInfo.Hash,
-					HashFunc:     script.HashInfo.HashFunc,
-					HashEncoding: script.HashInfo.HashEncoding,
-				},
-			},
-		); err != nil {
-			return err
-		}
+		},
+	); err != nil {
+		return err
+	}
 
-		if err := view2.GetEndpointService(t.SP).Bind(script.Recipient, tok.Owner.Raw); err != nil {
-			return err
-		}
-	default:
-		return errors.Errorf("invalid owner type, expecgted exchange script")
+	if err := view2.GetEndpointService(t.SP).Bind(script.Recipient, tok.Owner.Raw); err != nil {
+		return err
 	}
 
 	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Recipient}, token.WithTokenIDs(tok.Id))
