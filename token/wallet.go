@@ -178,7 +178,7 @@ func (w *Wallet) Contains(identity view.Identity) bool {
 
 // ContainsToken returns true if the wallet contains an identity that owns the passed token.
 func (w *Wallet) ContainsToken(token *token2.UnspentToken) bool {
-	return w.ContainsToken(token)
+	return w.w.ContainsToken(token)
 }
 
 // AuditorWallet models the wallet of an auditor
