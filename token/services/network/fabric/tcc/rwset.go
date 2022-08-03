@@ -30,7 +30,6 @@ func (rwset *rwsWrapper) Bytes() ([]byte, error) {
 }
 
 func (rwset *rwsWrapper) Done() {
-	return
 }
 
 func (rwset *rwsWrapper) Equals(r interface{}, namespace string) error {

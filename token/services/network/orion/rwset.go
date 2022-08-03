@@ -85,7 +85,6 @@ func (r *TxRWSWrapper) Bytes() ([]byte, error) {
 }
 
 func (r *TxRWSWrapper) Done() {
-	return
 }
 
 func (r *TxRWSWrapper) Equals(right interface{}, namespace string) error {
