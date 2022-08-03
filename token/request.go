@@ -1007,7 +1007,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		outputTokens = append(outputTokens, &token.Token{
 			Owner:    &token.Owner{Raw: owners[i]},
 			Type:     typ,
-			Quantity: token.NewQuantityFromUInt64(value).Decimal(),
+			Quantity: token.NewQuantityFromUInt64(value).Hex(),
 		})
 	}
 	qOutputSum := token.NewQuantityFromUInt64(outputSum)
@@ -1041,7 +1041,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		outputTokens = append(outputTokens, &token.Token{
 			Owner:    &token.Owner{Raw: pseudonym},
 			Type:     typ,
-			Quantity: diff.Decimal(),
+			Quantity: diff.Hex(),
 		})
 	}
 
