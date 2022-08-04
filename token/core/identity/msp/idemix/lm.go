@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	math3 "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -69,14 +68,6 @@ func NewLocalMembership(
 
 func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	logger.Debugf("Load Idemix Wallets: [%+q]", identities)
-
-	type Provider interface {
-		EnrollmentID() string
-		Identity(opts *fabric.IdentityOption) (view.Identity, []byte, error)
-		DeserializeVerifier(raw []byte) (driver.Verifier, error)
-		DeserializeSigner(raw []byte) (driver.Signer, error)
-		Info(raw []byte, auditInfo []byte) (string, error)
-	}
 
 	for _, identityConfig := range identities {
 		logger.Debugf("loadWallet: %+v", identityConfig)

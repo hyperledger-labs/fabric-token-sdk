@@ -21,7 +21,6 @@ import (
 
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -38,8 +37,6 @@ import (
 const (
 	DefaultTokenGenPath = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
-
-var logger = flogging.MustGetLogger("integration.token")
 
 type NetworkHandler interface {
 	GenerateArtifacts(tms *topology2.TMS)

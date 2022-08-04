@@ -16,7 +16,6 @@ import (
 )
 
 type Vault struct {
-	sp                   view.ServiceProvider
 	queryEngine          *query.Engine
 	certificationStorage *certification.Storage
 }

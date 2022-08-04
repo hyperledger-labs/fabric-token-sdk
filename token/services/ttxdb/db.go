@@ -47,13 +47,6 @@ func Register(name string, driver driver.Driver) {
 	drivers[name] = driver
 }
 
-func unregisterAllDrivers() {
-	driversMu.Lock()
-	defer driversMu.Unlock()
-	// For tests.
-	drivers = make(map[string]driver.Driver)
-}
-
 // Drivers returns a sorted list of the names of the registered drivers.
 func Drivers() []string {
 	driversMu.RLock()
@@ -196,9 +189,7 @@ type DB struct {
 	eIDsLocks sync.Map
 
 	// status related fields
-	statusUpdating atomic.Bool
-	pendingTXs     []string
-	wg             sync.WaitGroup
+	pendingTXs []string
 }
 
 func newDB(p driver.TokenTransactionDB) *DB {

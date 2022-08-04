@@ -349,7 +349,6 @@ func (p RecordSlice) Less(i, j int) bool { return p[i].Id < p[j].Id }
 func (p RecordSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 type TransactionIterator struct {
-	db     *Persistence
 	it     *badger.Iterator
 	params driver.QueryTransactionsParams
 }
