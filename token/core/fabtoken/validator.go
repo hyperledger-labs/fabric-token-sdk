@@ -102,9 +102,7 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 	if deserializer == nil {
 		return nil, errors.New("please provide a non-nil deserializer")
 	}
-	for _, f := range extraValidators {
-		defaultValidators = append(defaultValidators, f)
-	}
+	defaultValidators = append(defaultValidators, extraValidators...)
 	return &Validator{
 		pp:              pp,
 		deserializer:    deserializer,

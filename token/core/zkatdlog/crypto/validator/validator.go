@@ -94,9 +94,7 @@ type Validator struct {
 }
 
 func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransfer) *Validator {
-	for _, f := range extraValidators {
-		defaultValidators = append(defaultValidators, f)
-	}
+	defaultValidators = append(defaultValidators, extraValidators...)
 	return &Validator{
 		pp:              pp,
 		deserializer:    deserializer,
