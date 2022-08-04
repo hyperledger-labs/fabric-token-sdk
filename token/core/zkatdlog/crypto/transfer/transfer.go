@@ -122,7 +122,7 @@ func (p *Prover) Prove() ([]byte, error) {
 
 // Verify checks validity of serialized Proof
 func (v *Verifier) Verify(proof []byte) error {
-	tp := *&Proof{}
+	tp := Proof{}
 	err := tp.Deserialize(proof)
 	if err != nil {
 		return errors.Wrap(err, "invalid transfer proof")

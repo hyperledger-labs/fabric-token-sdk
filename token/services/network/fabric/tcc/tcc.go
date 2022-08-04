@@ -211,9 +211,9 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	fmt.Println("reading " + publicParamsPath + " ...")
 	paramsAsBytes, err := ioutil.ReadFile(publicParamsPath)
 	if err != nil {
-		fmt.Println(fmt.Sprintf(
-			"unable to read file %s (%s). continue looking pub params from init args or cc", publicParamsPath, err.Error(),
-		))
+		fmt.Printf(
+			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),
+		)
 		return ""
 	}
 
