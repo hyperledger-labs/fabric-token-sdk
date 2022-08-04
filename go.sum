@@ -691,6 +691,10 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220804113931-0efc848ceb56 h1:SnBmfAbwva0um7le0GSxnbwRsVdwGkGT2Q/hC3eIO60=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220804113931-0efc848ceb56/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220802155344-f87475651bbc h1:2FJ5dnuu+4CfZWbhiPwrxUWCmkUch47ZgfIhZAkWC/k=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220802155344-f87475651bbc/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220809144017-43cf4435733d h1:MI0N3aDYgni6srBvJl7PnFya0Vzq1iftutl9/UiZvdw=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220809144017-43cf4435733d/go.mod h1:SRZgh8Vc50KNt7gDxsIjMAnjzJsJBm0+tMqtqO/LW6A=
 github.com/hyperledger-labs/orion-sdk-go v0.0.0-20220213082028-b0ee3d8f361c h1:niolJc7rAbxKB1aJQH9aDvu4WteX6V2bZA/hFc2u8YE=
@@ -1326,6 +1330,7 @@ github.com/onsi/ginkgo v1.16.2/go.mod h1:CObGmKUOKaSC0RjmoAK7tKyn4Azo5P2IWuoMnvw
 github.com/onsi/ginkgo v1.16.4/go.mod h1:dX+/inL/fNMqNlz0e9LfyB9TswhZpCVdJM/Z6Vvnwo0=
 github.com/onsi/ginkgo v1.16.5 h1:8xi0RTUf59SOSfEtZMvwTvXYMzG4gV23XVHOZiXNtnE=
 github.com/onsi/ginkgo v1.16.5/go.mod h1:+E8gABHa3K6zRBolWtd+ROzc/U5bkGt0FwiG042wbpU=
+github.com/onsi/ginkgo/v2 v2.1.3 h1:e/3Cwtogj0HA+25nMP1jCMDIf8RtRYbGwGGuBIFztkc=
 github.com/onsi/ginkgo/v2 v2.1.4 h1:GNapqRSid3zijZ9H77KrgVG4/8KqiyRsxcSxe+7ApXY=
 github.com/onsi/ginkgo/v2 v2.1.4/go.mod h1:um6tUpWM/cxCK3/FK8BXqEiUMUwRgSM4JXG47RKZmLU=
 github.com/onsi/gomega v0.0.0-20151007035656-2152b45fa28a/go.mod h1:C1qb7wdrVGGVU+Z6iS04AVkA3Q65CEZX59MT0QO5uiA=
