@@ -26,11 +26,6 @@ func (role Role) getValue() int {
 	return int(role)
 }
 
-// checkRole Prove that the desired role is contained or not in the bitmask
-func checkRole(bitmask int, role Role) bool {
-	return (bitmask & role.getValue()) == role.getValue()
-}
-
 // getRoleMaskFromIdemixRoles Receive a list of roles to combine in a single bitmask
 func getRoleMaskFromIdemixRoles(roles []Role) int {
 	mask := 0

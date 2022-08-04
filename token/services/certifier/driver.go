@@ -9,12 +9,8 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.certifier")
 
 var (
 	driversMu sync.RWMutex
@@ -34,13 +30,6 @@ func Register(name string, driver driver.Driver) {
 		panic("Register called twice for driver " + name)
 	}
 	drivers[name] = driver
-}
-
-func unregisterAllDrivers() {
-	driversMu.Lock()
-	defer driversMu.Unlock()
-	// For tests.
-	drivers = make(map[string]driver.Driver)
 }
 
 // Drivers returns a sorted list of the names of the registered drivers.

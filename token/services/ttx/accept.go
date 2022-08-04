@@ -17,7 +17,6 @@ import (
 
 type acceptView struct {
 	tx *Transaction
-	id view.Identity
 }
 
 func NewAcceptView(tx *Transaction) *acceptView {

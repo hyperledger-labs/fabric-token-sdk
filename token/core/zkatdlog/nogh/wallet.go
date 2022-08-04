@@ -32,26 +32,6 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.identityProvider.GetEnrollmentID(auditInfo)
 }
 
-func (s *Service) registerIssuerSigner(signer SigningIdentity) error {
-	if signer == nil {
-		return errors.New("can't register issuer signer: nil signer")
-	}
-	fID, err := signer.Serialize()
-	if err != nil {
-		return errors.Wrapf(err, "failed serializing signer")
-	}
-
-	if err := view2.GetSigService(s.SP).RegisterSigner(fID, signer, signer); err != nil {
-		return errors.Wrapf(err, "failed registering signer for [%s]", view.Identity(fID).UniqueID())
-	}
-
-	if err := view2.GetEndpointService(s.SP).Bind(view2.GetIdentityProvider(s.SP).DefaultIdentity(), fID); err != nil {
-		return errors.Wrapf(err, "failed binding to long term identity or [%s]", view.Identity(fID).UniqueID())
-	}
-
-	return nil
-}
-
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 

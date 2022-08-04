@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
@@ -60,14 +59,6 @@ func NewLocalMembership(
 
 func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	logger.Debugf("Load x509 Wallets: [%+q]", identities)
-
-	type Provider interface {
-		EnrollmentID() string
-		Identity(opts *fabric.IdentityOption) (view.Identity, []byte, error)
-		DeserializeVerifier(raw []byte) (driver.Verifier, error)
-		DeserializeSigner(raw []byte) (driver.Signer, error)
-		Info(raw []byte, auditInfo []byte) (string, error)
-	}
 
 	for _, identityConfig := range identities {
 		logger.Debugf("Load x509 Wallet: [%v]", identityConfig)

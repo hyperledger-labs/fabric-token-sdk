@@ -11,12 +11,9 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
 
 type PublicParamsLoader interface {
 	Load() (*crypto.PublicParams, error)

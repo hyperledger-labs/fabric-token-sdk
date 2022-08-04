@@ -942,29 +942,6 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 	}, nil
 }
 
-func (r *Request) countOutputs() (int, error) {
-	ts := r.TokenService
-	sum := 0
-	if r.Actions == nil {
-		return 0, errors.New("can'r count outputs: nil actions in request")
-	}
-	for _, i := range r.Actions.Issues {
-		action, err := ts.tms.DeserializeIssueAction(i)
-		if err != nil {
-			return 0, err
-		}
-		sum += action.NumOutputs()
-	}
-	for _, t := range r.Actions.Transfers {
-		action, err := ts.tms.DeserializeTransferAction(t)
-		if err != nil {
-			return 0, err
-		}
-		sum += action.NumOutputs()
-	}
-	return sum, nil
-}
-
 func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity, string, error) {
 	inputTokens, err := r.TokenService.Vault().NewQueryEngine().GetTokens(inputs...)
 	if err != nil {
