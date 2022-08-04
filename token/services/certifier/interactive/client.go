@@ -138,24 +138,26 @@ func (d *CertificationClient) Scan() {
 			logger.Debugf("request certification of [%v] satisfied with no error", toBeCertified)
 		}
 
-		done := false
-		for {
-			select {
-			case <-d.ctx.Done():
-				return
-			case <-time.After(2 * time.Second):
-				txid, err := d.vault.GetLastTxID()
-				if err != nil {
-					continue
-				}
-				if txid != lastTXID {
-					lastTXID = txid
-					done = true
-					break
-				}
-			}
-			if done {
-				break
+		nextTxId, ok := d.getNextCommittedTxID(lastTXID)
+		if !ok {
+			return
+		}
+		lastTXID = nextTxId
+	}
+}
+
+func (d *CertificationClient) getNextCommittedTxID(lastTXID string) (string, bool) {
+	timeout := time.NewTimer(2 * time.Second)
+	defer timeout.Stop()
+
+	for {
+		select {
+		case <-d.ctx.Done():
+			return "", false
+		case <-timeout.C:
+			txid, err := d.vault.GetLastTxID()
+			if err == nil && txid != lastTXID {
+				return txid, true
 			}
 		}
 	}
