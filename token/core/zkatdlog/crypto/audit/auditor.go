@@ -327,9 +327,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 		if err != nil {
 			return nil, err
 		}
-		if &md == nil {
-			return nil, errors.Errorf("invalid issue metadata: it is nil")
-		}
+
 		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.TokenInfo) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
