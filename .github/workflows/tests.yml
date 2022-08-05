@@ -5,6 +5,12 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      fsc-version:
+        default: 'github.com/hyperledger-labs/fabric-smart-client@main'
+        required: true
+        description: 'FSC dependency'
 
 env:
   GOPATH: ${{ github.workspace }}
@@ -26,6 +32,17 @@ jobs:
         uses: actions/setup-go@v3
         with:
           go-version-file: "${{ env.FTS_PATH }}/go.mod"
+
+      - name: Replace FSC dep
+        working-directory: ${{ env.FTS_PATH }}
+        run: |
+          if [ -n "${{ github.event.inputs.fsc-version }}" ]; then
+            echo "Replace FSC dependency"
+            go mod edit -replace=github.com/hyperledger-labs/fabric-smart-client=${{ github.event.inputs.fsc-version }}
+            go mod tidy || true
+          else
+            echo "Skipping FSC dependency replacement"
+          fi
 
       - name: Set up tools
         working-directory: ${{ env.FTS_PATH }}
