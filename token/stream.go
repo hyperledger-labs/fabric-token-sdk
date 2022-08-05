@@ -33,6 +33,10 @@ type Output struct {
 	Quantity token2.Quantity
 }
 
+func (o Output) ID(txID string) *token2.ID {
+	return &token2.ID{TxId: txID, Index: o.Index}
+}
+
 // Input models an input of a token action
 type Input struct {
 	ActionIndex  int
