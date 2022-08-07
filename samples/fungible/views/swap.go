@@ -8,14 +8,12 @@ package views
 
 import (
 	"encoding/json"
+	"math/big"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // Swap contains the input information for a swap
@@ -87,11 +85,11 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 	os := outputs.ByRecipient(other)
-	assert.Equal(0, os.Sum().Cmp(token2.NewQuantityFromUInt64(t.FromQuantity)))
+	assert.Equal(0, os.Sum().Cmp(big.NewInt(int64(t.FromQuantity))))
 	assert.Equal(os.Count(), os.ByType(t.FromType).Count())
 
 	os = outputs.ByRecipient(me)
-	assert.Equal(0, os.Sum().Cmp(token2.NewQuantityFromUInt64(t.ToQuantity)))
+	assert.Equal(0, os.Sum().Cmp(big.NewInt(int64(t.ToQuantity))))
 	assert.Equal(os.Count(), os.ByType(t.ToType).Count())
 
 	// A is ready to collect all the required signatures and form the Transaction.

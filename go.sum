@@ -630,7 +630,6 @@ github.com/gorilla/mux v1.6.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2z
 github.com/gorilla/mux v1.7.2/go.mod h1:1lud6UwP+6orDFRuTfBEV8e9/aOM/c4fVVCaMa2zaAs=
 github.com/gorilla/mux v1.7.4/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/gorilla/mux v1.8.0 h1:i40aqfkR1h2SlN9hojwV5ZA91wcXFOvkdNIeFDP5koI=
-github.com/gorilla/mux v1.8.0/go.mod h1:DVbg23sWSpFRCP0SfiEN6jmj59UnW/n46BH5rLB71So=
 github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
@@ -691,8 +690,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220804113931-0efc848ceb56 h1:SnBmfAbwva0um7le0GSxnbwRsVdwGkGT2Q/hC3eIO60=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220804113931-0efc848ceb56/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220805114655-352e52a3cb5c h1:j8LAZKYyXJvmLqPF1ulGCoaljnHC/X6y4msRYNinIG8=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220805114655-352e52a3cb5c/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220802155344-f87475651bbc h1:2FJ5dnuu+4CfZWbhiPwrxUWCmkUch47ZgfIhZAkWC/k=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220802155344-f87475651bbc/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220809144017-43cf4435733d h1:MI0N3aDYgni6srBvJl7PnFya0Vzq1iftutl9/UiZvdw=

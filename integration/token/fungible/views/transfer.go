@@ -282,6 +282,11 @@ func (p *TransferWithSelectorViewFactory) NewView(in []byte) (view.View, error) 
 	return f, nil
 }
 
+type PrepareTransferResult struct {
+	TxID  string
+	TXRaw []byte
+}
+
 // PrepareTransferView is a view that prepares a transfer transaction without broadcasting it
 type PrepareTransferView struct {
 	*Transfer
@@ -336,7 +341,10 @@ func (t *PrepareTransferView) Call(context view.Context) (interface{}, error) {
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to sign transaction")
 
-	return tx.Bytes()
+	txRaw, err := tx.Bytes()
+	assert.NoError(err, "failed to serialize transaction")
+
+	return &PrepareTransferResult{TxID: tx.ID(), TXRaw: txRaw}, nil
 }
 
 type PrepareTransferViewFactory struct{}
