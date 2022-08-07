@@ -207,6 +207,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	// Check that the tokens are or are not in the vault
 	qe := vault.TokenVault().QueryEngine()
 	outputs, err := tx.Outputs()
+	assert.NoError(err, "failed to retrieve outputs")
 	for _, output := range outputs.Outputs() {
 		tokenID := output.ID(tx.ID())
 		if output.Owner.Equal(me) {
