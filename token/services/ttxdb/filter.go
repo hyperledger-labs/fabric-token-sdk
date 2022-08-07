@@ -10,7 +10,6 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // PaymentsFilter is a filter for payments.
@@ -48,13 +47,13 @@ func (f *PaymentsFilter) Execute() (*PaymentsFilter, error) {
 	return f, nil
 }
 
-func (f *PaymentsFilter) Sum() token2.Quantity {
+func (f *PaymentsFilter) Sum() *big.Int {
 	sum := big.NewInt(0)
 	for _, record := range f.records {
 		sum = sum.Add(sum, record.Amount)
 	}
 	sum.Neg(sum)
-	return token2.NewQuantityFromBig64(sum)
+	return sum
 }
 
 type HoldingsFilter struct {
@@ -85,10 +84,10 @@ func (f *HoldingsFilter) Execute() (*HoldingsFilter, error) {
 	return f, nil
 }
 
-func (f *HoldingsFilter) Sum() token2.Quantity {
+func (f *HoldingsFilter) Sum() *big.Int {
 	sum := big.NewInt(0)
 	for _, record := range f.records {
 		sum = sum.Add(sum, record.Amount)
 	}
-	return token2.NewQuantityFromBig64(sum)
+	return sum
 }
