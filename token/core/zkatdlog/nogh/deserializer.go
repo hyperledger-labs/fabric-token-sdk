@@ -40,6 +40,7 @@ type deserializer struct {
 	ownerDeserializer   VerifierDES
 	issuerDeserializer  VerifierDES
 	auditDeserializer   AuditDES
+	interopDeserializer *interop.OwnerDeserializer
 }
 
 // NewDeserializer returns a deserializer
@@ -52,17 +53,28 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params")
 	}
 
+	ownerDeserializer := identity.NewRawOwnerIdentityDeserializer(idemixDes)
+
 	return &deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(idemixDes),
+		ownerDeserializer:   ownerDeserializer,
 		auditDeserializer:   idemixDes,
+		interopDeserializer: interop.NewDeserializer(ownerDeserializer),
 	}, nil
+}
+
+// GetOwnerVerifierFromToken returns the verifier associated to the passed token
+func (d *deserializer) GetOwnerVerifierFromToken(tok *driver.UnspentToken) (driver.Verifier, error) {
+	return d.interopDeserializer.GetOwnerVerifierFromToken(&driver.UnspentToken{
+		ID:    tok.ID,
+		Owner: tok.Owner,
+	})
 }
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
+	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity

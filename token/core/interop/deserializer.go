@@ -20,40 +20,41 @@ type VerifierDES interface {
 	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
 }
 
-type Deserializer struct {
-	OwnerDeserializer VerifierDES
+type OwnerDeserializer struct {
+	DES VerifierDES
 }
 
-func NewDeserializer(ownerDeserializer VerifierDES) *Deserializer {
-	return &Deserializer{OwnerDeserializer: ownerDeserializer}
+func NewDeserializer(ownerDeserializer VerifierDES) *OwnerDeserializer {
+	return &OwnerDeserializer{ownerDeserializer}
 }
 
-func (d *Deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *OwnerDeserializer) GetOwnerVerifierFromToken(token *driver.UnspentToken) (driver.Verifier, error) {
+	id := token.Owner
 	si, err := identity.UnmarshallRawOwner(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal RawOwner")
 	}
 	if si.Type == identity.SerializedIdentityType {
-		return d.OwnerDeserializer.DeserializeVerifier(id)
+		return d.DES.DeserializeVerifier(id)
 	}
 	if si.Type == exchange.ScriptTypeExchange {
-		return d.getExchangeVerifier(si.Identity)
+		return d.GetExchangeVerifier(si.Identity)
 	}
 	return nil, errors.Errorf("failed to deserialize RawOwner: Unknown owner type %s", si.Type)
 }
 
-func (d *Deserializer) getExchangeVerifier(raw []byte) (driver.Verifier, error) {
+func (d *OwnerDeserializer) GetExchangeVerifier(raw []byte) (driver.Verifier, error) {
 	script := &exchange.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
 	}
 	v := &exchange.ExchangeVerifier{}
-	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)
+	v.Sender, err = d.DES.DeserializeVerifier(script.Sender)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the exchange script")
 	}
-	v.Recipient, err = d.OwnerDeserializer.DeserializeVerifier(script.Recipient)
+	v.Recipient, err = d.DES.DeserializeVerifier(script.Recipient)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the exchange script")
 	}

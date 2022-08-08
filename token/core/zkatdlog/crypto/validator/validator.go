@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 )
 
@@ -290,7 +291,11 @@ func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driv
 				return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
 			}
 			logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner).UniqueID())
-			verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner)
+			id, err := keys.GetTokenIdFromKey(in)
+			if err != nil {
+				return errors.Wrapf(err, "failed to extract token id from input string [%s]", in)
+			}
+			verifier, err := v.deserializer.GetOwnerVerifierFromToken(&driver.UnspentToken{ID: id, Owner: tok.Owner})
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
 			}

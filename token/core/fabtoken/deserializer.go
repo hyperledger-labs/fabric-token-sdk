@@ -28,20 +28,32 @@ type deserializer struct {
 	auditorDeserializer VerifierDES
 	ownerDeserializer   VerifierDES
 	issuerDeserializer  VerifierDES
+	interopDeserializer *interop.OwnerDeserializer
 }
 
 // NewDeserializer returns a deserializer
-func NewDeserializer() *deserializer {
+func NewDeserializer() driver.Deserializer {
+
+	ownerDeserializer := identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{})
+
 	return &deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{}),
+		ownerDeserializer:   ownerDeserializer,
+		interopDeserializer: interop.NewDeserializer(ownerDeserializer),
 	}
+}
+
+func (d *deserializer) GetOwnerVerifierFromToken(tok *driver.UnspentToken) (driver.Verifier, error) {
+	return d.interopDeserializer.GetOwnerVerifierFromToken(&driver.UnspentToken{
+		ID:    tok.ID,
+		Owner: tok.Owner,
+	})
 }
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
+	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity

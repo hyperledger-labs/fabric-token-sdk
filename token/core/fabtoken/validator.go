@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -24,14 +25,14 @@ import (
 
 var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeExchangeExtraValidator}
 
-type ValidateTransfer func(inputTokens []*token2.Token, tr driver.TransferAction) error
+type ValidateTransfer func(inputTokens []*token2.UnspentToken, tr driver.TransferAction) error
 
-func SerializedIdentityTypeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
+func SerializedIdentityTypeExtraValidator(inputTokens []*token2.UnspentToken, tr driver.TransferAction) error {
 	// noting else to validate
 	return nil
 }
 
-func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
+func ScriptTypeExchangeExtraValidator(inputTokens []*token2.UnspentToken, tr driver.TransferAction) error {
 	for _, in := range inputTokens {
 		owner, err := identity.UnmarshallRawOwner(in.Owner.Raw)
 		if err != nil {
@@ -318,7 +319,7 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 
 // VerifyTransfer checks that sum of inputTokens in TransferAction equals sum of outputs in TransferAction
 // It also checks that all outputs and inputs have the same type
-func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
+func (v *Validator) VerifyTransfer(inputTokens []*token2.UnspentToken, tr driver.TransferAction) error {
 	if tr.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")
 	}
@@ -439,10 +440,13 @@ func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
 }
 
 // CheckSendersSignatures verifies if a TokenRequest was signed by the owners of the inputs in the TokenRequest
-func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIndex int, signatureProvider driver.SignatureProvider) error {
+func (v *Validator) CheckSendersSignatures(inputTokens []*token2.UnspentToken, actionIndex int, signatureProvider driver.SignatureProvider) error {
 	for _, tok := range inputTokens {
 		logger.Debugf("check sender [%d][%s]", actionIndex, view.Identity(tok.Owner.Raw).UniqueID())
-		verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner.Raw)
+		verifier, err := v.deserializer.GetOwnerVerifierFromToken(&driver.UnspentToken{
+			ID:    tok.Id,
+			Owner: tok.Owner.Raw,
+		})
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
 		}
@@ -455,8 +459,8 @@ func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIn
 }
 
 // RetrieveInputsFromTransferAction retrieves from the passed ledger the inputs identified in TransferAction
-func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) ([]*token2.Token, error) {
-	var inputTokens []*token2.Token
+func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) ([]*token2.UnspentToken, error) {
+	var inputTokens []*token2.UnspentToken
 	inputs, err := t.GetInputs()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to retrieve input IDs")
@@ -474,7 +478,16 @@ func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) (
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
 		}
-		inputTokens = append(inputTokens, tok)
+		id, err := keys.GetTokenIdFromKey(in)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to extract token id from input string [%s]", in)
+		}
+		inputTokens = append(inputTokens, &token2.UnspentToken{
+			Id:       id,
+			Owner:    tok.Owner,
+			Type:     tok.Type,
+			Quantity: tok.Quantity,
+		})
 	}
 	return inputTokens, nil
 }

@@ -11,6 +11,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+// GetOwnerVerifierFromToken returns the verifier associated to the passed token
+func (s *Service) GetOwnerVerifierFromToken(tok *driver.UnspentToken) (driver.Verifier, error) {
+	return s.Deserializer.GetOwnerVerifierFromToken(tok)
+}
+
 // GetAuditorVerifier deserializes the verifier for the passed auditor identity
 func (s *Service) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	return s.Deserializer.GetAuditorVerifier(id)

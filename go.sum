@@ -705,8 +705,6 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220728121315-292fe4c92304 h1:c82DVFhyvvOXtBW8rHTylhZbpYTnuft+X7Vl4R9EC7I=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220728121315-292fe4c92304/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220802155344-f87475651bbc h1:2FJ5dnuu+4CfZWbhiPwrxUWCmkUch47ZgfIhZAkWC/k=
 github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220802155344-f87475651bbc/go.mod h1:lHxLvBxx7U4eniJ6xHGEvqfGuM3KhkWBGlNc7L/XYqU=
 github.com/hyperledger-labs/orion-sdk-go v0.0.0-20220213082028-b0ee3d8f361c h1:niolJc7rAbxKB1aJQH9aDvu4WteX6V2bZA/hFc2u8YE=
@@ -1632,6 +1630,7 @@ github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954/go.mod h1:u2MKk
 github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cbyO7IOYJZWg1U88JhDg3PB6klq9Hg2pA=
 github.com/tchap/go-patricia v2.2.6+incompatible/go.mod h1:bmLyhP68RS6kStMGxByiQ23RP/odRBOTVjwp2cDyi6I=
 github.com/tedsuo/ifrit v0.0.0-20180802180643-bea94bb476cc/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
+github.com/tedsuo/ifrit v0.0.0-20191009134036-9a97d0632f00/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
 github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113 h1:PnxSSxsUvOqMh7nslHscii/GV/Y9ZflmkZ2oEEEIGj4=
 github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113/go.mod h1:eyZnKCc955uh98WQvzOm0dgAeLnf2O0Rz0LPoC5ze+0=
 github.com/test-go/testify v1.1.4 h1:Tf9lntrKUMHiXQ07qBScBTSA0dhYQlu83hswqelv1iE=

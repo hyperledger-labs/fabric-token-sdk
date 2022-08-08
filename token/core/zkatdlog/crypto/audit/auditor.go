@@ -32,14 +32,8 @@ type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
-// Deserializer deserialize audit information
-type Deserializer interface {
-	// GetOwnerMatcher returns the owner matcher for the given audit info
-	GetOwnerMatcher(auditInfo []byte) (driver.Matcher, error)
-}
-
 // InspectTokenOwnerFunc models a function to inspect the owner field
-type InspectTokenOwnerFunc = func(des Deserializer, token *AuditableToken, index int) error
+type InspectTokenOwnerFunc = func(des driver.Deserializer, token *AuditableToken, index int) error
 
 // GetAuditInfoForIssuesFunc models a function to get auditable tokens from issue actions
 type GetAuditInfoForIssuesFunc = func(issues [][]byte, metadata []driver.IssueMetadata) ([][]*AuditableToken, error)
@@ -85,7 +79,7 @@ type OwnerOpening struct {
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
 	// Owner Identity Deserializer
-	Des Deserializer
+	Des driver.Deserializer
 	// Auditor's signing identity
 	Signer SigningIdentity
 	// Pedersen generators used to compute TokenData
@@ -101,7 +95,7 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(des driver.Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Des:            des,
 		PedersenParams: pp,
@@ -249,7 +243,7 @@ func (a *Auditor) InspectInputs(inputs []*AuditableToken) error {
 }
 
 // InspectTokenOwner verifies that the audit info matches the token owner
-func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error {
+func InspectTokenOwner(des driver.Deserializer, token *AuditableToken, index int) error {
 	if token.Token.IsRedeem() {
 		return errors.Errorf("token at index [%d] is a redeem token, cannot inspect ownership", index)
 	}
@@ -273,7 +267,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	return inspectTokenOwnerOfScript(des, token, index)
 }
 
-func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
+func inspectTokenOwnerOfScript(des driver.Deserializer, token *AuditableToken, index int) error {
 	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)

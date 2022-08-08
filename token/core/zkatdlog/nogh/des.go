@@ -12,6 +12,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+// GetOwnerVerifierFromToken returns the verifier associated to the passed token
+func (s *Service) GetOwnerVerifierFromToken(tok *driver.UnspentToken) (driver.Verifier, error) {
+	d, err := s.Deserializer()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get owner verifier from token")
+	}
+	return d.GetOwnerVerifierFromToken(tok)
+}
+
 // GetAuditorVerifier deserializes the verifier for the passed auditor identity
 func (s *Service) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	d, err := s.Deserializer()

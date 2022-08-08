@@ -3,11 +3,11 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -133,9 +133,16 @@ type Matcher interface {
 	Match([]byte) error
 }
 
+type UnspentToken struct {
+	ID    *token2.ID
+	Owner []byte
+}
+
 // Deserializer models the deserializer of owner, issuer, and auditor identities to
 // get signature verifiers
 type Deserializer interface {
+	// GetOwnerVerifierFromToken returns the verifier associated to the passed token
+	GetOwnerVerifierFromToken(tok *UnspentToken) (Verifier, error)
 	// GetOwnerVerifier returns the verifier associated to the passed owner identity
 	GetOwnerVerifier(id view.Identity) (Verifier, error)
 	// GetIssuerVerifier returns the verifier associated to the passed issuer identity
