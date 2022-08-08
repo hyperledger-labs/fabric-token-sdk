@@ -1,5 +1,5 @@
 .PHONY: checks
-checks: licensecheck gofmt goimports govet misspell ineffassign
+checks: licensecheck gofmt goimports govet misspell ineffassign staticcheck
 
 .PHONY: licensecheck
 licensecheck:
