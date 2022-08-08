@@ -305,6 +305,12 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	}
 	for _, output := range issue.GetOutputs() {
 		out := output.(*TransferOutput).Output
+		if out == nil {
+			panic("verifyIssue: out is nil")
+		}
+		if v.pp == nil {
+			panic("verifyIssue: pp is nil")
+		}
 		q, err := token2.ToQuantity(out.Quantity, v.pp.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
