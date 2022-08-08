@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/components"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )

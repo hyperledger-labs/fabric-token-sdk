@@ -11,7 +11,7 @@ import (
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
