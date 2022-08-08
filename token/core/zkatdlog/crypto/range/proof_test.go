@@ -10,7 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 

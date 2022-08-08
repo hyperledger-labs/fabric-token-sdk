@@ -17,21 +17,18 @@ import (
 	"text/template"
 	"time"
 
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
-
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
-	"github.com/tedsuo/ifrit/grouper"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
+	"github.com/tedsuo/ifrit/grouper"
 )
 
 const (

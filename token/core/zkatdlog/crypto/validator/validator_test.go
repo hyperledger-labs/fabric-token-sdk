@@ -20,7 +20,7 @@ import (
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"

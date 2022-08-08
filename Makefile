@@ -1,6 +1,11 @@
 # pinned versions
 FABRIC_VERSION=2.2
 
+# integration test options
+GINKGO_TEST_OPTS ?=
+GINKGO_TEST_OPTS += --keep-going
+GINKGO_TEST_OPTS += --slow-spec-threshold=60s
+
 TOP = .
 
 all: install-tools checks unit-tests #integration-tests
@@ -47,51 +52,51 @@ orion-server-images:
 
 .PHONY: integration-tests-dlog-fabric
 integration-tests-dlog-fabric:
-	cd ./integration/token/fungible/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/fungible/dlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-fabtoken-fabric
 integration-tests-fabtoken-fabric:
-	cd ./integration/token/fungible/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/fungible/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dlog-orion
 integration-tests-dlog-orion:
-	cd ./integration/token/fungible/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/fungible/odlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-fabtoken-orion
 integration-tests-fabtoken-orion:
-	cd ./integration/token/fungible/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/fungible/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-dlog
 integration-tests-nft-dlog:
-	cd ./integration/token/nft/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/nft/dlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-fabtoken
 integration-tests-nft-fabtoken:
-	cd ./integration/token/nft/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/nft/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-dlog-orion
 integration-tests-nft-dlog-orion:
-	cd ./integration/token/nft/odlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/nft/odlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-fabtoken-orion
 integration-tests-nft-fabtoken-orion:
-	cd ./integration/token/nft/ofabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/nft/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-fabtoken
 integration-tests-dvp-fabtoken:
-	cd ./integration/token/dvp/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/dvp/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-dlog
 integration-tests-dvp-dlog:
-	cd ./integration/token/dvp/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/dvp/dlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-interop-fabtoken
 integration-tests-interop-fabtoken:
-	cd ./integration/token/interop/fabtoken; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/interop/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-interop-dlog
 integration-tests-interop-dlog:
-	cd ./integration/token/interop/dlog; ginkgo -keepGoing --slowSpecThreshold 60 .
+	cd ./integration/token/interop/dlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: tidy
 tidy:
