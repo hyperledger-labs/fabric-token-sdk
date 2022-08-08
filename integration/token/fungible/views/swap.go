@@ -123,7 +123,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	qe := vault.TokenVault().QueryEngine()
 	for _, output := range outputs.Outputs() {
 		tokenID := output.ID(tx.ID())
-		if output.Owner.Equal(me) {
+		if output.Owner.Equal(me) || tx.TokenService().WalletManager().IsMe(output.Owner) {
 			// check it exists
 			_, toks, err := qe.GetTokens(tokenID)
 			assert.NoError(err, "failed to retrieve token [%s]", tokenID)
@@ -133,7 +133,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 		} else {
 			// check it does not exist
 			_, _, err := qe.GetTokens(tokenID)
-			assert.Equal(err, "token [%s] should not exist", tokenID)
+			assert.Error(err, "token [%s] should not exist", tokenID)
 			assert.True(strings.Contains(err.Error(), "token not found"))
 		}
 	}
@@ -210,7 +210,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve outputs")
 	for _, output := range outputs.Outputs() {
 		tokenID := output.ID(tx.ID())
-		if output.Owner.Equal(me) {
+		if output.Owner.Equal(me) || tx.TokenService().WalletManager().IsMe(output.Owner) {
 			// check it exists
 			_, toks, err := qe.GetTokens(tokenID)
 			assert.NoError(err, "failed to retrieve token [%s]", tokenID)
@@ -220,7 +220,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 		} else {
 			// check it does not exist
 			_, _, err := qe.GetTokens(tokenID)
-			assert.Equal(err, "token [%s] should not exist", tokenID)
+			assert.Error(err, "token [%s] should not exist", tokenID)
 			assert.True(strings.Contains(err.Error(), "token not found"))
 		}
 	}

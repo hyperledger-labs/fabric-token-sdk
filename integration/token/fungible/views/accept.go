@@ -87,7 +87,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 		} else {
 			// check it does not exist
 			_, _, err := qe.GetTokens(tokenID)
-			assert.Equal(err, "token [%s] should not exist", tokenID)
+			assert.Error(err, "token [%s] should not exist", tokenID)
 			assert.True(strings.Contains(err.Error(), "token not found"))
 		}
 	}
