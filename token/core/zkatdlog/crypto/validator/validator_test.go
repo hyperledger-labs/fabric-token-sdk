@@ -355,6 +355,10 @@ func (f *fakeProv) GetString(key string) string {
 	return f.typ
 }
 
+func (f *fakeProv) GetInt(key string) int {
+	return 0
+}
+
 func (f *fakeProv) GetDuration(key string) time.Duration {
 	return time.Duration(0)
 }
