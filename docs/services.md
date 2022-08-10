@@ -1,101 +1,99 @@
-# Services or What you need to build Token-Based Applications on top of Fabric
+# Services
 
-In this Section, we will see how to leverage the Token API to build a token infrastructure on top of `Fabric`.
-This is the most flexible part of the Token SDK stack because new services can be built as needed by the applications.
+In this Section, we will see how to leverage the Token API to build a token-based application.
+This is the most flexible part of the Token SDK stack because new services can be built as needed.
 
-To build our Fabric token infrastructure, we will need the following building blocks (or services).
+## Token Transaction Service
 
-- On the Fabric-side, we will define a `Token Namespace` that will contain all information that is needed to make
-  sense of the tokens stored in the namespace. The namespace's endorsement policy depends on the specific use case.
-  As a general guideline, we can say it should reflect the majority of the partners in the blockchain consortium.
-  Last but not least, a chaincode, the `Token Chaincode`. It is deployed to create the token namespace.
-  The token chaincode provides various functionalities to the applications.
-  We will explore these functions in more details later.
-- On the Client-side, we need
-    - A `Token Transaction` concept that let parties agree on the token operations to perform
-      (issue, transfer, redeem, and so on). The Token Transaction wraps a Token Request.
-    - A `Token Vault`. A local storage that contains tokens. We will learn exactly which tokens the vault contains
-      in the coming sections.
-    - A `Token Selector` to pick tokens from the vault and use them in operations like transfer and redeem.
-    - `Auditing` to enforce rules on a token transaction before this gets committed. This part is optional.
+To assemble token transactions, the Token SDK comes equipped with a dedicated service located in the package `token/services/ttx`.
+This service is responsible for assembling the token transaction, managing the transaction lifecycle, and so on.
 
-If you to jump ahead and see some examples, have a look [here](./../samples/README.md).
-
-Let us continue with the lifecycle of a token transaction. This will give us the possibility to describe
-how all the above components play together.
-
-## Token Transaction Lifecycle
+This service is backend agnostic, meaning that this service can be used to assemble token transactions for Fabric, for Orion, and so on.
+This is made possible by the `token/services/network` service. This service abstracts away the complexities of the underlying backend technology.
+More on this service in its dedicated section.
 
 The lifecycle of a Token Transaction consists of the following high-level steps:
 
 1. `Assembling the Token Transaction`. In this phase, the business parties decide on the token operations
-that must happen atomically. They assemble them in a token transaction by interacting following a business process.
+   that must happen atomically. The parties assemble them in a token transaction by interacting following a business process.
    Under the hood, a token transaction contains a Token Request (defined by the Token API).
 
-2. `Collect Signatures`. Once the Token Transaction is ready, meaning that the Token Request has been formed,
-   one of the business parties, let call it the `leader`, takes the charge of collecting the following signatures:
-   - From the issuers of new tokens, if any;
-   - From the owners of the tokens spent, if any;
-   - From any required auditor, if needed.
+2. `Collect Endorsements`. Once the Token Transaction is ready, meaning that the Token Request has been formed,
+   one of the business parties, let call it the `leader`, takes the charge of the following sub-steps:
+   - `Collect the relevant signatures for each action`: The leader contacts the the relevant business parties to collect their signatures.
+     - From the issuers of new tokens, if any;
+     - From the owners of the tokens spent, if any;
+   - `Request Audit`. The leader sends the token transaction the auditor that checks it and signs it if all checks pass.
+     The auditor sends back the signature to the leader
+   - `Request Approval`. At this point the token transaction can be validated and translated to a format
+     understood by the backend. The leader sends the token transaction to the `Approvers` that validate it and translate it.
+     The approvers send back the translated token transaction signed. We call these `approvals`.
+     The leader attach to the token transaction the approvals.
+   - `Distribute the Approvals`. The leader sends the full token transaction, containing also the approvals, to all involved business parties.
 
-3. `Collect Endorsements`. The Token Transaction must be submitted to Fabric. Therefore, it should be converted
-to something Fabric understands: An Endorser Transaction. The underlying process is the following:
-   - The leader assembles a Fabric Proposal to invoke the Token Chaincode's  validation function. This function
-    takes in input a Token Request (without the Metadata) and does the following:
-     - Validates the Token Request;
-     - Translates the Token Request into a RWSet.
+3. `Commit`. The Token Transaction is fully formed and can be committed. The leader sends the token transaction to the backed
+   stripping out all private information. The leader, and all other business parties, can now wait for finality if needed.
 
-   - The leader sends the Proposal to the endorsers of the Token Chaincode and collects the endorsements.
-   - The leader assembles the endorsements in a Fabric Endorser Transaction.
+## Token Vault Service
 
-4. `Fabric Transaction Distributtion`. The leader distributes the Fabric Transaction, formed at the previous step,
-   to all the parties involved in the transaction formation.
+The Token Vault service, located in `token/services/vault`, stores the available tokens owned by the wallets a node possess. 
+Tokens appear in the vault if an issuer issued them or another party transferred some units to one of the wallets the node possess.
+The vault service is backend agnostic. It uses the network service to get access to the local vault instance of a specific backed. 
 
-5. `Submit the Token Transaction for Ordering`. At this point, the leader sends the Fabric transaction to the Fabric
-Ordering Service. The parties involved in the transaction formation can wait, if they need to, wait for the finality of
-   the transaction.
+## Network Service
 
+The `token/services/network` service is responsible for abstracting away the complexities of the underlying backend technology, Fabric, Orion, and so on.
+The service uses a driver-based design that let the developers develop new drivers for different backends.
+Currently, the network service supports Fabric and Orion.
 
-Let us see what happens when the Fabric transaction gets committed.
-We would expect to see the tokens created by the transaction appearing in the Vault of the owners.
+### Fabric Driver
+
+The Fabric driver for the network service is located in the package `token/services/network/fabric`.
+This driver assumes that a `Token Chaincode` (located in the package `token/services/network/fabric/tcc`)
+is available in the Fabric network. This chaincode provides multiple functionalities that the Fabric driver uses.
+Namely:
+- `Public Parameters Lifecycle`. The public parameters govern the behaviour of the token chaincode that means how
+  token requests are processed and translated. The list of approved issuers and auditors, and so on.
+- `Approval`. This is one of the essential steps in the lifecycle of a token transaction,
+  as we have seen in the previous section. The Token Chaincode validates the received token request and, if valid, translates 
+  it into the RW Set format understood by Fabric.
+  Notice that the Token Chaincode can only check the validity of the transaction. Though, double spending can only verified
+  at committing time. To do so, the RW Set is generated in a way to trigger MVCC conflicts in case of double spending.
+  An approval in this case is just the endorsement over the RW Set.
+
+To commit a token transaction, the Fabric network driver first derives a Fabric transaction with the RW sets 
+obtained from the approval phase. Then, this fabric transaction is sent to the Fabric ordering service.
+
+Here is the pictorial representation of the lifecycle of a token transaction for Fabric:
+
+![fabric_ttx_lifecycle.png](imgs/fabric_ttx_lifecycle.png)
+
+Let us explore now what happens when the Fabric transaction gets committed.
+We expect to see the tokens created by the transaction appearing in the `Vault` of the owners.
 The following picture shows how this happens:
 
 ![commit_process.png](imgs/commit_process.png)
 
 In more details:
-1. The FSC node listens to the `Delivery Service` events generated by its Fabric peer partner.
-   When the Fabric peer commits our token transaction `Tx`, the FSC node gets informed.
+1. Using the FSC API, each business party listens to the `Delivery Service` events generated by its Fabric peer partner.
+   When the Fabric peer commits a token transaction `Tx`, the FSC node gets informed.
 2. The `Delivery Client` informs the `Committer` that `Tx` is available.
 3. If `Tx` is deemed valid by Fabric, then the `Committer` further manipulates the RWSet by invoking all registered
-   `RWSet Processors` before the RWSet gets committed into the vault. If `Tx` is invalid, the transaction gets directly
+   `RW Set Processors` before the RW Set gets committed into the vault. If `Tx` is invalid, the transaction is
    discarded.
 4. The Token SDK installs one of these processors, the `Token RW Set Processor`. This processor extracts all the token
-   related information and augments the RWSet with additional key-value pairs to speed up the
-   token selection process, among other things.
-5. Finally, the RWSet, after processing, is committed to the vault.
+   related information and augments the RW Set with additional key-value pairs to speed up the token selection process, among other things.
+5. Finally, the RW Set, after processing, is committed to the vault.
 
-Only at this point, the tokens created by the transaction become available inside the Token Vault and can be selected
-for a new transactions.
+Only at this point, the tokens created by the transaction become available via the Token Vault service we have discussed above.
 
-## The Token Namespace and Chaincode
+### Orion Driver
 
-In the previous Section, we have seen that part of the lifecycle of a Token Transaction is the invocation of the
-`Token Chaincode` that is associated to the `Token Namespace`.
+The Orion driver is similar to the Fabric driver because also Orion manages RW Sets.
+Though, in Orion there is not concept of chaincode or stored routing. 
+To solve this problem, the Orion driver assumes the existence of a `Custodian` that sits in front of Orion
+and handles the `approval` and `commit` steps.  
 
-The `Token Namespace` contains the tokens and any additional information needed to make sense out of them
-in a key-value format. Attached to the namespace we have:
-- The [`Token Chaincode`](https://github.com/hyperledger-labs/fabric-token-sdk/tree/main/token/services/network/fabric/tcc),
-  that exposes functionalities useful to develop token applications, and
-- The `Endorsement Policy` that describe the governance of the token chaincode. In other words, who is allowed to
-  modify the namespace.
+Here is the pictorial representation of the lifecycle of a token transaction for Orion:
 
-The Token Chaincode must be initialized with some `public parameters`.
-The public parameters depends on the specific token driver implementation and can be generated by
-using the utility [`tokengen`](./../cmd/tokengen/README.md).
-
-Once initialized, the token chaincode can provide the following functionalities:
-- `Fetch the public parameters`. They must be fetched by each FSC node running the Token SDK stack.
-  This is done automatically.
-- `Fetch Tokens` is used to retrieve the content of tokens by their ids.
-- `Validate and Translate Token Requests`. This is one of the essential steps in the lifecycle of a token transaction,
-  as we have seen in the previous section.
+![orion_ttx_lifecycle.png](imgs/orion_ttx_lifecycle.png)
