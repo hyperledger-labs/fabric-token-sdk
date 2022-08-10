@@ -8,7 +8,6 @@ package views
 
 import (
 	"encoding/json"
-	"strings"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -120,23 +119,7 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	// Check that the tokens are or are not in the vault
-	qe := vault.TokenVault().QueryEngine()
-	for _, output := range outputs.Outputs() {
-		tokenID := output.ID(tx.ID())
-		if output.Owner.Equal(me) || tx.TokenService().WalletManager().IsMe(output.Owner) {
-			// check it exists
-			_, toks, err := qe.GetTokens(tokenID)
-			assert.NoError(err, "failed to retrieve token [%s]", tokenID)
-			assert.Equal(1, len(toks), "expected one token")
-			assert.Equal(output.Quantity.Hex(), toks[0].Quantity, "token quantity mismatch")
-			assert.Equal(output.Type, toks[0].Type, "token type mismatch")
-		} else {
-			// check it does not exist
-			_, _, err := qe.GetTokens(tokenID)
-			assert.Error(err, "token [%s] should not exist", tokenID)
-			assert.True(strings.Contains(err.Error(), "token not found"))
-		}
-	}
+	AssertTokensInVault(vault, tx, outputs, me)
 
 	return tx.ID(), nil
 }
@@ -205,25 +188,9 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	// Check that the tokens are or are not in the vault
-	qe := vault.TokenVault().QueryEngine()
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed to retrieve outputs")
-	for _, output := range outputs.Outputs() {
-		tokenID := output.ID(tx.ID())
-		if output.Owner.Equal(me) || tx.TokenService().WalletManager().IsMe(output.Owner) {
-			// check it exists
-			_, toks, err := qe.GetTokens(tokenID)
-			assert.NoError(err, "failed to retrieve token [%s]", tokenID)
-			assert.Equal(1, len(toks), "expected one token")
-			assert.Equal(output.Quantity.Hex(), toks[0].Quantity, "token quantity mismatch")
-			assert.Equal(output.Type, toks[0].Type, "token type mismatch")
-		} else {
-			// check it does not exist
-			_, _, err := qe.GetTokens(tokenID)
-			assert.Error(err, "token [%s] should not exist", tokenID)
-			assert.True(strings.Contains(err.Error(), "token not found"))
-		}
-	}
+	AssertTokensInVault(vault, tx, outputs, me)
 
 	return tx.ID(), nil
 }
