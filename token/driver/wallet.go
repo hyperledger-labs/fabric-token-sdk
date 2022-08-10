@@ -3,22 +3,21 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type Key interface {
-	Bytes() []byte
-}
-
+// ListTokensOptions contains options that can be used to list tokens from a wallet
 type ListTokensOptions struct {
+	// TokenType is the type of token to list
 	TokenType string
 }
 
+// Wallet models a generic walleet
 type Wallet interface {
 	// ID returns the ID of this wallet
 	ID() string
@@ -27,7 +26,7 @@ type Wallet interface {
 	Contains(identity view.Identity) bool
 
 	// ContainsToken returns true if the passed token belongs to this wallet
-	ContainsToken(token *token2.UnspentToken) bool
+	ContainsToken(token *token.UnspentToken) bool
 
 	// GetSigner returns the Signer bound to the passed identity
 	GetSigner(identity view.Identity) (Signer, error)
@@ -45,7 +44,7 @@ type OwnerWallet interface {
 	GetAuditInfo(id view.Identity) ([]byte, error)
 
 	// ListTokens returns the list of unspent tokens owned by this wallet filtered using the passed options.
-	ListTokens(opts *ListTokensOptions) (*token2.UnspentTokens, error)
+	ListTokens(opts *ListTokensOptions) (*token.UnspentTokens, error)
 
 	// GetTokenMetadata returns any information needed to implement the transfer
 	GetTokenMetadata(id view.Identity) ([]byte, error)
@@ -54,7 +53,7 @@ type OwnerWallet interface {
 	EnrollmentID() string
 }
 
-// IssuerWallet models the wallet of an issuer as a container of issuer identities.
+// IssuerWallet models the wallet of an issuer
 type IssuerWallet interface {
 	Wallet
 
@@ -63,7 +62,7 @@ type IssuerWallet interface {
 	GetIssuerIdentity(tokenType string) (view.Identity, error)
 
 	// HistoryTokens returns the list of tokens issued by this wallet filtered using the passed options.
-	HistoryTokens(opts *ListTokensOptions) (*token2.IssuedTokens, error)
+	HistoryTokens(opts *ListTokensOptions) (*token.IssuedTokens, error)
 }
 
 // AuditorWallet models the wallet of an auditor
@@ -75,7 +74,7 @@ type AuditorWallet interface {
 	GetAuditorIdentity() (view.Identity, error)
 }
 
-// CertifierWallet models the wallet of an auditor
+// CertifierWallet models the wallet of a certifier
 type CertifierWallet interface {
 	Wallet
 
@@ -84,6 +83,7 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (view.Identity, error)
 }
 
+// WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error
@@ -129,7 +129,9 @@ type WalletService interface {
 	CertifierWalletByIdentity(identity view.Identity) CertifierWallet
 }
 
+// Matcher models a matcher that can be used to match identities
 type Matcher interface {
+	// Match returns true if the passed identity matches this matcher
 	Match([]byte) error
 }
 
@@ -142,6 +144,6 @@ type Deserializer interface {
 	GetIssuerVerifier(id view.Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
 	GetAuditorVerifier(id view.Identity) (Verifier, error)
-	// GetOwnerMatcher returns
-	GetOwnerMatcher(raw []byte) (Matcher, error)
+	// GetOwnerMatcher returns an identity matcher for the passed identity audit data.
+	GetOwnerMatcher(auditData []byte) (Matcher, error)
 }

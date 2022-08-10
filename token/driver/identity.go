@@ -57,14 +57,11 @@ type IdentityProvider interface {
 	// GetEnrollmentID extracts the enrollment ID from the passed audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
-	// GetIdentityMetadata returns the metadata associated to the passed identity
-	GetIdentityMetadata(identity view.Identity) ([]byte, error)
-
 	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id.
 	Bind(id view.Identity, longTerm view.Identity) error
 
-	// RegisterRecipientIdentity mark the passed identity as a recipient identity.
+	// RegisterRecipientIdentity register the passed identity as a third-pary recipient identity.
 	RegisterRecipientIdentity(id view.Identity) error
 
 	// RegisterOwnerWallet registers the passed wallet as the owner wallet of the passed identity.
