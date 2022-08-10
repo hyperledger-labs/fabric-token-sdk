@@ -22,6 +22,7 @@ type PublicParametersManager struct {
 	ppm tokenapi.PublicParamsManager
 }
 
+// Precision returns the precision used to represent the token quantity
 func (c *PublicParametersManager) Precision() uint64 {
 	return c.ppm.PublicParameters().Precision()
 }
