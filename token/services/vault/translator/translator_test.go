@@ -113,19 +113,8 @@ var _ = Describe("Translator", func() {
 
 			})
 		})
-
-		When("issuer is not allowed to issue tokens", func() {
-			BeforeEach(func() {
-				fakeIssuingValidator.ValidateReturnsOnCall(0, errors.New("wild banana"))
-			})
-			It("issue fails", func() {
-				err := writer.Write(fakeissue)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("verification of issue policy failed"))
-			})
-		})
-
 	})
+
 	Describe("Transfer: transaction graph revealed", func() {
 		BeforeEach(func() {
 			faketransfer.SerializeOutputAtReturnsOnCall(0, []byte("output-1"), nil)
