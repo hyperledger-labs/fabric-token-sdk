@@ -8,6 +8,7 @@ package token
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -94,10 +95,10 @@ func (o *OutputStream) Count() int {
 }
 
 // Sum returns the sum of the quantity of all outputs in the OutputStream.
-func (o *OutputStream) Sum() token2.Quantity {
-	sum := token2.NewZeroQuantity(o.Precision)
-	for _, output := range o.outputs {
-		sum = sum.Add(output.Quantity)
+func (o *OutputStream) Sum() *big.Int {
+	sum := big.NewInt(0)
+	for _, input := range o.outputs {
+		sum = sum.Add(sum, input.Quantity.ToBigInt())
 	}
 	return sum
 }
@@ -268,10 +269,10 @@ func (is *InputStream) ByType(tokenType string) *InputStream {
 }
 
 // Sum returns the sum of the quantities of the inputs.
-func (is *InputStream) Sum() token2.Quantity {
-	sum := token2.NewZeroQuantity(is.precision)
+func (is *InputStream) Sum() *big.Int {
+	sum := big.NewInt(0)
 	for _, input := range is.inputs {
-		sum = sum.Add(input.Quantity)
+		sum = sum.Add(sum, input.Quantity.ToBigInt())
 	}
 	return sum
 }

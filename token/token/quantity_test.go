@@ -117,9 +117,9 @@ func TestOverflow(t *testing.T) {
 		b.Add(b)
 	})
 
-	a, err = token2.ToBigQuantity(ToHex(1), 64)
+	a, err = token2.NewUBigQuantity(ToHex(1), 64)
 	assert.NoError(t, err)
-	b, err = token2.ToBigQuantity(ToHex(uint64(math.MaxUint64)), 64)
+	b, err = token2.NewUBigQuantity(ToHex(uint64(math.MaxUint64)), 64)
 	assert.NoError(t, err)
 
 	assert.Panics(t, func() {

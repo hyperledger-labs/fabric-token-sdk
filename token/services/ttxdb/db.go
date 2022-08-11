@@ -331,8 +331,8 @@ func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			diff := sent.Sub(sent, received)
 			if diff.Cmp(big.NewInt(0)) <= 0 {
 				continue
@@ -366,8 +366,8 @@ func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
 
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum().ToBigInt()
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			diff := received.Sub(received, sent)
 			if diff.Cmp(big.NewInt(0)) <= 0 {
 				// Nothing received
@@ -430,7 +430,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 		outTT := ous.TokenTypes()
 		for _, outEID := range outEIDs {
 			for _, tokenType := range outTT {
-				received := outputs.ByEnrollmentID(outEID).ByType(tokenType).Sum().ToBigInt()
+				received := outputs.ByEnrollmentID(outEID).ByType(tokenType).Sum()
 				if received.Cmp(big.NewInt(0)) <= 0 {
 					continue
 				}

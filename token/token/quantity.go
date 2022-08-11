@@ -38,11 +38,6 @@ type Quantity interface {
 	ToBigInt() *big.Int
 }
 
-type BigQuantity struct {
-	*big.Int
-	Precision uint64
-}
-
 // ToQuantity converts a string q to a BigQuantity of a given precision.
 // Argument q is supposed to be formatted following big.Int#scan specification.
 // The precision is expressed in bits.
@@ -69,24 +64,6 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	}
 }
 
-func ToBigQuantity(q string, precision uint64) (Quantity, error) {
-	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
-	}
-	v, success := big.NewInt(0).SetString(q, 0)
-	if !success {
-		return nil, errors.Errorf("invalid input [%s,%d]", q, precision)
-	}
-	if v.Cmp(big.NewInt(0)) < 0 {
-		return nil, errors.New("quantity must be larger than 0")
-	}
-	if v.BitLen() > int(precision) {
-		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
-	}
-
-	return &BigQuantity{Int: v, Precision: precision}, nil
-}
-
 // NewZeroQuantity returns to zero quantity at the passed precision/
 // The precision is expressed in bits.
 func NewZeroQuantity(precision uint64) Quantity {
@@ -107,15 +84,27 @@ func NewOneQuantity(precision uint64) Quantity {
 	}
 }
 
-func NewQuantityFromUInt64(q uint64) Quantity {
-	return &UInt64Quantity{Value: q}
+type BigQuantity struct {
+	*big.Int
+	Precision uint64
 }
 
-func NewQuantityFromBig64(q *big.Int) Quantity {
-	if q.BitLen() > 64 {
-		panic("invalid precision, expected at most 64 bits")
+func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
+	if precision == 0 {
+		return nil, errors.New("precision be larger than 0")
 	}
-	return &UInt64Quantity{Value: q.Uint64()}
+	v, success := big.NewInt(0).SetString(q, 0)
+	if !success {
+		return nil, errors.Errorf("invalid input [%s,%d]", q, precision)
+	}
+	if v.Cmp(big.NewInt(0)) < 0 {
+		return nil, errors.New("quantity must be larger than 0")
+	}
+	if v.BitLen() > int(precision) {
+		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
+	}
+
+	return &BigQuantity{Int: v, Precision: precision}, nil
 }
 
 func (q *BigQuantity) Add(b Quantity) Quantity {
@@ -180,6 +169,10 @@ func (q *BigQuantity) ToBigInt() *big.Int {
 
 type UInt64Quantity struct {
 	Value uint64
+}
+
+func NewQuantityFromUInt64(q uint64) Quantity {
+	return &UInt64Quantity{Value: q}
 }
 
 func (q *UInt64Quantity) Add(b Quantity) Quantity {
