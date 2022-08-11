@@ -38,7 +38,7 @@ var _ = Describe("Translator", func() {
 		fakeIssuingValidator = &mock.IssuingValidator{}
 		fakeRWSet = &mock.RWSet{}
 
-		writer = writer2.New(fakeIssuingValidator, "0", fakeRWSet, "zkat")
+		writer = writer2.New("0", fakeRWSet, "zkat")
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)

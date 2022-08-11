@@ -140,8 +140,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		db: request.Namespace,
 		tx: tx,
 	}
-	issuingValidator := &AllIssuersValid{}
-	t := translator.New(issuingValidator, request.TxID, rws, "")
+	t := translator.New(request.TxID, rws, "")
 	for _, action := range actions {
 		err = t.Write(action)
 		if err != nil {

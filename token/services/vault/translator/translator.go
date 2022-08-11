@@ -22,22 +22,20 @@ var logger = flogging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
-	IssuingValidator IssuingValidator
-	RWSet            RWSet
-	TxID             string
-	counter          uint64
-	sigCounter       uint64
-	namespace        string
+	RWSet      RWSet
+	TxID       string
+	counter    uint64
+	sigCounter uint64
+	namespace  string
 }
 
-func New(issuingValidator IssuingValidator, txID string, rwSet RWSet, namespace string) *Translator {
+func New(txID string, rwSet RWSet, namespace string) *Translator {
 	w := &Translator{
-		IssuingValidator: issuingValidator,
-		RWSet:            rwSet,
-		TxID:             txID,
-		counter:          0,
-		sigCounter:       0,
-		namespace:        namespace,
+		RWSet:      rwSet,
+		TxID:       txID,
+		counter:    0,
+		sigCounter: 0,
+		namespace:  namespace,
 	}
 
 	return w
@@ -178,17 +176,10 @@ func (w *Translator) checkAction(tokenAction interface{}) error {
 }
 
 func (w *Translator) checkIssue(issue IssueAction) error {
-	// check if issuer is allowed to issue type
-	err := w.checkIssuePolicy(issue)
-	if err != nil {
-		return errors.Wrapf(err, "invalid issue: verification of issue policy failed")
-	}
-
 	// check if the keys of issued tokens aren't already used.
 	// check is assigned owners are valid
 	for i := 0; i < issue.NumOutputs(); i++ {
-		err = w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID)
-		if err != nil {
+		if err := w.checkTokenDoesNotExist(w.counter+uint64(i), w.TxID); err != nil {
 			return err
 		}
 	}
@@ -249,11 +240,6 @@ func (w *Translator) checkTokenDoesNotExist(index uint64, txID string) error {
 		return errors.Errorf("token already exists: %s", tokenKey)
 	}
 	return nil
-}
-
-func (w *Translator) checkIssuePolicy(issue IssueAction) error {
-	// TODO: retrieve type from action
-	return w.IssuingValidator.Validate(issue.GetIssuer(), "")
 }
 
 func (w *Translator) commitProcess(action interface{}) error {
