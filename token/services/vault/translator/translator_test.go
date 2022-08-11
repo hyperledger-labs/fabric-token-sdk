@@ -24,8 +24,7 @@ const (
 
 var _ = Describe("Translator", func() {
 	var (
-		fakeIssuingValidator *mock.IssuingValidator
-		fakeRWSet            *mock.RWSet
+		fakeRWSet *mock.RWSet
 
 		writer *writer2.Translator
 
@@ -35,15 +34,12 @@ var _ = Describe("Translator", func() {
 	)
 
 	BeforeEach(func() {
-		fakeIssuingValidator = &mock.IssuingValidator{}
 		fakeRWSet = &mock.RWSet{}
 
 		writer = writer2.New("0", fakeRWSet, "zkat")
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)
-
-		fakeIssuingValidator.ValidateReturns(nil)
 
 		// fakeIssue
 		fakeissue = &mock.IssueAction{}
