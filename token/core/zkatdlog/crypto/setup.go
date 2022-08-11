@@ -23,22 +23,24 @@ const (
 )
 
 type PublicParams struct {
+	// Label is the identifier of the public parameters.
+	Label string
+	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
+	Curve math.CurveID
 	// PedGen is the generator of the Pedersen commitment group.
 	PedGen *math.G1
 	// PedParams contains the public parameters for the Pedersen commitment scheme.
 	PedParams []*math.G1
 	// RangeProofParams contains the public parameters for the range proof scheme.
 	RangeProofParams *RangeProofParams
+	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
+	IdemixCurveID math.CurveID
 	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
 	IdemixIssuerPK []byte
 	// Auditor is the public key of the auditor
 	Auditor []byte
 	// Issuers is a list of public keys of the entities that can issue tokens.
 	Issuers [][]byte
-	// Label is the identifier of the public parameters.
-	Label string
-	// Curve is the pairing-friendly elliptic curve used.
-	Curve math.CurveID
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
 	// Hash is the hash of the serialized public parameters.
@@ -183,17 +185,17 @@ func (pp *PublicParams) AddIssuer(id view.Identity) {
 	pp.Issuers = append(pp.Issuers, id)
 }
 
-func Setup(base int64, exponent int, nymPK []byte, curveID math.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters, curveID)
+func Setup(base int64, exponent int, nymPK []byte, idemixCurveID math.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, curveID math.CurveID) (*PublicParams, error) {
-	signer := pssign.NewSigner(nil, nil, nil, math.Curves[curveID])
+func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, idemixCurveID math.CurveID) (*PublicParams, error) {
+	signer := pssign.NewSigner(nil, nil, nil, math.Curves[math.BN254])
 	err := signer.KeyGen(1)
 	if err != nil {
 		return nil, err
 	}
-	pp := &PublicParams{Curve: curveID}
+	pp := &PublicParams{Curve: math.BN254}
 	pp.Label = label
 	err = pp.GeneratePedersenParameters()
 	if err != nil {
@@ -204,6 +206,7 @@ func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, 
 		return nil, err
 	}
 	pp.IdemixIssuerPK = nymPK
+	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision
 	// max value of any given token is max = base^exponent - 1
