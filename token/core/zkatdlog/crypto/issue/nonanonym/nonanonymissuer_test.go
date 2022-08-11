@@ -30,7 +30,7 @@ var _ = Describe("Issuer", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		pp, err = crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
+		pp, err = crypto.Setup(100, 2, nil, math.BN254)
 		Expect(err).NotTo(HaveOccurred())
 		owners = make([][]byte, 3)
 		owners[0] = []byte("alice")

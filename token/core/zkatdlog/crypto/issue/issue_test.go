@@ -52,7 +52,7 @@ func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness
 }
 
 func prepareZKIssue() (*issue.Prover, *issue.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(100, 2, nil, math.BN254)
 	Expect(err).NotTo(HaveOccurred())
 
 	tw, tokens := prepareInputsForZKIssue(pp)
