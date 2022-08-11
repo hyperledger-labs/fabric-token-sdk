@@ -10,11 +10,19 @@ token:
           - default: true
             id: alice
             path: /token/crypto/default-testchannel-zkat/idemix/alice
-            type: idemix:IdemixOrgMSP:BN254
+            opts:
+              PKCS11:
+                # Location of the PKCS11 module library
+                Library:
+                # Token Label
+                Label:
+                # User PIN
+                Pin:
+                Hash:
+                Security:
           - default: false
             id: alice.id1
             path: /token/crypto/default-testchannel-zkat/idemix/alice.id1
-            type: idemix:IdemixOrgMSP:BN254
     - certification: null
       network: n2
       channel: c2
@@ -24,11 +32,9 @@ token:
           - default: true
             id: alice
             path: /token/crypto/default-testchannel-zkat/idemix/alice
-            type: idemix:IdemixOrgMSP:BN254
           - default: false
             id: alice.id1
             path: /token/crypto/default-testchannel-zkat/idemix/alice.id1
-            type: idemix:IdemixOrgMSP:BN254
   ttxdb:
     persistence:
       opts:

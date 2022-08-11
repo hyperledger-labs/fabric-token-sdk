@@ -30,5 +30,7 @@ func TestGetTMSs(t *testing.T) {
 		tms2, err := tokenSDKConfig.GetTMS(tms.TMS().Network, tms.TMS().Channel, tms.TMS().Namespace)
 		assert.NoError(t, err)
 		assert.Equal(t, tms, tms2)
+
+		assert.Len(t, tms2.TMS().Wallets.Owners, 2)
 	}
 }

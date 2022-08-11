@@ -62,7 +62,7 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 
 	for _, identityConfig := range identities {
 		logger.Debugf("Load x509 Wallet: [%v]", identityConfig)
-		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default); err != nil {
+		if err := lm.registerIdentity(identityConfig, identityConfig.Default); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 	}
@@ -127,22 +127,25 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	return lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "")
+	return lm.registerIdentity(&config.Identity{
+		ID:   id,
+		Path: path,
+	}, lm.GetDefaultIdentifier() == "")
 }
 
-func (lm *LocalMembership) registerIdentity(id string, path string, setDefault bool) error {
+func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
-	translatedPath := lm.configManager.TranslatePath(path)
-	if err := lm.registerMSPProvider(id, translatedPath, setDefault); err != nil {
+	translatedPath := lm.configManager.TranslatePath(c.Path)
+	if err := lm.registerMSPProvider(c, translatedPath, setDefault); err != nil {
 		// Does path correspond to a holder containing multiple MSP identities?
-		if err := lm.registerMSPProviders(translatedPath); err != nil {
+		if err := lm.registerMSPProviders(c, translatedPath); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
 		}
 	}
 	return nil
 }
 
-func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, setDefault bool) error {
+func (lm *LocalMembership) registerMSPProvider(c *config.Identity, translatedPath string, setDefault bool) error {
 	// Try without "msp"
 	provider, err := x509.NewProvider(filepath.Join(translatedPath), lm.mspID, lm.signerService)
 	if err != nil {
@@ -159,17 +162,17 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, setDef
 
 	walletId, _, err := provider.Identity(nil)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", id, translatedPath)
+		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", c.ID, translatedPath)
 	}
 
-	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", id, provider.EnrollmentID(), walletId.String())
+	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", c.ID, provider.EnrollmentID(), walletId.String())
 	lm.deserializerManager.AddDeserializer(provider)
-	lm.addResolver(id, provider.EnrollmentID(), setDefault, provider.Identity)
+	lm.addResolver(c.ID, provider.EnrollmentID(), setDefault, provider.Identity)
 
 	return nil
 }
 
-func (lm *LocalMembership) registerMSPProviders(translatedPath string) error {
+func (lm *LocalMembership) registerMSPProviders(c *config.Identity, translatedPath string) error {
 	entries, err := ioutil.ReadDir(translatedPath)
 	if err != nil {
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
@@ -180,7 +183,7 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string) error {
 			continue
 		}
 		id := entry.Name()
-		if err := lm.registerMSPProvider(id, filepath.Join(translatedPath, id), false); err != nil {
+		if err := lm.registerMSPProvider(c, filepath.Join(translatedPath, id), false); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
 		}
 	}
