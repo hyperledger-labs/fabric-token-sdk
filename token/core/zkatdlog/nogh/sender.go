@@ -77,19 +77,19 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
-	transfer, infos, err := sender.GenerateZKTransfer(values, owners)
+	transfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
 
 	// prepare metadata
-	var infoRaws [][]byte
-	for _, information := range infos {
+	var outputMetadataRaw [][]byte
+	for _, information := range outputMetadata {
 		raw, err := information.Serialize()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed serializing token info for zkatdlog transfer action")
 		}
-		infoRaws = append(infoRaws, raw)
+		outputMetadataRaw = append(outputMetadataRaw, raw)
 	}
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
@@ -126,7 +126,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		Senders:            signerIds,
 		SenderAuditInfos:   senderAuditInfos,
 		TokenIDs:           ids,
-		TokenInfo:          infoRaws,
+		OutputsMetadata:    outputMetadataRaw,
 		Receivers:          ownerIdentities,
 		ReceiverAuditInfos: receiverAuditInfos,
 		ReceiverIsSender:   receiverIsSender,
@@ -135,8 +135,8 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	return transfer, metadata, nil
 }
 
-// VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
-func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]byte) error {
+// VerifyTransfer checks the outputs in the TransferAction against the passed metadata
+func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [][]byte) error {
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
@@ -151,18 +151,18 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, tokenInfos [][]by
 	for i := 0; i < len(tr.OutputTokens); i++ {
 		com[i] = tr.OutputTokens[i].Data
 
-		if len(tokenInfos[i]) == 0 {
+		if len(outputsMetadata[i]) == 0 {
 			continue
 		}
 		// TODO: complete this check...
 		// token information in cleartext
-		ti := &token.TokenInformation{}
-		if err := ti.Deserialize(tokenInfos[i]); err != nil {
+		meta := &token.Metadata{}
+		if err := meta.Deserialize(outputsMetadata[i]); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token information")
 		}
 
 		// check that token info matches output. If so, return token in cleartext. Else return an error.
-		tok, err := tr.OutputTokens[i].GetTokenInTheClear(ti, pp)
+		tok, err := tr.OutputTokens[i].GetTokenInTheClear(meta, pp)
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}

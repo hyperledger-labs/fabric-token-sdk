@@ -34,14 +34,14 @@ func (i *Issuer) New(ttype string, signer common.SigningIdentity, pp *crypto.Pub
 	i.PublicParams = pp
 }
 
-func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.IssueAction, []*token.TokenInformation, error) {
+func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.IssueAction, []*token.Metadata, error) {
 	if i.PublicParams == nil {
 		return nil, nil, errors.New("failed to generate ZK Issue: nil public parameters")
 	}
-	if len(math.Curves) < i.PublicParams.Curve+1 {
+	if len(math.Curves) < int(i.PublicParams.Curve)+1 {
 		return nil, nil, errors.New("failed to generate ZK Issue: please initialize public parameters with an admissible curve")
 	}
-	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.ZKATPedParams, math.Curves[i.PublicParams.Curve])
+	tokens, tw, err := token.GetTokensWithWitness(values, i.Type, i.PublicParams.PedParams, math.Curves[i.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, err
 	}
@@ -65,9 +65,9 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 		return nil, nil, err
 	}
 
-	inf := make([]*token.TokenInformation, len(values))
+	inf := make([]*token.Metadata, len(values))
 	for j := 0; j < len(inf); j++ {
-		inf[j] = &token.TokenInformation{
+		inf[j] = &token.Metadata{
 			Type:           i.Type,
 			Value:          tw[j].Value,
 			BlindingFactor: tw[j].BlindingFactor,

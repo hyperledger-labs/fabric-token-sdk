@@ -12,7 +12,7 @@ import (
 )
 
 type Issuer interface {
-	GenerateZKIssue(values []uint64, owners [][]byte) (*IssueAction, []*token.TokenInformation, error)
+	GenerateZKIssue(values []uint64, owners [][]byte) (*IssueAction, []*token.Metadata, error)
 
 	SignTokenActions(raw []byte, txID string) ([]byte, error)
 

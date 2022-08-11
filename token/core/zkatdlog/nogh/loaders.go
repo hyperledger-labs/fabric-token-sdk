@@ -53,10 +53,10 @@ type VaultTokenLoader struct {
 // matching the token identifiers, the corresponding zkatdlog tokens, the information of the
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
-func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Token, []*token.TokenInformation, []view.Identity, error) {
+func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Token, []*token.Metadata, []view.Identity, error) {
 	var tokens []*token.Token
 	var inputIDs []string
-	var inputInf []*token.TokenInformation
+	var inputInf []*token.Metadata
 	var signerIds []view.Identity
 
 	// return token commitments and the corresponding opening
@@ -74,7 +74,7 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 		if err != nil {
 			return errors.Wrapf(err, "failed unmarshalling token for id [%v]", id)
 		}
-		ti := &token.TokenInformation{}
+		ti := &token.Metadata{}
 		err = ti.Deserialize(info)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)

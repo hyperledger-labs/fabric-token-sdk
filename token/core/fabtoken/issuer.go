@@ -14,7 +14,7 @@ import (
 )
 
 // Issue returns an IssueAction as a function of the passed arguments
-// Issue also returns a serialization TokenInformation associated with issued tokens
+// Issue also returns a serialization OutputMetadata associated with issued tokens
 // and the identity of the issuer
 func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, [][]byte, view.Identity, error) {
 	for _, owner := range owners {
@@ -24,10 +24,10 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		}
 	}
 
-	var outs []*TransferOutput
-	var infos [][]byte
+	var outs []*Output
+	var metas [][]byte
 	for i, v := range values {
-		outs = append(outs, &TransferOutput{
+		outs = append(outs, &Output{
 			Output: &token2.Token{
 				Owner: &token2.Owner{
 					Raw: owners[i],
@@ -37,18 +37,18 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 			},
 		})
 
-		ti := &TokenInformation{
+		meta := &OutputMetadata{
 			Issuer: issuerIdentity,
 		}
-		tiRaw, err := ti.Serialize()
+		metaRaw, err := meta.Serialize()
 		if err != nil {
 			return nil, nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}
-		infos = append(infos, tiRaw)
+		metas = append(metas, metaRaw)
 	}
 
 	return &IssueAction{Issuer: issuerIdentity, Outputs: outs},
-		infos,
+		metas,
 		issuerIdentity,
 		nil
 }

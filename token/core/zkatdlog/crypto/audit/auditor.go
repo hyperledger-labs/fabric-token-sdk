@@ -332,7 +332,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
 		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
-			ti := &token.TokenInformation{}
+			ti := &token.Metadata{}
 			err := json.Unmarshal(md.TokenInfo[i], ti)
 			if err != nil {
 				return nil, err
@@ -388,8 +388,8 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 			return nil, nil, errors.Errorf("number of outputs does not match the number of receivers")
 		}
 		for i := 0; i < len(tr.ReceiverAuditInfos); i++ {
-			ti := &token.TokenInformation{}
-			err := json.Unmarshal(tr.TokenInfo[i], ti)
+			ti := &token.Metadata{}
+			err := json.Unmarshal(tr.OutputsMetadata[i], ti)
 			if err != nil {
 				return nil, nil, err
 			}

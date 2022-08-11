@@ -15,7 +15,7 @@ import (
 
 var _ = Describe("Token", func() {
 	var (
-		inf   *token2.TokenInformation
+		inf   *token2.Metadata
 		token *token2.Token
 		pp    *crypto.PublicParams
 	)
@@ -27,16 +27,16 @@ var _ = Describe("Token", func() {
 		c := math.Curves[pp.Curve]
 		rand, err := c.Rand()
 		Expect(err).NotTo(HaveOccurred())
-		inf = &token2.TokenInformation{
+		inf = &token2.Metadata{
 			Value:          c.NewZrFromInt(50),
 			Type:           "ABC",
 			BlindingFactor: c.NewRandomZr(rand),
 		}
 		token = &token2.Token{}
 		token.Data = c.NewG1()
-		token.Data.Add(pp.ZKATPedParams[1].Mul(inf.Value))
-		token.Data.Add(pp.ZKATPedParams[2].Mul(inf.BlindingFactor))
-		token.Data.Add(pp.ZKATPedParams[0].Mul(c.HashToZr([]byte("ABC"))))
+		token.Data.Add(pp.PedParams[1].Mul(inf.Value))
+		token.Data.Add(pp.PedParams[2].Mul(inf.BlindingFactor))
+		token.Data.Add(pp.PedParams[0].Mul(c.HashToZr([]byte("ABC"))))
 	})
 	Describe("get token in the clear", func() {
 		When("token is computed correctly", func() {

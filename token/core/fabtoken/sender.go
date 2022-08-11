@@ -30,18 +30,18 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 	}
 
 	// prepare outputs
-	var outs []*TransferOutput
-	var infos [][]byte
+	var outs []*Output
+	var metas [][]byte
 	for _, output := range Outputs {
-		outs = append(outs, &TransferOutput{
+		outs = append(outs, &Output{
 			Output: output,
 		})
-		ti := &TokenInformation{}
-		tiRaw, err := ti.Serialize()
+		meta := &OutputMetadata{}
+		metaRaw, err := meta.Serialize()
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}
-		infos = append(infos, tiRaw)
+		metas = append(metas, metaRaw)
 	}
 
 	// assemble transfer action
@@ -107,7 +107,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 		Senders:            signerIds,
 		SenderAuditInfos:   senderAuditInfos,
 		TokenIDs:           ids,
-		TokenInfo:          infos,
+		OutputsMetadata:    metas,
 		Receivers:          receivers,
 		ReceiverIsSender:   receiverIsSender,
 		ReceiverAuditInfos: receiverAuditInfos,
@@ -120,7 +120,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
-func (s *Service) VerifyTransfer(tr driver.TransferAction, tokenInfos [][]byte) error {
+func (s *Service) VerifyTransfer(tr driver.TransferAction, outputsMetadata [][]byte) error {
 	// TODO:
 	return nil
 }

@@ -76,7 +76,7 @@ func TestGenFullSuccess(t *testing.T) {
 
 	idemixPK, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixPK))
+	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPK))
 }
 
 func TestGenFailure(t *testing.T) {

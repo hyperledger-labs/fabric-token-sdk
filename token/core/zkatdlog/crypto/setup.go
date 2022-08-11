@@ -23,18 +23,25 @@ const (
 )
 
 type PublicParams struct {
-	P                 *math.G1
-	ZKATPedParams     []*math.G1
-	RangeProofParams  *RangeProofParams
-	IdemixCurve       math.CurveID
-	IdemixPK          []byte
-	IssuingPolicy     []byte
-	Auditor           []byte
-	Issuers           [][]byte
-	Label             string
-	Curve             int
+	// PedGen is the generator of the Pedersen commitment group.
+	PedGen *math.G1
+	// PedParams contains the public parameters for the Pedersen commitment scheme.
+	PedParams []*math.G1
+	// RangeProofParams contains the public parameters for the range proof scheme.
+	RangeProofParams *RangeProofParams
+	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
+	IdemixIssuerPK []byte
+	// Auditor is the public key of the auditor
+	Auditor []byte
+	// Issuers is a list of public keys of the entities that can issue tokens.
+	Issuers [][]byte
+	// Label is the identifier of the public parameters.
+	Label string
+	// Curve is the pairing-friendly elliptic curve used.
+	Curve math.CurveID
+	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
-
+	// Hash is the hash of the serialized public parameters.
 	Hash []byte
 }
 
@@ -115,6 +122,10 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if err := pp.ComputeHash(raw); err != nil {
 		return errors.Wrap(err, "failed computing hash")
 	}
+	// TODO: perform additional checks:
+	// the curve exists
+	// the idemix params are all set,
+	// and so on
 	return nil
 }
 
@@ -124,11 +135,11 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
-	pp.P = curve.GenG1.Mul(curve.NewRandomZr(rand))
-	pp.ZKATPedParams = make([]*math.G1, 3)
+	pp.PedGen = curve.GenG1.Mul(curve.NewRandomZr(rand))
+	pp.PedParams = make([]*math.G1, 3)
 
-	for i := 0; i < len(pp.ZKATPedParams); i++ {
-		pp.ZKATPedParams[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
+	for i := 0; i < len(pp.PedParams); i++ {
+		pp.PedParams[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
 	return nil
 }
@@ -177,12 +188,12 @@ func Setup(base int64, exponent int, nymPK []byte, curveID math.CurveID) (*Publi
 }
 
 func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, curveID math.CurveID) (*PublicParams, error) {
-	signer := pssign.NewSigner(nil, nil, nil, math.Curves[1])
+	signer := pssign.NewSigner(nil, nil, nil, math.Curves[curveID])
 	err := signer.KeyGen(1)
 	if err != nil {
 		return nil, err
 	}
-	pp := &PublicParams{Curve: 1}
+	pp := &PublicParams{Curve: curveID}
 	pp.Label = label
 	err = pp.GeneratePedersenParameters()
 	if err != nil {
@@ -192,8 +203,7 @@ func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, 
 	if err != nil {
 		return nil, err
 	}
-	pp.IdemixPK = nymPK
-	pp.IdemixCurve = curveID
+	pp.IdemixIssuerPK = nymPK
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision
 	// max value of any given token is max = base^exponent - 1

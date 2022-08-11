@@ -150,9 +150,9 @@ type Prover struct {
 func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Prover {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
-	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.ZKATPedParams, c)
+	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.PedParams, c)
 
-	p.RangeCorrectness = rp.NewProver(tw, tokens, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	p.RangeCorrectness = rp.NewProver(tw, tokens, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.PedParams, pp.RangeProofParams.SignPK, pp.PedGen, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 
 	return p
 }
@@ -192,8 +192,8 @@ type Verifier struct {
 
 func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.ZKATPedParams, math.Curves[pp.Curve])
-	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.PedParams, math.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewVerifier(tokens, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.PedParams, pp.RangeProofParams.SignPK, pp.PedGen, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 	return v
 }
 

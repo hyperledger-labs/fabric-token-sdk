@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import (
@@ -17,9 +18,9 @@ import (
 
 // Token encodes Type, Value, Owner
 type Token struct {
-	// this could be either an msp identity or an idemix identity
+	// Owner is the owner of the token
 	Owner []byte
-	// Pedersen commitment to type and value
+	// Data is the Pedersen commitment to type and value
 	Data *math.G1
 }
 
@@ -43,19 +44,19 @@ func (t *Token) GetCommitment() *math.G1 {
 	return t.Data
 }
 
-// GetTokenInTheClear returns Token information in the clear
-func (t *Token) GetTokenInTheClear(inf *TokenInformation, pp *crypto.PublicParams) (*token2.Token, error) {
-	com, err := common.ComputePedersenCommitment([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(inf.Type)), inf.Value, inf.BlindingFactor}, pp.ZKATPedParams, math.Curves[pp.Curve])
+// GetTokenInTheClear returns Token in the clear
+func (t *Token) GetTokenInTheClear(meta *Metadata, pp *crypto.PublicParams) (*token2.Token, error) {
+	com, err := common.ComputePedersenCommitment([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedParams, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
 	}
-	// check that token matches inf
+	// check that token matches meta
 	if !com.Equals(t.Data) {
 		return nil, errors.New("cannot retrieve token in the clear: output does not match provided opening")
 	}
 	return &token2.Token{
-		Type:     inf.Type,
-		Quantity: "0x" + inf.Value.String(),
+		Type:     meta.Type,
+		Quantity: "0x" + meta.Value.String(),
 		Owner:    &token2.Owner{Raw: t.Owner},
 	}, nil
 }
@@ -96,23 +97,28 @@ func GetTokensWithWitness(values []uint64, ttype string, pp []*math.G1, c *math.
 	return tokens, tw, nil
 }
 
-// TokenInformation is used to produce privacy-preserving transfers
-type TokenInformation struct {
-	Type           string
-	Value          *math.Zr
+// Metadata contains the metadata of a token
+type Metadata struct {
+	// Type is the type of the token
+	Type string
+	// Value is the quantity of the token
+	Value *math.Zr
+	// BlindingFactor is the blinding factor used to commit type and value
 	BlindingFactor *math.Zr
-	Owner          []byte
-	Issuer         []byte
+	// Owner is the owner of the token
+	Owner []byte
+	// Issuer is the issuer of the token, if defined
+	Issuer []byte
 }
 
-// Deserialize un-marshals TokenInformation
-func (inf *TokenInformation) Deserialize(b []byte) error {
-	return json.Unmarshal(b, inf)
+// Deserialize un-marshals Metadata
+func (m *Metadata) Deserialize(b []byte) error {
+	return json.Unmarshal(b, m)
 }
 
-// Serialize un-marshals TokenInformation
-func (inf *TokenInformation) Serialize() ([]byte, error) {
-	return json.Marshal(inf)
+// Serialize un-marshals Metadata
+func (m *Metadata) Serialize() ([]byte, error) {
+	return json.Marshal(m)
 }
 
 // TokenDataWitness contains the opening of Data in Token

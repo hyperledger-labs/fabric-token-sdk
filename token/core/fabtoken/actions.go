@@ -25,35 +25,35 @@ func (s *Signature) Metadata() map[string][]byte {
 	return s.metadata
 }
 
-// TokenInformation contains a serialization of the issuer of the token.
+// OutputMetadata contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
-type TokenInformation struct {
+type OutputMetadata struct {
 	Issuer []byte
 }
 
-// Deserialize un-marshals TokenInformation
-func (inf *TokenInformation) Deserialize(b []byte) error {
-	return json.Unmarshal(b, inf)
+// Deserialize un-marshals OutputMetadata
+func (m *OutputMetadata) Deserialize(b []byte) error {
+	return json.Unmarshal(b, m)
 }
 
-// Serialize marshals TokenInformation
-func (inf *TokenInformation) Serialize() ([]byte, error) {
-	return json.Marshal(inf)
+// Serialize marshals OutputMetadata
+func (m *OutputMetadata) Serialize() ([]byte, error) {
+	return json.Marshal(m)
 }
 
-// TransferOutput carries the output of a TransferAction
-type TransferOutput struct {
+// Output carries the output of an action
+type Output struct {
 	Output *token.Token
 }
 
-// Serialize marshals a TransferOutput
-func (t *TransferOutput) Serialize() ([]byte, error) {
+// Serialize marshals a Output
+func (t *Output) Serialize() ([]byte, error) {
 	return json.Marshal(t.Output)
 }
 
-// IsRedeem returns true if the owner of a TransferOutput is empty
+// IsRedeem returns true if the owner of a Output is empty
 // todo update interface to account for nil t.Output.Owner and nil t.Output
-func (t *TransferOutput) IsRedeem() bool {
+func (t *Output) IsRedeem() bool {
 	return len(t.Output.Owner.Raw) == 0
 }
 
@@ -62,7 +62,7 @@ type IssueAction struct {
 	// issuer's public key
 	Issuer view.Identity
 	// new tokens to be issued
-	Outputs []*TransferOutput
+	Outputs []*Output
 }
 
 // Serialize marshals IssueAction
@@ -126,7 +126,7 @@ type TransferAction struct {
 	// identifier of token to be transferred
 	Inputs []string
 	// outputs to be created as a result of the transfer
-	Outputs []*TransferOutput
+	Outputs []*Output
 }
 
 // Serialize marshals TransferAction

@@ -36,7 +36,7 @@ Each wallet is bound to a single `X509-based Fabric MSP identities`.
 
 ## Token Service
 
-A token is represented on the ledger as the `json` representation of the `token.Token` struct.
+A token is represented on the ledger directly as the `json` representation of the `token.Token` struct.
 The `Owner` field of the `token.Token` struct is filled with the `asn1` representation of the `identity.RawOwner` struct
 whose `Type` field is set to `identity.SerializedIdentityType` and whose `Raw` field is set to
 a serialized X509-based Fabric MSP identity.

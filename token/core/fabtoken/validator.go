@@ -42,7 +42,7 @@ func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.Tra
 				return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
 			}
 
-			out := tr.GetOutputs()[0].(*TransferOutput).Output
+			out := tr.GetOutputs()[0].(*Output).Output
 			if inputTokens[0].Type != out.Type {
 				return errors.Errorf("invalid transfer action: type of input does not match type of output")
 			}
@@ -58,7 +58,7 @@ func ScriptTypeExchangeExtraValidator(inputTokens []*token2.Token, tr driver.Tra
 	}
 
 	for _, o := range tr.GetOutputs() {
-		out, ok := o.(*TransferOutput)
+		out, ok := o.(*Output)
 		if !ok {
 			return errors.Errorf("invalid output")
 		}
@@ -303,7 +303,7 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 		return errors.Errorf("there is no output")
 	}
 	for _, output := range issue.GetOutputs() {
-		out := output.(*TransferOutput).Output
+		out := output.(*Output).Output
 		q, err := token2.ToQuantity(out.Quantity, v.pp.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
@@ -346,7 +346,7 @@ func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.Transf
 		}
 	}
 	for _, output := range tr.GetOutputs() {
-		out := output.(*TransferOutput).Output
+		out := output.(*Output).Output
 		q, err := token2.ToQuantity(out.Quantity, v.pp.QuantityPrecision)
 		if err != nil {
 			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)

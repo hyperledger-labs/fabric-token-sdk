@@ -57,7 +57,7 @@ type IssueMetadata struct {
 // TransferMetadata contains the metadata of a transfer action
 // For each TokenID there is a sender with its audit info to recover its enrollment ID,
 // For each Output there is:
-// - A TokenInfo entry to de-obfuscate the output;
+// - A OutputsMetadata entry to de-obfuscate the output;
 // - A Receiver identity;
 // - A ReceiverAuditInfo entry to recover the enrollment ID of the receiver
 // - A Flag to indicate if the receiver is a sender in this very same action
@@ -71,8 +71,8 @@ type TransferMetadata struct {
 
 	// Outputs is the list of outputs created by this transfer action
 	Outputs [][]byte
-	// TokenInfo, for each output we have a TokenInfo entry that contains secrets to de-obfuscate the output
-	TokenInfo [][]byte
+	// OutputsMetadata, for each output we have an OutputsMetadata entry that contains secrets to de-obfuscate the output
+	OutputsMetadata [][]byte
 	// Receivers is the list of receivers
 	Receivers []view.Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
@@ -111,7 +111,7 @@ func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 	for _, transfer := range m.Transfers {
 		for i, output := range transfer.Outputs {
 			if bytes.Equal(output, tokenRaw) {
-				return transfer.TokenInfo[i]
+				return transfer.OutputsMetadata[i]
 			}
 		}
 	}
@@ -185,7 +185,7 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 		transfers[i] = TransferMetadataSer{
 			TokenIDs:           TokenIDs,
 			Outputs:            transfer.Outputs,
-			TokenInfo:          transfer.TokenInfo,
+			TokenInfo:          transfer.OutputsMetadata,
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
 			Receivers:          transfer.Receivers,
@@ -222,7 +222,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 		m.Transfers[i] = TransferMetadata{
 			TokenIDs:           TokenIDs,
 			Outputs:            transfer.Outputs,
-			TokenInfo:          transfer.TokenInfo,
+			OutputsMetadata:    transfer.TokenInfo,
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
 			Receivers:          transfer.Receivers,

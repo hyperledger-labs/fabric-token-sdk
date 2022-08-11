@@ -32,7 +32,7 @@ type QueryEngine interface {
 }
 
 type TokenLoader interface {
-	LoadTokens(ids []*token3.ID) ([]string, []*token.Token, []*token.TokenInformation, []view.Identity, error)
+	LoadTokens(ids []*token3.ID) ([]string, []*token.Token, []*token.Metadata, []view.Identity, error)
 }
 
 type PublicParametersManager interface {
@@ -103,7 +103,7 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 	}
 
 	// get token info
-	ti := &token.TokenInformation{}
+	ti := &token.Metadata{}
 	err := ti.Deserialize(infoRaw)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token information")

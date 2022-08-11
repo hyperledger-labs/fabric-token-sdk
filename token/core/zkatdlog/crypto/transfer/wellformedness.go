@@ -348,7 +348,7 @@ func (p *WellFormednessProver) computeCommitments() (*WellFormednessCommitments,
 	// randomness used to prove sum value
 	randomness.sum = p.Curve.NewRandomZr(rand)
 	commitments.InputSum.Add(p.PedParams[1].Mul(randomness.sum))
-	// add P^{rand_type*len(p.Inputs)}
+	// add PedGen^{rand_type*len(p.Inputs)}
 	commitments.InputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Inputs)))))
 
 	// for outputs
@@ -359,7 +359,7 @@ func (p *WellFormednessProver) computeCommitments() (*WellFormednessCommitments,
 	commitments.OutputSum = p.Curve.NewG1()
 	// randomness used to prove sum value
 	commitments.OutputSum.Add(p.PedParams[1].Mul(randomness.sum))
-	// add P^{rand_type*len(p.Outputs)}
+	// add PedGen^{rand_type*len(p.Outputs)}
 	commitments.OutputSum.Add(Q.Mul(p.Curve.NewZrFromInt(int64(len(p.Outputs)))))
 
 	for i := 0; i < len(p.Outputs); i++ {

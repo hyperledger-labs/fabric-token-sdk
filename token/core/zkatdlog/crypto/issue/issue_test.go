@@ -47,7 +47,7 @@ func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness
 	}
 	ttype := "ABC"
 
-	tokens := PrepareTokens(values, bF, ttype, pp.ZKATPedParams)
+	tokens := PrepareTokens(values, bF, ttype, pp.PedParams)
 	return token.NewTokenDataWitness(ttype, values, bF), tokens
 }
 

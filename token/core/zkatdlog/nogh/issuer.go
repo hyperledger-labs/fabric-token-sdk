@@ -38,18 +38,18 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		Signer:   signer,
 	}, pp)
 
-	issue, infos, err := issuer.GenerateZKIssue(values, owners)
+	issue, outputMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	var infoRaws [][]byte
-	for _, information := range infos {
-		raw, err := information.Serialize()
+	var outputMetadataRaw [][]byte
+	for _, meta := range outputMetadata {
+		raw, err := meta.Serialize()
 		if err != nil {
 			return nil, nil, nil, errors.WithMessage(err, "failed serializing token info")
 		}
-		infoRaws = append(infoRaws, raw)
+		outputMetadataRaw = append(outputMetadataRaw, raw)
 	}
 
 	fid, err := issuer.Signer.Serialize()
@@ -57,11 +57,11 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		return nil, nil, nil, err
 	}
 
-	return issue, infoRaws, fid, err
+	return issue, outputMetadataRaw, fid, err
 }
 
-// VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
-func (s *Service) VerifyIssue(ia driver.IssueAction, tokenInfos [][]byte) error {
+// VerifyIssue checks if the outputs of an IssueAction match the passed metadata
+func (s *Service) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) error {
 	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
 	}

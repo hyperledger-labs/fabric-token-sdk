@@ -55,10 +55,10 @@ func NewProver(inputwitness, outputwitness []*token.TokenDataWitness, inputs, ou
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputwitness) != 1 || len(outputwitness) != 1 {
-		p.RangeCorrectness = rangeproof.NewProver(outW, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+		p.RangeCorrectness = rangeproof.NewProver(outW, outputs, pp.RangeProofParams.SignedValues, pp.RangeProofParams.Exponent, pp.PedParams, pp.RangeProofParams.SignPK, pp.PedGen, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 	}
 	wfw := NewWellFormednessWitness(inW, outW)
-	p.WellFormedness = NewWellFormednessProver(wfw, pp.ZKATPedParams, inputs, outputs, math.Curves[pp.Curve])
+	p.WellFormedness = NewWellFormednessProver(wfw, pp.PedParams, inputs, outputs, math.Curves[pp.Curve])
 	return p
 }
 
@@ -68,9 +68,9 @@ func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier 
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputs) != 1 || len(outputs) != 1 {
-		v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.ZKATPedParams, pp.RangeProofParams.SignPK, pp.P, pp.RangeProofParams.Q, math.Curves[pp.Curve])
+		v.RangeCorrectness = rangeproof.NewVerifier(outputs, uint64(len(pp.RangeProofParams.SignedValues)), pp.RangeProofParams.Exponent, pp.PedParams, pp.RangeProofParams.SignPK, pp.PedGen, pp.RangeProofParams.Q, math.Curves[pp.Curve])
 	}
-	v.WellFormedness = NewWellFormednessVerifier(pp.ZKATPedParams, inputs, outputs, math.Curves[pp.Curve])
+	v.WellFormedness = NewWellFormednessVerifier(pp.PedParams, inputs, outputs, math.Curves[pp.Curve])
 
 	return v
 }
