@@ -36,12 +36,12 @@ It contains the serialized version of the actions and the witnesses.
 
 ## Issue Service
 
-The `Issue Service` interface (`driver.IssueService`) contains the API to generate an Issue Action. 
+The `Issue Service` interface (`driver.IssueService`) contains the API to generate an instance of the `driver.IssueAction` interface. 
 This Issue Action can then be serialized and appended to a token request. 
 
 ## Transfer Service
 
-The `Transfer Service` interface (`driver.TransferService`) contains the API to generate a Transfer Action.
+The `Transfer Service` interface (`driver.TransferService`) contains the API to generate an instance of `driver.TransferAction` interface.
 This Transfer Action can then be serialized and appended to a token request.
 
 ## Token Service
