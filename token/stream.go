@@ -19,11 +19,22 @@ type QueryService interface {
 
 // Output models the output of a token action
 type Output struct {
-	ActionIndex  int
-	Owner        view.Identity
+	// ActionIndex is the index of the action that created this output
+	ActionIndex int
+	// Index is the absolute position of this output in the token request
+	Index uint64
+	// Owner is the identity of the owner of this output
+	Owner view.Identity
+	// EnrollmentID is the enrollment ID of the owner of this output
 	EnrollmentID string
-	Type         string
-	Quantity     token2.Quantity
+	// Type is the type of token
+	Type string
+	// Quantity is the quantity of tokens
+	Quantity token2.Quantity
+}
+
+func (o Output) ID(txID string) *token2.ID {
+	return &token2.ID{TxId: txID, Index: o.Index}
 }
 
 // Input models an input of a token action

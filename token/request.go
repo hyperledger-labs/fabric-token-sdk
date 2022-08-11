@@ -372,6 +372,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		return nil, err
 	}
 	var outputs []*Output
+	counter := uint64(0)
 	for i, issue := range r.Actions.Issues {
 		// deserialize action
 		issueAction, err := tms.DeserializeIssueAction(issue)
@@ -423,11 +424,13 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 
 			outputs = append(outputs, &Output{
 				ActionIndex:  i,
+				Index:        counter,
 				Owner:        tok.Owner.Raw,
 				EnrollmentID: eID,
 				Type:         tok.Type,
 				Quantity:     q,
 			})
+			counter++
 		}
 	}
 
@@ -486,11 +489,13 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 
 			outputs = append(outputs, &Output{
 				ActionIndex:  i,
+				Index:        counter,
 				Owner:        tok.Owner.Raw,
 				EnrollmentID: eID,
 				Type:         tok.Type,
 				Quantity:     q,
 			})
+			counter++
 		}
 	}
 
@@ -1002,7 +1007,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		outputTokens = append(outputTokens, &token.Token{
 			Owner:    &token.Owner{Raw: owners[i]},
 			Type:     typ,
-			Quantity: token.NewQuantityFromUInt64(value).Decimal(),
+			Quantity: token.NewQuantityFromUInt64(value).Hex(),
 		})
 	}
 	qOutputSum := token.NewQuantityFromUInt64(outputSum)
@@ -1036,7 +1041,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 		outputTokens = append(outputTokens, &token.Token{
 			Owner:    &token.Owner{Raw: pseudonym},
 			Type:     typ,
-			Quantity: diff.Decimal(),
+			Quantity: diff.Hex(),
 		})
 	}
 

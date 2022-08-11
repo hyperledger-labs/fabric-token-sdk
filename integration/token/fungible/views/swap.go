@@ -118,6 +118,9 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
+	// Check that the tokens are or are not in the vault
+	AssertTokensInVault(vault, tx, outputs, me)
+
 	return tx.ID(), nil
 }
 
@@ -136,7 +139,7 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	// As a first step, To responds to the request to exchange token recipient identities.
 	// To takes his token recipient identity from the default wallet (ttx.MyWallet(context)),
 	// if not otherwise specified.
-	_, _, err := ttx.RespondExchangeRecipientIdentities(context)
+	me, _, err := ttx.RespondExchangeRecipientIdentities(context)
 	assert.NoError(err, "failed getting identity")
 
 	// To respond to a call from the CollectActionsView, the first thing to do is to receive
@@ -183,6 +186,11 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	vc, err = vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+
+	// Check that the tokens are or are not in the vault
+	outputs, err := tx.Outputs()
+	assert.NoError(err, "failed to retrieve outputs")
+	AssertTokensInVault(vault, tx, outputs, me)
 
 	return tx.ID(), nil
 }
