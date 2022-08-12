@@ -12,7 +12,7 @@ In more details, the driver hides the token's owner, type, and quantity. But it 
 a give transaction. We say that this driver does not support `graph hiding`.
 Owner anonymity and unlinkability is achieved by using Identity Mixer (Idemix, for short).
 
-The identity of the issuers and the auditors is not hidden. 
+The identities of the issuers and the auditors are not hidden. 
 
 ## Public Params Manager
 
@@ -34,7 +34,7 @@ type PublicParams struct {
 	IdemixCurveID math.CurveID
 	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
 	IdemixIssuerPK []byte
-	// Auditor is the public key of the auditor
+	// Auditor is the public key of the auditor.
 	Auditor []byte
 	// Issuers is a list of public keys of the entities that can issue tokens.
 	Issuers [][]byte
@@ -50,14 +50,15 @@ The `Label` field must be set to `"zkatdlog"`.
 
 ## IdentityProvider
 
-In `ZKAT DLog`, there are two  long-term identities supported: 
-- `X509-based Fabric MSP identities`. Such an identity contains an X509 certificate and reveal in the clear the Enrollment ID of the certificate's owner.
+In `ZKAT DLog`, there are two long-term identities supported: 
+- `X509-based Fabric MSP identities`. Such an identity contains an X509 certificate and reveals in the clear the Enrollment ID of the certificate's owner.
   It will be used for issuers and auditors.
 - "Idemix-based Fabric MSP Identities". Such an identity contains an idemix credential.
   It will be used for token owners.
 
 ## Wallet Service
 
+To be continued...
 
 ## Token Service
 

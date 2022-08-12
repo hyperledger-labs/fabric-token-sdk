@@ -58,12 +58,18 @@ An auditor can use this API to verify the well-formedness of a token request wit
 
 The `Wallet Service` interface (`driver.WalletService`) contains the API to manage all the wallets.
 
-## IdentityProvider
+## Identity Provider
 
 The Identity Provider interface (`driver.IdentityProvider`) is used to manage long-term identities on top of which wallets are defined.
 The provider handles also signature verifiers, signers, and identity audit info.
 
 Each identity must have a unique role: Issuer, Auditor, Owner or Certifier.
+
+[//]: # ( 
+TODO:
+Should we also explain somewhere what these roles are?
+By reading this Issuer, Auditor and Owner are clear to me but what is the extra role of the Certifier? Maybe others reader will have similar thoughts?
+)
 
 ## Validator
 

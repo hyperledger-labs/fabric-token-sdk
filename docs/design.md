@@ -6,11 +6,11 @@ The `Fabric Token SDK` has the following characteristics;
 - It adopts the `UTXO model`. In the UTXO model, a direct acyclic graph reflects the movements of the assets. 
   Nodes are token transactions. Edges are transaction outputs. Each new token transaction consumes some the 
   UTXOs and create new ones.
-- Key-Management via `Wallets`. A Wallet contains a set of `secret keys` and keep track of the list of unspent outputs `owned` by those keys.
+- Key-Management via `Wallets`. A Wallet contains a set of `secret keys` and keeps track of the list of unspent outputs `owned` by those keys.
 - It supports `multplie privacy levels`: from a `plain` instantiation, where everything is in the clear on the ledger, 
-  to `Zero Knowledge-based` instantiations that will obfuscate the content of the ledger while enforcing the required invariants
+  to `Zero Knowledge-based` instantiations that will obfuscate the content of the token transactions on the ledger while enforcing the required invariants
   (see [drivers](./drivers.md) for more information).
-- It allows the developers to write their own `Services` on top of the Token SDK API to deliver customised components 
+- It allows developers to write their own `Services` on top of the Token SDK API to deliver customised components 
   for token-based applications.
 
 ## The Token SDK Stack
@@ -33,6 +33,6 @@ It consists of the following layers (from the top):
   
 The `Fabric Token SDK` is built on top of the `Fabric Smart Client` stack. 
 The `Smart Client` allows the `Token SDK` to: 
-- Orchestrate very complex token-dependent business processes via `views`;
+- Orchestrate very complex token-dependent business processes via [`views`](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/view/api.md);
 - Store the tokens inside the Vault for easy lookup and manipulation;
 - To listen to events from the backends related to token transaction, and more.

@@ -23,7 +23,8 @@ const (
 )
 
 type PublicParams struct {
-	// Label is the identifier of the public parameters.
+	// Label is the label associated with the PublicParams.
+	// It can be used by the driver for versioning purpose.
 	Label string
 	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
 	Curve math.CurveID
@@ -37,7 +38,7 @@ type PublicParams struct {
 	IdemixCurveID math.CurveID
 	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
 	IdemixIssuerPK []byte
-	// Auditor is the public key of the auditor
+	// Auditor is the public key of the auditor.
 	Auditor []byte
 	// Issuers is a list of public keys of the entities that can issue tokens.
 	Issuers [][]byte
