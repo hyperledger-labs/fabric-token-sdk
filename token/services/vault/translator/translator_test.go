@@ -24,8 +24,7 @@ const (
 
 var _ = Describe("Translator", func() {
 	var (
-		fakeIssuingValidator *mock.IssuingValidator
-		fakeRWSet            *mock.RWSet
+		fakeRWSet *mock.RWSet
 
 		writer *writer2.Translator
 
@@ -35,15 +34,12 @@ var _ = Describe("Translator", func() {
 	)
 
 	BeforeEach(func() {
-		fakeIssuingValidator = &mock.IssuingValidator{}
 		fakeRWSet = &mock.RWSet{}
 
-		writer = writer2.New(fakeIssuingValidator, "0", fakeRWSet, "zkat")
+		writer = writer2.New("0", fakeRWSet, "zkat")
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)
-
-		fakeIssuingValidator.ValidateReturns(nil)
 
 		// fakeIssue
 		fakeissue = &mock.IssueAction{}
@@ -113,19 +109,8 @@ var _ = Describe("Translator", func() {
 
 			})
 		})
-
-		When("issuer is not allowed to issue tokens", func() {
-			BeforeEach(func() {
-				fakeIssuingValidator.ValidateReturnsOnCall(0, errors.New("wild banana"))
-			})
-			It("issue fails", func() {
-				err := writer.Write(fakeissue)
-				Expect(err).To(HaveOccurred())
-				Expect(err.Error()).To(ContainSubstring("verification of issue policy failed"))
-			})
-		})
-
 	})
+
 	Describe("Transfer: transaction graph revealed", func() {
 		BeforeEach(func() {
 			faketransfer.SerializeOutputAtReturnsOnCall(0, []byte("output-1"), nil)

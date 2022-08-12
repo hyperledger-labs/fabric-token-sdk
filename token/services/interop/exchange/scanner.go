@@ -60,7 +60,7 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 		}
 
 		ns := tms.Namespace()
-		w := translator.New(nil, tx.TxID(), fabric2.NewRWSWrapper(rws), tms.Namespace())
+		w := translator.New(tx.TxID(), fabric2.NewRWSWrapper(rws), tms.Namespace())
 		for i := 0; i < rws.NumWrites(ns); i++ {
 			k, v, err := rws.GetWriteAt(ns, i)
 			if err != nil {

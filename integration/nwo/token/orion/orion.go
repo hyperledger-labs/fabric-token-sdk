@@ -153,13 +153,12 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	tx, err := session.DataTx()
 	Expect(err).ToNot(HaveOccurred(), "Failed to create data transaction")
 
-	issuingValidator := &tcc.AllIssuersValid{}
 	rwset := &RWSWrapper{
 		db: tms.Namespace,
 		me: custodianID,
 		tx: tx,
 	}
-	w := translator.New(issuingValidator, "", rwset, "")
+	w := translator.New("", rwset, "")
 	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred(), "Failed to read public parameters file %s", p.TokenPlatform.PublicParametersFile(tms))
 	action := &tcc.SetupAction{
