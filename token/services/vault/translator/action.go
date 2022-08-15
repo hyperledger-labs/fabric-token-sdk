@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package translator
 
 type SetupAction interface {
@@ -31,8 +32,4 @@ type TransferAction interface {
 	GetInputs() ([]string, error)
 	IsGraphHiding() bool
 	GetMetadata() []byte
-}
-
-type Signature interface {
-	Metadata() map[string][]byte
 }

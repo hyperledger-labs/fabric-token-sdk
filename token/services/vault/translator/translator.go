@@ -168,8 +168,6 @@ func (w *Translator) checkAction(tokenAction interface{}) error {
 		return w.checkTransfer(action)
 	case SetupAction:
 		return nil
-	case Signature:
-		return nil
 	default:
 		return errors.Errorf("unknown token action: %T", action)
 	}
@@ -262,8 +260,6 @@ func (w *Translator) commitAction(tokenAction interface{}) (err error) {
 		err = w.commitTransferAction(action)
 	case SetupAction:
 		err = w.commitSetupAction(action)
-	case Signature:
-		err = w.commitSignature(action)
 	}
 	return
 }
@@ -366,23 +362,19 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 		if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
 			return err
 		}
-	}
-	w.counter = w.counter + uint64(transferAction.NumOutputs())
-	return nil
-}
 
-func (w *Translator) commitSignature(sig Signature) error {
-	for k, value := range sig.Metadata() {
-		key, err := keys.CreateSigMetadataKey(w.TxID, w.sigCounter, k)
+		// also keep the claim pre-image
+		key, err = keys.CreateSigMetadataKey(w.TxID, w.sigCounter, "claimPreimage")
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
-		err = w.RWSet.SetState(w.namespace, key, value)
+		err = w.RWSet.SetState(w.namespace, key, metadata)
 		if err != nil {
 			return errors.Wrapf(err, "error setting state for key [%s]", key)
 		}
+		w.sigCounter++
 	}
-	w.sigCounter++
+	w.counter = w.counter + uint64(transferAction.NumOutputs())
 	return nil
 }
 

@@ -15,17 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Signature contains metadata
-type Signature struct {
-	metadata map[string][]byte // metadata may include for example the preimage of an htlc script
-}
-
-// Metadata returns the contained metadata
-func (s *Signature) Metadata() map[string][]byte {
-	return s.metadata
-}
-
-// OutputMetadata contains a serialization of the issuer of the token.
+// TokenInformation contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
 type OutputMetadata struct {
 	Issuer []byte
@@ -196,7 +186,7 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
-// GetMetadata returns nil, indicating that fabtoken TransferAction carries no metadata
+// GetMetadata returns the claim pre-image
 func (t *TransferAction) GetMetadata() []byte {
-	return nil
+	return t.ClaimPreImage
 }
