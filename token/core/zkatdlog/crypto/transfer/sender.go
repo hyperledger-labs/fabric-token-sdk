@@ -110,6 +110,8 @@ type TransferAction struct {
 	OutputTokens []*token.Token
 	// ZK Proof that shows that the transfer is correct
 	Proof []byte
+	// a transfer action may carry a ClaimPreImage
+	ClaimPreImage []byte
 }
 
 // NewTransfer returns the TransferAction that matches the passed arguments
@@ -204,9 +206,9 @@ func (t *TransferAction) IsGraphHiding() bool {
 }
 
 // GetMetadata returns metadata of the TransferAction
-// zkatdlog TransferAction does not carry any metadata
+// in zkatdlog it returns the claim pre-image
 func (t *TransferAction) GetMetadata() []byte {
-	return nil
+	return t.ClaimPreImage
 }
 
 func getTokenData(tokens []*token.Token) []*math.G1 {

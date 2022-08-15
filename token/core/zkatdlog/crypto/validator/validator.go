@@ -140,14 +140,6 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
-type Signature struct {
-	metadata map[string][]byte // metadata may include for example the preimage of an htlc script
-}
-
-func (s *Signature) Metadata() map[string][]byte {
-	return s.metadata
-}
-
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
@@ -174,25 +166,95 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 		actions = append(actions, action)
 	}
 	for _, action := range ta {
-		actions = append(actions, action)
+		transferAction := action.(*transfer.TransferAction)
+		act, err := AddMetadataToTransferAction(transferAction, ledger, signatureProvider)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed adding metadata to transfer action")
+		}
+		actions = append(actions, act)
 	}
 
+	return actions, nil
+}
+
+func AddMetadataToTransferAction(action *transfer.TransferAction, ledger driver.Ledger, signatureProvider driver.SignatureProvider) (*transfer.TransferAction, error) {
 	for _, sig := range signatureProvider.Signatures() {
 		claim := &htlc.ClaimSignature{}
-		if err = json.Unmarshal(sig, claim); err != nil {
+		if err := json.Unmarshal(sig, claim); err != nil {
 			continue
 		}
 		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
 			return nil, errors.New("expected a valid claim preImage and recipient signature")
 		}
-		actions = append(actions, &Signature{
-			metadata: map[string][]byte{
-				"claimPreimage": claim.Preimage,
-			},
-		})
+		b, err := IsItAnExchangeClaimTransferAction(action, ledger)
+		if err != nil {
+			return nil, err
+		}
+		if b {
+			action.ClaimPreImage = claim.Preimage
+		}
+	}
+	return action, nil
+}
+
+func IsItAnExchangeClaimTransferAction(action *transfer.TransferAction, ledger driver.Ledger) (bool, error) {
+	if action.NumOutputs() != 1 {
+		logger.Debugf("Number of outputs is %d", action.NumOutputs())
+		return false, nil
+	}
+	out, ok := action.GetOutputs()[0].(*token.Token)
+	if !ok {
+		return false, errors.New("invalid transfer action output")
+	}
+	if out.IsRedeem() {
+		logger.Debugf("this is a redeem")
+		return false, nil
 	}
 
-	return actions, nil
+	var inputTokens []*token.Token
+	inputs, err := action.GetInputs()
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to retrieve inputs to spend")
+	}
+	for _, in := range inputs {
+		bytes, err := ledger.GetState(in)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
+		}
+		if len(bytes) == 0 {
+			return false, errors.Errorf("input to spend [%s] does not exists", in)
+		}
+		tok := &token.Token{}
+		err = tok.Deserialize(bytes)
+		if err != nil {
+			return false, errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
+		}
+		inputTokens = append(inputTokens, tok)
+	}
+
+	if len(inputTokens) != 1 {
+		logger.Debugf("Number of inputs is %d", len(inputs))
+		return false, nil
+	}
+	inOwner, err := identity.UnmarshallRawOwner(inputTokens[0].Owner)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to unmarshall input raw owner")
+	}
+	if inOwner.Type != exchange.ScriptTypeExchange {
+		logger.Debugf("script recipient does not match the output owner")
+		return false, nil
+	}
+	script := &exchange.Script{}
+	err = json.Unmarshal(inOwner.Identity, script)
+	if err != nil {
+		return false, errors.Wrap(err, "failed to unmarshall into script")
+	}
+	if !script.Recipient.Equal(out.Owner) {
+		logger.Debugf("script recipient does not match the output owner")
+		return false, nil
+	}
+	logger.Debugf("this is an exchange claim")
+	return true, nil
 }
 
 func (v *Validator) unmarshalTransferActions(raw [][]byte) ([]driver.TransferAction, error) {
