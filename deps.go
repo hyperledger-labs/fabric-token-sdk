@@ -23,5 +23,6 @@ import (
 	_ "github.com/hyperledger/fabric/core/ledger/kvledger/txmgmt/statedb/statecouchdb"
 	_ "github.com/hyperledger/fabric/core/ledger/pvtdatastorage"
 	_ "github.com/hyperledger/fabric/core/operations"
+	_ "github.com/hyperledger/fabric/orderer/consensus/etcdraft"
 	_ "github.com/libp2p/go-libp2p-core/network"
 )
