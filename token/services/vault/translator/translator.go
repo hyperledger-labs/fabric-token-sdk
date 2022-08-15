@@ -22,20 +22,18 @@ var logger = flogging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
-	RWSet      RWSet
-	TxID       string
-	counter    uint64
-	sigCounter uint64
-	namespace  string
+	RWSet     RWSet
+	TxID      string
+	counter   uint64
+	namespace string
 }
 
 func New(txID string, rwSet RWSet, namespace string) *Translator {
 	w := &Translator{
-		RWSet:      rwSet,
-		TxID:       txID,
-		counter:    0,
-		sigCounter: 0,
-		namespace:  namespace,
+		RWSet:     rwSet,
+		TxID:      txID,
+		counter:   0,
+		namespace: namespace,
 	}
 
 	return w
@@ -145,12 +143,15 @@ func (w *Translator) QueryTokens(ids []*token2.ID) ([][]byte, error) {
 	return res, nil
 }
 
-func (w *Translator) IsSigMetadataKey(k string) (bool, error) {
-	prefix, _, err := keys.SplitCompositeKey(k)
+func (w *Translator) IsClaimPreImageKey(k string) (bool, error) {
+	prefix, components, err := keys.SplitCompositeKey(k)
 	if err != nil {
 		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
 	}
-	return prefix == keys.SignaturePrefix, nil
+	if prefix != keys.TokenKeyPrefix {
+		return false, nil
+	}
+	return components[0] == keys.ClaimPreImage, nil
 }
 
 func (w *Translator) checkProcess(action interface{}) error {
@@ -364,7 +365,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 		}
 
 		// also keep the claim pre-image
-		key, err = keys.CreateSigMetadataKey(w.TxID, w.sigCounter, "claimPreimage")
+		key, err = keys.CreateClaimPreImageKey()
 		if err != nil {
 			return errors.Errorf("error creating output ID: %s", err)
 		}
@@ -372,7 +373,6 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 		if err != nil {
 			return errors.Wrapf(err, "error setting state for key [%s]", key)
 		}
-		w.sigCounter++
 	}
 	w.counter = w.counter + uint64(transferAction.NumOutputs())
 	return nil

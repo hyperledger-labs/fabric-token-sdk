@@ -21,7 +21,6 @@ const (
 	MaxUnicodeRuneValue         = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
 	CompositeKeyNamespace       = "\x00"
 	TokenKeyPrefix              = "ztoken"
-	SignaturePrefix             = "sig"
 	FabTokenKeyPrefix           = "token"
 	FabTokenExtendedKeyPrefix   = "etoken"
 	AuditTokenKeyPrefix         = "audittoken"
@@ -42,6 +41,7 @@ const (
 	SerialNumber                = "sn"
 	IssueActionMetadata         = "iam"
 	TransferActionMetadata      = "tam"
+	ClaimPreImage               = "cpi"
 )
 
 func GetTokenIdFromKey(key string) (*token2.ID, error) {
@@ -107,10 +107,6 @@ func CreateTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }
 
-func CreateSigMetadataKey(txID string, index uint64, subKey string) (string, error) {
-	return CreateCompositeKey(SignaturePrefix, []string{txID, strconv.FormatUint(index, 10), subKey})
-}
-
 func CreateSNKey(sn string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{SerialNumber, sn})
 }
@@ -149,6 +145,10 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 
 func CreateTransferActionMetadataKey(hash string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, hash})
+}
+
+func CreateClaimPreImageKey() (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{ClaimPreImage, "claimPreImage"})
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go
