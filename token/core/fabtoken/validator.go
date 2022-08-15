@@ -150,24 +150,77 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 		actions = append(actions, action)
 	}
 	for _, action := range ta {
-		actions = append(actions, action)
+		act, err := AddMetadataToTransferAction(action, ledger, signatureProvider)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed adding metadata to transfer action")
+		}
+		actions = append(actions, act)
 	}
+
+	// actions are returned and will be used later to update the ledger
+	return actions, nil
+}
+
+func AddMetadataToTransferAction(action *TransferAction, ledger driver.Ledger, signatureProvider driver.SignatureProvider) (*TransferAction, error) {
 	for _, sig := range signatureProvider.Signatures() {
 		claim := &exchange.ClaimSignature{}
-		if err = json.Unmarshal(sig, claim); err != nil {
+		if err := json.Unmarshal(sig, claim); err != nil {
 			continue
 		}
 		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
 			return nil, errors.New("expected a valid claim preImage and recipient signature")
 		}
-		actions = append(actions, &Signature{
-			metadata: map[string][]byte{
-				"claimPreimage": claim.Preimage,
-			},
-		})
+		if IsItAnExchangeClaimTransferAction(action, ledger) {
+			action.ClaimPreImage = claim.Preimage
+		}
 	}
-	// actions are returned and will be used later to update the ledger
-	return actions, nil
+	return action, nil
+}
+
+func IsItAnExchangeClaimTransferAction(action *TransferAction, ledger driver.Ledger) bool {
+	if action.NumOutputs() != 1 {
+		logger.Debugf("Number of outputs is %d", action.NumOutputs())
+		return false
+	}
+	out, ok := action.GetOutputs()[0].(*TransferOutput)
+	if !ok {
+		logger.Debugf("invalid transfer action output")
+		return false
+	}
+	if out.IsRedeem() {
+		logger.Debugf("this is a redeem")
+		return false
+	}
+	inputs, err := RetrieveInputsFromTransferAction(action, ledger)
+	if err != nil {
+		logger.Debugf("error while retrieving inputs from transfer action: %v", err)
+		return false
+	}
+	if len(inputs) != 1 {
+		logger.Debugf("Number of inputs is %d", len(inputs))
+		return false
+	}
+	inOwner, err := identity.UnmarshallRawOwner(inputs[0].Owner.Raw)
+	if err != nil {
+		logger.Debugf("error while unmarshalling input raw owner: %v", err)
+		return false
+	}
+	if inOwner.Type != exchange.ScriptTypeExchange {
+		logger.Debugf("script recipient does not match the output owner")
+		return false
+	}
+	script := &exchange.Script{}
+	err = json.Unmarshal(inOwner.Identity, script)
+	if err != nil {
+		logger.Debugf("error while unmarshalling into script: %v", err)
+		return false
+	}
+	if !script.Recipient.Equal(out.Output.Owner.Raw) {
+		logger.Debugf("script recipient does not match the output owner")
+		return false
+	}
+	logger.Debugf("this is an exchange claim")
+	return true
 }
 
 // VerifyTokenRequestFromRaw validates the raw token request
