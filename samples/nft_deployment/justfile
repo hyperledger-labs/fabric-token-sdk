@@ -1,0 +1,90 @@
+#
+# Copyright contributors to the Hyperledgendary Full Stack Asset Transfer project
+#
+# SPDX-License-Identifier: Apache-2.0
+
+###############################################################################
+# COMMON TARGETS                                                              #
+###############################################################################
+
+
+# Ensure all properties are exported as shell env-vars
+set export
+
+# set the current directory, and the location of the test dats
+CWDIR := justfile_directory()
+
+_default:
+  @just -f {{justfile()}} --list
+
+
+###############################################################################
+# MICROFAB / DEV TARGETS                                                      #
+###############################################################################
+
+# Shut down the microfab (uf) instance
+microfab-down:
+    #!/bin/bash
+
+    if docker inspect microfab &>/dev/null; then
+        echo "Removing existing microfab container:"
+        docker kill microfab
+    fi
+
+
+# Start a micro fab instance and create configuration in _cfg/uf
+microfab: microfab-down
+    #!/bin/bash
+    set -e -o pipefail
+
+    export CFG=$CWDIR/_cfg/uf
+    export MICROFAB_CONFIG='{
+        "endorsing_organizations":[
+            {
+                "name": "org1"
+            },
+            {
+                "name": "org2"
+            }
+        ],
+        "channels":[
+            {
+                "name": "mychannel",
+                "endorsing_organizations":[
+                    "org1"
+                ]
+            }
+        ],
+        "capability_level":"V2_0"
+    }'
+
+    mkdir -p $CFG
+    echo
+    echo "Stating microfab...."
+
+    docker run --name microfab -p 8080:8080 --add-host host.docker.internal:host-gateway --rm -d -e MICROFAB_CONFIG="${MICROFAB_CONFIG}" -v "$(pwd)/_cfg/data":"/opt/microfab/data"  ibmcom/ibp-microfab
+    sleep 5
+
+    curl -s http://console.127-0-0-1.nip.io:8080/ak/api/v1/components | weft microfab -w $CFG/_wallets -p $CFG/_gateways -m $CFG/_msp -f
+    cat << EOF > $CFG/org1admin.env
+    export CORE_PEER_LOCALMSPID=org1MSP
+    export CORE_PEER_MSPCONFIGPATH=$CFG/_msp/org1/org1admin/msp
+    export CORE_PEER_ADDRESS=org1peer-api.127-0-0-1.nip.io:8080
+    export FABRIC_CFG_PATH=$CWDIR/config
+    export CORE_PEER_CLIENT_CONNTIMEOUT=15s
+    export CORE_PEER_DELIVERYTIMEOUT_CONNTIMEOUT=15s
+    EOF
+
+    cat << EOF > $CFG/org2admin.env
+    export CORE_PEER_LOCALMSPID=org2MSP
+    export CORE_PEER_MSPCONFIGPATH=$CFG/_msp/org2/org2admin/msp
+    export CORE_PEER_ADDRESS=org2peer-api.127-0-0-1.nip.io:8080
+    export FABRIC_CFG_PATH=$CWDIR/config
+    export CORE_PEER_CLIENT_CONNTIMEOUT=15s
+    export CORE_PEER_DELIVERYTIMEOUT_CONNTIMEOUT=15s
+    EOF
+
+    echo
+    echo "To get an peer cli environment run:"
+    echo
+    echo 'source $WORKSHOP/_cfg/uf/org1admin.env'

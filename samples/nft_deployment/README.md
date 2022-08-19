@@ -21,19 +21,15 @@ We will cover the following topics:
 
 ## Setup a Fabric network
 
-To illustrate how to use the Fabric Token SDK with an existing network, we will use the XXX/TODO sample network with its default configuration.
+To illustrate how to use the Fabric Token SDK with an existing network, we will use microFab (TBD?!?!?)) as our Fabric network with the following configuration.
 We will show the required steps to add Idemix support to the network.
 
+To start the network run:
 ```bash
-./network up
-
-# TODO
-# create channel
+just microfab
 ```
 
 ### Add Idemix Org
-
-
 
 #### Generate crypto material
 
@@ -88,6 +84,17 @@ idemixgen signerconfig \
   -r 150
 ```
 
+TODO 
+
+### Add Idemix Orgs to channel
+
+1. Add idemixOrgs to network https://hyperledger-fabric.readthedocs.io/en/latest/idemix.html
+2. Update Channel configuration
+
+### Create FSC crypto material
+
+TODO add
+
 ## FSC Node
 
 The Token SDK builds on top of the Fabric Smart Client (FSC). The business logic implemented using the View API of the Fabric Smart Client is executed by so called FSC nodes. Every participant (i.e., Alice, Bob, the Issuer, and the Auditor) in the nft sample hosts a FSC node. 
@@ -141,15 +148,38 @@ See more details in [TODO])().
 
 ### Prepare public parameters
 
-TODO
-
 We are using `tokengen` to create the public parameters used by the Token Validation Chaincode in our nft sample.
+
+tokengen gen fabtoken
+
+```bash
+go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
+tokengen gen dlog \ 
+  --auditors $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/auditor.org1.example/com/extraid/idemix/msp \ 
+  --issuers $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/issuer.org1.example/com/extraid/idemix/msp\
+  --cc
+
+cat zkatdlog_pp.json | base64
+```
+
+Copy the base64-encoded params into `$FTS_PATH/token/services/network/tcc/params.go`
+
+```go
+package tcc
+
+const Params = `>>>BASE64_STRING<<<`
+```
+
 
 ### Build
 
-TODO
+Once you have updated the `params.go`, you can compile TCC and package it using a `Dockerfile`.
 
-- Compile TCC and package it using a `Dockerfile`.
+```bash
+go build $FTS_PATH/token/services/network/tcc/main
+```
+
+TODO
 
 ### Deploy
 
