@@ -10,13 +10,13 @@ TODO define the right order
 We will cover the following topics:
 - Setup a Fabric network
 - Generate crypto material
-- Building the Token Validation Chaincode
 - Building the FSC node
 - Configuration
 - Run the node
 - Connecting to an existing Fabric network
   - Lazy (use FSC Integration test network)
-- Install chaincode
+- Building the Token Chaincode
+- Install & deploy Token Chaincode
 - Run the FSC nodes
 
 ## Setup a Fabric network
@@ -95,6 +95,46 @@ TODO
 
 TODO add
 
+- FSC node crypto material
+  - p2p
+  - grpc
+  - tls
+
+#### FTS Wallet crypto material (idemix)
+
+```bash
+
+go install github.com/hyperledger-labs/fabric-smart-client/cmd/fsccli
+
+fsccli cryptogen generate \
+  --config $TOKEN_CRYPTO/default-testchannel-zkat/issuer/issuers/crypto-config.yaml \
+  --output $TOKEN_CRYPTO/default-testchannel-zkat/issuer/issuers
+
+fsccli cryptogen generate \
+  --config $TOKEN_CRYPTO/default-testchannel-zkat/auditor/auditors/crypto-config.yaml \
+  --output $TOKEN_CRYPTO/default-testchannel-zkat/auditor/auditors
+ 
+idemixgen signerconfig \
+  --ca-input $TOKEN_CRYPTO/default-testchannel-zkat/idemix \
+  --output $TOKEN_CRYPTO/default-testchannel-zkat/idemix/alice \
+  --admin \
+  -u default-testchannel-zkat.example.com \
+  -e alice \
+  -r 100 \
+  --curve BN254 
+
+idemixgen signerconfig \
+  --ca-input $TOKEN_CRYPTO/default-testchannel-zkat/idemix \
+  --output $TOKEN_CRYPTO/default-testchannel-zkat/idemix/bob \
+  --admin \
+  -u default-testchannel-zkat.example.com \
+  -e bob \
+  -r 110 \
+  --curve BN254 
+
+```
+
+
 ## FSC Node
 
 The Token SDK builds on top of the Fabric Smart Client (FSC). The business logic implemented using the View API of the Fabric Smart Client is executed by so called FSC nodes. Every participant (i.e., Alice, Bob, the Issuer, and the Auditor) in the nft sample hosts a FSC node. 
@@ -124,12 +164,75 @@ The configuration contains three major sections:
 ```yaml
 # this section contains the configuration related to the FSC node
 fsc:
+  id: fsc.alice
+  networkId: 7jxtlwbgxfachim4clepdnqu7q
+  # grpc view manager endpoint
+  address: 127.0.0.1:20006
+  addressAutoDetect: true
+  listenAddress: 127.0.0.1:20006 # TODO is this redundant with address?
+  
+  # FSC node identity for p2p comm
+  identity:
+    cert:
+      file: $FSC_CRYPTO/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/msp/signcerts/alice.fsc.example.com-cert.pem
+    key:
+      file: $FSC_CRYPTO/peerOrganizations/fsc.example.com/peers/alice.fsc.example.com/msp/keystore/priv_sk
+  admin: # what is that used for?
+    certs:
+      - /Users/bur/Developer/gocode/src/github.com/hyperledger-labs/fabric-token-sdk/samples/nft/testdata/fsc/crypto/peerOrganizations/fsc.example.com/users/Admin@fsc.example.com/msp/signcerts/Admin@fsc.example.com-cert.pem
+  tls:
+    # this is for grpc-tls connection
+  web:
+  tracing:
+  metrics:
+  endpoint:
+    resolvers:
+    # resolvers used for p2p authentication
+    - name: issuer
+      domain: fsc.example.com
+      identity:
+        id: issuer
+        path: $FSC_CRYPTO/peerOrganizations/fsc.example.com/peers/issuer.fsc.example.com/msp/signcerts/issuer.fsc.example.com-cert.pem
+      addresses:
+        P2P: 127.0.0.1:20001
+      aliases:
 
-# # this section contains the configuration related to the Fabric backend
+# this section contains the configuration related to the fabric driver 
 fabric:
+  default:
+    mspConfigPath: $CRYTPO/peerOrganizations/org2.example.com/peers/alice.org2.example.com/msp
+    msps:
+      - id: idemix
+        mspType: idemix
+        mspID: IdemixOrgMSP
+        cacheSize: 0
+        path: $CRYTPO/peerOrganizations/org2.example.com/peers/alice.org2.example.com/extraids/idemix
+    tls:
+    peers:
+    channel:
+    vault:
+    endpint:
+      resolvers:
+        # can't we use discovery here?
 
 # this section contains the configuration related to the Token SDK
 token:
+  enabled: true
+  tms:
+    - certification: null
+      channel: testchannel
+      namespace: zkat
+      network: default
+      wallets:
+        owners:
+          - default: true
+            id: alice
+            path: $TOKEN_CRYPTO/default-testchannel-zkat/idemix/alice
+  ttxdb:
+    persistence:
+      opts:
+        path: $WD/testdata/fsc/nodes/alice/kvs
+      type: badger
 ```
 
 ### Run
