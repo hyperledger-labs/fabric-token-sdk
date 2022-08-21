@@ -1,6 +1,6 @@
 # Token API
 
-The `Token API`, located in `token` and `token\token` packages, 
+The `Token API`, located in `token` and `token/token` packages, 
 offers a useful abstraction to deal with tokens in an implementation and backend independent way.
 
 The Token SDK handles tokens that consist of the following triplet:

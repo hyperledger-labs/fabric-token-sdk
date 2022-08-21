@@ -31,7 +31,7 @@ The lifecycle of a Token Transaction consists of the following high-level steps:
      understood by the ledger backend. The leader sends the token transaction, stripped from all private data, 
      to the `Approvers` that validate it and translate it.
      The approvers send back the translated token transaction signed. We call these `approvals`.
-     The leader attaches to the token transaction the approvals.
+     The leader attaches the approvals to the token transaction.
    - `Distribute the Approvals`. The leader sends the full token transaction, containing also the approvals, to all involved business parties.
 
 3. `Commit`. The Token Transaction is fully formed and can be committed. The leader sends the token transaction to the ledger backend
@@ -96,8 +96,8 @@ Only at this point, the tokens created by the transaction become available via t
 ### Orion Driver
 
 The Orion driver is similar to the Fabric driver because also Orion manages RW Sets.
-Though, in Orion there is not concept of chaincode or stored routines. 
-To solve this problem, the Orion driver assumes the existence of a `Custodian` that sits in front of Orion
+Though, in Orion there is no concept of chaincode or stored routines. 
+To solve this problem, the Orion driver assumes the existence of a `Custodian` (another FSC node) that sits in front of Orion
 and handles the `approval` and `commit` steps.  
 
 Here is the pictorial representation of the lifecycle of a token transaction for Orion:
