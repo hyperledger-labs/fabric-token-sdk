@@ -3,21 +3,24 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
-import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-)
-
+// SigningIdentity models a signing identity
 type SigningIdentity interface {
+	// Sign signs message bytes and returns the signature or an error on failure.
 	Sign(raw []byte) ([]byte, error)
 
+	// Verify verifies a signature over a message
 	Verify(message, sigma []byte) error
 
+	// Serialize serializes the signing identity
 	Serialize() ([]byte, error)
 }
 
+// Verifier is an interface which wraps the Verify method.
 type Verifier interface {
+	// Verify verifies the signature over the message bytes and returns nil if the signature is valid and an error otherwise.
 	Verify(message, sigma []byte) error
 }
 
@@ -25,9 +28,4 @@ type Verifier interface {
 type Signer interface {
 	// Sign signs message bytes and returns the signature or an error on failure.
 	Sign(message []byte) ([]byte, error)
-}
-
-type SignerService interface {
-	// RegisterSigner associated the passed signer and verifier to the passed identity
-	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
 }

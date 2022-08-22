@@ -218,7 +218,7 @@ func HashMessages(m []*math.Zr, c *math.Curve) (*math.Zr, error) {
 }
 
 // obfuscateSignature returns an obfuscated Pointcheval-Sanders signature
-// this is a pair (R', S') = (R, S*P^r) where (R, S) is a Pointcheval-Sanders signature
+// this is a pair (R', S') = (R, S*PedGen^r) where (R, S) is a Pointcheval-Sanders signature
 // of the POKProver
 func (p *POKProver) obfuscateSignature() (*pssign.Signature, error) {
 	rand, err := p.Curve.Rand()

@@ -72,17 +72,17 @@ var _ = Describe("Sender", func() {
 		ids[1] = "1"
 		ids[2] = "3"
 
-		inputs := PrepareTokens(invalues, inBF, "ABC", pp.ZKATPedParams, c)
+		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedParams, c)
 		tokens = make([]*token.Token, 3)
 
 		tokens[0] = &token.Token{Data: inputs[0], Owner: []byte("alice-1")}
 		tokens[1] = &token.Token{Data: inputs[1], Owner: []byte("alice-2")}
 		tokens[2] = &token.Token{Data: inputs[2], Owner: []byte("alice-3")}
 
-		inputInf := make([]*token.TokenInformation, 3)
-		inputInf[0] = &token.TokenInformation{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
-		inputInf[1] = &token.TokenInformation{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
-		inputInf[2] = &token.TokenInformation{Type: "ABC", Value: invalues[2], BlindingFactor: inBF[2]}
+		inputInf := make([]*token.Metadata, 3)
+		inputInf[0] = &token.Metadata{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
+		inputInf[1] = &token.Metadata{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
+		inputInf[2] = &token.Metadata{Type: "ABC", Value: invalues[2], BlindingFactor: inBF[2]}
 
 		sender, err = transfer2.NewSender(signers, tokens, ids, inputInf, pp)
 		Expect(err).NotTo(HaveOccurred())

@@ -191,7 +191,7 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellFormedne
 	outValues[0] = c.NewZrFromInt(50)
 	outValues[1] = c.NewZrFromInt(100)
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.ZKATPedParams, c)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedParams, c)
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
@@ -226,7 +226,7 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) (*transfer.WellF
 	outValues[0] = c.NewZrFromInt(110)
 	outValues[1] = c.NewZrFromInt(45)
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.ZKATPedParams, c)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedParams, c)
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
@@ -251,7 +251,7 @@ func prepareInputsForOwnershipTransfer(pp *crypto.PublicParams) (*transfer.WellF
 	inValue := c.NewZrFromInt(90)
 	outValue := c.NewZrFromInt(90)
 
-	in, out := prepareInputsOutputs([]*math.Zr{inValue}, []*math.Zr{outValue}, []*math.Zr{inBF}, []*math.Zr{outBF}, ttype, pp.ZKATPedParams, c)
+	in, out := prepareInputsOutputs([]*math.Zr{inValue}, []*math.Zr{outValue}, []*math.Zr{inBF}, []*math.Zr{outBF}, ttype, pp.PedParams, c)
 	intw := make([]*token.TokenDataWitness, 1)
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF, Value: inValue, Type: ttype}

@@ -32,23 +32,23 @@ type Sender struct {
 	// InputIDs is the identifiers of the Inputs to be spent
 	InputIDs []string
 	// contains the opening of the inputs to be spent
-	InputInformation []*token.TokenInformation
+	InputInformation []*token.Metadata
 	// PublicParams refers to the public cryptographic parameters to be used
 	// to produce the TokenRequest
 	PublicParams *crypto.PublicParams
 }
 
 // NewSender returns a Sender
-func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.TokenInformation, pp *crypto.PublicParams) (*Sender, error) {
+func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.Metadata, pp *crypto.PublicParams) (*Sender, error) {
 	if len(signers) != len(tokens) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
-// GenerateZKTransfer produces a TransferAction and an array of TokenInformation
+// GenerateZKTransfer produces a TransferAction and an array of Metadata
 // that corresponds to the openings of the newly created outputs
-func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.TokenInformation, error) {
+func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.Metadata, error) {
 	if len(values) != len(owners) {
 		return nil, nil, errors.Errorf("cannot generate transfer: number of values [%d] does not match number of recipients [%d]", len(values), len(owners))
 	}
@@ -60,7 +60,7 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 		}
 		intw[i] = &token.TokenDataWitness{Value: s.InputInformation[i].Value, Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
 	}
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.ZKATPedParams, math.Curves[s.PublicParams.Curve])
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedParams, math.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
@@ -74,9 +74,9 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to produce transfer action")
 	}
-	inf := make([]*token.TokenInformation, len(owners))
+	inf := make([]*token.Metadata, len(owners))
 	for i := 0; i < len(inf); i++ {
-		inf[i] = &token.TokenInformation{
+		inf[i] = &token.Metadata{
 			Type:           s.InputInformation[0].Type,
 			Value:          outtw[i].Value,
 			BlindingFactor: outtw[i].BlindingFactor,

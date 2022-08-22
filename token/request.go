@@ -295,7 +295,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	}
 	//if logger.IsEnabledFor(zapcore.DebugLevel) {
 	// double check
-	if err := ts.VerifyTransfer(transfer, transferMetadata.TokenInfo); err != nil {
+	if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
 		return nil, errors.Wrap(err, "failed checking generated proof")
 	}
 	//}
@@ -343,7 +343,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	}
 
 	// double check
-	if err := ts.VerifyTransfer(transfer, transferMetadata.TokenInfo); err != nil {
+	if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
 		return errors.Wrap(err, "failed checking generated proof")
 	}
 
@@ -449,7 +449,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 
-		if len(transferAction.GetOutputs()) != len(transferMeta.TokenInfo) || len(transferMeta.ReceiverAuditInfos) != len(transferAction.GetOutputs()) {
+		if len(transferAction.GetOutputs()) != len(transferMeta.OutputsMetadata) || len(transferMeta.ReceiverAuditInfos) != len(transferAction.GetOutputs()) {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]: invalid metadata", i)
 		}
 		for j, output := range transferAction.GetOutputs() {
@@ -470,7 +470,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 				continue
 			}
 
-			tok, _, err := tms.DeserializeToken(raw, transferMeta.TokenInfo[j])
+			tok, _, err := tms.DeserializeToken(raw, transferMeta.OutputsMetadata[j])
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 			}
@@ -619,7 +619,7 @@ func (r *Request) IsValid() error {
 		}
 		meta := r.Metadata.Transfers[i]
 		outputs := action.GetOutputs()
-		if len(outputs) != len(meta.TokenInfo) || len(meta.ReceiverAuditInfos) != len(outputs) {
+		if len(outputs) != len(meta.OutputsMetadata) || len(meta.ReceiverAuditInfos) != len(outputs) {
 			return errors.Errorf("failed matching transfer action with its metadata [%d]: invalid metadata", i)
 		}
 		for j, output := range outputs {
@@ -627,7 +627,7 @@ func (r *Request) IsValid() error {
 				return errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
 			}
 		}
-		if err := ts.VerifyTransfer(action, r.Metadata.Transfers[i].TokenInfo); err != nil {
+		if err := ts.VerifyTransfer(action, r.Metadata.Transfers[i].OutputsMetadata); err != nil {
 			return errors.WithMessagef(err, "failed verifying transfer action")
 		}
 	}

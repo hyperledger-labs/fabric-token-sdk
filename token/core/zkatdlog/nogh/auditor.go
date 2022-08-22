@@ -31,7 +31,7 @@ func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMeta
 		return errors.WithMessagef(err, "failed getting deserializer for auditor check")
 	}
 	pp := s.PublicParams()
-	if err := audit.NewAuditor(des, pp.ZKATPedParams, pp.IdemixPK, nil, math.Curves[pp.Curve]).Check(
+	if err := audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
 		tokenRequestMetadata,
 		inputTokens,

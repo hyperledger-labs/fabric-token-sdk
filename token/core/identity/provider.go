@@ -87,10 +87,6 @@ func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
 	return auditInfo, nil
 }
 
-func (p *Provider) GetIdentityMetadata(identity view.Identity) ([]byte, error) {
-	panic("implement me")
-}
-
 func (p *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
 	return view2.GetSigService(p.sp).RegisterSigner(identity, signer, verifier)
 }

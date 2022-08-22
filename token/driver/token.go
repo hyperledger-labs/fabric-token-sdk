@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package driver
 
 import (
@@ -11,6 +12,6 @@ import (
 )
 
 type TokenService interface {
-	// DeserializeToken returns the token and its issuer (if any).
-	DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error)
+	// DeserializeToken unmarshals the passed output and uses the passed metadata to derive a token and its issuer (if any).
+	DeserializeToken(output []byte, outputMetadata []byte) (*token2.Token, view.Identity, error)
 }

@@ -80,9 +80,9 @@ var _ = Describe("validator", func() {
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		des, err := idemix2.NewDeserializer(pp.IdemixPK)
+		des, err := idemix2.NewDeserializer(pp.IdemixIssuerPK)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.ZKATPedParams, pp.IdemixPK, asigner, c)
+		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.PedParams, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -508,14 +508,14 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	ids[0] = "0"
 	ids[1] = "1"
 
-	inputs := prepareTokens(invalues, inBF, "ABC", pp.ZKATPedParams, c)
+	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedParams, c)
 	tokens := make([]*tokn.Token, 2)
 	tokens[0] = &tokn.Token{Data: inputs[0], Owner: id}
 	tokens[1] = &tokn.Token{Data: inputs[1], Owner: id}
 
-	inputInf := make([]*tokn.TokenInformation, 2)
-	inputInf[0] = &tokn.TokenInformation{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
-	inputInf[1] = &tokn.TokenInformation{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
+	inputInf := make([]*tokn.Metadata, 2)
+	inputInf[0] = &tokn.Metadata{Type: "ABC", Value: invalues[0], BlindingFactor: inBF[0]}
+	inputInf[1] = &tokn.Metadata{Type: "ABC", Value: invalues[1], BlindingFactor: inBF[1]}
 	sender, err := transfer.NewSender(signers, tokens, ids, inputInf, pp)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -541,7 +541,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata.TokenInfo = marshalledInfo
+	metadata.OutputsMetadata = marshalledInfo
 	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // Ledger models a read-only ledger
@@ -17,14 +17,14 @@ type Ledger interface {
 
 // Validator validates a token request
 type Validator struct {
-	backend tokenapi.Validator
+	backend driver.Validator
 }
 
 // UnmarshallAndVerify unmarshalls the token request and verifies it against the passed ledger and anchor
-func (c *Validator) UnmarshallAndVerify(ledger Ledger, binding string, raw []byte) ([]interface{}, error) {
+func (c *Validator) UnmarshallAndVerify(ledger Ledger, anchor string, raw []byte) ([]interface{}, error) {
 	actions, err := c.backend.VerifyTokenRequestFromRaw(func(key string) ([]byte, error) {
 		return ledger.GetState(key)
-	}, binding, raw)
+	}, anchor, raw)
 	if err != nil {
 		return nil, err
 	}

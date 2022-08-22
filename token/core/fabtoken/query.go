@@ -34,7 +34,7 @@ func (s *Service) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*toke
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token")
 	}
 
-	tokInfo := &TokenInformation{}
+	tokInfo := &OutputMetadata{}
 	if err := tokInfo.Deserialize(tokenInfoRaw); err != nil {
 		return nil, nil, errors.Wrap(err, "failed unmarshalling token information")
 	}

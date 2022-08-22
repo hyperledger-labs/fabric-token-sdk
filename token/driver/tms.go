@@ -8,6 +8,7 @@ package driver
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 
+// TokenManagerService is the entry point of the Driver API and gives access to the rest of the API
 type TokenManagerService interface {
 	IssueService
 	TransferService

@@ -123,7 +123,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			if search(eIDs, recipientEID) != -1 {
 				logger.Debugf("keeping transfer for [%s]", recipientEID)
 				Outputs = transfer.Outputs[i]
-				TokenInfo = transfer.TokenInfo[i]
+				TokenInfo = transfer.OutputsMetadata[i]
 				Receivers = transfer.Receivers[i]
 				ReceiverIsSender = transfer.ReceiverIsSender[i]
 				ReceiverAuditInfos = transfer.ReceiverAuditInfos[i]
@@ -136,7 +136,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			transferRes.Receivers = append(transferRes.Receivers, Receivers)
 			transferRes.ReceiverIsSender = append(transferRes.ReceiverIsSender, ReceiverIsSender)
 			transferRes.ReceiverAuditInfos = append(transferRes.ReceiverAuditInfos, ReceiverAuditInfos)
-			transferRes.TokenInfo = append(transferRes.TokenInfo, TokenInfo)
+			transferRes.OutputsMetadata = append(transferRes.OutputsMetadata, TokenInfo)
 		}
 
 		// if skip = true, it means that this transfer does not contain any output for the given enrollment IDs.
@@ -233,8 +233,8 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
 	}
-	if len(m.Outputs) != len(m.TokenInfo) {
-		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.TokenInfo))
+	if len(m.Outputs) != len(m.OutputsMetadata) {
+		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.OutputsMetadata))
 	}
 	if len(m.Outputs) != len(m.Receivers) {
 		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.Outputs), len(m.Receivers))
@@ -250,10 +250,10 @@ func (m *TransferMetadata) Match(action *TransferAction) error {
 
 // IsOutputAbsent returns true if the given output's metadata is absent
 func (m *TransferMetadata) IsOutputAbsent(j int) bool {
-	if j >= len(m.TokenInfo) {
+	if j >= len(m.OutputsMetadata) {
 		return true
 	}
-	return len(m.TokenInfo[j]) == 0
+	return len(m.OutputsMetadata[j]) == 0
 }
 
 // IsInputAbsent returns true if the given input's metadata is absent

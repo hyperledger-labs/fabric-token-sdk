@@ -9,35 +9,39 @@ package core
 import (
 	"sync"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
-
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.core")
 
 type CallbackFunc func(network, channel, namespace string) error
 
+// TMSProvider is a token management service provider.
+// It is responsible for creating token management services for different networks.
 type TMSProvider struct {
-	sp           view2.ServiceProvider
+	sp           view.ServiceProvider
 	callbackFunc CallbackFunc
 
 	lock     sync.Mutex
-	services map[string]api2.TokenManagerService
+	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(sp view2.ServiceProvider, callbackFunc CallbackFunc) *TMSProvider {
+func NewTMSProvider(sp view.ServiceProvider, callbackFunc CallbackFunc) *TMSProvider {
 	ms := &TMSProvider{
 		sp:           sp,
 		callbackFunc: callbackFunc,
-		services:     map[string]api2.TokenManagerService{},
+		services:     map[string]driver.TokenManagerService{},
 	}
 	return ms
 }
 
-func (m *TMSProvider) GetTokenManagerService(network string, channel string, namespace string, publicParamsFetcher api2.PublicParamsFetcher) (api2.TokenManagerService, error) {
+// GetTokenManagerService returns a driver.TokenManagerService instance for the passed parameters.
+// If a TokenManagerService is not available, it creates one by first fetching the public parameters using the passed driver.PublicParamsFetcher.
+// If no driver is registered for the public params' identifier, it returns an error.
+func (m *TMSProvider) GetTokenManagerService(network string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (driver.TokenManagerService, error) {
 	if len(network) == 0 {
 		return nil, errors.Errorf("network not specified")
 	}
@@ -64,7 +68,7 @@ func (m *TMSProvider) GetTokenManagerService(network string, channel string, nam
 	return service, nil
 }
 
-func (m *TMSProvider) newTMS(networkID string, channel string, namespace string, publicParamsFetcher api2.PublicParamsFetcher) (api2.TokenManagerService, error) {
+func (m *TMSProvider) newTMS(networkID string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (driver.TokenManagerService, error) {
 	ppRaw, err := publicParamsFetcher.Fetch()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed fetching public parameters")

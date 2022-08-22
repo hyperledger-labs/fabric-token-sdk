@@ -13,7 +13,7 @@ import (
 )
 
 // nymSigner implements signing identity
-// This is a signer for the Signature of Knowledge of (SK, BF) such that NYM = P^SK*Q^BF
+// This is a signer for the Signature of Knowledge of (SK, BF) such that NYM = PedGen^SK*Q^BF
 type nymSigner struct {
 	*NymVerifier
 	SK *math.Zr
@@ -42,7 +42,7 @@ func NewNymVerifier(nymParams []*math.G1, nym *math.G1, curve *math.Curve) (*Nym
 	return &NymVerifier{NYMParams: nymParams, NYM: nym, Curve: curve}, nil
 }
 
-// Sign produces a signature of knowledge (SOK for short) for (SK, BF) such that NYM = P^SK*Q^BF
+// Sign produces a signature of knowledge (SOK for short) for (SK, BF) such that NYM = PedGen^SK*Q^BF
 func (s *nymSigner) Sign(message []byte) ([]byte, error) {
 	if message == nil {
 		return nil, errors.New("failed to sign anonymously: nil message")
@@ -92,7 +92,7 @@ type NymVerifier struct {
 	Curve     *math.Curve
 }
 
-// Serialize returns a serialized pseudonym (P^SK*Q^BF)
+// Serialize returns a serialized pseudonym (PedGen^SK*Q^BF)
 func (v *NymVerifier) Serialize() ([]byte, error) {
 	if v.NYM == nil {
 		return nil, errors.New("failed to serialize NymVerifier: a nil pseudonym")

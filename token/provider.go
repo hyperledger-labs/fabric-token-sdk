@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	tokenapi "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var (
@@ -23,7 +23,7 @@ type Normalizer interface {
 // VaultProvider provides token vault instances
 type VaultProvider interface {
 	// Vault returns a token vault instance for the passed inputs
-	Vault(network string, channel string, namespace string) tokenapi.Vault
+	Vault(network string, channel string, namespace string) driver.Vault
 }
 
 // SelectorManager handles token selection operations
@@ -43,13 +43,13 @@ type SelectorManagerProvider interface {
 // CertificationClientProvider provides instances of CertificationClient
 type CertificationClientProvider interface {
 	// New returns a new CertificationClient instance for the passed inputs
-	New(network string, channel string, namespace string, driver string) (tokenapi.CertificationClient, error)
+	New(network string, channel string, namespace string, driver string) (driver.CertificationClient, error)
 }
 
 // ManagementServiceProvider provides instances of the management service
 type ManagementServiceProvider struct {
 	sp                          ServiceProvider
-	tmsProvider                 tokenapi.TokenManagerServiceProvider
+	tmsProvider                 driver.TokenManagerServiceProvider
 	normalizer                  Normalizer
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
@@ -59,7 +59,7 @@ type ManagementServiceProvider struct {
 // NewManagementServiceProvider returns a new instance of ManagementServiceProvider
 func NewManagementServiceProvider(
 	sp ServiceProvider,
-	tmsProvider tokenapi.TokenManagerServiceProvider,
+	tmsProvider driver.TokenManagerServiceProvider,
 	normalizer Normalizer,
 	vaultProvider VaultProvider,
 	certificationClientProvider CertificationClientProvider,

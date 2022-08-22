@@ -20,14 +20,16 @@ const (
 	DefaultPrecision = uint64(64)
 )
 
+// PublicParams is the public parameters for fabtoken
 type PublicParams struct {
-	// This indicates that this is the public parameters for fabtoken driver
+	// Label is the label associated with the PublicParams.
+	// It can be used by the driver for versioning purpose.
 	Label string
 	// The precision of token quantities
 	QuantityPrecision uint64
 	// This is set when audit is enabled
 	Auditor []byte
-	// This encodes the list of authorized auditors
+	// This encodes the list of authorized issuers
 	Issuers [][]byte
 }
 

@@ -14,6 +14,7 @@ type Envelope interface {
 	// Bytes marshals the envelope to bytes
 	Bytes() ([]byte, error)
 
+	// FromBytes unmarshals the envelope from bytes
 	FromBytes([]byte) error
 
 	// TxID returns the ID of this envelope

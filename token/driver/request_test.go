@@ -73,7 +73,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("output1"),
 					[]byte("output2"),
 				},
-				TokenInfo: [][]byte{
+				OutputsMetadata: [][]byte{
 					[]byte("token_info1"),
 					[]byte("token_info2"),
 				},

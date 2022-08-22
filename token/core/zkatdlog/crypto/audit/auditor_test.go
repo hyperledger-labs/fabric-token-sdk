@@ -57,9 +57,9 @@ var _ = Describe("Auditor", func() {
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix2.NewDeserializer(pp.IdemixPK)
+		des, err := idemix2.NewDeserializer(pp.IdemixIssuerPK)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.ZKATPedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
+		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.PedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
@@ -141,7 +141,7 @@ func createTransfer(pp *crypto.PublicParams) (*transfer2.TransferAction, driver.
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata.TokenInfo = marshalledInfo
+	metadata.OutputsMetadata = marshalledInfo
 	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
@@ -176,7 +176,7 @@ func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Transfer
 		Expect(err).NotTo(HaveOccurred())
 	}
 
-	metadata.TokenInfo = marshalledInfo
+	metadata.OutputsMetadata = marshalledInfo
 	metadata.Outputs = make([][]byte, len(transfer.OutputTokens))
 	metadata.ReceiverAuditInfos = make([][]byte, len(transfer.OutputTokens))
 	for i := 0; i < len(transfer.OutputTokens); i++ {
@@ -294,22 +294,22 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	return id, auditInfo
 }
 
-func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []*token.TokenInformation) {
+func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []*token.Metadata) {
 	c := math.Curves[pp.Curve]
 	inputs := make([]*token.Token, 2)
-	infos := make([]*token.TokenInformation, 2)
+	infos := make([]*token.Metadata, 2)
 	values := []*math.Zr{c.NewZrFromInt(25), c.NewZrFromInt(35)}
 	rand, err := c.Rand()
 	Expect(err).NotTo(HaveOccurred())
 	ttype := c.HashToZr([]byte("ABC"))
 
 	for i := 0; i < len(inputs); i++ {
-		infos[i] = &token.TokenInformation{}
+		infos[i] = &token.Metadata{}
 		infos[i].BlindingFactor = c.NewRandomZr(rand)
 		infos[i].Value = values[i]
 		infos[i].Type = "ABC"
 		inputs[i] = &token.Token{}
-		inputs[i].Data, err = common.ComputePedersenCommitment([]*math.Zr{ttype, values[i], infos[i].BlindingFactor}, pp.ZKATPedParams, c)
+		inputs[i].Data, err = common.ComputePedersenCommitment([]*math.Zr{ttype, values[i], infos[i].BlindingFactor}, pp.PedParams, c)
 		Expect(err).NotTo(HaveOccurred())
 		inputs[i].Owner = id
 	}
@@ -317,7 +317,7 @@ func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []
 	return inputs, infos
 }
 
-func prepareTransfer(pp *crypto.PublicParams, id view.Identity) (*transfer2.TransferAction, []*token.TokenInformation, []*token.Token) {
+func prepareTransfer(pp *crypto.PublicParams, id view.Identity) (*transfer2.TransferAction, []*token.Metadata, []*token.Token) {
 	inputs, tokenInfos := createInputs(pp, id)
 
 	fakeSigner := &mock.SigningIdentity{}

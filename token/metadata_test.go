@@ -43,7 +43,7 @@ func testFilterByCase0(t *testing.T) {
 		Senders:            []view.Identity{view.Identity("Alice")},
 		SenderAuditInfos:   [][]byte{[]byte("Alice")},
 		Outputs:            [][]byte{[]byte("Bob's output")},
-		TokenInfo:          [][]byte{[]byte("Bob's output's token info")},
+		OutputsMetadata:    [][]byte{[]byte("Bob's output's token info")},
 		Receivers:          []view.Identity{view.Identity("Bob")},
 		ReceiverAuditInfos: [][]byte{[]byte("Bob")},
 		ReceiverIsSender:   []bool{false},
@@ -59,7 +59,7 @@ func testFilterByCase0(t *testing.T) {
 		Senders:            []view.Identity{view.Identity("Charlie")},
 		SenderAuditInfos:   [][]byte{[]byte("Charlie")},
 		Outputs:            [][]byte{[]byte("Dave's output")},
-		TokenInfo:          [][]byte{[]byte("Dave's output's token info")},
+		OutputsMetadata:    [][]byte{[]byte("Dave's output's token info")},
 		Receivers:          []view.Identity{view.Identity("Dave")},
 		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
 		ReceiverIsSender:   []bool{false},
@@ -285,7 +285,7 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 
 	// assert that the lengths are the same
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
-	assert.Len(t, original.TokenInfo, len(filtered.TokenInfo))
+	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
 	assert.Len(t, original.Receivers, len(filtered.Receivers))
 	assert.Len(t, original.ReceiverAuditInfos, len(filtered.ReceiverAuditInfos))
 	assert.Len(t, original.ReceiverIsSender, len(filtered.ReceiverIsSender))
@@ -294,8 +294,8 @@ func assertEmptyTransferMetadata(t *testing.T, original, filtered *driver.Transf
 		assert.Nil(t, filtered.Outputs[i])
 	}
 	// assert each token info is empty
-	for i := 0; i < len(original.TokenInfo); i++ {
-		assert.Nil(t, filtered.TokenInfo[i])
+	for i := 0; i < len(original.OutputsMetadata); i++ {
+		assert.Nil(t, filtered.OutputsMetadata[i])
 	}
 	// assert each receiver is empty
 	for i := 0; i < len(original.Receivers); i++ {
@@ -316,7 +316,7 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	assert.Equal(t, original.Senders, filtered.Senders)
 	assert.Equal(t, original.SenderAuditInfos, filtered.SenderAuditInfos)
 	assert.Equal(t, original.Outputs, filtered.Outputs)
-	assert.Equal(t, original.TokenInfo, filtered.TokenInfo)
+	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 	assert.Equal(t, original.ReceiverAuditInfos, filtered.ReceiverAuditInfos)
 }
