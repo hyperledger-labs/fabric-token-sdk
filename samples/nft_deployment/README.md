@@ -21,8 +21,12 @@ We will cover the following topics:
 
 ## Setup a Fabric network
 
-To illustrate how to use the Fabric Token SDK with an existing network, we will use microFab (TBD?!?!?)) as our Fabric network with the following configuration.
-We will show the required steps to add Idemix support to the network.
+To illustrate how to use the Fabric Token SDK with an existing network, we will use microFab (TBD?!?!?)) as our Fabric network with the following configuration:
+1. Two organization: Org1 and Org2;
+2. Single channel;
+3. Org1 runs/endorses the Token Chaincode.
+
+We also need to add Idemix support to the network to allow business parties to hide their identities when submitting Fabric transactions.
 
 To start the network run:
 ```bash
@@ -31,13 +35,11 @@ just microfab
 
 ### Add Idemix Org
 
+We need to add an Idemix organization to allow business parties to sign Fabric transactions in an anonymous and unlikable way.
+
 #### Generate crypto material
 
-TODO
-
-To achieve privacy for tokens, the Fabric Token SDK uses Idemix to hide the transaction submitters identities. 
-Next we create an Idemix org and add it do our channel.
-
+First step is to generate the Idemix Credential Issuer's key pair:
 
 ```bash
 go install github.com/IBM/idemix/tools/idemixgen
@@ -47,24 +49,11 @@ export IDEMIX_CRYTPO=$(pwd)/testdata/fabric/crypto
 idemixgen ca-keygen \
   --output $IDEMIX_CRYTPO/peerOrganizations/idemixorg.example.com
 
-# issuer
-idemixgen signerconfig \
-  --ca-input $IDEMIX_CRYTPO/peerOrganizations/idemixorg.example.com \
-  --output $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/issuer.org1.example.com/extraids/idemix \
-  --admin \
-  -u idemixorg.example.com \
-  -e issuer \
-  -r 120
+```
 
-# auditor
-idemixgen signerconfig \
-  --ca-input $IDEMIX_CRYTPO/peerOrganizations/idemixorg.example.com \
-  --output $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/auditor.org1.example.com/extraids/idemix \
-  --admin \
-  -u idemixorg.example.com \
-  -e auditor \
-  -r 130
+Then, we need to generate the Idemix Credential Signer's key pairs for Alice and Bob, our business parties:
 
+```bash
 # alice
 idemixgen signerconfig \
   --ca-input $IDEMIX_CRYTPO/peerOrganizations/idemixorg.example.com \
@@ -86,12 +75,69 @@ idemixgen signerconfig \
 
 TODO 
 
-### Add Idemix Orgs to channel
+### Add Idemix Org to channel
 
 1. Add idemixOrgs to network https://hyperledger-fabric.readthedocs.io/en/latest/idemix.html
 2. Update Channel configuration
 
-### Create FSC crypto material
+
+## Token Validation Chaincode
+
+We begin by building all components used in the nft sample.
+The Token SDK uses a Token Validation Chaincode with Fabric to translate Token Transaction into Fabric Transaction with RWSets.
+See more details in [TODO])().
+
+### Generate crypto material
+
+TODO: We need to generate crypto material for the Issuer, the Auditor, and the Token Owners.
+Issuer and Auditor are X509 certificates. For Token Owners, we need to setup an Idemix CA with curve `BN254`. 
+
+### Prepare public parameters
+
+We are using `tokengen` to create the public parameters used by the Token Validation Chaincode in our nft sample.
+
+tokengen gen fabtoken
+
+```bash
+go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
+tokengen gen dlog \ 
+  --auditors $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/auditor.org1.example/com/extraid/idemix/msp \ 
+  --issuers $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/issuer.org1.example/com/extraid/idemix/msp\
+  --cc
+
+cat zkatdlog_pp.json | base64
+```
+
+Copy the base64-encoded params into `$FTS_PATH/token/services/network/tcc/params.go`
+
+```go
+package tcc
+
+const Params = `>>>BASE64_STRING<<<`
+```
+
+
+### Build
+
+Once you have updated the `params.go`, you can compile TCC and package it using a `Dockerfile`.
+
+```bash
+go build $FTS_PATH/token/services/network/tcc/main
+```
+
+TODO
+
+### Deploy
+
+Run it as chaincode-as-a-service
+
+TODO
+
+## FSC Node
+
+The Token SDK builds on top of the Fabric Smart Client (FSC). The business logic implemented using the View API of the Fabric Smart Client is executed by so called FSC nodes. Every participant (i.e., Alice, Bob, the Issuer, and the Auditor) in the nft sample hosts a FSC node. 
+
+### Create crypto material
 
 TODO add
 
@@ -99,6 +145,7 @@ TODO add
   - p2p
   - grpc
   - tls
+  - wallets
 
 #### FTS Wallet crypto material (idemix)
 
@@ -133,11 +180,6 @@ idemixgen signerconfig \
   --curve BN254 
 
 ```
-
-
-## FSC Node
-
-The Token SDK builds on top of the Fabric Smart Client (FSC). The business logic implemented using the View API of the Fabric Smart Client is executed by so called FSC nodes. Every participant (i.e., Alice, Bob, the Issuer, and the Auditor) in the nft sample hosts a FSC node. 
 
 ### Build
 
@@ -242,53 +284,6 @@ cd nodes/alice
 go build -o alice
 ./alice node start
 ```
-
-## Token Validation Chaincode
-
-We begin by building all components used in the nft sample.
-The Token SDK uses a Token Validation Chaincode with Fabric to translate Token Transaction into Fabric Transaction with RWSets.
-See more details in [TODO])().
-
-### Prepare public parameters
-
-We are using `tokengen` to create the public parameters used by the Token Validation Chaincode in our nft sample.
-
-tokengen gen fabtoken
-
-```bash
-go install github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen
-tokengen gen dlog \ 
-  --auditors $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/auditor.org1.example/com/extraid/idemix/msp \ 
-  --issuers $IDEMIX_CRYTPO/peerOrganizations/org1.example.com/peers/issuer.org1.example/com/extraid/idemix/msp\
-  --cc
-
-cat zkatdlog_pp.json | base64
-```
-
-Copy the base64-encoded params into `$FTS_PATH/token/services/network/tcc/params.go`
-
-```go
-package tcc
-
-const Params = `>>>BASE64_STRING<<<`
-```
-
-
-### Build
-
-Once you have updated the `params.go`, you can compile TCC and package it using a `Dockerfile`.
-
-```bash
-go build $FTS_PATH/token/services/network/tcc/main
-```
-
-TODO
-
-### Deploy
-
-Run it as chaincode-as-a-service
-
-TODO
 
 ## Action Required: Complete the journey
 

@@ -249,7 +249,7 @@ Namely, Fabric and FSC networks.
 For Fabric, we will use a simple topology with:
 1. Two organization: Org1 and Org2;
 2. Single channel;
-2. Org1 runs/endorse the Token Chaincode.
+3. Org1 runs/endorses the Token Chaincode.
 
 For the FSC network, we have a topology with a node for each business party.
 1. Issuer and Auditor have an Org1 Fabric Identity;
