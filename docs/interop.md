@@ -67,3 +67,5 @@ The `deserializer` in the interoperability case returns a specialized script own
 The driver's `TransferService` also takes into account the presence of scripts, as `Transfer` returns `TransferMetadata` which includes information for both the sender and recipient of a script.
 
 Lastly, the `auditor` inspects the token ownership also in the interoperability case, and verifies that the audit info matches the script owner's, both the sender and the recipient.
+
+For more details on the drivers see [`FabToken`](./fabtoken.md) and [`ZKAT DLog`](./zkat-dlog.md).
