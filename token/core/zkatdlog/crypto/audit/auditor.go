@@ -280,7 +280,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 	}
 	scriptInf := &interop.ScriptInfo{}
 	if err := json.Unmarshal(token.Owner.OwnerInfo, scriptInf); err != nil {
-		return errors.Wrapf(err, "failed to unmarshal exchange info")
+		return errors.Wrapf(err, "failed to unmarshal script info")
 	}
 	scriptSender, scriptRecipient, err := interop.GetScriptSenderAndRecipient(owner)
 	if err != nil {

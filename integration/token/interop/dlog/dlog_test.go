@@ -28,13 +28,13 @@ var _ = Describe("DLog end to end", func() {
 		ii.Stop()
 	})
 
-	Describe("Asset Exchange Single Fabric Network", func() {
+	Describe("HTLC Single Fabric Network", func() {
 		BeforeEach(func() {
 			var err error
 			ii, err = integration.New(
-				integration2.ZKATDLogInteropExchange.StartPortForNode(),
+				integration2.ZKATDLogInteropHTLC.StartPortForNode(),
 				"",
-				interop.AssetExchangeSingleFabricNetworkTopology("dlog")...,
+				interop.HTLCSingleFabricNetworkTopology("dlog")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -42,18 +42,18 @@ var _ = Describe("DLog end to end", func() {
 			ii.Start()
 		})
 
-		It("Performed exchange-related basic operations", func() {
-			interop.TestExchangeSingleFabricNetwork(ii)
+		It("Performed htlc-related basic operations", func() {
+			interop.TestHTLCSingleFabricNetwork(ii)
 		})
 	})
 
-	Describe("Asset Exchange Two Fabric Networks", func() {
+	Describe("HTLC Two Fabric Networks", func() {
 		BeforeEach(func() {
 			var err error
 			ii, err = integration.New(
-				integration2.ZKATDLogInteropExchangeTwoFabricNetworks.StartPortForNode(),
+				integration2.ZKATDLogInteropHTLCTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.AssetExchangeTwoFabricNetworksTopology("dlog")...,
+				interop.HTLCTwoFabricNetworksTopology("dlog")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -61,8 +61,8 @@ var _ = Describe("DLog end to end", func() {
 			ii.Start()
 		})
 
-		It("Performed an exchange based atomic swap", func() {
-			interop.TestExchangeTwoFabricNetworks(ii)
+		It("Performed an htlc based atomic swap", func() {
+			interop.TestHTLCTwoFabricNetworks(ii)
 		})
 	})
 
@@ -72,7 +72,7 @@ var _ = Describe("DLog end to end", func() {
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.AssetExchangeTwoFabricNetworksTopology("dlog")...,
+				interop.HTLCTwoFabricNetworksTopology("dlog")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -85,13 +85,13 @@ var _ = Describe("DLog end to end", func() {
 		})
 	})
 
-	Describe("Asset Exchange No Cross Claim Two Fabric Networks", func() {
+	Describe("HTLC No Cross Claim Two Fabric Networks", func() {
 		BeforeEach(func() {
 			var err error
 			ii, err = integration.New(
-				integration2.ZKATDLogInteropExchangeSwapNoCrossTwoFabricNetworks.StartPortForNode(),
+				integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.AssetExchangeNoCrossClaimTopology("dlog")...,
+				interop.HTLCNoCrossClaimTopology("dlog")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -99,8 +99,8 @@ var _ = Describe("DLog end to end", func() {
 			ii.Start()
 		})
 
-		It("Performed an exchange based atomic swap", func() {
-			interop.TestExchangeNoCrossClaimTwoFabricNetworks(ii)
+		It("Performed an htlc based atomic swap", func() {
+			interop.TestHTLCNoCrossClaimTwoFabricNetworks(ii)
 		})
 	})
 

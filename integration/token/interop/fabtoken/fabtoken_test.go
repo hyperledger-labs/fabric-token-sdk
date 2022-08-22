@@ -28,13 +28,13 @@ var _ = Describe("FabToken end to end", func() {
 		ii.Stop()
 	})
 
-	Describe("Asset Exchange Single Fabric Network", func() {
+	Describe("HTLC Single Fabric Network", func() {
 		BeforeEach(func() {
 			var err error
 			ii, err = integration.New(
-				integration2.FabTokenInteropExchange.StartPortForNode(),
+				integration2.FabTokenInteropHTLC.StartPortForNode(),
 				"",
-				interop.AssetExchangeSingleFabricNetworkTopology("fabtoken")...,
+				interop.HTLCSingleFabricNetworkTopology("fabtoken")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -42,18 +42,18 @@ var _ = Describe("FabToken end to end", func() {
 			ii.Start()
 		})
 
-		It("Performed exchange-related basic operations", func() {
-			interop.TestExchangeSingleFabricNetwork(ii)
+		It("Performed htlc-related basic operations", func() {
+			interop.TestHTLCSingleFabricNetwork(ii)
 		})
 	})
 
-	Describe("Asset Exchange Two Fabric Networks", func() {
+	Describe("HTLC Two Fabric Networks", func() {
 		BeforeEach(func() {
 			var err error
 			ii, err = integration.New(
-				integration2.FabTokenInteropExchangeTwoFabricNetworks.StartPortForNode(),
+				integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.AssetExchangeTwoFabricNetworksTopology("fabtoken")...,
+				interop.HTLCTwoFabricNetworksTopology("fabtoken")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -61,8 +61,8 @@ var _ = Describe("FabToken end to end", func() {
 			ii.Start()
 		})
 
-		It("Performed an exchange based atomic swap", func() {
-			interop.TestExchangeTwoFabricNetworks(ii)
+		It("Performed an htlc based atomic swap", func() {
+			interop.TestHTLCTwoFabricNetworks(ii)
 		})
 	})
 
@@ -72,7 +72,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.AssetExchangeTwoFabricNetworksTopology("fabtoken")...,
+				interop.HTLCTwoFabricNetworksTopology("fabtoken")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -85,13 +85,13 @@ var _ = Describe("FabToken end to end", func() {
 		})
 	})
 
-	Describe("Asset Exchange No Cross Claim Two Fabric Networks", func() {
+	Describe("HTLC No Cross Claim Two Fabric Networks", func() {
 		BeforeEach(func() {
 			var err error
 			ii, err = integration.New(
-				integration2.FabTokenInteropExchangeSwapNoCrossTwoFabricNetworks.StartPortForNode(),
+				integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.AssetExchangeNoCrossClaimTopology("fabtoken")...,
+				interop.HTLCNoCrossClaimTopology("fabtoken")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -99,8 +99,8 @@ var _ = Describe("FabToken end to end", func() {
 			ii.Start()
 		})
 
-		It("Performed an exchange based atomic swap", func() {
-			interop.TestExchangeNoCrossClaimTwoFabricNetworks(ii)
+		It("Performed an htlc based atomic swap", func() {
+			interop.TestHTLCNoCrossClaimTwoFabricNetworks(ii)
 		})
 	})
 

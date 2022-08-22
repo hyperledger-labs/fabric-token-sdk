@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -86,8 +86,8 @@ func checkBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
-func exchangeLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) ([]byte, []byte) {
-	result, err := network.Client(id).CallView("exchange.lock", common.JSONMarshall(&exchange.Lock{
+func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) ([]byte, []byte) {
+	result, err := network.Client(id).CallView("htlc.lock", common.JSONMarshall(&htlc.Lock{
 		TMSID:               tmsID,
 		ReclamationDeadline: deadline,
 		Wallet:              wallet,
@@ -99,7 +99,7 @@ func exchangeLock(network *integration.Infrastructure, tmsID token.TMSID, id str
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		lockResult := &exchange.LockInfo{}
+		lockResult := &htlc.LockInfo{}
 		common.JSONUnmarshal(result.([]byte), lockResult)
 
 		Expect(network.Client(receiver).IsTxFinal(
@@ -125,8 +125,8 @@ func exchangeLock(network *integration.Infrastructure, tmsID token.TMSID, id str
 	}
 }
 
-func exchangeReclaimAll(network *integration.Infrastructure, id string, wallet string, errorMsgs ...string) {
-	txID, err := network.Client(id).CallView("exchange.reclaimAll", common.JSONMarshall(&exchange.ReclaimAll{
+func htlcReclaimAll(network *integration.Infrastructure, id string, wallet string, errorMsgs ...string) {
+	txID, err := network.Client(id).CallView("htlc.reclaimAll", common.JSONMarshall(&htlc.ReclaimAll{
 		Wallet: wallet,
 	}))
 	if len(errorMsgs) == 0 {
@@ -141,8 +141,8 @@ func exchangeReclaimAll(network *integration.Infrastructure, id string, wallet s
 	}
 }
 
-func exchangeClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
-	txID, err := network.Client(id).CallView("exchange.claim", common.JSONMarshall(&exchange.Claim{
+func lockClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
+	txID, err := network.Client(id).CallView("htlc.claim", common.JSONMarshall(&htlc.Claim{
 		TMSID:    tmsID,
 		Wallet:   wallet,
 		PreImage: preImage,
@@ -164,7 +164,7 @@ func exchangeClaim(network *integration.Infrastructure, tmsID token.TMSID, id st
 }
 
 func fastExchange(network *integration.Infrastructure, id string, recipient string, tmsID1 token.TMSID, typ1 string, amount1 uint64, tmsID2 token.TMSID, typ2 string, amount2 uint64, deadline time.Duration) {
-	_, err := network.Client(id).CallView("exchange.fastExchange", common.JSONMarshall(&exchange.FastExchange{
+	_, err := network.Client(id).CallView("htlc.fastExchange", common.JSONMarshall(&htlc.FastExchange{
 		Recipient:           network.Identity(recipient),
 		TMSID1:              tmsID1,
 		Type1:               typ1,
@@ -182,7 +182,7 @@ func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc 
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = network.Client(id).CallView("exchange.scan", common.JSONMarshall(&exchange.Scan{
+	_, err = network.Client(id).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
 		TMSID:    options.TMSID(),
 		Timeout:  30 * time.Second,
 		Hash:     hash,

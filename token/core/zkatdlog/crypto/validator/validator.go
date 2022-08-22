@@ -22,13 +22,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
 
-var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeExchangeExtraValidator}
+var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeHTLCExtraValidator}
 
 type ValidateTransfer func(tokens []*token.Token, tr *transfer.TransferAction) error
 
@@ -37,15 +37,15 @@ func SerializedIdentityTypeExtraValidator(tokens []*token.Token, tr *transfer.Tr
 	return nil
 }
 
-func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
+func ScriptTypeHTLCExtraValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
 	for _, in := range tokens {
 		owner, err := identity.UnmarshallRawOwner(in.Owner)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
-		if owner.Type == exchange.ScriptTypeExchange {
+		if owner.Type == htlc.ScriptTypeHTLC {
 			if len(tokens) != 1 || len(tr.GetOutputs()) != 1 {
-				return errors.Errorf("invalid transfer action: an exchange script only transfers the ownership of a token")
+				return errors.Errorf("invalid transfer action: an htlc script only transfers the ownership of a token")
 			}
 
 			out := tr.GetOutputs()[0].(*token.Token)
@@ -54,8 +54,8 @@ func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.Transf
 			}
 
 			// check that owner field in output is correct
-			if err := interop.VerifyTransferFromExchangeScript(tokens[0].Owner, out.Owner); err != nil {
-				return errors.Wrap(err, "failed to verify transfer from exchange script")
+			if err := interop.VerifyTransferFromHTLCScript(tokens[0].Owner, out.Owner); err != nil {
+				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
 		}
 	}
@@ -72,14 +72,14 @@ func ScriptTypeExchangeExtraValidator(tokens []*token.Token, tr *transfer.Transf
 		if err != nil {
 			return err
 		}
-		if owner.Type == exchange.ScriptTypeExchange {
-			script := &exchange.Script{}
+		if owner.Type == htlc.ScriptTypeHTLC {
+			script := &htlc.Script{}
 			err = json.Unmarshal(owner.Identity, script)
 			if err != nil {
 				return err
 			}
 			if script.Deadline.Before(time.Now()) {
-				return errors.Errorf("exchange script invalid: expiration date has already passed")
+				return errors.Errorf("htlc script invalid: expiration date has already passed")
 			}
 			continue
 		}
@@ -141,7 +141,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 }
 
 type Signature struct {
-	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
+	metadata map[string][]byte // metadata may include for example the preimage of an htlc script
 }
 
 func (s *Signature) Metadata() map[string][]byte {
@@ -178,7 +178,7 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	}
 
 	for _, sig := range signatureProvider.Signatures() {
-		claim := &exchange.ClaimSignature{}
+		claim := &htlc.ClaimSignature{}
 		if err = json.Unmarshal(sig, claim); err != nil {
 			continue
 		}

@@ -12,7 +12,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
@@ -49,7 +49,7 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 	auditInfo := &ScriptInfo{}
 	auditInfo.Sender, err = view2.GetSigService(s).GetAuditInfo(sender)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for exchange script [%s]", view.Identity(raw).String())
+		return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", view.Identity(raw).String())
 	}
 
 	auditInfo.Recipient, err = view2.GetSigService(s).GetAuditInfo(recipient)
@@ -65,11 +65,11 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 
 // GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
 func GetScriptSenderAndRecipient(ro *identity.RawOwner) (sender, recipient view.Identity, err error) {
-	if ro.Type == exchange.ScriptTypeExchange {
-		script := &exchange.Script{}
+	if ro.Type == htlc.ScriptTypeHTLC {
+		script := &htlc.Script{}
 		err = json.Unmarshal(ro.Identity, script)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to unmarshal exchange script")
+			return nil, nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 		}
 		return script.Sender, script.Recipient, nil
 	}

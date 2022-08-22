@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"crypto"
@@ -25,7 +25,7 @@ type HashInfo struct {
 	HashEncoding encoding.Encoding
 }
 
-// Script contains the details of an exchange
+// Script contains the details of an htlc
 type Script struct {
 	Sender    view.Identity
 	Recipient view.Identity
@@ -41,15 +41,15 @@ func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
 	return false
 }
 
-// IsMine returns true if one is either a sender or a recipient of an exchange script
+// IsMine returns true if one is either a sender or a recipient of an htlc script
 func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
 	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 		return nil, false
 	}
-	if owner.Type != ScriptTypeExchange {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptTypeExchange)
+	if owner.Type != ScriptTypeHTLC {
+		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptTypeHTLC)
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {

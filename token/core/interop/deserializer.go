@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
@@ -36,26 +36,26 @@ func (d *Deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, erro
 	if si.Type == identity.SerializedIdentityType {
 		return d.OwnerDeserializer.DeserializeVerifier(id)
 	}
-	if si.Type == exchange.ScriptTypeExchange {
-		return d.getExchangeVerifier(si.Identity)
+	if si.Type == htlc.ScriptTypeHTLC {
+		return d.getHTLCVerifier(si.Identity)
 	}
 	return nil, errors.Errorf("failed to deserialize RawOwner: Unknown owner type %s", si.Type)
 }
 
-func (d *Deserializer) getExchangeVerifier(raw []byte) (driver.Verifier, error) {
-	script := &exchange.Script{}
+func (d *Deserializer) getHTLCVerifier(raw []byte) (driver.Verifier, error) {
+	script := &htlc.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+		return nil, errors.Errorf("failed to unmarshal RawOwner as an htlc script")
 	}
-	v := &exchange.ExchangeVerifier{}
+	v := &htlc.HTLCVerifier{}
 	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the exchange script")
+		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the htlc script")
 	}
 	v.Recipient, err = d.OwnerDeserializer.DeserializeVerifier(script.Recipient)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the exchange script")
+		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the htlc script")
 	}
 	v.Deadline = script.Deadline
 	v.HashInfo.Hash = script.HashInfo.Hash
