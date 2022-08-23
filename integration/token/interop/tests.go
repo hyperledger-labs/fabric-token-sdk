@@ -77,7 +77,7 @@ func TestHTLCSingleFabricNetwork(network *integration.Infrastructure) {
 	checkBalance(network, "bob", "", "EUR", 30)
 	checkBalance(network, "bob", "", "USD", 0)
 
-	lockClaim(network, defaultTMSID, "bob", "", preImage)
+	htlcClaim(network, defaultTMSID, "bob", "", preImage)
 	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
 	checkBalance(network, "alice", "", "EUR", 0)
 	checkBalance(network, "bob", "", "EUR", 30)
@@ -107,8 +107,8 @@ func TestHTLCTwoFabricNetworks(network *integration.Infrastructure) {
 	preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
 	htlcLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
 
-	lockClaim(network, beta, "alice", "", preImage)
-	lockClaim(network, alpha, "bob", "", preImage)
+	htlcClaim(network, beta, "alice", "", preImage)
+	htlcClaim(network, alpha, "bob", "", preImage)
 
 	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
 	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
@@ -117,8 +117,8 @@ func TestHTLCTwoFabricNetworks(network *integration.Infrastructure) {
 
 	// Try to claim again and get an error
 
-	lockClaim(network, beta, "alice", "", preImage, "expected only one htlc script to match")
-	lockClaim(network, alpha, "bob", "", preImage, "expected only one htlc script to match")
+	htlcClaim(network, beta, "alice", "", preImage, "expected only one htlc script to match")
+	htlcClaim(network, alpha, "bob", "", preImage, "expected only one htlc script to match")
 
 	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
 	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
@@ -127,8 +127,8 @@ func TestHTLCTwoFabricNetworks(network *integration.Infrastructure) {
 
 	// Try to claim without locking
 
-	lockClaim(network, beta, "alice", "", nil, "expected only one htlc script to match")
-	lockClaim(network, alpha, "bob", "", nil, "expected only one htlc script to match")
+	htlcClaim(network, beta, "alice", "", nil, "expected only one htlc script to match")
+	htlcClaim(network, alpha, "bob", "", nil, "expected only one htlc script to match")
 
 	checkBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
 	checkBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
@@ -152,8 +152,8 @@ func TestHTLCNoCrossClaimTwoFabricNetworks(network *integration.Infrastructure) 
 	preImage, hash := htlcLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
 	htlcLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
 
-	go func() { lockClaim(network, alpha, "alice", "alice.id2", preImage) }()
-	go func() { lockClaim(network, beta, "bob", "bob.id2", preImage) }()
+	go func() { htlcClaim(network, alpha, "alice", "alice.id2", preImage) }()
+	go func() { htlcClaim(network, beta, "bob", "bob.id2", preImage) }()
 	scan(network, "alice", hash, crypto.SHA256, token.WithTMSID(alpha))
 	scan(network, "bob", hash, crypto.SHA256, token.WithTMSID(beta))
 

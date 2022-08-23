@@ -141,7 +141,7 @@ func htlcReclaimAll(network *integration.Infrastructure, id string, wallet strin
 	}
 }
 
-func lockClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
+func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
 	txID, err := network.Client(id).CallView("htlc.claim", common.JSONMarshall(&htlc.Claim{
 		TMSID:    tmsID,
 		Wallet:   wallet,
