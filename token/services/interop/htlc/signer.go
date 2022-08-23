@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"bytes"
@@ -16,13 +16,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ClaimSignature is the claim signature of an exchange script
+// ClaimSignature is the claim signature of an htlc script
 type ClaimSignature struct {
 	RecipientSignature []byte
 	Preimage           []byte
 }
 
-// ClaimSigner is the signer for the claim of an exchange script
+// ClaimSigner is the signer for the claim of an htlc script
 type ClaimSigner struct {
 	Recipient driver.Signer
 	Preimage  []byte
@@ -83,8 +83,8 @@ func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) erro
 	return nil
 }
 
-// ExchangeVerifier checks if an exchange script can be claimed or reclaimed
-type ExchangeVerifier struct {
+// Verifier checks if an htlc script can be claimed or reclaimed
+type Verifier struct {
 	Recipient driver.Verifier
 	Sender    driver.Verifier
 	Deadline  time.Time
@@ -92,7 +92,7 @@ type ExchangeVerifier struct {
 }
 
 // Verify verifies the claim or reclaim signature
-func (v *ExchangeVerifier) Verify(msg []byte, sigma []byte) error {
+func (v *Verifier) Verify(msg []byte, sigma []byte) error {
 	// if timeout has not elapsed, only claim is allowed
 	if time.Now().Before(v.Deadline) {
 		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: HashInfo{
@@ -101,13 +101,13 @@ func (v *ExchangeVerifier) Verify(msg []byte, sigma []byte) error {
 			HashEncoding: v.HashInfo.HashEncoding,
 		}}
 		if err := cv.Verify(msg, sigma); err != nil {
-			return errors.WithMessagef(err, "failed verifying exchange claim signature")
+			return errors.WithMessagef(err, "failed verifying htlc claim signature")
 		}
 		return nil
 	}
 	// if timeout has elapsed, only a reclaim is possible
 	if err := v.Sender.Verify(msg, sigma); err != nil {
-		return errors.WithMessagef(err, "failed verifying exchange reclaim signature")
+		return errors.WithMessagef(err, "failed verifying htlc reclaim signature")
 	}
 	return nil
 }

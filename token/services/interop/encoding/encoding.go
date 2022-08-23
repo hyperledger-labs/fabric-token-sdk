@@ -57,7 +57,7 @@ func (e Encoding) New() EncodingFunc {
 			return f()
 		}
 	}
-	logger.Errorf("exchange: requested Encoding function %s is unavailable", strconv.Itoa(int(e)))
+	logger.Errorf("requested Encoding function %s is unavailable", strconv.Itoa(int(e)))
 	return nil
 }
 

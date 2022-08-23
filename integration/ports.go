@@ -34,14 +34,14 @@ const (
 	FabTokenNFT
 	OrionZKATDLogNFT
 	OrionFabTokenNFT
-	FabTokenInteropExchange
-	FabTokenInteropExchangeTwoFabricNetworks
+	FabTokenInteropHTLC
+	FabTokenInteropHTLCTwoFabricNetworks
 	FabTokenInteropFastExchangeTwoFabricNetworks
-	FabTokenInteropExchangeSwapNoCrossTwoFabricNetworks
-	ZKATDLogInteropExchange
-	ZKATDLogInteropExchangeTwoFabricNetworks
+	FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks
+	ZKATDLogInteropHTLC
+	ZKATDLogInteropHTLCTwoFabricNetworks
 	ZKATDLogInteropFastExchangeTwoFabricNetworks
-	ZKATDLogInteropExchangeSwapNoCrossTwoFabricNetworks
+	ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks
 )
 
 // StartPortForNode On linux, the default ephemeral port range is 32768-60999 and can be

@@ -14,11 +14,11 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
+func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -51,9 +51,9 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
-	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
-	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
-	alice.RegisterViewFactory("exchange.fastExchange", &exchange.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
+	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
+	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -61,9 +61,9 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
-	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
-	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
-	bob.RegisterResponder(&exchange.FastExchangeResponderView{}, &exchange.FastExchangeInitiatorView{})
+	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
+	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
+	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -75,7 +75,7 @@ func AssetExchangeSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topol
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
 
-func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
+func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -114,11 +114,11 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
-	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
-	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
-	alice.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
-	alice.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
-	alice.RegisterViewFactory("exchange.fastExchange", &exchange.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
+	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
+	alice.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
+	alice.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
+	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -128,11 +128,11 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
-	bob.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
-	bob.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
-	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
-	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
-	bob.RegisterResponder(&exchange.FastExchangeResponderView{}, &exchange.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
+	bob.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
+	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
+	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
+	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -149,7 +149,7 @@ func AssetExchangeTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topolog
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
-func AssetExchangeNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
+func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -188,12 +188,12 @@ func AssetExchangeNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		token.WithOwnerIdentity(tokenSDKDriver, "alice.id2"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
-	alice.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
-	alice.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
-	alice.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
-	alice.RegisterViewFactory("exchange.fastExchange", &exchange.FastExchangeInitiatorViewFactory{})
-	alice.RegisterViewFactory("exchange.scan", &exchange.ScanViewFactory{})
-	alice.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
+	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
+	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
+	alice.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
+	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
+	alice.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("beta", "Org4"),
@@ -202,12 +202,12 @@ func AssetExchangeNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		token.WithOwnerIdentity(tokenSDKDriver, "bob.id2"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
-	bob.RegisterViewFactory("exchange.lock", &exchange.LockViewFactory{})
-	bob.RegisterViewFactory("exchange.reclaimAll", &exchange.ReclaimAllViewFactory{})
-	bob.RegisterViewFactory("exchange.claim", &exchange.ClaimViewFactory{})
-	bob.RegisterViewFactory("exchange.scan", &exchange.ScanViewFactory{})
-	bob.RegisterResponder(&exchange.LockAcceptView{}, &exchange.LockView{})
-	bob.RegisterResponder(&exchange.FastExchangeResponderView{}, &exchange.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
+	bob.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
+	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
+	bob.RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
+	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
+	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

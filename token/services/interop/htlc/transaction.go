@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"crypto"
@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	ScriptTypeExchange    = "exchange" // exchange script
+	ScriptType            = "htlc" // htlc script
 	defaultDeadlineOffset = time.Hour
 )
 
@@ -34,7 +34,7 @@ func WithHash(hash []byte) token.TransferOption {
 		if o.Attributes == nil {
 			o.Attributes = map[interface{}]interface{}{}
 		}
-		o.Attributes["exchange.hash"] = hash
+		o.Attributes["htlc.hash"] = hash
 		return nil
 	}
 }
@@ -45,7 +45,7 @@ func WithHashFunc(hashFunc crypto.Hash) token.TransferOption {
 		if o.Attributes == nil {
 			o.Attributes = map[interface{}]interface{}{}
 		}
-		o.Attributes["exchange.hashFunc"] = hashFunc
+		o.Attributes["htlc.hashFunc"] = hashFunc
 		return nil
 	}
 }
@@ -56,7 +56,7 @@ func WithHashEncoding(encoding encoding.Encoding) token.TransferOption {
 		if o.Attributes == nil {
 			o.Attributes = map[interface{}]interface{}{}
 		}
-		o.Attributes["exchange.hashEncoding"] = encoding
+		o.Attributes["htlc.hashEncoding"] = encoding
 		return nil
 	}
 }
@@ -107,8 +107,8 @@ func (t *Transaction) Outputs() (*OutputStream, error) {
 	return NewOutputStream(outs), nil
 }
 
-// Exchange appends an exchange (transfer) action to the token request of the transaction
-func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, typ string, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error) {
+// Lock appends a lock action to the token request of the transaction
+func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ string, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error) {
 	options, err := compileTransferOptions(opts...)
 	if err != nil {
 		return nil, err
@@ -131,28 +131,28 @@ func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, 
 	hashFunc := crypto.SHA256 // default hash function
 	var hashEncoding encoding.Encoding
 	if options.Attributes != nil {
-		boxed, ok := options.Attributes["exchange.hash"]
+		boxed, ok := options.Attributes["htlc.hash"]
 		if ok {
 			hash, ok = boxed.([]byte)
 			if !ok {
-				return nil, errors.Errorf("expected exchange.hash attribute to be []byte, got [%T]", boxed)
+				return nil, errors.Errorf("expected htlc.hash attribute to be []byte, got [%T]", boxed)
 			}
 		}
-		boxed, ok = options.Attributes["exchange.hashFunc"]
+		boxed, ok = options.Attributes["htlc.hashFunc"]
 		if ok {
 			hashFunc, ok = boxed.(crypto.Hash)
 			if !ok {
-				return nil, errors.Errorf("expected exchange.hashFunc attribute to be crypto.Hash, got [%T]", boxed)
+				return nil, errors.Errorf("expected htlc.hashFunc attribute to be crypto.Hash, got [%T]", boxed)
 			}
 			if hashFunc == 0 {
 				hashFunc = crypto.SHA256 // default hash function
 			}
 		}
-		boxed, ok = options.Attributes["exchange.hashEncoding"]
+		boxed, ok = options.Attributes["htlc.hashEncoding"]
 		if ok {
 			hashEncoding, ok = boxed.(encoding.Encoding)
 			if !ok {
-				return nil, errors.Errorf("expected exchange.hashEncoding attribute to be Encoding, got [%T]", boxed)
+				return nil, errors.Errorf("expected htlc.hashEncoding attribute to be Encoding, got [%T]", boxed)
 			}
 		}
 	}
@@ -179,13 +179,13 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return err
 	}
-	if owner.Type != ScriptTypeExchange {
-		return errors.Errorf("invalid owner type, expected exchange script")
+	if owner.Type != ScriptType {
+		return errors.Errorf("invalid owner type, expected htlc script")
 	}
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal RawOwner as an exchange script")
+		return errors.Errorf("failed to unmarshal RawOwner as an htlc script")
 	}
 
 	// Register the signer for the reclaim
@@ -227,11 +227,11 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 	script := &Script{}
-	if owner.Type != ScriptTypeExchange {
-		return errors.New("invalid owner type, expected exchange script")
+	if owner.Type != ScriptType {
+		return errors.New("invalid owner type, expected htlc script")
 	}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
-		return errors.New("failed to unmarshal RawOwner as an exchange script")
+		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
 
 	if preImage == nil {
@@ -317,7 +317,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 		return nil, nil, err
 	}
 	ro := &identity.RawOwner{
-		Type:     ScriptTypeExchange,
+		Type:     ScriptType,
 		Identity: rawScript,
 	}
 	raw, err := identity.MarshallRawOwner(ro)

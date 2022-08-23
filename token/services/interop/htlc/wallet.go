@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"bytes"
@@ -49,7 +49,7 @@ func (w *OwnerWallet) ListExpired() ([]*token2.UnspentToken, error) {
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 			continue
 		}
-		if owner.Type == ScriptTypeExchange {
+		if owner.Type == ScriptType {
 			script := &Script{}
 			if err := json.Unmarshal(owner.Identity, script); err != nil {
 				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
@@ -90,7 +90,7 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte) ([]*token2.UnspentToken, e
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 			continue
 		}
-		if owner.Type == ScriptTypeExchange {
+		if owner.Type == ScriptType {
 			script := &Script{}
 			if err := json.Unmarshal(owner.Identity, script); err != nil {
 				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)

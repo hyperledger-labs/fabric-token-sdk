@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"encoding/json"
@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Terms contains the details of the exchange to be examined
+// Terms contains the details of the htlc to be examined
 type Terms struct {
 	ReclamationDeadline time.Duration
 	TMSID1              token.TMSID

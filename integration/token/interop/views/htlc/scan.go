@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"crypto"
@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 )
 
 // Scan contains the input information for a scan of a matching preimage
@@ -35,7 +35,7 @@ type ScanView struct {
 }
 
 func (s *ScanView) Call(context view.Context) (interface{}, error) {
-	preImage, err := exchange.ScanForPreImage(context, s.Hash, s.HashFunc, encoding.None, s.Timeout, token.WithTMSID(s.TMSID))
+	preImage, err := htlc.ScanForPreImage(context, s.Hash, s.HashFunc, encoding.None, s.Timeout, token.WithTMSID(s.TMSID))
 	if err != nil {
 		return nil, err
 	}

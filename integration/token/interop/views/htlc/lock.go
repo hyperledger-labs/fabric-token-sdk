@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"crypto"
@@ -17,11 +17,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/exchange"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
-// Lock contains the input information to exchange a token
+// Lock contains the input information to lock a token
 type Lock struct {
 	// TMSID identifies the TMS to use to perform the token operation
 	TMSID token.TMSID
@@ -56,36 +56,36 @@ func (hv *LockView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knows already which
 	// identity the recipient wants to use.
-	me, recipient, err := exchange.ExchangeRecipientIdentities(context, "", hv.Recipient, token.WithTMSID(hv.TMSID))
+	me, recipient, err := htlc.ExchangeRecipientIdentities(context, "", hv.Recipient, token.WithTMSID(hv.TMSID))
 	assert.NoError(err, "failed getting recipient identity")
 
-	// At this point, the sender is ready to prepare the exchange transaction
+	// At this point, the sender is ready to prepare the htlc transaction
 	// and specify the auditor that must be contacted to approve the operation.
-	tx, err := exchange.NewTransaction(
+	tx, err := htlc.NewTransaction(
 		context,
 		fabric.GetIdentityProvider(context, hv.TMSID.Network).DefaultIdentity(),
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(hv.TMSID),
 	)
-	assert.NoError(err, "failed creating an exchange transaction")
+	assert.NoError(err, "failed creating an htlc transaction")
 
 	// The sender will select tokens owned by this wallet
-	senderWallet := exchange.GetWallet(context, hv.Wallet, token.WithTMSID(hv.TMSID))
+	senderWallet := htlc.GetWallet(context, hv.Wallet, token.WithTMSID(hv.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", hv.Wallet)
 
-	// The sender adds an exchange operation to the transaction.
-	preImage, err := tx.Exchange(
+	// The sender adds a lock operation to the transaction.
+	preImage, err := tx.Lock(
 		senderWallet,
 		me,
 		hv.Type,
 		hv.Amount,
 		recipient,
 		hv.ReclamationDeadline,
-		exchange.WithHash(hv.Hash),
-		exchange.WithHashFunc(hv.HashFunc),
-		exchange.WithHashEncoding(encoding.None),
+		htlc.WithHash(hv.Hash),
+		htlc.WithHashFunc(hv.HashFunc),
+		htlc.WithHashEncoding(encoding.None),
 	)
-	assert.NoError(err, "failed adding exchange")
+	assert.NoError(err, "failed adding a lock operation")
 
 	// The sender is ready to collect all the required signatures.
 	// In this case, the sender's and the auditor's signatures.
@@ -93,13 +93,13 @@ func (hv *LockView) Call(context view.Context) (interface{}, error) {
 	// This is all done in one shot running the following view.
 	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
-	// the exchange transaction valid.
-	_, err = context.RunView(exchange.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to collect endorsements for exchange transaction")
+	// the htlc transaction valid.
+	_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
+	assert.NoError(err, "failed to collect endorsements for htlc transaction")
 
 	// Last but not least, the locker sends the transaction for ordering and waits for transaction finality.
-	_, err = context.RunView(exchange.NewOrderingAndFinalityView(tx))
-	assert.NoError(err, "failed to commit exchange transaction")
+	_, err = context.RunView(htlc.NewOrderingAndFinalityView(tx))
+	assert.NoError(err, "failed to commit htlc transaction")
 
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
@@ -129,11 +129,11 @@ func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	// to a request for a recipient identity.
 	// The recipient can do that by using the following code.
 	// The recipient identity will be taken from the default wallet, if not otherwise specified.
-	me, sender, err := exchange.RespondExchangeRecipientIdentities(context)
+	me, sender, err := htlc.RespondExchangeRecipientIdentities(context)
 	assert.NoError(err, "failed to respond to identity request")
 
-	// At some point, the recipient receives the exchange transaction that in the meantime has been assembled
-	tx, err := exchange.ReceiveTransaction(context)
+	// At some point, the recipient receives the htlc transaction that in the meantime has been assembled
+	tx, err := htlc.ReceiveTransaction(context)
 	assert.NoError(err, "failed to receive tokens")
 
 	// The recipient can perform any check on the transaction as required by the business process
@@ -143,20 +143,20 @@ func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed getting outputs")
 	assert.True(outputs.Count() >= 1, "expected at least one output, got [%d]", outputs.Count())
 	outputs = outputs.ByScript()
-	assert.True(outputs.Count() == 1, "expected only one exchange output, got [%d]", outputs.Count())
+	assert.True(outputs.Count() == 1, "expected only one htlc output, got [%d]", outputs.Count())
 	script := outputs.ScriptAt(0)
-	assert.NotNil(script, "expected an exchange script")
+	assert.NotNil(script, "expected an htlc script")
 	assert.True(me.Equal(script.Recipient), "expected me as recipient of the script")
 	assert.True(sender.Equal(script.Sender), "expected sender as sender of the script")
 
 	// If everything is fine, the recipient accepts and sends back her signature.
 	// Notice that, a signature from the recipient might or might not be required to make the transaction valid.
 	// This depends on the driver implementation.
-	_, err = context.RunView(exchange.NewAcceptView(tx))
+	_, err = context.RunView(htlc.NewAcceptView(tx))
 	assert.NoError(err, "failed to accept new tokens")
 
 	// Before completing, the recipient waits for finality of the transaction
-	_, err = context.RunView(exchange.NewFinalityView(tx))
+	_, err = context.RunView(htlc.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
 	return tx, nil

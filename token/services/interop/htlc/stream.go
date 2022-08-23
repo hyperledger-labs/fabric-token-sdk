@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package exchange
+package htlc
 
 import (
 	"encoding/json"
@@ -28,7 +28,7 @@ func (o *OutputStream) Filter(f func(t *token.Output) bool) *OutputStream {
 	return NewOutputStream(o.OutputStream.Filter(f))
 }
 
-// ByScript filters the OutputStream to only include outputs that are owned by an exchange script
+// ByScript filters the OutputStream to only include outputs that are owned by an htlc script
 func (o *OutputStream) ByScript() *OutputStream {
 	return o.Filter(func(t *token.Output) bool {
 		owner, err := identity.UnmarshallRawOwner(t.Owner)
@@ -36,14 +36,14 @@ func (o *OutputStream) ByScript() *OutputStream {
 			return false
 		}
 		switch owner.Type {
-		case ScriptTypeExchange:
+		case ScriptType:
 			return true
 		}
 		return false
 	})
 }
 
-// ScriptAt returns an exchange script that is the owner of the output at the passed index of the OutputStream
+// ScriptAt returns an htlc script that is the owner of the output at the passed index of the OutputStream
 func (o *OutputStream) ScriptAt(i int) *Script {
 	tok := o.OutputStream.At(i)
 	owner, err := identity.UnmarshallRawOwner(tok.Owner)
@@ -51,13 +51,13 @@ func (o *OutputStream) ScriptAt(i int) *Script {
 		logger.Debugf("failed unmarshalling raw owner [%s]: [%s]", tok, err)
 		return nil
 	}
-	if owner.Type != ScriptTypeExchange {
-		logger.Debugf("owner type is [%s] instead of [%s]", owner.Type, ScriptTypeExchange)
+	if owner.Type != ScriptType {
+		logger.Debugf("owner type is [%s] instead of [%s]", owner.Type, ScriptType)
 		return nil
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
-		logger.Debugf("failed unmarshalling  exchange script [%s]: [%s]", tok, err)
+		logger.Debugf("failed unmarshalling  htlc script [%s]: [%s]", tok, err)
 		return nil
 	}
 	if script.Sender.IsNone() || script.Recipient.IsNone() {

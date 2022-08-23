@@ -17,7 +17,7 @@ import (
 
 // Signature contains metadata
 type Signature struct {
-	metadata map[string][]byte // metadata may include for example the preimage of an exchange script
+	metadata map[string][]byte // metadata may include for example the preimage of an htlc script
 }
 
 // Metadata returns the contained metadata
