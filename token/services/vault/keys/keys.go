@@ -11,8 +11,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +43,7 @@ const (
 	ClaimPreImage               = "cpi"
 )
 
-func GetTokenIdFromKey(key string) (*token2.ID, error) {
+func GetTokenIdFromKey(key string) (*token.ID, error) {
 	_, components, err := SplitCompositeKey(key)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
@@ -61,10 +60,10 @@ func GetTokenIdFromKey(key string) (*token2.ID, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInKey-1], err))
 	}
-	return &token2.ID{TxId: txID, Index: index}, nil
+	return &token.ID{TxId: txID, Index: index}, nil
 }
 
-func GetTokenIdFromExtendedKey(key string) (*token2.ID, error) {
+func GetTokenIdFromExtendedKey(key string) (*token.ID, error) {
 	_, components, err := SplitCompositeKey(key)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
@@ -81,7 +80,7 @@ func GetTokenIdFromExtendedKey(key string) (*token2.ID, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInExtendedKey-1], err))
 	}
-	return &token2.ID{TxId: txID, Index: index}, nil
+	return &token.ID{TxId: txID, Index: index}, nil
 }
 
 func SplitCompositeKey(compositeKey string) (string, []string, error) {

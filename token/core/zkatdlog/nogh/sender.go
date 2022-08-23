@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -70,7 +70,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 			continue
 		}
-		_, recipient, err := interop.GetScriptSenderAndRecipient(owner)
+		_, recipient, err := htlc.GetScriptSenderAndRecipient(owner)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting script sender and recipient")
 		}
@@ -98,7 +98,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := interop.GetOwnerAuditInfo(output.Owner.Raw, s.SP)
+		auditInfo, err := htlc.GetOwnerAuditInfo(output.Owner.Raw, s.SP)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -108,7 +108,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for senders
 	var senderAuditInfos [][]byte
 	for _, t := range tokens {
-		auditInfo, err := interop.GetOwnerAuditInfo(t.Owner, s.SP)
+		auditInfo, err := htlc.GetOwnerAuditInfo(t.Owner, s.SP)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}

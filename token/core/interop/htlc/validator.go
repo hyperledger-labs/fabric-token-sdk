@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package interop
+package htlc
 
 import (
 	"encoding/json"
@@ -15,8 +15,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// VerifyTransferFromHTLCScript validates the owners of the transfer in the htlc script
-func VerifyTransferFromHTLCScript(senderRawOwner []byte, outRawOwner []byte) error {
+// VerifyOwner validates the owners of the transfer in the htlc script
+func VerifyOwner(senderRawOwner []byte, outRawOwner []byte) error {
 	sender, err := identity.UnmarshallRawOwner(senderRawOwner)
 	if err != nil {
 		return err

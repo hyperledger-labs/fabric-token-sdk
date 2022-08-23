@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -41,7 +41,7 @@ func NewDeserializer() *deserializer {
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
+	return htlc.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
@@ -74,7 +74,7 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	}
 
 	// Try to unmarshal it as ScriptInfo
-	si := &interop.ScriptInfo{}
+	si := &htlc.ScriptInfo{}
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {

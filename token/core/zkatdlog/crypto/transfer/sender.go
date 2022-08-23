@@ -209,7 +209,6 @@ func (t *TransferAction) IsGraphHiding() bool {
 }
 
 // GetMetadata returns metadata of the TransferAction
-// in zkatdlog it returns the claim pre-image
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
 }

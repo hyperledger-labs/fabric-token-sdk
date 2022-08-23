@@ -54,7 +54,6 @@ type TransferAction interface {
 	// GetInputs returns the inputs's identifiers of the action
 	GetInputs() ([]string, error)
 	// IsGraphHiding returns true if the action is graph hiding
-	// TODO: Deprecated. This should be checked using the public parameters
 	IsGraphHiding() bool
 	// GetMetadata returns the action's metadata
 	GetMetadata() map[string][]byte

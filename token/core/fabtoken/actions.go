@@ -15,7 +15,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TokenInformation contains a serialization of the issuer of the token.
+// OutputMetadata contains a serialization of the issuer of the token.
 // type, value and owner of token can be derived from the token itself.
 type OutputMetadata struct {
 	Issuer []byte
@@ -188,7 +188,46 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
-// GetMetadata returns the claim pre-image
+// GetMetadata returns the action's metadata
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
+}
+
+// UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in the passed TokenRequest
+func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
+	ia, err := UnmarshalIssueActions(tr.Issues)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
+	}
+	ta, err := UnmarshalTransferActions(tr.Transfers)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
+	}
+	return ia, ta, nil
+}
+
+// UnmarshalTransferActions returns an array of deserialized TransferAction from raw bytes
+func UnmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
+	res := make([]*TransferAction, len(raw))
+	for i := 0; i < len(raw); i++ {
+		ta := &TransferAction{}
+		if err := ta.Deserialize(raw[i]); err != nil {
+			return nil, err
+		}
+		res[i] = ta
+	}
+	return res, nil
+}
+
+// UnmarshalIssueActions returns an array of deserialized IssueAction from raw bytes
+func UnmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
+	res := make([]*IssueAction, len(raw))
+	for i := 0; i < len(raw); i++ {
+		ia := &IssueAction{}
+		if err := ia.Deserialize(raw[i]); err != nil {
+			return nil, err
+		}
+		res[i] = ia
+	}
+	return res, nil
 }

@@ -9,12 +9,10 @@ package fabtoken
 import (
 	"bytes"
 	"encoding/json"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -22,96 +20,41 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var defaultValidators = []ValidateTransfer{SerializedIdentityTypeExtraValidator, ScriptTypeHTLCExtraValidator}
-
-type ValidateTransfer func(inputTokens []*token2.Token, tr driver.TransferAction) error
-
-func SerializedIdentityTypeExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
-	// noting else to validate
-	return nil
-}
-
-func ScriptTypeHTLCExtraValidator(inputTokens []*token2.Token, tr driver.TransferAction) error {
-	for _, in := range inputTokens {
-		owner, err := identity.UnmarshallRawOwner(in.Owner.Raw)
-		if err != nil {
-			return errors.Wrap(err, "failed to unmarshal owner of input token")
-		}
-		if owner.Type == htlc.ScriptType {
-			if len(inputTokens) != 1 || len(tr.GetOutputs()) != 1 {
-				return errors.Errorf("invalid transfer action: an htlc script only transfers the ownership of a token")
-			}
-
-			out := tr.GetOutputs()[0].(*Output).Output
-			if inputTokens[0].Type != out.Type {
-				return errors.Errorf("invalid transfer action: type of input does not match type of output")
-			}
-			if inputTokens[0].Quantity != out.Quantity {
-				return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
-			}
-
-			// check that owner field in output is correct
-			if err := interop.VerifyTransferFromHTLCScript(inputTokens[0].Owner.Raw, out.Owner.Raw); err != nil {
-				return errors.Wrap(err, "failed to verify transfer from htlc script")
-			}
-		}
-	}
-
-	for _, o := range tr.GetOutputs() {
-		out, ok := o.(*Output)
-		if !ok {
-			return errors.Errorf("invalid output")
-		}
-		if out.IsRedeem() {
-			continue
-		}
-		owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
-		if err != nil {
-			return err
-		}
-		if owner.Type == htlc.ScriptType {
-			script := &htlc.Script{}
-			err = json.Unmarshal(owner.Identity, script)
-			if err != nil {
-				return err
-			}
-			if script.Deadline.Before(time.Now()) {
-				return errors.Errorf("htlc script invalid: expiration date has already passed")
-			}
-			continue
-		}
-	}
-	return nil
-}
-
 // Validator checks the validity of fabtoken TokenRequest
 type Validator struct {
 	// fabtoken public parameters
 	pp *PublicParams
-	// deserializer for identities used in fabtoken
+	// deserializer for identities
 	deserializer driver.Deserializer
-	// extraValidators for performing additional validation
-	extraValidators []ValidateTransfer
+	// transferValidators for performing transfer action validation
+	transferValidators []ValidateTransferFunc
 }
 
 // NewValidator initializes a Validator with the passed parameters
-func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransfer) (*Validator, error) {
+func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) (*Validator, error) {
 	if pp == nil {
 		return nil, errors.New("please provide a non-nil public parameters")
 	}
 	if deserializer == nil {
 		return nil, errors.New("please provide a non-nil deserializer")
 	}
-	defaultValidators = append(defaultValidators, extraValidators...)
-	return &Validator{
-		pp:              pp,
-		deserializer:    deserializer,
-		extraValidators: defaultValidators,
-	}, nil
+	validators := []ValidateTransferFunc{
+		(&TransferSignature{Deserializer: deserializer}).Validate,
+		(&TransferBalance{PP: pp}).Validate,
+		TransferHTLC,
+	}
+	validators = append(validators, extraValidators...)
+	v := &Validator{
+		pp:                 pp,
+		deserializer:       deserializer,
+		transferValidators: validators,
+	}
+	return v, nil
 }
 
 // VerifyTokenRequest validates the passed token request against data in the ledger, the signature provided and the binding
 func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
+	// validate arguments
 	if ledger == nil {
 		return nil, errors.New("please provide a non-nil ledger")
 	}
@@ -150,86 +93,11 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 		actions = append(actions, action)
 	}
 	for _, action := range ta {
-		act, err := AddMetadataToTransferAction(action, ledger, signatureProvider)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed adding metadata to transfer action")
-		}
-		actions = append(actions, act)
+		actions = append(actions, action)
 	}
 
 	// actions are returned and will be used later to update the ledger
 	return actions, nil
-}
-
-func AddMetadataToTransferAction(action *TransferAction, ledger driver.Ledger, signatureProvider driver.SignatureProvider) (*TransferAction, error) {
-	for _, sig := range signatureProvider.Signatures() {
-		claim := &htlc.ClaimSignature{}
-		if err := json.Unmarshal(sig, claim); err != nil {
-			continue
-		}
-		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
-			return nil, errors.New("expected a valid claim preImage and recipient signature")
-		}
-		if IsItAnExchangeClaimTransferAction(action, ledger) {
-			if len(action.Metadata) == 0 {
-				return nil, errors.Errorf("cannot find htlc pre-image, no metadata")
-			}
-			value, ok := action.Metadata[htlc.ClaimPreImage]
-			if !ok {
-				return nil, errors.Errorf("cannot find htlc pre-image, missing metadata entry")
-			}
-			if !bytes.Equal(value, claim.Preimage) {
-				return nil, errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
-			}
-		}
-	}
-	return action, nil
-}
-
-func IsItAnExchangeClaimTransferAction(action *TransferAction, ledger driver.Ledger) bool {
-	if action.NumOutputs() != 1 {
-		logger.Debugf("Number of outputs is %d", action.NumOutputs())
-		return false
-	}
-	out, ok := action.GetOutputs()[0].(*Output)
-	if !ok {
-		logger.Debugf("invalid transfer action output")
-		return false
-	}
-	if out.IsRedeem() {
-		logger.Debugf("this is a redeem")
-		return false
-	}
-	inputs, err := RetrieveInputsFromTransferAction(action, ledger)
-	if err != nil {
-		logger.Debugf("error while retrieving inputs from transfer action: %v", err)
-		return false
-	}
-	if len(inputs) != 1 {
-		logger.Debugf("Number of inputs is %d", len(inputs))
-		return false
-	}
-	inOwner, err := identity.UnmarshallRawOwner(inputs[0].Owner.Raw)
-	if err != nil {
-		logger.Debugf("error while unmarshalling input raw owner: %v", err)
-		return false
-	}
-	if inOwner.Type != htlc.ScriptType {
-		logger.Debugf("script recipient does not match the output owner")
-		return false
-	}
-	script := &htlc.Script{}
-	err = json.Unmarshal(inOwner.Identity, script)
-	if err != nil {
-		logger.Debugf("error while unmarshalling into script: %v", err)
-		return false
-	}
-	if !script.Recipient.Equal(out.Output.Owner.Raw) {
-		logger.Debugf("script recipient does not match the output owner")
-		return false
-	}
-	logger.Debugf("this is an exchange claim")
-	return true
 }
 
 // VerifyTokenRequestFromRaw validates the raw token request
@@ -290,7 +158,8 @@ func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignaturePro
 			return errors.New("failed to deserialize auditor's public key")
 		}
 
-		return signatureProvider.HasBeenSignedBy(v.pp.AuditorIdentity(), verifier)
+		_, err = signatureProvider.HasBeenSignedBy(v.pp.AuditorIdentity(), verifier)
+		return err
 	}
 	return nil
 }
@@ -300,7 +169,7 @@ func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignaturePro
 func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
 		// verify that issue is valid
-		if err := v.verifyIssue(issue); err != nil {
+		if err := v.VerifyIssue(issue); err != nil {
 			return errors.Wrap(err, "failed to verify issue action")
 		}
 
@@ -325,42 +194,15 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
 		}
 		// verify if the token request concatenated with the binding was signed by the issuer
-		if err := signatureProvider.HasBeenSignedBy(issue.Issuer, verifier); err != nil {
+		if _, err := signatureProvider.HasBeenSignedBy(issue.Issuer, verifier); err != nil {
 			return errors.Wrapf(err, "failed verifying signature")
 		}
 	}
 	return nil
 }
 
-// VerifyTransfers checks if the created output tokens are valid and if the content of the token request concatenated
-// with the binding was signed by the owners of the input tokens
-func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
-	logger.Debugf("check sender start...")
-	defer logger.Debugf("check sender finished.")
-	for i, t := range transferActions {
-		// get inputs used in the current transfer action
-		inputTokens, err := RetrieveInputsFromTransferAction(t, ledger)
-		if err != nil {
-			return errors.Wrapf(err, "failed to retrieve input from transfer action at index %d", i)
-		}
-		// verify if the token request concatenated with the binding was signed by the owners of the inputs
-		// in the current transfer action
-		err = v.CheckSendersSignatures(inputTokens, i, signatureProvider)
-		if err != nil {
-			return err
-		}
-		// verify if input tokens and output tokens in the current transfer action have the same type
-		// verify if sum of input tokens  in the current transfer action equals the sum of output tokens
-		// in the current transfer action
-		if err := v.VerifyTransfer(inputTokens, t); err != nil {
-			return errors.Wrapf(err, "failed to verify transfer action at index %d", i)
-		}
-	}
-	return nil
-}
-
-// verifyIssue checks if all outputs in IssueAction are valid (no zero-value outputs)
-func (v *Validator) verifyIssue(issue driver.IssueAction) error {
+// VerifyIssue checks if all outputs in IssueAction are valid (no zero-value outputs)
+func (v *Validator) VerifyIssue(issue driver.IssueAction) error {
 	if issue.NumOutputs() == 0 {
 		return errors.Errorf("there is no output")
 	}
@@ -378,53 +220,36 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	return nil
 }
 
+// VerifyTransfers checks if the created output tokens are valid and if the content of the token request concatenated
+// with the binding was signed by the owners of the input tokens
+func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
+	logger.Debugf("check sender start...")
+	defer logger.Debugf("check sender finished.")
+	for i, t := range transferActions {
+		// get inputs used in the current transfer action
+		inputTokens, err := RetrieveInputsFromTransferAction(t, ledger)
+		if err != nil {
+			return errors.Wrapf(err, "failed to retrieve input from transfer action at index %d", i)
+		}
+		// verify if input tokens and output tokens in the current transfer action have the same type
+		// verify if sum of input tokens  in the current transfer action equals the sum of output tokens
+		// in the current transfer action
+		if err := v.VerifyTransfer(inputTokens, t, signatureProvider); err != nil {
+			return errors.Wrapf(err, "failed to verify transfer action at index %d", i)
+		}
+		// check metadata, if required
+		if err := CheckTransferActionMetadata(t, ledger, signatureProvider); err != nil {
+			return errors.Wrap(err, "failed adding metadata to transfer action")
+		}
+	}
+	return nil
+}
+
 // VerifyTransfer checks that sum of inputTokens in TransferAction equals sum of outputs in TransferAction
 // It also checks that all outputs and inputs have the same type
-func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction) error {
-	if tr.NumOutputs() == 0 {
-		return errors.Errorf("there is no output")
-	}
-	if len(inputTokens) == 0 {
-		return errors.Errorf("there is no input")
-	}
-	if inputTokens[0] == nil {
-		return errors.Errorf("first input is nil")
-	}
-	typ := inputTokens[0].Type
-	inputSum := token2.NewZeroQuantity(v.pp.QuantityPrecision)
-	outputSum := token2.NewZeroQuantity(v.pp.QuantityPrecision)
-	for i, input := range inputTokens {
-		if input == nil {
-			return errors.Errorf("input %d is nil", i)
-		}
-		q, err := token2.ToQuantity(input.Quantity, v.pp.QuantityPrecision)
-		if err != nil {
-			return errors.Wrapf(err, "failed parsing quantity [%s]", input.Quantity)
-		}
-		inputSum.Add(q)
-		// check that all inputs have the same type
-		if input.Type != typ {
-			return errors.Errorf("input type %s does not match type %s", input.Type, typ)
-		}
-	}
-	for _, output := range tr.GetOutputs() {
-		out := output.(*Output).Output
-		q, err := token2.ToQuantity(out.Quantity, v.pp.QuantityPrecision)
-		if err != nil {
-			return errors.Wrapf(err, "failed parsing quantity [%s]", out.Quantity)
-		}
-		outputSum.Add(q)
-		// check that all outputs have the same type and it is the same type as inputs
-		if out.Type != typ {
-			return errors.Errorf("output type %s does not match type %s", out.Type, typ)
-		}
-	}
-	// check equality of sum of inputs and outputs
-	if inputSum.Cmp(outputSum) != 0 {
-		return errors.Errorf("input sum %v does not match output sum %v", inputSum, outputSum)
-	}
-	for _, v := range v.extraValidators {
-		if err := v(inputTokens, tr); err != nil {
+func (v *Validator) VerifyTransfer(inputTokens []*token2.Token, tr driver.TransferAction, signatureProvider driver.SignatureProvider) error {
+	for _, validator := range v.transferValidators {
+		if err := validator(inputTokens, tr, signatureProvider); err != nil {
 			return err
 		}
 	}
@@ -443,14 +268,14 @@ type backend struct {
 // HasBeenSignedBy checks if a given message has been signed by the signing identity matching
 // the passed verifier
 // todo shall we remove id from the parameters
-func (b *backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) error {
+func (b *backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) ([]byte, error) {
 	if b.index >= len(b.signatures) {
-		return errors.Errorf("invalid state, insufficient number of signatures")
+		return nil, errors.Errorf("invalid state, insufficient number of signatures")
 	}
 	sigma := b.signatures[b.index]
 	b.index++
 
-	return verifier.Verify(b.message, sigma)
+	return sigma, verifier.Verify(b.message, sigma)
 }
 
 func (b *backend) GetState(key string) ([]byte, error) {
@@ -459,61 +284,6 @@ func (b *backend) GetState(key string) ([]byte, error) {
 
 func (b *backend) Signatures() [][]byte {
 	return b.signatures
-}
-
-// UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in the passed TokenRequest
-func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
-	ia, err := unmarshalIssueActions(tr.Issues)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
-	}
-	ta, err := unmarshalTransferActions(tr.Transfers)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
-	}
-	return ia, ta, nil
-}
-
-// unmarshalTransferActions returns an array of deserialized TransferAction from raw bytes
-func unmarshalTransferActions(raw [][]byte) ([]*TransferAction, error) {
-	res := make([]*TransferAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ta := &TransferAction{}
-		if err := ta.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ta
-	}
-	return res, nil
-}
-
-// unmarshalIssueActions returns an array of deserialized IssueAction from raw bytes
-func unmarshalIssueActions(raw [][]byte) ([]*IssueAction, error) {
-	res := make([]*IssueAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ia := &IssueAction{}
-		if err := ia.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ia
-	}
-	return res, nil
-}
-
-// CheckSendersSignatures verifies if a TokenRequest was signed by the owners of the inputs in the TokenRequest
-func (v *Validator) CheckSendersSignatures(inputTokens []*token2.Token, actionIndex int, signatureProvider driver.SignatureProvider) error {
-	for _, tok := range inputTokens {
-		logger.Debugf("check sender [%d][%s]", actionIndex, view.Identity(tok.Owner.Raw).UniqueID())
-		verifier, err := v.deserializer.GetOwnerVerifier(tok.Owner.Raw)
-		if err != nil {
-			return errors.Wrapf(err, "failed deserializing owner [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
-		}
-		logger.Debugf("signature verification [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
-		if err := signatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier); err != nil {
-			return errors.Wrapf(err, "failed signature verification [%d][%v][%s]", actionIndex, tok, view.Identity(tok.Owner.Raw).UniqueID())
-		}
-	}
-	return nil
 }
 
 // RetrieveInputsFromTransferAction retrieves from the passed ledger the inputs identified in TransferAction
@@ -539,4 +309,75 @@ func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) (
 		inputTokens = append(inputTokens, tok)
 	}
 	return inputTokens, nil
+}
+
+func CheckTransferActionMetadata(action *TransferAction, ledger driver.Ledger, signatureProvider driver.SignatureProvider) error {
+	for _, sig := range signatureProvider.Signatures() {
+		claim := &htlc.ClaimSignature{}
+		if err := json.Unmarshal(sig, claim); err != nil {
+			continue
+		}
+		if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
+			return errors.New("expected a valid claim preImage and recipient signature")
+		}
+		if IsItAnExchangeClaimTransferAction(action, ledger) {
+			if len(action.Metadata) == 0 {
+				return errors.Errorf("cannot find htlc pre-image, no metadata")
+			}
+			value, ok := action.Metadata[htlc.ClaimPreImage]
+			if !ok {
+				return errors.Errorf("cannot find htlc pre-image, missing metadata entry")
+			}
+			if !bytes.Equal(value, claim.Preimage) {
+				return errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
+			}
+		}
+	}
+	return nil
+}
+
+func IsItAnExchangeClaimTransferAction(action *TransferAction, ledger driver.Ledger) bool {
+	if action.NumOutputs() != 1 {
+		logger.Debugf("Number of outputs is %d", action.NumOutputs())
+		return false
+	}
+	out, ok := action.GetOutputs()[0].(*Output)
+	if !ok {
+		logger.Debugf("invalid transfer action output")
+		return false
+	}
+	if out.IsRedeem() {
+		logger.Debugf("this is a redeem")
+		return false
+	}
+	inputs, err := RetrieveInputsFromTransferAction(action, ledger)
+	if err != nil {
+		logger.Debugf("error while retrieving inputs from transfer action: %v", err)
+		return false
+	}
+	if len(inputs) != 1 {
+		logger.Debugf("Number of inputs is %d", len(inputs))
+		return false
+	}
+	inOwner, err := identity.UnmarshallRawOwner(inputs[0].Owner.Raw)
+	if err != nil {
+		logger.Debugf("error while unmarshalling input raw owner: %v", err)
+		return false
+	}
+	if inOwner.Type != htlc.ScriptType {
+		logger.Debugf("script recipient does not match the output owner")
+		return false
+	}
+	script := &htlc.Script{}
+	err = json.Unmarshal(inOwner.Identity, script)
+	if err != nil {
+		logger.Debugf("error while unmarshalling into script: %v", err)
+		return false
+	}
+	if !script.Recipient.Equal(out.Output.Owner.Raw) {
+		logger.Debugf("script recipient does not match the output owner")
+		return false
+	}
+	logger.Debugf("this is an exchange claim")
+	return true
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -114,7 +114,7 @@ func (w *Translator) ReadSetupParameters() ([]byte, error) {
 	return raw, nil
 }
 
-func (w *Translator) QueryTokens(ids []*token2.ID) ([][]byte, error) {
+func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
 	for _, id := range ids {
