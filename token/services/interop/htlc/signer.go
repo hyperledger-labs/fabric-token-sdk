@@ -83,8 +83,8 @@ func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) erro
 	return nil
 }
 
-// HTLCVerifier checks if an htlc script can be claimed or reclaimed
-type HTLCVerifier struct {
+// Verifier checks if an htlc script can be claimed or reclaimed
+type Verifier struct {
 	Recipient driver.Verifier
 	Sender    driver.Verifier
 	Deadline  time.Time
@@ -92,7 +92,7 @@ type HTLCVerifier struct {
 }
 
 // Verify verifies the claim or reclaim signature
-func (v *HTLCVerifier) Verify(msg []byte, sigma []byte) error {
+func (v *Verifier) Verify(msg []byte, sigma []byte) error {
 	// if timeout has not elapsed, only claim is allowed
 	if time.Now().Before(v.Deadline) {
 		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: HashInfo{

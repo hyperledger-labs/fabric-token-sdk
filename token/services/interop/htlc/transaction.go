@@ -24,7 +24,7 @@ import (
 )
 
 const (
-	ScriptTypeHTLC        = "htlc" // htlc script
+	ScriptType            = "htlc" // htlc script
 	defaultDeadlineOffset = time.Hour
 )
 
@@ -179,7 +179,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return err
 	}
-	if owner.Type != ScriptTypeHTLC {
+	if owner.Type != ScriptType {
 		return errors.Errorf("invalid owner type, expected htlc script")
 	}
 	script := &Script{}
@@ -227,7 +227,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 	script := &Script{}
-	if owner.Type != ScriptTypeHTLC {
+	if owner.Type != ScriptType {
 		return errors.New("invalid owner type, expected htlc script")
 	}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
@@ -317,7 +317,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 		return nil, nil, err
 	}
 	ro := &identity.RawOwner{
-		Type:     ScriptTypeHTLC,
+		Type:     ScriptType,
 		Identity: rawScript,
 	}
 	raw, err := identity.MarshallRawOwner(ro)

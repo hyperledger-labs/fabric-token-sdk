@@ -48,8 +48,8 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 		return nil, false
 	}
-	if owner.Type != ScriptTypeHTLC {
-		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptTypeHTLC)
+	if owner.Type != ScriptType {
+		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptType)
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {

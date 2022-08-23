@@ -37,7 +37,7 @@ func ScriptTypeHTLCExtraValidator(inputTokens []*token2.Token, tr driver.Transfe
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
-		if owner.Type == htlc.ScriptTypeHTLC {
+		if owner.Type == htlc.ScriptType {
 			if len(inputTokens) != 1 || len(tr.GetOutputs()) != 1 {
 				return errors.Errorf("invalid transfer action: an htlc script only transfers the ownership of a token")
 			}
@@ -69,7 +69,7 @@ func ScriptTypeHTLCExtraValidator(inputTokens []*token2.Token, tr driver.Transfe
 		if err != nil {
 			return err
 		}
-		if owner.Type == htlc.ScriptTypeHTLC {
+		if owner.Type == htlc.ScriptType {
 			script := &htlc.Script{}
 			err = json.Unmarshal(owner.Identity, script)
 			if err != nil {

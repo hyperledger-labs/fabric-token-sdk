@@ -65,7 +65,7 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 
 // GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
 func GetScriptSenderAndRecipient(ro *identity.RawOwner) (sender, recipient view.Identity, err error) {
-	if ro.Type == htlc.ScriptTypeHTLC {
+	if ro.Type == htlc.ScriptType {
 		script := &htlc.Script{}
 		err = json.Unmarshal(ro.Identity, script)
 		if err != nil {

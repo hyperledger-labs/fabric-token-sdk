@@ -36,7 +36,7 @@ func (o *OutputStream) ByScript() *OutputStream {
 			return false
 		}
 		switch owner.Type {
-		case ScriptTypeHTLC:
+		case ScriptType:
 			return true
 		}
 		return false
@@ -51,8 +51,8 @@ func (o *OutputStream) ScriptAt(i int) *Script {
 		logger.Debugf("failed unmarshalling raw owner [%s]: [%s]", tok, err)
 		return nil
 	}
-	if owner.Type != ScriptTypeHTLC {
-		logger.Debugf("owner type is [%s] instead of [%s]", owner.Type, ScriptTypeHTLC)
+	if owner.Type != ScriptType {
+		logger.Debugf("owner type is [%s] instead of [%s]", owner.Type, ScriptType)
 		return nil
 	}
 	script := &Script{}
