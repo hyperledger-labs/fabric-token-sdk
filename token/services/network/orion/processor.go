@@ -165,9 +165,9 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 				logger.Debugf("expected key without the issue action metadata, skipping")
 			}
 			continue
-		case keys.ClaimPreImage:
+		case keys.TransferActionMetadata:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the claim pre-image, skipping")
+				logger.Debugf("expected key without the issue action metadata, skipping")
 			}
 			continue
 		}

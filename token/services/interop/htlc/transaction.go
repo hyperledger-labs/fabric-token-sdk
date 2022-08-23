@@ -26,6 +26,7 @@ import (
 const (
 	ScriptType            = "htlc" // htlc script
 	defaultDeadlineOffset = time.Hour
+	ClaimPreImage         = "cpi"
 )
 
 // WithHash sets a hash attribute to be used to customize the transfer command
@@ -273,7 +274,14 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 
-	return t.Transfer(wallet, tok.Type, []uint64{q.ToBigInt().Uint64()}, []view.Identity{script.Recipient}, token.WithTokenIDs(tok.Id))
+	return t.Transfer(
+		wallet,
+		tok.Type,
+		[]uint64{q.ToBigInt().Uint64()},
+		[]view.Identity{script.Recipient},
+		token.WithTokenIDs(tok.Id),
+		token.WithTransferMetadata(ClaimPreImage, preImage),
+	)
 }
 
 func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, error) {

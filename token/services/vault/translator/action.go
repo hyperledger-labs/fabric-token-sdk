@@ -31,5 +31,5 @@ type TransferAction interface {
 	SerializeOutputAt(index int) ([]byte, error)
 	GetInputs() ([]string, error)
 	IsGraphHiding() bool
-	GetMetadata() []byte
+	GetMetadata() map[string][]byte
 }

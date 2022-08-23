@@ -9,6 +9,7 @@ package nogh
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -81,6 +82,9 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
+
+	// add transfer action's metadata
+	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
 
 	// prepare metadata
 	var outputMetadataRaw [][]byte

@@ -20,15 +20,15 @@ type TransferAction struct {
 		result1 []string
 		result2 error
 	}
-	GetMetadataStub        func() []byte
+	GetMetadataStub        func() map[string][]byte
 	getMetadataMutex       sync.RWMutex
 	getMetadataArgsForCall []struct {
 	}
 	getMetadataReturns struct {
-		result1 []byte
+		result1 map[string][]byte
 	}
 	getMetadataReturnsOnCall map[int]struct {
-		result1 []byte
+		result1 map[string][]byte
 	}
 	GetSerializedOutputsStub        func() ([][]byte, error)
 	getSerializedOutputsMutex       sync.RWMutex
@@ -158,7 +158,7 @@ func (fake *TransferAction) GetInputsReturnsOnCall(i int, result1 []string, resu
 	}{result1, result2}
 }
 
-func (fake *TransferAction) GetMetadata() []byte {
+func (fake *TransferAction) GetMetadata() map[string][]byte {
 	fake.getMetadataMutex.Lock()
 	ret, specificReturn := fake.getMetadataReturnsOnCall[len(fake.getMetadataArgsForCall)]
 	fake.getMetadataArgsForCall = append(fake.getMetadataArgsForCall, struct {
@@ -182,32 +182,32 @@ func (fake *TransferAction) GetMetadataCallCount() int {
 	return len(fake.getMetadataArgsForCall)
 }
 
-func (fake *TransferAction) GetMetadataCalls(stub func() []byte) {
+func (fake *TransferAction) GetMetadataCalls(stub func() map[string][]byte) {
 	fake.getMetadataMutex.Lock()
 	defer fake.getMetadataMutex.Unlock()
 	fake.GetMetadataStub = stub
 }
 
-func (fake *TransferAction) GetMetadataReturns(result1 []byte) {
+func (fake *TransferAction) GetMetadataReturns(result1 map[string][]byte) {
 	fake.getMetadataMutex.Lock()
 	defer fake.getMetadataMutex.Unlock()
 	fake.GetMetadataStub = nil
 	fake.getMetadataReturns = struct {
-		result1 []byte
+		result1 map[string][]byte
 	}{result1}
 }
 
-func (fake *TransferAction) GetMetadataReturnsOnCall(i int, result1 []byte) {
+func (fake *TransferAction) GetMetadataReturnsOnCall(i int, result1 map[string][]byte) {
 	fake.getMetadataMutex.Lock()
 	defer fake.getMetadataMutex.Unlock()
 	fake.GetMetadataStub = nil
 	if fake.getMetadataReturnsOnCall == nil {
 		fake.getMetadataReturnsOnCall = make(map[int]struct {
-			result1 []byte
+			result1 map[string][]byte
 		})
 	}
 	fake.getMetadataReturnsOnCall[i] = struct {
-		result1 []byte
+		result1 map[string][]byte
 	}{result1}
 }
 

@@ -203,11 +203,6 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 				logger.Debugf("expected key without the issue action metadata, skipping")
 			}
 			continue
-		case keys.ClaimPreImage:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the claim pre-image, skipping")
-			}
-			continue
 		}
 
 		index, err := strconv.ParseUint(components[1], 10, 64)

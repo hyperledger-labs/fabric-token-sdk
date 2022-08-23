@@ -12,28 +12,29 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
-	RWSet     RWSet
-	TxID      string
-	counter   uint64
-	namespace string
+	RWSet           RWSet
+	TxID            string
+	counter         uint64
+	metadataCounter uint64
+	namespace       string
 }
 
 func New(txID string, rwSet RWSet, namespace string) *Translator {
 	w := &Translator{
-		RWSet:     rwSet,
-		TxID:      txID,
-		counter:   0,
-		namespace: namespace,
+		RWSet:           rwSet,
+		TxID:            txID,
+		counter:         0,
+		metadataCounter: 0,
+		namespace:       namespace,
 	}
 
 	return w
@@ -143,15 +144,8 @@ func (w *Translator) QueryTokens(ids []*token2.ID) ([][]byte, error) {
 	return res, nil
 }
 
-func (w *Translator) IsClaimPreImageKey(k string) (bool, error) {
-	prefix, components, err := keys.SplitCompositeKey(k)
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
-	}
-	if prefix != keys.TokenKeyPrefix {
-		return false, nil
-	}
-	return components[0] == keys.ClaimPreImage, nil
+func (w *Translator) IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
+	return keys.IsTransferMetadataKeyWithSubKey(k, subKey)
 }
 
 func (w *Translator) checkProcess(action interface{}) error {
@@ -322,6 +316,8 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 // Check the owner of each output to determine how to generate the key
 func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	base := w.counter
+
+	// store outputs
 	for i := 0; i < transferAction.NumOutputs(); i++ {
 		if !transferAction.IsRedeemAt(i) {
 			outputID, err := keys.CreateTokenKey(w.TxID, base+uint64(i))
@@ -339,6 +335,8 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 			}
 		}
 	}
+
+	// store inputs
 	ids, err := transferAction.GetInputs()
 	if err != nil {
 		return err
@@ -347,33 +345,27 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	if err != nil {
 		return err
 	}
+
+	// store metadata
 	metadata := transferAction.GetMetadata()
-	if len(metadata) != 0 {
-		key, err := keys.CreateTransferActionMetadataKey(hash.Hashable(metadata).String())
+	for key, value := range metadata {
+		k, err := keys.CreateTransferActionMetadataKey(w.TxID, w.metadataCounter, key)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
-		raw, err := w.RWSet.GetState(w.namespace, key)
+		raw, err := w.RWSet.GetState(w.namespace, k)
 		if err != nil {
 			return err
 		}
 		if len(raw) != 0 {
 			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, string(raw))
 		}
-		if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
+		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
 			return err
 		}
-
-		// also keep the claim pre-image
-		key, err = keys.CreateClaimPreImageKey()
-		if err != nil {
-			return errors.Errorf("error creating output ID: %s", err)
-		}
-		err = w.RWSet.SetState(w.namespace, key, metadata)
-		if err != nil {
-			return errors.Wrapf(err, "error setting state for key [%s]", key)
-		}
+		w.metadataCounter++
 	}
+
 	w.counter = w.counter + uint64(transferAction.NumOutputs())
 	return nil
 }

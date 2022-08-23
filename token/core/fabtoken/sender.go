@@ -8,6 +8,7 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -46,9 +47,13 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token2
 
 	// assemble transfer action
 	transfer := &TransferAction{
-		Inputs:  inputIDs,
-		Outputs: outs,
+		Inputs:   inputIDs,
+		Outputs:  outs,
+		Metadata: map[string][]byte{},
 	}
+
+	// add transfer action's metadata
+	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
 
 	// assemble transfer metadata
 	var receivers []view.Identity

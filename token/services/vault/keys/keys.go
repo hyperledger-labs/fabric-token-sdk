@@ -143,12 +143,25 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, hash})
 }
 
-func CreateTransferActionMetadataKey(hash string) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, hash})
+func CreateTransferActionMetadataKey(txID string, index uint64, subKey string) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, strconv.FormatUint(index, 10), subKey})
 }
 
-func CreateClaimPreImageKey() (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{ClaimPreImage, "claimPreImage"})
+func IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
+	prefix, components, err := SplitCompositeKey(k)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
+	}
+	if prefix != TokenKeyPrefix {
+		return false, nil
+	}
+	if components[0] != TransferActionMetadata {
+		return false, nil
+	}
+	if len(components) != 4 {
+		return false, nil
+	}
+	return components[3] == subKey, nil
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

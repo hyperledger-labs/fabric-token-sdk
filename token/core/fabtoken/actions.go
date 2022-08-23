@@ -117,6 +117,8 @@ type TransferAction struct {
 	Inputs []string
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
+	// Metadata contains the action's metadata
+	Metadata map[string][]byte
 }
 
 // Serialize marshals TransferAction
@@ -187,6 +189,6 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 }
 
 // GetMetadata returns the claim pre-image
-func (t *TransferAction) GetMetadata() []byte {
-	return t.ClaimPreImage
+func (t *TransferAction) GetMetadata() map[string][]byte {
+	return t.Metadata
 }

@@ -8,13 +8,16 @@ package token
 
 import (
 	"encoding/asn1"
-	"fmt"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+)
+
+const (
+	TransferMetadataPrefix = "TransferMetadataPrefix"
 )
 
 // IssueOptions models the options that can be passed to the issue command
@@ -78,17 +81,9 @@ func WithTokenSelector(selector Selector) TransferOption {
 	}
 }
 
-// WithOutputMetadata sets outputs metadata
-func WithOutputMetadata(metadata [][]byte) TransferOption {
-	return func(o *TransferOptions) error {
-		if o.Attributes == nil {
-			o.Attributes = make(map[interface{}]interface{})
-		}
-		for i, bytes := range metadata {
-			o.Attributes[fmt.Sprintf("output.metadata.%d", i)] = bytes
-		}
-		return nil
-	}
+// WithTransferMetadata sets transfer action metadata
+func WithTransferMetadata(key string, value []byte) TransferOption {
+	return WithTransferAttribute(TransferMetadataPrefix+key, value)
 }
 
 // WithTokenIDs sets the tokens ids to transfer
@@ -102,6 +97,9 @@ func WithTokenIDs(ids ...*token.ID) TransferOption {
 // WithTransferAttribute sets an attribute to be used to customize the transfer command
 func WithTransferAttribute(attr, value interface{}) TransferOption {
 	return func(o *TransferOptions) error {
+		if o.Attributes == nil {
+			o.Attributes = make(map[interface{}]interface{})
+		}
 		o.Attributes[attr] = value
 		return nil
 	}

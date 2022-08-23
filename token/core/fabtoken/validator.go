@@ -171,7 +171,16 @@ func AddMetadataToTransferAction(action *TransferAction, ledger driver.Ledger, s
 			return nil, errors.New("expected a valid claim preImage and recipient signature")
 		}
 		if IsItAnExchangeClaimTransferAction(action, ledger) {
-			action.ClaimPreImage = claim.Preimage
+			if len(action.Metadata) == 0 {
+				return nil, errors.Errorf("cannot find htlc pre-image, no metadata")
+			}
+			value, ok := action.Metadata[exchange.ClaimPreImage]
+			if !ok {
+				return nil, errors.Errorf("cannot find htlc pre-image, missing metadata entry")
+			}
+			if !bytes.Equal(value, claim.Preimage) {
+				return nil, errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
+			}
 		}
 	}
 	return action, nil
