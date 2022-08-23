@@ -174,7 +174,7 @@ func AddMetadataToTransferAction(action *TransferAction, ledger driver.Ledger, s
 			if len(action.Metadata) == 0 {
 				return nil, errors.Errorf("cannot find htlc pre-image, no metadata")
 			}
-			value, ok := action.Metadata[exchange.ClaimPreImage]
+			value, ok := action.Metadata[htlc.ClaimPreImage]
 			if !ok {
 				return nil, errors.Errorf("cannot find htlc pre-image, missing metadata entry")
 			}
@@ -191,7 +191,7 @@ func IsItAnExchangeClaimTransferAction(action *TransferAction, ledger driver.Led
 		logger.Debugf("Number of outputs is %d", action.NumOutputs())
 		return false
 	}
-	out, ok := action.GetOutputs()[0].(*TransferOutput)
+	out, ok := action.GetOutputs()[0].(*Output)
 	if !ok {
 		logger.Debugf("invalid transfer action output")
 		return false
@@ -214,11 +214,11 @@ func IsItAnExchangeClaimTransferAction(action *TransferAction, ledger driver.Led
 		logger.Debugf("error while unmarshalling input raw owner: %v", err)
 		return false
 	}
-	if inOwner.Type != exchange.ScriptTypeExchange {
+	if inOwner.Type != htlc.ScriptType {
 		logger.Debugf("script recipient does not match the output owner")
 		return false
 	}
-	script := &exchange.Script{}
+	script := &htlc.Script{}
 	err = json.Unmarshal(inOwner.Identity, script)
 	if err != nil {
 		logger.Debugf("error while unmarshalling into script: %v", err)
