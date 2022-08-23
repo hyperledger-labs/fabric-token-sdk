@@ -5,19 +5,19 @@ It allows spending a token to a script by encoding the script in the `Owner` fie
 After the ownership is assigned to a script, the script is evaluated at the time of spending the token. 
 The right to spend a token is enforced according to the conditions within the script.
 
-## HTLC (atomic cross-chain swap or exchange)
+## HTLC
 
 HTLC (Hash Time Locked Contract) is a token transfer that use hashlocks and timelocks to require that the recipient of a token either acknowledge receiving the token prior to a deadline by generating cryptographic proof or forfeit the ability to claim the token, returning it to the sender.
-With this mechanism Token SDK supports atomic cross-chain swap or exchange of tokens. 
+With this mechanism Token SDK supports atomic cross-chain swap of tokens. 
 
 ### HTLC script
 
-The HTLC (exchange) script encodes the details of the exchange, the identities of the sender and the recipient of the token, a deadline, and hashing information.
+The HTLC script encodes the details of the htlc, the identities of the sender and the recipient of the token, a deadline, and hashing information.
 The hashing information includes the hash itself, the hash function used (e.g., SHA-256), and the encoding (e.g., Base64).
-The hash is chosen by the sender and the recipient must provide the preimage for the exchange to happen.
+The hash is chosen by the sender and the recipient must provide the preimage for the transfer to happen.
 
 ```go
-// Script contains the details of an exchange
+// Script contains the details of an htlc
 type Script struct {
     Sender    view.Identity
     Recipient view.Identity
@@ -39,14 +39,14 @@ The interoperability services which are responsible for assembling the token tra
 They are located in `token/services/interop`.
 
 Other services are script specific.
-For example, the token transaction assembling service enables appending exchange, claim, or reclaim actions to the token request of the transaction. All of these actions translate into a transfer action. 
-Exchange is the "locking" process, where the sender sets the details of the exchange and transfers ownership of the token to a script. 
+For example, the token transaction assembling service enables appending lock, claim, or reclaim actions to the token request of the transaction. All of these actions translate into a transfer action. 
+Lock is the locking process, where the sender sets the details of the htlc and transfers ownership of the token to a script. 
 Claim allows the recipient to gain ownership of the token by providing the preimage. 
 Reclaim returns the token to the sender. 
 Claim must happen before the deadline ends, while reclaim can only occur after the deadline has passed.
 
 ```go
-func (t *Transaction) Exchange(wallet *token.OwnerWallet, sender view.Identity, typ string, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error)
+func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ string, value uint64, recipient view.Identity, deadline time.Duration, opts ...token.TransferOption) ([]byte, error)
 func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error
 func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error
 ```
@@ -59,7 +59,7 @@ In addition, the interop signer and verifier services are script specific, for e
 
 The `FabToken` and `ZKAT DLog` drivers support also interoperability, and more specifically, the drivers support HTLC.
 
-In addition to the regular validation process, their `validator` ensures that in the exchange and claim cases the deadline has not expired, and in the reclaim case the deadline has passed.    
+In addition to the regular validation process, their `validator` ensures that in the lock and claim cases the deadline has not expired, and in the reclaim case the deadline has passed.    
 Moreover, the validator returns a `TransferAction` now holds the `ClaimPreImage`, as it is written into the ledger and can later be searched by calling the scan function located in `token/services/interop/scanner.go`
 
 The `deserializer` in the interoperability case returns a specialized script owner verifier, that takes into account both the sender and the recipient as well as the deadline (located in `token/services/interop/signer.go`). 
