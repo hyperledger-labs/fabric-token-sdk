@@ -169,7 +169,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 		return nil, errors.WithMessagef(err, "failed receiving certifications [%v] from [%s]", i.ids, i.certifier)
 	}
 
-	// 4. Validate response
+	// 4. TransferBalanceValidate response
 	logger.Debugf("validate certification request response for [%v]", i.ids)
 	if err := cm.VerifyCertifications(i.ids, certifications); err != nil {
 		logger.Errorf("failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
