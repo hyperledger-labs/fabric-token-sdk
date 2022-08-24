@@ -116,23 +116,27 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			// check type and quantity
-			out := ctx.Action.GetOutputs()[0].(*Output).Output
-			if ctx.InputTokens[0].Type != out.Type {
+			output := ctx.Action.GetOutputs()[0].(*Output)
+			tok := output.Output
+			if ctx.InputTokens[0].Type != tok.Type {
 				return errors.Errorf("invalid transfer action: type of input does not match type of output")
 			}
-			if ctx.InputTokens[0].Quantity != out.Quantity {
+			if ctx.InputTokens[0].Quantity != tok.Quantity {
 				return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
+			}
+			if output.IsRedeem() {
+				return errors.Errorf("invalid transfer action: the output for corresponding to an htlc spending should not be a redeem")
 			}
 
 			// check owner field
-			script, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner.Raw, out.Owner.Raw)
+			_, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner.Raw, tok.Owner.Raw)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			if err := HTLCMetadataCheck(ctx, script, sigma); err != nil {
+			if err := HTLCMetadataCheck(ctx, op, sigma); err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
 		}
@@ -168,29 +172,23 @@ func TransferHTLCValidate(ctx *Context) error {
 }
 
 // HTLCMetadataCheck checks that the HTLC metadata is in place
-func HTLCMetadataCheck(ctx *Context, script *htlc.Script, sig []byte) error {
+func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
+	if op == htlc2.Reclaim {
+		// No metadata in this case
+		return nil
+	}
+
+	// Unmarshal signature to ClaimSignature
 	claim := &htlc.ClaimSignature{}
 	if err := json.Unmarshal(sig, claim); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling cliam signature")
+		return errors.Wrapf(err, "failed unmarshalling cliam signature [%s]", string(sig))
 	}
+	// Check that it is well-formed
 	if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
 		return errors.New("expected a valid claim preImage and recipient signature")
 	}
 
-	if ctx.Action.NumOutputs() != 1 {
-		return errors.Errorf("Number of outputs is %d", ctx.Action.NumOutputs())
-	}
-	out, ok := ctx.Action.GetOutputs()[0].(*Output)
-	if !ok {
-		return errors.Errorf("invalid transfer action output")
-	}
-	if out.IsRedeem() {
-		return errors.Errorf("this is a redeem")
-	}
-	if !script.Recipient.Equal(out.Output.Owner.Raw) {
-		return errors.Errorf("script recipient does not match the output owner")
-	}
-
+	// Check the pre-image is in the action's metadata
 	if len(ctx.Action.Metadata) == 0 {
 		return errors.Errorf("cannot find htlc pre-image, no metadata")
 	}

@@ -15,29 +15,37 @@ import (
 	"github.com/pkg/errors"
 )
 
+type OperationType int
+
+const (
+	None OperationType = iota
+	Claim
+	Reclaim
+)
+
 // VerifyOwner validates the owners of the transfer in the htlc script
-func VerifyOwner(senderRawOwner []byte, outRawOwner []byte) (*htlc.Script, error) {
+func VerifyOwner(senderRawOwner []byte, outRawOwner []byte) (*htlc.Script, OperationType, error) {
 	sender, err := identity.UnmarshallRawOwner(senderRawOwner)
 	if err != nil {
-		return nil, err
+		return nil, None, err
 	}
 	script := &htlc.Script{}
 	err = json.Unmarshal(sender.Identity, script)
 	if err != nil {
-		return nil, err
+		return nil, None, err
 	}
 
 	if time.Now().Before(script.Deadline) {
 		// this should be a claim
 		if !script.Recipient.Equal(outRawOwner) {
-			return nil, errors.Errorf("owner of output token does not correspond to recipient in htlc request")
+			return nil, None, errors.Errorf("owner of output token does not correspond to recipient in htlc request")
 		}
+		return script, Claim, nil
 	} else {
 		// this should be a reclaim
 		if !script.Sender.Equal(outRawOwner) {
-			return nil, errors.Errorf("owner of output token does not correspond to sender in htlc request")
+			return nil, None, errors.Errorf("owner of output token does not correspond to sender in htlc request")
 		}
+		return script, Reclaim, nil
 	}
-
-	return script, nil
 }

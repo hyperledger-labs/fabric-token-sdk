@@ -67,7 +67,7 @@ func HTLCValidator(tokens []*token.Token, tr *transfer.TransferAction) error {
 			}
 
 			// check that owner field in output is correct
-			if _, err := htlc2.VerifyOwner(tokens[0].Owner, out.Owner); err != nil {
+			if _, _, err := htlc2.VerifyOwner(tokens[0].Owner, out.Owner); err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
 		}
