@@ -154,7 +154,7 @@ func IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
 	if len(components) != 4 {
 		return false, nil
 	}
-	return components[3] == subKey, nil
+	return components[2] == subKey, nil
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go
