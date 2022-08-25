@@ -21,7 +21,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	w := ttx.MyAuditorWallet(context)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
-	// TransferBalanceValidate
+	// Validate
 	auditor := ttx.NewAuditor(context, w)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
