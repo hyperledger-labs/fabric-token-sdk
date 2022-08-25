@@ -200,7 +200,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		case keys.TransferActionMetadata:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the issue action metadata, skipping")
+				logger.Debugf("expected key without the transfer action metadata, skipping")
 			}
 			continue
 		}
