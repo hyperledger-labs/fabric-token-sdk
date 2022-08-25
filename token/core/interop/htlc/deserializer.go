@@ -28,7 +28,7 @@ func NewDeserializer(ownerDeserializer VerifierDES) *Deserializer {
 	return &Deserializer{OwnerDeserializer: ownerDeserializer}
 }
 
-func (d *Deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
 	si, err := identity.UnmarshallRawOwner(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal RawOwner")

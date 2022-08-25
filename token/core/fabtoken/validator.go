@@ -10,8 +10,9 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -116,7 +117,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 		return nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
 
-	// Prepare message expected to be signed
+	// Prepare Message expected to be signed
 	// TODO: encapsulate this somewhere
 	req := &driver.TokenRequest{}
 	req.Transfers = tr.Transfers
@@ -139,11 +140,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 		signatures = tr.Signatures
 	}
 
-	backend := &backend{
-		getState:   getState,
-		message:    signed,
-		signatures: signatures,
-	}
+	backend := common.NewBackend(getState, signed, signatures)
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
 }
 
@@ -256,36 +253,6 @@ func (v *Validator) VerifyTransfer(ledger driver.Ledger, inputTokens []*token2.T
 		}
 	}
 	return nil
-}
-
-type backend struct {
-	getState driver.GetStateFnc
-	// signed message
-	message []byte
-	index   int
-	// signatures on message
-	signatures [][]byte
-}
-
-// HasBeenSignedBy checks if a given message has been signed by the signing identity matching
-// the passed verifier
-// todo shall we remove id from the parameters
-func (b *backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) ([]byte, error) {
-	if b.index >= len(b.signatures) {
-		return nil, errors.Errorf("invalid state, insufficient number of signatures")
-	}
-	sigma := b.signatures[b.index]
-	b.index++
-
-	return sigma, verifier.Verify(b.message, sigma)
-}
-
-func (b *backend) GetState(key string) ([]byte, error) {
-	return b.getState(key)
-}
-
-func (b *backend) Signatures() [][]byte {
-	return b.signatures
 }
 
 // RetrieveInputsFromTransferAction retrieves from the passed ledger the inputs identified in TransferAction

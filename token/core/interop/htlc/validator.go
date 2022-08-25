@@ -24,7 +24,7 @@ const (
 )
 
 // VerifyOwner validates the owners of the transfer in the htlc script
-func VerifyOwner(senderRawOwner []byte, outRawOwner []byte) (*htlc.Script, OperationType, error) {
+func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htlc.Script, OperationType, error) {
 	sender, err := identity.UnmarshallRawOwner(senderRawOwner)
 	if err != nil {
 		return nil, None, err
@@ -35,7 +35,7 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte) (*htlc.Script, Opera
 		return nil, None, err
 	}
 
-	if time.Now().Before(script.Deadline) {
+	if now.Before(script.Deadline) {
 		// this should be a claim
 		if !script.Recipient.Equal(outRawOwner) {
 			return nil, None, errors.Errorf("owner of output token does not correspond to recipient in htlc request")

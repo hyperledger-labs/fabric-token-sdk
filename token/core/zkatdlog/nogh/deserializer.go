@@ -56,14 +56,14 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 	return &deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(idemixDes),
+		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(idemixDes)),
 		auditDeserializer:   idemixDes,
 	}, nil
 }
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return htlc.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
+	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
