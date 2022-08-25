@@ -13,8 +13,7 @@ on:
         description: 'FSC dependency'
 
 env:
-  GOPATH: ${{ github.workspace }}
-  FTS_PATH: "${{ github.workspace }}/src/github.com/hyperledger-labs/fabric-token-sdk"
+  FTS_PATH: "${{ github.workspace }}/fabric-token-sdk"
   GOFLAGS: -mod=mod
 
 jobs:
