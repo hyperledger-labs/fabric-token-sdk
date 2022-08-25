@@ -349,7 +349,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	// store metadata
 	metadata := transferAction.GetMetadata()
 	for key, value := range metadata {
-		k, err := keys.CreateTransferActionMetadataKey(w.TxID, w.metadataCounter, key)
+		k, err := keys.CreateTransferActionMetadataKey(w.TxID, key, w.metadataCounter)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}

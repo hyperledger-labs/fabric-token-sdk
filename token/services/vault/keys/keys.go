@@ -136,8 +136,8 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, hash})
 }
 
-func CreateTransferActionMetadataKey(txID string, index uint64, subKey string) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, strconv.FormatUint(index, 10), subKey})
+func CreateTransferActionMetadataKey(txID string, subKey string, index uint64) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, subKey, strconv.FormatUint(index, 10)})
 }
 
 func IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
