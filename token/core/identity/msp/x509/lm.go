@@ -12,12 +12,10 @@ import (
 	"path/filepath"
 	"sync"
 
-	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
-	"gopkg.in/yaml.v2"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
@@ -150,9 +148,14 @@ func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool)
 
 func (lm *LocalMembership) registerMSPProvider(c *config.Identity, translatedPath string, setDefault bool) error {
 	// Try without "msp"
-	opts, err := ToBCCSPOpts(c.Opts)
+	opts, err := config2.ToBCCSPOpts(c.Opts)
 	if err != nil {
 		return errors.WithMessage(err, "failed to extract BCCSP options")
+	}
+	if opts == nil {
+		logger.Debugf("no BCCSP options set for [%s]: [%v]", c.ID, c.Opts)
+	} else {
+		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", c.ID, opts, opts.PKCS11, opts.SW)
 	}
 	provider, err := x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath), lm.mspID, lm.signerService, opts)
 	if err != nil {
@@ -248,21 +251,4 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 		logger.Debugf("identity info not found for label [%s][%v]", label, lm.bccspResolversByIdentity)
 	}
 	return nil
-}
-
-func ToBCCSPOpts(opts interface{}) (*config2.BCCSP, error) {
-	if opts == nil {
-		return nil, nil
-	}
-	out, err := yaml.Marshal(opts)
-	if err != nil {
-		return nil, errors.Wrapf(err, "faild to marshal [%v]", opts)
-	}
-	root := &struct {
-		Opts *config2.BCCSP
-	}{}
-	if err := yaml.Unmarshal(out, root); err != nil {
-		return nil, errors.Wrapf(err, "faild to unmarshal [%v] to BCCSP options", opts)
-	}
-	return root.Opts, nil
 }

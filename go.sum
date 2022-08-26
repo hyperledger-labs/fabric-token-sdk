@@ -705,13 +705,15 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220825115127-a9f766e3f428 h1:Rf8YY5FNoS2OOoI6xlcuFfW4qJPHNF7raD56OWh4nuA=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220825115127-a9f766e3f428/go.mod h1:SRZgh8Vc50KNt7gDxsIjMAnjzJsJBm0+tMqtqO/LW6A=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220826111114-0426af514643 h1:wweE91Ttedro++BWLBXfoKPKhcuOtH5fgBT4nZnSHk0=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220826111114-0426af514643/go.mod h1:SRZgh8Vc50KNt7gDxsIjMAnjzJsJBm0+tMqtqO/LW6A=
 github.com/hyperledger-labs/orion-sdk-go v0.0.0-20220213082028-b0ee3d8f361c h1:niolJc7rAbxKB1aJQH9aDvu4WteX6V2bZA/hFc2u8YE=
 github.com/hyperledger-labs/orion-sdk-go v0.0.0-20220213082028-b0ee3d8f361c/go.mod h1:VDuSI17SlxWJCs+p/WYzXRT8g9FhOuL96C15zt+9Pw0=
 github.com/hyperledger-labs/orion-server v0.2.1 h1:uLhuSprg5EWWLs047+54f2ZGuhbZrMa/c38rqpj2FKQ=
 github.com/hyperledger-labs/orion-server v0.2.1/go.mod h1:PyEVhf9fKK8Euq0GDo48KBJFxS2dsZZXzcB2OH3nm7s=
+github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 h1:vBvo0PNm82ht7wpBjlYY4ZHxV3YprCfdVd3T4JG9vBw=
 github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1/go.mod h1:POCGO/RK9YDfgdhuyqjoD9tRNtWfK7Rh5AYYmsb1Chc=
+github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c h1:pKr8VnHlduEgdInwLWykYAw+lpUizjQJaJ8I5fVoRUo=
 github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c/go.mod h1:si2XAWZclHXC359OyYMpNHfonf2P7P2nzABdCA8mPqs=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7 h1:LKWVg/yHT1GdNrcmnwp+Fzij8Wlwl7T7l22MP66TVNY=
 github.com/hyperledger/fabric v1.4.0-rc1.0.20210722174351-9815a7a8f0f7/go.mod h1:g/IlXbV5x5GEprnavUFN+YoJZeIjwDocRcmO5ZG4ugc=

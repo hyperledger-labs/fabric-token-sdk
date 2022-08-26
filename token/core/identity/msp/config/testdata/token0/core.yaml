@@ -1,0 +1,66 @@
+token:
+  enabled: true
+  tms:
+    - certification: null
+      network: n1
+      channel: c1
+      namespace: ns1
+      wallets:
+        owners:
+          - default: true
+            id: alice
+            path: /token/crypto/default-testchannel-zkat/idemix/alice
+            opts:
+              BCCSP:
+                Default: SW
+                # Settings for the SW crypto provider (i.e. when DEFAULT: SW)
+                SW:
+                  Hash: SHA2
+                  Security: 256
+                # Settings for the PKCS#11 crypto provider (i.e. when DEFAULT: PKCS11)
+                PKCS11:
+                  # Location of the PKCS11 module library
+                  Library: /usr/local/lib/softhsm/libsofthsm2.so
+                  # Token Label
+                  Label: ForFSC
+                  # User PIN
+                  Pin: 98765432
+                  Hash: SHA2
+                  Security: 256
+          - default: false
+            id: alice.id1
+            path: /token/crypto/default-testchannel-zkat/idemix/alice.id1
+    - certification: null
+      network: n2
+      channel: c2
+      namespace: ns2
+      wallets:
+        owners:
+          - default: true
+            id: alice
+            path: /token/crypto/default-testchannel-zkat/idemix/alice
+            opts:
+              BCCSP:
+                Default: SW
+                # Settings for the SW crypto provider (i.e. when DEFAULT: SW)
+                SW:
+                  Hash: SHA2
+                  Security: 256
+                # Settings for the PKCS#11 crypto provider (i.e. when DEFAULT: PKCS11)
+                PKCS11:
+                  # Location of the PKCS11 module library
+                  Library: /usr/local/lib/softhsm/libsofthsm2.so
+                  # Token Label
+                  Label: ForFSC
+                  # User PIN
+                  Pin: 98765432
+                  Hash: SHA2
+                  Security: 256
+          - default: false
+            id: alice.id1
+            path: /token/crypto/default-testchannel-zkat/idemix/alice.id1
+  ttxdb:
+    persistence:
+      opts:
+        path: /tmp/ttxdb
+      type: badger
