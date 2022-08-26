@@ -86,10 +86,10 @@ jobs:
       matrix:
         tests: [
           dlog-fabric,
-          dloghsm-fabric
+          dloghsm-fabric,
           fabtoken-fabric,
           dlog-orion,
-          fabtoken-orion ,
+          fabtoken-orion,
           nft-dlog,
           nft-fabtoken,
           nft-dlog-orion,
