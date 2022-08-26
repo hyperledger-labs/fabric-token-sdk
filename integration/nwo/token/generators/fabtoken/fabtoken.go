@@ -16,6 +16,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/network"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
@@ -177,8 +179,8 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 	d.GenerateArtifacts(output)
 
 	var identities []generators.Identity
-	for _, name := range names {
-		identities = append(identities, generators.Identity{
+	for i, name := range names {
+		id := generators.Identity{
 			ID: name,
 			Path: filepath.Join(
 				output,
@@ -187,7 +189,19 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 				"users",
 				fmt.Sprintf("%s@%s", name, domain),
 				"msp"),
-		})
+		}
+
+		if wallet == "issuers" || wallet == "auditors" {
+			if userSpecs[i].HSM {
+				// PKCS11
+				id.Opts = network.BCCSPOpts("PKCS11")
+			} else {
+				// SW
+				id.Opts = network.BCCSPOpts("SW")
+			}
+		}
+
+		identities = append(identities, id)
 	}
 	return identities
 
