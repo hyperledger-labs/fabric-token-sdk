@@ -76,6 +76,30 @@ func (o *Options) SetAuditor(v bool) {
 	o.Mapping["Auditor"] = v
 }
 
+func (o *Options) UseHSMForIssuer(label string) {
+	o.Mapping["Issuers.HSM."+label] = true
+}
+
+func (o *Options) IsUseHSMForIssuer(label string) bool {
+	v, ok := o.Mapping["Issuers.HSM."+label]
+	if !ok {
+		return false
+	}
+	return v.(bool)
+}
+
+func (o *Options) UseHSMForAuditor() {
+	o.Mapping["Auditor.HSM"] = true
+}
+
+func (o *Options) IsUseHSMForAuditor() bool {
+	v, ok := o.Mapping["Auditor.HSM"]
+	if !ok {
+		return false
+	}
+	return v.(bool)
+}
+
 func ToOptions(o *node.Options) *Options {
 	opt, ok := o.Mapping["token"]
 	if !ok {

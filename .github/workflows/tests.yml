@@ -86,6 +86,7 @@ jobs:
       matrix:
         tests: [
           dlog-fabric,
+          dloghsm-fabric
           fabtoken-fabric,
           dlog-orion,
           fabtoken-orion ,

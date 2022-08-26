@@ -54,6 +54,13 @@ orion-server-images:
 integration-tests-dlog-fabric:
 	cd ./integration/token/fungible/dlog; ginkgo $(GINKGO_TEST_OPTS) .
 
+.PHONY: integration-tests-dloghsm-fabric
+integration-tests-dloghsm-fabric:
+	@echo "Setup SoftHSM"
+	@./ci/scripts/setup_softhsm.sh
+	@echo "Start Integration Test"
+	cd ./integration/token/fungible/dloghsm; ginkgo $(GINKGO_TEST_OPTS) .
+
 .PHONY: integration-tests-fabtoken-fabric
 integration-tests-fabtoken-fabric:
 	cd ./integration/token/fungible/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
@@ -107,6 +114,7 @@ clean:
 	docker network prune -f
 	docker container prune -f
 	rm -rf ./integration/token/fungible/dlog/cmd/
+	rm -rf ./integration/token/fungible/dloghsm/cmd/
 	rm -rf ./integration/token/fungible/fabtoken/cmd/
 	rm -rf ./integration/token/fungible/odlog/cmd/
 	rm -rf ./integration/token/fungible/ofabtoken/cmd/
