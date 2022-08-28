@@ -59,9 +59,9 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	return nil, nil
 }
 
-type CheckPublicParamsViewFactory struct{}
+type CheckPublicParamsMatchViewFactory struct{}
 
-func (p *CheckPublicParamsViewFactory) NewView(in []byte) (view.View, error) {
+func (p *CheckPublicParamsMatchViewFactory) NewView(in []byte) (view.View, error) {
 	f := &CheckPublicParamsMatchView{}
 	return f, nil
 }

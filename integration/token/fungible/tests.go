@@ -905,7 +905,7 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 
 func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...string) {
 	for _, id := range ids {
-		_, err := network.Client(id).CallView("CheckPublicParamsViewFactory", nil)
+		_, err := network.Client(id).CallView("CheckPublicParamsMatch", nil)
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
