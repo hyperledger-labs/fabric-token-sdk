@@ -52,9 +52,9 @@ func (c *PublicParametersManager) Bytes() ([]byte, error) {
 	return c.ppm.PublicParameters().Bytes()
 }
 
-// ForceFetch forcefully fetches the public parameters from the backend
-func (c *PublicParametersManager) ForceFetch() error {
-	return c.ppm.ForceFetch()
+// Update fetches the public parameters from the backend and update the local one accordingly
+func (c *PublicParametersManager) Update() error {
+	return c.ppm.Update()
 }
 
 // Identifier returns the identifier of the public parameters
@@ -65,4 +65,9 @@ func (c *PublicParametersManager) Identifier() string {
 // Auditors returns the list of auditors' identities
 func (c *PublicParametersManager) Auditors() []view.Identity {
 	return c.ppm.PublicParameters().Auditors()
+}
+
+// Fetch fetches the public parameters from the backend
+func (c *PublicParametersManager) Fetch() ([]byte, error) {
+	return c.ppm.Fetch()
 }

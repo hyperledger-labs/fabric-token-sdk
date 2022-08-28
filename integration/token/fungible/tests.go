@@ -210,6 +210,8 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 func TestAll(network *integration.Infrastructure, auditor string) {
 	RegisterAuditor(network, auditor)
 
+	CheckPublicParamsViewFactory(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+
 	t0 := time.Now()
 	// Rest of the test
 	IssueCash(network, "", "USD", 110, "alice", auditor, true)
@@ -563,6 +565,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	// the previous call should not keep the token locked if release is successful
 	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
+
+	CheckPublicParamsViewFactory(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
 }
 
 func RegisterAuditor(network *integration.Infrastructure, id string) {
@@ -897,4 +901,11 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+}
+
+func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		_, err := network.Client(id).CallView("CheckPublicParamsViewFactory", nil)
+		Expect(err).NotTo(HaveOccurred())
+	}
 }

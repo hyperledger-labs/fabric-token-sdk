@@ -17,8 +17,8 @@ import (
 )
 
 type PublicParamsLoader interface {
-	Load() (*PublicParams, error)
-	ForceFetch() (*PublicParams, error)
+	Fetch() ([]byte, error)
+	FetchParams() (*PublicParams, error)
 }
 
 type QueryEngine interface {

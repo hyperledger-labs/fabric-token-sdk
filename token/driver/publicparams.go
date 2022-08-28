@@ -54,10 +54,10 @@ type PublicParameters interface {
 type PublicParamsManager interface {
 	// PublicParameters returns the public parameters.
 	PublicParameters() PublicParameters
-
 	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
 	NewCertifierKeyPair() ([]byte, []byte, error)
-
-	// ForceFetch forces a fetch of the public parameters from the repository.
-	ForceFetch() error
+	// Update fetches the public parameters and update the local public parameters
+	Update() error
+	// Fetch fetches the public parameters
+	Fetch() ([]byte, error)
 }

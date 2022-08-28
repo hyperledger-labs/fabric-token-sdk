@@ -9,15 +9,18 @@ package ppm
 import (
 	"sync"
 
-	"github.com/pkg/errors"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
+var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
+
 type PublicParamsLoader interface {
-	Load() (*crypto.PublicParams, error)
-	ForceFetch() (*crypto.PublicParams, error)
+	Fetch() ([]byte, error)
+	FetchParams() (*crypto.PublicParams, error)
 }
 
 type PublicParamsManager struct {
@@ -45,7 +48,7 @@ func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
 	panic("not supported")
 }
 
-func (v *PublicParamsManager) ForceFetch() error {
+func (v *PublicParamsManager) Update() error {
 	v.mutex.Lock()
 	defer v.mutex.Unlock()
 
@@ -53,13 +56,27 @@ func (v *PublicParamsManager) ForceFetch() error {
 		return errors.New("public parameters loader not set")
 	}
 
-	pp, err := v.publicParamsLoader.ForceFetch()
+	pp, err := v.publicParamsLoader.FetchParams()
 	if err != nil {
 		return errors.WithMessagef(err, "failed force fetching public parameters")
 	}
 	v.pp = pp
 
 	return nil
+}
+
+func (v *PublicParamsManager) Fetch() ([]byte, error) {
+	logger.Debugf("fetch public parameters...")
+	if v.publicParamsLoader == nil {
+		return nil, errors.New("public parameters loader not set")
+	}
+	raw, err := v.publicParamsLoader.Fetch()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed force fetching public parameters")
+	}
+	logger.Debugf("fetched public parameters [%s]", hash.Hashable(raw).String())
+
+	return raw, nil
 }
 
 func (v *PublicParamsManager) PublicParams() *crypto.PublicParams {

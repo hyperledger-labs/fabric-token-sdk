@@ -11,15 +11,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type TokenVault interface {
 	PublicParams() ([]byte, error)
-	GetTokenInfoAndCommitments(ids []*token3.ID, callback api2.QueryCallback2Func) error
-	GetTokenCommitments(ids []*token3.ID, callback api2.QueryCallbackFunc) error
+	GetTokenInfoAndCommitments(ids []*token3.ID, callback driver.QueryCallback2Func) error
+	GetTokenCommitments(ids []*token3.ID, callback driver.QueryCallbackFunc) error
 }
 
 type VaultTokenCommitmentLoader struct {
@@ -94,58 +94,42 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 }
 
 type VaultPublicParamsLoader struct {
-	TokenVault          TokenVault
-	PublicParamsFetcher api2.PublicParamsFetcher
+	PublicParamsFetcher driver.PublicParamsFetcher
 	PPLabel             string
 }
 
-func NewVaultPublicParamsLoader(tokenVault TokenVault, publicParamsFetcher api2.PublicParamsFetcher, PPLabel string) *VaultPublicParamsLoader {
-	return &VaultPublicParamsLoader{TokenVault: tokenVault, PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
+func NewVaultPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, PPLabel string) *VaultPublicParamsLoader {
+	return &VaultPublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
 }
 
-// Load retrieves the public parameters. It first checks if the public parameters are cached.
-// If not Load fetches the parameters from the ledger
-func (s *VaultPublicParamsLoader) Load() (*crypto.PublicParams, error) {
-	raw, err := s.TokenVault.PublicParams()
+// Fetch fetches the public parameters from the backed
+func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
+	logger.Debugf("fetch public parameters...")
+	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
+		logger.Errorf("failed retrieving public params [%s]", err)
 		return nil, err
 	}
-	if len(raw) == 0 {
-		logger.Warnf("public parameters not found")
-		raw, err = s.PublicParamsFetcher.Fetch()
-		if err != nil {
-			logger.Errorf("failed retrieving public params [%s]", err)
-			return nil, err
-		}
-	}
-
-	logger.Debugf("unmarshal public parameters")
-	pp := &crypto.PublicParams{}
-	pp.Label = s.PPLabel
-	err = pp.Deserialize(raw)
-	if err != nil {
-		return nil, err
-	}
-	logger.Debugf("unmarshal public parameters done")
-	return pp, nil
+	logger.Debugf("fetched public parameters [%s]", hash.Hashable(raw).String())
+	return raw, nil
 }
 
-// ForceFetch retrieves the public parameters from the ledger
-func (s *VaultPublicParamsLoader) ForceFetch() (*crypto.PublicParams, error) {
-	logger.Debugf("force public parameters fetch")
+// FetchParams fetches the public parameters from the backed and unmarshals them
+func (s *VaultPublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
+	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
 		logger.Errorf("failed retrieving public params [%s]", err)
 		return nil, err
 	}
 
-	logger.Debugf("unmarshal public parameters")
+	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(raw).String())
 	pp := &crypto.PublicParams{}
 	pp.Label = s.PPLabel
 	err = pp.Deserialize(raw)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
-	logger.Debugf("unmarshal public parameters done")
+	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(raw).String())
 	return pp, nil
 }
