@@ -44,6 +44,11 @@ func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.PublicParams()
 }
 
+// SerializePublicParameters returns the public params in a serialized form
+func (v *PublicParamsManager) SerializePublicParameters() ([]byte, error) {
+	return v.PublicParams().Serialize()
+}
+
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
 	panic("not supported")
 }

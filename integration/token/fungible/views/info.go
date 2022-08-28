@@ -48,7 +48,7 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	tms := token.GetManagementService(context)
 	assert.NotNil(tms, "failed to get TMS")
 
-	ppRaw, err := tms.PublicParametersManager().Bytes()
+	ppRaw, err := tms.PublicParametersManager().SerializePublicParameters()
 	assert.NoError(err, "failed to marshal public params")
 
 	fetchedPPRaw, err := tms.PublicParametersManager().Fetch()

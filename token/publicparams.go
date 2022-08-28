@@ -47,9 +47,9 @@ func (c *PublicParametersManager) MaxTokenValue() uint64 {
 	return c.ppm.PublicParameters().MaxTokenValue()
 }
 
-// Bytes returns the public parameters as a byte array
-func (c *PublicParametersManager) Bytes() ([]byte, error) {
-	return c.ppm.PublicParameters().Bytes()
+// SerializePublicParameters returns the public parameters in their serialized form
+func (c *PublicParametersManager) SerializePublicParameters() ([]byte, error) {
+	return c.ppm.SerializePublicParameters()
 }
 
 // Update fetches the public parameters from the backend and update the local one accordingly

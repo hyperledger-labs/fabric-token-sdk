@@ -42,6 +42,11 @@ func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.PublicParams()
 }
 
+// SerializePublicParameters returns the public params in a serialized form
+func (v *PublicParamsManager) SerializePublicParameters() ([]byte, error) {
+	return v.PublicParams().Serialize()
+}
+
 // NewCertifierKeyPair returns the key pair of a certifier, in this instantiation, the method panics
 // fabtoken does not support token certification
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {

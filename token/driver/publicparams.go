@@ -60,4 +60,6 @@ type PublicParamsManager interface {
 	Update() error
 	// Fetch fetches the public parameters
 	Fetch() ([]byte, error)
+	// SerializePublicParameters returns the public params in a serialized form
+	SerializePublicParameters() ([]byte, error)
 }
