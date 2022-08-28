@@ -35,7 +35,7 @@ type TransferAction interface {
 	IsRedeemAt(index int) bool
 	// SerializeOutputAt returns the serialized output at the passed index
 	SerializeOutputAt(index int) ([]byte, error)
-	// GetInputs returns the inputs's identifiers of the action
+	// GetInputs returns the identifiers of the inputs in the action.
 	GetInputs() ([]string, error)
 	// IsGraphHiding returns true if the action is graph hiding
 	IsGraphHiding() bool

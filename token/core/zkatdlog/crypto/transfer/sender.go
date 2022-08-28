@@ -111,7 +111,7 @@ type TransferAction struct {
 	OutputTokens []*token.Token
 	// ZK Proof that shows that the transfer is correct
 	Proof []byte
-	// Metadata contains the action's metadata
+	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
 }
 

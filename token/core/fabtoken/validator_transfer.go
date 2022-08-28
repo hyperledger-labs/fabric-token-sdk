@@ -108,7 +108,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
-		// is it owned by a htlc script?
+		// is it owned by an htlc script?
 		if owner.Type == htlc.ScriptType {
 			// Then, the first output must be compatible with this input.
 			if len(ctx.Action.GetOutputs()) != 1 {
@@ -125,7 +125,7 @@ func TransferHTLCValidate(ctx *Context) error {
 				return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
 			}
 			if output.IsRedeem() {
-				return errors.Errorf("invalid transfer action: the output for corresponding to an htlc spending should not be a redeem")
+				return errors.Errorf("invalid transfer action: the output corresponding to an htlc spending should not be a redeem")
 			}
 
 			// check owner field

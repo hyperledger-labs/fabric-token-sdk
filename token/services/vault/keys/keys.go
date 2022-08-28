@@ -136,6 +136,9 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, hash})
 }
 
+// CreateTransferActionMetadataKey returns the transfer action metadata key built from the passed
+// transaction id, subkey, and index. Index is used to make sure the key is unique with the respect to the
+// token request this key appears.
 func CreateTransferActionMetadataKey(txID string, subKey string, index uint64) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, subKey, strconv.FormatUint(index, 10)})
 }

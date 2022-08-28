@@ -117,7 +117,7 @@ type TransferAction struct {
 	Inputs []string
 	// outputs to be created as a result of the transfer
 	Outputs []*Output
-	// Metadata contains the action's metadata
+	// Metadata contains the transfer action's metadata
 	Metadata map[string][]byte
 }
 
