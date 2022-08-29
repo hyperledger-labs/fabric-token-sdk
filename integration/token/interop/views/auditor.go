@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"math/big"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -60,6 +62,22 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			logger.Debugf("Payment Limit: [%s] Diff [%d], type [%s]", eID, diff.Int64(), tokenType)
 
 			assert.True(diff.Cmp(big.NewInt(int64(Limit))) <= 0, "payment limit reached [%s][%s][%s]", eID, tokenType, diff.Text(10))
+		}
+	}
+
+	for i := 0; i < inputs.Count(); i++ {
+		input, err := htlc.ToInput(inputs.At(i))
+		assert.NoError(err)
+		if input.IsHTLC() {
+			//
+		}
+	}
+
+	for i := 0; i < outputs.Count(); i++ {
+		output, err := htlc.ToOutput(outputs.At(i))
+		assert.NoError(err)
+		if output.IsHTLC() {
+			//
 		}
 	}
 
