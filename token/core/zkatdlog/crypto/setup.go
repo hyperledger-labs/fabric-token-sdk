@@ -44,8 +44,6 @@ type PublicParams struct {
 	Issuers [][]byte
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
-	// Hash is the hash of the serialized public parameters.
-	Hash []byte
 }
 
 type RangeProofParams struct {
@@ -60,9 +58,6 @@ func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 	pp.Label = label
 	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
-	}
-	if err := pp.ComputeHash(raw); err != nil {
-		return nil, errors.Wrap(err, "failed computing hash")
 	}
 	return pp, nil
 }
@@ -122,9 +117,6 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if err := json.Unmarshal(publicParams.Raw, pp); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters")
 	}
-	if err := pp.ComputeHash(raw); err != nil {
-		return errors.Wrap(err, "failed computing hash")
-	}
 	// TODO: perform additional checks:
 	// the curve exists
 	// the idemix params are all set,
@@ -165,25 +157,28 @@ func (pp *PublicParams) GenerateRangeProofParameters(signer *pssign.Signer, maxV
 	return nil
 }
 
-func (pp *PublicParams) ComputeHash(raw []byte) error {
-	hash := sha256.New()
-	n, err := hash.Write(raw)
-	if n != len(raw) {
-		return errors.New("failed to hash public parameters")
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to hash public parameters")
-	}
-	pp.Hash = hash.Sum(nil)
-	return nil
-}
-
 func (pp *PublicParams) AddAuditor(auditor view.Identity) {
 	pp.Auditor = auditor
 }
 
 func (pp *PublicParams) AddIssuer(id view.Identity) {
 	pp.Issuers = append(pp.Issuers, id)
+}
+
+func (pp *PublicParams) ComputeHash() ([]byte, error) {
+	raw, err := pp.Bytes()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to serialize public params")
+	}
+	hash := sha256.New()
+	n, err := hash.Write(raw)
+	if n != len(raw) {
+		return nil, errors.New("failed to hash public parameters")
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to hash public parameters")
+	}
+	return hash.Sum(nil), nil
 }
 
 func Setup(base int64, exponent int, nymPK []byte, idemixCurveID math.CurveID) (*PublicParams, error) {
