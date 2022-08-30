@@ -66,7 +66,7 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 			if err != nil {
 				return false, err
 			}
-			if f, err := w.IsSigMetadataKey(k); err == nil && f {
+			if f, err := w.IsTransferMetadataKeyWithSubKey(k, ClaimPreImage); err == nil && f {
 				// hash + encoding
 				hash := hashFunc.New()
 				if _, err = hash.Write(v); err != nil {

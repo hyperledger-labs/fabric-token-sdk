@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -278,11 +278,11 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
 	}
-	scriptInf := &interop.ScriptInfo{}
+	scriptInf := &htlc.ScriptInfo{}
 	if err := json.Unmarshal(token.Owner.OwnerInfo, scriptInf); err != nil {
 		return errors.Wrapf(err, "failed to unmarshal script info")
 	}
-	scriptSender, scriptRecipient, err := interop.GetScriptSenderAndRecipient(owner)
+	scriptSender, scriptRecipient, err := htlc.GetScriptSenderAndRecipient(owner)
 	if err != nil {
 		return errors.Wrap(err, "failed getting script sender and recipient")
 	}

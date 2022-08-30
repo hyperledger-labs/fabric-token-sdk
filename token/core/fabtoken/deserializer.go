@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -35,13 +35,13 @@ func NewDeserializer() *deserializer {
 	return &deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{}),
+		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{})),
 	}
 }
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return interop.NewDeserializer(d.ownerDeserializer).GetOwnerVerifier(id)
+	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
@@ -74,7 +74,7 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	}
 
 	// Try to unmarshal it as ScriptInfo
-	si := &interop.ScriptInfo{}
+	si := &htlc.ScriptInfo{}
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {

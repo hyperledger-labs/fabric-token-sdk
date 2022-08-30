@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package keys
 
 import (
@@ -10,8 +11,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -20,30 +20,24 @@ const (
 	MaxUnicodeRuneValue         = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
 	CompositeKeyNamespace       = "\x00"
 	TokenKeyPrefix              = "ztoken"
-	SignaturePrefix             = "sig"
 	FabTokenKeyPrefix           = "token"
 	FabTokenExtendedKeyPrefix   = "etoken"
 	AuditTokenKeyPrefix         = "audittoken"
 	TokenMineKeyPrefix          = "mine"
 	TokenSetupKeyPrefix         = "setup"
 	IssuedHistoryTokenKeyPrefix = "issued"
-	TokenAuditorKeyPrefix       = "auditor"
 	TokenNameSpace              = "zkat"
 	numComponentsInKey          = 2 // 2 components: txid, index, excluding TokenKeyPrefix
 	numComponentsInExtendedKey  = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
-	Action                      = "action"
-	ActionIssue                 = "issue"
-	ActionTransfer              = "transfer"
 	Info                        = "info"
 	IDs                         = "ids"
 	TokenRequestKeyPrefix       = "token_request"
-	OwnerSeparator              = "/"
 	SerialNumber                = "sn"
 	IssueActionMetadata         = "iam"
 	TransferActionMetadata      = "tam"
 )
 
-func GetTokenIdFromKey(key string) (*token2.ID, error) {
+func GetTokenIdFromKey(key string) (*token.ID, error) {
 	_, components, err := SplitCompositeKey(key)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
@@ -60,10 +54,10 @@ func GetTokenIdFromKey(key string) (*token2.ID, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInKey-1], err))
 	}
-	return &token2.ID{TxId: txID, Index: index}, nil
+	return &token.ID{TxId: txID, Index: index}, nil
 }
 
-func GetTokenIdFromExtendedKey(key string) (*token2.ID, error) {
+func GetTokenIdFromExtendedKey(key string) (*token.ID, error) {
 	_, components, err := SplitCompositeKey(key)
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
@@ -80,7 +74,7 @@ func GetTokenIdFromExtendedKey(key string) (*token2.ID, error) {
 	if err != nil {
 		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInExtendedKey-1], err))
 	}
-	return &token2.ID{TxId: txID, Index: index}, nil
+	return &token.ID{TxId: txID, Index: index}, nil
 }
 
 func SplitCompositeKey(compositeKey string) (string, []string, error) {
@@ -104,10 +98,6 @@ func SplitCompositeKey(compositeKey string) (string, []string, error) {
 // TODO: move index to uint32 of uint64
 func CreateTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
-}
-
-func CreateSigMetadataKey(txID string, index uint64, subKey string) (string, error) {
-	return CreateCompositeKey(SignaturePrefix, []string{txID, strconv.FormatUint(index, 10), subKey})
 }
 
 func CreateSNKey(sn string) (string, error) {
@@ -146,8 +136,28 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{IssueActionMetadata, hash})
 }
 
-func CreateTransferActionMetadataKey(hash string) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, hash})
+// CreateTransferActionMetadataKey returns the transfer action metadata key built from the passed
+// transaction id, subkey, and index. Index is used to make sure the key is unique with the respect to the
+// token request this key appears.
+func CreateTransferActionMetadataKey(txID string, subKey string, index uint64) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, subKey, strconv.FormatUint(index, 10)})
+}
+
+func IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
+	prefix, components, err := SplitCompositeKey(k)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
+	}
+	if prefix != TokenKeyPrefix {
+		return false, nil
+	}
+	if components[0] != TransferActionMetadata {
+		return false, nil
+	}
+	if len(components) != 4 {
+		return false, nil
+	}
+	return components[2] == subKey, nil
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

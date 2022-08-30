@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package transfer
 
 import (
@@ -110,6 +111,8 @@ type TransferAction struct {
 	OutputTokens []*token.Token
 	// ZK Proof that shows that the transfer is correct
 	Proof []byte
+	// Metadata contains the transfer action's metadata
+	Metadata map[string][]byte
 }
 
 // NewTransfer returns the TransferAction that matches the passed arguments
@@ -128,7 +131,9 @@ func NewTransfer(inputs []string, inputCommitments []*math.G1, outputs []*math.G
 		Inputs:           inputs,
 		InputCommitments: inputCommitments,
 		OutputTokens:     tokens,
-		Proof:            proof}, nil
+		Proof:            proof,
+		Metadata:         map[string][]byte{},
+	}, nil
 }
 
 // GetInputs returns the inputs in the TransferAction
@@ -204,9 +209,8 @@ func (t *TransferAction) IsGraphHiding() bool {
 }
 
 // GetMetadata returns metadata of the TransferAction
-// zkatdlog TransferAction does not carry any metadata
-func (t *TransferAction) GetMetadata() []byte {
-	return nil
+func (t *TransferAction) GetMetadata() map[string][]byte {
+	return t.Metadata
 }
 
 func getTokenData(tokens []*token.Token) []*math.G1 {
