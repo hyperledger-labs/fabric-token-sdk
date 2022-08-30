@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -69,7 +70,8 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		input, err := htlc.ToInput(inputs.At(i))
 		assert.NoError(err)
 		if input.IsHTLC() {
-			//
+			// TODO
+			fmt.Printf("this is a script")
 		}
 	}
 
@@ -77,7 +79,8 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		output, err := htlc.ToOutput(outputs.At(i))
 		assert.NoError(err)
 		if output.IsHTLC() {
-			//
+			// TODO
+			fmt.Printf("this is a script")
 		}
 	}
 

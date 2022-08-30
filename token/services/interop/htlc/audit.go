@@ -42,11 +42,11 @@ func ToOutput(i *token.Output) (*Output, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
-	if owner.Type == ScriptType {
-		if len(i.OwnerAuditInfo) != 0 {
-
-		}
-	}
+	//// TODO: unmarshal script
+	//if owner.Type == ScriptType {
+	//	if len(i.OwnerAuditInfo) != 0 {
+	//	}
+	//}
 	return &Output{
 		Output: i,
 		isHTLC: owner.Type == ScriptType,
