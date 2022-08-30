@@ -33,20 +33,6 @@ type Script struct {
 	HashInfo  HashInfo
 }
 
-// ScriptInfo includes info about the sender and the recipient
-type ScriptInfo struct {
-	Sender    []byte
-	Recipient []byte
-}
-
-func (si *ScriptInfo) Marshal() ([]byte, error) {
-	return json.Marshal(si)
-}
-
-func (si *ScriptInfo) Unarshal(raw []byte) error {
-	return json.Unmarshal(raw, si)
-}
-
 // ScriptOwnership implements the Ownership interface for scripts
 type ScriptOwnership struct{}
 

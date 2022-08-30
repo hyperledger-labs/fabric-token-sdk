@@ -43,7 +43,7 @@ func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed getting script sender and recipient")
 	}
 
-	auditInfo := &htlc.ScriptInfo{}
+	auditInfo := &ScriptInfo{}
 	auditInfo.Sender, err = s.GetAuditInfo(sender)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", view.Identity(raw).String())
@@ -58,6 +58,20 @@ func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
 	}
 	return raw, nil
+}
+
+// ScriptInfo includes info about the sender and the recipient
+type ScriptInfo struct {
+	Sender    []byte
+	Recipient []byte
+}
+
+func (si *ScriptInfo) Marshal() ([]byte, error) {
+	return json.Marshal(si)
+}
+
+func (si *ScriptInfo) Unarshal(raw []byte) error {
+	return json.Unmarshal(raw, si)
 }
 
 // GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner

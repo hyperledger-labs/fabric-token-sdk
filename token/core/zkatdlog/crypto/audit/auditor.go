@@ -10,8 +10,6 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
