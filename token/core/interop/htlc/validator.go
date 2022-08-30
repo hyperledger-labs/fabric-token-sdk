@@ -38,13 +38,13 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htl
 	if now.Before(script.Deadline) {
 		// this should be a claim
 		if !script.Recipient.Equal(outRawOwner) {
-			return nil, None, errors.Errorf("owner of output token does not correspond to recipient in htlc request")
+			return nil, None, errors.New("owner of output token does not correspond to recipient in htlc request")
 		}
 		return script, Claim, nil
 	} else {
 		// this should be a reclaim
 		if !script.Sender.Equal(outRawOwner) {
-			return nil, None, errors.Errorf("owner of output token does not correspond to sender in htlc request")
+			return nil, None, errors.New("owner of output token does not correspond to sender in htlc request")
 		}
 		return script, Reclaim, nil
 	}

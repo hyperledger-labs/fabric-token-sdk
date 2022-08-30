@@ -11,16 +11,14 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -109,9 +107,6 @@ func TransferHTLCValidate(ctx *Context) error {
 			}
 
 			out := ctx.Action.GetOutputs()[0].(*token.Token)
-			if ctx.InputTokens[0].Data.Equals(out.Data) {
-				return errors.Errorf("invalid transfer action: content of input does not match content of output")
-			}
 
 			// check that owner field in output is correct
 			_, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
@@ -173,11 +168,11 @@ func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
 
 	// Check the pre-image is in the action's metadata
 	if len(ctx.Action.Metadata) == 0 {
-		return errors.Errorf("cannot find htlc pre-image, no metadata")
+		return errors.New("cannot find htlc pre-image, no metadata")
 	}
 	value, ok := ctx.Action.Metadata[htlc.ClaimPreImage]
 	if !ok {
-		return errors.Errorf("cannot find htlc pre-image, missing metadata entry")
+		return errors.New("cannot find htlc pre-image, missing metadata entry")
 	}
 	if !bytes.Equal(value, claim.Preimage) {
 		return errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)

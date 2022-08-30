@@ -9,7 +9,7 @@ package common
 import (
 	"strings"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 // SetTransferActionMetadata extracts the transfer metadata from the passed attributes and
@@ -19,8 +19,8 @@ func SetTransferActionMetadata(attrs map[interface{}]interface{}, metadata map[s
 		k, ok1 := key.(string)
 		v, ok2 := value.([]byte)
 		if ok1 && ok2 {
-			if strings.HasPrefix(k, token2.TransferMetadataPrefix) {
-				mKey := strings.TrimPrefix(k, token2.TransferMetadataPrefix)
+			if strings.HasPrefix(k, token.TransferMetadataPrefix) {
+				mKey := strings.TrimPrefix(k, token.TransferMetadataPrefix)
 				metadata[mKey] = v
 			}
 		}

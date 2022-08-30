@@ -10,9 +10,8 @@ import (
 	"bytes"
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -227,7 +226,7 @@ func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*Tra
 			return errors.Wrapf(err, "failed to retrieve input from transfer action at index %d", i)
 		}
 		// verify if input tokens and output tokens in the current transfer action have the same type
-		// verify if sum of input tokens  in the current transfer action equals the sum of output tokens
+		// verify if sum of input tokens in the current transfer action equals the sum of output tokens
 		// in the current transfer action
 		if err := v.VerifyTransfer(ledger, inputTokens, t, signatureProvider); err != nil {
 			return errors.Wrapf(err, "failed to verify transfer action at index %d", i)

@@ -188,7 +188,7 @@ func (t *TransferAction) Deserialize(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
-// GetMetadata returns the action's metadata
+// GetMetadata returns the transfer action's metadata
 func (t *TransferAction) GetMetadata() map[string][]byte {
 	return t.Metadata
 }

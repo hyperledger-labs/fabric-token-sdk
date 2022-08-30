@@ -54,13 +54,13 @@ func TransferSignatureValidate(ctx *Context) error {
 // TransferBalanceValidate checks that the sum of the inputs is equal to the sum of the outputs
 func TransferBalanceValidate(ctx *Context) error {
 	if ctx.Action.NumOutputs() == 0 {
-		return errors.Errorf("there is no output")
+		return errors.New("there is no output")
 	}
 	if len(ctx.InputTokens) == 0 {
-		return errors.Errorf("there is no input")
+		return errors.New("there is no input")
 	}
 	if ctx.InputTokens[0] == nil {
-		return errors.Errorf("first input is nil")
+		return errors.New("first input is nil")
 	}
 	typ := ctx.InputTokens[0].Type
 	inputSum := token.NewZeroQuantity(ctx.PP.QuantityPrecision)
@@ -99,7 +99,7 @@ func TransferBalanceValidate(ctx *Context) error {
 	return nil
 }
 
-// TransferHTLCValidate checks the validity of the TransferHTLCValidate scripts, if any
+// TransferHTLCValidate checks the validity of the HTLC scripts, if any
 func TransferHTLCValidate(ctx *Context) error {
 	now := time.Now()
 
@@ -112,20 +112,20 @@ func TransferHTLCValidate(ctx *Context) error {
 		if owner.Type == htlc.ScriptType {
 			// Then, the first output must be compatible with this input.
 			if len(ctx.Action.GetOutputs()) != 1 {
-				return errors.Errorf("invalid transfer action: an htlc script only transfers the ownership of a token")
+				return errors.New("invalid transfer action: an htlc script only transfers the ownership of a token")
 			}
 
 			// check type and quantity
 			output := ctx.Action.GetOutputs()[0].(*Output)
 			tok := output.Output
 			if ctx.InputTokens[0].Type != tok.Type {
-				return errors.Errorf("invalid transfer action: type of input does not match type of output")
+				return errors.New("invalid transfer action: type of input does not match type of output")
 			}
 			if ctx.InputTokens[0].Quantity != tok.Quantity {
-				return errors.Errorf("invalid transfer action: quantity of input does not match quantity of output")
+				return errors.New("invalid transfer action: quantity of input does not match quantity of output")
 			}
 			if output.IsRedeem() {
-				return errors.Errorf("invalid transfer action: the output corresponding to an htlc spending should not be a redeem")
+				return errors.New("invalid transfer action: the output corresponding to an htlc spending should not be a redeem")
 			}
 
 			// check owner field
@@ -137,7 +137,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			// check metadata
 			sigma := ctx.Signatures[i]
 			if err := HTLCMetadataCheck(ctx, op, sigma); err != nil {
-				return errors.WithMessagef(err, "failed to check htlc metadata")
+				return errors.Wrapf(err, "failed to check htlc metadata")
 			}
 		}
 	}
@@ -145,13 +145,13 @@ func TransferHTLCValidate(ctx *Context) error {
 	for _, o := range ctx.Action.GetOutputs() {
 		out, ok := o.(*Output)
 		if !ok {
-			return errors.Errorf("invalid output")
+			return errors.New("invalid output")
 		}
 		if out.IsRedeem() {
 			continue
 		}
 
-		// if it is a htlc script than the deadline must be still valid
+		// if it is an htlc script then the deadline must still be valid
 		owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
 		if err != nil {
 			return err
@@ -163,7 +163,7 @@ func TransferHTLCValidate(ctx *Context) error {
 				return err
 			}
 			if script.Deadline.Before(now) {
-				return errors.Errorf("htlc script invalid: expiration date has already passed")
+				return errors.New("htlc script invalid: expiration date has already passed")
 			}
 			continue
 		}
@@ -188,13 +188,13 @@ func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
 		return errors.New("expected a valid claim preImage and recipient signature")
 	}
 
-	// Check the pre-image is in the action's metadata
+	// Check that the pre-image is in the action's metadata
 	if len(ctx.Action.Metadata) == 0 {
-		return errors.Errorf("cannot find htlc pre-image, no metadata")
+		return errors.New("cannot find htlc pre-image, no metadata")
 	}
 	value, ok := ctx.Action.Metadata[htlc.ClaimPreImage]
 	if !ok {
-		return errors.Errorf("cannot find htlc pre-image, missing metadata entry")
+		return errors.New("cannot find htlc pre-image, missing metadata entry")
 	}
 	if !bytes.Equal(value, claim.Preimage) {
 		return errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
