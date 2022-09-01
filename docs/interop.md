@@ -3,7 +3,7 @@
 Token SDK supports interoperability, cross-chain operations, via scripting. 
 It allows spending a token to a script by encoding the script in the `Owner` field of a `Token`, and the different drivers are capable of interpreting the owner as a script.
 After the ownership is assigned to a script, the script is evaluated at the time of spending the token. 
-The right to spend a token is enforced according to the conditions within the script.
+The right to spend the token is enforced according to the conditions within the script.
 
 ## HTLC
 
@@ -25,7 +25,7 @@ type Script struct {
     HashInfo  HashInfo
 }
 
-// HashInfo contains the information regarding the hashing
+// HashInfo contains the information regarding the hash
 type HashInfo struct {
     Hash         []byte
     HashFunc     crypto.Hash
@@ -35,11 +35,7 @@ type HashInfo struct {
 
 ## Interoperability services
 
-The interoperability services which are responsible for assembling the token transaction, managing the transaction lifecycle, and so on, are the same as the [`Token Transaction Services`](./services.md). 
-They are located in `token/services/interop`.
-
-Other services are script specific.
-For example, the token transaction assembling service enables appending lock, claim, or reclaim actions to the token request of the transaction. All of these actions translate into a transfer action. 
+The token transaction assembling service enables appending lock, claim, or reclaim actions to the token request of the transaction. All of these actions translate into a transfer action. 
 Lock is the locking process, where the sender sets the details of the htlc and transfers ownership of the token to a script. 
 Claim allows the recipient to gain ownership of the token by providing the preimage. 
 Reclaim returns the token to the sender. 
@@ -51,18 +47,23 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error
 ```
 
-The interop `Wallet` service, located in `token/services/interop/wallet.go`, supports listing expired tokens, whose deadline have passed, and listing tokens with a desired matching preimage.
+The interop `Wallet` service, located under `token/services/interop/`, supports listing tokens with a desired matching preimage, and listing expired tokens, whose deadline have passed.
 
 In addition, the interop signer and verifier services are script specific, for example in the HTLC case the preimage is part of the signed message.
+
+Finally, the interoperability services which are responsible for assembling the token transaction and managing its lifecycle are the same as the [`Token Transaction Services`](./services.md).
+They are located in `token/services/interop`.
+
 
 ## Driver adjustments 
 
 The `FabToken` and `ZKAT DLog` drivers support also interoperability, and more specifically, the drivers support HTLC.
 
 In addition to the regular validation process, their `validator` ensures that in the lock and claim cases the deadline has not expired, and in the reclaim case the deadline has passed.    
-Moreover, the validator returns a `TransferAction` now holds the `ClaimPreImage`, as it is written into the ledger and can later be searched by calling the scan function located in `token/services/interop/scanner.go`
+Their `validator` also allows adding extra validation process to support more kinds of interoperability scripts.  
+Moreover, the validator returns a `TransferAction` that now holds the `ClaimPreImage`, as it is written into the ledger and can later be searched by calling the scan function located in `token/services/interop/scanner.go`
 
-The `deserializer` in the interoperability case returns a specialized script owner verifier, that takes into account both the sender and the recipient as well as the deadline (located in `token/services/interop/signer.go`). 
+The `deserializer` in the interoperability case returns a specialized script owner verifier, that takes into account both the sender and the recipient as well as the deadline and the hash. 
 
 The driver's `TransferService` also takes into account the presence of scripts, as `Transfer` returns `TransferMetadata` which includes information for both the sender and recipient of a script.
 
