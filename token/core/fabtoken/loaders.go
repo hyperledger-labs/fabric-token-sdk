@@ -3,10 +3,12 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package fabtoken
 
 import (
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -16,7 +18,7 @@ type TokenVault interface {
 }
 
 type VaultTokenLoader struct {
-	TokenVault api2.QueryEngine
+	TokenVault driver.QueryEngine
 }
 
 // GetTokens takes an array of token identifiers (txID, index) and returns the keys of the identified tokens
@@ -27,55 +29,38 @@ func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token,
 
 // VaultPublicParamsLoader allows one to fetch the public parameters for fabtoken
 type VaultPublicParamsLoader struct {
-	TokenVault          TokenVault
-	PublicParamsFetcher api2.PublicParamsFetcher
+	PublicParamsFetcher driver.PublicParamsFetcher
 	PPLabel             string
 }
 
-// Load returns the PublicParams associated with fabtoken
-// Load first checks if PublicParams are cached, if not, then Load fetches them
-func (s *VaultPublicParamsLoader) Load() (*PublicParams, error) {
-	raw, err := s.TokenVault.PublicParams()
+// Fetch fetches the public parameters from the backend
+func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
+	logger.Debugf("fetch public parameters...")
+	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to retrieve public parameters")
+		logger.Errorf("failed retrieving public params [%s]", err)
+		return nil, err
 	}
-	if len(raw) == 0 {
-		logger.Warnf("public parameters not found")
-		raw, err = s.PublicParamsFetcher.Fetch()
-		if err != nil {
-			logger.Errorf("failed retrieving public params [%s]", err)
-			return nil, err
-		}
-	}
-
-	logger.Debugf("unmarshal public parameters")
-	pp := &PublicParams{}
-	pp.Label = s.PPLabel
-	err = pp.Deserialize(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
-	}
-	logger.Debugf("unmarshal public parameters done")
-	return pp, nil
+	logger.Debugf("fetched public parameters [%s]", hash.Hashable(raw).String())
+	return raw, nil
 }
 
-// ForceFetch returns the PublicParams associated with fabtoken
-// ForceFetch does not look into cache, unlike Load.
-func (s *VaultPublicParamsLoader) ForceFetch() (*PublicParams, error) {
-	logger.Debugf("force public parameters fetch")
+// FetchParams fetches the public parameters from the backend and unmarshal them
+func (s *VaultPublicParamsLoader) FetchParams() (*PublicParams, error) {
+	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
 		logger.Errorf("failed retrieving public params [%s]", err)
 		return nil, err
 	}
 
-	logger.Debugf("unmarshal public parameters")
+	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(raw).String())
 	pp := &PublicParams{}
 	pp.Label = s.PPLabel
 	err = pp.Deserialize(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
-	logger.Debugf("unmarshal public parameters done")
+	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(raw).String())
 	return pp, nil
 }

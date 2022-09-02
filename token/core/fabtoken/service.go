@@ -17,8 +17,10 @@ import (
 )
 
 type PublicParamsLoader interface {
-	Load() (*PublicParams, error)
-	ForceFetch() (*PublicParams, error)
+	// Fetch fetches the public parameters from the backend
+	Fetch() ([]byte, error)
+	// FetchParams fetches the public parameters from the backend and unmarshal them
+	FetchParams() (*PublicParams, error)
 }
 
 type QueryEngine interface {

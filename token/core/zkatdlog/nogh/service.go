@@ -151,7 +151,7 @@ func (s *Service) PublicParams() *crypto.PublicParams {
 }
 
 func (s *Service) FetchPublicParams() error {
-	return s.PPM.ForceFetch()
+	return s.PPM.Update()
 }
 
 func (s *Service) Deserializer() (api3.Deserializer, error) {

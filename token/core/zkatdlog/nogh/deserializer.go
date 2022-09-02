@@ -97,8 +97,12 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
-	logger.Infof("Deserialize: [%s][%s]", params.Hash, d.oldHash)
-	if bytes.Equal(d.oldHash, params.Hash) {
+	newHash, err := params.ComputeHash()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to compute the hash of the public params")
+	}
+	logger.Infof("Deserialize: [%s][%s]", newHash, d.oldHash)
+	if bytes.Equal(d.oldHash, newHash) {
 		return d.des, nil
 	}
 
@@ -107,7 +111,7 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 		return nil, err
 	}
 	d.des = des
-	d.oldHash = params.Hash
+	d.oldHash = newHash
 	return des, nil
 }
 
