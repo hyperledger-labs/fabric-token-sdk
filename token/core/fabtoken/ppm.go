@@ -72,7 +72,7 @@ func (v *PublicParamsManager) Update() error {
 	return nil
 }
 
-// Fetch fetches the public parameters from the backed
+// Fetch fetches the public parameters from the backend
 func (v *PublicParamsManager) Fetch() ([]byte, error) {
 	if v.publicParamsLoader == nil {
 		return nil, errors.New("public parameters loader not set")

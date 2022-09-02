@@ -17,7 +17,9 @@ import (
 )
 
 type PublicParamsLoader interface {
+	// Fetch fetches the public parameters from the backend
 	Fetch() ([]byte, error)
+	// FetchParams fetches the public parameters from the backend and unmarshal them
 	FetchParams() (*PublicParams, error)
 }
 

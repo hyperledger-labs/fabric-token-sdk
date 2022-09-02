@@ -93,7 +93,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		tmsConfig,
 	)
 	if err := service.PPM.Update(); err != nil {
-		return nil, errors.WithMessage(err, "failed to fetch public parameters")
+		return nil, errors.WithMessage(err, "failed to update public parameters")
 	}
 	return service, nil
 }

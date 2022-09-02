@@ -102,7 +102,7 @@ func NewVaultPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, 
 	return &VaultPublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
 }
 
-// Fetch fetches the public parameters from the backed
+// Fetch fetches the public parameters from the backend
 func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
@@ -114,7 +114,7 @@ func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 	return raw, nil
 }
 
-// FetchParams fetches the public parameters from the backed and unmarshals them
+// FetchParams fetches the public parameters from the backend and unmarshal them
 func (s *VaultPublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()

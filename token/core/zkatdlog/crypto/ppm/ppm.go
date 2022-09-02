@@ -19,7 +19,9 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
 
 type PublicParamsLoader interface {
+	// Fetch fetches the public parameters from the backend
 	Fetch() ([]byte, error)
+	// FetchParams fetches the public parameters from the backend and unmarshal them
 	FetchParams() (*crypto.PublicParams, error)
 }
 
@@ -63,7 +65,7 @@ func (v *PublicParamsManager) Update() error {
 
 	pp, err := v.publicParamsLoader.FetchParams()
 	if err != nil {
-		return errors.WithMessagef(err, "failed force fetching public parameters")
+		return errors.WithMessagef(err, "failed updating public parameters")
 	}
 	v.pp = pp
 

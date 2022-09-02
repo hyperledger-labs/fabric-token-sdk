@@ -56,7 +56,7 @@ type PublicParamsManager interface {
 	PublicParameters() PublicParameters
 	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
 	NewCertifierKeyPair() ([]byte, []byte, error)
-	// Update fetches the public parameters and update the local public parameters
+	// Update fetches the public parameters from the backend and write them locally
 	Update() error
 	// Fetch fetches the public parameters
 	Fetch() ([]byte, error)

@@ -33,7 +33,7 @@ type VaultPublicParamsLoader struct {
 	PPLabel             string
 }
 
-// Fetch fetches the public parameters from the remote repository
+// Fetch fetches the public parameters from the backend
 func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
@@ -45,7 +45,7 @@ func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 	return raw, nil
 }
 
-// FetchParams fetches the public parameters from the remote repository and unmarshal them
+// FetchParams fetches the public parameters from the backend and unmarshal them
 func (s *VaultPublicParamsLoader) FetchParams() (*PublicParams, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
