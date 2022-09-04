@@ -59,9 +59,9 @@ They are located in `token/services/interop`.
 
 The `FabToken` and `ZKAT DLog` drivers support also interoperability, and more specifically, the drivers support HTLC.
 
-In addition to the regular validation process, their `validator` ensures that in the lock and claim cases the deadline has not expired, and in the reclaim case the deadline has passed.    
-Their `validator` also allows adding extra validation process to support more kinds of interoperability scripts.  
-Moreover, the validator returns a `TransferAction` that now holds the `ClaimPreImage`, as it is written into the ledger and can later be searched by calling the scan function located in `token/services/interop/scanner.go`
+The validator in `FabToken` and `ZKAT DLog` can be enhanced with extra validators to accommodate additional validation rules. In particular, to support atomic swap, they take a validator that ensures HTLC conditions are met. That is, the deadline has not passed in the case of lock, that a claim was initiated by the recipient before the expiration of the deadline and carries the pre-image matching the hash, and that a reclaim is initiated by the sender after the deadline has passed.
+
+Their `TransferAction` carries the pre-image at time of transaction assembly to support HTLC.
 
 The `deserializer` in the interoperability case returns a specialized script owner verifier, that takes into account both the sender and the recipient as well as the deadline and the hash. 
 
