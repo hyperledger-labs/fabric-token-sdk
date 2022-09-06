@@ -8,16 +8,16 @@ The right to spend the token is enforced according to the conditions within the 
 ## HTLC
 
 HTLC (Hash Time Locked Contract) is a token transfer that use hashlocks and timelocks to require that the recipient of a token either acknowledge receiving the token prior to a deadline by generating cryptographic proof or forfeit the ability to claim the token, returning it to the sender.
-With this mechanism Token SDK supports atomic cross-chain swap of tokens. 
+With this mechanism, the Token SDK supports atomic cross-chain swap of tokens. 
 
 ### HTLC script
 
-The HTLC script encodes the details of the htlc, the identities of the sender and the recipient of the token, a deadline, and hashing information.
+The HTLC script encodes the details of the HTLC, the identities of the sender and the recipient of the token, a deadline, and hashing information.
 The hashing information includes the hash itself, the hash function used (e.g., SHA-256), and the encoding (e.g., Base64).
 The hash is chosen by the sender and the recipient must provide the preimage for the transfer to happen.
 
 ```go
-// Script contains the details of an htlc
+// Script contains the details of an HTLC
 type Script struct {
     Sender    view.Identity
     Recipient view.Identity
@@ -35,10 +35,10 @@ type HashInfo struct {
 
 ## Interoperability services
 
-The token transaction assembling service enables appending lock, claim, or reclaim actions to the token request of the transaction. All of these actions translate into a transfer action. 
-Lock is the locking process, where the sender sets the details of the htlc and transfers ownership of the token to a script. 
-Claim allows the recipient to gain ownership of the token by providing the preimage. 
-Reclaim returns the token to the sender. 
+The token transaction assembling service enables appending `Lock`, `Claim`, or `Reclaim` actions to the token request of the transaction. All of these actions translate into a transfer action. 
+`Lock` is the locking process, where the sender sets the details of the HTLC and transfers ownership of the token to a script. 
+`Claim` allows the recipient to gain ownership of the token by providing the preimage. 
+`Reclaim` returns the token to the sender. 
 Claim must happen before the deadline ends, while reclaim can only occur after the deadline has passed.
 
 ```go
@@ -49,7 +49,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 
 The interop `Wallet` service, located under `token/services/interop/`, supports listing tokens with a desired matching preimage, and listing expired tokens, whose deadline have passed.
 
-In addition, the interop signer and verifier services are script specific, for example in the HTLC case the preimage is part of the signed message.
+In addition, the interop `Signer` and `Verifier` services are script specific, for example in the HTLC case the preimage is part of the signed message.
 
 Finally, the interoperability services which are responsible for assembling the token transaction and managing its lifecycle are the same as the [`Token Transaction Services`](./services.md).
 They are located in `token/services/interop`.
