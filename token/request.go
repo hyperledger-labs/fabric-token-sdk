@@ -510,7 +510,7 @@ func (r *Request) Inputs() (*InputStream, error) {
 func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 	tms := r.TokenService.tms
 	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
-		return nil, errors.New("can'r get inputs:invalid token service in request")
+		return nil, errors.New("can't get inputs: invalid token service in request")
 	}
 	meta, err := r.GetMetadata()
 	if err != nil {
@@ -937,7 +937,7 @@ func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 // GetMetadata returns the metadata of the request.
 func (r *Request) GetMetadata() (*Metadata, error) {
 	if r.TokenService == nil {
-		return nil, errors.New("can'r get metadata: nil token service in request")
+		return nil, errors.New("can't get metadata: nil token service in request")
 	}
 	return &Metadata{
 		TMS:                  r.TokenService.tms,
