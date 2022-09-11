@@ -1061,7 +1061,7 @@ token:
           - default: true
             # ID of the wallet
             id: alice 
-            # Path to folder containing the crypographic material 
+            # Path to folder containing the cryptographic material 
             path: /home/vagrant/testdata/token/crypto/default-testchannel-zkat/idemix/alice
             # Type of the wallet in the form of <type>:<MSPID>:<idemix elliptic curve>
             type: idemix:IdemixOrgMSP:BN254

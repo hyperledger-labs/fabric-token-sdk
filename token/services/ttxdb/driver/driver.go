@@ -69,7 +69,7 @@ const (
 type MovementRecord struct {
 	// TxID is the transaction ID
 	TxID string
-	// EnrollmentID is the enrollment ID of the account that is receiving or sendeing
+	// EnrollmentID is the enrollment ID of the account that is receiving or sending
 	EnrollmentID string
 	// TokenType is the type of token
 	TokenType string
