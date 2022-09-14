@@ -8,8 +8,8 @@ package views
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -66,21 +66,23 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	}
 
 	for i := 0; i < inputs.Count(); i++ {
-		input, err := htlc.ToInput(inputs.At(i))
+		script, err := htlc.InputToScript(inputs.At(i))
 		assert.NoError(err)
-		if input.IsHTLC() {
-			// TODO
-			fmt.Printf("this is a script")
+		if script == nil {
+			continue
 		}
+		// check script details, for example make sure the hash is set
+		assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
 	}
 
 	for i := 0; i < outputs.Count(); i++ {
-		output, err := htlc.ToOutput(outputs.At(i))
+		script, err := htlc.OutputToScript(outputs.At(i))
 		assert.NoError(err)
-		if output.IsHTLC() {
-			// TODO
-			fmt.Printf("this is a script")
+		if script == nil {
+			continue
 		}
+		// check script details, for example make sure the deadline has not passed
+		assert.True(script.Deadline.After(time.Now()), "expiration date has already passed")
 	}
 
 	return context.RunView(ttx.NewAuditApproveView(w, tx))

@@ -7,52 +7,41 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"encoding/json"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/pkg/errors"
 )
 
-type Input struct {
-	*token.Input
-	isHTLC bool
-}
-
-func ToInput(i *token.Input) (*Input, error) {
+func InputToScript(i *token.Input) (*Script, error) {
 	owner, err := identity.UnmarshallRawOwner(i.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
-	return &Input{
-		Input:  i,
-		isHTLC: owner.Type == ScriptType,
-	}, nil
+	if owner.Type != ScriptType {
+		return nil, nil
+	}
+	script := &Script{}
+	err = json.Unmarshal(owner.Identity, script)
+	if err != nil {
+		return nil, err
+	}
+	return script, nil
 }
 
-func (i *Input) IsHTLC() bool {
-	return i.isHTLC
-}
-
-type Output struct {
-	*token.Output
-	isHTLC bool
-}
-
-func ToOutput(i *token.Output) (*Output, error) {
-	owner, err := identity.UnmarshallRawOwner(i.Owner)
+func OutputToScript(o *token.Output) (*Script, error) {
+	owner, err := identity.UnmarshallRawOwner(o.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
-	//// TODO: unmarshal script
-	//if owner.Type == ScriptType {
-	//	if len(i.OwnerAuditInfo) != 0 {
-	//	}
-	//}
-	return &Output{
-		Output: i,
-		isHTLC: owner.Type == ScriptType,
-	}, nil
-}
-
-func (i *Output) IsHTLC() bool {
-	return i.isHTLC
+	if owner.Type != ScriptType {
+		return nil, nil
+	}
+	script := &Script{}
+	err = json.Unmarshal(owner.Identity, script)
+	if err != nil {
+		return nil, err
+	}
+	return script, nil
 }
