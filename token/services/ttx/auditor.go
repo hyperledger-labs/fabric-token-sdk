@@ -22,10 +22,23 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// TxStatus is the status of a transaction
+type TxStatus = ttxdb.TxStatus
+
+const (
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending TxStatus = "Pending"
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed TxStatus = "Confirmed"
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted TxStatus = "Deleted"
+)
+
 type txAuditor struct {
 	sp      view2.ServiceProvider
 	w       *token.AuditorWallet
 	auditor *auditor.Auditor
+	db      *ttxdb.DB
 }
 
 func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *txAuditor {
@@ -33,6 +46,7 @@ func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *txAuditor {
 		sp:      sp,
 		w:       w,
 		auditor: auditor.New(sp, w),
+		db:      ttxdb.Get(sp, w),
 	}
 }
 
@@ -51,12 +65,19 @@ func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
 
+// AcquireLocks try to acquire a lock on the passed enrollment IDs. The call blocks until all locks can be acquired.
 func (a *txAuditor) AcquireLocks(eIDs ...string) error {
-	return ttxdb.Get(a.sp, a.w).AcquireLocks(eIDs...)
+	return a.db.AcquireLocks(eIDs...)
 }
 
+// Unlock unlocks the passed enrollment IDs.
 func (a *txAuditor) Unlock(eIDs []string) {
-	ttxdb.Get(a.sp, a.w).Unlock(eIDs...)
+	a.db.Unlock(eIDs...)
+}
+
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+func (a *txAuditor) SetStatus(txID string, status TxStatus) error {
+	return a.db.SetStatus(txID, status)
 }
 
 type RegisterAuditorView struct {
