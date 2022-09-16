@@ -18,7 +18,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
-var Limit = 50
+const (
+	Limit int64 = 50
+)
 
 type AuditView struct{}
 
@@ -61,28 +63,33 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			}
 			logger.Debugf("Payment Limit: [%s] Diff [%d], type [%s]", eID, diff.Int64(), tokenType)
 
-			assert.True(diff.Cmp(big.NewInt(int64(Limit))) <= 0, "payment limit reached [%s][%s][%s]", eID, tokenType, diff.Text(10))
+			assert.True(diff.Cmp(big.NewInt(Limit)) <= 0, "payment limit reached [%s][%s][%s]", eID, tokenType, diff.Text(10))
 		}
 	}
 
 	for i := 0; i < inputs.Count(); i++ {
-		script, err := htlc.InputToScript(inputs.At(i))
-		assert.NoError(err)
-		if script == nil {
+		input, err := htlc.ToInput(inputs.At(i))
+		assert.NoError(err, "cannot get htlc input wrapper")
+		if !input.IsHTLC() {
 			continue
 		}
 		// check script details, for example make sure the hash is set
+		script, err := input.Script()
+		assert.NoError(err, "cannot get htlc script from input")
 		assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
 	}
 
+	now := time.Now()
 	for i := 0; i < outputs.Count(); i++ {
-		script, err := htlc.OutputToScript(outputs.At(i))
-		assert.NoError(err)
-		if script == nil {
+		output, err := htlc.ToOutput(outputs.At(i))
+		assert.NoError(err, "cannot get htlc output wrapper")
+		if !output.IsHTLC() {
 			continue
 		}
 		// check script details, for example make sure the deadline has not passed
-		assert.True(script.Deadline.After(time.Now()), "expiration date has already passed")
+		script, err := output.Script()
+		assert.NoError(err, "cannot get htlc script from input")
+		assert.NoError(script.Validate(now), "script is not valid")
 	}
 
 	return context.RunView(ttx.NewAuditApproveView(w, tx))

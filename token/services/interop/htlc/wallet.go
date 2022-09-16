@@ -102,6 +102,10 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte) ([]*token2.UnspentToken, e
 			}
 			logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
 
+			if !script.HashInfo.HashFunc.Available() {
+				logger.Errorf("script hash function not available [%d]", script.HashInfo.HashFunc)
+				continue
+			}
 			hash := script.HashInfo.HashFunc.New()
 			if _, err = hash.Write(preImage); err != nil {
 				return nil, err

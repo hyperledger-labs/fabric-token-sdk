@@ -162,8 +162,8 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err != nil {
 				return err
 			}
-			if script.Deadline.Before(now) {
-				return errors.New("htlc script invalid: expiration date has already passed")
+			if err := script.Validate(now); err != nil {
+				return errors.WithMessagef(err, "htlc script invalid")
 			}
 			continue
 		}
