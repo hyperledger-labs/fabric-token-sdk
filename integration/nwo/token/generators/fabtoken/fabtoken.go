@@ -19,6 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/network"
+	ftopology "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -47,9 +49,10 @@ PeerOrgs:{{ range .PeerOrgs }}
   {{- end }}
   Users:
     Count: {{ .Users }}
-    {{- if len .UserNames }}
-    Names: {{ range .UserNames }}
-    - {{ . }}
+    {{- if len .UserSpecs }}
+    Specs: {{ range .UserSpecs }}
+    - Name: {{ .Name }}
+      HSM: {{ .HSM }}
     {{- end }}
     {{- end }}
 
@@ -67,33 +70,17 @@ PeerOrgs:{{ range .PeerOrgs }}
 
 var logger = flogging.MustGetLogger("integration.token.generators.fabtoken")
 
-type Organization struct {
-	ID            string
-	MSPID         string
-	MSPType       string
-	Name          string
-	Domain        string
-	EnableNodeOUs bool
-	Users         int
-	UserNames     []string
-	CA            *CA
-}
-
-type CA struct {
-	Hostname string `yaml:"hostname,omitempty"`
-}
-
 type Peer struct {
 	Name         string
 	Organization string
 }
 
 type Layout struct {
-	Orgs  []Organization
+	Orgs  []ftopology.Organization
 	Peers []Peer
 }
 
-func (l *Layout) PeerOrgs() []Organization {
+func (l *Layout) PeerOrgs() []ftopology.Organization {
 	return l.Orgs
 }
 
@@ -153,8 +140,23 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 	orgName := fmt.Sprintf("Org%s", n.ID())
 	mspID := fmt.Sprintf("%sMSP", orgName)
 	domain := fmt.Sprintf("%s.example.com", orgName)
+
+	var userSpecs []ftopology.UserSpec
+	for _, name := range names {
+		us := ftopology.UserSpec{
+			Name: name,
+			HSM:  false,
+		}
+		switch wallet {
+		case "issuers":
+			us.HSM = topology.ToOptions(&n.Options).IsUseHSMForIssuer(name)
+		case "auditors":
+			us.HSM = topology.ToOptions(&n.Options).IsUseHSMForAuditor()
+		}
+		userSpecs = append(userSpecs, us)
+	}
 	l := &Layout{
-		Orgs: []Organization{
+		Orgs: []ftopology.Organization{
 			{
 				ID:            orgName,
 				MSPID:         mspID,
@@ -163,30 +165,40 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 				Domain:        domain,
 				EnableNodeOUs: false,
 				Users:         1,
+				UserSpecs:     userSpecs,
 			},
 		},
-	}
-	for _, name := range names {
-		l.Peers = append(l.Peers, Peer{
-			Name:         name,
-			Organization: orgName,
-		})
+		Peers: []Peer{
+			{Name: orgName, Organization: orgName},
+		},
 	}
 	d.GenerateCryptoConfig(output, l)
 	d.GenerateArtifacts(output)
 
 	var identities []generators.Identity
-	for _, name := range names {
-		identities = append(identities, generators.Identity{
+	for i, name := range names {
+		id := generators.Identity{
 			ID: name,
 			Path: filepath.Join(
 				output,
 				"peerOrganizations",
 				domain,
-				"peers",
-				fmt.Sprintf("%s.%s", name, domain),
+				"users",
+				fmt.Sprintf("%s@%s", name, domain),
 				"msp"),
-		})
+		}
+
+		if wallet == "issuers" || wallet == "auditors" {
+			if userSpecs[i].HSM {
+				// PKCS11
+				id.Opts = network.BCCSPOpts("PKCS11")
+			} else {
+				// SW
+				id.Opts = network.BCCSPOpts("SW")
+			}
+		}
+
+		identities = append(identities, id)
 	}
 	return identities
 

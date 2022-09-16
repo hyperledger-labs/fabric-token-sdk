@@ -38,6 +38,23 @@ token:
       - id: {{ .ID }}
         default: {{ .Default }}
         path: {{ .Path }}
+        opts:
+          BCCSP:
+            Default: {{ .Opts.Default }}
+            # Settings for the SW crypto provider (i.e. when DEFAULT: SW)
+            SW:
+               Hash: {{ .Opts.SW.Hash }}
+               Security: {{ .Opts.SW.Security }}
+            # Settings for the PKCS#11 crypto provider (i.e. when DEFAULT: PKCS11)
+            PKCS11:
+               # Location of the PKCS11 module library
+               Library: {{ .Opts.PKCS11.Library }}
+               # Token Label
+               Label: {{ .Opts.PKCS11.Label }}
+               # User PIN
+               Pin: {{ .Opts.PKCS11.Pin }}
+               Hash: {{ .Opts.PKCS11.Hash }}
+               Security: {{ .Opts.PKCS11.Security }}
       {{ end }}
     {{ end }}{{ if Wallets.Owners }}
       # Owners wallets are used to own tokens
@@ -52,6 +69,23 @@ token:
       - id: {{ .ID }}
         default: {{ .Default }}
         path: {{ .Path }}
+        opts:
+          BCCSP:
+            Default: {{ .Opts.Default }}
+            # Settings for the SW crypto provider (i.e. when DEFAULT: SW)
+            SW:
+               Hash: {{ .Opts.SW.Hash }}
+               Security: {{ .Opts.SW.Security }}
+            # Settings for the PKCS#11 crypto provider (i.e. when DEFAULT: PKCS11)
+            PKCS11:
+               # Location of the PKCS11 module library
+               Library: {{ .Opts.PKCS11.Library }}
+               # Token Label
+               Label: {{ .Opts.PKCS11.Label }}
+               # User PIN
+               Pin: {{ .Opts.PKCS11.Pin }}
+               Hash: {{ .Opts.PKCS11.Hash }}
+               Security: {{ .Opts.PKCS11.Security }}
       {{ end }}
     {{ end }}
     {{ end }}

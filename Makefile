@@ -8,7 +8,7 @@ GINKGO_TEST_OPTS += --slow-spec-threshold=60s
 
 TOP = .
 
-all: install-tools checks unit-tests #integration-tests
+all: install-tools install-softhsm checks unit-tests #integration-tests
 
 .PHONY: install-tools
 install-tools:
@@ -28,6 +28,10 @@ unit-tests:
 unit-tests-race:
 	@export GORACE=history_size=7; go test -race -cover $(shell go list ./... | grep -v '/integration/')
 	cd integration/nwo/; go test -cover ./...
+
+.PHONY: install-softhsm
+install-softhsm:
+	./ci/scripts/install_softhsm.sh
 
 .PHONY: docker-images
 docker-images: fabric-docker-images orion-server-images monitoring-docker-images
@@ -53,6 +57,13 @@ orion-server-images:
 .PHONY: integration-tests-dlog-fabric
 integration-tests-dlog-fabric:
 	cd ./integration/token/fungible/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+
+.PHONY: integration-tests-dloghsm-fabric
+integration-tests-dloghsm-fabric: install-softhsm
+	@echo "Setup SoftHSM"
+	@./ci/scripts/setup_softhsm.sh
+	@echo "Start Integration Test"
+	cd ./integration/token/fungible/dloghsm; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-fabtoken-fabric
 integration-tests-fabtoken-fabric:
@@ -107,6 +118,7 @@ clean:
 	docker network prune -f
 	docker container prune -f
 	rm -rf ./integration/token/fungible/dlog/cmd/
+	rm -rf ./integration/token/fungible/dloghsm/cmd/
 	rm -rf ./integration/token/fungible/fabtoken/cmd/
 	rm -rf ./integration/token/fungible/odlog/cmd/
 	rm -rf ./integration/token/fungible/ofabtoken/cmd/
