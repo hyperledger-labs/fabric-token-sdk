@@ -149,9 +149,9 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 		}
 		switch wallet {
 		case "issuers":
-			us.HSM = topology.ToOptions(&n.Options).IsUseHSMForIssuer(name)
+			us.HSM = topology.ToOptions(n.Options).IsUseHSMForIssuer(name)
 		case "auditors":
-			us.HSM = topology.ToOptions(&n.Options).IsUseHSMForAuditor()
+			us.HSM = topology.ToOptions(n.Options).IsUseHSMForAuditor()
 		}
 		userSpecs = append(userSpecs, us)
 	}

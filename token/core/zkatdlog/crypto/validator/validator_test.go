@@ -376,10 +376,6 @@ func (f *fakeProv) IsSet(key string) bool {
 }
 
 func (f *fakeProv) UnmarshalKey(key string, rawVal interface{}) error {
-	*(rawVal.(*kvs.Opts)) = kvs.Opts{
-		Path: f.path,
-	}
-
 	return nil
 }
 
@@ -399,7 +395,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	registry := registry2.New()
 	registry.RegisterService(&fakeProv{typ: "memory"})
 
-	kvss, err := kvs.New("memory", "", registry)
+	kvss, err := kvs.New(registry, "memory", "")
 	Expect(err).NotTo(HaveOccurred())
 	err = registry.RegisterService(kvss)
 	Expect(err).NotTo(HaveOccurred())
