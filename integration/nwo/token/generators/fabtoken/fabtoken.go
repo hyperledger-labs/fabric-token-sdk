@@ -16,11 +16,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/network"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/network"
 	ftopology "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -71,19 +70,17 @@ PeerOrgs:{{ range .PeerOrgs }}
 
 var logger = flogging.MustGetLogger("integration.token.generators.fabtoken")
 
-type Organization = ftopology.Organization
-
 type Peer struct {
 	Name         string
 	Organization string
 }
 
 type Layout struct {
-	Orgs  []Organization
+	Orgs  []ftopology.Organization
 	Peers []Peer
 }
 
-func (l *Layout) PeerOrgs() []Organization {
+func (l *Layout) PeerOrgs() []ftopology.Organization {
 	return l.Orgs
 }
 
@@ -159,7 +156,7 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 		userSpecs = append(userSpecs, us)
 	}
 	l := &Layout{
-		Orgs: []Organization{
+		Orgs: []ftopology.Organization{
 			{
 				ID:            orgName,
 				MSPID:         mspID,
