@@ -72,7 +72,7 @@ func (o ServiceOptions) ParamAsString(key string) (string, error) {
 	}
 	s, ok := v.(string)
 	if !ok {
-		return "", errors.Errorf("expecting string, found [%t]", o)
+		return "", errors.Errorf("expecting string, found [%T]", o)
 	}
 	return s, nil
 }
