@@ -46,6 +46,8 @@ type ServiceOptions struct {
 	Namespace string
 	// PublicParamsFetcher is used to fetch the public parameters
 	PublicParamsFetcher PublicParamsFetcher
+	// Params is used to store any application specific parameter
+	Params map[string]interface{}
 }
 
 // TMSID returns the TMSID for the given ServiceOptions
@@ -55,6 +57,24 @@ func (o ServiceOptions) TMSID() TMSID {
 		Channel:   o.Channel,
 		Namespace: o.Namespace,
 	}
+}
+
+// ParamAsString returns the value bound to the passed key.
+// If the key is not found, it returns the empty string.
+// if the value bound to the passed key is not a string, it returns an error.
+func (o ServiceOptions) ParamAsString(key string) (string, error) {
+	if o.Params == nil {
+		return "", nil
+	}
+	v, ok := o.Params[key]
+	if !ok {
+		return "", nil
+	}
+	s, ok := v.(string)
+	if !ok {
+		return "", errors.Errorf("expecting string, found [%t]", o)
+	}
+	return s, nil
 }
 
 // CompileServiceOptions compiles the given list of ServiceOption
