@@ -9,6 +9,8 @@ package ttx
 import (
 	"encoding/asn1"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -270,7 +272,7 @@ func (t *Transaction) storeTransient() error {
 		return err
 	}
 
-	if err := t.Payload.Transient.Set("zkat", raw); err != nil {
+	if err := t.Payload.Transient.Set(keys.TokenRequestMetadata, raw); err != nil {
 		return err
 	}
 

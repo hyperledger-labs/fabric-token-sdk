@@ -118,7 +118,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		}
 		return err
 	}
-	if !transientMap.Exists("zkat") {
+	if !transientMap.Exists(keys.TokenRequestMetadata) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], no transient map found", txID)
 		}
@@ -137,7 +137,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	metadata, err := tms.NewMetadataFromBytes(transientMap.Get("zkat"))
+	metadata, err := tms.NewMetadataFromBytes(transientMap.Get(keys.TokenRequestMetadata))
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)

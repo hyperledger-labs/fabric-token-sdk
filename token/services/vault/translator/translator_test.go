@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	tokenNameSpace = "zkat"
+	tokenNameSpace = keys.TokenNamespace
 )
 
 var _ = Describe("Translator", func() {
@@ -36,7 +36,7 @@ var _ = Describe("Translator", func() {
 	BeforeEach(func() {
 		fakeRWSet = &mock.RWSet{}
 
-		writer = writer2.New("0", fakeRWSet, "zkat")
+		writer = writer2.New("0", fakeRWSet, tokenNameSpace)
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)
