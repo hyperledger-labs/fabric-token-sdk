@@ -11,13 +11,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // HashInfo contains the information regarding the hashing
@@ -40,7 +39,7 @@ type Script struct {
 // - The recipient must be set
 // - The deadline must be after the passed time reference
 // - HashInfo must be Available
-func (s Script) Validate(timeReference time.Time) error {
+func (s *Script) Validate(timeReference time.Time) error {
 	if s.Sender.IsNone() {
 		return errors.New("sender not set")
 	}

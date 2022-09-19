@@ -86,9 +86,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		if !output.IsHTLC() {
 			continue
 		}
-		// check script details, for example make sure the deadline has not passed
+		// check script details
 		script, err := output.Script()
-		assert.NoError(err, "cannot get htlc script from input")
+		assert.NoError(err, "cannot get htlc script from output")
 		assert.NoError(script.Validate(now), "script is not valid")
 	}
 
