@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"context"
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -20,14 +23,14 @@ type orderingView struct {
 
 // NewOrderingView returns a new instance of the orderingView struct.
 // The view does the following:
-// 1. It broadcasts the token transaction to the proper Fabric ordering service.
+// 1. It broadcasts the token transaction to the proper backend.
 func NewOrderingView(tx *Transaction) *orderingView {
 	return &orderingView{tx: tx}
 }
 
 // Call execute the view.
 // The view does the following:
-// 1. It broadcasts the token token transaction to the proper Fabric ordering service.
+// 1. It broadcasts the token token transaction to the proper backend.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "start", "orderingView", o.tx.ID())
@@ -48,29 +51,38 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 }
 
 type orderingAndFinalityView struct {
-	tx *Transaction
+	tx      *Transaction
+	timeout time.Duration
 }
 
 // NewOrderingAndFinalityView returns a new instance of the orderingAndFinalityView struct.
 // The view does the following:
-// 1. It broadcasts the token transaction to the proper Fabric ordering service.
+// 1. It broadcasts the token transaction to the proper backend.
 // 2. It waits for finality of the token transaction by listening to delivery events from one of the
 // Fabric peer nodes trusted by the FSC node.
 func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
 	return &orderingAndFinalityView{tx: tx}
 }
 
+// NewOrderingAndFinalityWithTimeoutView returns a new instance of the orderingAndFinalityView struct.
+// The view does the following:
+// 1. It broadcasts the token transaction to the proper backend.
+// 2. It waits for finality of the token transaction.
+func NewOrderingAndFinalityWithTimeoutView(tx *Transaction, timeout time.Duration) *orderingAndFinalityView {
+	return &orderingAndFinalityView{tx: tx, timeout: timeout}
+}
+
 // Call executes the view.
 // The view does the following:
-// 1. It broadcasts the token transaction to the proper Fabric ordering service.
-// 2. It waits for finality of the token transaction by listening to delivery events from one of the
-// Fabric peer nodes trusted by the FSC node.
-func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error) {
-	agent := metrics.Get(context)
+// 1. It broadcasts the token transaction to the proper backend.
+// 2. It waits for finality of the token transaction.
+// It returns in case the operation is not completed before the passed timeout.
+func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
+	agent := metrics.Get(ctx)
 	agent.EmitKey(0, "ttx", "start", "orderingAndFinalityView", o.tx.ID())
 	defer agent.EmitKey(0, "ttx", "end", "orderingAndFinalityView", o.tx.ID())
 
-	nw := network.GetInstance(context, o.tx.Network(), o.tx.Channel())
+	nw := network.GetInstance(ctx, o.tx.Network(), o.tx.Channel())
 	if nw == nil {
 		return nil, errors.Errorf("network [%s] not found", o.tx.Network())
 	}
@@ -102,5 +114,11 @@ func (o *orderingAndFinalityView) Call(context view.Context) (interface{}, error
 		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 
-	return nil, nw.IsFinal(o.tx.ID())
+	c := ctx.Context()
+	if o.timeout != 0 {
+		var cancel context.CancelFunc
+		c, cancel = context.WithTimeout(c, o.timeout)
+		defer cancel()
+	}
+	return nil, nw.IsFinal(c, o.tx.ID())
 }

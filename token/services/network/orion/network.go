@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"context"
 	"sync"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -106,8 +107,8 @@ func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error
 	panic("implement me")
 }
 
-func (n *Network) IsFinal(id string) error {
-	return n.n.Finality().IsFinal(id)
+func (n *Network) IsFinal(ctx context.Context, id string) error {
+	return n.n.Finality().IsFinal(ctx, id)
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {

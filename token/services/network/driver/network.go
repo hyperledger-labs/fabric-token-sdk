@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 
@@ -58,7 +59,7 @@ type Network interface {
 	IsFinalForParties(id string, endpoints ...view.Identity) error
 
 	// IsFinal takes in input a transaction id and waits for its confirmation.
-	IsFinal(id string) error
+	IsFinal(ctx context.Context, id string) error
 
 	// NewEnvelope returns a new instance of an envelope
 	NewEnvelope() Envelope

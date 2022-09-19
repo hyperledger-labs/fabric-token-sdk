@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package network
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -243,8 +244,11 @@ func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error
 }
 
 // IsFinal returns true if the given transaction is final
-func (n *Network) IsFinal(id string) error {
-	return n.n.IsFinal(id)
+func (n *Network) IsFinal(ctx context.Context, id string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return n.n.IsFinal(ctx, id)
 }
 
 // AnonymousIdentity returns a fresh anonymous identity

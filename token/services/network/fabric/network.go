@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"sync"
@@ -199,8 +200,8 @@ func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error
 	return n.ch.Finality().IsFinalForParties(id, endpoints...)
 }
 
-func (n *Network) IsFinal(id string) error {
-	return n.ch.Finality().IsFinal(id)
+func (n *Network) IsFinal(ctx context.Context, id string) error {
+	return n.ch.Finality().IsFinal(ctx, id)
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {
