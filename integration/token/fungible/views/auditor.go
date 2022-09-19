@@ -239,3 +239,33 @@ func (p *CurrentSpendingViewFactory) NewView(in []byte) (view.View, error) {
 
 	return f, nil
 }
+
+type SetTransactionAuditStatus struct {
+	TxID   string
+	Status ttx.TxStatus
+}
+
+// SetTransactionAuditStatusView is used to set the status of a given transaction in the audit db
+type SetTransactionAuditStatusView struct {
+	*SetTransactionAuditStatus
+}
+
+func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{}, error) {
+	w := ttx.MyAuditorWallet(context)
+	assert.NotNil(w, "failed getting default auditor wallet")
+
+	auditor := ttx.NewAuditor(context, w)
+	assert.NoError(auditor.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+
+	return nil, nil
+}
+
+type SetTransactionAuditStatusViewFactory struct{}
+
+func (p *SetTransactionAuditStatusViewFactory) NewView(in []byte) (view.View, error) {
+	f := &SetTransactionAuditStatusView{SetTransactionAuditStatus: &SetTransactionAuditStatus{}}
+	err := json.Unmarshal(in, f.SetTransactionAuditStatus)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}

@@ -71,6 +71,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		issuer.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		issuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		issuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
+		issuer.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
 		auditor = issuer
 	} else {
 		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
@@ -84,6 +85,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
 		auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+		auditor.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -95,6 +97,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	alice.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	alice.RegisterViewFactory("transfer", &views.TransferViewFactory{})
 	alice.RegisterViewFactory("transferWithSelector", &views.TransferWithSelectorViewFactory{})
 	alice.RegisterViewFactory("redeem", &views.RedeemViewFactory{})
@@ -128,6 +131,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 	bob.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	bob.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	bob.RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{})
+	bob.RegisterViewFactory("TokenSelectorUnlock", &views.TokenSelectorUnlockViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
