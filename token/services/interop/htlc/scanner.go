@@ -11,6 +11,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/base64"
+	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
@@ -19,8 +20,24 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
+	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
+
+const (
+	ScanForPreImageStartingTransaction = "htlc.ScanForPreImage.StartingTransaction"
+)
+
+// WithStartingTransaction sets the network name
+func WithStartingTransaction(txID string) token.ServiceOption {
+	return func(o *token.ServiceOptions) error {
+		if o.Params == nil {
+			o.Params = map[string]interface{}{}
+		}
+		o.Params[ScanForPreImageStartingTransaction] = txID
+		return nil
+	}
+}
 
 // ScanForPreImage scans the ledger for a preimage of the passed image, taking into account the timeout
 func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
@@ -36,10 +53,15 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 	}
 	tms := token.GetManagementService(ctx, opts...)
 
+	startingTxID, err := tokenOptions.ParamAsString(ScanForPreImageStartingTransaction)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid starting transaction param")
+	}
+
 	var preImage []byte
 	c, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	if err := ch.Delivery().Scan(c, "", func(tx *fabric.ProcessedTransaction) (bool, error) {
+	if err := ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
 		logger.Debugf("scanning [%s]...", tx.TxID())
 
 		rws, err := ch.Vault().GetEphemeralRWSet(tx.Results())
@@ -95,6 +117,9 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 		logger.Debugf("scanning for preimage on [%s] not found", tx.TxID())
 		return false, nil
 	}); err != nil {
+		if strings.Contains(err.Error(), "context done") {
+			return nil, errors.WithMessage(err, "timeout reached")
+		}
 		return nil, err
 	}
 

@@ -71,7 +71,7 @@ func TestHTLCSingleFabricNetwork(network *integration.Infrastructure) {
 
 	// htlc (lock, claim)
 	defaultTMSID := token.TMSID{}
-	preImage, _ := htlcLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	_, preImage, _ := htlcLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 	checkBalance(network, "alice", "", "USD", 100, token.WithTMSID(defaultTMSID))
 	checkBalance(network, "alice", "", "EUR", 0)
 	checkBalance(network, "bob", "", "EUR", 30)
@@ -104,7 +104,7 @@ func TestHTLCTwoFabricNetworks(network *integration.Infrastructure) {
 	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
 	checkBalance(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 
-	preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
+	_, preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
 	htlcLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
 
 	htlcClaim(network, beta, "alice", "", preImage)
@@ -149,18 +149,24 @@ func TestHTLCNoCrossClaimTwoFabricNetworks(network *integration.Infrastructure) 
 	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob.id1")
 	checkBalance(network, "bob", "bob.id1", "USD", 30, token.WithTMSID(beta))
 
-	preImage, hash := htlcLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
-	htlcLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
+	aliceLockTxID, preImage, hash := htlcLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
+	bobLockTxID, _, _ := htlcLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
 
 	go func() { htlcClaim(network, alpha, "alice", "alice.id2", preImage) }()
 	go func() { htlcClaim(network, beta, "bob", "bob.id2", preImage) }()
-	scan(network, "alice", hash, crypto.SHA256, token.WithTMSID(alpha))
-	scan(network, "bob", hash, crypto.SHA256, token.WithTMSID(beta))
+	scan(network, "alice", hash, crypto.SHA256, "", token.WithTMSID(alpha))
+	scan(network, "alice", hash, crypto.SHA256, aliceLockTxID, token.WithTMSID(alpha))
+
+	scan(network, "bob", hash, crypto.SHA256, "", token.WithTMSID(beta))
+	scan(network, "bob", hash, crypto.SHA256, bobLockTxID, token.WithTMSID(beta))
 
 	checkBalance(network, "alice", "alice.id1", "EUR", 20, token.WithTMSID(alpha))
 	checkBalance(network, "alice", "alice.id2", "EUR", 10, token.WithTMSID(alpha))
 	checkBalance(network, "bob", "bob.id1", "USD", 20, token.WithTMSID(beta))
 	checkBalance(network, "bob", "bob.id2", "USD", 10, token.WithTMSID(beta))
+
+	txID := tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
+	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"timeout reached"}, token.WithTMSID(alpha))
 }
 
 func TestFastExchange(network *integration.Infrastructure) {

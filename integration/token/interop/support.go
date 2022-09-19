@@ -86,7 +86,7 @@ func checkBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
-func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) ([]byte, []byte) {
+func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {
 	result, err := network.Client(id).CallView("htlc.lock", common.JSONMarshall(&htlc.Lock{
 		TMSID:               tmsID,
 		ReclamationDeadline: deadline,
@@ -114,14 +114,14 @@ func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string,
 		if len(hash) != 0 {
 			Expect(lockResult.Hash).To(BeEquivalentTo(hash))
 		}
-		return lockResult.PreImage, lockResult.Hash
+		return lockResult.TxID, lockResult.PreImage, lockResult.Hash
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
 			Expect(err.Error()).To(ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
-		return nil, nil
+		return "", nil, nil
 	}
 }
 
@@ -178,15 +178,33 @@ func fastExchange(network *integration.Infrastructure, id string, recipient stri
 	time.Sleep(5 * time.Second)
 }
 
-func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, opts ...token.ServiceOption) {
+func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
 	_, err = network.Client(id).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
-		TMSID:    options.TMSID(),
-		Timeout:  30 * time.Second,
-		Hash:     hash,
-		HashFunc: hashFunc,
+		TMSID:                 options.TMSID(),
+		Timeout:               30 * time.Second,
+		Hash:                  hash,
+		HashFunc:              hashFunc,
+		StartingTransactionID: startingTransactionID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
+}
+
+func scanWithError(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, errorMsgs []string, opts ...token.ServiceOption) {
+	options, err := token.CompileServiceOptions(opts...)
+	Expect(err).NotTo(HaveOccurred())
+
+	_, err = network.Client(id).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
+		TMSID:                 options.TMSID(),
+		Timeout:               30 * time.Second,
+		Hash:                  hash,
+		HashFunc:              hashFunc,
+		StartingTransactionID: startingTransactionID,
+	}))
+	Expect(err).To(HaveOccurred())
+	for _, msg := range errorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg))
+	}
 }
