@@ -73,7 +73,7 @@ func (s *QueryExecutor) QueryByKey(state interface{}, key string, value string) 
 		if err != nil {
 			return errors.Wrap(err, "failed to convert quantity")
 		}
-		if q.Cmp(token2.NewQuantityFromUInt64(1)) == 0 {
+		if q.Cmp(token2.NewOneQuantity(s.precision)) == 0 {
 			// this is the token
 			decoded, err := base64.StdEncoding.DecodeString(t.Type)
 			if err != nil {

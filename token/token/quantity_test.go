@@ -18,7 +18,7 @@ import (
 
 func TestToQuantity(t *testing.T) {
 	_, err := token2.ToQuantity(ToHex(100), 0)
-	assert.Equal(t, "precision be larger than 0", err.Error())
+	assert.Equal(t, "precision must be larger than 0", err.Error())
 
 	_, err = token2.ToQuantity(IntToHex(-100), 64)
 	assert.Equal(t, "invalid input [0x-64,64]", err.Error())

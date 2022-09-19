@@ -156,6 +156,10 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
 	// If no specific tokens are requested, then a custom token selection process start
+	precision := token2.GetManagementService(context).PublicParametersManager().Precision()
+	amount, err := token.UInt64ToQuantity(t.Amount, precision)
+	assert.NoError(err, "failed to convert to quantity")
+
 	if len(t.TokenIDs) == 0 {
 		// The sender uses the default token selector each transaction comes equipped with
 		selector, err := tx.Selector()
@@ -171,7 +175,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 			// Select the request amount of tokens of the given type
 			ids, sum, err = selector.Select(
 				ttx.GetWallet(context, t.Wallet),
-				token.NewQuantityFromUInt64(t.Amount).Decimal(),
+				amount.Decimal(),
 				t.Type,
 			)
 			// If an error occurs and retry has been asked, then wait first a bit
@@ -207,7 +211,6 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		assert.NoError(err, "failed getting tokens from ids")
 
 		// Then, the sender double check that what returned by the selector is correct
-		precision := tx.TokenService().PublicParametersManager().Precision()
 		recomputedSum := token.NewZeroQuantity(precision)
 		for _, tok := range tokens {
 			// Is the token of the right type?
@@ -220,7 +223,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 		// Is the recomputed sum correct?
 		assert.True(sum.Cmp(recomputedSum) == 0, "sums do not match")
 		// Is the amount selected equal or larger than what requested?
-		assert.False(sum.Cmp(token.NewQuantityFromUInt64(t.Amount)) < 0, "if this point is reached, funds are sufficients")
+		assert.False(sum.Cmp(amount) < 0, "if this point is reached, funds are sufficient")
 
 		t.TokenIDs = ids
 	}

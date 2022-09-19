@@ -24,13 +24,13 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	id, err := ttx.RespondRequestRecipientIdentityUsingWallet(context, "")
 	assert.NoError(err, "failed to respond to identity request")
 
-	// At some point, the recipient receives the token transaction that in the mean time has been assembled
+	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed to receive tokens")
 
 	// The recipient can perform any check on the transaction as required by the business process
 	// In particular, here, the recipient checks that the transaction contains at least one output, and
-	// that there is at least one output that names the recipient. (The recipient is receiving something.
+	// that there is at least one output that names the recipient.(The recipient is receiving something).
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 	assert.True(outputs.Count() > 0)
@@ -39,13 +39,13 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// The recipient here is checking that, for each type of token she is receiving,
 	// she does not hold already more than 3000 units of that type.
 	// Just a fancy query to show the capabilities of the services we are using.
+	precision := tx.TokenService().PublicParametersManager().Precision()
 	for _, output := range outputs.ByRecipient(id).Outputs() {
 		unspentTokens, err := ttx.MyWallet(context).ListUnspentTokens(ttx.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
-		assert.True(
-			unspentTokens.Sum(tx.TokenService().PublicParametersManager().Precision()).Cmp(token2.NewQuantityFromUInt64(3000)) <= 0,
-			"cannot have more than 3000 unspent quantity for type [%s]", output.Type,
-		)
+		upperBound, err := token2.UInt64ToQuantity(3000, precision)
+		assert.NoError(err, "failed to convert to quantity")
+		assert.True(unspentTokens.Sum(precision).Cmp(upperBound) <= 0, "cannot have more than 3000 unspent quantity for type [%s]", output.Type)
 	}
 
 	// If everything is fine, the recipient accepts and sends back her signature.
@@ -89,13 +89,13 @@ func (a *AcceptPreparedCashView) Call(context view.Context) (interface{}, error)
 	id, err := ttx.RespondRequestRecipientIdentityUsingWallet(context, "")
 	assert.NoError(err, "failed to respond to identity request")
 
-	// At some point, the recipient receives the token transaction that in the mean time has been assembled
+	// At some point, the recipient receives the token transaction that in the meantime has been assembled
 	tx, err := ttx.ReceiveTransaction(context)
 	assert.NoError(err, "failed to receive tokens")
 
 	// The recipient can perform any check on the transaction as required by the business process
 	// In particular, here, the recipient checks that the transaction contains at least one output, and
-	// that there is at least one output that names the recipient. (The recipient is receiving something.
+	// that there is at least one output that names the recipient (The recipient is receiving something).
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed getting outputs")
 	assert.True(outputs.Count() > 0)

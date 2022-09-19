@@ -38,12 +38,12 @@ type Quantity interface {
 	ToBigInt() *big.Int
 }
 
-// ToQuantity converts a string q to a BigQuantity of a given precision.
+// ToQuantity converts a string q to a Quantity of a given precision.
 // Argument q is supposed to be formatted following big.Int#scan specification.
 // The precision is expressed in bits.
 func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
@@ -54,6 +54,29 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	}
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
+	}
+
+	switch precision {
+	case 64:
+		return &UInt64Quantity{Value: v.Uint64()}, nil
+	default:
+		return &BigQuantity{Int: v, Precision: precision}, nil
+	}
+}
+
+// UInt64ToQuantity converts a uint64 q to a Quantity of a given precision.
+// Argument q is supposed to be formatted following big.Int#scan specification.
+// The precision is expressed in bits.
+func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
+	if precision == 0 {
+		return nil, errors.New("precision must be larger than 0")
+	}
+	v := big.NewInt(0).SetUint64(u)
+	if v.Cmp(big.NewInt(0)) < 0 {
+		return nil, errors.New("quantity must be larger than 0")
+	}
+	if v.BitLen() > int(precision) {
+		return nil, errors.Errorf("%d has precision %d > %d", u, v.BitLen(), precision)
 	}
 
 	switch precision {
@@ -91,7 +114,7 @@ type BigQuantity struct {
 
 func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
