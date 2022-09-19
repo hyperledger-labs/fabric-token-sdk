@@ -9,7 +9,6 @@ package htlc
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -61,23 +60,26 @@ func (cv *ClaimVerifier) Verify(tokenRequestAndTxID, claimSignature []byte) erro
 	sig := &ClaimSignature{}
 	err := json.Unmarshal(claimSignature, sig)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to unmarshal claim signature")
 	}
 
 	msg := concatTokenRequestTxIDPreimage(tokenRequestAndTxID, sig.Preimage)
 	if err := cv.Recipient.Verify(msg, sig.RecipientSignature); err != nil {
-		return err
+		return errors.WithMessagef(err, "failed to verify recipient signature")
 	}
 
+	if !cv.HashInfo.HashFunc.Available() {
+		return errors.Errorf("script hash function not available [%d]", cv.HashInfo.HashFunc)
+	}
 	hash := cv.HashInfo.HashFunc.New()
 	if _, err = hash.Write(sig.Preimage); err != nil {
-		return err
+		return errors.Wrapf(err, "failed to compute hash image")
 	}
 	image := hash.Sum(nil)
 	image = []byte(cv.HashInfo.HashEncoding.New().EncodeToString(image))
 
 	if !bytes.Equal(cv.HashInfo.Hash, image) {
-		return fmt.Errorf("hash mismatch: SHA(%x) = %x != %x", sig.Preimage, image, cv.HashInfo.Hash)
+		return errors.Errorf("hash mismatch: SHA(%x) = %x != %x", sig.Preimage, image, cv.HashInfo.Hash)
 	}
 
 	return nil

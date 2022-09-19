@@ -421,12 +421,13 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			}
 
 			outputs = append(outputs, &Output{
-				ActionIndex:  i,
-				Index:        counter,
-				Owner:        tok.Owner.Raw,
-				EnrollmentID: eID,
-				Type:         tok.Type,
-				Quantity:     q,
+				ActionIndex:    i,
+				Index:          counter,
+				Owner:          tok.Owner.Raw,
+				OwnerAuditInfo: issueMeta.ReceiversAuditInfos[j],
+				EnrollmentID:   eID,
+				Type:           tok.Type,
+				Quantity:       q,
 			})
 			counter++
 		}
@@ -473,8 +474,10 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 				return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 			}
 			var eID string
+			var ownerAuditInfo []byte
 			if len(tok.Owner.Raw) != 0 {
-				eID, err = tms.GetEnrollmentID(transferMeta.ReceiverAuditInfos[j])
+				ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]
+				eID, err = tms.GetEnrollmentID(ownerAuditInfo)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 				}
@@ -486,12 +489,13 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			}
 
 			outputs = append(outputs, &Output{
-				ActionIndex:  i,
-				Index:        counter,
-				Owner:        tok.Owner.Raw,
-				EnrollmentID: eID,
-				Type:         tok.Type,
-				Quantity:     q,
+				ActionIndex:    i,
+				Index:          counter,
+				Owner:          tok.Owner.Raw,
+				OwnerAuditInfo: ownerAuditInfo,
+				EnrollmentID:   eID,
+				Type:           tok.Type,
+				Quantity:       q,
 			})
 			counter++
 		}
@@ -554,10 +558,11 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 			}
 
 			inputs = append(inputs, &Input{
-				ActionIndex:  i,
-				Id:           transferMeta.TokenIDAt(j),
-				Owner:        transferMeta.Senders[j],
-				EnrollmentID: eID,
+				ActionIndex:    i,
+				Id:             transferMeta.TokenIDAt(j),
+				Owner:          transferMeta.Senders[j],
+				OwnerAuditInfo: senderAuditInfo,
+				EnrollmentID:   eID,
 			})
 		}
 	}
@@ -887,6 +892,13 @@ func (r *Request) AuditInputs() (*InputStream, error) {
 			return nil, errors.Wrapf(err, "failed converting quantity [%s]", toks[i].Quantity)
 		}
 		in.Quantity = q
+
+		// retrieve the owner's audit info
+		ownerAuditInfo, err := r.TokenService.tms.GetAuditInfo(toks[i].Owner.Raw)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
+		}
+		in.OwnerAuditInfo = ownerAuditInfo
 	}
 	return inputs, nil
 }

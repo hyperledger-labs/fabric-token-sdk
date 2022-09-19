@@ -9,21 +9,18 @@ package htlc
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
-// ScriptInfo includes info about the sender and the recipient
-type ScriptInfo struct {
-	Sender    []byte
-	Recipient []byte
+type AuditInfoProvider interface {
+	GetAuditInfo(identity view.Identity) ([]byte, error)
 }
 
 // GetOwnerAuditInfo returns the audit info of the owner
-func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
+func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
 	if len(raw) == 0 {
 		// this is a redeem
 		return nil, nil
@@ -34,7 +31,7 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
 	}
 	if owner.Type == identity.SerializedIdentityType {
-		auditInfo, err := view2.GetSigService(s).GetAuditInfo(raw)
+		auditInfo, err := s.GetAuditInfo(raw)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
 		}
@@ -47,12 +44,12 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 	}
 
 	auditInfo := &ScriptInfo{}
-	auditInfo.Sender, err = view2.GetSigService(s).GetAuditInfo(sender)
+	auditInfo.Sender, err = s.GetAuditInfo(sender)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", view.Identity(raw).String())
 	}
 
-	auditInfo.Recipient, err = view2.GetSigService(s).GetAuditInfo(recipient)
+	auditInfo.Recipient, err = s.GetAuditInfo(recipient)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for script [%s]", view.Identity(raw).String())
 	}
@@ -61,6 +58,20 @@ func GetOwnerAuditInfo(raw []byte, s view2.ServiceProvider) ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
 	}
 	return raw, nil
+}
+
+// ScriptInfo includes info about the sender and the recipient
+type ScriptInfo struct {
+	Sender    []byte
+	Recipient []byte
+}
+
+func (si *ScriptInfo) Marshal() ([]byte, error) {
+	return json.Marshal(si)
+}
+
+func (si *ScriptInfo) Unarshal(raw []byte) error {
+	return json.Unmarshal(raw, si)
 }
 
 // GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner

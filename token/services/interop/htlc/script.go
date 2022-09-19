@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // HashInfo contains the information regarding the hashing
@@ -31,6 +32,30 @@ type Script struct {
 	Recipient view.Identity
 	Deadline  time.Time
 	HashInfo  HashInfo
+}
+
+// Validate performs the following checks:
+// - The sender must be set
+// - The recipient must be set
+// - The deadline must be after the passed time reference
+// - HashInfo must be Available
+func (s *Script) Validate(timeReference time.Time) error {
+	if s.Sender.IsNone() {
+		return errors.New("sender not set")
+	}
+	if s.Recipient.IsNone() {
+		return errors.New("recipient not set")
+	}
+	if s.Deadline.Before(timeReference) {
+		return errors.New("expiration date has already passed")
+	}
+	if !s.HashInfo.HashFunc.Available() {
+		return errors.New("hash function not available")
+	}
+	if !s.HashInfo.HashEncoding.Available() {
+		return errors.New("encoding function not available")
+	}
+	return nil
 }
 
 // ScriptOwnership implements the Ownership interface for scripts

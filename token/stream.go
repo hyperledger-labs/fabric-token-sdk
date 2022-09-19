@@ -26,6 +26,8 @@ type Output struct {
 	Index uint64
 	// Owner is the identity of the owner of this output
 	Owner view.Identity
+	// OwnerAuditInfo contains the audit information of the output's owner
+	OwnerAuditInfo []byte
 	// EnrollmentID is the enrollment ID of the owner of this output
 	EnrollmentID string
 	// Type is the type of token
@@ -40,12 +42,13 @@ func (o Output) ID(txID string) *token2.ID {
 
 // Input models an input of a token action
 type Input struct {
-	ActionIndex  int
-	Id           *token2.ID
-	Owner        view.Identity
-	EnrollmentID string
-	Type         string
-	Quantity     token2.Quantity
+	ActionIndex    int
+	Id             *token2.ID
+	Owner          view.Identity
+	OwnerAuditInfo []byte
+	EnrollmentID   string
+	Type           string
+	Quantity       token2.Quantity
 }
 
 // OutputStream models a stream over a set of outputs (Output).
