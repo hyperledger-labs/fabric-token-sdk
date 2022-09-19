@@ -144,7 +144,9 @@ func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	assert.True(outputs.Count() >= 1, "expected at least one output, got [%d]", outputs.Count())
 	outputs = outputs.ByScript()
 	assert.True(outputs.Count() == 1, "expected only one htlc output, got [%d]", outputs.Count())
+
 	script := outputs.ScriptAt(0)
+	assert.NoError(script.Validate(time.Now()), "script is not valid")
 	assert.NotNil(script, "expected an htlc script")
 	assert.True(me.Equal(script.Recipient), "expected me as recipient of the script")
 	assert.True(sender.Equal(script.Sender), "expected sender as sender of the script")
