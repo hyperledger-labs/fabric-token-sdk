@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -270,7 +271,7 @@ func (t *Transaction) storeTransient() error {
 		return err
 	}
 
-	if err := t.Payload.Transient.Set("zkat", raw); err != nil {
+	if err := t.Payload.Transient.Set(keys.TokenRequestMetadata, raw); err != nil {
 		return err
 	}
 

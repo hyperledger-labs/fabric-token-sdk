@@ -26,7 +26,7 @@ const (
 	TokenMineKeyPrefix          = "mine"
 	TokenSetupKeyPrefix         = "setup"
 	IssuedHistoryTokenKeyPrefix = "issued"
-	TokenNameSpace              = "zkat"
+	TokenNamespace              = "tns"
 	numComponentsInKey          = 2 // 2 components: txid, index, excluding TokenKeyPrefix
 	numComponentsInExtendedKey  = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
 	Info                        = "info"
@@ -35,6 +35,7 @@ const (
 	SerialNumber                = "sn"
 	IssueActionMetadata         = "iam"
 	TransferActionMetadata      = "tam"
+	TokenRequestMetadata        = "trmd"
 )
 
 func GetTokenIdFromKey(key string) (*token.ID, error) {

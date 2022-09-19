@@ -9,6 +9,7 @@ package token
 import (
 	fsc2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	. "github.com/onsi/gomega"
 
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -70,7 +71,7 @@ func (t *Topology) AddTMS(backend BackedTopology, channel string, driver string)
 		BackendTopology: backend,
 		Network:         backend.Name(),
 		Channel:         channel,
-		Namespace:       "zkat",
+		Namespace:       keys.TokenNamespace,
 		Driver:          driver,
 		Certifiers:      []string{},
 		BackendParams:   map[string]interface{}{},
