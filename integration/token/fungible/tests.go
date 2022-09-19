@@ -385,6 +385,19 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
 
+	// Test Auditor ability to override transaction state
+	txID3, _ := PrepareTransferCash(network, "bob", "", "PINE", 10, "alice", auditor, nil)
+	CheckBalance(network, "alice", "", "PINE", 0)
+	CheckHolding(network, "alice", "", "PINE", 10)
+	CheckBalance(network, "bob", "", "PINE", 55)
+	CheckHolding(network, "bob", "", "PINE", 45)
+	SetTransactionAuditStatus(network, auditor, txID3, ttx.Deleted)
+	CheckBalanceAndHolding(network, "alice", "", "PINE", 0)
+	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
+	TokenSelectorUnlock(network, "bob", txID3)
+
+	// Addition transfers
+
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
 	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150)
@@ -769,14 +782,17 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 }
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token2.ID, expectedErrorMsgs ...string) (string, []byte) {
-	txBoxed, err := network.Client(id).CallView("prepareTransfer", common.JSONMarshall(&views.Transfer{
+	transferInput := &views.Transfer{
 		Auditor:   auditor,
 		Wallet:    wallet,
-		TokenIDs:  []*token2.ID{tokenID},
 		Type:      typ,
 		Amount:    amount,
 		Recipient: network.Identity(receiver),
-	}))
+	}
+	if tokenID != nil {
+		transferInput.TokenIDs = []*token2.ID{tokenID}
+	}
+	txBoxed, err := network.Client(id).CallView("prepareTransfer", common.JSONMarshall(transferInput))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 	} else {
@@ -789,6 +805,21 @@ func PrepareTransferCash(network *integration.Infrastructure, id string, wallet 
 	res := &views.PrepareTransferResult{}
 	common.JSONUnmarshal(txBoxed.([]byte), res)
 	return res.TxID, res.TXRaw
+}
+
+func SetTransactionAuditStatus(network *integration.Infrastructure, id string, txID string, txStatus ttx.TxStatus) {
+	_, err := network.Client(id).CallView("SetTransactionAuditStatus", common.JSONMarshall(views.SetTransactionAuditStatus{
+		TxID:   txID,
+		Status: txStatus,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func TokenSelectorUnlock(network *integration.Infrastructure, id string, txID string) {
+	_, err := network.Client(id).CallView("TokenSelectorUnlock", common.JSONMarshall(views.TokenSelectorUnlock{
+		TxID: txID,
+	}))
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func BroadcastPreparedTransferCash(network *integration.Infrastructure, id string, tx []byte, finality bool, expectedErrorMsgs ...string) {

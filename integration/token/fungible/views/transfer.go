@@ -391,3 +391,27 @@ func (p *BroadcastPreparedTransferViewFactory) NewView(in []byte) (view.View, er
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }
+
+type TokenSelectorUnlock struct {
+	TxID string
+}
+
+// TokenSelectorUnlockView is a view that broadcasts a prepared transfer transaction
+type TokenSelectorUnlockView struct {
+	*TokenSelectorUnlock
+}
+
+func (t *TokenSelectorUnlockView) Call(context view.Context) (interface{}, error) {
+	assert.NoError(token2.GetManagementService(context).SelectorManager().Unlock(t.TxID), "failed to unlock tokens locked by transaction [%s]", t.TxID)
+
+	return nil, nil
+}
+
+type TokenSelectorUnlockViewFactory struct{}
+
+func (p *TokenSelectorUnlockViewFactory) NewView(in []byte) (view.View, error) {
+	f := &TokenSelectorUnlockView{TokenSelectorUnlock: &TokenSelectorUnlock{}}
+	err := json.Unmarshal(in, f.TokenSelectorUnlock)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
