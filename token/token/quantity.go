@@ -43,7 +43,7 @@ type Quantity interface {
 // The precision is expressed in bits.
 func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
@@ -69,7 +69,7 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 // The precision is expressed in bits.
 func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v := big.NewInt(0).SetUint64(u)
 	if v.Cmp(big.NewInt(0)) < 0 {
@@ -114,7 +114,7 @@ type BigQuantity struct {
 
 func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
