@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"context"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
@@ -114,11 +113,5 @@ func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 
-	c := ctx.Context()
-	if o.timeout != 0 {
-		var cancel context.CancelFunc
-		c, cancel = context.WithTimeout(c, o.timeout)
-		defer cancel()
-	}
-	return nil, nw.IsFinal(c, o.tx.ID())
+	return ctx.RunView(NewFinalityWithTimeoutView(o.tx, o.timeout))
 }

@@ -8,6 +8,7 @@ package views
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -415,6 +416,40 @@ type TokenSelectorUnlockViewFactory struct{}
 func (p *TokenSelectorUnlockViewFactory) NewView(in []byte) (view.View, error) {
 	f := &TokenSelectorUnlockView{TokenSelectorUnlock: &TokenSelectorUnlock{}}
 	err := json.Unmarshal(in, f.TokenSelectorUnlock)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+type FinalityWithTimeout struct {
+	Tx      []byte
+	Timeout time.Duration
+}
+
+// FinalityWithTimeoutView is a view that runs the finality view with timeout.
+// The timeout is expected to happen
+type FinalityWithTimeoutView struct {
+	*FinalityWithTimeout
+}
+
+func (r *FinalityWithTimeoutView) Call(ctx view.Context) (interface{}, error) {
+	tx, err := ttx.NewTransactionFromBytes(ctx, "", "", r.Tx)
+	assert.NoError(err, "failed unmarshalling transaction")
+
+	// broadcast the transaction to the ordering service
+	start := time.Now()
+	_, err = ctx.RunView(ttx.NewFinalityWithTimeoutView(tx, r.Timeout))
+	end := time.Now()
+	assert.Error(err)
+	assert.True(strings.Contains(err.Error(), "timeout"))
+
+	return end.Sub(start).Seconds(), nil
+}
+
+type FinalityWithTimeoutViewFactory struct{}
+
+func (i *FinalityWithTimeoutViewFactory) NewView(in []byte) (view.View, error) {
+	f := &FinalityWithTimeoutView{FinalityWithTimeout: &FinalityWithTimeout{}}
+	err := json.Unmarshal(in, f.FinalityWithTimeout)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

@@ -8,6 +8,7 @@ package fungible
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -386,7 +387,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
 
 	// Test Auditor ability to override transaction state
-	txID3, _ := PrepareTransferCash(network, "bob", "", "PINE", 10, "alice", auditor, nil)
+	txID3, tx3 := PrepareTransferCash(network, "bob", "", "PINE", 10, "alice", auditor, nil)
 	CheckBalance(network, "alice", "", "PINE", 0)
 	CheckHolding(network, "alice", "", "PINE", 10)
 	CheckBalance(network, "bob", "", "PINE", 55)
@@ -395,6 +396,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
 	TokenSelectorUnlock(network, "bob", txID3)
+	FinalityWithTimeout(network, "bob", tx3, 20*time.Second)
 
 	// Addition transfers
 
@@ -840,6 +842,18 @@ func BroadcastPreparedTransferCash(network *integration.Infrastructure, id strin
 	time.Sleep(5 * time.Second)
 }
 
+func FinalityWithTimeout(network *integration.Infrastructure, id string, tx []byte, timeout time.Duration) {
+	elapsedBoxed, err := network.Client(id).CallView("FinalityWithTimeout", common.JSONMarshall(&views.FinalityWithTimeout{
+		Tx:      tx,
+		Timeout: timeout,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+
+	elapsed := JSONUnmarshalFloat64(elapsedBoxed)
+	Expect(elapsed > timeout.Seconds()).To(BeTrue())
+	Expect(elapsed < timeout.Seconds()*2).To(BeTrue())
+}
+
 func GetTransactionInfo(network *integration.Infrastructure, id string, txnId string) *ttx.TransactionInfo {
 	boxed, err := network.Client(id).CallView("transactionInfo", common.JSONMarshall(&views.TransactionInfo{
 		TransactionID: txnId,
@@ -939,4 +953,19 @@ func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...st
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", nil)
 		Expect(err).NotTo(HaveOccurred())
 	}
+}
+
+func JSONUnmarshalFloat64(v interface{}) float64 {
+	var s float64
+	switch v := v.(type) {
+	case []byte:
+		err := json.Unmarshal(v, &s)
+		Expect(err).NotTo(HaveOccurred())
+	case string:
+		err := json.Unmarshal([]byte(v), &s)
+		Expect(err).NotTo(HaveOccurred())
+	default:
+		panic(fmt.Sprintf("type not recognized [%T]", v))
+	}
+	return s
 }
