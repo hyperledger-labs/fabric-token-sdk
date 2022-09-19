@@ -26,14 +26,19 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 
 	var outs []*Output
 	var metas [][]byte
+	precision := s.PublicParamsManager().PublicParameters().Precision()
 	for i, v := range values {
+		q, err := token2.UInt64ToQuantity(v, precision)
+		if err != nil {
+			return nil, nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", v, precision)
+		}
 		outs = append(outs, &Output{
 			Output: &token2.Token{
 				Owner: &token2.Owner{
 					Raw: owners[i],
 				},
 				Type:     typ,
-				Quantity: token2.NewQuantityFromUInt64(v).Hex(),
+				Quantity: q.Hex(),
 			},
 		})
 

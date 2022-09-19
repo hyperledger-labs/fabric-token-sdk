@@ -998,17 +998,21 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 	}
 
 	// Compute output tokens
-	outputSum := uint64(0)
+	precision := r.TokenService.PublicParametersManager().Precision()
+	outputSum := token.NewZeroQuantity(precision)
 	var outputTokens []*token.Token
 	for i, value := range values {
-		outputSum += value
+		q, err := token.UInt64ToQuantity(value, precision)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", value, precision)
+		}
+		outputSum = outputSum.Add(q)
 		outputTokens = append(outputTokens, &token.Token{
 			Owner:    &token.Owner{Raw: owners[i]},
 			Type:     typ,
-			Quantity: token.NewQuantityFromUInt64(value).Hex(),
+			Quantity: q.Hex(),
 		})
 	}
-	qOutputSum := token.NewQuantityFromUInt64(outputSum)
 
 	// Select input tokens, if not passed as opt
 	if len(transferOpts.TokenIDs) == 0 {
@@ -1020,15 +1024,15 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}
 		}
-		tokenIDs, inputSum, err = selector.Select(wallet, token.NewQuantityFromUInt64(outputSum).Decimal(), typ)
+		tokenIDs, inputSum, err = selector.Select(wallet, outputSum.Decimal(), typ)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed selecting tokens")
 		}
 	}
 
 	// Is there a rest?
-	if inputSum.Cmp(qOutputSum) == 1 {
-		diff := inputSum.Sub(qOutputSum)
+	if inputSum.Cmp(outputSum) == 1 {
+		diff := inputSum.Sub(outputSum)
 		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
 		pseudonym, err := wallet.GetRecipientIdentity()

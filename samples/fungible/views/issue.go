@@ -61,7 +61,11 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 		fmt.Printf("History [%s,%s]<[230]?\n", history.Sum(precision).ToBigInt().Text(10), p.TokenType)
 
 		// Fail if the sum of the issued tokens and the current quest is larger than 230
-		assert.True(history.Sum(precision).Add(token2.NewQuantityFromUInt64(p.Quantity)).Cmp(token2.NewQuantityFromUInt64(230)) <= 0)
+		q, err := token2.UInt64ToQuantity(p.Quantity, precision)
+		assert.NoError(err, "failed to convert quantity")
+		upperBound, err := token2.UInt64ToQuantity(230, precision)
+		assert.NoError(err, "failed to convert upper bound")
+		assert.True(history.Sum(precision).Add(q).Cmp(upperBound) <= 0)
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
