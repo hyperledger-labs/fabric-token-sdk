@@ -45,10 +45,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		upperLimit, err := token2.UInt64ToQuantity(3000, precision)
 		assert.NoError(err, "failed to convert to quantity")
-		assert.True(
-			unspentTokens.Sum(precision).Cmp(upperLimit) <= 0,
-			"cannot have more than 3000 unspent quantity for type [%s]", output.Type,
-		)
+		assert.True(unspentTokens.Sum(precision).Cmp(upperLimit) <= 0, "cannot have more than 3000 unspent quantity for type [%s]", output.Type)
 	}
 
 	// If everything is fine, the recipient accepts and sends back her signature.
