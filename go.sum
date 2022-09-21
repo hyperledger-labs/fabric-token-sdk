@@ -766,8 +766,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/huin/goupnp v1.0.0 h1:wg75sLpL6DZqwHQN6E1Cfk6mtfzS45z8OV+ic+DtHRo=
 github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7Bnc=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220916063604-a362fd582d7d h1:QlQBkhq7hmpkE/FRemyiVvYG2Wf8TK4haaoelFlFw+0=
-github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220916063604-a362fd582d7d/go.mod h1:L2ofOZpk4xaJ7fB2CNQdr2zywUoTs5KKld87vRcVCG0=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220921090436-d89a8f762c3f h1:mxIpXV9ysHPIVA5/i1BY+6sle04rh4FHfnxUko7UIp0=
+github.com/hyperledger-labs/fabric-smart-client v0.0.0-20220921090436-d89a8f762c3f/go.mod h1:L2ofOZpk4xaJ7fB2CNQdr2zywUoTs5KKld87vRcVCG0=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5 h1:HFGRTuMZgzo9EtyJeFAhVSlbrj6x3jtY0aDcghdjzRE=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5/go.mod h1:At8hiFATfkDXQ4AFLVbaTiC9GDhVDo8aN/supb1KBb4=
 github.com/hyperledger-labs/orion-server v0.2.5 h1:aFudmB9SAnsT5v8jhazkuszEu0pdJNFqaYZF2GpvAuI=
