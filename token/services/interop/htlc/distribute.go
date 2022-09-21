@@ -37,6 +37,20 @@ func (t *Terms) FromBytes(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
+// Validate checks the terms
+func (t *Terms) Validate() error {
+	if t.ReclamationDeadline <= 0 {
+		return errors.New("reclamation deadline should be larger than zero")
+	}
+	if t.Type1 == "" || t.Type2 == "" {
+		return errors.New("types should be set")
+	}
+	if t.Amount1 <= 0 || t.Amount2 <= 0 {
+		return errors.New("amounts should be larger than zero")
+	}
+	return nil
+}
+
 // DistributeTermsView holds the terms and the recipient identity to be used by the view
 type DistributeTermsView struct {
 	recipient view.Identity
@@ -87,6 +101,5 @@ func (v *termsReceiverView) Call(context view.Context) (interface{}, error) {
 	if err := terms.FromBytes(payload); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling terms")
 	}
-	// TODO review terms and accept
 	return terms, nil
 }
