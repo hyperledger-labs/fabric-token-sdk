@@ -29,7 +29,7 @@ func NewOrderingView(tx *Transaction) *orderingView {
 
 // Call execute the view.
 // The view does the following:
-// 1. It broadcasts the token token transaction to the proper backend.
+// 1. It broadcasts the token transaction to the proper backend.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "start", "orderingView", o.tx.ID())
