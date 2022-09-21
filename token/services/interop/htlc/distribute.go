@@ -37,8 +37,8 @@ func (t *Terms) FromBytes(raw []byte) error {
 	return json.Unmarshal(raw, t)
 }
 
-// Review checks the terms
-func (t *Terms) Review() error {
+// Validate checks the terms
+func (t *Terms) Validate() error {
 	if t.ReclamationDeadline <= 0 {
 		return errors.New("reclamation deadline should be larger than zero")
 	}

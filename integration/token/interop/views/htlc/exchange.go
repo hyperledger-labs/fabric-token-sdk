@@ -189,7 +189,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	terms, err := htlc.ReceiveTerms(context)
 	assert.NoError(err, "failed to receive the terms")
 
-	assert.NoError(terms.Review(), "failed reviewing terms")
+	assert.NoError(terms.Validate(), "failed to validate the terms")
 
 	// Initiator's Leg
 	var script *htlc.Script
