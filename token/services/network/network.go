@@ -12,6 +12,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -318,6 +321,10 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeL
 // UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
 func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error {
 	return n.n.UnsubscribeTxStatusChanges(id, listener)
+}
+
+func (n *Network) ScanForKey(ctx view.Context, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	panic("implement me")
 }
 
 // Provider returns an instance of network provider

@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
@@ -26,10 +25,14 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+type QueryEngine interface {
+	ListUnspentTokens() (*token2.UnspentTokens, error)
+}
+
 // OwnerWallet is a combination of a wallet and a query service
 type OwnerWallet struct {
 	wallet       *token.OwnerWallet
-	queryService interactive.QueryEngine
+	queryService QueryEngine
 }
 
 // ListExpired returns a list of tokens with a passed deadline whose sender id is contained within the wallet

@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -26,7 +28,6 @@ import (
 const (
 	ScriptType            = "htlc" // htlc script
 	defaultDeadlineOffset = time.Hour
-	ClaimPreImage         = "cpi"
 )
 
 // WithHash sets a hash attribute to be used to customize the transfer command
@@ -280,7 +281,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
 		token.WithTokenIDs(tok.Id),
-		token.WithTransferMetadata(ClaimPreImage+base64.StdEncoding.EncodeToString(preImage), preImage),
+		token.WithTransferMetadata(keys.ClaimPreImage+base64.StdEncoding.EncodeToString(preImage), preImage),
 	)
 }
 

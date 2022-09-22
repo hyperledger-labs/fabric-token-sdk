@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
@@ -192,7 +194,7 @@ func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
 	if len(ctx.Action.Metadata) == 0 {
 		return errors.New("cannot find htlc pre-image, no metadata")
 	}
-	value, ok := ctx.Action.Metadata[htlc.ClaimPreImage]
+	value, ok := ctx.Action.Metadata[keys.ClaimPreImage]
 	if !ok {
 		return errors.New("cannot find htlc pre-image, missing metadata entry")
 	}
