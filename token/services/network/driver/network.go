@@ -10,6 +10,9 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
+
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -93,4 +96,6 @@ type Network interface {
 
 	// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
 	UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error
+
+	ScanForKey(namespace string, startingTxID string, key string, timeout time.Duration, opts ...token2.ServiceOption) ([]byte, error)
 }

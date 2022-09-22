@@ -323,8 +323,8 @@ func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeL
 	return n.n.UnsubscribeTxStatusChanges(id, listener)
 }
 
-func (n *Network) ScanForKey(ctx view.Context, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
-	panic("implement me")
+func (n *Network) ScanForKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	return n.n.ScanForKey(namespace, startingTxID, key, timeout, opts...)
 }
 
 // Provider returns an instance of network provider

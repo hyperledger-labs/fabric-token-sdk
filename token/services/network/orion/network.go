@@ -9,6 +9,9 @@ package orion
 import (
 	"context"
 	"sync"
+	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
@@ -175,6 +178,10 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatus
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
 	return n.n.Committer().UnsubscribeTxStatusChanges(txID, listener)
+}
+
+func (n *Network) ScanForKey(namespace string, startingTxID string, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	panic("implement me")
 }
 
 type nv struct {

@@ -8,9 +8,15 @@ package fabric
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"sync"
+	"time"
+
+	"go.uber.org/zap/zapcore"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -19,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -309,4 +316,64 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatus
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
 	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
+}
+
+func (n *Network) ScanForKey(namespace string, startingTxID string, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	var keyValue []byte
+	c, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	vault := n.ch.Vault()
+	if err := n.ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
+		logger.Debugf("scanning [%s]...", tx.TxID())
+
+		rws, err := vault.GetEphemeralRWSet(tx.Results())
+		if err != nil {
+			return false, err
+		}
+
+		found := false
+		for _, ns := range rws.Namespaces() {
+			if ns == namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
+			return false, nil
+		}
+
+		ns := namespace
+		w := translator.New(tx.TxID(), NewRWSWrapper(rws), namespace)
+		for i := 0; i < rws.NumWrites(ns); i++ {
+			k, v, err := rws.GetWriteAt(ns, i)
+			if err != nil {
+				return false, err
+			}
+			subKey, err := w.GetTransferMetadataKeyWithSubKey(k)
+			if err != nil {
+				continue
+			}
+			if subKey == key {
+				keyValue = v
+				return true, nil
+			}
+		}
+		logger.Debugf("scanning for preimage on [%s] not found", tx.TxID())
+		return false, nil
+	}); err != nil {
+		if strings.Contains(err.Error(), "context done") {
+			return nil, errors.WithMessage(err, "timeout reached")
+		}
+		return nil, err
+	}
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",
+			key,
+			timeout,
+			base64.StdEncoding.EncodeToString(keyValue),
+		)
+	}
+	return keyValue, nil
 }

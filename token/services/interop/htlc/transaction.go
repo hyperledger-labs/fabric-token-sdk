@@ -13,8 +13,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -275,13 +273,18 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 
+	image, err := script.HashInfo.Image(preImage)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to compute image of [%x]", preImage)
+	}
+
 	return t.Transfer(
 		wallet,
 		tok.Type,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
 		token.WithTokenIDs(tok.Id),
-		token.WithTransferMetadata(keys.ClaimPreImage+base64.StdEncoding.EncodeToString(preImage), preImage),
+		token.WithTransferMetadata(ClaimKey(image), preImage),
 	)
 }
 
