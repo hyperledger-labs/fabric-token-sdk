@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"bytes"
 	"encoding/json"
 	"time"
 
@@ -116,7 +115,7 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			if err := HTLCMetadataCheck(ctx, script, op, sigma); err != nil {
+			if err := htlc2.MetadataCheck(ctx.Action, script, op, sigma); err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
 		}
@@ -146,41 +145,5 @@ func TransferHTLCValidate(ctx *Context) error {
 			continue
 		}
 	}
-	return nil
-}
-
-// HTLCMetadataCheck checks that the HTLC metadata is in place
-func HTLCMetadataCheck(ctx *Context, script *htlc.Script, op htlc2.OperationType, sig []byte) error {
-	if op == htlc2.Reclaim {
-		// No metadata in this case
-		return nil
-	}
-
-	// Unmarshal signature to ClaimSignature
-	claim := &htlc.ClaimSignature{}
-	if err := json.Unmarshal(sig, claim); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling cliam signature [%s]", string(sig))
-	}
-	// Check that it is well-formed
-	if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
-		return errors.New("expected a valid claim preImage and recipient signature")
-	}
-
-	// Check the pre-image is in the action's metadata
-	if len(ctx.Action.Metadata) == 0 {
-		return errors.New("cannot find htlc pre-image, no metadata")
-	}
-	image, err := script.HashInfo.Image(claim.Preimage)
-	if err != nil {
-		return errors.Wrapf(err, "failed to compute image of [%x]", claim.Preimage)
-	}
-	value, ok := ctx.Action.Metadata[htlc.ClaimKey(image)]
-	if !ok {
-		return errors.New("cannot find htlc pre-image, missing metadata entry")
-	}
-	if !bytes.Equal(value, claim.Preimage) {
-		return errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
-	}
-
 	return nil
 }
