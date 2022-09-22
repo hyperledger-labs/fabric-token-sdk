@@ -144,8 +144,8 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	return res, nil
 }
 
-func (w *Translator) IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
-	return keys.IsTransferMetadataKeyWithSubKey(k, subKey)
+func (w *Translator) GetTransferMetadataKeyWithSubKey(k string) (string, error) {
+	return keys.GetTransferMetadataSubKey(k)
 }
 
 func (w *Translator) checkProcess(action interface{}) error {
@@ -349,7 +349,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	// store metadata
 	metadata := transferAction.GetMetadata()
 	for key, value := range metadata {
-		k, err := keys.CreateTransferActionMetadataKey(w.TxID, key, w.metadataCounter)
+		k, err := keys.CreateTransferActionMetadataKey(key)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}

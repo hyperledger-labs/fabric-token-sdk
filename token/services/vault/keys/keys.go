@@ -9,7 +9,10 @@ package keys
 import (
 	"fmt"
 	"strconv"
+	"strings"
 	"unicode/utf8"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -140,25 +143,29 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 // CreateTransferActionMetadataKey returns the transfer action metadata key built from the passed
 // transaction id, subkey, and index. Index is used to make sure the key is unique with the respect to the
 // token request this key appears.
-func CreateTransferActionMetadataKey(txID string, subKey string, index uint64) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, subKey, strconv.FormatUint(index, 10)})
+func CreateTransferActionMetadataKey(subKey string) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, subKey})
 }
 
-func IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
+func GetTransferMetadataSubKey(k string) (string, error) {
 	prefix, components, err := SplitCompositeKey(k)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
+		return "", errors.Wrapf(err, "failed to split composite key [%s]", k)
+	}
+	if len(components) != 2 {
+		return "", errors.Wrapf(err, "key [%s] should contain 2 components, got [%d]", k, len(components))
 	}
 	if prefix != TokenKeyPrefix {
-		return false, nil
+		return "", errors.Errorf("key [%s] doesn not contain the token key prefix", k)
 	}
 	if components[0] != TransferActionMetadata {
-		return false, nil
+		return "", errors.Errorf("key [%s] doesn not contain the token transfer action medatata prefix", k)
 	}
-	if len(components) != 4 {
-		return false, nil
-	}
-	return components[2] == subKey, nil
+	return components[1], nil
+}
+
+func IsClaimKey(subKey string) (bool, error) {
+	return strings.HasPrefix(subKey, htlc.ClaimPreImage), nil
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

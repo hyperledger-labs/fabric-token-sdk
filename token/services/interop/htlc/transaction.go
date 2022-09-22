@@ -280,7 +280,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
 		token.WithTokenIDs(tok.Id),
-		token.WithTransferMetadata(ClaimPreImage, preImage),
+		token.WithTransferMetadata(ClaimPreImage+base64.StdEncoding.EncodeToString(preImage), preImage),
 	)
 }
 

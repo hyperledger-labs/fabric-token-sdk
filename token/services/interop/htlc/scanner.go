@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -42,6 +43,13 @@ func WithStartingTransaction(txID string) token.ServiceOption {
 // ScanForPreImage scans the ledger for a preimage of the passed image, taking into account the timeout
 func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	logger.Debugf("scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
+
+	if !hashFunc.Available() {
+		return nil, errors.Errorf("passed hash function is not available [%d]", hashFunc)
+	}
+	if !hashEncoding.Available() {
+		return nil, errors.Errorf("passed hash endcoding is not available [%d]", hashEncoding)
+	}
 
 	tokenOptions, err := token.CompileServiceOptions(opts...)
 	if err != nil {
@@ -88,7 +96,12 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 			if err != nil {
 				return false, err
 			}
-			if f, err := w.IsTransferMetadataKeyWithSubKey(k, ClaimPreImage); err == nil && f {
+			subKey, err := w.GetTransferMetadataKeyWithSubKey(k)
+			if err != nil {
+				continue
+			}
+			// extract hash
+			if f, err := keys.IsClaimKey(subKey); err == nil && f {
 				// hash + encoding
 				hash := hashFunc.New()
 				if _, err = hash.Write(v); err != nil {
