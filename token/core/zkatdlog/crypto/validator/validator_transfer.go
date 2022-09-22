@@ -11,8 +11,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -111,14 +109,14 @@ func TransferHTLCValidate(ctx *Context) error {
 			out := ctx.Action.GetOutputs()[0].(*token.Token)
 
 			// check that owner field in output is correct
-			_, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
+			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			if err := HTLCMetadataCheck(ctx, op, sigma); err != nil {
+			if err := HTLCMetadataCheck(ctx, script, op, sigma); err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
 		}
@@ -152,7 +150,7 @@ func TransferHTLCValidate(ctx *Context) error {
 }
 
 // HTLCMetadataCheck checks that the HTLC metadata is in place
-func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
+func HTLCMetadataCheck(ctx *Context, script *htlc.Script, op htlc2.OperationType, sig []byte) error {
 	if op == htlc2.Reclaim {
 		// No metadata in this case
 		return nil
@@ -172,7 +170,11 @@ func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
 	if len(ctx.Action.Metadata) == 0 {
 		return errors.New("cannot find htlc pre-image, no metadata")
 	}
-	value, ok := ctx.Action.Metadata[keys.ClaimPreImage]
+	image, err := script.HashInfo.Image(claim.Preimage)
+	if err != nil {
+		return errors.Wrapf(err, "failed to compute image of [%x]", claim.Preimage)
+	}
+	value, ok := ctx.Action.Metadata[htlc.ClaimKey(image)]
 	if !ok {
 		return errors.New("cannot find htlc pre-image, missing metadata entry")
 	}
