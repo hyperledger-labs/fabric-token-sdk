@@ -144,7 +144,7 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	return res, nil
 }
 
-func (w *Translator) GetTransferMetadataKeyWithSubKey(k string) (string, error) {
+func (w *Translator) GetTransferMetadataSubKey(k string) (string, error) {
 	return keys.GetTransferMetadataSubKey(k)
 }
 

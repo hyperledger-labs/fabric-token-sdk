@@ -66,11 +66,10 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup key [%s]", claimKey)
 	}
-	hi := HashInfo{
+	recomputedImage, err := (&HashInfo{
 		HashFunc:     hashFunc,
 		HashEncoding: hashEncoding,
-	}
-	recomputedImage, err := hi.Image(preImage)
+	}).Image(preImage)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to compute image of [%x]", preImage)
 	}

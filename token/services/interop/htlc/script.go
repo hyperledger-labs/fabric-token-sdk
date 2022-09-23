@@ -26,6 +26,7 @@ type HashInfo struct {
 	HashEncoding encoding.Encoding
 }
 
+// Validate checks that the hash and encoding functions are available
 func (i *HashInfo) Validate() error {
 	if !i.HashFunc.Available() {
 		return errors.New("hash function not available")
@@ -36,6 +37,7 @@ func (i *HashInfo) Validate() error {
 	return nil
 }
 
+// Image computes the image of the passer pre-image using the hash and encoding function of this struct
 func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
 	if err := i.Validate(); err != nil {
 		return nil, errors.WithMessagef(err, "hash info not valid")

@@ -12,6 +12,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
 
+const (
+	ClaimPreImage = keys.ClaimPreImage
+)
+
+// ClaimKey returns the claim key for the passed byte array
 func ClaimKey(v []byte) string {
-	return keys.ClaimPreImage + base64.StdEncoding.EncodeToString(v)
+	return ClaimPreImage + base64.StdEncoding.EncodeToString(v)
 }

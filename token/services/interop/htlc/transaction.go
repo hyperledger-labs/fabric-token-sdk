@@ -234,7 +234,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
 
-	if preImage == nil {
+	if len(preImage) == 0 {
 		return errors.New("preImage is nil")
 	}
 

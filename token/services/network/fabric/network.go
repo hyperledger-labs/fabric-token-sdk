@@ -350,7 +350,7 @@ func (n *Network) ScanForKey(namespace string, startingTxID string, key string, 
 			if err != nil {
 				return false, err
 			}
-			subKey, err := w.GetTransferMetadataKeyWithSubKey(k)
+			subKey, err := w.GetTransferMetadataSubKey(k)
 			if err != nil {
 				continue
 			}

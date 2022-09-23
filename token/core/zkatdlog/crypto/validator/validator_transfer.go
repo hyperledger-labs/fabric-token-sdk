@@ -30,6 +30,11 @@ type Context struct {
 	InputTokens       []*token.Token
 	Action            *transfer.TransferAction
 	Ledger            driver.Ledger
+	MetadataCounter   map[string]int
+}
+
+func (c *Context) CountMetadataKey(key string) {
+	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
 }
 
 type ValidateTransferFunc func(ctx *Context) error
@@ -115,9 +120,11 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			if err := htlc2.MetadataCheck(ctx.Action, script, op, sigma); err != nil {
+			metadataKey, err := htlc2.MetadataCheck(ctx.Action, script, op, sigma)
+			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
+			ctx.CountMetadataKey(metadataKey)
 		}
 	}
 
