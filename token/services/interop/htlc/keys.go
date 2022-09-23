@@ -8,12 +8,10 @@ package htlc
 
 import (
 	"encoding/base64"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
 
 const (
-	ClaimPreImage = keys.ClaimPreImage
+	ClaimPreImage = "cpi"
 )
 
 // ClaimKey returns the claim key for the passed byte array

@@ -226,7 +226,7 @@ func (v *Validator) verifyTransfer(tr driver.TransferAction, ledger driver.Ledge
 		counter += c
 	}
 	if len(tr.GetMetadata()) != counter {
-		return errors.Errorf("more metadata than those validated [%d]!=[%d]", len(tr.GetMetadata()), counter)
+		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(tr.GetMetadata()), counter, tr.GetMetadata(), context.MetadataCounter)
 	}
 
 	return nil

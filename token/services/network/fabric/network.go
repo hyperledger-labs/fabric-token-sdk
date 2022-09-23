@@ -14,10 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -28,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -318,7 +315,7 @@ func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStat
 	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
 }
 
-func (n *Network) ScanForKey(namespace string, startingTxID string, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+func (n *Network) LookupKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
 	var keyValue []byte
 	c, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()

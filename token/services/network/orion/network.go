@@ -11,8 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -180,8 +178,20 @@ func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStat
 	return n.n.Committer().UnsubscribeTxStatusChanges(txID, listener)
 }
 
-func (n *Network) ScanForKey(namespace string, startingTxID string, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
-	panic("implement me")
+func (n *Network) LookupKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+	pp, err := view2.GetManager(n.sp).InitiateView(
+		NewLookupKeyRequestView(
+			n.Name(),
+			namespace,
+			startingTxID,
+			key,
+			timeout,
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return pp.([]byte), nil
 }
 
 type nv struct {

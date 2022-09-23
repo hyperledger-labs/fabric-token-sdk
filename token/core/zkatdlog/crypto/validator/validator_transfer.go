@@ -124,7 +124,9 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
-			ctx.CountMetadataKey(metadataKey)
+			if op != htlc2.Reclaim {
+				ctx.CountMetadataKey(metadataKey)
+			}
 		}
 	}
 

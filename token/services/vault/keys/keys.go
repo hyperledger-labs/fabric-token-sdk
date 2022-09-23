@@ -9,7 +9,6 @@ package keys
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -37,8 +36,6 @@ const (
 	IssueActionMetadata         = "iam"
 	TransferActionMetadata      = "tam"
 	TokenRequestMetadata        = "trmd"
-	// Move back to the interop/htlc package
-	ClaimPreImage = "cpi"
 )
 
 func GetTokenIdFromKey(key string) (*token.ID, error) {
@@ -162,10 +159,6 @@ func GetTransferMetadataSubKey(k string) (string, error) {
 		return "", errors.Errorf("key [%s] doesn not contain the token transfer action medatata prefix", k)
 	}
 	return components[1], nil
-}
-
-func IsClaimKey(subKey string) (bool, error) {
-	return strings.HasPrefix(subKey, ClaimPreImage), nil
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

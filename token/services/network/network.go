@@ -14,10 +14,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -324,7 +323,7 @@ func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeL
 }
 
 func (n *Network) ScanForKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
-	return n.n.ScanForKey(namespace, startingTxID, key, timeout, opts...)
+	return n.n.LookupKey(namespace, startingTxID, key, timeout)
 }
 
 // Provider returns an instance of network provider
