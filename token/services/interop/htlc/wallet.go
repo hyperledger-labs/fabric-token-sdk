@@ -12,14 +12,12 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -52,6 +50,7 @@ func (w *OwnerWallet) ListExpired() ([]*token2.UnspentToken, error) {
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 			continue
 		}
+		logger.Debugf("owner is of type [%d]", owner.Type)
 		if owner.Type == ScriptType {
 			script := &Script{}
 			if err := json.Unmarshal(owner.Identity, script); err != nil {
@@ -143,15 +142,18 @@ func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption)
 // Wallet returns an OwnerWallet which contains a wallet and a query service
 func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet, opts ...token.ServiceOption) *OwnerWallet {
 	tms := token.GetManagementService(sp, opts...)
-	ch := fabric.GetChannel(sp, tms.Network(), tms.Channel())
-	v := vault.New(
-		sp,
-		ch.Name(),
-		tms.Namespace(),
-		fabric3.NewVault(ch),
-	)
+	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
+	if nw == nil {
+		return nil
+	}
+	vault, err := nw.Vault(tms.Namespace())
+	if err != nil {
+		logger.Errorf("failed to get vault for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+		return nil
+	}
+
 	return &OwnerWallet{
 		wallet:       wallet,
-		queryService: v.QueryEngine(),
+		queryService: vault.TokenVault().QueryEngine(),
 	}
 }

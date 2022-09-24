@@ -47,6 +47,25 @@ var _ = Describe("FabToken end to end", func() {
 		})
 	})
 
+	Describe("HTLC Single Orion Network", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropHTLC.StartPortForNode(),
+				"",
+				interop.HTLCSingleOrionNetworkTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed htlc-related basic operations", func() {
+			interop.TestHTLCSingleFabricNetwork(ii)
+		})
+	})
+
 	Describe("HTLC Two Fabric Networks", func() {
 		BeforeEach(func() {
 			var err error

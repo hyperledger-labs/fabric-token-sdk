@@ -9,7 +9,6 @@ package htlc
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -40,9 +39,8 @@ func (r *ClaimView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "htlc script has expired")
 	assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
 
-	tx, err := htlc.NewTransaction(
+	tx, err := htlc.NewAnonymousTransaction(
 		context,
-		fabric.GetIdentityProvider(context, r.TMSID.Network).DefaultIdentity(),
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),
 	)

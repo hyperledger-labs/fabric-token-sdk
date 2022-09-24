@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
@@ -72,9 +71,8 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	// Initiator's Leg
 	var preImage []byte
 	_, err = view2.RunCall(context, func(context view.Context) (interface{}, error) {
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, v.TMSID1.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID1),
 		)
@@ -142,9 +140,8 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 		assert.NoError(err, "cannot retrieve list of expired tokens")
 		assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
 
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, v.TMSID2.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID2),
 		)
@@ -219,9 +216,8 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 	// Responder's Leg
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, terms.TMSID2.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID2),
 		)
@@ -276,9 +272,8 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.NoError(err, "cannot retrieve list of expired tokens")
 		assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
 
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, terms.TMSID1.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID1),
 		)

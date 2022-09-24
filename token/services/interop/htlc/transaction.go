@@ -87,6 +87,17 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	}, nil
 }
 
+// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
+func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transaction, error) {
+	tx, err := ttx.NewAnonymousTransaction(sp, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{
+		Transaction: tx,
+	}, nil
+}
+
 // NewTransactionFromBytes returns a new transaction from the passed bytes
 func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []byte) (*Transaction, error) {
 	tx, err := ttx.NewTransactionFromBytes(ctx, network, channel, raw)

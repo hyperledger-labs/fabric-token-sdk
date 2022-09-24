@@ -356,7 +356,7 @@ func (n *Network) LookupKey(namespace string, startingTxID string, key string, t
 				return true, nil
 			}
 		}
-		logger.Debugf("scanning for preimage on [%s] not found", tx.TxID())
+		logger.Debugf("scanning for key [%s] on [%s] not found", key, tx.TxID())
 		return false, nil
 	}); err != nil {
 		if strings.Contains(err.Error(), "context done") {

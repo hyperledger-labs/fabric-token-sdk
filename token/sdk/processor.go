@@ -35,7 +35,7 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 				ons,
 				namespace,
 				p.sp,
-				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}),
+				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 			),
 		); err != nil {

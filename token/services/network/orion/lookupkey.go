@@ -7,24 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"encoding/base64"
 	"time"
 
+	"github.com/hashicorp/go-uuid"
+	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type LookupKeyRequest struct {
-	Network   string
-	Namespace string
-}
-
-type LookupKeyResponse struct {
-	Raw []byte
-}
-
-type LookupKeyRequestView struct {
 	Network      string
 	Namespace    string
 	StartingTxID string
@@ -32,13 +27,23 @@ type LookupKeyRequestView struct {
 	Timeout      time.Duration
 }
 
+type LookupKeyResponse struct {
+	Raw []byte
+}
+
+type LookupKeyRequestView struct {
+	*LookupKeyRequest
+}
+
 func NewLookupKeyRequestView(network string, namespace string, startingTxID string, key string, timeout time.Duration) *LookupKeyRequestView {
 	return &LookupKeyRequestView{
-		Network:      network,
-		Namespace:    namespace,
-		StartingTxID: startingTxID,
-		Key:          key,
-		Timeout:      timeout,
+		LookupKeyRequest: &LookupKeyRequest{
+			Network:      network,
+			Namespace:    namespace,
+			StartingTxID: startingTxID,
+			Key:          key,
+			Timeout:      timeout,
+		},
 	}
 }
 
@@ -51,7 +56,7 @@ func (v *LookupKeyRequestView) Call(context view.Context) (interface{}, error) {
 	if isCustodian {
 		logger.Debugf("I'm a custodian, connect directly to orion")
 		// I'm a custodian, connect directly to orion
-		return ReadPublicParameters(context, v.Network, v.Namespace)
+		return LookupKey(context, v.LookupKeyRequest)
 	}
 
 	// this is not a custodian, connect to it
@@ -65,11 +70,7 @@ func (v *LookupKeyRequestView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
-	request := &LookupKeyRequest{
-		Network:   v.Network,
-		Namespace: v.Namespace,
-	}
-	if err := session.Send(request); err != nil {
+	if err := session.Send(v.LookupKeyRequest); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
 	response := &LookupKeyResponse{}
@@ -90,14 +91,69 @@ func (v *RespondLookupKeyRequestView) Call(context view.Context) (interface{}, e
 	}
 	logger.Debugf("request: %+v", request)
 
-	// Get the public parameters from request network and namespace
-	ppRaw, err := ReadPublicParameters(context, request.Network, request.Namespace)
+	// Get key's value
+	value, err := LookupKey(context, request)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get public parameters from orion network [%s]", request.Network)
+		return nil, errors.Wrapf(err, "failed to get key's value from orion network [%s]", request.Network)
 	}
-	logger.Debugf("reading public parameters, done: %d", len(ppRaw))
-	if err := session.Send(&LookupKeyResponse{Raw: ppRaw}); err != nil {
+	logger.Debugf("get key's value, done: %d", len(value))
+	if err := session.Send(&LookupKeyResponse{Raw: value}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
+}
+
+func LookupKey(context view.Context, request *LookupKeyRequest) ([]byte, error) {
+	ons := orion2.GetOrionNetworkService(context, request.Network)
+	if ons == nil {
+		return nil, errors.Errorf("cannot find orion netwotk [%s]", request.Network)
+	}
+	uuid, err := uuid.GenerateUUID()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate session uuid")
+	}
+	s, err := ons.SessionManager().NewSession(uuid)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get a new session")
+	}
+	qe, err := s.QueryExecutor(request.Namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get query executor for [%s:%s]", request.Network, request.Namespace)
+	}
+
+	pollingTime := int64(500)
+	iterations := int(request.Timeout.Milliseconds() / pollingTime)
+	if iterations == 0 {
+		iterations = 1
+	}
+	for i := 0; i < iterations; i++ {
+		timeout := time.NewTimer(time.Duration(pollingTime) * time.Millisecond)
+
+		stop := false
+		select {
+		case <-context.Context().Done():
+			timeout.Stop()
+			return nil, errors.Errorf("view context done")
+		case <-timeout.C:
+			timeout.Stop()
+			v, _, err := qe.Get(request.Key)
+			if err != nil {
+				logger.Errorf("failed to get key [%s] from [%s:%s]", request.Key, request.Network, request.Namespace)
+			}
+			if len(v) != 0 {
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",
+						request.Key,
+						timeout,
+						base64.StdEncoding.EncodeToString(v),
+					)
+				}
+				return v, nil
+			}
+		}
+		if stop {
+			break
+		}
+	}
+	return nil, errors.Errorf("cannot find get key [%s] from [%s:%s]", request.Key, request.Network, request.Namespace)
 }
