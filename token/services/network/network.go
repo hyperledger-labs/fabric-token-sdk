@@ -12,9 +12,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -135,6 +137,10 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 		return err
 	}
 	return e.e.FromBytes(r)
+}
+
+func (e *Envelope) String() string {
+	return e.e.String()
 }
 
 type RWSet struct {
@@ -318,6 +324,12 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeL
 // UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
 func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error {
 	return n.n.UnsubscribeTxStatusChanges(id, listener)
+}
+
+// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
+// The operation gets canceled if the passed timeout gets reached.
+func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
 }
 
 // Provider returns an instance of network provider

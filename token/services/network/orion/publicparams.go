@@ -96,12 +96,6 @@ func (v *RespondPublicParamsRequestView) Call(context view.Context) (interface{}
 	return nil, nil
 }
 
-type AllIssuersValid struct{}
-
-func (i *AllIssuersValid) Validate(creator view.Identity, tokenType string) error {
-	return nil
-}
-
 func ReadPublicParameters(context view2.ServiceProvider, network, namespace string) ([]byte, error) {
 	ons := orion.GetOrionNetworkService(context, network)
 	if ons == nil {

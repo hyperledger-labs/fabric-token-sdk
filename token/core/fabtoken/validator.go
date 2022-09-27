@@ -36,16 +36,17 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 	if deserializer == nil {
 		return nil, errors.New("please provide a non-nil deserializer")
 	}
-	validators := []ValidateTransferFunc{
+
+	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,
 	}
-	validators = append(validators, extraValidators...)
+	transferValidators = append(transferValidators, extraValidators...)
 	v := &Validator{
 		pp:                 pp,
 		deserializer:       deserializer,
-		transferValidators: validators,
+		transferValidators: transferValidators,
 	}
 	return v, nil
 }
@@ -245,11 +246,24 @@ func (v *Validator) VerifyTransfer(ledger driver.Ledger, inputTokens []*token2.T
 		InputTokens:       inputTokens,
 		Action:            tr.(*TransferAction),
 		Ledger:            ledger,
+		MetadataCounter:   map[string]int{},
 	}
 	for _, validator := range v.transferValidators {
 		if err := validator(ctx); err != nil {
 			return err
 		}
+	}
+
+	// Check that all metadata have been validated
+	counter := 0
+	for k, c := range ctx.MetadataCounter {
+		if c > 1 {
+			return errors.Errorf("metadata key [%s] appeared more than once", k)
+		}
+		counter += c
+	}
+	if len(tr.GetMetadata()) != counter {
+		return errors.Errorf("more metadata than those validated [%d]!=[%d]", len(tr.GetMetadata()), counter)
 	}
 	return nil
 }

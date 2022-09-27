@@ -23,22 +23,22 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
 
 type Validator struct {
-	pp           *crypto.PublicParams
-	deserializer driver.Deserializer
-	validators   []ValidateTransferFunc
+	pp                 *crypto.PublicParams
+	deserializer       driver.Deserializer
+	transferValidators []ValidateTransferFunc
 }
 
 func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
-	validators := []ValidateTransferFunc{
+	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
 	}
-	validators = append(validators, extraValidators...)
+	transferValidators = append(transferValidators, extraValidators...)
 	return &Validator{
-		pp:           pp,
-		deserializer: deserializer,
-		validators:   validators,
+		pp:                 pp,
+		deserializer:       deserializer,
+		transferValidators: transferValidators,
 	}
 }
 
@@ -209,11 +209,25 @@ func (v *Validator) verifyTransfer(tr driver.TransferAction, ledger driver.Ledge
 		Action:            action,
 		Ledger:            ledger,
 		SignatureProvider: signatureProvider,
+		MetadataCounter:   map[string]int{},
 	}
-	for _, v := range v.validators {
+	for _, v := range v.transferValidators {
 		if err := v(context); err != nil {
 			return err
 		}
 	}
+
+	// Check that all metadata have been validated
+	counter := 0
+	for k, c := range context.MetadataCounter {
+		if c > 1 {
+			return errors.Errorf("metadata key [%s] appeared more than one time", k)
+		}
+		counter += c
+	}
+	if len(tr.GetMetadata()) != counter {
+		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(tr.GetMetadata()), counter, tr.GetMetadata(), context.MetadataCounter)
+	}
+
 	return nil
 }

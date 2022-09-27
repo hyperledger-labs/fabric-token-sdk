@@ -25,4 +25,7 @@ type Envelope interface {
 
 	// Creator returns the creator of this envelope
 	Creator() []byte
+
+	// String returns the string representation of this envelope
+	String() string
 }

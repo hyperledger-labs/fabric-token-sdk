@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -93,4 +94,8 @@ type Network interface {
 
 	// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
 	UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error
+
+	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
+	// The operation gets canceled if the passed timeout elapses.
+	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration) ([]byte, error)
 }

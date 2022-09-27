@@ -9,6 +9,7 @@ package orion
 import (
 	"context"
 	"sync"
+	"time"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
@@ -16,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -175,6 +177,26 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatus
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
 	return n.n.Committer().UnsubscribeTxStatusChanges(txID, listener)
+}
+
+func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+	k, err := keys.CreateTransferActionMetadataKey(key)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
+	}
+	pp, err := view2.GetManager(n.sp).InitiateView(
+		NewLookupKeyRequestView(
+			n.Name(),
+			namespace,
+			startingTxID,
+			orionKey(k),
+			timeout,
+		),
+	)
+	if err != nil {
+		return nil, err
+	}
+	return pp.([]byte), nil
 }
 
 type nv struct {

@@ -26,6 +26,31 @@ type HashInfo struct {
 	HashEncoding encoding.Encoding
 }
 
+// Validate checks that the hash and encoding functions are available
+func (i *HashInfo) Validate() error {
+	if !i.HashFunc.Available() {
+		return errors.New("hash function not available")
+	}
+	if !i.HashEncoding.Available() {
+		return errors.New("encoding function not available")
+	}
+	return nil
+}
+
+// Image computes the image of the passed pre-image using the hash and encoding function of this struct
+func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
+	if err := i.Validate(); err != nil {
+		return nil, errors.WithMessagef(err, "hash info not valid")
+	}
+	hash := i.HashFunc.New()
+	if _, err := hash.Write(preImage); err != nil {
+		return nil, errors.Wrapf(err, "failed to compute hash image")
+	}
+	image := hash.Sum(nil)
+	image = []byte(i.HashEncoding.New().EncodeToString(image))
+	return image, nil
+}
+
 // Script contains the details of an htlc
 type Script struct {
 	Sender    view.Identity
@@ -49,11 +74,8 @@ func (s *Script) Validate(timeReference time.Time) error {
 	if s.Deadline.Before(timeReference) {
 		return errors.New("expiration date has already passed")
 	}
-	if !s.HashInfo.HashFunc.Available() {
-		return errors.New("hash function not available")
-	}
-	if !s.HashInfo.HashEncoding.Available() {
-		return errors.New("encoding function not available")
+	if err := s.HashInfo.Validate(); err != nil {
+		return err
 	}
 	return nil
 }

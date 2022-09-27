@@ -232,6 +232,10 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
+			}
 		}
 
 		// if I'm an auditor, store the audit entry

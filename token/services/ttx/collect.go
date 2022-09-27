@@ -130,7 +130,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 		Transient:    map[string][]byte{},
 		TokenRequest: token.NewRequest(nil, ""),
 	}
-	err = unmarshal(nil, txPayload, msg.Payload)
+	err = unmarshal(context, txPayload, msg.Payload)
 	if err != nil {
 		return errors.Wrap(err, "failed unmarshalling reply")
 	}

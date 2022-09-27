@@ -26,7 +26,6 @@ import (
 const (
 	ScriptType            = "htlc" // htlc script
 	defaultDeadlineOffset = time.Hour
-	ClaimPreImage         = "cpi"
 )
 
 // WithHash sets a hash attribute to be used to customize the transfer command
@@ -88,9 +87,20 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	}, nil
 }
 
+// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
+func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transaction, error) {
+	tx, err := ttx.NewAnonymousTransaction(sp, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{
+		Transaction: tx,
+	}, nil
+}
+
 // NewTransactionFromBytes returns a new transaction from the passed bytes
 func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []byte) (*Transaction, error) {
-	tx, err := ttx.NewTransactionFromBytes(ctx, network, channel, raw)
+	tx, err := ttx.NewTransactionFromBytes(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
@@ -235,7 +245,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
 
-	if preImage == nil {
+	if len(preImage) == 0 {
 		return errors.New("preImage is nil")
 	}
 
@@ -274,13 +284,18 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 
+	image, err := script.HashInfo.Image(preImage)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to compute image of [%x]", preImage)
+	}
+
 	return t.Transfer(
 		wallet,
 		tok.Type,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
 		token.WithTokenIDs(tok.Id),
-		token.WithTransferMetadata(ClaimPreImage, preImage),
+		token.WithTransferMetadata(ClaimKey(image), preImage),
 	)
 }
 
