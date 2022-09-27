@@ -65,7 +65,7 @@ func MetadataCheck(action Action, script *htlc.Script, op OperationType, sig []b
 	// Unmarshal signature to ClaimSignature
 	claim := &htlc.ClaimSignature{}
 	if err := json.Unmarshal(sig, claim); err != nil {
-		return "", errors.Wrapf(err, "failed unmarshalling cliam signature [%s]", string(sig))
+		return "", errors.Wrapf(err, "failed unmarshalling claim signature [%s]", string(sig))
 	}
 	// Check that it is well-formed
 	if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {

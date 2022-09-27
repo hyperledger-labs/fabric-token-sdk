@@ -258,7 +258,7 @@ func (v *Validator) VerifyTransfer(ledger driver.Ledger, inputTokens []*token2.T
 	counter := 0
 	for k, c := range ctx.MetadataCounter {
 		if c > 1 {
-			return errors.Errorf("metadata key [%s] appeared more than one time", k)
+			return errors.Errorf("metadata key [%s] appeared more than once", k)
 		}
 		counter += c
 	}

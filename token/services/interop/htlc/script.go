@@ -37,7 +37,7 @@ func (i *HashInfo) Validate() error {
 	return nil
 }
 
-// Image computes the image of the passer pre-image using the hash and encoding function of this struct
+// Image computes the image of the passed pre-image using the hash and encoding function of this struct
 func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
 	if err := i.Validate(); err != nil {
 		return nil, errors.WithMessagef(err, "hash info not valid")

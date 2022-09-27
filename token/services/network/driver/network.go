@@ -96,6 +96,6 @@ type Network interface {
 	UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error
 
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
-	// The operation gets canceled if the passed timeout gets reached.
+	// The operation gets canceled if the passed timeout elapses.
 	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration) ([]byte, error)
 }

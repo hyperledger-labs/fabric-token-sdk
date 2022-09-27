@@ -250,7 +250,6 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	// Claim initiator's script
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
 		// Scan for the pre-image, this will be the signal that the initiator has claimed responder's script
-		// TODO: fix timeout
 		preImage, err := htlc.ScanForPreImage(
 			context,
 			script.HashInfo.Hash,

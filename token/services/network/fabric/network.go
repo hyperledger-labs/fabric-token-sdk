@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -23,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
