@@ -100,3 +100,8 @@ func (v *PublicParamsManager) PublicParams() *PublicParams {
 	defer v.mutex.RUnlock()
 	return v.pp
 }
+
+// Validate validates the public parameters
+func (v *PublicParamsManager) Validate() error {
+	return nil
+}

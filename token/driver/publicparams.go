@@ -62,4 +62,6 @@ type PublicParamsManager interface {
 	Fetch() ([]byte, error)
 	// SerializePublicParameters returns the public params in a serialized form
 	SerializePublicParameters() ([]byte, error)
+	// Validate validates the public parameters
+	Validate() error
 }

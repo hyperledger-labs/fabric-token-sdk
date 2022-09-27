@@ -57,10 +57,12 @@ func (s *VaultPublicParamsLoader) FetchParams() (*PublicParams, error) {
 	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(raw).String())
 	pp := &PublicParams{}
 	pp.Label = s.PPLabel
-	err = pp.Deserialize(raw)
-	if err != nil {
+	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
 	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(raw).String())
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate public parameters")
+	}
 	return pp, nil
 }
