@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -21,7 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -315,7 +316,11 @@ func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStat
 	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
 }
 
-func (n *Network) LookupKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+	transferMetadataKey, err := keys.CreateTransferActionMetadataKey(key)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
+	}
 	var keyValue []byte
 	c, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
@@ -341,22 +346,17 @@ func (n *Network) LookupKey(namespace string, startingTxID string, key string, t
 		}
 
 		ns := namespace
-		w := translator.New(tx.TxID(), NewRWSWrapper(rws), namespace)
 		for i := 0; i < rws.NumWrites(ns); i++ {
 			k, v, err := rws.GetWriteAt(ns, i)
 			if err != nil {
 				return false, err
 			}
-			subKey, err := w.GetTransferMetadataSubKey(k)
-			if err != nil {
-				continue
-			}
-			if subKey == key {
+			if k == transferMetadataKey {
 				keyValue = v
 				return true, nil
 			}
 		}
-		logger.Debugf("scanning for key [%s] on [%s] not found", key, tx.TxID())
+		logger.Debugf("scanning for key [%s] on [%s] not found", transferMetadataKey, tx.TxID())
 		return false, nil
 	}); err != nil {
 		if strings.Contains(err.Error(), "context done") {
@@ -367,7 +367,7 @@ func (n *Network) LookupKey(namespace string, startingTxID string, key string, t
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",
-			key,
+			transferMetadataKey,
 			timeout,
 			base64.StdEncoding.EncodeToString(keyValue),
 		)

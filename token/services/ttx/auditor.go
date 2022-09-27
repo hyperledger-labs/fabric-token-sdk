@@ -305,27 +305,27 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 
 	logger.Debugf("Signing and sending back transaction...done [%s]", a.tx.ID())
 
-	if err := a.waitFabricEnvelope(context); err != nil {
+	if err := a.waitEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
 	}
 	return nil
 }
 
-func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
-	logger.Debugf("Waiting for fabric envelope... [%s]", a.tx.ID())
+func (a *AuditApproveView) waitEnvelope(context view.Context) error {
+	logger.Debugf("Waiting for envelope... [%s]", a.tx.ID())
 	tx, err := ReceiveTransaction(context)
 	if err != nil {
-		return errors.Wrapf(err, "failed receiving transaction")
+		return errors.Wrapf(err, "failed to receive transaction with network envelope")
 	}
-	logger.Debugf("Waiting for fabric envelope...transaction received[%s]", a.tx.ID())
+	logger.Debugf("Waiting for envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Processes Fabric Envelope...")
+		logger.Debugf("Processes envelope...")
 	}
 	env := tx.Payload.Envelope
 	if env == nil {
-		return errors.Errorf("expected fabric envelope")
+		return errors.Errorf("expected envelope")
 	}
 	// Ack for distribution
 	// Send the signature back
@@ -374,7 +374,7 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	agent := metrics.Get(context)
 	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
 
-	logger.Debugf("Waiting for fabric envelope...done [%s]", a.tx.ID())
+	logger.Debugf("Waiting for envelope...done [%s]", a.tx.ID())
 
 	return nil
 }

@@ -405,6 +405,10 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		return errors.New("transaction envelope is empty")
 	}
 
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("distribute env [%s]", env.String())
+	}
+
 	// double check that the transaction is valid
 	// if err := c.tx.IsValid(); err != nil {
 	// 	return errors.Wrap(err, "failed verifying transaction content before distributing it")
@@ -642,7 +646,6 @@ func (c *collectEndorsementsView) getSession(context view.Context, p view.Identi
 
 type receiveTransactionView struct {
 	network string
-	channel string
 }
 
 func NewReceiveTransactionView(network string) *receiveTransactionView {
@@ -662,9 +665,9 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 			return nil, errors.New(string(msg.Payload))
 		}
 		logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
-		tx, err := NewTransactionFromBytes(context, f.network, f.channel, msg.Payload)
+		tx, err := NewTransactionFromBytes(context, msg.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling transaction")
+			return nil, errors.Wrap(err, "failed to receive transaction")
 		}
 		// Check that the transaction is valid
 		if err := tx.IsValid(); err != nil {

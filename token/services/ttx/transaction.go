@@ -98,18 +98,17 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 	return tx, nil
 }
 
-func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []byte) (*Transaction, error) {
+func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) {
 	// TODO: remove the need of network by introducing custom Pyaload unmarshalling
 	tx := &Transaction{
 		Payload: &Payload{
-			Envelope:     network.GetInstance(sp, nw, channel).NewEnvelope(),
 			Transient:    map[string][]byte{},
 			TokenRequest: token.NewRequest(nil, ""),
 		},
 		SP: sp,
 	}
 
-	if err := unmarshal(tx, tx.Payload, raw); err != nil {
+	if err := unmarshal(sp, tx.Payload, raw); err != nil {
 		return nil, err
 	}
 
@@ -295,6 +294,8 @@ func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
 	}
 	t.Envelope = envelope
 
+	logger.Debugf("setting envelope [%s]", envelope.String())
+
 	return nil
 }
 
@@ -376,6 +377,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
+		logger.Debugf("transaction evelope [%s]", t.Envelope.String())
 	}
 
 	res, err := asn1.Marshal(TransactionSer{
@@ -396,7 +398,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	return res, nil
 }
 
-func unmarshal(t *Transaction, p *Payload, raw []byte) error {
+func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
 	var ser TransactionSer
 	if _, err := asn1.Unmarshal(raw, &ser); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling transaction [%s]", string(raw))
@@ -422,9 +424,12 @@ func unmarshal(t *Transaction, p *Payload, raw []byte) error {
 			return errors.Wrap(err, "failed unmarshalling token request")
 		}
 	}
+	if p.Envelope == nil {
+		p.Envelope = network.GetInstance(sp, p.Network, p.Channel).NewEnvelope()
+	}
 	if len(ser.Envelope) != 0 {
 		if err := p.Envelope.FromBytes(ser.Envelope); err != nil {
-			return errors.Wrap(err, "failed unmarshalling envelope")
+			return errors.Wrapf(err, "failed unmarshalling envelope [%d]", len(ser.Envelope))
 		}
 		// if err := t.setEnvelope(t.Envelope); err != nil {
 		// 	return errors.Wrap(err, "failed setting envelope")

@@ -17,7 +17,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func TestHTLCSingleFabricNetwork(network *integration.Infrastructure) {
+func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	registerAuditor(network)
 
 	issueCash(network, "", "USD", 110, "alice")
@@ -91,7 +91,7 @@ func TestHTLCSingleFabricNetwork(network *integration.Infrastructure) {
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(defaultTMSID))
 }
 
-func TestHTLCTwoFabricNetworks(network *integration.Infrastructure) {
+func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 
@@ -136,7 +136,7 @@ func TestHTLCTwoFabricNetworks(network *integration.Infrastructure) {
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
 }
 
-func TestHTLCNoCrossClaimTwoFabricNetworks(network *integration.Infrastructure) {
+func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 

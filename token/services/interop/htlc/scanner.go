@@ -62,7 +62,7 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 	}
 
 	claimKey := ClaimKey(image)
-	preImage, err := network.ScanForKey(tms.Namespace(), startingTxID, claimKey, timeout, opts...)
+	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), startingTxID, claimKey, timeout, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup key [%s]", claimKey)
 	}

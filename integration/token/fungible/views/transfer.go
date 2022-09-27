@@ -371,7 +371,7 @@ type BroadcastPreparedTransferView struct {
 }
 
 func (t *BroadcastPreparedTransferView) Call(context view.Context) (interface{}, error) {
-	tx, err := ttx.NewTransactionFromBytes(context, "", "", t.Tx)
+	tx, err := ttx.NewTransactionFromBytes(context, t.Tx)
 	assert.NoError(err, "failed unmarshalling transaction")
 
 	// broadcast the transaction to the ordering service
@@ -432,7 +432,7 @@ type FinalityWithTimeoutView struct {
 }
 
 func (r *FinalityWithTimeoutView) Call(ctx view.Context) (interface{}, error) {
-	tx, err := ttx.NewTransactionFromBytes(ctx, "", "", r.Tx)
+	tx, err := ttx.NewTransactionFromBytes(ctx, r.Tx)
 	assert.NoError(err, "failed unmarshalling transaction")
 
 	// broadcast the transaction to the ordering service

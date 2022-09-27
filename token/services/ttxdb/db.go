@@ -509,6 +509,7 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 	defer cm.mutex.Unlock()
 
 	id := w.TMS().ID().String() + w.ID()
+	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.dbs[id]
 	if !ok {
 		driver, err := drivers[cm.driver].Open(cm.sp, id)

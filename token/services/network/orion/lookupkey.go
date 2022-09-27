@@ -8,9 +8,9 @@ package orion
 
 import (
 	"encoding/base64"
+	"fmt"
 	"time"
 
-	"github.com/hashicorp/go-uuid"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -25,6 +25,10 @@ type LookupKeyRequest struct {
 	StartingTxID string
 	Key          string
 	Timeout      time.Duration
+}
+
+func (l *LookupKeyRequest) String() string {
+	return fmt.Sprintf("[%s:%s:%s:%s]", l.Network, l.Namespace, l.StartingTxID, l.Key)
 }
 
 type LookupKeyResponse struct {
@@ -68,14 +72,14 @@ func (v *LookupKeyRequestView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("custodian: %s", custodian)
 	session, err := session2.NewJSON(context, context.Initiator(), view2.GetIdentityProvider(context).Identity(custodian))
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
+		return nil, errors.Wrapf(err, "failed to get session to custodian [%s] for request [%s]", custodian, v.LookupKeyRequest)
 	}
 	if err := session.Send(v.LookupKeyRequest); err != nil {
-		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
+		return nil, errors.Wrapf(err, "failed to send request [%s] to custodian [%s]", v.LookupKeyRequest, custodian)
 	}
 	response := &LookupKeyResponse{}
-	if err := session.Receive(response); err != nil {
-		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
+	if err := session.ReceiveWithTimeout(response, v.Timeout); err != nil {
+		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s] on request [%s]", custodian, v.LookupKeyRequest)
 	}
 	return response.Raw, nil
 }
@@ -108,11 +112,11 @@ func LookupKey(context view.Context, request *LookupKeyRequest) ([]byte, error) 
 	if ons == nil {
 		return nil, errors.Errorf("cannot find orion netwotk [%s]", request.Network)
 	}
-	uuid, err := uuid.GenerateUUID()
+	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to generate session uuid")
+		return nil, errors.Wrap(err, "failed to get custodian identifier")
 	}
-	s, err := ons.SessionManager().NewSession(uuid)
+	s, err := ons.SessionManager().NewSession(custodianID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get a new session")
 	}
@@ -140,6 +144,7 @@ func LookupKey(context view.Context, request *LookupKeyRequest) ([]byte, error) 
 			if err != nil {
 				logger.Errorf("failed to get key [%s] from [%s:%s]", request.Key, request.Network, request.Namespace)
 			}
+			logger.Debugf("get key [%s] from [%s:%s], result [%d]", request.Key, request.Network, request.Namespace, len(v))
 			if len(v) != 0 {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",

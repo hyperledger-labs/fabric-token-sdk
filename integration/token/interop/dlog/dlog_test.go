@@ -25,6 +25,7 @@ var _ = Describe("DLog end to end", func() {
 	})
 
 	AfterEach(func() {
+		ii.DeleteOnStop = false
 		ii.Stop()
 	})
 
@@ -43,7 +44,7 @@ var _ = Describe("DLog end to end", func() {
 		})
 
 		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleFabricNetwork(ii)
+			interop.TestHTLCSingleNetwork(ii)
 		})
 	})
 
@@ -62,7 +63,7 @@ var _ = Describe("DLog end to end", func() {
 		})
 
 		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleFabricNetwork(ii)
+			interop.TestHTLCSingleNetwork(ii)
 		})
 	})
 
@@ -81,7 +82,7 @@ var _ = Describe("DLog end to end", func() {
 		})
 
 		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCTwoFabricNetworks(ii)
+			interop.TestHTLCTwoNetworks(ii)
 		})
 	})
 
@@ -119,7 +120,27 @@ var _ = Describe("DLog end to end", func() {
 		})
 
 		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCNoCrossClaimTwoFabricNetworks(ii)
+			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
+		})
+	})
+
+	Describe("HTLC No Cross Claim with Orion and Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
+				"/home/vagrant/testdata",
+				interop.HTLCNoCrossClaimWithOrionTopology("dlog")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.DeleteOnStart = true
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed an htlc based atomic swap", func() {
+			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
 		})
 	})
 

@@ -41,6 +41,7 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 
 	return common.JSONUnmarshalString(txid)
 }
@@ -55,6 +56,11 @@ func tmsIssueCash(network *integration.Infrastructure, tmsID token.TMSID, issuer
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(
+		common.JSONUnmarshalString(txid),
+		api.WithNetwork(tmsID.Network),
+		api.WithChannel(tmsID.Channel),
+	)).NotTo(HaveOccurred())
+	Expect(network.Client("auditor").IsTxFinal(
 		common.JSONUnmarshalString(txid),
 		api.WithNetwork(tmsID.Network),
 		api.WithChannel(tmsID.Channel),
@@ -107,6 +113,12 @@ func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string,
 			api.WithNetwork(tmsID.Network),
 			api.WithChannel(tmsID.Channel),
 		)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(
+			lockResult.TxID,
+			api.WithNetwork(tmsID.Network),
+			api.WithChannel(tmsID.Channel),
+		)).NotTo(HaveOccurred())
+
 		if len(hash) == 0 {
 			Expect(lockResult.PreImage).NotTo(BeNil())
 		}
@@ -142,15 +154,21 @@ func htlcReclaimAll(network *integration.Infrastructure, id string, wallet strin
 }
 
 func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
-	txID, err := network.Client(id).CallView("htlc.claim", common.JSONMarshall(&htlc.Claim{
+	txIDBoxed, err := network.Client(id).CallView("htlc.claim", common.JSONMarshall(&htlc.Claim{
 		TMSID:    tmsID,
 		Wallet:   wallet,
 		PreImage: preImage,
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
+		txID := common.JSONUnmarshalString(txIDBoxed)
 		Expect(network.Client(id).IsTxFinal(
-			common.JSONUnmarshalString(txID),
+			txID,
+			api.WithNetwork(tmsID.Network),
+			api.WithChannel(tmsID.Channel),
+		)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(
+			txID,
 			api.WithNetwork(tmsID.Network),
 			api.WithChannel(tmsID.Channel),
 		)).NotTo(HaveOccurred())
@@ -184,7 +202,7 @@ func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc 
 
 	_, err = network.Client(id).CallView("htlc.scan", common.JSONMarshall(&htlc.Scan{
 		TMSID:                 options.TMSID(),
-		Timeout:               30 * time.Second,
+		Timeout:               120 * time.Second,
 		Hash:                  hash,
 		HashFunc:              hashFunc,
 		StartingTransactionID: startingTransactionID,

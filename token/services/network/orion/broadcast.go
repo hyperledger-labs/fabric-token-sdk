@@ -104,7 +104,7 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	if err := env.FromBytes(request.Blob); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal envelope")
 	}
-	logger.Debugf("commit envelope [%s]", env.TxID())
+	logger.Debugf("commit envelope [%s][%s]", env.TxID(), env.String())
 	if err := ons.TransactionManager().CommitEnvelope(oSession, env); err != nil {
 		return nil, errors.Wrap(err, "failed to commit envelope")
 	}

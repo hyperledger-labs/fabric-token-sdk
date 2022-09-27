@@ -100,7 +100,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transactio
 
 // NewTransactionFromBytes returns a new transaction from the passed bytes
 func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []byte) (*Transaction, error) {
-	tx, err := ttx.NewTransactionFromBytes(ctx, network, channel, raw)
+	tx, err := ttx.NewTransactionFromBytes(ctx, raw)
 	if err != nil {
 		return nil, err
 	}

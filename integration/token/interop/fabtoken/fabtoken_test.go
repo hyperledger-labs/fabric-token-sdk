@@ -43,7 +43,7 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleFabricNetwork(ii)
+			interop.TestHTLCSingleNetwork(ii)
 		})
 	})
 
@@ -62,7 +62,7 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleFabricNetwork(ii)
+			interop.TestHTLCSingleNetwork(ii)
 		})
 	})
 
@@ -81,7 +81,7 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCTwoFabricNetworks(ii)
+			interop.TestHTLCTwoNetworks(ii)
 		})
 	})
 
@@ -119,7 +119,7 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCNoCrossClaimTwoFabricNetworks(ii)
+			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
 		})
 	})
 

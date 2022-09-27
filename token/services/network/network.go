@@ -139,6 +139,10 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 	return e.e.FromBytes(r)
 }
 
+func (e *Envelope) String() string {
+	return e.e.String()
+}
+
 type RWSet struct {
 	rws driver.RWSet
 }
@@ -322,8 +326,10 @@ func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeL
 	return n.n.UnsubscribeTxStatusChanges(id, listener)
 }
 
-func (n *Network) ScanForKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
-	return n.n.LookupKey(namespace, startingTxID, key, timeout)
+// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
+// The operation gets canceled if the passed timeout gets reached.
+func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
 }
 
 // Provider returns an instance of network provider
