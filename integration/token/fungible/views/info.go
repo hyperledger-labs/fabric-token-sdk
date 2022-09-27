@@ -48,11 +48,17 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	tms := token.GetManagementService(context)
 	assert.NotNil(tms, "failed to get TMS")
 
+	assert.NoError(tms.PublicParametersManager().Validate(), "failed to validate local public parameters")
+
 	ppRaw, err := tms.PublicParametersManager().SerializePublicParameters()
 	assert.NoError(err, "failed to marshal public params")
 
 	fetchedPPRaw, err := tms.PublicParametersManager().Fetch()
 	assert.NoError(err, "failed to fetch public params")
+
+	ppm, err := token.NewPublicParametersManagerFromPublicParams(fetchedPPRaw)
+	assert.NoError(err, "failed to instantiate public params manager from fetch params")
+	assert.NoError(ppm.Validate(), "failed to validate remote public parameters")
 
 	assert.Equal(fetchedPPRaw, ppRaw, "public params do not match [%s]!=[%s]", hash.Hashable(fetchedPPRaw), hash.Hashable(ppRaw))
 

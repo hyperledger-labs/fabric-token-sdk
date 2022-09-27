@@ -128,6 +128,11 @@ func (pp *PublicParams) Precision() uint64 {
 	return pp.QuantityPrecision
 }
 
+// Validate validates the public parameters
+func (pp *PublicParams) Validate() error {
+	return nil
+}
+
 // Setup initializes PublicParams
 func Setup() (*PublicParams, error) {
 	return &PublicParams{

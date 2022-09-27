@@ -286,6 +286,10 @@ func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Vali
 		return nil, nil, errors.Wrap(err, "failed instantiating public parameters manager")
 	}
 
+	if err := ppm.Validate(); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to validate public parameters")
+	}
+
 	logger.Debugf("instantiate validator...")
 	validator, err := core.NewValidator(pp)
 	if err != nil {
@@ -293,4 +297,20 @@ func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Vali
 	}
 
 	return &PublicParametersManager{ppm: ppm}, &Validator{backend: validator}, nil
+}
+
+func NewPublicParametersManagerFromPublicParams(params []byte) (*PublicParametersManager, error) {
+	logger.Debugf("unmarshall public parameters...")
+	pp, err := core.PublicParametersFromBytes(params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
+	}
+
+	logger.Debugf("instantiate public parameters manager...")
+	ppm, err := core.NewPublicParametersManager(pp)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed instantiating public parameters manager")
+	}
+
+	return &PublicParametersManager{ppm: ppm}, nil
 }

@@ -52,6 +52,11 @@ func (c *PublicParametersManager) SerializePublicParameters() ([]byte, error) {
 	return c.ppm.SerializePublicParameters()
 }
 
+// Validate validates the public parameters
+func (c *PublicParametersManager) Validate() error {
+	return c.ppm.Validate()
+}
+
 // Update fetches the public parameters from the backend and update the local one accordingly
 func (c *PublicParametersManager) Update() error {
 	return c.ppm.Update()

@@ -43,4 +43,10 @@ func TestSerialization(t *testing.T) {
 
 	assert.Equal(t, pp, pp2)
 	assert.Equal(t, ser, ser2)
+
+	assert.NoError(t, pp.Validate())
+
+	pp.Issuers = [][]byte{[]byte("issuer")}
+	assert.NoError(t, pp.Validate())
+
 }

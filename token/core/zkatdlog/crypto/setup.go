@@ -53,6 +53,32 @@ type RangeProofParams struct {
 	Exponent     int
 }
 
+func (rpp *RangeProofParams) Validate() error {
+	if len(rpp.SignPK) != 3 {
+		return errors.Errorf("invalid range proof parameters: signature public key should be 3, instead it is %d", len(rpp.SignPK))
+	}
+	if len(rpp.SignedValues) < 2 {
+		return errors.New("invalid range proof parameters: signed values should be > 2")
+	}
+	if rpp.Q == nil {
+		return errors.New("invalid range proof parameters: generator Q is nil")
+	}
+	if rpp.Exponent == 0 {
+		return errors.New("invalid range proof parameters: exponent is 0")
+	}
+	for i := 0; i < len(rpp.SignedValues); i++ {
+		if rpp.SignedValues[i] == nil {
+			return errors.Errorf("invalid range proof parameters: signed value at index %d is nil", i)
+		}
+	}
+	for i := 0; i < len(rpp.SignPK); i++ {
+		if rpp.SignPK[i] == nil {
+			return errors.Errorf("invalid range proof parameters: public key at index %d is nil", i)
+		}
+	}
+	return nil
+}
+
 func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 	pp := &PublicParams{}
 	pp.Label = label
@@ -207,4 +233,41 @@ func SetupWithCustomLabel(base int64, exponent int, nymPK []byte, label string, 
 	pp.QuantityPrecision = DefaultPrecision
 	// max value of any given token is max = base^exponent - 1
 	return pp, nil
+}
+
+func (pp *PublicParams) Validate() error {
+	if int(pp.Curve) > len(math.Curves)-1 {
+		return errors.Errorf("invalid public parameters: invalid curveID [%d > %d]", int(pp.Curve), len(math.Curves)-1)
+	}
+	if int(pp.IdemixCurveID) > len(math.Curves)-1 {
+		return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(math.Curves)-1)
+	}
+	if pp.PedGen == nil {
+		return errors.New("invalid public parameters: nil Pedersen generator")
+	}
+	if len(pp.PedParams) != 3 {
+		return errors.Errorf("invalid public parameters: length mismatch in Pedersen parameters [%d vs. 3]", len(pp.PedParams))
+	}
+	for i := 0; i < len(pp.PedParams); i++ {
+		if pp.PedParams[i] == nil {
+			return errors.Errorf("invalid public parameters: nil Pedersen parameter at index %d", i)
+		}
+	}
+	if pp.RangeProofParams == nil {
+		return errors.New("invalid public parameters: nil range proof parameters")
+	}
+	err := pp.RangeProofParams.Validate()
+	if err != nil {
+		return errors.Wrap(err, "invalid public parameters")
+	}
+	if pp.QuantityPrecision != DefaultPrecision {
+		return errors.Errorf("invalid public parameters: quantity precision should be %d instead it is %d", DefaultPrecision, pp.QuantityPrecision)
+	}
+	if len(pp.IdemixIssuerPK) == 0 {
+		return errors.New("invalid public parameters: empty idemix issuer")
+	}
+	//if len(pp.Issuers) == 0 {
+	//	return errors.New("invalid public parameters: empty list of issuers")
+	//}
+	return nil
 }
