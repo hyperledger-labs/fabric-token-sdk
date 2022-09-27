@@ -53,6 +53,8 @@ type IssueAction struct {
 	Issuer view.Identity
 	// new tokens to be issued
 	Outputs []*Output
+	// metadata of the issue action
+	Metadata []byte
 }
 
 // Serialize marshals IssueAction
@@ -106,9 +108,9 @@ func (i *IssueAction) GetIssuer() []byte {
 	return i.Issuer
 }
 
-// GetMetadata returns nil, indicating that IssueAction in fabtoken carries no metadata
+// GetMetadata returns the IssueAction metadata
 func (i *IssueAction) GetMetadata() []byte {
-	return nil
+	return i.Metadata
 }
 
 // TransferAction encodes a fabtoken transfer
