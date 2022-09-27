@@ -266,8 +266,8 @@ func (pp *PublicParams) Validate() error {
 	if len(pp.IdemixIssuerPK) == 0 {
 		return errors.New("invalid public parameters: empty idemix issuer")
 	}
-	if len(pp.Issuers) == 0 {
-		return errors.New("invalid public parameters: empty list of issuers")
-	}
+	//if len(pp.Issuers) == 0 {
+	//	return errors.New("invalid public parameters: empty list of issuers")
+	//}
 	return nil
 }
