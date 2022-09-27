@@ -43,4 +43,10 @@ func TestSerialization(t *testing.T) {
 
 	assert.Equal(t, pp, pp2)
 	assert.Equal(t, ser, ser2)
+
+	assert.Error(t, pp.Validate(), "invalid public parameters: empty list of issuers")
+
+	pp.Issuers = [][]byte{[]byte("issuer")}
+	assert.NoError(t, pp.Validate())
+
 }

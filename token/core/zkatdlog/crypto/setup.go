@@ -55,7 +55,7 @@ type RangeProofParams struct {
 
 func (rpp *RangeProofParams) Validate() error {
 	if len(rpp.SignPK) != 3 {
-		return errors.Errorf("invalid range proof parameters: signature public key should be 3, instead it is %d", rpp.SignPK)
+		return errors.Errorf("invalid range proof parameters: signature public key should be 3, instead it is %d", len(rpp.SignPK))
 	}
 	if len(rpp.SignedValues) < 2 {
 		return errors.New("invalid range proof parameters: signed values should be > 2")
