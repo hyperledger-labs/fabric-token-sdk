@@ -27,7 +27,7 @@ type IssueAction struct {
 	// flag to indicate whether the Issuer is anonymous or not
 	Anonymous bool
 	// Metadata of the issue action
-	Metadata []byte
+	Metadata map[string][]byte
 }
 
 // GetProof returns IssueAction ZKP
@@ -36,7 +36,7 @@ func (i *IssueAction) GetProof() []byte {
 }
 
 // GetMetadata returns IssueAction metadata if there is any.
-func (i *IssueAction) GetMetadata() []byte {
+func (i *IssueAction) GetMetadata() map[string][]byte {
 	return i.Metadata
 }
 

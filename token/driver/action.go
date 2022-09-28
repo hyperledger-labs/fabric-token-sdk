@@ -26,7 +26,7 @@ type IssueAction interface {
 	// GetIssuer returns the issuer of the action
 	GetIssuer() []byte
 	// GetMetadata returns the metadata of the action
-	GetMetadata() []byte
+	GetMetadata() map[string][]byte
 }
 
 // Output models an output of an action
