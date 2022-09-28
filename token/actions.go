@@ -39,7 +39,7 @@ func (i *IssueAction) GetIssuer() []byte {
 }
 
 // GetMetadata returns the metadata of the action.
-func (i *IssueAction) GetMetadata() []byte {
+func (i *IssueAction) GetMetadata() map[string][]byte {
 	return i.a.GetMetadata()
 }
 

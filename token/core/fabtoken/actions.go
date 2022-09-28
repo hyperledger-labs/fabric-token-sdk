@@ -54,7 +54,7 @@ type IssueAction struct {
 	// new tokens to be issued
 	Outputs []*Output
 	// metadata of the issue action
-	Metadata []byte
+	Metadata map[string][]byte
 }
 
 // Serialize marshals IssueAction
@@ -109,7 +109,7 @@ func (i *IssueAction) GetIssuer() []byte {
 }
 
 // GetMetadata returns the IssueAction metadata
-func (i *IssueAction) GetMetadata() []byte {
+func (i *IssueAction) GetMetadata() map[string][]byte {
 	return i.Metadata
 }
 
