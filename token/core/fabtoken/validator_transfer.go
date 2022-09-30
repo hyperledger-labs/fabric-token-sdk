@@ -140,7 +140,7 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			metadataKey, err := htlc2.MetadataCheck(ctx.Action, script, op, sigma)
+			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.Action, script, op, sigma)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
@@ -173,6 +173,11 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err := script.Validate(now); err != nil {
 				return errors.WithMessagef(err, "htlc script invalid")
 			}
+			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.Action, script)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to check htlc metadata")
+			}
+			ctx.CountMetadataKey(metadataKey)
 			continue
 		}
 	}

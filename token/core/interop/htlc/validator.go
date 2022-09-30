@@ -55,8 +55,8 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htl
 	}
 }
 
-// MetadataCheck checks that the HTLC metadata is in place
-func MetadataCheck(action Action, script *htlc.Script, op OperationType, sig []byte) (string, error) {
+// MetadataClaimKeyCheck checks that the claim key is in place
+func MetadataClaimKeyCheck(action Action, script *htlc.Script, op OperationType, sig []byte) (string, error) {
 	if op == Reclaim {
 		// No metadata in this case
 		return "", nil
@@ -90,5 +90,22 @@ func MetadataCheck(action Action, script *htlc.Script, op OperationType, sig []b
 		return "", errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
 	}
 
+	return key, nil
+}
+
+// MetadataLockKeyCheck checks that the lock key is in place
+func MetadataLockKeyCheck(action Action, script *htlc.Script) (string, error) {
+	metadata := action.GetMetadata()
+	if len(metadata) == 0 {
+		return "", errors.New("cannot find htlc lock, no metadata")
+	}
+	key := htlc.LockKey(script.HashInfo.Hash)
+	value, ok := metadata[key]
+	if !ok {
+		return "", errors.New("cannot find htlc lock, missing metadata entry")
+	}
+	if !bytes.Equal(value, htlc.LockValue(script.HashInfo.Hash)) {
+		return "", errors.Errorf("invalid action, cannot match htlc lock with metadata [%x]!=[%x]", value, script.HashInfo.Hash)
+	}
 	return key, nil
 }

@@ -8,6 +8,7 @@ package translator
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -358,7 +359,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 			return err
 		}
 		if len(raw) != 0 {
-			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, string(raw))
+			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, base64.StdEncoding.EncodeToString(raw))
 		}
 		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
 			return err

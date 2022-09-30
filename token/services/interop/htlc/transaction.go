@@ -167,11 +167,17 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 			}
 		}
 	}
-	script, preImage, err := t.recipientAsScript(sender, recipient, deadline, hash, hashFunc, hashEncoding)
+	scriptID, preImage, script, err := t.recipientAsScript(sender, recipient, deadline, hash, hashFunc, hashEncoding)
 	if err != nil {
 		return nil, err
 	}
-	_, err = t.TokenRequest.Transfer(wallet, typ, []uint64{value}, []view.Identity{script}, opts...)
+	_, err = t.TokenRequest.Transfer(
+		wallet,
+		typ,
+		[]uint64{value},
+		[]view.Identity{scriptID},
+		append(opts, token.WithTransferMetadata(LockKey(script.HashInfo.Hash), LockValue(script.HashInfo.Hash)))...,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -299,25 +305,25 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	)
 }
 
-func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, error) {
+func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, *Script, error) {
 	// sample pre-image and its hash
 	var preImage []byte
 	var err error
 	if len(h) == 0 {
 		preImage, err = CreateNonce()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		hash := hashFunc.New()
 		if _, err := hash.Write(preImage); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		h = hash.Sum(nil)
 		// no need to encode if encoding is none (=0)
 		if hashEncoding != 0 {
 			he := hashEncoding.New()
 			if he == nil {
-				return nil, nil, errors.New("hashEncoding.New() returned nil")
+				return nil, nil, nil, errors.New("hashEncoding.New() returned nil")
 			}
 			h = []byte(he.EncodeToString(h))
 		}
@@ -325,7 +331,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 
 	logger.Debugf("pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImage), base64.StdEncoding.EncodeToString(h))
 
-	script := Script{
+	script := &Script{
 		HashInfo: HashInfo{
 			Hash:         h,
 			HashFunc:     hashFunc,
@@ -337,7 +343,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	}
 	rawScript, err := json.Marshal(script)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	ro := &identity.RawOwner{
 		Type:     ScriptType,
@@ -345,9 +351,9 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	}
 	raw, err := identity.MarshallRawOwner(ro)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return raw, preImage, nil
+	return raw, preImage, script, nil
 }
 
 // CreateNonce generates a nonce using the common/crypto package

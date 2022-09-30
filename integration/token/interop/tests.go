@@ -8,12 +8,15 @@ package interop
 
 import (
 	"crypto"
+	"encoding/base64"
+	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	. "github.com/onsi/gomega"
 )
 
@@ -89,6 +92,16 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	checkBalance(network, "alice", "", "EUR", 0)
 	checkBalance(network, "bob", "", "EUR", 30)
 	checkBalance(network, "bob", "", "USD", 20, token.WithTMSID(defaultTMSID))
+
+	// lock two times with the same hash, the second lock should fail
+	_, _, hash := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
+		fmt.Sprintf(
+			"entry with transfer metadata key [%s] is already occupied by [%s]",
+			htlc.LockKey(hash),
+			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
+		),
+	)
 }
 
 func TestHTLCTwoNetworks(network *integration.Infrastructure) {
