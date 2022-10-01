@@ -25,6 +25,7 @@ func LockKey(v []byte) string {
 	return LockHash + hex.EncodeToString(v)
 }
 
+// LockValue returns the encoding of the value for a lock key
 func LockValue(v []byte) []byte {
 	return []byte(hex.EncodeToString(v))
 }
