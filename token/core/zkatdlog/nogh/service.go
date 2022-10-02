@@ -7,14 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"sync"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
-	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -36,11 +35,17 @@ type TokenLoader interface {
 }
 
 type PublicParametersManager interface {
-	api3.PublicParamsManager
+	driver.PublicParamsManager
 	PublicParams() *crypto.PublicParams
 }
 
-type DeserializerProviderFunc = func(params *crypto.PublicParams) (api3.Deserializer, error)
+type DeserializerProviderFunc = func(params *crypto.PublicParams) (driver.Deserializer, error)
+
+type KVS interface {
+	Exists(id string) bool
+	Put(id string, state interface{}) error
+	Get(id string, state interface{}) error
+}
 
 type Service struct {
 	Channel               string
@@ -49,18 +54,17 @@ type Service struct {
 	PP                    *crypto.PublicParams
 	PPM                   PublicParametersManager
 	PPLabel               string
-	PublicParamsFetcher   api3.PublicParamsFetcher
+	PublicParamsFetcher   driver.PublicParamsFetcher
 	TokenLoader           TokenLoader
 	TokenCommitmentLoader TokenCommitmentLoader
 	QE                    QueryEngine
 	DeserializerProvider  DeserializerProviderFunc
 	configManager         config.Manager
 
-	identityProvider api3.IdentityProvider
-	OwnerWallets     []*wallet
-	IssuerWallets    []*issuerWallet
-	AuditorWallets   []*auditorWallet
-	WalletsLock      sync.Mutex
+	identityProvider       driver.IdentityProvider
+	OwnerWalletsRegistry   *identity.WalletsRegistry
+	IssuerWalletsRegistry  *identity.WalletsRegistry
+	AuditorWalletsRegistry *identity.WalletsRegistry
 }
 
 func NewTokenService(
@@ -71,23 +75,27 @@ func NewTokenService(
 	tokenLoader TokenLoader,
 	tokenCommitmentLoader TokenCommitmentLoader,
 	queryEngine QueryEngine,
-	identityProvider api3.IdentityProvider,
+	identityProvider driver.IdentityProvider,
 	deserializerProvider DeserializerProviderFunc,
 	ppLabel string,
 	configManager config.Manager,
+	kvs KVS,
 ) (*Service, error) {
 	s := &Service{
-		Channel:               channel,
-		Namespace:             namespace,
-		SP:                    sp,
-		PPM:                   PPM,
-		TokenLoader:           tokenLoader,
-		TokenCommitmentLoader: tokenCommitmentLoader,
-		QE:                    queryEngine,
-		identityProvider:      identityProvider,
-		DeserializerProvider:  deserializerProvider,
-		PPLabel:               ppLabel,
-		configManager:         configManager,
+		Channel:                channel,
+		Namespace:              namespace,
+		SP:                     sp,
+		PPM:                    PPM,
+		TokenLoader:            tokenLoader,
+		TokenCommitmentLoader:  tokenCommitmentLoader,
+		QE:                     queryEngine,
+		identityProvider:       identityProvider,
+		DeserializerProvider:   deserializerProvider,
+		PPLabel:                ppLabel,
+		configManager:          configManager,
+		OwnerWalletsRegistry:   identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.OwnerRole, kvs),
+		IssuerWalletsRegistry:  identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.IssuerRole, kvs),
+		AuditorWalletsRegistry: identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.AuditorRole, kvs),
 	}
 	return s, nil
 }
@@ -118,12 +126,12 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 }
 
 // IdentityProvider returns the identity provider associated with the service
-func (s *Service) IdentityProvider() api3.IdentityProvider {
+func (s *Service) IdentityProvider() driver.IdentityProvider {
 	return s.identityProvider
 }
 
 // Validator returns the validator associated with the service
-func (s *Service) Validator() api3.Validator {
+func (s *Service) Validator() driver.Validator {
 	d, err := s.Deserializer()
 	if err != nil {
 		panic(err)
@@ -136,7 +144,7 @@ func (s *Service) Validator() api3.Validator {
 }
 
 // PublicParamsManager returns the manager of the public parameters associated with the service
-func (s *Service) PublicParamsManager() api3.PublicParamsManager {
+func (s *Service) PublicParamsManager() driver.PublicParamsManager {
 	return s.PPM
 }
 
@@ -154,7 +162,7 @@ func (s *Service) FetchPublicParams() error {
 	return s.PPM.Update()
 }
 
-func (s *Service) Deserializer() (api3.Deserializer, error) {
+func (s *Service) Deserializer() (driver.Deserializer, error) {
 	pp := s.PublicParams()
 	d, err := s.DeserializerProvider(pp)
 	if err != nil {

@@ -8,6 +8,7 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -93,6 +94,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		crypto.DLogPublicParameters,
 		tmsConfig,
+		kvs.GetService(sp),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

@@ -8,9 +8,9 @@ package fabtoken
 
 import (
 	"fmt"
-	"sync"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -41,6 +41,12 @@ type PublicParametersManager interface {
 	PublicParams() *PublicParams
 }
 
+type KVS interface {
+	Exists(id string) bool
+	Put(id string, state interface{}) error
+	Get(id string, state interface{}) error
+}
+
 type Service struct {
 	SP          view2.ServiceProvider
 	Channel     string
@@ -50,12 +56,11 @@ type Service struct {
 	QE          QueryEngine
 	CM          config.Manager
 
-	IP             driver.IdentityProvider
-	Deserializer   driver.Deserializer
-	OwnerWallets   []*ownerWallet
-	IssuerWallets  []*issuerWallet
-	AuditorWallets []*auditorWallet
-	WalletsLock    sync.Mutex
+	IP                     driver.IdentityProvider
+	Deserializer           driver.Deserializer
+	OwnerWalletsRegistry   *identity.WalletsRegistry
+	IssuerWalletsRegistry  *identity.WalletsRegistry
+	AuditorWalletsRegistry *identity.WalletsRegistry
 }
 
 func NewService(
@@ -68,17 +73,21 @@ func NewService(
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	cm config.Manager,
+	kvs KVS,
 ) *Service {
 	s := &Service{
-		SP:           sp,
-		Namespace:    namespace,
-		Channel:      channel,
-		TokenLoader:  tokenLoader,
-		QE:           qe,
-		PPM:          ppm,
-		IP:           identityProvider,
-		Deserializer: deserializer,
-		CM:           cm,
+		SP:                     sp,
+		Namespace:              namespace,
+		Channel:                channel,
+		TokenLoader:            tokenLoader,
+		QE:                     qe,
+		PPM:                    ppm,
+		IP:                     identityProvider,
+		Deserializer:           deserializer,
+		CM:                     cm,
+		OwnerWalletsRegistry:   identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.OwnerRole, kvs),
+		IssuerWalletsRegistry:  identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.IssuerRole, kvs),
+		AuditorWalletsRegistry: identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.AuditorRole, kvs),
 	}
 	return s
 }
