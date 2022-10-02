@@ -200,10 +200,6 @@ func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 	return raw, nil
 }
 
-func (s *Service) walletID(id string) string {
-	return s.Channel + s.Namespace + id
-}
-
 type ownerWallet struct {
 	tokenService *Service
 	id           string
