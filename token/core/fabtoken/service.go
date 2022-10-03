@@ -9,6 +9,8 @@ package fabtoken
 import (
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -49,8 +51,7 @@ type KVS interface {
 
 type Service struct {
 	SP          view2.ServiceProvider
-	Channel     string
-	Namespace   string
+	TMSID       token.TMSID
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
 	QE          QueryEngine
@@ -65,8 +66,7 @@ type Service struct {
 
 func NewService(
 	sp view2.ServiceProvider,
-	channel string,
-	namespace string,
+	tmsID token.TMSID,
 	ppm PublicParametersManager,
 	tokenLoader TokenLoader,
 	qe QueryEngine,
@@ -77,17 +77,16 @@ func NewService(
 ) *Service {
 	s := &Service{
 		SP:                     sp,
-		Namespace:              namespace,
-		Channel:                channel,
+		TMSID:                  tmsID,
 		TokenLoader:            tokenLoader,
 		QE:                     qe,
 		PPM:                    ppm,
 		IP:                     identityProvider,
 		Deserializer:           deserializer,
 		CM:                     cm,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.OwnerRole, kvs),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.IssuerRole, kvs),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.AuditorRole, kvs),
+		OwnerWalletsRegistry:   identity.NewWalletsRegistry(tmsID, identityProvider, driver.OwnerRole, kvs),
+		IssuerWalletsRegistry:  identity.NewWalletsRegistry(tmsID, identityProvider, driver.IssuerRole, kvs),
+		AuditorWalletsRegistry: identity.NewWalletsRegistry(tmsID, identityProvider, driver.AuditorRole, kvs),
 	}
 	return s
 }

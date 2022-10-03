@@ -9,6 +9,7 @@ package nogh
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -48,9 +49,8 @@ type KVS interface {
 }
 
 type Service struct {
-	Channel               string
-	Namespace             string
 	SP                    view2.ServiceProvider
+	TMSID                 token2.TMSID
 	PP                    *crypto.PublicParams
 	PPM                   PublicParametersManager
 	PPLabel               string
@@ -68,9 +68,8 @@ type Service struct {
 }
 
 func NewTokenService(
-	channel string,
-	namespace string,
 	sp view2.ServiceProvider,
+	tmsID token2.TMSID,
 	PPM PublicParametersManager,
 	tokenLoader TokenLoader,
 	tokenCommitmentLoader TokenCommitmentLoader,
@@ -82,8 +81,7 @@ func NewTokenService(
 	kvs KVS,
 ) (*Service, error) {
 	s := &Service{
-		Channel:                channel,
-		Namespace:              namespace,
+		TMSID:                  tmsID,
 		SP:                     sp,
 		PPM:                    PPM,
 		TokenLoader:            tokenLoader,
@@ -93,9 +91,9 @@ func NewTokenService(
 		DeserializerProvider:   deserializerProvider,
 		PPLabel:                ppLabel,
 		configManager:          configManager,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.OwnerRole, kvs),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.IssuerRole, kvs),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(channel, namespace, identityProvider, driver.AuditorRole, kvs),
+		OwnerWalletsRegistry:   identity.NewWalletsRegistry(tmsID, identityProvider, driver.OwnerRole, kvs),
+		IssuerWalletsRegistry:  identity.NewWalletsRegistry(tmsID, identityProvider, driver.IssuerRole, kvs),
+		AuditorWalletsRegistry: identity.NewWalletsRegistry(tmsID, identityProvider, driver.AuditorRole, kvs),
 	}
 	return s, nil
 }

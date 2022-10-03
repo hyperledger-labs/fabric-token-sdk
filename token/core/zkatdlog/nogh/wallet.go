@@ -122,8 +122,8 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 		return nil
 	}
 	newWallet := newIssuerWallet(s, wID, idInfoIdentity)
-	s.IssuerWalletsRegistry.Register(wID, newWallet)
-	if err := s.IssuerWalletsRegistry.PutRecipientIdentity(idInfoIdentity, wID); err != nil {
+	s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.IssuerWalletsRegistry.RegisterIdentity(idInfoIdentity, wID); err != nil {
 		panic(fmt.Sprintf("programming error, failed to register recipient identity [%s]", err))
 	}
 	logger.Debugf("created issuer wallet [%s]", wID)
@@ -158,8 +158,8 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 		logger.Errorf("failed to get auditor wallet identity for [%s:%s:%s]: %s", wID, id, err)
 	}
 	newWallet := newAuditorWallet(s, wID, idInfoIdentity)
-	s.AuditorWalletsRegistry.Register(wID, newWallet)
-	if err := s.AuditorWalletsRegistry.PutRecipientIdentity(idInfoIdentity, wID); err != nil {
+	s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.AuditorWalletsRegistry.RegisterIdentity(idInfoIdentity, wID); err != nil {
 		panic(fmt.Sprintf("programming error, failed to register recipient identity [%s]", err))
 	}
 	logger.Debugf("created auditor wallet [%s]", wID)
@@ -189,7 +189,6 @@ type ownerWallet struct {
 	tokenService *Service
 	id           string
 	identityInfo driver.IdentityInfo
-	prefix       string
 	cache        *idemix.WalletIdentityCache
 }
 
@@ -198,9 +197,8 @@ func newOwnerWallet(tokenService *Service, id string, identityInfo driver.Identi
 		tokenService: tokenService,
 		id:           id,
 		identityInfo: identityInfo,
-		prefix:       fmt.Sprintf("%s:%s:%s", tokenService.Channel, tokenService.Namespace, id),
 	}
-	tokenService.OwnerWalletsRegistry.Register(id, w)
+	tokenService.OwnerWalletsRegistry.RegisterWallet(id, w)
 	w.cache = idemix.NewWalletIdentityCache(w.getRecipientIdentity, idemix.DefaultCacheSize)
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), idemix.DefaultCacheSize)
 	return w
@@ -211,7 +209,7 @@ func (w *ownerWallet) ID() string {
 }
 
 func (w *ownerWallet) Contains(identity view.Identity) bool {
-	return w.tokenService.OwnerWalletsRegistry.ExistsRecipientIdentity(identity, w.id)
+	return w.tokenService.OwnerWalletsRegistry.ContainsIdentity(identity, w.id)
 }
 
 func (w *ownerWallet) ContainsToken(token *token2.UnspentToken) bool {
@@ -235,7 +233,7 @@ func (w *ownerWallet) getRecipientIdentity() (view.Identity, error) {
 	}
 
 	// Register the pseudonym
-	if err := w.tokenService.OwnerWalletsRegistry.PutRecipientIdentity(pseudonym, w.id); err != nil {
+	if err := w.tokenService.OwnerWalletsRegistry.RegisterIdentity(pseudonym, w.id); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
 	}
 	return pseudonym, nil

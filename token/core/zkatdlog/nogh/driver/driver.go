@@ -9,6 +9,7 @@ package driver
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -82,10 +83,14 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	wallets.Put(driver.CertifierRole, wallet)
 
 	// Instantiate the token service
+	tmsID := token.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
+	}
 	service, err := zkatdlog.NewTokenService(
-		channel,
-		namespace,
 		sp,
+		tmsID,
 		ppm.New(zkatdlog.NewVaultPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters)),
 		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},

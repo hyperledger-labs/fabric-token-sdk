@@ -11,8 +11,10 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type KVS interface {
@@ -27,20 +29,19 @@ type WalletEntry struct {
 }
 
 type WalletsRegistry struct {
-	Channel          string
-	Namespace        string
+	ID               token.TMSID
 	IdentityProvider driver.IdentityProvider
 	IdentityRole     driver.IdentityRole
 	KVS              KVS
 
-	WLock   sync.RWMutex
+	sync.RWMutex
 	Wallets map[string]*WalletEntry
 }
 
-func NewWalletsRegistry(channel string, namespace string, identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, KVS KVS) *WalletsRegistry {
+// NewWalletsRegistry returns a new wallets registry for the passed parameters
+func NewWalletsRegistry(id token.TMSID, identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, KVS KVS) *WalletsRegistry {
 	return &WalletsRegistry{
-		Channel:          channel,
-		Namespace:        namespace,
+		ID:               id,
 		IdentityProvider: identityProvider,
 		IdentityRole:     identityRole,
 		KVS:              KVS,
@@ -48,6 +49,10 @@ func NewWalletsRegistry(channel string, namespace string, identityProvider drive
 	}
 }
 
+// Lookup searches the wallet corresponding to the passed id.
+// If a wallet is found, Lookup returns the wallet and its identifier.
+// If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id.
+// The identity info can be nil meaning that nothing has been found bound to the passed identifier
 func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error) {
 	identity, walletID, err := r.IdentityProvider.LookupIdentifier(r.IdentityRole, id)
 	if err != nil {
@@ -58,14 +63,20 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	if ok {
 		return walletEntry.Wallet, nil, wID, nil
 	}
-	logger.Debugf("no wallet found for [%s] at [%s]", identity, wID)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("no wallet found for [%s] at [%s]", identity, wID)
+	}
 	if len(identity) != 0 {
 		identityWID, err := r.GetWallet(identity)
-		logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
+		}
 		if err == nil && len(identityWID) != 0 {
 			w, ok := r.Wallets[identityWID]
 			if ok {
-				logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.Wallet.ID(), identityWID)
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("found wallet [%s:%s:%s:%s]", identity, walletID, w.Wallet.ID(), identityWID)
+				}
 				return w.Wallet, nil, identityWID, nil
 			}
 		} /*else {
@@ -90,23 +101,19 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	return nil, idInfo, wID, nil
 }
 
-func (r *WalletsRegistry) walletID(id string) string {
-	return r.Channel + r.Namespace + id
-}
-
-func (r *WalletsRegistry) Register(id string, w driver.Wallet) {
+// RegisterWallet binds the passed wallet to the passed it
+func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) {
 	r.Wallets[id] = &WalletEntry{
-		Prefix: fmt.Sprintf("%s:%s:%s", r.Channel, r.Namespace, id),
+		Prefix: fmt.Sprintf("%s:%s:%s:%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id),
 		Wallet: w,
 	}
 }
 
-func (r *WalletsRegistry) ExistsRecipientIdentity(identity view.Identity, wID string) bool {
-	return r.KVS.Exists(r.Wallets[wID].Prefix + identity.Hash())
-}
-
-func (r *WalletsRegistry) PutRecipientIdentity(identity view.Identity, wID string) error {
-	logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
+// RegisterIdentity binds the passed identity to the passed wallet identifier
+func (r *WalletsRegistry) RegisterIdentity(identity view.Identity, wID string) error {
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
+	}
 	idHash := identity.Hash()
 	if err := r.KVS.Put(idHash, wID); err != nil {
 		return err
@@ -117,19 +124,24 @@ func (r *WalletsRegistry) PutRecipientIdentity(identity view.Identity, wID strin
 	return nil
 }
 
+// GetWallet returns the wallet identifier bound to the passed identity
 func (r *WalletsRegistry) GetWallet(identity view.Identity) (string, error) {
 	var wID string
 	if err := r.KVS.Get(identity.Hash(), &wID); err != nil {
 		return "", err
 	}
-	logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("wallet [%s] is bound to identity [%s]", wID, identity)
+	}
 	return wID, nil
 }
 
-func (r *WalletsRegistry) Lock() {
-	r.WLock.Lock()
+// ContainsIdentity returns true is the passed identity belongs to the passed wallet,
+// false otherwise
+func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
+	return r.KVS.Exists(r.Wallets[wID].Prefix + identity.Hash())
 }
 
-func (r *WalletsRegistry) Unlock() {
-	r.WLock.Unlock()
+func (r *WalletsRegistry) walletID(id string) string {
+	return fmt.Sprintf("%s:%s:%s:%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id)
 }

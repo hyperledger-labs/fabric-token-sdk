@@ -9,6 +9,8 @@ package identity
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
@@ -26,9 +28,9 @@ func TestGetWallet(t *testing.T) {
 	assert.NoError(t, err)
 
 	alice := view.Identity("alice")
-	wr := NewWalletsRegistry("testchannel", "tns", nil, driver.OwnerRole, kvstore)
-	wr.Register("hello", nil)
-	assert.NoError(t, wr.PutRecipientIdentity(alice, "hello"))
+	wr := NewWalletsRegistry(token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}, nil, driver.OwnerRole, kvstore)
+	wr.RegisterWallet("hello", nil)
+	assert.NoError(t, wr.RegisterIdentity(alice, "hello"))
 	wID, err := wr.GetWallet(alice)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", wID)

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package fabtoken
 
 import (
@@ -100,8 +101,8 @@ func (s *Service) OwnerWalletByID(id interface{}) driver.OwnerWallet {
 	}
 
 	newWallet := newOwnerWallet(s, idInfoIdentity, wrappedID, wID, idInfo)
-	s.OwnerWalletsRegistry.Register(wID, newWallet)
-	if err := s.IssuerWalletsRegistry.PutRecipientIdentity(idInfoIdentity, wID); err != nil {
+	s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.OwnerWalletsRegistry.RegisterIdentity(wrappedID, wID); err != nil {
 		panic(fmt.Sprintf("programming error, failed to register recipient identity [%s]", err))
 	}
 	logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, wID)
@@ -137,8 +138,8 @@ func (s *Service) issuerWallet(id interface{}) driver.IssuerWallet {
 		return nil
 	}
 	newWallet := newIssuerWallet(s, wID, idInfoIdentity)
-	s.IssuerWalletsRegistry.Register(wID, newWallet)
-	if err := s.IssuerWalletsRegistry.PutRecipientIdentity(idInfoIdentity, wID); err != nil {
+	s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.IssuerWalletsRegistry.RegisterIdentity(idInfoIdentity, wID); err != nil {
 		panic(fmt.Sprintf("programming error, failed to register recipient identity [%s]", err))
 	}
 	logger.Debugf("created issuer wallet [%s]", wID)
@@ -173,8 +174,8 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 		logger.Errorf("failed to get auditor wallet identity for [%s:%s:%s]: %s", wID, id, err)
 	}
 	newWallet := newAuditorWallet(s, wID, idInfoIdentity)
-	s.AuditorWalletsRegistry.Register(wID, newWallet)
-	if err := s.AuditorWalletsRegistry.PutRecipientIdentity(idInfoIdentity, wID); err != nil {
+	s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.AuditorWalletsRegistry.RegisterIdentity(idInfoIdentity, wID); err != nil {
 		panic(fmt.Sprintf("programming error, failed to register recipient identity [%s]", err))
 	}
 	logger.Debugf("created auditor wallet [%s]", wID)
