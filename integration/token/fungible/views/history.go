@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -98,6 +100,7 @@ type ListAcceptedTransactions struct {
 	From            *time.Time
 	To              *time.Time
 	ActionTypes     []ttxdb.ActionType
+	Statuses        []driver.TxStatus
 }
 
 type ListAcceptedTransactionsView struct {
@@ -115,6 +118,7 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		From:            p.From,
 		To:              p.To,
 		ActionTypes:     p.ActionTypes,
+		Statuses:        p.Statuses,
 	})
 	assert.NoError(err, "failed querying transactions")
 	defer it.Close()

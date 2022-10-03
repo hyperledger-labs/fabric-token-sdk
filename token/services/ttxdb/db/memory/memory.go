@@ -134,6 +134,18 @@ func (p *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (
 				continue
 			}
 		}
+		if len(params.Statuses) != 0 {
+			found := false
+			for _, statusType := range params.Statuses {
+				if statusType == record.Status {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
 
 		subset = append(subset, record)
 	}

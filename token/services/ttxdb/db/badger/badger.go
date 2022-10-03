@@ -512,6 +512,18 @@ func (t *TransactionSelector) Select(record *TransactionRecord) (bool, bool) {
 			return false, false
 		}
 	}
+	if len(t.params.Statuses) != 0 {
+		found := false
+		for _, statusType := range t.params.Statuses {
+			if statusType == record.Record.Status {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
 	// match the wallet
 	senderMatch := true
 	if len(t.params.SenderWallet) != 0 && record.Record.SenderEID != t.params.SenderWallet {

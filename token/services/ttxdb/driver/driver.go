@@ -172,6 +172,9 @@ type QueryTransactionsParams struct {
 	// ActionTypes is the list of action types to accept
 	// If empty, any type is accepted
 	ActionTypes []ActionType
+	// ActionTypes is the list of transaction status to accept
+	// If empty, any type is accepted
+	Statuses []TxStatus
 }
 
 // TokenTransactionDB defines the interface for a token transactions database
