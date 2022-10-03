@@ -97,6 +97,7 @@ type ListAcceptedTransactions struct {
 	RecipientWallet string
 	From            *time.Time
 	To              *time.Time
+	ActionTypes     []ttxdb.ActionType
 }
 
 type ListAcceptedTransactionsView struct {
@@ -113,6 +114,7 @@ func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, 
 		RecipientWallet: p.RecipientWallet,
 		From:            p.From,
 		To:              p.To,
+		ActionTypes:     p.ActionTypes,
 	})
 	assert.NoError(err, "failed querying transactions")
 	defer it.Close()

@@ -220,6 +220,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110)
 	CheckAuditedTransactions(network, AuditedTransactions[:1], nil, nil)
 	CheckAuditedTransactions(network, AuditedTransactions[:1], &t0, &t1)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil, ttxdb.Issue)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1)
 
@@ -283,6 +284,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckAuditedTransactions(network, AuditedTransactions[5:7], &t8, &t9)
 	CheckSpending(network, "alice", "", "USD", 111)
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[3:4], &t8, &t9)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[3:4], &t8, &t9, ttxdb.Transfer)
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], &t0, &t9)
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], nil, nil)
 	ut := ListUnspentTokens(network, "alice", "", "USD")
@@ -297,6 +299,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	RedeemCash(network, "bob", "", "USD", 11, auditor)
 	t10 := time.Now()
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil, ttxdb.Redeem)
 	CheckAuditedTransactions(network, AuditedTransactions[7:9], &t9, &t10)
 
 	t11 := time.Now()
@@ -645,7 +648,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, expected []*t
 	}
 }
 
-func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
+func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, actionTypes ...ttxdb.ActionType) {
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 	}))
@@ -657,6 +660,7 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id string, w
 		RecipientWallet: eID,
 		From:            start,
 		To:              end,
+		ActionTypes:     actionTypes,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
