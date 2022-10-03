@@ -104,7 +104,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 // RegisterWallet binds the passed wallet to the passed it
 func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) {
 	r.Wallets[id] = &WalletEntry{
-		Prefix: fmt.Sprintf("%s:%s:%s:%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id),
+		Prefix: fmt.Sprintf("%s~%s~%s~%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id),
 		Wallet: w,
 	}
 }
@@ -143,5 +143,5 @@ func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) b
 }
 
 func (r *WalletsRegistry) walletID(id string) string {
-	return fmt.Sprintf("%s:%s:%s:%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id)
+	return fmt.Sprintf("%s~%s~%s~%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id)
 }
