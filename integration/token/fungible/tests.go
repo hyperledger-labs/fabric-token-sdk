@@ -303,8 +303,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	RedeemCash(network, "bob", "", "USD", 11, auditor)
 	t10 := time.Now()
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil, nil)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil, nil, ttxdb.Redeem)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Redeem)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[5:6], nil, nil, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Redeem)
 	CheckAuditedTransactions(network, AuditedTransactions[7:9], &t9, &t10)
 
 	t11 := time.Now()
