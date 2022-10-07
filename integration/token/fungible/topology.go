@@ -66,8 +66,32 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("RegisterIssuerWallet", &views.RegisterIssuerWalletViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
+	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+
+	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
+		fabric.WithOrganization("Org1"),
+		fabric.WithAnonymousIdentity(),
+		orion.WithRole("issuer"),
+		token.WithDefaultIssuerIdentity(),
+		token.WithIssuerIdentity("newIssuer.id1"),
+		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithOwnerIdentity(tokenSDKDriver, "newIssuer.owner"),
+	)
+	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
+	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
 
 	var auditor *node.Node
+	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
+		fabric.WithOrganization("Org1"),
+		orion.WithRole("auditor"),
+		token.WithAuditorIdentity(),
+	)
+	newAuditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	newAuditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
+	newAuditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+
 	if auditorAsIssuer {
 		issuer.AddOptions(
 			orion.WithRole("auditor"),
@@ -81,6 +105,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		issuer.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
 		issuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		issuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+		issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 		auditor = issuer
 	} else {
 		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
@@ -101,6 +126,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
+		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(

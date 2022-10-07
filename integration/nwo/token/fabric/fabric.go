@@ -14,9 +14,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
-
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -26,6 +23,8 @@ import (
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -39,6 +38,7 @@ const (
 )
 
 type fabricPlatform interface {
+	UpdateChaincode(chaincodeId string, version string, path string, packageFile string)
 	DeployChaincode(chaincode *topology.ChannelChaincode)
 	InvokeChaincode(cc *topology.ChannelChaincode, method string, args ...[]byte) []byte
 	DefaultIdemixOrgMSPDir() string
@@ -56,6 +56,7 @@ type tokenPlatform interface {
 	PublicParametersDir() string
 	GetBuilder() api2.Builder
 	TokenDir() string
+	UpdatePublicParams(tms *topology2.TMS, pp []byte, chaincodeId string, chaincodeVersion string)
 }
 
 type Entry struct {

@@ -71,6 +71,8 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	switch fn {
 	case "setup":
 		return r.setup(req, tx, rws, ns)
+	case "init":
+		return r.init(tx, ns)
 	default:
 		return r.tokenRequest(req, tx, rws, ns)
 	}
@@ -90,6 +92,25 @@ func (r *RWSetProcessor) setup(req fabric.Request, tx fabric.ProcessTransaction,
 	}
 	logger.Debugf("[setup] store setup bundle done")
 
+	return nil
+}
+
+//init when invoked fetches the public params from backend and updates the local version
+func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, ns string) error {
+	tms := token.GetManagementService(
+		r.sp,
+		token.WithNetwork(tx.Network()),
+		token.WithChannel(tx.Channel()),
+		token.WithNamespace(ns),
+	)
+	if tms == nil {
+		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
+	}
+	err := tms.PublicParametersManager().Update()
+	if err != nil {
+		return errors.Wrapf(err, "failed updating public params ")
+	}
+	logger.Debugf("Successfully updated public parameters")
 	return nil
 }
 

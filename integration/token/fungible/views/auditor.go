@@ -24,6 +24,7 @@ type AuditView struct{}
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
 	tx, err := ttx.ReceiveTransaction(context)
+
 	assert.NoError(err, "failed receiving transaction")
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
@@ -288,5 +289,30 @@ func (p *SetTransactionAuditStatusViewFactory) NewView(in []byte) (view.View, er
 	err := json.Unmarshal(in, f.SetTransactionAuditStatus)
 	assert.NoError(err, "failed unmarshalling input")
 
+	return f, nil
+}
+
+type GetAuditorWalletIdentity struct {
+	ID string
+}
+
+type GetAuditorWalletIdentityView struct {
+	*GetAuditorWalletIdentity
+}
+
+type GetAuditorWalletIdentityViewFactory struct{}
+
+func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, error) {
+	defaultAuditorWallet := token.GetManagementService(context).WalletManager().AuditorWallet(g.ID)
+	assert.NotNil(defaultAuditorWallet, "no default auditor wallet")
+	id, err := defaultAuditorWallet.GetAuditorIdentity()
+	assert.NoError(err, "failed getting auditorIdentity ")
+	return id, err
+}
+
+func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
+	f := &GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &GetAuditorWalletIdentity{}}
+	err := json.Unmarshal(in, f.GetAuditorWalletIdentity)
+	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

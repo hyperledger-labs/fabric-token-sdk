@@ -18,15 +18,13 @@ import (
 	"strings"
 	"text/template"
 
-	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/cc"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	. "github.com/onsi/gomega"
-
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
-
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	topology3 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/cc"
+	. "github.com/onsi/gomega"
 )
 
 type TCC struct {
@@ -54,15 +52,7 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 		cc.Chaincode.Name+".tar.gz",
 	)
 	Expect(os.MkdirAll(packageDir, 0766)).ToNot(HaveOccurred())
-
-	t, err := template.New("node").Funcs(template.FuncMap{
-		"Params": func() string { return base64.StdEncoding.EncodeToString(ppRaw) },
-	}).Parse(pp2.DefaultParams)
-	Expect(err).ToNot(HaveOccurred())
-	paramsFile := bytes.NewBuffer(nil)
-	err = t.Execute(io.MultiWriter(paramsFile), nil)
-	Expect(err).ToNot(HaveOccurred())
-
+	paramsFile := PublicPramasTemplate(ppRaw)
 	port := p.TokenPlatform.GetContext().ReservePort()
 	err = packager.New().PackageChaincode(
 		cc.Chaincode.Path,
@@ -105,6 +95,44 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 	cc.Chaincode.PackageFile = packageFile
 
 	return cc, port
+}
+
+func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology3.TMS, cc *topology.ChannelChaincode, ppRaw []byte, version string) {
+	packageDir := filepath.Join(
+		p.TokenPlatform.GetContext().RootDir(),
+		"token",
+		"chaincodes",
+		"tcc",
+		tms.Network,
+		tms.Channel,
+		tms.Namespace,
+	)
+	packageFile := filepath.Join(
+		packageDir,
+		cc.Chaincode.Name+version+".tar.gz",
+	)
+	Expect(os.MkdirAll(packageDir, 0766)).ToNot(HaveOccurred())
+
+	paramsFile := PublicPramasTemplate(ppRaw)
+
+	err := packager.New().PackageChaincode(
+		cc.Chaincode.Path,
+		cc.Chaincode.Lang,
+		cc.Chaincode.Label,
+		packageFile,
+		func(filePath string, fileName string) (string, []byte) {
+			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
+				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
+				return "", paramsFile.Bytes()
+			}
+			return "", nil
+		},
+	)
+	Expect(err).ToNot(HaveOccurred())
+	cc.Chaincode.PackageFile = packageFile
+	p.Fabric(tms).(*fabric.Platform).UpdateChaincode(cc.Chaincode.Name,
+		version,
+		cc.Chaincode.Path, cc.Chaincode.PackageFile)
 }
 
 func (p *NetworkHandler) PrepareTCC(tms *topology3.TMS, orgs []string) (*topology.ChannelChaincode, uint16) {
@@ -169,4 +197,15 @@ func (p *NetworkHandler) setupTokenChaincodes(tms *topology3.TMS) {
 			pp,
 		)
 	}
+}
+
+func PublicPramasTemplate(ppRaw []byte) *bytes.Buffer {
+	t, err := template.New("node").Funcs(template.FuncMap{
+		"Params": func() string { return base64.StdEncoding.EncodeToString(ppRaw) },
+	}).Parse(pp2.DefaultParams)
+	Expect(err).ToNot(HaveOccurred())
+	paramsFile := bytes.NewBuffer(nil)
+	err = t.Execute(io.MultiWriter(paramsFile), nil)
+	Expect(err).ToNot(HaveOccurred())
+	return paramsFile
 }

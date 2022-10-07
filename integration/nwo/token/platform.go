@@ -21,8 +21,10 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/context"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/onsi/ginkgo/v2"
@@ -222,6 +224,19 @@ func (p *Platform) AddNetworkHandler(label string, nh NetworkHandler) {
 
 func (p *Platform) SetPublicParamsGenerator(name string, gen generators.PublicParamsGenerator) {
 	p.PublicParamsGenerators[name] = gen
+}
+
+func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte, chaincodeId string, chaincodeVersion string) {
+	var cc *topology.ChannelChaincode
+	nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()].(*fabric.NetworkHandler)
+	for _, chaincode := range nh.Fabric(tms).Topology().Chaincodes {
+		if chaincode.Chaincode.Name == chaincodeId {
+			cc = chaincode
+			break
+		}
+	}
+	Expect(cc).NotTo(BeNil(), "failed to find chaincode [%s]", chaincodeId)
+	nh.UpdateChaincodePublicParams(tms, cc, publicParams, chaincodeVersion)
 }
 
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
