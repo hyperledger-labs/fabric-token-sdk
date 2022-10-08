@@ -13,6 +13,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
@@ -20,16 +21,19 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -41,7 +45,9 @@ type Registry interface {
 }
 
 type SDK struct {
-	registry Registry
+	registry       Registry
+	auditorManager *auditor.Manager
+	ownerManager   *owner.Manager
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -85,8 +91,12 @@ func (p *SDK) Install() error {
 	// Network provider
 	assert.NoError(p.registry.RegisterService(network.NewProvider(p.registry)))
 
-	// Token Transaction DB, use the driver from the configuration
-	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
+	// Token Transaction DB
+	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "", kvs.GetService(p.registry))))
+	p.auditorManager = auditor.NewManager(p.registry, kvs.GetService(p.registry))
+	assert.NoError(p.registry.RegisterService(p.auditorManager))
+	p.ownerManager = owner.NewManager(p.registry, kvs.GetService(p.registry))
+	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
 	logger.Infof("Install View Handlers")
 	query.InstallQueryViewFactories(p.registry)
@@ -102,5 +112,21 @@ func (p *SDK) Install() error {
 }
 
 func (p *SDK) Start(ctx context.Context) error {
+	configProvider := view2.GetConfigService(p.registry)
+	if !configProvider.GetBool("token.enabled") {
+		logger.Infof("Token platform not enabled, skipping start")
+		return nil
+	}
+	logger.Infof("Token platform enabled, starting...")
+
+	// restore owner and auditor dbs, if any
+	if err := p.ownerManager.Restore(); err != nil {
+		return errors.WithMessagef(err, "failed to restore auditors")
+	}
+	if err := p.auditorManager.Restore(); err != nil {
+		return errors.WithMessagef(err, "failed to restore auditors")
+	}
+
+	logger.Infof("Token platform enabled, starting...done")
 	return nil
 }

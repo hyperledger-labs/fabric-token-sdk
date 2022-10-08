@@ -272,10 +272,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
 
-	network.StopFSCNode("alice")
-	time.Sleep(3 * time.Second)
-	network.StartFSCNode("alice")
-	time.Sleep(5 * time.Second)
+	Restart(network, "alice")
 
 	t8 := time.Now()
 	TransferCash(network, "alice", "", "USD", 111, "bob", auditor)
@@ -347,10 +344,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
 
 	// Restart the auditor
-	network.StopFSCNode("auditor")
-	time.Sleep(3 * time.Second)
-	network.StartFSCNode("auditor")
-	time.Sleep(5 * time.Second)
+	Restart(network, "auditor")
 	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
@@ -371,6 +365,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	txID2, tx2 := PrepareTransferCash(network, "alice", "", "PINE", 55, "bob", auditor, tokenIDPine)
 	CheckBalance(network, "alice", "", "PINE", 55)
 	CheckHolding(network, "alice", "", "PINE", -55)
+	CheckBalance(network, "bob", "", "PINE", 0)
+	CheckHolding(network, "bob", "", "PINE", 110)
+	Restart(network, "bob")
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110)
 	BroadcastPreparedTransferCash(network, "alice", tx1, true)
@@ -398,8 +395,11 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	TokenSelectorUnlock(network, "bob", txID3)
 	FinalityWithTimeout(network, "bob", tx3, 20*time.Second)
 
-	// Addition transfers
+	// Restart
+	Restart(network, auditor, "alice", "bob", "charlie", "manager")
+	RegisterAuditor(network, auditor)
 
+	// Addition transfers
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
 	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150)
@@ -952,6 +952,17 @@ func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...st
 	for _, id := range ids {
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", nil)
 		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func Restart(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		network.StopFSCNode(id)
+	}
+	time.Sleep(30 * time.Second)
+	for _, id := range ids {
+		network.StartFSCNode(id)
+		time.Sleep(5 * time.Second)
 	}
 }
 

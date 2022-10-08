@@ -15,6 +15,7 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
@@ -475,10 +476,23 @@ func (db *DB) rollback(err error) {
 	}
 }
 
+type KVS interface {
+	Exists(id string) bool
+	Put(id string, state interface{}) error
+	Get(id string, state interface{}) error
+}
+
+type DBEntry struct {
+	TMSID    token.TMSID
+	WalletID string
+	Type     string
+}
+
 // Manager handles the databases
 type Manager struct {
 	sp     view2.ServiceProvider
 	driver string
+	kvs    KVS
 	mutex  sync.Mutex
 	dbs    map[string]*DB
 }
@@ -488,7 +502,7 @@ type Manager struct {
 // If the driver is not supported, an error is returned.
 // If the driver is not specified, the driver is taken from the configuration.
 // If the configuration is not specified, the default driver is used.
-func NewManager(sp view2.ServiceProvider, driver string) *Manager {
+func NewManager(sp view2.ServiceProvider, driver string, kvs KVS) *Manager {
 	if len(driver) == 0 {
 		driver = view2.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
 		if len(driver) == 0 {
@@ -499,6 +513,7 @@ func NewManager(sp view2.ServiceProvider, driver string) *Manager {
 	return &Manager{
 		sp:     sp,
 		driver: driver,
+		kvs:    kvs,
 		dbs:    map[string]*DB{},
 	}
 }
@@ -516,10 +531,41 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}
+		dbEntryType := "auditor"
+		_, ok := w.(*token.AuditorWallet)
+		if !ok {
+			dbEntryType = "tms"
+		}
+		if err := cm.kvs.Put(kvs.CreateCompositeKeyOrPanic("ttxdb", []string{id}), &DBEntry{
+			TMSID:    w.TMS().ID(),
+			WalletID: w.ID(),
+			Type:     dbEntryType,
+		}); err != nil {
+			return nil, errors.Wrapf(err, "failed to stop db entry in KVS [%s:%s]", w.TMS().ID(), w.ID())
+		}
 		c = newDB(driver)
 		cm.dbs[id] = c
 	}
 	return c, nil
+}
+
+func (cm *Manager) ListDBs() ([]DBEntry, error) {
+	it, err := kvs.GetService(cm.sp).GetByPartialCompositeID("ttxdb", nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to db list iterator")
+	}
+	var res []DBEntry
+	for {
+		if !it.HasNext() {
+			break
+		}
+		e := DBEntry{}
+		if _, err := it.Next(&e); err != nil {
+			return nil, errors.Wrapf(err, "failed to get db entry")
+		}
+		res = append(res, e)
+	}
+	return res, nil
 }
 
 var (

@@ -22,11 +22,11 @@ type TxStatus = ttxdb.TxStatus
 
 const (
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = "Pending"
+	Pending = ttxdb.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = "Confirmed"
+	Confirmed = ttxdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = "Deleted"
+	Deleted = ttxdb.Deleted
 )
 
 // Transaction models a generic token transaction
@@ -61,11 +61,6 @@ func (a *QueryExecutor) Done() {
 type Auditor struct {
 	sp view2.ServiceProvider
 	db *ttxdb.DB
-}
-
-// New returns a new Auditor instance for the passed auditor wallet
-func New(sp view2.ServiceProvider, w *token.AuditorWallet) *Auditor {
-	return &Auditor{sp: sp, db: ttxdb.Get(sp, w)}
 }
 
 // Validate validates the passed token request
@@ -104,10 +99,6 @@ func (a *Auditor) Append(tx Transaction) error {
 	if net == nil {
 		return errors.Errorf("failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
-	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
-	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.db}); err != nil {
-		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
-	}
 	logger.Debugf("append done for request %s", tx.ID())
 	return nil
 }
@@ -115,25 +106,4 @@ func (a *Auditor) Append(tx Transaction) error {
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *Auditor) SetStatus(txID string, status TxStatus) error {
 	return a.db.SetStatus(txID, status)
-}
-
-type TxStatusChangesListener struct {
-	net *network.Network
-	db  *ttxdb.DB
-}
-
-func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
-	logger.Debugf("tx status changed for tx %s: %s", txID, status)
-	var txStatus ttxdb.TxStatus
-	switch network.ValidationCode(status) {
-	case network.Valid:
-		txStatus = ttxdb.Confirmed
-	case network.Invalid:
-		txStatus = ttxdb.Deleted
-	}
-	if err := t.db.SetStatus(txID, txStatus); err != nil {
-		return errors.WithMessagef(err, "failed setting status for request %s", txID)
-	}
-	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
-	return nil
 }
