@@ -95,7 +95,7 @@ func (s *Service) OwnerWalletByID(id interface{}) api2.OwnerWallet {
 	// Create the wallet
 	idInfo, err := s.identityProvider.GetIdentityInfo(api2.OwnerRole, walletID)
 	if err != nil {
-		logger.Errorf("failed to get owner wallet info for [%s:%s]: %s", walletID, identity.String(), err)
+		logger.Debugf("owner wallet [%s:%s] not found: %s", walletID, identity.Hash(), err)
 		return nil
 	}
 
