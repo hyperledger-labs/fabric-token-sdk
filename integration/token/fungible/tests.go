@@ -396,8 +396,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	FinalityWithTimeout(network, "bob", tx3, 20*time.Second)
 
 	// Restart
-	Restart(network, auditor, "alice", "bob", "charlie", "manager")
-	RegisterAuditor(network, auditor)
+	//Restart(network, auditor, "alice", "bob", "charlie", "manager")
+	//RegisterAuditor(network, auditor)
 
 	// Addition transfers
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
