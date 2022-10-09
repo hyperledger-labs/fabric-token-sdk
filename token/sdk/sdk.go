@@ -33,7 +33,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
-	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -91,8 +90,8 @@ func (p *SDK) Install() error {
 	// Network provider
 	assert.NoError(p.registry.RegisterService(network.NewProvider(p.registry)))
 
-	// Token Transaction DB
-	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "", kvs.GetService(p.registry))))
+	// Token Transaction DB and derivatives
+	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
 	p.auditorManager = auditor.NewManager(p.registry, kvs.GetService(p.registry))
 	assert.NoError(p.registry.RegisterService(p.auditorManager))
 	p.ownerManager = owner.NewManager(p.registry, kvs.GetService(p.registry))
@@ -120,12 +119,12 @@ func (p *SDK) Start(ctx context.Context) error {
 	logger.Infof("Token platform enabled, starting...")
 
 	// restore owner and auditor dbs, if any
-	if err := p.ownerManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore onwer dbs")
-	}
-	if err := p.auditorManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore auditor dbs")
-	}
+	//if err := p.ownerManager.Restore(); err != nil {
+	//	return errors.WithMessagef(err, "failed to restore onwer dbs")
+	//}
+	//if err := p.auditorManager.Restore(); err != nil {
+	//	return errors.WithMessagef(err, "failed to restore auditor dbs")
+	//}
 
 	logger.Infof("Token platform enabled, starting...done")
 	return nil
