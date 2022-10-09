@@ -121,10 +121,10 @@ func (p *SDK) Start(ctx context.Context) error {
 
 	// restore owner and auditor dbs, if any
 	if err := p.ownerManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore auditors")
+		return errors.WithMessagef(err, "failed to restore onwer dbs")
 	}
 	if err := p.auditorManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore auditors")
+		return errors.WithMessagef(err, "failed to restore auditor dbs")
 	}
 
 	logger.Infof("Token platform enabled, starting...done")

@@ -956,14 +956,14 @@ func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...st
 }
 
 func Restart(network *integration.Infrastructure, ids ...string) {
-	for _, id := range ids {
-		network.StopFSCNode(id)
-	}
-	time.Sleep(5 * time.Second)
-	for _, id := range ids {
-		network.StartFSCNode(id)
-	}
-	time.Sleep(5 * time.Second)
+	//for _, id := range ids {
+	//	network.StopFSCNode(id)
+	//}
+	//time.Sleep(5 * time.Second)
+	//for _, id := range ids {
+	//	network.StartFSCNode(id)
+	//}
+	//time.Sleep(5 * time.Second)
 }
 
 func JSONUnmarshalFloat64(v interface{}) float64 {
