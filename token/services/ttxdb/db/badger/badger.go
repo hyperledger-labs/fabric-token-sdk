@@ -32,6 +32,10 @@ const (
 	streamLogPrefixStatus = "ttxdb.SetStatus"
 )
 
+type TransactionRecordSelector interface {
+	Select(record *TransactionRecord) (bool, bool)
+}
+
 type MovementRecord struct {
 	Id     uint64
 	Record *driver.MovementRecord
@@ -183,7 +187,10 @@ func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) 
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	it.Seek([]byte("tx"))
 
-	return &TransactionIterator{it: it, params: params}, nil
+	selector := &TransactionSelector{
+		params: params,
+	}
+	return &TransactionIterator{it: it, selector: selector}, nil
 }
 
 func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
@@ -349,8 +356,8 @@ func (p RecordSlice) Less(i, j int) bool { return p[i].Id < p[j].Id }
 func (p RecordSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 type TransactionIterator struct {
-	it     *badger.Iterator
-	params driver.QueryTransactionsParams
+	it       *badger.Iterator
+	selector TransactionRecordSelector
 }
 
 func (t *TransactionIterator) Close() {
@@ -386,33 +393,13 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 
 		t.it.Next()
 
-		// match the time constraints
-		if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
-			logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
-			continue
-		}
-		if t.params.To != nil && record.Record.Timestamp.After(*t.params.To) {
-			logger.Debugf("skipping transaction [%s] because it is after the to time", record.Record.TxID)
+		matched, stop := t.selector.Select(record)
+		if stop {
 			return nil, nil
 		}
-		// match the wallet
-		senderMatch := true
-		if len(t.params.SenderWallet) != 0 && record.Record.SenderEID != t.params.SenderWallet {
-			senderMatch = false
-		}
-		receiverMatch := true
-		if len(t.params.RecipientWallet) != 0 && record.Record.RecipientEID != t.params.RecipientWallet {
-			receiverMatch = false
-		}
-		if !senderMatch && !receiverMatch {
-			logger.Debugf("skipping transaction [%s] because it does not match the sender [%s:%s] or receiver [%s:%s]",
-				record.Record.TxID,
-				record.Record.SenderEID, t.params.SenderWallet,
-				record.Record.RecipientEID, t.params.RecipientWallet,
-			)
+		if !matched {
 			continue
 		}
-
 		logger.Debugf("found transaction [%s,%s]", string(item.Key()), record.Record.TxID, record.Record.SenderEID, record.Record.RecipientEID)
 		return record.Record, nil
 	}
@@ -494,4 +481,65 @@ func (m *MovementSelector) Select(record *MovementRecord) bool {
 	}
 
 	return true
+}
+
+// TransactionSelector is used to select a set of transaction records
+type TransactionSelector struct {
+	params driver.QueryTransactionsParams
+}
+
+// Select returns true is the record matches the selection criteria.
+// Additionally, it returns another flag indicating if it is time to stop or not.
+func (t *TransactionSelector) Select(record *TransactionRecord) (bool, bool) {
+	// match the time constraints
+	if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
+		logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
+		return false, false
+	}
+	if t.params.To != nil && record.Record.Timestamp.After(*t.params.To) {
+		logger.Debugf("skipping transaction [%s] because it is after the to time", record.Record.TxID)
+		return false, true
+	}
+	if len(t.params.ActionTypes) != 0 {
+		found := false
+		for _, actionType := range t.params.ActionTypes {
+			if actionType == record.Record.ActionType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
+	if len(t.params.Statuses) != 0 {
+		found := false
+		for _, statusType := range t.params.Statuses {
+			if statusType == record.Record.Status {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
+	// match the wallet
+	senderMatch := true
+	if len(t.params.SenderWallet) != 0 && record.Record.SenderEID != t.params.SenderWallet {
+		senderMatch = false
+	}
+	receiverMatch := true
+	if len(t.params.RecipientWallet) != 0 && record.Record.RecipientEID != t.params.RecipientWallet {
+		receiverMatch = false
+	}
+	if !senderMatch && !receiverMatch {
+		logger.Debugf("skipping transaction [%s] because it does not match the sender [%s:%s] or receiver [%s:%s]",
+			record.Record.TxID,
+			record.Record.SenderEID, t.params.SenderWallet,
+			record.Record.RecipientEID, t.params.RecipientWallet,
+		)
+		return false, false
+	}
+	return true, false
 }

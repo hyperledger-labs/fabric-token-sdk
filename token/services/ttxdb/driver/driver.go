@@ -169,6 +169,12 @@ type QueryTransactionsParams struct {
 	// To is the end time of the query
 	// If nil, the query ends at the last transaction
 	To *time.Time
+	// ActionTypes is the list of action types to accept
+	// If empty, any action type is accepted
+	ActionTypes []ActionType
+	// Statuses is the list of transaction status to accept
+	// If empty, any status is accepted
+	Statuses []TxStatus
 }
 
 // TokenTransactionDB defines the interface for a token transactions database

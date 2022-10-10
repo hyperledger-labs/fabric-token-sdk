@@ -122,6 +122,31 @@ func (p *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (
 		if len(params.SenderWallet) != 0 && record.SenderEID != params.SenderWallet {
 			continue
 		}
+		if len(params.ActionTypes) != 0 {
+			found := false
+			for _, actionType := range params.ActionTypes {
+				if actionType == record.ActionType {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+		if len(params.Statuses) != 0 {
+			found := false
+			for _, statusType := range params.Statuses {
+				if statusType == record.Status {
+					found = true
+					break
+				}
+			}
+			if !found {
+				continue
+			}
+		}
+
 		subset = append(subset, record)
 	}
 	return &TransactionIterator{txs: subset}, nil
