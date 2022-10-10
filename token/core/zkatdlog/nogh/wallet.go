@@ -155,7 +155,7 @@ func (s *Service) auditorWallet(id interface{}) driver.AuditorWallet {
 	// Create the wallet
 	idInfoIdentity, _, err := idInfo.Get()
 	if err != nil {
-		logger.Errorf("failed to get auditor wallet identity for [%s:%s:%s]: %s", wID, id, err)
+		logger.Errorf("failed to get auditor wallet identity for [%s:%s]: %s", wID, id, err)
 	}
 	newWallet := newAuditorWallet(s, wID, idInfoIdentity)
 	s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet)

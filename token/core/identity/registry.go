@@ -79,18 +79,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 				}
 				return w.Wallet, nil, identityWID, nil
 			}
-		} /*else {
-			// brute force search as last resort
-			logger.Debugf("brute force search of the wallet id for [%s]", identity)
-			for _, w := range r.Wallets {
-				if w.Wallet.Contains(identity) {
-					logger.Debugf("found wallet [%s:%s:%s]", identity, walletID, w.Wallet.ID())
-					return w.Wallet, nil, wID, nil
-				}
-			}
-
-			logger.Errorf("failed to lookup wallet for identity [%s]: [%s]", identity, err)
-		}*/
+		}
 	}
 
 	idInfo, err := r.IdentityProvider.GetIdentityInfo(r.IdentityRole, walletID)
@@ -101,7 +90,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	return nil, idInfo, wID, nil
 }
 
-// RegisterWallet binds the passed wallet to the passed it
+// RegisterWallet binds the passed wallet to the passed id
 func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) {
 	r.Wallets[id] = &WalletEntry{
 		Prefix: fmt.Sprintf("%s-%s-%s-%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id),
@@ -136,7 +125,7 @@ func (r *WalletsRegistry) GetWallet(identity view.Identity) (string, error) {
 	return wID, nil
 }
 
-// ContainsIdentity returns true is the passed identity belongs to the passed wallet,
+// ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
 func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
 	return r.KVS.Exists(r.Wallets[wID].Prefix + identity.Hash())
