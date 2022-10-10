@@ -489,7 +489,7 @@ type TransactionSelector struct {
 }
 
 // Select returns true is the record matches the selection criteria.
-// Additionally, it returns another flag indicating if it time to stop or not.
+// Additionally, it returns another flag indicating if it is time to stop or not.
 func (t *TransactionSelector) Select(record *TransactionRecord) (bool, bool) {
 	// match the time constraints
 	if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {

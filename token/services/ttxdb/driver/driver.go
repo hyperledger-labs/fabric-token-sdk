@@ -170,10 +170,10 @@ type QueryTransactionsParams struct {
 	// If nil, the query ends at the last transaction
 	To *time.Time
 	// ActionTypes is the list of action types to accept
-	// If empty, any type is accepted
+	// If empty, any action type is accepted
 	ActionTypes []ActionType
-	// ActionTypes is the list of transaction status to accept
-	// If empty, any type is accepted
+	// Statuses is the list of transaction status to accept
+	// If empty, any status is accepted
 	Statuses []TxStatus
 }
 
