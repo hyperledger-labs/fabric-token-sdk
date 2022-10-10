@@ -94,5 +94,9 @@ func (v *PublicParamsManager) PublicParams() *crypto.PublicParams {
 
 // Validate validates the public parameters
 func (v *PublicParamsManager) Validate() error {
-	return nil
+	pp := v.PublicParams()
+	if pp == nil {
+		return errors.New("public parameters not set")
+	}
+	return pp.Validate()
 }
