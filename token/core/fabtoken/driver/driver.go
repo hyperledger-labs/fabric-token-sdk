@@ -8,6 +8,8 @@ package driver
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
@@ -78,10 +80,15 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	}
 	wallets.Put(driver.CertifierRole, wallet)
 
+	// Instantiate the token service
+	tmsID := token.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
+	}
 	service := fabtoken.NewService(
 		sp,
-		channel,
-		namespace,
+		tmsID,
 		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{
 			PublicParamsFetcher: publicParamsFetcher,
 			PPLabel:             fabtoken.PublicParameters,
@@ -91,6 +98,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		fabtoken.NewDeserializer(),
 		tmsConfig,
+		kvs.GetService(sp),
 	)
 	if err := service.PPM.Update(); err != nil {
 		return nil, errors.WithMessage(err, "failed to update public parameters")

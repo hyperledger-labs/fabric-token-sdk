@@ -10,12 +10,12 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	api3 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
-func (s *Service) AuditorCheck(tokenRequest *api3.TokenRequest, tokenRequestMetadata *api3.TokenRequestMetadata, txID string) error {
+func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
 	logger.Debugf("check token request validity...")
 	var inputTokens [][]*token.Token
 	for _, transfer := range tokenRequestMetadata.Transfers {
