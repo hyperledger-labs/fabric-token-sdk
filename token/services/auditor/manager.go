@@ -73,11 +73,13 @@ func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
 }
 
 func (cm *Manager) Restore() error {
+	logger.Infof("restore audit dbs...")
 	entries, err := cm.list()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to list existing auditors")
 	}
 	for _, entry := range entries {
+		logger.Infof("restore audit dbs for entry [%s:%s]...", entry.TMSID.String(), entry.WalletID)
 		tms := token.GetManagementService(cm.sp, token.WithTMSID(entry.TMSID))
 		if tms == nil {
 			return errors.Errorf("cannot find TMS [%s]", entry.TMSID)
@@ -89,7 +91,9 @@ func (cm *Manager) Restore() error {
 		if err := cm.restore(w); err != nil {
 			return errors.Errorf("cannot bootstrap auditdb for [%s:%s]", entry.TMSID, entry.WalletID)
 		}
+		logger.Infof("restore audit dbs for entry [%s:%s]...done", entry.TMSID.String(), entry.WalletID)
 	}
+	logger.Infof("restore audit dbs...done")
 	return nil
 }
 
@@ -136,6 +140,7 @@ func (cm *Manager) restore(w *token.AuditorWallet) error {
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s:%s]", w.TMS().Network(), w.TMS().Channel(), w.ID())
 	}
+	defer it.Close()
 	v, err := net.Vault(w.TMS().Channel())
 	if err != nil {
 		return errors.Errorf("failed to get vault for [%s:%s:%s]", w.TMS().Network(), w.TMS().Channel(), w.ID())
@@ -196,10 +201,10 @@ func (cm *Manager) restore(w *token.AuditorWallet) error {
 		if err := auditor.db.SetStatus(updated.TxID, updated.Status); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
-		logger.Debugf("found transaction [%s] in vault with status [%d], corresponding pending transaction updated", updated.TxID, updated.Status)
+		logger.Infof("found transaction [%s] in vault with status [%d], corresponding pending transaction updated", updated.TxID, updated.Status)
 	}
 
-	logger.Debugf("auditdb [%s:%s], found [%d] pending transactions", w.TMS().Network(), w.TMS().Channel(), len(pendingTXs))
+	logger.Infof("auditdb [%s:%s], found [%d] pending transactions", w.TMS().Network(), w.TMS().Channel(), len(pendingTXs))
 
 	for _, txID := range pendingTXs {
 		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, auditor.db}); err != nil {

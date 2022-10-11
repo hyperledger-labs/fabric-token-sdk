@@ -72,11 +72,13 @@ func (cm *Manager) Owner(tms *token.ManagementService) (*Owner, error) {
 }
 
 func (cm *Manager) Restore() error {
+	logger.Infof("restore owner dbs...")
 	entries, err := cm.list()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to list existing owners")
 	}
 	for _, entry := range entries {
+		logger.Infof("restore owner dbs for entry [%s]...", entry.TMSID.String())
 		tms := token.GetManagementService(cm.sp, token.WithTMSID(entry.TMSID))
 		if tms == nil {
 			return errors.Errorf("cannot find TMS [%s]", entry.TMSID)
@@ -84,7 +86,9 @@ func (cm *Manager) Restore() error {
 		if err := cm.restore(tms); err != nil {
 			return errors.Errorf("cannot bootstrap auditdb for [%s]", entry.TMSID)
 		}
+		logger.Infof("restore owner dbs for entry [%s]...done", entry.TMSID.String())
 	}
+	logger.Infof("restore owner dbs...done")
 	return nil
 }
 
@@ -130,6 +134,7 @@ func (cm *Manager) restore(tms *token.ManagementService) error {
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s:%s]", tms.ID().Network, tms.ID().Channel, tms.ID())
 	}
+	defer it.Close()
 
 	v, err := net.Vault(tms.ID().Channel)
 	if err != nil {
@@ -191,10 +196,10 @@ func (cm *Manager) restore(tms *token.ManagementService) error {
 		if err := owner.db.SetStatus(updated.TxID, updated.Status); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
-		logger.Debugf("found transaction [%s] in vault with status [%d], corresponding pending transaction updated", updated.TxID, updated.Status)
+		logger.Infof("found transaction [%s] in vault with status [%d], corresponding pending transaction updated", updated.TxID, updated.Status)
 	}
 
-	logger.Debugf("ownerdb [%s:%s], found [%d] pending transactions", tms.ID().Network, tms.ID().Channel, len(pendingTXs))
+	logger.Infof("ownerdb [%s:%s], found [%d] pending transactions", tms.ID().Network, tms.ID().Channel, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
 		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, owner.db}); err != nil {

@@ -131,9 +131,11 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
 	go func() {
+		logger.Debugf("unsubscribe for tx %s...", txID)
 		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {
 			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
 		}
+		logger.Debugf("unsubscribe for tx %s...done", txID)
 	}()
 	return nil
 }
