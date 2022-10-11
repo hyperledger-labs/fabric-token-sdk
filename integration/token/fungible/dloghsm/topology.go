@@ -179,7 +179,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	manager.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
 	tms.SetTokenGenPublicParams("100", "2")

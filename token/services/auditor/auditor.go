@@ -22,11 +22,11 @@ type TxStatus = ttxdb.TxStatus
 
 const (
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = "Pending"
+	Pending = ttxdb.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = "Confirmed"
+	Confirmed = ttxdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = "Deleted"
+	Deleted = ttxdb.Deleted
 )
 
 // Transaction models a generic token transaction
@@ -61,11 +61,6 @@ func (a *QueryExecutor) Done() {
 type Auditor struct {
 	sp view2.ServiceProvider
 	db *ttxdb.DB
-}
-
-// New returns a new Auditor instance for the passed auditor wallet
-func New(sp view2.ServiceProvider, w *token.AuditorWallet) *Auditor {
-	return &Auditor{sp: sp, db: ttxdb.Get(sp, w)}
 }
 
 // Validate validates the passed token request
@@ -135,5 +130,10 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
+	go func() {
+		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {
+			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+		}
+	}()
 	return nil
 }
