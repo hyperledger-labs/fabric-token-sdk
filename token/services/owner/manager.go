@@ -237,7 +237,7 @@ type tmsWallet struct {
 }
 
 func (t *tmsWallet) ID() string {
-	return t.tms.ID().String()
+	return ""
 }
 
 func (t *tmsWallet) TMS() *token.ManagementService {
