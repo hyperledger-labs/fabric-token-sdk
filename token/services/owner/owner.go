@@ -17,6 +17,8 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.owner")
 
+type QueryTransactionsParams = ttxdb.QueryTransactionsParams
+
 // TxStatus is the status of a transaction
 type TxStatus = ttxdb.TxStatus
 

@@ -51,6 +51,9 @@ type Network interface {
 	// StoreEnvelope stores locally the passed envelope mapping it to the passed id
 	StoreEnvelope(id string, env []byte) error
 
+	// ExistEnvelope returns true if an envelope exists for the passed id, false otherwise
+	ExistEnvelope(id string) bool
+
 	// Broadcast sends the passed blob to the network
 	Broadcast(blob interface{}) error
 
@@ -69,6 +72,9 @@ type Network interface {
 
 	// StoreTransient stores the passed transient map and maps it to the passed id
 	StoreTransient(id string, transient TransientMap) error
+
+	// ExistTransient returns true if a transient map exists for the passed id, false otherwise
+	ExistTransient(id string) bool
 
 	// RequestApproval requests approval for the passed request and returns the returned envelope
 	RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
@@ -98,4 +104,6 @@ type Network interface {
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 	// The operation gets canceled if the passed timeout elapses.
 	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration) ([]byte, error)
+
+	Ledger() (Ledger, error)
 }

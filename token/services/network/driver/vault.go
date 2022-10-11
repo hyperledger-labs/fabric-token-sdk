@@ -41,4 +41,7 @@ type Vault interface {
 
 	// Status returns the status of the transaction
 	Status(id string) (ValidationCode, error)
+
+	// DiscardTx discards the transaction with the passed id
+	DiscardTx(id string) error
 }

@@ -180,6 +180,10 @@ func (v *Vault) Status(id string) (ValidationCode, error) {
 	return ValidationCode(vc), err
 }
 
+func (v *Vault) DiscardTx(id string) error {
+	return v.v.DiscardTx(id)
+}
+
 type LocalMembership struct {
 	lm driver.LocalMembership
 }
@@ -194,6 +198,18 @@ func (l *LocalMembership) AnonymousIdentity() view.Identity {
 
 func (l *LocalMembership) IsMe(id view.Identity) bool {
 	return l.lm.IsMe(id)
+}
+
+type Ledger struct {
+	l driver.Ledger
+}
+
+func (l *Ledger) Status(id string) (ValidationCode, error) {
+	vc, err := l.l.Status(id)
+	if err != nil {
+		return 0, err
+	}
+	return ValidationCode(vc), nil
 }
 
 // Network provides access to the remote network
@@ -232,6 +248,14 @@ func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
 // StoreEnvelope stores locally the given transaction envelope and associated it with the given id
 func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.StoreEnvelope(id, env)
+}
+
+func (n *Network) ExistEnvelope(id string) bool {
+	return n.n.ExistEnvelope(id)
+}
+
+func (n *Network) ExistTransient(id string) bool {
+	return n.n.ExistTransient(id)
 }
 
 // Broadcast sends the given blob to the network
@@ -330,6 +354,14 @@ func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeL
 // The operation gets canceled if the passed timeout gets reached.
 func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
+}
+
+func (n *Network) Ledger(namespace string) (*Ledger, error) {
+	l, err := n.n.Ledger()
+	if err != nil {
+		return nil, err
+	}
+	return &Ledger{l: l}, nil
 }
 
 // Provider returns an instance of network provider

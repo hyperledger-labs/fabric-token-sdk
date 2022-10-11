@@ -213,7 +213,7 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 func TestAll(network *integration.Infrastructure, auditor string) {
 	RegisterAuditor(network, auditor)
 
-	CheckPublicParamsViewFactory(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()
 	// Rest of the test
@@ -590,7 +590,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
 
-	CheckPublicParamsViewFactory(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	CheckOwnerDB(network, "issuer", "alice", "bob", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "")
 }
 
 func RegisterAuditor(network *integration.Infrastructure, id string) {
@@ -959,11 +961,32 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
-func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...string) {
+func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	for _, id := range ids {
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", nil)
 		Expect(err).NotTo(HaveOccurred())
 	}
+}
+
+func CheckOwnerDB(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
+		Expect(err).NotTo(HaveOccurred())
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+	}
+}
+
+func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string) {
+	errorMessagesBoxed, err := network.Client(auditorID).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
+		Auditor:         true,
+		AuditorWalletID: walletID,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	var errorMessages []string
+	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+	Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
 }
 
 func Restart(network *integration.Infrastructure, ids ...string) {

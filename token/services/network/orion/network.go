@@ -94,6 +94,10 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.Vault().StoreEnvelope(id, env)
 }
 
+func (n *Network) ExistEnvelope(id string) bool {
+	return n.n.EnvelopeService().Exists(id)
+}
+
 func (n *Network) Broadcast(blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
@@ -119,6 +123,10 @@ func (n *Network) NewEnvelope() driver.Envelope {
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
 	return n.n.Vault().StoreTransient(id, orion.TransientMap(transient))
+}
+
+func (n *Network) ExistTransient(id string) bool {
+	return n.n.MetadataService().Exists(id)
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -199,6 +207,10 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	return pp.([]byte), nil
 }
 
+func (n *Network) Ledger() (driver.Ledger, error) {
+	panic("implement me")
+}
+
 type nv struct {
 	v          *orion.Vault
 	tokenVault *vault.Vault
@@ -227,4 +239,8 @@ func (v *nv) TokenVault() *vault.Vault {
 func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 	vc, err := v.v.Status(txID)
 	return driver.ValidationCode(vc), err
+}
+
+func (v *nv) DiscardTx(txID string) error {
+	return v.v.DiscardTx(txID)
 }

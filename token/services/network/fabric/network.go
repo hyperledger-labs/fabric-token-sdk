@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger/fabric-protos-go/peer"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -133,17 +135,45 @@ func (v *nv) TokenVault() *vault.Vault {
 	return v.tokenVault
 }
 
+func (v *nv) DiscardTx(txID string) error {
+	return v.v.DiscardTx(txID)
+}
+
+type ledger struct {
+	l *fabric.Ledger
+}
+
+func (l *ledger) Status(id string) (driver.ValidationCode, error) {
+	tx, err := l.l.GetTransactionByID(id)
+	if err != nil {
+		return 0, errors.Wrapf(err, "failed to get transaction [%s]", id)
+	}
+	switch peer.TxValidationCode(tx.ValidationCode()) {
+	case peer.TxValidationCode_VALID:
+		return driver.Valid, nil
+	default:
+		return driver.Invalid, nil
+	}
+}
+
 type Network struct {
-	n  *fabric.NetworkService
-	ch *fabric.Channel
-	sp view2.ServiceProvider
+	n      *fabric.NetworkService
+	ch     *fabric.Channel
+	sp     view2.ServiceProvider
+	ledger *ledger
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel) *Network {
-	return &Network{n: n, ch: ch, sp: sp, vaultCache: map[string]driver.Vault{}}
+	return &Network{
+		n:          n,
+		ch:         ch,
+		sp:         sp,
+		ledger:     &ledger{ch.Ledger()},
+		vaultCache: map[string]driver.Vault{},
+	}
 }
 
 func (n *Network) Name() string {
@@ -196,6 +226,10 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.ch.Vault().StoreEnvelope(id, env)
 }
 
+func (n *Network) ExistEnvelope(id string) bool {
+	return n.ch.EnvelopeService().Exists(id)
+}
+
 func (n *Network) Broadcast(blob interface{}) error {
 	return n.n.Ordering().Broadcast(blob)
 }
@@ -214,6 +248,10 @@ func (n *Network) NewEnvelope() driver.Envelope {
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
 	return n.ch.Vault().StoreTransient(id, fabric.TransientMap(transient))
+}
+
+func (n *Network) ExistTransient(id string) bool {
+	return n.ch.MetadataService().Exists(id)
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -372,4 +410,8 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 		)
 	}
 	return keyValue, nil
+}
+
+func (n *Network) Ledger() (driver.Ledger, error) {
+	return n.ledger, nil
 }
