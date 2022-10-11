@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package owner
 
 import (
+	"fmt"
 	"reflect"
 	"sync"
 
@@ -237,7 +238,8 @@ type tmsWallet struct {
 }
 
 func (t *tmsWallet) ID() string {
-	return ""
+	id := t.tms.ID()
+	return fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace)
 }
 
 func (t *tmsWallet) TMS() *token.ManagementService {

@@ -63,6 +63,11 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	if ok {
 		return walletEntry.Wallet, nil, wID, nil
 	}
+	walletEntry, ok = r.Wallets[walletID]
+	if ok {
+		return walletEntry.Wallet, nil, walletID, nil
+	}
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("no wallet found for [%s] at [%s]", identity, wID)
 	}
