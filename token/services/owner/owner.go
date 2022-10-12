@@ -17,6 +17,18 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.owner")
 
+// TxStatus is the status of a transaction
+type TxStatus = ttxdb.TxStatus
+
+const (
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending = ttxdb.Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed = ttxdb.Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted = ttxdb.Deleted
+)
+
 // Transaction models a token transaction
 type Transaction interface {
 	ID() string
@@ -79,6 +91,11 @@ func (a *Owner) Append(tx Transaction) error {
 	}
 	logger.Debugf("append done for request %s", tx.ID())
 	return nil
+}
+
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+func (a *Owner) SetStatus(txID string, status TxStatus) error {
+	return a.db.SetStatus(txID, status)
 }
 
 type TxStatusChangesListener struct {
