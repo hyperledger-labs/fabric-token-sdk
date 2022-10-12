@@ -76,6 +76,9 @@ type Network interface {
 	// ExistTransient returns true if a transient map exists for the passed id, false otherwise
 	ExistTransient(id string) bool
 
+	// GetTransient retrieves the transient map bound to the passed id
+	GetTransient(id string) (TransientMap, error)
+
 	// RequestApproval requests approval for the passed request and returns the returned envelope
 	RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
 

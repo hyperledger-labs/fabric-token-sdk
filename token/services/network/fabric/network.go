@@ -254,6 +254,14 @@ func (n *Network) ExistTransient(id string) bool {
 	return n.ch.MetadataService().Exists(id)
 }
 
+func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
+	tm, err := n.ch.MetadataService().LoadTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return driver.TransientMap(tm), nil
+}
+
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	env, err := chaincode.NewEndorseView(
 		namespace,

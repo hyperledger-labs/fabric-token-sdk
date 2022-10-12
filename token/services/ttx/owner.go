@@ -15,29 +15,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	// EndorsementAckPrefix is the prefix for the endorsement ACKs.
-	EndorsementAckPrefix = "ttx.endorse.ack"
-)
-
-// TransactionInfo contains the transaction info.
-type TransactionInfo struct {
-	// EndorsementAcks contains the endorsement ACKs received at time of dissemination.
-	EndorsementAcks map[string][]byte
-}
-
 type txOwner struct {
-	sp    view2.ServiceProvider
-	tms   *token.ManagementService
-	owner *owner.Owner
+	sp                      view2.ServiceProvider
+	tms                     *token.ManagementService
+	owner                   *owner.Owner
+	transactionInfoProvider *TransactionInfoProvider
 }
 
 // NewOwner returns a new owner service.
 func NewOwner(sp view2.ServiceProvider, tms *token.ManagementService) *txOwner {
 	return &txOwner{
-		sp:    sp,
-		tms:   tms,
-		owner: owner.New(sp, tms),
+		sp:                      sp,
+		tms:                     tms,
+		owner:                   owner.New(sp, tms),
+		transactionInfoProvider: NewTransactionInfoProvider(sp, tms),
 	}
 }
 
@@ -55,43 +46,7 @@ func (a *txOwner) Append(tx *Transaction) error {
 
 // TransactionInfo returns the transaction info for the given transaction ID.
 func (a *txOwner) TransactionInfo(txID string) (*TransactionInfo, error) {
-	// Load transaction endorsement ACKs
-	k := kvs.GetService(a.sp)
-	acks := make(map[string][]byte)
-	it, err := k.GetByPartialCompositeID(EndorsementAckPrefix, []string{txID})
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed loading ack for [%s]", txID)
-	}
-	defer it.Close()
-	for {
-		if !it.HasNext() {
-			break
-		}
-		var ack []byte
-		key, err := it.Next(&ack)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed loading ack for [%s]", txID)
-		}
-
-		objectType, attrs, err := kvs.SplitCompositeKey(key)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed splitting composite key for [%s]", txID)
-		}
-		if objectType != EndorsementAckPrefix {
-			return nil, errors.Errorf("unexpected object type [%s]", objectType)
-		}
-		if len(attrs) != 2 {
-			return nil, errors.Errorf("unexpected number of attributes [%d]", len(attrs))
-		}
-		acks[attrs[1]] = ack
-	}
-	if len(acks) == 0 {
-		return nil, errors.Errorf("no ack found for [%s]", txID)
-	}
-
-	return &TransactionInfo{
-		EndorsementAcks: acks,
-	}, nil
+	return a.transactionInfoProvider.TransactionInfo(txID)
 }
 
 func (a *txOwner) appendTransactionEndorseAck(tx *Transaction, id view.Identity, sigma []byte) error {

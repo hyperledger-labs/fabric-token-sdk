@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
@@ -42,6 +43,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 	l, err := net.Ledger(tms.Namespace())
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+	tip := ttx.NewTransactionInfoProvider(context, tms)
 
 	var qe *ttxdb.QueryExecutor
 	if m.Auditor {
@@ -66,7 +68,10 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 
 		// compare the status in the vault with the status of the record
 		vc, err := v.Status(transactionRecord.TxID)
-		assert.NoError(err, "failed to get status for transaction [%s]", transactionRecord.TxID)
+		if err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("failed to get vault status transaction record [%s]: [%s]", transactionRecord.TxID, err))
+			continue
+		}
 		switch {
 		case vc == network.Unknown:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown to the vault", transactionRecord.TxID))
@@ -95,6 +100,10 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			errorMessages = append(errorMessages, fmt.Sprintf("no metadata found for transaction record [%s]", transactionRecord.TxID))
 		}
 
+		if _, err := tip.TransactionInfo(transactionRecord.TxID); err != nil {
+			errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction infor for transaction record [%s]: [%s]", transactionRecord.TxID, err))
+		}
+
 		// check the ledger
 		lVC, err := l.Status(transactionRecord.TxID)
 		if err != nil {
@@ -103,24 +112,24 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		switch {
 		case vc == network.Valid && lVC != network.Valid:
 			if err != nil {
-				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]", transactionRecord.TxID))
+				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		case vc == network.Invalid && lVC != network.Invalid:
 			if lVC != network.Unknown || transactionRecord.Status != ttxdb.Deleted {
 				if err != nil {
-					errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]", transactionRecord.TxID))
+					errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 				}
 				errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 			}
 		case vc == network.Unknown && lVC != network.Unknown:
 			if err != nil {
-				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]", transactionRecord.TxID))
+				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		case vc == network.Busy && lVC != network.Unknown:
 			if err != nil {
-				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]", transactionRecord.TxID))
+				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		}

@@ -296,6 +296,15 @@ func (n *Network) StoreTransient(id string, transient TransientMap) error {
 	return n.n.StoreTransient(id, driver.TransientMap(transient))
 }
 
+// GetTransient retrieves the transient map bound to the passed id
+func (n *Network) GetTransient(id string) (TransientMap, error) {
+	tm, err := n.n.GetTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return TransientMap(tm), nil
+}
+
 // RequestApproval requests approval for the given token request
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
 	env, err := n.n.RequestApproval(context, namespace, requestRaw, signer, driver.TxID{
