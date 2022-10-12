@@ -58,7 +58,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	if err != nil {
 		return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 	}
-	wID := r.walletID(walletID)
+	wID := walletID
 	walletEntry, ok := r.Wallets[wID]
 	if ok {
 		return walletEntry.Wallet, nil, wID, nil
@@ -129,8 +129,4 @@ func (r *WalletsRegistry) GetWallet(identity view.Identity) (string, error) {
 // false otherwise
 func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
 	return r.KVS.Exists(r.Wallets[wID].Prefix + identity.Hash())
-}
-
-func (r *WalletsRegistry) walletID(id string) string {
-	return fmt.Sprintf("%s-%s-%s-%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id)
 }

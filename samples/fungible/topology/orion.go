@@ -87,7 +87,6 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	custodian.AddOptions(orion.WithRole("custodian"))
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(orionTopology, "", tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	orion2.SetCustodian(tms, custodian)

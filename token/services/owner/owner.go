@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package owner
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -59,13 +59,8 @@ func (a *QueryExecutor) Done() {
 
 // Owner is the interface for the owner service
 type Owner struct {
-	sp view2.ServiceProvider
+	sp view.ServiceProvider
 	db *ttxdb.DB
-}
-
-// New returns a new Owner instance for the passed wallet
-func New(sp view2.ServiceProvider, tms *token.ManagementService) *Owner {
-	return &Owner{sp: sp, db: ttxdb.Get(sp, &tmsWallet{tms: tms})}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -115,18 +110,13 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	if err := t.db.SetStatus(txID, txStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
-	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
+	logger.Infof("tx status changed for tx %s: %s done", txID, status)
+	go func() {
+		logger.Debugf("unsubscribe for tx %s...", txID)
+		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {
+			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+		}
+		logger.Debugf("unsubscribe for tx %s...done", txID)
+	}()
 	return nil
-}
-
-type tmsWallet struct {
-	tms *token.ManagementService
-}
-
-func (t *tmsWallet) ID() string {
-	return ""
-}
-
-func (t *tmsWallet) TMS() *token.ManagementService {
-	return t.tms
 }

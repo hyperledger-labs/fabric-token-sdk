@@ -40,6 +40,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("debug", "")
 
+	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
+
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
@@ -179,7 +181,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	manager.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
 	tms := tokenTopology.AddTMS(backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
 	tms.SetTokenGenPublicParams("100", "2")
