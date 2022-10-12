@@ -13,7 +13,6 @@ import (
 	_ "github.com/fzipp/gocyclo/cmd/gocyclo"
 	_ "github.com/google/addlicense"
 	_ "github.com/gordonklaus/ineffassign"
-	_ "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/weaver/relay/fabric"
 	_ "github.com/maxbrunsfeld/counterfeiter/v6"
 	_ "github.com/onsi/ginkgo/v2/ginkgo"
 	_ "golang.org/x/tools/cmd/goimports"
