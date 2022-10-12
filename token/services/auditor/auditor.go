@@ -118,7 +118,7 @@ type TxStatusChangesListener struct {
 }
 
 func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
-	logger.Debugf("tx status changed for tx %s: %s", txID, status)
+	logger.Infof("tx status changed for tx %s: %s", txID, status)
 	var txStatus ttxdb.TxStatus
 	switch network.ValidationCode(status) {
 	case network.Valid:

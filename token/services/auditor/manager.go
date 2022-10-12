@@ -160,7 +160,7 @@ func (cm *Manager) restore(w *token.AuditorWallet) error {
 			break
 		}
 		if tr.Status == ttxdb.Pending {
-			logger.Debugf("found pending transaction [%s] at [%s:%s]", tr.TxID, w.TMS().Network(), w.TMS().Channel())
+			logger.Infof("found pending transaction [%s] at [%s:%s]", tr.TxID, w.TMS().Network(), w.TMS().Channel())
 			found := false
 			for _, txID := range pendingTXs {
 				if tr.TxID == txID {

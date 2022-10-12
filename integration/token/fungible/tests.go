@@ -352,7 +352,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
 
 	// Restart the auditor
-	Restart(network, "auditor")
+	Restart(network, auditor)
 	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
@@ -376,6 +376,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110)
 	Restart(network, "bob")
+	Restart(network, auditor)
+	RegisterAuditor(network, auditor)
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110)
 	BroadcastPreparedTransferCash(network, "alice", tx1, true)

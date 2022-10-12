@@ -40,6 +40,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("debug", "")
 
+	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
+
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
