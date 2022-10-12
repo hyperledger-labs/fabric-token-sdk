@@ -190,6 +190,7 @@ func (cm *Manager) restore(tms *token.ManagementService) error {
 			})
 		}
 	}
+	it.Close()
 	qe.Done()
 
 	for _, updated := range toBeUpdated {

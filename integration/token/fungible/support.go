@@ -404,7 +404,7 @@ func CheckOwnerDB(network *integration.Infrastructure, ids ...string) {
 		Expect(err).NotTo(HaveOccurred())
 		var errorMessages []string
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages from [%s], got [% v]", id, errorMessages)
 	}
 }
 

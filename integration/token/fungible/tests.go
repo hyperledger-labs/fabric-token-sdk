@@ -401,6 +401,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	// Restart
 	Restart(network, "alice", "bob", "charlie", "manager")
+	CheckOwnerDB(network, "issuer", "alice", "bob", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "")
 
 	// Addition transfers
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)

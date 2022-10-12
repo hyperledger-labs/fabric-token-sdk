@@ -38,7 +38,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("debug", "")
 
 	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
 
