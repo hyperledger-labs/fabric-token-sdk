@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
@@ -84,7 +86,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, expected []*t
 	}
 }
 
-func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
+func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, statuses []driver.TxStatus, actionTypes ...ttxdb.ActionType) {
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 	}))
@@ -96,6 +98,8 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id string, w
 		RecipientWallet: eID,
 		From:            start,
 		To:              end,
+		ActionTypes:     actionTypes,
+		Statuses:        statuses,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
@@ -428,4 +432,15 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 		panic(fmt.Sprintf("type not recognized [%T]", v))
 	}
 	return s
+}
+
+func Restart(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		network.StopFSCNode(id)
+	}
+	time.Sleep(10 * time.Second)
+	for _, id := range ids {
+		network.StartFSCNode(id)
+	}
+	time.Sleep(10 * time.Second)
 }

@@ -20,9 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
-type DB interface {
-}
-
 type CheckTTXDB struct {
 	Auditor         bool
 	AuditorWalletID string
