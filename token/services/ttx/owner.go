@@ -49,6 +49,11 @@ func (a *txOwner) TransactionInfo(txID string) (*TransactionInfo, error) {
 	return a.transactionInfoProvider.TransactionInfo(txID)
 }
 
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+func (a *txOwner) SetStatus(txID string, status TxStatus) error {
+	return a.owner.SetStatus(txID, status)
+}
+
 func (a *txOwner) appendTransactionEndorseAck(tx *Transaction, id view.Identity, sigma []byte) error {
 	k := kvs.GetService(a.sp)
 	ackKey, err := kvs.CreateCompositeKey(EndorsementAckPrefix, []string{tx.ID(), id.UniqueID()})

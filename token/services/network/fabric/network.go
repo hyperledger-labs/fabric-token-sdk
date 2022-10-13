@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger/fabric-protos-go/peer"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -25,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -146,8 +145,9 @@ type ledger struct {
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	tx, err := l.l.GetTransactionByID(id)
 	if err != nil {
-		return 0, errors.Wrapf(err, "failed to get transaction [%s]", id)
+		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
 	}
+	logger.Infof("ledger status of [%s] is [%d]", id, tx.ValidationCode())
 	switch peer.TxValidationCode(tx.ValidationCode()) {
 	case peer.TxValidationCode_VALID:
 		return driver.Valid, nil

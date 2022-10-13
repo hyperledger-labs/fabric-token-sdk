@@ -33,15 +33,18 @@ type Network struct {
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 	ip             IdentityProvider
+	ledger         *ledger
 }
 
 func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService) *Network {
-	return &Network{
+	network := &Network{
 		sp:         sp,
 		ip:         ip,
 		n:          n,
 		vaultCache: map[string]driver.Vault{},
 	}
+	network.ledger = &ledger{n: network}
+	return network
 }
 
 func (n *Network) Name() string {
@@ -216,7 +219,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 }
 
 func (n *Network) Ledger() (driver.Ledger, error) {
-	panic("implement me")
+	return n.ledger, nil
 }
 
 type nv struct {
@@ -251,4 +254,16 @@ func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 
 func (v *nv) DiscardTx(txID string) error {
 	return v.v.DiscardTx(txID)
+}
+
+type ledger struct {
+	n *Network
+}
+
+func (l *ledger) Status(id string) (driver.ValidationCode, error) {
+	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n, id))
+	if err != nil {
+		return driver.Unknown, err
+	}
+	return boxed.(driver.ValidationCode), nil
 }

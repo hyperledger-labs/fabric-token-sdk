@@ -353,6 +353,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150)
 	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
 
+	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "")
+
 	// Check double spending
 	txIDPine := IssueCash(network, "", "PINE", 55, "alice", auditor, true)
 	tokenIDPine := &token2.ID{
@@ -386,6 +389,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	Expect(network.Client("auditor").IsTxFinal(txID2)).To(HaveOccurred())
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
+	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "")
 
 	// Test Auditor ability to override transaction state
 	txID3, tx3 := PrepareTransferCash(network, "bob", "", "PINE", 10, "alice", auditor, nil)
@@ -398,10 +403,15 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
 	TokenSelectorUnlock(network, "bob", txID3)
 	FinalityWithTimeout(network, "bob", tx3, 20*time.Second)
+	SetTransactionOwnersStatus(network, txID3, ttx.Deleted, "alice", "bob")
 
 	// Restart
+	CheckOwnerDB(network, nil, "bob", "alice")
+	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "")
 	Restart(network, "alice", "bob", "charlie", "manager")
-	CheckOwnerDB(network, "issuer", "alice", "bob", "charlie", "manager")
+	CheckOwnerDB(network, nil, "bob", "alice")
+	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
 
 	// Addition transfers
@@ -587,6 +597,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
 
 	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
-	CheckOwnerDB(network, "issuer", "alice", "bob", "charlie", "manager")
+	CheckOwnerDB(network, nil, "bob", "alice")
+	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
 }

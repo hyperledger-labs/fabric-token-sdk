@@ -16,6 +16,7 @@ func InstallViews(sp view.ServiceProvider) error {
 	view.GetRegistry(sp).RegisterResponder(&RequestApprovalResponderView{}, &RequestApprovalView{})
 	view.GetRegistry(sp).RegisterResponder(&BroadcastResponderView{}, &BroadcastView{})
 	view.GetRegistry(sp).RegisterResponder(&RespondLookupKeyRequestView{}, &LookupKeyRequestView{})
+	view.GetRegistry(sp).RegisterResponder(&RequestTxStatusView{}, &RequestTxStatusResponderView{})
 
 	return nil
 }

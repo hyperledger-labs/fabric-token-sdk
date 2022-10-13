@@ -13,14 +13,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
@@ -260,6 +259,16 @@ func SetTransactionAuditStatus(network *integration.Infrastructure, id string, t
 	Expect(err).NotTo(HaveOccurred())
 }
 
+func SetTransactionOwnersStatus(network *integration.Infrastructure, txID string, txStatus ttx.TxStatus, ids ...string) {
+	for _, id := range ids {
+		_, err := network.Client(id).CallView("SetTransactionOwnerStatus", common.JSONMarshall(views.SetTransactionOwnerStatus{
+			TxID:   txID,
+			Status: txStatus,
+		}))
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
 func TokenSelectorUnlock(network *integration.Infrastructure, id string, txID string) {
 	_, err := network.Client(id).CallView("TokenSelectorUnlock", common.JSONMarshall(views.TokenSelectorUnlock{
 		TxID: txID,
@@ -398,13 +407,24 @@ func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	}
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, ids ...string) {
+func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...string) {
 	for _, id := range ids {
 		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
 		Expect(err).NotTo(HaveOccurred())
 		var errorMessages []string
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages from [%s], got [% v]", id, errorMessages)
+
+		Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
+		for _, expectedError := range expectedErrors {
+			found := false
+			for _, message := range errorMessages {
+				if message == expectedError {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
+		}
 	}
 }
 

@@ -11,33 +11,26 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	"github.com/pkg/errors"
 )
 
 type TxStatusRequest struct {
-	Network   string
-	Namespace string
-	TxID      string
-	Request   []byte
+	Network string
+	TxID    string
 }
 
 type TxStatusResponse struct {
-	Envelope []byte
+	Status driver.ValidationCode
 }
 
 type RequestTxStatusView struct {
-	Network    driver.Network
-	Namespace  string
-	RequestRaw []byte
-	Signer     view.Identity
-	TxID       string
+	Network driver.Network
+	TxID    string
 }
 
-func NewRequestTxStatusView(network driver.Network, namespace string, requestRaw []byte, signer view.Identity, txID string) *RequestTxStatusView {
-	return &RequestTxStatusView{Network: network, Namespace: namespace, RequestRaw: requestRaw, Signer: signer, TxID: txID}
+func NewRequestTxStatusView(network driver.Network, txID string) *RequestTxStatusView {
+	return &RequestTxStatusView{Network: network, TxID: txID}
 }
 
 func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
@@ -52,10 +45,8 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	}
 	// TODO: Should we sign the txStatus request?
 	request := &TxStatusRequest{
-		Network:   r.Network.Name(),
-		Namespace: r.Namespace,
-		TxID:      r.TxID,
-		Request:   r.RequestRaw,
+		Network: r.Network.Name(),
+		TxID:    r.TxID,
 	}
 	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
@@ -64,11 +55,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	env := r.Network.NewEnvelope()
-	if err := env.FromBytes(response.Envelope); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal transaction")
-	}
-	return env, nil
+	return response.Status, nil
 }
 
 type RequestTxStatusResponderView struct{}
@@ -82,81 +69,43 @@ func (r *RequestTxStatusResponderView) Call(context view.Context) (interface{}, 
 	}
 	logger.Debugf("request: %+v", request)
 
-	txRaw, err := r.process(context, request)
+	status, err := r.process(context, request)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to process request")
 	}
-	if err := session.Send(&TxStatusResponse{Envelope: txRaw}); err != nil {
+	if err := session.Send(&TxStatusResponse{Status: status}); err != nil {
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
 }
 
-func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) ([]byte, error) {
-	ppRaw, err := ReadPublicParameters(context, request.Network, request.Namespace)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read public parameters")
-	}
-	_, validator, err := token.NewServicesFromPublicParams(ppRaw)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create validator")
-	}
-
-	// Verify
+func (r *RequestTxStatusResponderView) process(context view.Context, request *TxStatusRequest) (driver.ValidationCode, error) {
 	ons := orion.GetOrionNetworkService(context, request.Network)
 	if ons == nil {
-		return nil, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
+		return driver.Unknown, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
 	}
 	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get custodian identifier")
+		return driver.Unknown, errors.Wrap(err, "failed to get custodian identifier")
 	}
 	logger.Debugf("open session to orion [%s]", custodianID)
 	oSession, err := ons.SessionManager().NewSession(custodianID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
+		return driver.Unknown, errors.Wrapf(err, "failed to create session to orion network [%s]", request.Network)
 	}
-	qe, err := oSession.QueryExecutor(request.Namespace)
+	ledger, err := oSession.Ledger()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
+		return driver.Unknown, errors.Wrapf(err, "failed to get ledger for orion network [%s]", request.Network)
+	}
+	tx, err := ledger.GetTransactionByID(request.TxID)
+	if err != nil {
+		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s] for orion network [%s]", request.TxID, request.Network)
 	}
 
-	actions, err := validator.UnmarshallAndVerify(
-		&LedgerWrapper{qe: qe},
-		request.TxID,
-		request.Request,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshall and verify request")
+	switch tx.ValidationCode() {
+	case orion.VALID:
+		return driver.Valid, nil
+	default:
+		return driver.Invalid, nil
 	}
-
-	// Write
-	tx, err := ons.TransactionManager().NewTransaction(request.TxID, custodianID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create transaction [%s]", request.TxID)
-	}
-	rws := &TxRWSWrapper{
-		me: custodianID,
-		db: request.Namespace,
-		tx: tx,
-	}
-	t := translator.New(request.TxID, rws, "")
-	for _, action := range actions {
-		err = t.Write(action)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to write action")
-		}
-	}
-	err = t.CommitTokenRequest(request.Request, false)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to commit token request")
-	}
-
-	// close transaction
-	envelopeRaw, err := tx.SignAndClose()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to sign and close transaction [%s]", request.TxID)
-	}
-
-	return envelopeRaw, nil
 }
