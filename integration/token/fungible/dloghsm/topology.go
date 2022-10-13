@@ -61,6 +61,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 	issuer.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	var auditor *node.Node
 	if auditorAsIssuer {
