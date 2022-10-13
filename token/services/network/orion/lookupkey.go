@@ -84,9 +84,9 @@ func (v *LookupKeyRequestView) Call(context view.Context) (interface{}, error) {
 	return response.Raw, nil
 }
 
-type RespondLookupKeyRequestView struct{}
+type LookupKeyRequestRespondView struct{}
 
-func (v *RespondLookupKeyRequestView) Call(context view.Context) (interface{}, error) {
+func (v *LookupKeyRequestRespondView) Call(context view.Context) (interface{}, error) {
 	// receive request
 	session := session2.JSON(context)
 	request := &LookupKeyRequest{}
