@@ -59,7 +59,7 @@ type Validator interface {
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
 
 type PublicParametersManager interface {
-	IsGraphHiding() bool
+	GraphHiding() bool
 }
 
 type TokenChaincode struct {
@@ -305,7 +305,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	logger.Debugf("check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
-	res, err := w.AreTokensSpent(ids, cc.PublicParametersManager.IsGraphHiding())
+	res, err := w.AreTokensSpent(ids, cc.PublicParametersManager.GraphHiding())
 	if err != nil {
 		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))
