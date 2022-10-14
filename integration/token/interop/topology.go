@@ -57,7 +57,6 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
 	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
-	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
@@ -70,7 +69,6 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
-	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
 
