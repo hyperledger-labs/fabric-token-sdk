@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token
 
 import "fmt"
@@ -124,4 +125,10 @@ func (it *UnspentTokens) ByType(typ string) *UnspentTokens {
 		}
 	}
 	return res
+}
+
+// At returns the unspent token at position i.
+// No boundary checks are performed.
+func (it *UnspentTokens) At(i int) *UnspentToken {
+	return it.Tokens[i]
 }

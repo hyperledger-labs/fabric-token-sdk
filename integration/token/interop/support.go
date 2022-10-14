@@ -8,6 +8,7 @@ package interop
 
 import (
 	"crypto"
+	"strconv"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -81,7 +82,7 @@ func listIssuerHistory(network *integration.Infrastructure, wallet string, typ s
 	return issuedTokens
 }
 
-func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
+func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
 	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ, opts...)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(b)).To(BeEquivalentTo(1))
@@ -90,6 +91,57 @@ func checkBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
+func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64) {
+	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+		Wallet: wallet,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	eID := common.JSONUnmarshalString(eIDBoxed)
+	holdingBoxed, err := network.Client("auditor").CallView("holding", common.JSONMarshall(&views.CurrentHolding{
+		EnrollmentID: eID,
+		TokenType:    typ,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
+	Expect(err).NotTo(HaveOccurred())
+	Expect(holding).To(Equal(int(expected)))
+}
+
+func CheckBalanceWithLocked(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, expectedLocked uint64, expectedExpired uint64) {
+	resBoxed, err := network.Client(id).CallView("balance", common.JSONMarshall(&views2.Balance{
+		Wallet: wallet,
+		Type:   typ,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	result := &views2.BalanceResult{}
+	common.JSONUnmarshal(resBoxed.([]byte), result)
+	Expect(err).NotTo(HaveOccurred())
+
+	balance, err := strconv.Atoi(result.Quantity)
+	Expect(err).NotTo(HaveOccurred())
+	locked, err := strconv.Atoi(result.Locked)
+	Expect(err).NotTo(HaveOccurred())
+	expired, err := strconv.Atoi(result.Expired)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(balance).To(Equal(int(expected)), "expected [%d], got [%d]", expected, balance)
+	Expect(locked).To(Equal(int(expectedLocked)), "expected locked [%d], got [%d]", expectedLocked, locked)
+	Expect(expired).To(Equal(int(expectedExpired)), "expected expired [%d], got [%d]", expectedExpired, expired)
+}
+
+func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
+	CheckBalance(network, id, wallet, typ, expected)
+	CheckHolding(network, id, wallet, typ, int64(expected))
+}
+
+func CheckBalanceWithLockedAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expectedBalance uint64, expectedLocked uint64, expectedExpired uint64, expectedHolding int64) {
+	CheckBalanceWithLocked(network, id, wallet, typ, expectedBalance, expectedLocked, expectedExpired)
+	if expectedHolding == -1 {
+		expectedHolding = int64(expectedBalance + expectedLocked + expectedExpired)
+	}
+	CheckHolding(network, id, wallet, typ, expectedHolding)
 }
 
 func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {

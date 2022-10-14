@@ -46,6 +46,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 		token.WithAuditorIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -56,6 +57,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
 	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -66,6 +69,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

@@ -138,7 +138,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 
 		matched, err := htlc.Wallet(context, wallet, token.WithTMSID(v.TMSID2)).ListByPreImage(preImage)
 		assert.NoError(err, "cannot retrieve list of expired tokens")
-		assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
+		assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
 		tx, err := htlc.NewAnonymousTransaction(
 			context,
@@ -146,7 +146,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 			ttx.WithTMSID(v.TMSID2),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
-		assert.NoError(tx.Claim(wallet, matched[0], preImage), "failed adding a claim for [%s]", matched[0].Id)
+		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 		assert.NoError(err, "failed to collect endorsements for htlc transaction")
@@ -269,7 +269,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		assert.NotNil(wallet, "wallet not found")
 		matched, err := htlc.Wallet(context, wallet, token.WithTMSID(terms.TMSID1)).ListByPreImage(preImage)
 		assert.NoError(err, "cannot retrieve list of expired tokens")
-		assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
+		assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
 		tx, err := htlc.NewAnonymousTransaction(
 			context,
@@ -277,7 +277,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 			ttx.WithTMSID(terms.TMSID1),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
-		assert.NoError(tx.Claim(wallet, matched[0], preImage), "failed adding a claim for [%s]", matched[0].Id)
+		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 		assert.NoError(err, "failed to collect endorsements for htlc transaction")
