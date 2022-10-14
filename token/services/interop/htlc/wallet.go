@@ -123,8 +123,8 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 	})
 }
 
-// ListExpiredTokens returns a list of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
-func (w *OwnerWallet) ListExpiredTokens(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
+// ListExpiredReceivedTokens returns a list of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
+func (w *OwnerWallet) ListExpiredReceivedTokens(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err

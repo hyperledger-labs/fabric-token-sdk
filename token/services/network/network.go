@@ -339,6 +339,11 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	return n.n.QueryTokens(context, namespace, IDs)
 }
 
+// AreTokensSpent retrieves the spent flag for the passed ids
+func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
+	return n.n.AreTokensSpent(context, namespace, IDs)
+}
+
 // LocalMembership returns the local membership for this network
 func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}

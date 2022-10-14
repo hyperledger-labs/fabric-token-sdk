@@ -92,6 +92,9 @@ type Network interface {
 	// QueryTokens retrieves the token content for the passed token ids
 	QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error)
 
+	// AreTokensSpent retrieves the spent flag for the passed ids
+	AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error)
+
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership
 

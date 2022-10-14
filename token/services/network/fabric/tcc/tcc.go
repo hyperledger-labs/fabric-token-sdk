@@ -33,6 +33,7 @@ const (
 	QueryPublicParamsFunction = "queryPublicParams"
 	AddCertifierFunction      = "addCertifier"
 	QueryTokensFunctions      = "queryTokens"
+	AreTokensSpent            = "areTokensSpent"
 
 	PublicParamsPathVarEnv = "PUBLIC_PARAMS_FILE_PATH"
 )
@@ -58,6 +59,7 @@ type Validator interface {
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
 
 type PublicParametersManager interface {
+	IsGraphHiding() bool
 }
 
 type TokenChaincode struct {
@@ -136,6 +138,11 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 				return shim.Error("request to retrieve tokens is empty")
 			}
 			return cc.QueryTokens(args[1], stub)
+		case AreTokensSpent:
+			if len(args) != 2 {
+				return shim.Error("request to checks if tokens are spent is empty")
+			}
+			return cc.AreTokensSpent(args[1], stub)
 		default:
 			return shim.Error(fmt.Sprintf("function not [%s] recognized", f))
 		}
@@ -279,6 +286,34 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		logger.Errorf("failed marshalling tokens: [%s]", err)
 		return shim.Error(fmt.Sprintf("failed marshalling tokens: [%s]", err))
+	}
+	return shim.Success(raw)
+}
+
+func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubInterface) pb.Response {
+	_, err := cc.GetValidator(Params)
+	if err != nil {
+		return shim.Error(err.Error())
+	}
+
+	var ids []string
+	if err := json.Unmarshal(idsRaw, &ids); err != nil {
+		logger.Errorf("failed unmarshalling tokens ids: [%s]", err)
+		return shim.Error(err.Error())
+	}
+
+	logger.Debugf("check if tokens are spent [%v]...", ids)
+
+	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
+	res, err := w.AreTokensSpent(ids, cc.PublicParametersManager.IsGraphHiding())
+	if err != nil {
+		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
+		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))
+	}
+	raw, err := json.Marshal(res)
+	if err != nil {
+		logger.Errorf("failed marshalling spent flags: [%s]", err)
+		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
 	}
 	return shim.Success(raw)
 }

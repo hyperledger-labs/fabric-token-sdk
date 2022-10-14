@@ -107,6 +107,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		token.WithAuditorIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -182,6 +183,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		token.WithAuditorIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -261,6 +263,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		token.WithAuditorIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -342,6 +345,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 		token.WithAuditorIdentity(),
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),

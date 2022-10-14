@@ -35,6 +35,7 @@ const (
 	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
+	AreTokensSpent            = "areTokensSpent"
 )
 
 type GetFunc func() (view.Identity, []byte, error)
@@ -323,7 +324,7 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 		idsRaw,
 	).WithNetwork(n.Name()).WithChannel(n.Channel()))
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed quering tokens")
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens")
 	}
 
 	// Unbox
@@ -333,10 +334,38 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	}
 	var tokens [][]byte
 	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling response")
+		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
 	}
 
 	return tokens, nil
+}
+
+func (n *Network) AreTokensSpent(c view.Context, namespace string, IDs []string) ([]bool, error) {
+	idsRaw, err := json.Marshal(IDs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling ids")
+	}
+
+	payloadBoxed, err := c.RunView(chaincode.NewQueryView(
+		namespace,
+		AreTokensSpent,
+		idsRaw,
+	).WithNetwork(n.Name()).WithChannel(n.Channel()))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens spent")
+	}
+
+	// Unbox
+	raw, ok := payloadBoxed.([]byte)
+	if !ok {
+		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
+	}
+	var spent []bool
+	if err := json.Unmarshal(raw, &spent); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
+	}
+
+	return spent, nil
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {

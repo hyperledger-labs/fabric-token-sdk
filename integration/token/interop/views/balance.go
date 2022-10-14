@@ -69,7 +69,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// expired
-	expiredTokens, err := htlc.Wallet(context, wallet).ListExpiredTokens(token.WithType(b.Type))
+	expiredTokens, err := htlc.Wallet(context, wallet).ListExpiredReceivedTokens(token.WithType(b.Type))
 	assert.NoError(err, "failed to get expired tokens")
 	expiredSum := token2.NewZeroQuantity(precision)
 	for _, tok := range expiredTokens.Tokens {
