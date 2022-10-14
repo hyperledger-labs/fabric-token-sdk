@@ -88,7 +88,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("debug", "")
+	//fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -118,6 +118,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
 	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -129,6 +130,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
@@ -191,6 +193,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
 	alice.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
+	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -205,6 +208,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -235,7 +239,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),
@@ -267,6 +271,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 	alice.RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 	alice.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
+	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("beta", "Org4"),
@@ -281,6 +286,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -310,7 +316,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("debug", "")
+	//fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),
@@ -344,6 +350,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 	alice.RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 	alice.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
+	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
@@ -357,6 +364,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
+	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
