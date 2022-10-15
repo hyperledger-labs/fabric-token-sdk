@@ -97,7 +97,12 @@ jobs:
           dvp-fabtoken,
           dvp-dlog,
           interop-fabtoken,
-          interop-dlog
+          interop-dlog-t1,
+          interop-dlog-t2,
+          interop-dlog-t3,
+          interop-dlog-t4,
+          interop-dlog-t5,
+          interop-dlog-t6,
         ]
 
     steps:

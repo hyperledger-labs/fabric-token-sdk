@@ -19,6 +19,8 @@ install-tools:
 
 # include the checks target
 include $(TOP)/checks.mk
+# include the interop tests target
+include $(TOP)/interoptests.mk
 
 .PHONY: unit-tests
 unit-tests:
@@ -102,14 +104,6 @@ integration-tests-dvp-fabtoken:
 .PHONY: integration-tests-dvp-dlog
 integration-tests-dvp-dlog:
 	cd ./integration/token/dvp/dlog; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-interop-fabtoken
-integration-tests-interop-fabtoken:
-	cd ./integration/token/interop/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-interop-dlog
-integration-tests-interop-dlog:
-	cd ./integration/token/interop/dlog; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: tidy
 tidy:
