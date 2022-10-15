@@ -102,9 +102,9 @@ func (r *RequestSpentTokensResponderView) process(context view.Context, request 
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s:%s]", request.Network, request.Namespace)
 	}
 
-	tms := token.GetManagementService(context, token.WithTMS(request.Namespace, "", request.Namespace))
+	tms := token.GetManagementService(context, token.WithTMS(request.Network, "", request.Namespace))
 	if tms == nil {
-		return nil, errors.Errorf("cannot find tms for [%s:%s]", request.Namespace, request.Namespace)
+		return nil, errors.Errorf("cannot find tms for [%s:%s]", request.Network, request.Namespace)
 	}
 
 	flags := make([]bool, len(request.IDs))
