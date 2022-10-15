@@ -19,8 +19,8 @@ install-tools:
 
 # include the checks target
 include $(TOP)/checks.mk
-# include the interop tests target
-include $(TOP)/interoptests.mk
+# include the interop target
+include $(TOP)/interop.mk
 
 .PHONY: unit-tests
 unit-tests:
