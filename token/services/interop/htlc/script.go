@@ -110,16 +110,16 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 
 	// I'm either the sender
 	logger.Debugf("Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if tms.WalletManager().OwnerWalletByIdentity(script.Sender) != nil {
+	if wallet := tms.WalletManager().OwnerWalletByIdentity(script.Sender); wallet != nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-		return nil, true
+		return []string{"htlc" + wallet.ID()}, true
 	}
 
 	// or the recipient
 	logger.Debugf("Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if tms.WalletManager().OwnerWalletByIdentity(script.Recipient) != nil {
+	if wallet := tms.WalletManager().OwnerWalletByIdentity(script.Recipient); wallet != nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-		return nil, true
+		return []string{"htlc" + wallet.ID()}, true
 	}
 
 	logger.Debugf("Is Mine [%s,%s,%s]? No", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)

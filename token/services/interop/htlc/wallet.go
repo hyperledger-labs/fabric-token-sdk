@@ -48,13 +48,8 @@ func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.Unspe
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(func(tok *token2.UnspentToken, script *Script) (bool, error) {
+	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
 		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-		if len(compiledOpts.TokenType) != 0 && tok.Type != compiledOpts.TokenType {
-			logger.Debugf("discarding token of type [%s]!=[%s]", tok.Type, compiledOpts.TokenType)
-			return false, nil
-		}
 
 		// is this expired and I am the sender?
 		now := time.Now()
@@ -75,13 +70,8 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte, opts ...token.ListTokensOp
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(func(tok *token2.UnspentToken, script *Script) (bool, error) {
+	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
 		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-		if len(compiledOpts.TokenType) != 0 && tok.Type != compiledOpts.TokenType {
-			logger.Debugf("discarding token of type [%s]!=[%s]", tok.Type, compiledOpts.TokenType)
-			return false, nil
-		}
 
 		if !script.HashInfo.HashFunc.Available() {
 			logger.Errorf("script hash function not available [%d]", script.HashInfo.HashFunc)
@@ -151,12 +141,7 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		if len(compiledOpts.TokenType) != 0 && tok.Type != compiledOpts.TokenType {
-			logger.Debugf("discarding token of type [%s]!=[%s]", tok.Type, compiledOpts.TokenType)
-			return false, nil
-		}
-
+	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
 		now := time.Now()
 		logger.Debugf("[%v]<=[%v] and sender [%s]?", script.Deadline, now, script.Sender.UniqueID())
 		return script.Deadline.After(now) && w.wallet.Contains(script.Recipient), nil
@@ -170,12 +155,7 @@ func (w *OwnerWallet) ListExpiredReceivedTokens(opts ...token.ListTokensOption) 
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		if len(compiledOpts.TokenType) != 0 && tok.Type != compiledOpts.TokenType {
-			logger.Debugf("discarding token of type [%s]!=[%s]", tok.Type, compiledOpts.TokenType)
-			return false, nil
-		}
-
+	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
 		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
 		now := time.Now()
 		logger.Debugf("[%v]<=[%v] and sender [%s]?", script.Deadline, now, script.Sender.UniqueID())
@@ -221,41 +201,21 @@ func (w *OwnerWallet) CleanupExpiredReceivedTokens(context view.Context, opts ..
 	return &token2.UnspentTokens{Tokens: res}, nil
 }
 
-func (w *OwnerWallet) filter(pick PickFunction) (*token2.UnspentTokens, error) {
-	unspentTokens, err := w.queryService.ListUnspentTokens()
+func (w *OwnerWallet) filter(tokenType string, pick PickFunction) (*token2.UnspentTokens, error) {
+	it, err := w.filterIterator(tokenType, pick)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
-	logger.Debugf("[%d] unspent tokens found", len(unspentTokens.Tokens))
 	var tokens []*token2.UnspentToken
-	for _, tok := range unspentTokens.Tokens {
-		logger.Debugf("token [%s,%s,%s,%s] contains a script?", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-		owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	for {
+		tok, err := it.Next()
 		if err != nil {
-			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
-			continue
+			return nil, errors.Wrapf(err, "failed to get next unspent token from iterator")
 		}
-		if owner.Type == ScriptType {
-			script := &Script{}
-			if err := json.Unmarshal(owner.Identity, script); err != nil {
-				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-				continue
-			}
-			if script.Sender.IsNone() {
-				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-				continue
-			}
-			logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-			pickItem, err := pick(tok, script)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to pick (token,script)[%v:%v] pair", tok, script)
-			}
-			if pickItem {
-				tokens = append(tokens, tok)
-			}
+		if tok == nil {
+			break
 		}
+		tokens = append(tokens, tok)
 	}
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
@@ -264,7 +224,7 @@ func (w *OwnerWallet) filterIterator(tokenType string, pick PickFunction) (*Filt
 	var it driver.UnspentTokensIterator
 	var err error
 	if len(tokenType) != 0 {
-		it, err = w.queryService.UnspentTokensIteratorBy(w.wallet.ID(), tokenType)
+		it, err = w.queryService.UnspentTokensIteratorBy("htlc"+w.wallet.ID(), tokenType)
 	} else {
 		it, err = w.queryService.UnspentTokensIterator()
 	}
@@ -311,5 +271,35 @@ func (f *FilteredIterator) Close() {
 }
 
 func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
-	panic("implement me")
+	for {
+		tok, err := f.it.Next()
+		if err != nil {
+			return nil, err
+		}
+		if tok == nil {
+			return nil, nil
+		}
+		owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
+		if owner.Type == ScriptType {
+			script := &Script{}
+			if err := json.Unmarshal(owner.Identity, script); err != nil {
+				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+				continue
+			}
+			if script.Sender.IsNone() {
+				logger.Debugf("token [%s,%s,%s,%s] contains a script? No", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+				continue
+			}
+			logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+
+			pickItem, err := f.pick(tok, script)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to pick (token,script)[%v:%v] pair", tok, script)
+			}
+			if pickItem {
+				return tok, nil
+			}
+		}
+	}
 }
