@@ -398,23 +398,23 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 
 func (w *Translator) areTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
 	res := make([]bool, len(ids))
-	if !graphHiding {
+	if graphHiding {
 		for i, id := range ids {
-			logger.Debugf("Delete state %s\n", id)
-			v, err := w.RWSet.GetState(w.namespace, id)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get output %s", id)
-			}
-			res[i] = len(v) == 0
-		}
-	} else {
-		for i, id := range ids {
-			logger.Debugf("add serial number %s\n", id)
+			logger.Debugf("check serial number %s\n", id)
 			v, err := w.RWSet.GetState(w.namespace, id)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
 			}
 			res[i] = len(v) != 0
+		}
+	} else {
+		for i, id := range ids {
+			logger.Debugf("check state %s\n", id)
+			v, err := w.RWSet.GetState(w.namespace, id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get output %s", id)
+			}
+			res[i] = len(v) == 0
 		}
 	}
 

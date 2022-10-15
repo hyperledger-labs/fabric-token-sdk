@@ -175,8 +175,12 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	panic("implement me")
 }
 
-func (n *Network) AreTokensSpent(c view.Context, namespace string, IDs []string) ([]bool, error) {
-	panic("not implemented")
+func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
+	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestSpentTokensView(n, namespace, IDs))
+	if err != nil {
+		return nil, err
+	}
+	return resBoxed.([]bool), nil
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {

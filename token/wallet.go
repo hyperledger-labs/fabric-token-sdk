@@ -154,6 +154,10 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 	return wm.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
 }
 
+func (wm *WalletManager) SpentIDs(ids []*token2.ID) ([]string, error) {
+	return wm.managementService.tms.SpentIDs(ids...)
+}
+
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
 // These identities own tokens.
 type Wallet struct {

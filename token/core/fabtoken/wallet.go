@@ -9,6 +9,8 @@ package fabtoken
 import (
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -189,6 +191,18 @@ func (s *Service) CertifierWallet(id string) driver.CertifierWallet {
 
 func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWallet {
 	return nil
+}
+
+func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
+	sIDs := make([]string, len(ids))
+	var err error
+	for i, id := range ids {
+		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
+		}
+	}
+	return sIDs, nil
 }
 
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {

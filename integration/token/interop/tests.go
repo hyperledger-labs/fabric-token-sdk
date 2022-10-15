@@ -74,7 +74,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 120, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 10, 0)
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 0, -1)
 
 	// htlc (lock, claim)
 	defaultTMSID := token.TMSID{}
@@ -82,20 +82,20 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 20, 10, 20)
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 20, 0, -1)
 
 	htlcClaim(network, defaultTMSID, "bob", "", preImage)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 10, 20)
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
 
 	// payment limit reached
 	htlcLock(network, defaultTMSID, "alice", "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 10, 20)
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)

@@ -127,6 +127,9 @@ type WalletService interface {
 
 	// CertifierWalletByIdentity returns an instance of the CertifierWallet interface that contains the passed identity.
 	CertifierWalletByIdentity(identity view.Identity) CertifierWallet
+
+	// SpentIDs returns the spend ids for the passed token ids
+	SpentIDs(ids ...*token.ID) ([]string, error)
 }
 
 // Matcher models a matcher that can be used to match identities
