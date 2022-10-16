@@ -154,6 +154,7 @@ func (w *OwnerWallet) filter(tokenType string, sender bool, pick PickFunction) (
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
+	defer it.Close()
 	var tokens []*token2.UnspentToken
 	for {
 		tok, err := it.Next()
