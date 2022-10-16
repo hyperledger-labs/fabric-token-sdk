@@ -7,10 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
-	"bytes"
-	"encoding/base64"
 	"encoding/json"
-	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -21,17 +18,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
-// PickFunction is a prototype for (token,script) pair selection
-type PickFunction = func(*token2.UnspentToken, *Script) (bool, error)
-
 type QueryEngine interface {
-	ListUnspentTokens() (*token2.UnspentTokens, error)
-	// UnspentTokensIterator returns an iterator over all unspent tokens
-	UnspentTokensIterator() (driver.UnspentTokensIterator, error)
-	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
 	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 }
 
@@ -48,19 +38,17 @@ func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.Unspe
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+	return w.filter(compiledOpts.TokenType, true, DeadlineBefore)
+}
 
-		// is this expired and I am the sender?
-		now := time.Now()
-		logger.Debugf("[%v]<=[%v] and sender [%s]?", script.Deadline, now, script.Sender.UniqueID())
-		if script.Deadline.Before(now) && w.wallet.Contains(script.Sender) {
-			logger.Debugf("[%v]<=[%v] and sender [%s]? Yes", script.Deadline, now, script.Sender.UniqueID())
-			return true, nil
-		}
-		logger.Debugf("[%v]<=[%v] and sender [%s]? No", script.Deadline, now, script.Sender.UniqueID())
-		return false, nil
-	})
+// ListExpiredIterator returns an iterator of tokens with a passed deadline whose sender id is contained within the wallet
+func (w *OwnerWallet) ListExpiredIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	return w.filterIterator(compiledOpts.TokenType, true, DeadlineBefore)
 }
 
 // ListByPreImage returns a list of tokens with a matching preimage
@@ -70,68 +58,17 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte, opts ...token.ListTokensOp
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-		if !script.HashInfo.HashFunc.Available() {
-			logger.Errorf("script hash function not available [%d]", script.HashInfo.HashFunc)
-			return false, nil
-		}
-		hash := script.HashInfo.HashFunc.New()
-		if _, err := hash.Write(preImage); err != nil {
-			return false, err
-		}
-		h := hash.Sum(nil)
-		h = []byte(script.HashInfo.HashEncoding.New().EncodeToString(h))
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("searching for script matching (pre-image, image) = (%s,%s)",
-				base64.StdEncoding.EncodeToString(preImage),
-				base64.StdEncoding.EncodeToString(h),
-			)
-		}
-
-		// does the preimage match?
-		logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity,
-			base64.StdEncoding.EncodeToString(h), base64.StdEncoding.EncodeToString(script.HashInfo.Hash))
-
-		return bytes.Equal(h, script.HashInfo.Hash) && w.wallet.Contains(script.Recipient), nil
-	})
+	return w.filter(compiledOpts.TokenType, false, (&PreImageFilter{preImage: preImage}).Filter)
 }
 
+// ListByPreImageIterator returns an iterator of tokens with a matching preimage
 func (w *OwnerWallet) ListByPreImageIterator(preImage []byte, opts ...token.ListTokensOption) (*FilteredIterator, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-		if !script.HashInfo.HashFunc.Available() {
-			logger.Errorf("script hash function not available [%d]", script.HashInfo.HashFunc)
-			return false, nil
-		}
-		hash := script.HashInfo.HashFunc.New()
-		if _, err := hash.Write(preImage); err != nil {
-			return false, err
-		}
-		h := hash.Sum(nil)
-		h = []byte(script.HashInfo.HashEncoding.New().EncodeToString(h))
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("searching for script matching (pre-image, image) = (%s,%s)",
-				base64.StdEncoding.EncodeToString(preImage),
-				base64.StdEncoding.EncodeToString(h),
-			)
-		}
-
-		// does the preimage match?
-		logger.Debugf("token [%s,%s,%s,%s] does hashes match?", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity,
-			base64.StdEncoding.EncodeToString(h), base64.StdEncoding.EncodeToString(script.HashInfo.Hash))
-
-		return bytes.Equal(h, script.HashInfo.Hash) && w.wallet.Contains(script.Recipient), nil
-	})
+	return w.filterIterator(compiledOpts.TokenType, false, (&PreImageFilter{preImage: preImage}).Filter)
 }
 
 // ListTokens returns a list of tokens that matches the passed options and whose recipient belongs to this wallet
@@ -141,11 +78,17 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		now := time.Now()
-		logger.Debugf("[%v]<=[%v] and sender [%s]?", script.Deadline, now, script.Sender.UniqueID())
-		return script.Deadline.After(now) && w.wallet.Contains(script.Recipient), nil
-	})
+	return w.filter(compiledOpts.TokenType, false, DeadlineAfter)
+}
+
+// ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
+func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	return w.filterIterator(compiledOpts.TokenType, false, DeadlineAfter)
 }
 
 // ListExpiredReceivedTokens returns a list of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
@@ -155,12 +98,17 @@ func (w *OwnerWallet) ListExpiredReceivedTokens(opts ...token.ListTokensOption) 
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, func(tok *token2.UnspentToken, script *Script) (bool, error) {
-		logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-		now := time.Now()
-		logger.Debugf("[%v]<=[%v] and sender [%s]?", script.Deadline, now, script.Sender.UniqueID())
-		return script.Deadline.Before(now) && w.wallet.Contains(script.Recipient), nil
-	})
+	return w.filter(compiledOpts.TokenType, false, DeadlineBefore)
+}
+
+// ListExpiredReceivedTokensIterator returns an iterator of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
+func (w *OwnerWallet) ListExpiredReceivedTokensIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	return w.filterIterator(compiledOpts.TokenType, false, DeadlineBefore)
 }
 
 func (w *OwnerWallet) CleanupExpiredReceivedTokens(context view.Context, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
@@ -201,8 +149,8 @@ func (w *OwnerWallet) CleanupExpiredReceivedTokens(context view.Context, opts ..
 	return &token2.UnspentTokens{Tokens: res}, nil
 }
 
-func (w *OwnerWallet) filter(tokenType string, pick PickFunction) (*token2.UnspentTokens, error) {
-	it, err := w.filterIterator(tokenType, pick)
+func (w *OwnerWallet) filter(tokenType string, sender bool, pick PickFunction) (*token2.UnspentTokens, error) {
+	it, err := w.filterIterator(tokenType, sender, pick)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -220,14 +168,14 @@ func (w *OwnerWallet) filter(tokenType string, pick PickFunction) (*token2.Unspe
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
-func (w *OwnerWallet) filterIterator(tokenType string, pick PickFunction) (*FilteredIterator, error) {
-	var it driver.UnspentTokensIterator
-	var err error
-	if len(tokenType) != 0 {
-		it, err = w.queryService.UnspentTokensIteratorBy("htlc"+w.wallet.ID(), tokenType)
+func (w *OwnerWallet) filterIterator(tokenType string, sender bool, pick PickFunction) (*FilteredIterator, error) {
+	var walletID string
+	if sender {
+		walletID = senderWallet(w.wallet)
 	} else {
-		it, err = w.queryService.UnspentTokensIterator()
+		walletID = recipientWallet(w.wallet)
 	}
+	it, err := w.queryService.UnspentTokensIteratorBy(walletID, tokenType)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}

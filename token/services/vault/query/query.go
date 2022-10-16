@@ -59,7 +59,11 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	return len(val) == 1 && val[0] == 1, nil
 }
 
+// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
 func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensIterator, error) {
+	if len(id) == 0 {
+		return nil, errors.New("wallet id must be specified")
+	}
 	logger.Debugf("List token iterator [%s,%s]...", id, typ)
 	var startKey string
 	var err error
