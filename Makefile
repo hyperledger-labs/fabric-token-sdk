@@ -21,6 +21,8 @@ install-tools:
 include $(TOP)/checks.mk
 # include the interop target
 include $(TOP)/interop.mk
+# include the fungible target
+include $(TOP)/fungible.mk
 
 .PHONY: unit-tests
 unit-tests:
@@ -58,28 +60,6 @@ orion-server-images:
 	docker pull orionbcdb/orion-server:$(ORION_VERSION)
 	docker image tag orionbcdb/orion-server:$(ORION_VERSION) orionbcdb/orion-server:latest
 
-.PHONY: integration-tests-dlog-fabric
-integration-tests-dlog-fabric:
-	cd ./integration/token/fungible/dlog; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-dloghsm-fabric
-integration-tests-dloghsm-fabric: install-softhsm
-	@echo "Setup SoftHSM"
-	@./ci/scripts/setup_softhsm.sh
-	@echo "Start Integration Test"
-	cd ./integration/token/fungible/dloghsm; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-fabtoken-fabric
-integration-tests-fabtoken-fabric:
-	cd ./integration/token/fungible/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-dlog-orion
-integration-tests-dlog-orion:
-	cd ./integration/token/fungible/odlog; ginkgo $(GINKGO_TEST_OPTS) .
-
-.PHONY: integration-tests-fabtoken-orion
-integration-tests-fabtoken-orion:
-	cd ./integration/token/fungible/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-dlog
 integration-tests-nft-dlog:
