@@ -9,15 +9,14 @@ package nogh
 import (
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -176,7 +175,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 	return nil
 }
 
-func (s *Service) SpentIDs(ids ...*token2.ID) ([]string, error) {
+func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
 	sIDs := make([]string, len(ids))
 	var err error
 	for i, id := range ids {
@@ -226,7 +225,7 @@ func (w *ownerWallet) Contains(identity view.Identity) bool {
 	return w.tokenService.OwnerWalletsRegistry.ContainsIdentity(identity, w.id)
 }
 
-func (w *ownerWallet) ContainsToken(token *token2.UnspentToken) bool {
+func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }
 
@@ -277,7 +276,7 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return si, err
 }
 
-func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token2.UnspentTokens, error) {
+func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
 	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
@@ -285,7 +284,7 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token2.Unspen
 	}
 	defer it.Close()
 
-	unspentTokens := &token2.UnspentTokens{}
+	unspentTokens := &token.UnspentTokens{}
 	for {
 		t, err := it.Next()
 		if err != nil {
@@ -337,7 +336,7 @@ func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
 
-func (w *issuerWallet) ContainsToken(token *token2.UnspentToken) bool {
+func (w *issuerWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }
 
@@ -356,14 +355,14 @@ func (w *issuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 	return si, nil
 }
 
-func (w *issuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token2.IssuedTokens, error) {
+func (w *issuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
 	logger.Debugf("issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
 	source, err := w.tokenService.QE.ListHistoryIssuedTokens()
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
 
-	unspentTokens := &token2.IssuedTokens{}
+	unspentTokens := &token.IssuedTokens{}
 	for _, t := range source.Tokens {
 		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
 			logger.Debugf("issuer wallet [%s]: discarding token of type [%s]!=[%s]", w.ID(), t.Type, opts.TokenType)
@@ -405,7 +404,7 @@ func (w *auditorWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
 
-func (w *auditorWallet) ContainsToken(token *token2.UnspentToken) bool {
+func (w *auditorWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }
 
