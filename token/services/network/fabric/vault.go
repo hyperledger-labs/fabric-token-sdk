@@ -61,6 +61,7 @@ func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
 			return errors.Wrapf(err, "failed to append deletion of [%s]", id)
 		}
 	}
+	rws.Done()
 
 	if err := v.ch.Vault().CommitTX(txID, 0, 0); err != nil {
 		return errors.WithMessagef(err, "failed to commit rws with token delitions")
