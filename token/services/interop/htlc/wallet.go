@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -29,6 +30,8 @@ type QueryEngine interface {
 type OwnerWallet struct {
 	wallet       *token.OwnerWallet
 	queryService QueryEngine
+	vault        *vault.Vault
+	bufferSize   int
 }
 
 // ListExpired returns a list of tokens with a passed deadline whose sender id is contained within the wallet
@@ -111,42 +114,74 @@ func (w *OwnerWallet) ListExpiredReceivedTokensIterator(opts ...token.ListTokens
 	return w.filterIterator(compiledOpts.TokenType, false, DeadlineBefore)
 }
 
-func (w *OwnerWallet) CleanupExpiredReceivedTokens(context view.Context, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
-	expiredTokens, err := w.ListExpiredReceivedTokens(opts...)
+func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...token.ListTokensOption) error {
+	it, err := w.ListExpiredReceivedTokensIterator(opts...)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to fetch list of expired received tokens")
+		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
+	}
+	var buffer []*token2.UnspentToken
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get next expired received token")
+		}
+		if tok == nil {
+			break
+		}
+		buffer = append(buffer, tok)
+		if len(buffer) > w.bufferSize {
+			if err := w.deleteExpiredReceivedTokens(context, buffer); err != nil {
+				return errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+			}
+			buffer = nil
+		}
+	}
+	if err := w.deleteExpiredReceivedTokens(context, buffer); err != nil {
+		return errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+	}
+
+	return nil
+}
+
+func (w *OwnerWallet) deleteExpiredReceivedTokens(context view.Context, expiredTokens []*token2.UnspentToken) error {
+	if len(expiredTokens) == 0 {
+		return nil
 	}
 
 	// get spent flags
-	ids := make([]*token2.ID, expiredTokens.Count())
-	for i, tok := range expiredTokens.Tokens {
+	ids := make([]*token2.ID, len(expiredTokens))
+	for i, tok := range expiredTokens {
 		ids[i] = tok.Id
 	}
 	tms := w.wallet.TMS()
 	spentIDs, err := tms.WalletManager().SpentIDs(ids)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
+		return errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
 	}
 	net := network.GetInstance(context, tms.Network(), tms.Channel())
 	if net == nil {
-		return nil, errors.Errorf("cannot load network [%s:%s]", tms.Network(), tms.Channel())
+		return errors.Errorf("cannot load network [%s:%s]", tms.Network(), tms.Channel())
 	}
 	spent, err := net.AreTokensSpent(context, tms.Namespace(), spentIDs)
 	if err != nil {
-		return nil, errors.Errorf("cannot to fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
+		return errors.Errorf("cannot to fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
 	}
 
 	// remove the tokens flagged as spent
-	var res []*token2.UnspentToken
-	for i, unspentToken := range expiredTokens.Tokens {
+	var toDelete []*token2.ID
+	for i, unspentToken := range expiredTokens {
 		if spent[i] {
 			logger.Debugf("token [%s] is spent", unspentToken.Id)
+			toDelete = append(toDelete, unspentToken.Id)
 		} else {
 			logger.Debugf("token [%s] is not spent", unspentToken.Id)
-			res = append(res, unspentToken)
 		}
 	}
-	return &token2.UnspentTokens{Tokens: res}, nil
+	if err := w.vault.DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+		return errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
+	}
+
+	return nil
 }
 
 func (w *OwnerWallet) filter(tokenType string, sender bool, pick PickFunction) (*token2.UnspentTokens, error) {
@@ -206,7 +241,9 @@ func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet, opts ...token.S
 
 	return &OwnerWallet{
 		wallet:       wallet,
+		vault:        vault.TokenVault(),
 		queryService: vault.TokenVault().QueryEngine(),
+		bufferSize:   100,
 	}
 }
 

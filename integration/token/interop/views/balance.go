@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type Balance struct {
@@ -45,23 +44,20 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	ownedSum, err := unspentTokens.Sum(precision)
 	assert.NoError(err, "failed to compute the sum of the unspent tokens")
 
+	htlcWallet := htlc.Wallet(context, wallet)
 	// locked
-	lockedToTokens, err := htlc.Wallet(context, wallet).ListTokensIterator(token.WithType(b.Type))
+	lockedToTokens, err := htlcWallet.ListTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get locked to tokens")
 	lockedSum, err := lockedToTokens.Sum(precision)
 	assert.NoError(err, "failed to compute the sum of the htlc locked tokens")
 
 	// expired
-	expiredTokens, err := htlc.Wallet(context, wallet).CleanupExpiredReceivedTokens(context, token.WithType(b.Type))
+	err = htlcWallet.DeleteExpiredReceivedTokens(context, token.WithType(b.Type))
+	assert.NoError(err, "failed to delete expired tokens")
+	expiredTokens, err := htlcWallet.ListExpiredReceivedTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get expired tokens")
-	expiredSum := token2.NewZeroQuantity(precision)
-	for _, tok := range expiredTokens.Tokens {
-		q, err := token2.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, err
-		}
-		expiredSum = expiredSum.Add(q)
-	}
+	expiredSum, err := expiredTokens.Sum(precision)
+	assert.NoError(err, "failed to compute the sum of the htlc expired tokens")
 
 	return BalanceResult{
 		Quantity: ownedSum.Decimal(),
