@@ -297,6 +297,15 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.Unspent
 	return unspentTokens, nil
 }
 
+func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
+	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
+	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	if err != nil {
+		return nil, errors.Wrap(err, "token selection failed")
+	}
+	return it, nil
+}
+
 func (w *ownerWallet) EnrollmentID() string {
 	return w.identityInfo.EnrollmentID()
 }

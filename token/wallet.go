@@ -256,6 +256,20 @@ func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token2.Unspe
 	return o.w.ListTokens(compiledOpts)
 }
 
+// ListUnspentTokensIterator returns an iterator of unspent tokens owned by identities in this wallet and filtered by the passed options.
+// Options: WithType
+func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*UnspentTokensIterator, error) {
+	compiledOpts, err := CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, err
+	}
+	it, err := o.w.ListTokensIterator(compiledOpts)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
+}
+
 func (o *OwnerWallet) EnrollmentID() string {
 	return o.w.EnrollmentID()
 }

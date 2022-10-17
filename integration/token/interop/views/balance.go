@@ -8,7 +8,6 @@ package views
 
 import (
 	"encoding/json"
-	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -37,36 +36,20 @@ type BalanceView struct {
 func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(b.TMSID))
 	wallet := tms.WalletManager().OwnerWallet(b.Wallet)
-	if wallet == nil {
-		return nil, fmt.Errorf("wallet %s not found", b.Wallet)
-	}
+	assert.NotNil(wallet, "failed to get wallet [%s]", b.Wallet)
 
 	// owned
-	unspentTokens, err := wallet.ListUnspentTokens(token.WithType(b.Type))
-	if err != nil {
-		return nil, err
-	}
+	unspentTokens, err := wallet.ListUnspentTokensIterator(token.WithType(b.Type))
+	assert.NoError(err, "failed to get unspent tokens")
 	precision := tms.PublicParametersManager().Precision()
-	ownedSum := token2.NewZeroQuantity(precision)
-	for _, tok := range unspentTokens.Tokens {
-		q, err := token2.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, err
-		}
-		ownedSum = ownedSum.Add(q)
-	}
+	ownedSum, err := unspentTokens.Sum(precision)
+	assert.NoError(err, "failed to compute the sum of the unspent tokens")
 
 	// locked
-	lockedToTokens, err := htlc.Wallet(context, wallet).ListTokens(token.WithType(b.Type))
+	lockedToTokens, err := htlc.Wallet(context, wallet).ListTokensIterator(token.WithType(b.Type))
 	assert.NoError(err, "failed to get locked to tokens")
-	lockedSum := token2.NewZeroQuantity(precision)
-	for _, tok := range lockedToTokens.Tokens {
-		q, err := token2.ToQuantity(tok.Quantity, precision)
-		if err != nil {
-			return nil, err
-		}
-		lockedSum = lockedSum.Add(q)
-	}
+	lockedSum, err := lockedToTokens.Sum(precision)
+	assert.NoError(err, "failed to compute the sum of the htlc locked tokens")
 
 	// expired
 	expiredTokens, err := htlc.Wallet(context, wallet).CleanupExpiredReceivedTokens(context, token.WithType(b.Type))

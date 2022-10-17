@@ -46,6 +46,9 @@ type OwnerWallet interface {
 	// ListTokens returns the list of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokens(opts *ListTokensOptions) (*token.UnspentTokens, error)
 
+	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
+	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
+
 	// GetTokenMetadata returns any information needed to implement the transfer
 	GetTokenMetadata(id view.Identity) ([]byte, error)
 

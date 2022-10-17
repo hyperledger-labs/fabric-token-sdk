@@ -252,3 +252,26 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 		}
 	}
 }
+
+// Sum consumes the iterator and computes the sum of the quantities of the tokens in the iterator
+func (f *FilteredIterator) Sum(precision uint64) (token2.Quantity, error) {
+	defer f.Close()
+	sum := token2.NewZeroQuantity(precision)
+	for {
+		tok, err := f.Next()
+		if err != nil {
+			return nil, err
+		}
+		if tok == nil {
+			break
+		}
+
+		q, err := token2.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, err
+		}
+		sum = sum.Add(q)
+	}
+
+	return sum, nil
+}
