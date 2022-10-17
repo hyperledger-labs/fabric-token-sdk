@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package interactive
 
 import (
@@ -12,18 +13,20 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.certifier.interactive")
 
 type QueryEngine interface {
-	ListUnspentTokens() (*token2.UnspentTokens, error)
+	UnspentTokensIterator() (network.UnspentTokensIterator, error)
 }
 
 type CertificationStorage interface {
-	Exists(id *token2.ID) bool
-	Store(certifications map[*token2.ID][]byte) error
+	Exists(id *token.ID) bool
+	Store(certifications map[*token.ID][]byte) error
 }
 
 type Vault interface {
@@ -51,6 +54,7 @@ type CertificationClient struct {
 	certificationStorage CertificationStorage
 	viewManager          ViewManager
 	certifiers           []view2.Identity
+	waitTime             time.Duration
 }
 
 func NewCertificationClient(
@@ -72,15 +76,16 @@ func NewCertificationClient(
 		certificationStorage: cm,
 		viewManager:          fm,
 		certifiers:           certifiers,
+		waitTime:             10 * time.Second,
 	}
 }
 
-func (d *CertificationClient) IsCertified(id *token2.ID) bool {
+func (d *CertificationClient) IsCertified(id *token.ID) bool {
 	return d.certificationStorage.Exists(id)
 }
 
-func (d *CertificationClient) RequestCertification(ids ...*token2.ID) error {
-	var toBeCertified []*token2.ID
+func (d *CertificationClient) RequestCertification(ids ...*token.ID) error {
+	var toBeCertified []*token.ID
 	for _, id := range ids {
 		if !d.IsCertified(id) {
 			toBeCertified = append(toBeCertified, id)
@@ -95,7 +100,7 @@ func (d *CertificationClient) RequestCertification(ids ...*token2.ID) error {
 	if err != nil {
 		return err
 	}
-	certifications, ok := resultBoxed.(map[*token2.ID][]byte)
+	certifications, ok := resultBoxed.(map[*token.ID][]byte)
 	if !ok {
 		panic("invalid type, expected map[token.ID][]byte")
 	}
@@ -112,20 +117,40 @@ func (d *CertificationClient) Start() error {
 
 func (d *CertificationClient) Scan() {
 	var lastTXID string
+	var tokens driver.UnspentTokensIterator
 	for {
-		// Check the unspent tokens
-		tokens, err := d.queryEngine.ListUnspentTokens()
-		if err != nil {
-			break
+		if tokens != nil {
+			tokens.Close()
 		}
-		var toBeCertified []*token2.ID
-		for _, token := range tokens.Tokens {
+
+		logger.Debugf("check the certification of unspent tokens...")
+		// Check the unspent tokens
+		var err error
+		tokens, err = d.queryEngine.UnspentTokensIterator()
+		if err != nil {
+			logger.Errorf("failed to get an iterator over unspent tokens, wait and retry [%s]", err)
+			time.Sleep(d.waitTime)
+			continue
+		}
+
+		var toBeCertified []*token.ID
+		for {
+			token, err := tokens.Next()
+			if err != nil {
+				logger.Errorf("failed to get next unspent tokens, stop here [%s]", err)
+				break
+			}
+			if token == nil {
+				break
+			}
+
 			// does token have a certification?
 			if !d.certificationStorage.Exists(token.Id) {
 				// if no, batch it
 				toBeCertified = append(toBeCertified, token.Id)
 			}
 		}
+		tokens.Close()
 
 		if len(toBeCertified) != 0 {
 			// Request certification
@@ -138,6 +163,7 @@ func (d *CertificationClient) Scan() {
 			logger.Debugf("request certification of [%v] satisfied with no error", toBeCertified)
 		}
 
+		// wait for new tokens to appear in the ledger
 		nextTxId, ok := d.getNextCommittedTxID(lastTXID)
 		if !ok {
 			return

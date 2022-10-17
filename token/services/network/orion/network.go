@@ -11,14 +11,15 @@ import (
 	"sync"
 	"time"
 
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -171,7 +172,7 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return pp.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	panic("implement me")
 }
 
@@ -191,7 +192,7 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	ai := &idemix2.AuditInfo{}
+	ai := &idemix.AuditInfo{}
 	if err := ai.FromBytes(raw); err != nil {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
@@ -239,15 +240,25 @@ func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *nv) ListUnspentTokens() (*token2.UnspentTokens, error) {
+// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+func (v *nv) UnspentTokensIteratorBy(id, typ string) (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIteratorBy(id, typ)
+}
+
+// UnspentTokensIterator returns an iterator over all unspent tokens
+func (v *nv) UnspentTokensIterator() (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIterator()
+}
+
+func (v *nv) ListUnspentTokens() (*token.UnspentTokens, error) {
 	return v.tokenVault.QueryEngine().ListUnspentTokens()
 }
 
-func (v *nv) Exists(id *token2.ID) bool {
+func (v *nv) Exists(id *token.ID) bool {
 	return v.tokenVault.CertificationStorage().Exists(id)
 }
 
-func (v *nv) Store(certifications map[*token2.ID][]byte) error {
+func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 

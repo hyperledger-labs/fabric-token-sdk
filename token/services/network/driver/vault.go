@@ -22,10 +22,21 @@ const (
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
 
+type UnspentTokensIterator interface {
+	Close()
+	Next() (*token.UnspentToken, error)
+}
+
 // Vault models the vault service
 type Vault interface {
 	// GetLastTxID returns the last transaction ID committed into the vault
 	GetLastTxID() (string, error)
+
+	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+	UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error)
+
+	// UnspentTokensIterator returns an iterator over all unspent tokens
+	UnspentTokensIterator() (UnspentTokensIterator, error)
 
 	// ListUnspentTokens returns the list of all unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)

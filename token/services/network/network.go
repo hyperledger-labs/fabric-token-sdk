@@ -34,6 +34,8 @@ const (
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
 
+type UnspentTokensIterator = driver.UnspentTokensIterator
+
 // TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
 type TxStatusChangeListener interface {
 	// OnStatusChange is called when the status of a transaction changes
@@ -157,6 +159,14 @@ type Vault struct {
 
 func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
+}
+
+func (v *Vault) UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error) {
+	return v.v.UnspentTokensIteratorBy(id, typ)
+}
+
+func (v *Vault) UnspentTokensIterator() (UnspentTokensIterator, error) {
+	return v.v.UnspentTokensIterator()
 }
 
 func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {

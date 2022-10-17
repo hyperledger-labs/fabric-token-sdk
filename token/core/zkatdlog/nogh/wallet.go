@@ -279,26 +279,27 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token2.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	source, err := w.tokenService.QE.ListUnspentTokens()
+	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
+	defer it.Close()
 
 	unspentTokens := &token2.UnspentTokens{}
-	for _, t := range source.Tokens {
-		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
-			logger.Debugf("wallet: discarding token of type [%s]!=[%s]", t.Type, opts.TokenType)
-			continue
-		}
+	for {
+		t, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
 
-		if !w.Contains(t.Owner.Raw) {
-			logger.Debugf("wallet: discarding token, owner does not belong to this wallet")
-			continue
+		}
+		if t == nil {
+			break
 		}
 
 		logger.Debugf("wallet: adding token of type [%s], quantity [%s]", t.Type, t.Quantity)
 		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
 	}
+
 	logger.Debugf("wallet: list tokens done, found [%d] unspent tokens", len(unspentTokens.Tokens))
 
 	return unspentTokens, nil

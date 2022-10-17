@@ -27,7 +27,7 @@ type PublicParamsLoader interface {
 
 type QueryEngine interface {
 	IsMine(id *token2.ID) (bool, error)
-	ListUnspentTokens() (*token2.UnspentTokens, error)
+	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 	ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error)
 	ListHistoryIssuedTokens() (*token2.IssuedTokens, error)
 	PublicParams() ([]byte, error)
