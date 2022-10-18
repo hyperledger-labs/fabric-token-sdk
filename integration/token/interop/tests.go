@@ -218,9 +218,14 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	txID := tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
 	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"timeout reached"}, token.WithTMSID(alpha))
 
-	CheckPublicParams(network, token.TMSID{}, "issuer", "auditor", "alice", "bob")
-	CheckOwnerDB(network, token.TMSID{}, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, token.TMSID{}, "auditor", "", nil)
+	CheckPublicParams(network, token.TMSID{}, "alice", "bob")
+	CheckPublicParams(network, alpha, "issuer", "auditor")
+	CheckPublicParams(network, beta, "issuer", "auditor")
+	CheckOwnerDB(network, token.TMSID{}, nil, "auditor", "alice", "bob")
+	CheckOwnerDB(network, alpha, nil, "issuer")
+	CheckOwnerDB(network, beta, nil, "issuer")
+	CheckAuditorDB(network, alpha, "auditor", "", nil)
+	CheckAuditorDB(network, beta, "auditor", "", nil)
 }
 
 func TestFastExchange(network *integration.Infrastructure) {
