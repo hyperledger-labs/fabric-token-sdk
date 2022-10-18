@@ -11,13 +11,16 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure) {
@@ -97,15 +100,38 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
 
+	CheckPublicParams(network, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, nil, "issuer", "auditor", "alice", "bob")
+	CheckAuditorDB(network, "auditor", "", nil)
+
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
-	htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
+	failedLockTXID, _, _ := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
 		fmt.Sprintf(
 			"entry with transfer metadata key [%s] is already occupied by [%s]",
 			htlc.LockKey(hash),
 			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
 		),
 	)
+
+	CheckPublicParams(network, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, nil, "issuer", "auditor", "alice", "bob")
+	CheckAuditorDB(network, "auditor", "", func(errs []string) error {
+		fmt.Printf("Got errors [%v]", errs)
+		if len(errs) != 8 {
+			return errors.Errorf("expected 8 errors, got [%d]", len(errs))
+		}
+		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.Pending)
+		if errs[0] != firstError {
+			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
+		}
+		for _, err := range errs {
+			if !strings.Contains(err, failedLockTXID) {
+				return errors.Errorf("[%s] does not contain [%s]", err, failedLockTXID)
+			}
+		}
+		return nil
+	})
 }
 
 func TestHTLCTwoNetworks(network *integration.Infrastructure) {

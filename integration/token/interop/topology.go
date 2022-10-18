@@ -29,7 +29,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -39,6 +39,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -47,6 +49,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -59,6 +63,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	alice.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -71,6 +77,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
 	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	bob.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -99,6 +107,8 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
+	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -108,6 +118,8 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	)
 	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -121,6 +133,8 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 	alice.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	alice.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -134,6 +148,8 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&htlc.FastExchangeResponderView{}, &htlc.FastExchangeInitiatorView{})
 	bob.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 	bob.RegisterViewFactory("GetEnrollmentID", &views.GetEnrollmentIDViewFactory{})
+	bob.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
@@ -325,7 +341,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("db.driver.badger=info:debug", "")
+	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),

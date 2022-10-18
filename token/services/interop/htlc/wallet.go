@@ -54,7 +54,7 @@ func (w *OwnerWallet) ListExpiredIterator(opts ...token.ListTokensOption) (*Filt
 	return w.filterIterator(compiledOpts.TokenType, true, DeadlineBefore)
 }
 
-// ListByPreImage returns a list of tokens with a matching preimage
+// ListByPreImage returns a list of tokens whose recipient is this wallet and with a matching preimage
 func (w *OwnerWallet) ListByPreImage(preImage []byte, opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
@@ -64,7 +64,7 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte, opts ...token.ListTokensOp
 	return w.filter(compiledOpts.TokenType, false, (&PreImageFilter{preImage: preImage}).Filter)
 }
 
-// ListByPreImageIterator returns an iterator of tokens with a matching preimage
+// ListByPreImageIterator returns am iterator of tokens whose recipient is this wallet and with a matching preimage
 func (w *OwnerWallet) ListByPreImageIterator(preImage []byte, opts ...token.ListTokensOption) (*FilteredIterator, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
@@ -164,7 +164,7 @@ func (w *OwnerWallet) deleteExpiredReceivedTokens(context view.Context, expiredT
 	}
 	spent, err := net.AreTokensSpent(context, tms.Namespace(), spentIDs)
 	if err != nil {
-		return errors.Errorf("cannot to fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
+		return errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
 	}
 
 	// remove the tokens flagged as spent

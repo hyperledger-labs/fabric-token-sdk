@@ -9,7 +9,10 @@ package htlc
 import (
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"time"
+
+	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -50,7 +53,16 @@ type LockView struct {
 	*Lock
 }
 
-func (hv *LockView) Call(context view.Context) (interface{}, error) {
+func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
+	var tx *htlc.Transaction
+	defer func() {
+		if e := recover(); e != nil {
+			if tx != nil {
+				fmt.Printf("add to err tx id [%s]", tx.ID())
+				err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), err)
+			}
+		}
+	}()
 	// As a first step, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knows already which
@@ -60,7 +72,7 @@ func (hv *LockView) Call(context view.Context) (interface{}, error) {
 
 	// At this point, the sender is ready to prepare the htlc transaction
 	// and specify the auditor that must be contacted to approve the operation.
-	tx, err := htlc.NewAnonymousTransaction(
+	tx, err = htlc.NewAnonymousTransaction(
 		context,
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(hv.TMSID),

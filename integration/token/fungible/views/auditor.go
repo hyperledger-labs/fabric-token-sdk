@@ -168,8 +168,9 @@ func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CurrentHolding struct {
-	EnrollmentID string `json:"enrollment_id"`
-	TokenType    string `json:"token_type"`
+	EnrollmentID string
+	TokenType    string
+	TMSID        token.TMSID
 }
 
 // CurrentHoldingView is used to retrieve the current holding of token type of the passed enrollment id
@@ -178,7 +179,10 @@ type CurrentHoldingView struct {
 }
 
 func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
-	w := ttx.MyAuditorWallet(context)
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+
+	w := tms.WalletManager().AuditorWallet("")
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor := ttx.NewAuditor(context, w)

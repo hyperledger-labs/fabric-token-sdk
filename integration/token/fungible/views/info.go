@@ -13,11 +13,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
 type GetEnrollmentID struct {
-	Wallet string `json:"wallet"`
+	Wallet string
+	TMSID  token.TMSID
 }
 
 // GetEnrollmentIDView is a view that returns the enrollment ID of a wallet.
@@ -26,9 +26,10 @@ type GetEnrollmentIDView struct {
 }
 
 func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
-	w := ttx.GetWallet(context, r.Wallet)
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+	w := tms.WalletManager().OwnerWallet(r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
-
 	return w.EnrollmentID(), nil
 }
 

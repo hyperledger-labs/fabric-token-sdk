@@ -71,7 +71,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 		switch {
 		case vc == network.Unknown:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not deleted for the db", transactionRecord.TxID))
+			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", transactionRecord.TxID, transactionRecord.Status))
 		case vc == network.HasDependencies:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] has dependencies", transactionRecord.TxID))
 		case vc == network.Valid && transactionRecord.Status == ttxdb.Pending:
@@ -98,7 +98,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 
 		if _, err := tip.TransactionInfo(transactionRecord.TxID); err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction infor for transaction record [%s]: [%s]", transactionRecord.TxID, err))
+			errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction info for transaction record [%s]: [%s]", transactionRecord.TxID, err))
 		}
 
 		// check the ledger

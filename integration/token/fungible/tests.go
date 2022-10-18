@@ -597,7 +597,6 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
 
 	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
-	CheckOwnerDB(network, nil, "bob", "alice")
-	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
+	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
 }
