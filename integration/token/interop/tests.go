@@ -100,9 +100,9 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
 
-	CheckPublicParams(network, "issuer", "auditor", "alice", "bob")
-	CheckOwnerDB(network, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, "auditor", "", nil)
+	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
+	CheckAuditorDB(network, token.TMSID{}, "auditor", "", nil)
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
@@ -114,9 +114,9 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 		),
 	)
 
-	CheckPublicParams(network, "issuer", "auditor", "alice", "bob")
-	CheckOwnerDB(network, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, "auditor", "", func(errs []string) error {
+	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
+	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
 		fmt.Printf("Got errors [%v]", errs)
 		if len(errs) != 8 {
 			return errors.Errorf("expected 8 errors, got [%d]", len(errs))
@@ -142,10 +142,10 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	registerAuditor(network, token.WithTMSID(beta))
 
 	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice")
-	CheckBalance(network, "alice", "", "EUR", 30, token.WithTMSID(alpha))
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 30, token.WithTMSID(alpha))
 
 	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
-	CheckBalance(network, "bob", "", "USD", 30, token.WithTMSID(beta))
+	CheckBalanceAndHolding(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 
 	_, preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
 	htlcLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
@@ -153,30 +153,37 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	htlcClaim(network, beta, "alice", "", preImage)
 	htlcClaim(network, alpha, "bob", "", preImage)
 
-	CheckBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
-	CheckBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
-	CheckBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
 
 	// Try to claim again and get an error
 
 	htlcClaim(network, beta, "alice", "", preImage, "expected only one htlc script to match")
 	htlcClaim(network, alpha, "bob", "", preImage, "expected only one htlc script to match")
 
-	CheckBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
-	CheckBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
-	CheckBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
 
 	// Try to claim without locking
 
 	htlcClaim(network, beta, "alice", "", nil, "expected only one htlc script to match")
 	htlcClaim(network, alpha, "bob", "", nil, "expected only one htlc script to match")
 
-	CheckBalance(network, "alice", "", "EUR", 20, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "", "EUR", 10, token.WithTMSID(alpha))
-	CheckBalance(network, "alice", "", "USD", 10, token.WithTMSID(beta))
-	CheckBalance(network, "bob", "", "USD", 20, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
+
+	CheckPublicParams(network, alpha, "issuer", "auditor", "alice", "bob")
+	CheckPublicParams(network, beta, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, alpha, nil, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
+	CheckAuditorDB(network, alpha, "auditor", "", nil)
+	CheckAuditorDB(network, beta, "auditor", "", nil)
 }
 
 func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
@@ -187,10 +194,10 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	registerAuditor(network, token.WithTMSID(beta))
 
 	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
-	CheckBalance(network, "alice", "alice.id1", "EUR", 30, token.WithTMSID(alpha))
+	CheckBalanceAndHolding(network, "alice", "alice.id1", "EUR", 30, token.WithTMSID(alpha))
 
 	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob.id1")
-	CheckBalance(network, "bob", "bob.id1", "USD", 30, token.WithTMSID(beta))
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 30, token.WithTMSID(beta))
 
 	aliceLockTxID, preImage, hash := htlcLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
 	bobLockTxID, _, _ := htlcLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
@@ -203,13 +210,17 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	scan(network, "bob", hash, crypto.SHA256, "", token.WithTMSID(beta))
 	scan(network, "bob", hash, crypto.SHA256, bobLockTxID, token.WithTMSID(beta))
 
-	CheckBalance(network, "alice", "alice.id1", "EUR", 20, token.WithTMSID(alpha))
-	CheckBalance(network, "alice", "alice.id2", "EUR", 10, token.WithTMSID(alpha))
-	CheckBalance(network, "bob", "bob.id1", "USD", 20, token.WithTMSID(beta))
-	CheckBalance(network, "bob", "bob.id2", "USD", 10, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "alice", "alice.id1", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "alice", "alice.id2", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
+	CheckBalanceWithLockedAndHolding(network, "bob", "bob.id1", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
+	CheckBalanceWithLockedAndHolding(network, "bob", "bob.id2", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
 
 	txID := tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
 	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"timeout reached"}, token.WithTMSID(alpha))
+
+	CheckPublicParams(network, token.TMSID{}, "issuer", "auditor", "alice", "bob")
+	CheckOwnerDB(network, token.TMSID{}, nil, "issuer", "auditor", "alice", "bob")
+	CheckAuditorDB(network, token.TMSID{}, "auditor", "", nil)
 }
 
 func TestFastExchange(network *integration.Infrastructure) {

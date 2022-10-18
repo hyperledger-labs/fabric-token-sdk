@@ -153,16 +153,20 @@ func CheckBalanceWithLockedAndHolding(network *integration.Infrastructure, id st
 	CheckHolding(network, id, wallet, typ, expectedHolding, opts...)
 }
 
-func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
+func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, ids ...string) {
 	for _, id := range ids {
-		_, err := network.Client(id).CallView("CheckPublicParamsMatch", nil)
+		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+			TMSID: tmsID,
+		}))
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
 
-func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...string) {
+func CheckOwnerDB(network *integration.Infrastructure, tmsID token.TMSID, expectedErrors []string, ids ...string) {
 	for _, id := range ids {
-		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
+		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
+			TMSID: tmsID,
+		}))
 		Expect(err).NotTo(HaveOccurred())
 		var errorMessages []string
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
@@ -181,10 +185,11 @@ func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, 
 	}
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string, errorCheck func([]string) error) {
+func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, auditorID string, walletID string, errorCheck func([]string) error) {
 	errorMessagesBoxed, err := network.Client(auditorID).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor:         true,
 		AuditorWalletID: walletID,
+		TMSID:           tmsID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	if errorCheck != nil {

@@ -43,10 +43,16 @@ func (p *GetEnrollmentIDViewFactory) NewView(in []byte) (view.View, error) {
 	return f, nil
 }
 
-type CheckPublicParamsMatchView struct{}
+type CheckPublicParamsMatch struct {
+	TMSID token.TMSID
+}
+
+type CheckPublicParamsMatchView struct {
+	*CheckPublicParamsMatch
+}
 
 func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context)
+	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
 	assert.NotNil(tms, "failed to get TMS")
 
 	assert.NoError(tms.PublicParametersManager().Validate(), "failed to validate local public parameters")
@@ -69,6 +75,9 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 type CheckPublicParamsMatchViewFactory struct{}
 
 func (p *CheckPublicParamsMatchViewFactory) NewView(in []byte) (view.View, error) {
-	f := &CheckPublicParamsMatchView{}
+	f := &CheckPublicParamsMatchView{CheckPublicParamsMatch: &CheckPublicParamsMatch{}}
+	err := json.Unmarshal(in, f.CheckPublicParamsMatch)
+	assert.NoError(err, "failed unmarshalling input")
+
 	return f, nil
 }

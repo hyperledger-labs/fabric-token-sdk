@@ -23,6 +23,7 @@ import (
 type CheckTTXDB struct {
 	Auditor         bool
 	AuditorWalletID string
+	TMSID           token.TMSID
 }
 
 type CheckTTXDBView struct {
@@ -32,7 +33,7 @@ type CheckTTXDBView struct {
 func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	var errorMessages []string
 
-	tms := token.GetManagementService(context)
+	tms := token.GetManagementService(context, token.WithTMSID(m.TMSID))
 	assert.NotNil(tms, "failed to get default tms")
 	net := network.GetInstance(context, tms.Network(), tms.Channel())
 	assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
