@@ -31,6 +31,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
 
+	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
+
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
@@ -97,6 +99,8 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("debug", "")
+
+	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),

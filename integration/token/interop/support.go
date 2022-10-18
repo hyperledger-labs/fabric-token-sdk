@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func registerAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
+func RegisterAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -35,7 +35,7 @@ func registerAuditor(network *integration.Infrastructure, opts ...token.ServiceO
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func issueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
 	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
 		IssuerWallet: wallet,
 		TokenType:    typ,
@@ -49,7 +49,7 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 	return common.JSONUnmarshalString(txid)
 }
 
-func tmsIssueCash(network *integration.Infrastructure, tmsID token.TMSID, issuer string, wallet string, typ string, amount uint64, receiver string) string {
+func IssueCashWithTMS(network *integration.Infrastructure, tmsID token.TMSID, issuer string, wallet string, typ string, amount uint64, receiver string) string {
 	txid, err := network.Client(issuer).CallView("issue", common.JSONMarshall(&views2.IssueCash{
 		TMSID:        tmsID,
 		IssuerWallet: wallet,
@@ -72,7 +72,7 @@ func tmsIssueCash(network *integration.Infrastructure, tmsID token.TMSID, issuer
 	return common.JSONUnmarshalString(txid)
 }
 
-func listIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
+func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
 	res, err := network.Client("issuer").CallView("history", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
@@ -201,6 +201,17 @@ func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, audi
 		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
 	}
+}
+
+func Restart(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		network.StopFSCNode(id)
+	}
+	time.Sleep(10 * time.Second)
+	for _, id := range ids {
+		network.StartFSCNode(id)
+	}
+	time.Sleep(10 * time.Second)
 }
 
 func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {

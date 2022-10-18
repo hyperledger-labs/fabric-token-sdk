@@ -24,34 +24,34 @@ import (
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure) {
-	registerAuditor(network)
+	RegisterAuditor(network)
 
-	issueCash(network, "", "USD", 110, "alice")
+	IssueCash(network, "", "USD", 110, "alice")
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
-	issueCash(network, "", "USD", 10, "alice")
+	IssueCash(network, "", "USD", 10, "alice")
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 120, 0, 0, -1)
 
-	h := listIssuerHistory(network, "", "USD")
+	h := ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = listIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
-	issueCash(network, "", "EUR", 10, "bob")
+	IssueCash(network, "", "EUR", 10, "bob")
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 10, 0, 0, -1)
-	issueCash(network, "", "EUR", 10, "bob")
+	IssueCash(network, "", "EUR", 10, "bob")
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 20, 0, 0, -1)
-	issueCash(network, "", "EUR", 10, "bob")
+	IssueCash(network, "", "EUR", 10, "bob")
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 
-	h = listIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = listIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
@@ -60,6 +60,9 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 0, -1)
+
+	Restart(network, "issuer", "auditor", "alice", "bob")
+	RegisterAuditor(network)
 
 	// htlc (lock, reclaim)
 	htlcLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
@@ -138,13 +141,13 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 
-	registerAuditor(network, token.WithTMSID(alpha))
-	registerAuditor(network, token.WithTMSID(beta))
+	RegisterAuditor(network, token.WithTMSID(alpha))
+	RegisterAuditor(network, token.WithTMSID(beta))
 
-	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice")
+	IssueCashWithTMS(network, alpha, "issuer", "", "EUR", 30, "alice")
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 30, token.WithTMSID(alpha))
 
-	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
+	IssueCashWithTMS(network, beta, "issuer", "", "USD", 30, "bob")
 	CheckBalanceAndHolding(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 
 	_, preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
@@ -190,13 +193,13 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 
-	registerAuditor(network, token.WithTMSID(alpha))
-	registerAuditor(network, token.WithTMSID(beta))
+	RegisterAuditor(network, token.WithTMSID(alpha))
+	RegisterAuditor(network, token.WithTMSID(beta))
 
-	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
+	IssueCashWithTMS(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
 	CheckBalanceAndHolding(network, "alice", "alice.id1", "EUR", 30, token.WithTMSID(alpha))
 
-	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob.id1")
+	IssueCashWithTMS(network, beta, "issuer", "", "USD", 30, "bob.id1")
 	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 30, token.WithTMSID(beta))
 
 	aliceLockTxID, preImage, hash := htlcLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
@@ -215,7 +218,7 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "bob.id1", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
 	CheckBalanceWithLockedAndHolding(network, "bob", "bob.id2", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
 
-	txID := tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
+	txID := IssueCashWithTMS(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
 	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"timeout reached"}, token.WithTMSID(alpha))
 
 	CheckPublicParams(network, token.TMSID{}, "alice", "bob")
@@ -232,13 +235,13 @@ func TestFastExchange(network *integration.Infrastructure) {
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 
-	registerAuditor(network, token.WithTMSID(alpha))
-	registerAuditor(network, token.WithTMSID(beta))
+	RegisterAuditor(network, token.WithTMSID(alpha))
+	RegisterAuditor(network, token.WithTMSID(beta))
 
-	tmsIssueCash(network, alpha, "issuer", "", "EUR", 30, "alice")
+	IssueCashWithTMS(network, alpha, "issuer", "", "EUR", 30, "alice")
 	CheckBalance(network, "alice", "", "EUR", 30, token.WithTMSID(alpha))
 
-	tmsIssueCash(network, beta, "issuer", "", "USD", 30, "bob")
+	IssueCashWithTMS(network, beta, "issuer", "", "USD", 30, "bob")
 	CheckBalance(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 
 	fastExchange(network, "alice", "bob", alpha, "EUR", 10, beta, "USD", 10, 1*time.Hour)
