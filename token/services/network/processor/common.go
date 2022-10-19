@@ -138,7 +138,7 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 
 	// store extended fabtoken, if needed
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s], append extended fabtoken output [%s,%s,%v]", txID, outputID, ids)
+		logger.Debugf("transaction [%s], append extended fabtoken output [%s,%v]", txID, outputID, ids)
 	}
 	for _, id := range ids {
 		if len(id) == 0 {

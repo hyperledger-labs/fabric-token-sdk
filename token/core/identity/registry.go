@@ -8,8 +8,10 @@ package identity
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -58,16 +60,18 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	if err != nil {
 		return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 	}
+	logger.Debugf("looked-up identifier [%s:%s]", identity, walletIDToString(walletID))
 	wID := walletID
 	walletEntry, ok := r.Wallets[wID]
 	if ok {
 		return walletEntry.Wallet, nil, wID, nil
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("no wallet found for [%s] at [%s]", identity, wID)
+		logger.Debugf("no wallet found for [%s] at [%s]", identity, walletIDToString(wID))
 	}
+	var identityWID string
 	if len(identity) != 0 {
-		identityWID, err := r.GetWallet(identity)
+		identityWID, err = r.GetWallet(identity)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
 		}
@@ -82,12 +86,21 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 		}
 	}
 
-	idInfo, err := r.IdentityProvider.GetIdentityInfo(r.IdentityRole, walletID)
-	if err != nil {
-		return nil, nil, wID, errors.WithMessagef(err, "failed to get wwallet info for [%s]", walletID)
+	for _, id := range []string{wID, identityWID} {
+		if len(id) == 0 {
+			continue
+		}
+		// give it a second chance
+		var idInfo driver.IdentityInfo
+		idInfo, err = r.IdentityProvider.GetIdentityInfo(r.IdentityRole, id)
+		if err == nil {
+			logger.Debugf("identity info found at [%s]", walletIDToString(id))
+			return nil, idInfo, id, nil
+		} else {
+			logger.Debugf("identity info not found at [%s]", walletIDToString(id))
+		}
 	}
-
-	return nil, idInfo, wID, nil
+	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%s]", walletIDToString(walletID), walletIDToString(identityWID))
 }
 
 // RegisterWallet binds the passed wallet to the passed id
@@ -129,4 +142,12 @@ func (r *WalletsRegistry) GetWallet(identity view.Identity) (string, error) {
 // false otherwise
 func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
 	return r.KVS.Exists(r.Wallets[wID].Prefix + identity.Hash())
+}
+
+func walletIDToString(w string) string {
+	if len(w) <= 20 {
+		return strings.ToValidUTF8(w, "X")
+	}
+
+	return fmt.Sprintf("%s~%s", w[:20], hash.Hashable(w).String())
 }

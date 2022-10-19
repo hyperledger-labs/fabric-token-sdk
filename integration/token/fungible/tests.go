@@ -270,7 +270,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
 
-	Restart(network, "alice")
+	Restart(network, false, "alice")
 
 	t8 := time.Now()
 	TransferCash(network, "alice", "", "USD", 111, "bob", auditor)
@@ -346,7 +346,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
 
 	// Restart the auditor
-	Restart(network, auditor)
+	Restart(network, false, auditor)
 	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
@@ -372,11 +372,16 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckHolding(network, "alice", "", "PINE", -55)
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110)
-	Restart(network, "bob")
-	Restart(network, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110)
+	Restart(network, true, "bob")
+	Restart(network, false, auditor)
 	RegisterAuditor(network, auditor)
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110)
+	CheckOwnerDB(network, nil, "bob")
 	BroadcastPreparedTransferCash(network, "alice", tx1, true)
 	Expect(network.Client("bob").IsTxFinal(txID1)).NotTo(HaveOccurred())
 	Expect(network.Client("auditor").IsTxFinal(txID1)).NotTo(HaveOccurred())
@@ -409,7 +414,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckOwnerDB(network, nil, "bob", "alice")
 	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
-	Restart(network, "alice", "bob", "charlie", "manager")
+	Restart(network, false, "alice", "bob", "charlie", "manager")
 	CheckOwnerDB(network, nil, "bob", "alice")
 	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")

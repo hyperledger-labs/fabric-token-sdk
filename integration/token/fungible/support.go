@@ -15,6 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -454,13 +455,33 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 	return s
 }
 
-func Restart(network *integration.Infrastructure, ids ...string) {
+func Restart(network *integration.Infrastructure, deleteVault bool, ids ...string) {
 	for _, id := range ids {
 		network.StopFSCNode(id)
 	}
 	time.Sleep(10 * time.Second)
+	if deleteVault {
+		for _, id := range ids {
+			fn := fabric.Network(network.Ctx, "default")
+			if fn != nil {
+				fn.DeleteVault(id)
+			} else {
+				// skip
+				//on := orion.Network(network.Ctx, "orion")
+				//if on != nil {
+				//	on.DeleteVault(id)
+				//} else {
+				//	Expect(false).To(BeTrue(), "neither fabric nor orion network found")
+				//}
+			}
+		}
+	}
 	for _, id := range ids {
 		network.StartFSCNode(id)
 	}
 	time.Sleep(10 * time.Second)
+	if deleteVault {
+		// Add extra time to wait for the vault to be reconstructed
+		time.Sleep(30 * time.Second)
+	}
 }
