@@ -103,7 +103,6 @@ jobs:
           interop-fabtoken-t3,
           interop-fabtoken-t4,
           interop-fabtoken-t5,
-          interop-fabtoken-t6,
           interop-dlog-t1,
           interop-dlog-t2,
           interop-dlog-t3,
