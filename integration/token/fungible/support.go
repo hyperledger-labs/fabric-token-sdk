@@ -465,15 +465,15 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 			fn := fabric.Network(network.Ctx, "default")
 			if fn != nil {
 				fn.DeleteVault(id)
-			} else {
+			} /*else {
 				// skip
-				//on := orion.Network(network.Ctx, "orion")
-				//if on != nil {
-				//	on.DeleteVault(id)
-				//} else {
-				//	Expect(false).To(BeTrue(), "neither fabric nor orion network found")
-				//}
-			}
+				on := orion.Network(network.Ctx, "orion")
+				if on != nil {
+					on.DeleteVault(id)
+				} else {
+					Expect(false).To(BeTrue(), "neither fabric nor orion network found")
+				}
+			}*/
 		}
 	}
 	for _, id := range ids {
