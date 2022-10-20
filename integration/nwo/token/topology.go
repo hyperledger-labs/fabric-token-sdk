@@ -69,10 +69,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 	}
 
 	var nodes []*node.Node
-	for _, n := range fscNodes {
-		nodes = append(nodes, n)
-	}
-
+	nodes = append(nodes, fscNodes...)
 	tms := &topology2.TMS{
 		BackendTopology: backend,
 		Network:         backend.Name(),
