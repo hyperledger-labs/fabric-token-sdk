@@ -92,6 +92,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 		orionTopology.SetDefaultSDK(fscTopology)
+		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)

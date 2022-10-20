@@ -56,6 +56,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// we need to define the custodian
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
+	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)

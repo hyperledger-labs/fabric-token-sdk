@@ -201,11 +201,14 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 		orionTopology.SetDefaultSDK(fscTopology)
+		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)
 
-	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+	if backend != "orion" {
+		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

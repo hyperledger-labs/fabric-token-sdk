@@ -155,6 +155,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
+	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -166,8 +167,6 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 	orionTopology.SetDefaultSDK(fscTopology)
-
-	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
 	return []api.Topology{orionTopology, tokenTopology, fscTopology}
 }
@@ -427,6 +426,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
+	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
