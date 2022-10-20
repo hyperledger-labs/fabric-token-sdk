@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -465,7 +466,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 			fn := fabric.Network(network.Ctx, "default")
 			if fn != nil {
 				fn.DeleteVault(id)
-			} /*else {
+			} else {
 				// skip
 				on := orion.Network(network.Ctx, "orion")
 				if on != nil {
@@ -473,7 +474,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 				} else {
 					Expect(false).To(BeTrue(), "neither fabric nor orion network found")
 				}
-			}*/
+			}
 		}
 	}
 	for _, id := range ids {

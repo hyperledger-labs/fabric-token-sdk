@@ -40,8 +40,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	fscTopology := fsc.NewTopology()
 	fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
 
-	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
-
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
@@ -203,9 +201,14 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 		orionTopology.SetDefaultSDK(fscTopology)
+		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)
+
+	if backend != "orion" {
+		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

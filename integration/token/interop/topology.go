@@ -31,8 +31,6 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
 
-	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
-
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
@@ -89,6 +87,8 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
+	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
 
@@ -99,8 +99,6 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("debug", "")
-
-	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -168,6 +166,8 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 	orionTopology.SetDefaultSDK(fscTopology)
+
+	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
 	return []api.Topology{orionTopology, tokenTopology, fscTopology}
 }
