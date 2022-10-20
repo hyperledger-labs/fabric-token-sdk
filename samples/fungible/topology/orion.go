@@ -88,7 +88,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(orionTopology, "", tokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	orion2.SetCustodian(tms, custodian)
 

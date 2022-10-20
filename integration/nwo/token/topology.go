@@ -8,6 +8,7 @@ package token
 
 import (
 	fsc2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	. "github.com/onsi/gomega"
@@ -55,7 +56,7 @@ func (t *Topology) DefaultChannel() string {
 	return ""
 }
 
-func (t *Topology) AddTMS(backend BackedTopology, channel string, driver string) *topology2.TMS {
+func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel string, driver string) *topology2.TMS {
 	found := false
 	for _, s := range Drivers {
 		if driver == s {
@@ -67,6 +68,11 @@ func (t *Topology) AddTMS(backend BackedTopology, channel string, driver string)
 		Expect(found).To(BeTrue(), "Driver [%s] not recognized", driver)
 	}
 
+	var nodes []*node.Node
+	for _, n := range fscNodes {
+		nodes = append(nodes, n)
+	}
+
 	tms := &topology2.TMS{
 		BackendTopology: backend,
 		Network:         backend.Name(),
@@ -76,6 +82,7 @@ func (t *Topology) AddTMS(backend BackedTopology, channel string, driver string)
 		Certifiers:      []string{},
 		BackendParams:   map[string]interface{}{},
 		TokenTopology:   t,
+		FSCNodes:        nodes,
 	}
 	t.TMSs = append(t.TMSs, tms)
 	return tms

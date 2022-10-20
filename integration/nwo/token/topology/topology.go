@@ -55,6 +55,7 @@ type TMS struct {
 	Issuers             []string
 
 	TokenTopology   TokenTopology  `yaml:"-"`
+	FSCNodes        []*node.Node   `yaml:"-"`
 	BackendTopology BackedTopology `yaml:"-"`
 	BackendParams   map[string]interface{}
 }

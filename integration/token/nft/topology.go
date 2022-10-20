@@ -79,7 +79,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(backendNetwork, backendChannel, tokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {

@@ -25,6 +25,7 @@ var _ = Describe("DLog end to end", func() {
 	})
 
 	AfterEach(func() {
+		ii.DeleteOnStop = false
 		ii.Stop()
 	})
 
@@ -128,7 +129,7 @@ var _ = Describe("DLog end to end", func() {
 			var err error
 			ii, err = integration.New(
 				integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
-				"",
+				"/home/vagrant/testdata",
 				interop.HTLCNoCrossClaimWithOrionTopology("dlog")...,
 			)
 			Expect(err).NotTo(HaveOccurred())
