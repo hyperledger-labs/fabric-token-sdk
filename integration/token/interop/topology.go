@@ -341,7 +341,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bpb"), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
+	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
