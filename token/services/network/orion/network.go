@@ -11,14 +11,16 @@ import (
 	"sync"
 	"time"
 
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -33,15 +35,18 @@ type Network struct {
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 	ip             IdentityProvider
+	ledger         *ledger
 }
 
 func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService) *Network {
-	return &Network{
+	network := &Network{
 		sp:         sp,
 		ip:         ip,
 		n:          n,
 		vaultCache: map[string]driver.Vault{},
 	}
+	network.ledger = &ledger{n: network}
+	return network
 }
 
 func (n *Network) Name() string {
@@ -71,7 +76,7 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.n))
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.n, processor.NewCommonTokenStore(n.sp)))
 	nv := &nv{
 		v:          n.n.Vault(),
 		tokenVault: tokenVault,
@@ -92,6 +97,10 @@ func (n *Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
 
 func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.Vault().StoreEnvelope(id, env)
+}
+
+func (n *Network) EnvelopeExists(id string) bool {
+	return n.n.EnvelopeService().Exists(id)
 }
 
 func (n *Network) Broadcast(blob interface{}) error {
@@ -119,6 +128,18 @@ func (n *Network) NewEnvelope() driver.Envelope {
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
 	return n.n.Vault().StoreTransient(id, orion.TransientMap(transient))
+}
+
+func (n *Network) TransientExists(id string) bool {
+	return n.n.MetadataService().Exists(id)
+}
+
+func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
+	tm, err := n.n.MetadataService().LoadTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return driver.TransientMap(tm), nil
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -152,8 +173,16 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return pp.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	panic("implement me")
+}
+
+func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
+	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestSpentTokensView(n, namespace, IDs))
+	if err != nil {
+		return nil, err
+	}
+	return resBoxed.([]bool), nil
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
@@ -164,7 +193,7 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	ai := &idemix2.AuditInfo{}
+	ai := &idemix.AuditInfo{}
 	if err := ai.FromBytes(raw); err != nil {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
@@ -199,6 +228,10 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	return pp.([]byte), nil
 }
 
+func (n *Network) Ledger() (driver.Ledger, error) {
+	return n.ledger, nil
+}
+
 type nv struct {
 	v          *orion.Vault
 	tokenVault *vault.Vault
@@ -208,15 +241,25 @@ func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *nv) ListUnspentTokens() (*token2.UnspentTokens, error) {
+// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+func (v *nv) UnspentTokensIteratorBy(id, typ string) (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIteratorBy(id, typ)
+}
+
+// UnspentTokensIterator returns an iterator over all unspent tokens
+func (v *nv) UnspentTokensIterator() (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIterator()
+}
+
+func (v *nv) ListUnspentTokens() (*token.UnspentTokens, error) {
 	return v.tokenVault.QueryEngine().ListUnspentTokens()
 }
 
-func (v *nv) Exists(id *token2.ID) bool {
+func (v *nv) Exists(id *token.ID) bool {
 	return v.tokenVault.CertificationStorage().Exists(id)
 }
 
-func (v *nv) Store(certifications map[*token2.ID][]byte) error {
+func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
@@ -227,4 +270,20 @@ func (v *nv) TokenVault() *vault.Vault {
 func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 	vc, err := v.v.Status(txID)
 	return driver.ValidationCode(vc), err
+}
+
+func (v *nv) DiscardTx(txID string) error {
+	return v.v.DiscardTx(txID)
+}
+
+type ledger struct {
+	n *Network
+}
+
+func (l *ledger) Status(id string) (driver.ValidationCode, error) {
+	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n, id))
+	if err != nil {
+		return driver.Unknown, err
+	}
+	return boxed.(driver.ValidationCode), nil
 }

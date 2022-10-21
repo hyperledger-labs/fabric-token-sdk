@@ -195,6 +195,7 @@ func (cm *Manager) restore(w *token.AuditorWallet) error {
 			})
 		}
 	}
+	it.Close()
 	qe.Done()
 
 	for _, updated := range toBeUpdated {

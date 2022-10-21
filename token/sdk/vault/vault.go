@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
@@ -56,7 +57,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 			v.sp,
 			ch.Name(),
 			namespace,
-			fabric2.NewVault(ch),
+			fabric2.NewVault(ch, processor.NewCommonTokenStore(v.sp)),
 		)
 	} else {
 		ons := orion.GetOrionNetworkService(v.sp, network)
@@ -65,7 +66,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 				v.sp,
 				"",
 				namespace,
-				orion2.NewVault(ons),
+				orion2.NewVault(ons, processor.NewCommonTokenStore(v.sp)),
 			)
 		}
 	}

@@ -37,7 +37,7 @@ func (r *ClaimView) Call(context view.Context) (interface{}, error) {
 
 	matched, err := htlc.Wallet(context, claimWallet, token.WithTMSID(r.TMSID)).ListByPreImage(r.PreImage)
 	assert.NoError(err, "htlc script has expired")
-	assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
+	assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
 	tx, err := htlc.NewAnonymousTransaction(
 		context,
@@ -45,7 +45,7 @@ func (r *ClaimView) Call(context view.Context) (interface{}, error) {
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")
-	assert.NoError(tx.Claim(claimWallet, matched[0], r.PreImage), "failed adding a claim for [%s]", matched[0].Id)
+	assert.NoError(tx.Claim(claimWallet, matched.At(0), r.PreImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 	_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 	assert.NoError(err, "failed to collect endorsements on htlc transaction")

@@ -79,3 +79,27 @@ func (v *Vault) NewQueryEngine() *QueryEngine {
 type UnspentTokensIterator struct {
 	driver.UnspentTokensIterator
 }
+
+// Sum  computes the sum of the quantities of the tokens in the iterator.
+// Sum closes the iterator at the end of the execution.
+func (u *UnspentTokensIterator) Sum(precision uint64) (token2.Quantity, error) {
+	defer u.Close()
+	sum := token2.NewZeroQuantity(precision)
+	for {
+		tok, err := u.Next()
+		if err != nil {
+			return nil, err
+		}
+		if tok == nil {
+			break
+		}
+
+		q, err := token2.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, err
+		}
+		sum = sum.Add(q)
+	}
+
+	return sum, nil
+}

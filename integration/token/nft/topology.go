@@ -79,7 +79,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(backendNetwork, backendChannel, tokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
@@ -87,11 +87,13 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
 		orion2.SetCustodian(tms, custodian)
+		tms.AddNode(custodian)
 
 		// Enable orion sdk on each FSC node
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 		orionTopology.SetDefaultSDK(fscTopology)
+		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)

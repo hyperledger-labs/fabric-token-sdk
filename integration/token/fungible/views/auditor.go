@@ -13,7 +13,10 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
 type AuditView struct{}
@@ -165,8 +168,9 @@ func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CurrentHolding struct {
-	EnrollmentID string `json:"enrollment_id"`
-	TokenType    string `json:"token_type"`
+	EnrollmentID string
+	TokenType    string
+	TMSID        token.TMSID
 }
 
 // CurrentHoldingView is used to retrieve the current holding of token type of the passed enrollment id
@@ -175,7 +179,10 @@ type CurrentHoldingView struct {
 }
 
 func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
-	w := ttx.MyAuditorWallet(context)
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+
+	w := tms.WalletManager().AuditorWallet("")
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor := ttx.NewAuditor(context, w)
@@ -256,6 +263,16 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 
 	auditor := ttx.NewAuditor(context, w)
 	assert.NoError(auditor.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+
+	if r.Status == ttxdb.Deleted {
+		tms := token.GetManagementService(context)
+		assert.NotNil(tms, "failed to get default tms")
+		net := network.GetInstance(context, tms.Network(), tms.Channel())
+		assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
+		v, err := net.Vault(tms.Namespace())
+		assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+		assert.NoError(v.DiscardTx(r.TxID), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
+	}
 
 	return nil, nil
 }

@@ -51,6 +51,9 @@ type Network interface {
 	// StoreEnvelope stores locally the passed envelope mapping it to the passed id
 	StoreEnvelope(id string, env []byte) error
 
+	// EnvelopeExists returns true if an envelope exists for the passed id, false otherwise
+	EnvelopeExists(id string) bool
+
 	// Broadcast sends the passed blob to the network
 	Broadcast(blob interface{}) error
 
@@ -70,6 +73,12 @@ type Network interface {
 	// StoreTransient stores the passed transient map and maps it to the passed id
 	StoreTransient(id string, transient TransientMap) error
 
+	// TransientExists returns true if a transient map exists for the passed id, false otherwise
+	TransientExists(id string) bool
+
+	// GetTransient retrieves the transient map bound to the passed id
+	GetTransient(id string) (TransientMap, error)
+
 	// RequestApproval requests approval for the passed request and returns the returned envelope
 	RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
 
@@ -82,6 +91,9 @@ type Network interface {
 
 	// QueryTokens retrieves the token content for the passed token ids
 	QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error)
+
+	// AreTokensSpent retrieves the spent flag for the passed ids
+	AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error)
 
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership
@@ -98,4 +110,7 @@ type Network interface {
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 	// The operation gets canceled if the passed timeout elapses.
 	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration) ([]byte, error)
+
+	// Ledger gives access to the remote ledger
+	Ledger() (Ledger, error)
 }

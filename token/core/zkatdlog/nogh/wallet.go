@@ -15,7 +15,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -174,6 +175,19 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 	return nil
 }
 
+// SpentIDs returns the spend ids for the passed token ids
+func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
+	sIDs := make([]string, len(ids))
+	var err error
+	for i, id := range ids {
+		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
+		}
+	}
+	return sIDs, nil
+}
+
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 	raw, err := identity.MarshallRawOwner(&identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id})
 	if err != nil {
@@ -212,7 +226,8 @@ func (w *ownerWallet) Contains(identity view.Identity) bool {
 	return w.tokenService.OwnerWalletsRegistry.ContainsIdentity(identity, w.id)
 }
 
-func (w *ownerWallet) ContainsToken(token *token2.UnspentToken) bool {
+// ContainsToken returns true if the passed token is owned by this wallet
+func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }
 
@@ -263,31 +278,41 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return si, err
 }
 
-func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token2.UnspentTokens, error) {
+func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	source, err := w.tokenService.QE.ListUnspentTokens()
+	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
+	defer it.Close()
 
-	unspentTokens := &token2.UnspentTokens{}
-	for _, t := range source.Tokens {
-		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
-			logger.Debugf("wallet: discarding token of type [%s]!=[%s]", t.Type, opts.TokenType)
-			continue
+	unspentTokens := &token.UnspentTokens{}
+	for {
+		t, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
+
 		}
-
-		if !w.Contains(t.Owner.Raw) {
-			logger.Debugf("wallet: discarding token, owner does not belong to this wallet")
-			continue
+		if t == nil {
+			break
 		}
 
 		logger.Debugf("wallet: adding token of type [%s], quantity [%s]", t.Type, t.Quantity)
 		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
 	}
+
 	logger.Debugf("wallet: list tokens done, found [%d] unspent tokens", len(unspentTokens.Tokens))
 
 	return unspentTokens, nil
+}
+
+func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
+	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
+	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	if err != nil {
+		return nil, errors.Wrap(err, "token selection failed")
+	}
+	return it, nil
 }
 
 type issuerWallet struct {
@@ -313,7 +338,7 @@ func (w *issuerWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
 
-func (w *issuerWallet) ContainsToken(token *token2.UnspentToken) bool {
+func (w *issuerWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }
 
@@ -332,14 +357,14 @@ func (w *issuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 	return si, nil
 }
 
-func (w *issuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token2.IssuedTokens, error) {
+func (w *issuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
 	logger.Debugf("issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
 	source, err := w.tokenService.QE.ListHistoryIssuedTokens()
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
 
-	unspentTokens := &token2.IssuedTokens{}
+	unspentTokens := &token.IssuedTokens{}
 	for _, t := range source.Tokens {
 		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
 			logger.Debugf("issuer wallet [%s]: discarding token of type [%s]!=[%s]", w.ID(), t.Type, opts.TokenType)
@@ -381,7 +406,7 @@ func (w *auditorWallet) Contains(identity view.Identity) bool {
 	return w.identity.Equal(identity)
 }
 
-func (w *auditorWallet) ContainsToken(token *token2.UnspentToken) bool {
+func (w *auditorWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }
 

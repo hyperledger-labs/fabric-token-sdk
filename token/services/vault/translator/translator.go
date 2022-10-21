@@ -146,6 +146,10 @@ func (w *Translator) GetTransferMetadataSubKey(k string) (string, error) {
 	return keys.GetTransferMetadataSubKey(k)
 }
 
+func (w *Translator) AreTokensSpent(id []string, graphHiding bool) ([]bool, error) {
+	return w.areTokensSpent(id, graphHiding)
+}
+
 func (w *Translator) checkProcess(action interface{}) error {
 	if err := w.checkAction(action); err != nil {
 		return err
@@ -376,7 +380,7 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 			logger.Debugf("Delete state %s\n", id)
 			err := w.RWSet.DeleteState(w.namespace, id)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "failed to delete output %s", id)
 			}
 		}
 	} else {
@@ -390,4 +394,29 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 	}
 
 	return nil
+}
+
+func (w *Translator) areTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
+	res := make([]bool, len(ids))
+	if graphHiding {
+		for i, id := range ids {
+			logger.Debugf("check serial number %s\n", id)
+			v, err := w.RWSet.GetState(w.namespace, id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
+			}
+			res[i] = len(v) != 0
+		}
+	} else {
+		for i, id := range ids {
+			logger.Debugf("check state %s\n", id)
+			v, err := w.RWSet.GetState(w.namespace, id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get output %s", id)
+			}
+			res[i] = len(v) == 0
+		}
+	}
+
+	return res, nil
 }

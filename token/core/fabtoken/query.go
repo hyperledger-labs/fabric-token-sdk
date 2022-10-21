@@ -14,12 +14,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ListTokens returns the list of unspent tokens
-// An UnspentToken consists of the token's unique identifier and information (type, value, owner)
-func (s *Service) ListTokens() (*token2.UnspentTokens, error) {
-	return s.QE.ListUnspentTokens()
-}
-
 // HistoryIssuedTokens returns the list of all issued tokens
 // An IssuedToken consists of the identity of the token issuer, the token unique identifier
 // and information

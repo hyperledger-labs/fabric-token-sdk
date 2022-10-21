@@ -91,9 +91,9 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 	return response.Raw, nil
 }
 
-type RespondPublicParamsRequestView struct{}
+type PublicParamsRequestResponderView struct{}
 
-func (v *RespondPublicParamsRequestView) Call(context view.Context) (interface{}, error) {
+func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
 	session := session2.JSON(context)
 	request := &PublicParamsRequest{}

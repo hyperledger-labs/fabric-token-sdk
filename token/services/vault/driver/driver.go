@@ -6,6 +6,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 // RWSet interface, used to read from, and write to, a rwset.
 type RWSet interface {
 	SetState(namespace string, key string, value []byte) error
@@ -33,4 +35,5 @@ type Executor interface {
 
 type Vault interface {
 	NewQueryExecutor() (Executor, error)
+	DeleteTokens(ns string, ids ...*token.ID) error
 }

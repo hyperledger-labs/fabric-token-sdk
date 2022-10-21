@@ -34,6 +34,8 @@ const (
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
 
+type UnspentTokensIterator = driver.UnspentTokensIterator
+
 // TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
 type TxStatusChangeListener interface {
 	// OnStatusChange is called when the status of a transaction changes
@@ -159,6 +161,14 @@ func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
+func (v *Vault) UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error) {
+	return v.v.UnspentTokensIteratorBy(id, typ)
+}
+
+func (v *Vault) UnspentTokensIterator() (UnspentTokensIterator, error) {
+	return v.v.UnspentTokensIterator()
+}
+
 func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {
 	return v.v.ListUnspentTokens()
 }
@@ -180,6 +190,10 @@ func (v *Vault) Status(id string) (ValidationCode, error) {
 	return ValidationCode(vc), err
 }
 
+func (v *Vault) DiscardTx(id string) error {
+	return v.v.DiscardTx(id)
+}
+
 type LocalMembership struct {
 	lm driver.LocalMembership
 }
@@ -194,6 +208,18 @@ func (l *LocalMembership) AnonymousIdentity() view.Identity {
 
 func (l *LocalMembership) IsMe(id view.Identity) bool {
 	return l.lm.IsMe(id)
+}
+
+type Ledger struct {
+	l driver.Ledger
+}
+
+func (l *Ledger) Status(id string) (ValidationCode, error) {
+	vc, err := l.l.Status(id)
+	if err != nil {
+		return 0, err
+	}
+	return ValidationCode(vc), nil
 }
 
 // Network provides access to the remote network
@@ -234,6 +260,14 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.StoreEnvelope(id, env)
 }
 
+func (n *Network) ExistEnvelope(id string) bool {
+	return n.n.EnvelopeExists(id)
+}
+
+func (n *Network) ExistTransient(id string) bool {
+	return n.n.TransientExists(id)
+}
+
 // Broadcast sends the given blob to the network
 func (n *Network) Broadcast(blob interface{}) error {
 	switch b := blob.(type) {
@@ -272,6 +306,15 @@ func (n *Network) StoreTransient(id string, transient TransientMap) error {
 	return n.n.StoreTransient(id, driver.TransientMap(transient))
 }
 
+// GetTransient retrieves the transient map bound to the passed id
+func (n *Network) GetTransient(id string) (TransientMap, error) {
+	tm, err := n.n.GetTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return TransientMap(tm), nil
+}
+
 // RequestApproval requests approval for the given token request
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
 	env, err := n.n.RequestApproval(context, namespace, requestRaw, signer, driver.TxID{
@@ -306,6 +349,11 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	return n.n.QueryTokens(context, namespace, IDs)
 }
 
+// AreTokensSpent retrieves the spent flag for the passed ids
+func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
+	return n.n.AreTokensSpent(context, namespace, IDs)
+}
+
 // LocalMembership returns the local membership for this network
 func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
@@ -330,6 +378,14 @@ func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeL
 // The operation gets canceled if the passed timeout gets reached.
 func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
+}
+
+func (n *Network) Ledger(namespace string) (*Ledger, error) {
+	l, err := n.n.Ledger()
+	if err != nil {
+		return nil, err
+	}
+	return &Ledger{l: l}, nil
 }
 
 // Provider returns an instance of network provider

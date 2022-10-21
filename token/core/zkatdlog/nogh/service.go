@@ -26,7 +26,9 @@ type TokenCommitmentLoader interface {
 
 type QueryEngine interface {
 	IsMine(id *token3.ID) (bool, error)
-	ListUnspentTokens() (*token3.UnspentTokens, error)
+	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+	// The token type can be empty. In that case, tokens of any type are returned.
+	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListAuditTokens(ids ...*token3.ID) ([]*token3.Token, error)
 	ListHistoryIssuedTokens() (*token3.IssuedTokens, error)
 }

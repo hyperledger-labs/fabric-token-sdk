@@ -25,7 +25,7 @@ type Wallet interface {
 	// Contains returns true if the passed identity belongs to this wallet
 	Contains(identity view.Identity) bool
 
-	// ContainsToken returns true if the passed token belongs to this wallet
+	// ContainsToken returns true if the passed token is owned by this wallet
 	ContainsToken(token *token.UnspentToken) bool
 
 	// GetSigner returns the Signer bound to the passed identity
@@ -45,6 +45,9 @@ type OwnerWallet interface {
 
 	// ListTokens returns the list of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokens(opts *ListTokensOptions) (*token.UnspentTokens, error)
+
+	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
+	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
 
 	// GetTokenMetadata returns any information needed to implement the transfer
 	GetTokenMetadata(id view.Identity) ([]byte, error)
@@ -127,6 +130,9 @@ type WalletService interface {
 
 	// CertifierWalletByIdentity returns an instance of the CertifierWallet interface that contains the passed identity.
 	CertifierWalletByIdentity(identity view.Identity) CertifierWallet
+
+	// SpentIDs returns the spend ids for the passed token ids
+	SpentIDs(ids ...*token.ID) ([]string, error)
 }
 
 // Matcher models a matcher that can be used to match identities

@@ -8,6 +8,9 @@ package interop
 
 import (
 	"crypto"
+	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -22,7 +25,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func registerAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
+func RegisterAuditor(network *integration.Infrastructure, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -32,7 +35,7 @@ func registerAuditor(network *integration.Infrastructure, opts ...token.ServiceO
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func issueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
 	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
 		IssuerWallet: wallet,
 		TokenType:    typ,
@@ -46,7 +49,7 @@ func issueCash(network *integration.Infrastructure, wallet string, typ string, a
 	return common.JSONUnmarshalString(txid)
 }
 
-func tmsIssueCash(network *integration.Infrastructure, tmsID token.TMSID, issuer string, wallet string, typ string, amount uint64, receiver string) string {
+func IssueCashWithTMS(network *integration.Infrastructure, tmsID token.TMSID, issuer string, wallet string, typ string, amount uint64, receiver string) string {
 	txid, err := network.Client(issuer).CallView("issue", common.JSONMarshall(&views2.IssueCash{
 		TMSID:        tmsID,
 		IssuerWallet: wallet,
@@ -69,7 +72,7 @@ func tmsIssueCash(network *integration.Infrastructure, tmsID token.TMSID, issuer
 	return common.JSONUnmarshalString(txid)
 }
 
-func listIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
+func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
 	res, err := network.Client("issuer").CallView("history", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
@@ -81,7 +84,7 @@ func listIssuerHistory(network *integration.Infrastructure, wallet string, typ s
 	return issuedTokens
 }
 
-func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
+func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
 	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ, opts...)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(len(b)).To(BeEquivalentTo(1))
@@ -90,6 +93,125 @@ func checkBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
+}
+
+func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64, opts ...token.ServiceOption) {
+	opt, err := token.CompileServiceOptions(opts...)
+	Expect(err).NotTo(HaveOccurred(), "failed to compile options [%v]", opts)
+	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
+		Wallet: wallet,
+		TMSID:  opt.TMSID(),
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	eID := common.JSONUnmarshalString(eIDBoxed)
+	holdingBoxed, err := network.Client("auditor").CallView("holding", common.JSONMarshall(&views.CurrentHolding{
+		EnrollmentID: eID,
+		TokenType:    typ,
+		TMSID:        opt.TMSID(),
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
+	Expect(err).NotTo(HaveOccurred())
+	Expect(holding).To(Equal(int(expected)))
+}
+
+func CheckBalanceWithLocked(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, expectedLocked uint64, expectedExpired uint64, opts ...token.ServiceOption) {
+	opt, err := token.CompileServiceOptions(opts...)
+	Expect(err).NotTo(HaveOccurred(), "failed to compile options [%v]", opts)
+	resBoxed, err := network.Client(id).CallView("balance", common.JSONMarshall(&views2.Balance{
+		Wallet: wallet,
+		Type:   typ,
+		TMSID:  opt.TMSID(),
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	result := &views2.BalanceResult{}
+	common.JSONUnmarshal(resBoxed.([]byte), result)
+	Expect(err).NotTo(HaveOccurred())
+
+	balance, err := strconv.Atoi(result.Quantity)
+	Expect(err).NotTo(HaveOccurred())
+	locked, err := strconv.Atoi(result.Locked)
+	Expect(err).NotTo(HaveOccurred())
+	expired, err := strconv.Atoi(result.Expired)
+	Expect(err).NotTo(HaveOccurred())
+
+	Expect(balance).To(Equal(int(expected)), "expected [%d], got [%d]", expected, balance)
+	Expect(locked).To(Equal(int(expectedLocked)), "expected locked [%d], got [%d]", expectedLocked, locked)
+	Expect(expired).To(Equal(int(expectedExpired)), "expected expired [%d], got [%d]", expectedExpired, expired)
+}
+
+func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
+	CheckBalance(network, id, wallet, typ, expected, opts...)
+	CheckHolding(network, id, wallet, typ, int64(expected), opts...)
+}
+
+func CheckBalanceWithLockedAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expectedBalance uint64, expectedLocked uint64, expectedExpired uint64, expectedHolding int64, opts ...token.ServiceOption) {
+	CheckBalanceWithLocked(network, id, wallet, typ, expectedBalance, expectedLocked, expectedExpired, opts...)
+	if expectedHolding == -1 {
+		expectedHolding = int64(expectedBalance + expectedLocked + expectedExpired)
+	}
+	CheckHolding(network, id, wallet, typ, expectedHolding, opts...)
+}
+
+func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, ids ...string) {
+	for _, id := range ids {
+		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+			TMSID: tmsID,
+		}))
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func CheckOwnerDB(network *integration.Infrastructure, tmsID token.TMSID, expectedErrors []string, ids ...string) {
+	for _, id := range ids {
+		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
+			TMSID: tmsID,
+		}))
+		Expect(err).NotTo(HaveOccurred())
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+
+		Expect(len(errorMessages)).To(Equal(len(expectedErrors)), "expected %d error messages from [%s], got [% v]", len(expectedErrors), id, errorMessages)
+		for _, expectedError := range expectedErrors {
+			found := false
+			for _, message := range errorMessages {
+				if message == expectedError {
+					found = true
+					break
+				}
+			}
+			Expect(found).To(BeTrue(), "cannot find error message [%s] in [% v]", expectedError, errorMessages)
+		}
+	}
+}
+
+func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, auditorID string, walletID string, errorCheck func([]string) error) {
+	errorMessagesBoxed, err := network.Client(auditorID).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
+		Auditor:         true,
+		AuditorWalletID: walletID,
+		TMSID:           tmsID,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	if errorCheck != nil {
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
+	} else {
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+	}
+}
+
+func Restart(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		network.StopFSCNode(id)
+	}
+	time.Sleep(10 * time.Second)
+	for _, id := range ids {
+		network.StartFSCNode(id)
+	}
+	time.Sleep(10 * time.Second)
 }
 
 func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {
@@ -133,7 +255,16 @@ func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string,
 			Expect(err.Error()).To(ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
-		return "", nil, nil
+
+		errMsg := err.Error()
+		fmt.Printf("Got error message [%s]\n", errMsg)
+		txID := ""
+		index := strings.Index(err.Error(), "<<<[")
+		if index != -1 {
+			txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
+		}
+		fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+		return txID, nil, nil
 	}
 }
 

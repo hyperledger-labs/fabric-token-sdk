@@ -86,13 +86,21 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	id := ownerFilter.ID()
 
 	i := 0
+	var unspentTokens *token.UnspentTokensIterator
+	defer func() {
+		if unspentTokens != nil {
+			unspentTokens.Close()
+		}
+	}()
 	for {
+		if unspentTokens != nil {
+			unspentTokens.Close()
+		}
 		logger.Debugf("start token selection, iteration [%d/%d]", i, s.numRetry)
-		unspentTokens, err := s.queryService.UnspentTokensIteratorBy(id, tokenType)
+		unspentTokens, err = s.queryService.UnspentTokensIteratorBy(id, tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "token selection failed")
 		}
-		defer unspentTokens.Close()
 		logger.Debugf("select token for a quantity of [%s] of type [%s]", q, tokenType)
 
 		// First select only certified

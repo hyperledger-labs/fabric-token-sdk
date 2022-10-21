@@ -20,7 +20,6 @@ import (
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -90,12 +89,12 @@ func (p *Platform) GenerateArtifacts() {
 		nh.GenerateArtifacts(tms)
 	}
 
-	// Generate fsc configuration extension
-	fscTopology := p.Context.TopologyByName(fsc.TopologyName).(*fsc.Topology)
-	for _, node := range fscTopology.Nodes {
-		p.GenerateExtension(node)
-
-		for _, tms := range p.Topology.TMSs {
+	// Generate fsc configuration extension.
+	// For each TMS
+	for _, tms := range p.Topology.TMSs {
+		// For each node in the TMS, generate its config extension
+		for _, node := range tms.FSCNodes {
+			p.GenerateExtension(node)
 			// get the network handler for this TMS
 			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
 			// generate artifacts

@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -191,6 +192,19 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 	return nil
 }
 
+// SpentIDs returns the spend ids for the passed token ids
+func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
+	sIDs := make([]string, len(ids))
+	var err error
+	for i, id := range ids {
+		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
+		}
+	}
+	return sIDs, nil
+}
+
 func (s *Service) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
 	raw, err := identity.MarshallRawOwner(&identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id})
 	if err != nil {
@@ -258,29 +272,39 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	source, err := w.tokenService.ListTokens()
+	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
+	defer it.Close()
 
 	unspentTokens := &token.UnspentTokens{}
-	for _, t := range source.Tokens {
-		if len(opts.TokenType) != 0 && t.Type != opts.TokenType {
-			logger.Debugf("wallet: discarding token of type [%s]!=[%s]", t.Type, opts.TokenType)
-			continue
-		}
+	for {
+		t, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
 
-		if !w.Contains(t.Owner.Raw) {
-			logger.Debugf("wallet: discarding token, owner does not belong to this wallet")
-			continue
+		}
+		if t == nil {
+			break
 		}
 
 		logger.Debugf("wallet: adding token of type [%s], quantity [%s]", t.Type, t.Quantity)
 		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
 	}
+
 	logger.Debugf("wallet: list tokens done, found [%d] unspent tokens", len(unspentTokens.Tokens))
 
 	return unspentTokens, nil
+}
+
+func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
+	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
+	it, err := w.tokenService.QE.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	if err != nil {
+		return nil, errors.Wrap(err, "token selection failed")
+	}
+	return it, nil
 }
 
 func (w *ownerWallet) EnrollmentID() string {

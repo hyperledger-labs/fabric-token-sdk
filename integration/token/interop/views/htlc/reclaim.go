@@ -37,7 +37,7 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 
 	expired, err := htlc.Wallet(context, senderWallet, token.WithTMSID(r.TMSID)).ListExpired()
 	assert.NoError(err, "cannot retrieve list of expired tokens")
-	assert.True(len(expired) > 0, "no htlc script has expired")
+	assert.True(expired.Count() > 0, "no htlc script has expired")
 
 	tx, err := htlc.NewAnonymousTransaction(
 		context,
@@ -45,7 +45,7 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 		ttx.WithTMSID(r.TMSID),
 	)
 	assert.NoError(err, "failed to create an htlc transaction")
-	for _, id := range expired {
+	for _, id := range expired.Tokens {
 		assert.NoError(tx.Reclaim(senderWallet, id), "failed adding a reclaim for [%s]", id)
 	}
 

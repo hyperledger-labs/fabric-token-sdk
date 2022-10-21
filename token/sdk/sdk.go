@@ -120,7 +120,24 @@ func (p *SDK) Start(ctx context.Context) error {
 	}
 	logger.Infof("Token platform enabled, starting...")
 
-	//restore owner and auditor dbs, if any
+	// load the configured tms
+	tmsConfigs, err := config.NewTokenSDK(configProvider).GetTMSs()
+	if err != nil {
+		return errors.WithMessagef(err, "failed get the TMS configurations")
+	}
+	for _, tmsConfig := range tmsConfigs {
+		tmsID := token.TMSID{
+			Network:   tmsConfig.TMS().Network,
+			Channel:   tmsConfig.TMS().Channel,
+			Namespace: tmsConfig.TMS().Namespace,
+		}
+		tms := token.GetManagementService(p.registry, token.WithTMSID(tmsID))
+		if tms == nil {
+			return errors.Errorf("failed to load configured TMS [%s]", tmsID)
+		}
+	}
+
+	// restore owner and auditor dbs, if any
 	if err := p.ownerManager.Restore(); err != nil {
 		return errors.WithMessagef(err, "failed to restore onwer dbs")
 	}

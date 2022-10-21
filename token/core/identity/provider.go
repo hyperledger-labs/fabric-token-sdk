@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
-	"fmt"
 	"runtime/debug"
 	"sync"
 
@@ -70,11 +69,11 @@ func (p *Provider) GetIdentityInfo(role driver.IdentityRole, id string) (driver.
 func (p *Provider) LookupIdentifier(role driver.IdentityRole, v interface{}) (view.Identity, string, error) {
 	wallet, ok := p.wallets[role]
 	if !ok {
-		return nil, "", fmt.Errorf("wallet not found for role [%d]", role)
+		return nil, "", errors.Errorf("wallet not found for role [%d]", role)
 	}
 	id, label := wallet.MapToID(v)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, label)
+		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, walletIDToString(label))
 	}
 	return id, label, nil
 }

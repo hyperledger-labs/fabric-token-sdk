@@ -15,14 +15,17 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -34,6 +37,7 @@ const (
 	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
+	AreTokensSpent            = "areTokensSpent"
 )
 
 type GetFunc func() (view.Identity, []byte, error)
@@ -117,15 +121,25 @@ func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *nv) ListUnspentTokens() (*token2.UnspentTokens, error) {
+// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+func (v *nv) UnspentTokensIteratorBy(id, typ string) (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIteratorBy(id, typ)
+}
+
+// UnspentTokensIterator returns an iterator over all unspent tokens
+func (v *nv) UnspentTokensIterator() (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIterator()
+}
+
+func (v *nv) ListUnspentTokens() (*token.UnspentTokens, error) {
 	return v.tokenVault.QueryEngine().ListUnspentTokens()
 }
 
-func (v *nv) Exists(id *token2.ID) bool {
+func (v *nv) Exists(id *token.ID) bool {
 	return v.tokenVault.CertificationStorage().Exists(id)
 }
 
-func (v *nv) Store(certifications map[*token2.ID][]byte) error {
+func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
@@ -133,17 +147,46 @@ func (v *nv) TokenVault() *vault.Vault {
 	return v.tokenVault
 }
 
+func (v *nv) DiscardTx(txID string) error {
+	return v.v.DiscardTx(txID)
+}
+
+type ledger struct {
+	l *fabric.Ledger
+}
+
+func (l *ledger) Status(id string) (driver.ValidationCode, error) {
+	tx, err := l.l.GetTransactionByID(id)
+	if err != nil {
+		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
+	}
+	logger.Infof("ledger status of [%s] is [%d]", id, tx.ValidationCode())
+	switch peer.TxValidationCode(tx.ValidationCode()) {
+	case peer.TxValidationCode_VALID:
+		return driver.Valid, nil
+	default:
+		return driver.Invalid, nil
+	}
+}
+
 type Network struct {
-	n  *fabric.NetworkService
-	ch *fabric.Channel
-	sp view2.ServiceProvider
+	n      *fabric.NetworkService
+	ch     *fabric.Channel
+	sp     view2.ServiceProvider
+	ledger *ledger
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel) *Network {
-	return &Network{n: n, ch: ch, sp: sp, vaultCache: map[string]driver.Vault{}}
+	return &Network{
+		n:          n,
+		ch:         ch,
+		sp:         sp,
+		ledger:     &ledger{ch.Ledger()},
+		vaultCache: map[string]driver.Vault{},
+	}
 }
 
 func (n *Network) Name() string {
@@ -173,7 +216,7 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch))
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch, processor.NewCommonTokenStore(n.sp)))
 	nv := &nv{
 		v:          n.ch.Vault(),
 		tokenVault: tokenVault,
@@ -196,6 +239,10 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.ch.Vault().StoreEnvelope(id, env)
 }
 
+func (n *Network) EnvelopeExists(id string) bool {
+	return n.ch.EnvelopeService().Exists(id)
+}
+
 func (n *Network) Broadcast(blob interface{}) error {
 	return n.n.Ordering().Broadcast(blob)
 }
@@ -214,6 +261,18 @@ func (n *Network) NewEnvelope() driver.Envelope {
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
 	return n.ch.Vault().StoreTransient(id, fabric.TransientMap(transient))
+}
+
+func (n *Network) TransientExists(id string) bool {
+	return n.ch.MetadataService().Exists(id)
+}
+
+func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
+	tm, err := n.ch.MetadataService().LoadTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return driver.TransientMap(tm), nil
 }
 
 func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -265,7 +324,7 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return ppBoxed.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	idsRaw, err := json.Marshal(IDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling ids")
@@ -277,7 +336,7 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 		idsRaw,
 	).WithNetwork(n.Name()).WithChannel(n.Channel()))
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed quering tokens")
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens")
 	}
 
 	// Unbox
@@ -287,10 +346,38 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	}
 	var tokens [][]byte
 	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling response")
+		return nil, errors.Wrapf(err, "failed to unmarshal response")
 	}
 
 	return tokens, nil
+}
+
+func (n *Network) AreTokensSpent(c view.Context, namespace string, IDs []string) ([]bool, error) {
+	idsRaw, err := json.Marshal(IDs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling ids")
+	}
+
+	payloadBoxed, err := c.RunView(chaincode.NewQueryView(
+		namespace,
+		AreTokensSpent,
+		idsRaw,
+	).WithNetwork(n.Name()).WithChannel(n.Channel()))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens spent")
+	}
+
+	// Unbox
+	raw, ok := payloadBoxed.([]byte)
+	if !ok {
+		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
+	}
+	var spent []bool
+	if err := json.Unmarshal(raw, &spent); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
+	}
+
+	return spent, nil
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
@@ -300,7 +387,7 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	ai := &idemix2.AuditInfo{}
+	ai := &idemix.AuditInfo{}
 	if err := ai.FromBytes(raw); err != nil {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
@@ -372,4 +459,8 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 		)
 	}
 	return keyValue, nil
+}
+
+func (n *Network) Ledger() (driver.Ledger, error) {
+	return n.ledger, nil
 }

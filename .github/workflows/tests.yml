@@ -85,8 +85,10 @@ jobs:
       fail-fast: false
       matrix:
         tests: [
-          dlog-fabric,
-          dloghsm-fabric,
+          dlog-fabric-t1,
+          dlog-fabric-t2,
+          dloghsm-fabric-t1,
+          dloghsm-fabric-t2,
           fabtoken-fabric,
           dlog-orion,
           fabtoken-orion,
@@ -96,8 +98,17 @@ jobs:
           nft-fabtoken-orion,
           dvp-fabtoken,
           dvp-dlog,
-          interop-fabtoken,
-          interop-dlog
+          interop-fabtoken-t1,
+          interop-fabtoken-t2,
+          interop-fabtoken-t3,
+          interop-fabtoken-t4,
+          interop-fabtoken-t5,
+          interop-dlog-t1,
+          interop-dlog-t2,
+          interop-dlog-t3,
+          interop-dlog-t4,
+          interop-dlog-t5,
+          interop-dlog-t6,
         ]
 
     steps:

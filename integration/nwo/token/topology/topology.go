@@ -55,6 +55,7 @@ type TMS struct {
 	Issuers             []string
 
 	TokenTopology   TokenTopology  `yaml:"-"`
+	FSCNodes        []*node.Node   `yaml:"-"`
 	BackendTopology BackedTopology `yaml:"-"`
 	BackendParams   map[string]interface{}
 }
@@ -98,4 +99,8 @@ func (t *TMS) SetNamespace(namespace string) *TMS {
 
 	t.Namespace = namespace
 	return t
+}
+
+func (t *TMS) AddNode(custodian *node.Node) {
+	t.FSCNodes = append(t.FSCNodes, custodian)
 }

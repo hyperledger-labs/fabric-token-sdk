@@ -154,6 +154,11 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 	return wm.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
 }
 
+// SpentIDs returns the spent keys corresponding to the passed token IDs
+func (wm *WalletManager) SpentIDs(ids []*token2.ID) ([]string, error) {
+	return wm.managementService.tms.SpentIDs(ids...)
+}
+
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
 // These identities own tokens.
 type Wallet struct {
@@ -245,11 +250,25 @@ func (o *OwnerWallet) GetTokenMetadata(token []byte) ([]byte, error) {
 // ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
 func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token2.UnspentTokens, error) {
-	compiledOpts, err := compileListTokensOption(opts...)
+	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
 	return o.w.ListTokens(compiledOpts)
+}
+
+// ListUnspentTokensIterator returns an iterator of unspent tokens owned by identities in this wallet and filtered by the passed options.
+// Options: WithType
+func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*UnspentTokensIterator, error) {
+	compiledOpts, err := CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, err
+	}
+	it, err := o.w.ListTokensIterator(compiledOpts)
+	if err != nil {
+		return nil, err
+	}
+	return &UnspentTokensIterator{UnspentTokensIterator: it}, nil
 }
 
 func (o *OwnerWallet) EnrollmentID() string {
@@ -276,14 +295,14 @@ func (i *IssuerWallet) GetSigner(identity view.Identity) (Signer, error) {
 // ListIssuedTokens returns the list of tokens issued by identities in this wallet and filter by the passed options.
 // Options: WithType
 func (i *IssuerWallet) ListIssuedTokens(opts ...ListTokensOption) (*token2.IssuedTokens, error) {
-	compiledOpts, err := compileListTokensOption(opts...)
+	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
 	}
 	return i.w.HistoryTokens(compiledOpts)
 }
 
-func compileListTokensOption(opts ...ListTokensOption) (*api2.ListTokensOptions, error) {
+func CompileListTokensOption(opts ...ListTokensOption) (*api2.ListTokensOptions, error) {
 	txOptions := &ListTokensOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {

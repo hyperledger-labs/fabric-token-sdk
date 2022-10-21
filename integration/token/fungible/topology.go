@@ -38,9 +38,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
-
-	fscTopology.AddNodeByName("lib-p2p-bootstrap-node")
+	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -61,6 +59,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 	issuer.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	var auditor *node.Node
 	if auditorAsIssuer {
@@ -88,6 +87,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
 		auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 		auditor.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
+		auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -111,6 +111,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{})
 	alice.RegisterViewFactory("broadcastPreparedTransfer", &views.BroadcastPreparedTransferViewFactory{})
 	alice.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
+	alice.RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -136,6 +138,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterViewFactory("prepareTransfer", &views.PrepareTransferViewFactory{})
 	bob.RegisterViewFactory("TokenSelectorUnlock", &views.TokenSelectorUnlockViewFactory{})
 	bob.RegisterViewFactory("FinalityWithTimeout", &views.FinalityWithTimeoutViewFactory{})
+	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
+	bob.RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -157,6 +161,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	charlie.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 	charlie.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	charlie.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	charlie.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -179,9 +184,10 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	manager.RegisterViewFactory("acceptedTransactionHistory", &views.ListAcceptedTransactionsViewFactory{})
 	manager.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	manager.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
+	manager.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(backendNetwork, backendChannel, tokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org1")
@@ -190,14 +196,20 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
 		orion2.SetCustodian(tms, custodian)
+		tms.AddNode(custodian)
 
 		// Enable orion sdk on each FSC node
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 		orionTopology.SetDefaultSDK(fscTopology)
+		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetDefaultSDK(fscTopology)
 	tms.AddAuditor(auditor)
+
+	if backend != "orion" {
+		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }
