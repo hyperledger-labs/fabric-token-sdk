@@ -1,6 +1,11 @@
 # pinned versions
-FABRIC_VERSION=2.2
+FABRIC_VERSION ?= 2.2.8
+FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
 ORION_VERSION=v0.2.5
+
+# need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
+FABRIC_BINARY_BASE=$(PWD)/../fabric
+FAB_BINS=$(FABRIC_BINARY_BASE)/bin
 
 # integration test options
 GINKGO_TEST_OPTS ?=
@@ -34,15 +39,19 @@ unit-tests-race:
 install-softhsm:
 	./ci/scripts/install_softhsm.sh
 
+.PHONY: download-fabric
+download-fabric:
+	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION)
+
 .PHONY: docker-images
 docker-images: fabric-docker-images orion-server-images monitoring-docker-images
 
 .PHONY: fabric-docker-images
 fabric-docker-images:
-	docker pull hyperledger/fabric-baseos:$(FABRIC_VERSION)
-	docker image tag hyperledger/fabric-baseos:$(FABRIC_VERSION) hyperledger/fabric-baseos:latest
-	docker pull hyperledger/fabric-ccenv:$(FABRIC_VERSION)
-	docker image tag hyperledger/fabric-ccenv:$(FABRIC_VERSION) hyperledger/fabric-ccenv:latest
+	docker pull hyperledger/fabric-baseos:$(FABRIC_TWO_DIGIT_VERSION)
+	docker image tag hyperledger/fabric-baseos:$(FABRIC_TWO_DIGIT_VERSION) hyperledger/fabric-baseos:latest
+	docker pull hyperledger/fabric-ccenv:$(FABRIC_TWO_DIGIT_VERSION)
+	docker image tag hyperledger/fabric-ccenv:$(FABRIC_TWO_DIGIT_VERSION) hyperledger/fabric-ccenv:latest
 
 .PHONY: monitoring-docker-images
 monitoring-docker-images:
@@ -57,19 +66,19 @@ orion-server-images:
 	docker image tag orionbcdb/orion-server:$(ORION_VERSION) orionbcdb/orion-server:latest
 
 .PHONY: integration-tests-dlog-fabric
-integration-tests-dlog-fabric:
-	cd ./integration/token/fungible/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-dlog-fabric: download-fabric
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dloghsm-fabric
-integration-tests-dloghsm-fabric: install-softhsm
+integration-tests-dloghsm-fabric: install-softhsm download-fabric
 	@echo "Setup SoftHSM"
 	@./ci/scripts/setup_softhsm.sh
 	@echo "Start Integration Test"
-	cd ./integration/token/fungible/dloghsm; ginkgo $(GINKGO_TEST_OPTS) .
+	cd ./integration/token/fungible/dloghsm; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-fabtoken-fabric
-integration-tests-fabtoken-fabric:
-	cd ./integration/token/fungible/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-fabtoken-fabric: download-fabric
+	cd ./integration/token/fungible/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dlog-orion
 integration-tests-dlog-orion:
@@ -80,12 +89,12 @@ integration-tests-fabtoken-orion:
 	cd ./integration/token/fungible/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-dlog
-integration-tests-nft-dlog:
-	cd ./integration/token/nft/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-nft-dlog: download-fabric
+	cd ./integration/token/nft/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-fabtoken
-integration-tests-nft-fabtoken:
-	cd ./integration/token/nft/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-nft-fabtoken: download-fabric
+	cd ./integration/token/nft/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-dlog-orion
 integration-tests-nft-dlog-orion:
@@ -96,20 +105,20 @@ integration-tests-nft-fabtoken-orion:
 	cd ./integration/token/nft/ofabtoken; ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-fabtoken
-integration-tests-dvp-fabtoken:
-	cd ./integration/token/dvp/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-dvp-fabtoken: download-fabric
+	cd ./integration/token/dvp/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-dlog
-integration-tests-dvp-dlog:
-	cd ./integration/token/dvp/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-dvp-dlog:  download-fabric
+	cd ./integration/token/dvp/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-interop-fabtoken
-integration-tests-interop-fabtoken:
-	cd ./integration/token/interop/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-interop-fabtoken: download-fabric
+	cd ./integration/token/interop/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-interop-dlog
-integration-tests-interop-dlog:
-	cd ./integration/token/interop/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+integration-tests-interop-dlog: download-fabric
+	cd ./integration/token/interop/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: tidy
 tidy:
