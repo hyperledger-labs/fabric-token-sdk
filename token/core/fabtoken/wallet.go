@@ -192,6 +192,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 	return nil
 }
 
+// SpentIDs returns the spend ids for the passed token ids
 func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
 	sIDs := make([]string, len(ids))
 	var err error

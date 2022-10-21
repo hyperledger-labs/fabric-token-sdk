@@ -33,7 +33,8 @@ type QueryEngine interface {
 	IsMine(id *token.ID) (bool, error)
 	// UnspentTokensIterator returns an iterator over all unspent tokens
 	UnspentTokensIterator() (UnspentTokensIterator, error)
-	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+	// The token type can be empty. In that case, tokens of any type are returned.
 	UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error)
 	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)

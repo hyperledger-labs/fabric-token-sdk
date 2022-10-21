@@ -28,6 +28,11 @@ type BalanceResult struct {
 	Expired  string
 }
 
+// BalanceView is a view used to return:
+// 1. The amount of unspent tokens;
+// 2. The amount of htlc-locked tokens not yet expired;
+// 3. The amount of expired htlc-locked tokens that have been not reclaimed
+// for the given wallet.
 type BalanceView struct {
 	*Balance
 }
@@ -47,7 +52,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 	htlcWallet := htlc.Wallet(context, wallet)
 	// locked
 	lockedToTokens, err := htlcWallet.ListTokensIterator(token.WithType(b.Type))
-	assert.NoError(err, "failed to get locked to tokens")
+	assert.NoError(err, "failed to get locked tokens")
 	lockedSum, err := lockedToTokens.Sum(precision)
 	assert.NoError(err, "failed to compute the sum of the htlc locked tokens")
 

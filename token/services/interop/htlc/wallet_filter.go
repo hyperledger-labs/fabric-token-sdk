@@ -16,14 +16,15 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// PickFunction is a prototype for (token,script) pair selection
-type PickFunction = func(*token.UnspentToken, *Script) (bool, error)
+// SelectFunction is the prototype of a function to select pairs (token,script)
+type SelectFunction = func(*token.UnspentToken, *Script) (bool, error)
 
-type PreImageFilter struct {
+// PreImageSelector selects htlc-tokens that match a given pre-image
+type PreImageSelector struct {
 	preImage []byte
 }
 
-func (f *PreImageFilter) Filter(tok *token.UnspentToken, script *Script) (bool, error) {
+func (f *PreImageSelector) Filter(tok *token.UnspentToken, script *Script) (bool, error) {
 	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
 
 	if !script.HashInfo.HashFunc.Available() {
@@ -51,16 +52,16 @@ func (f *PreImageFilter) Filter(tok *token.UnspentToken, script *Script) (bool, 
 	return bytes.Equal(h, script.HashInfo.Hash), nil
 }
 
-func DeadlineBefore(tok *token.UnspentToken, script *Script) (bool, error) {
+// SelectExpired selects expired htlc-tokens
+func SelectExpired(tok *token.UnspentToken, script *Script) (bool, error) {
 	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
-
-	// is this expired and I am the sender?
 	now := time.Now()
 	logger.Debugf("[%v]<=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
 	return script.Deadline.Before(now), nil
 }
 
-func DeadlineAfter(tok *token.UnspentToken, script *Script) (bool, error) {
+// SelectNonExpired selects non-expired htlc-tokens
+func SelectNonExpired(tok *token.UnspentToken, script *Script) (bool, error) {
 	now := time.Now()
 	logger.Debugf("[%v]>=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
 	return script.Deadline.After(now), nil

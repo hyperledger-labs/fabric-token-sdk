@@ -261,11 +261,11 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 }
 
 func (n *Network) ExistEnvelope(id string) bool {
-	return n.n.ExistEnvelope(id)
+	return n.n.EnvelopeExists(id)
 }
 
 func (n *Network) ExistTransient(id string) bool {
-	return n.n.ExistTransient(id)
+	return n.n.TransientExists(id)
 }
 
 // Broadcast sends the given blob to the network

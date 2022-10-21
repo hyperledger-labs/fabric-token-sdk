@@ -154,7 +154,7 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 	return wm.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
 }
 
-// SpentIDs returns the spend keys corresponding to the passed token IDs
+// SpentIDs returns the spent keys corresponding to the passed token IDs
 func (wm *WalletManager) SpentIDs(ids []*token2.ID) ([]string, error) {
 	return wm.managementService.tms.SpentIDs(ids...)
 }

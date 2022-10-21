@@ -140,7 +140,7 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 			return cc.QueryTokens(args[1], stub)
 		case AreTokensSpent:
 			if len(args) != 2 {
-				return shim.Error("request to checks if tokens are spent is empty")
+				return shim.Error("request to check if tokens are spent is empty")
 			}
 			return cc.AreTokensSpent(args[1], stub)
 		default:

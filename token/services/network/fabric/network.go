@@ -239,7 +239,7 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.ch.Vault().StoreEnvelope(id, env)
 }
 
-func (n *Network) ExistEnvelope(id string) bool {
+func (n *Network) EnvelopeExists(id string) bool {
 	return n.ch.EnvelopeService().Exists(id)
 }
 
@@ -263,7 +263,7 @@ func (n *Network) StoreTransient(id string, transient driver.TransientMap) error
 	return n.ch.Vault().StoreTransient(id, fabric.TransientMap(transient))
 }
 
-func (n *Network) ExistTransient(id string) bool {
+func (n *Network) TransientExists(id string) bool {
 	return n.ch.MetadataService().Exists(id)
 }
 
@@ -346,7 +346,7 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	}
 	var tokens [][]byte
 	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
+		return nil, errors.Wrapf(err, "failed to unmarshal response")
 	}
 
 	return tokens, nil

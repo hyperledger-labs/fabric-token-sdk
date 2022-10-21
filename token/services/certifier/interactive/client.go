@@ -54,7 +54,8 @@ type CertificationClient struct {
 	certificationStorage CertificationStorage
 	viewManager          ViewManager
 	certifiers           []view2.Identity
-	waitTime             time.Duration
+	// waitTime is used in case of a failure. It tells how much time to wait before retrying.
+	waitTime time.Duration
 }
 
 func NewCertificationClient(

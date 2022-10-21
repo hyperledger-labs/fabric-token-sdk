@@ -80,7 +80,8 @@ type UnspentTokensIterator struct {
 	driver.UnspentTokensIterator
 }
 
-// Sum consumes the iterator and computes the sum of the quantities of the tokens in the iterator
+// Sum  computes the sum of the quantities of the tokens in the iterator.
+// Sum closes the iterator at the end of the execution.
 func (u *UnspentTokensIterator) Sum(precision uint64) (token2.Quantity, error) {
 	defer u.Close()
 	sum := token2.NewZeroQuantity(precision)

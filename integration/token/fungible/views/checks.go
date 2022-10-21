@@ -26,6 +26,8 @@ type CheckTTXDB struct {
 	TMSID           token.TMSID
 }
 
+// CheckTTXDBView is a view that performs consistency checks among the transaction db (either auditor or owner),
+// the vault, and the backed. It reports a list of mismatch that can be used for debug purposes.
 type CheckTTXDBView struct {
 	*CheckTTXDB
 }

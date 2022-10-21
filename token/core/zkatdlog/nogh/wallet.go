@@ -175,6 +175,7 @@ func (s *Service) CertifierWalletByIdentity(id view.Identity) driver.CertifierWa
 	return nil
 }
 
+// SpentIDs returns the spend ids for the passed token ids
 func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {
 	sIDs := make([]string, len(ids))
 	var err error
@@ -225,6 +226,7 @@ func (w *ownerWallet) Contains(identity view.Identity) bool {
 	return w.tokenService.OwnerWalletsRegistry.ContainsIdentity(identity, w.id)
 }
 
+// ContainsToken returns true if the passed token is owned by this wallet
 func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.Contains(token.Owner.Raw)
 }

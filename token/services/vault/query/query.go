@@ -59,7 +59,8 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	return len(val) == 1 && val[0] == 1, nil
 }
 
-// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
+// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+// The token type can be empty. In that case, tokens of any type are returned.
 func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensIterator, error) {
 	if len(id) == 0 {
 		return nil, errors.New("wallet id must be specified")
@@ -119,7 +120,7 @@ func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) 
 }
 
 func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
-	logger.Debugf("List unspent  token...")
+	logger.Debugf("List unspent token...")
 	it, err := e.UnspentTokensIterator()
 	if err != nil {
 		return nil, err
@@ -142,7 +143,7 @@ func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
 }
 
 func (e *Engine) ListUnspentTokensBy(id, typ string) (*token.UnspentTokens, error) {
-	logger.Debugf("List unspent  token by [%s:%s]...", id, typ)
+	logger.Debugf("list unspent token by [%s:%s]...", id, typ)
 	it, err := e.UnspentTokensIteratorBy(id, typ)
 	if err != nil {
 		return nil, err

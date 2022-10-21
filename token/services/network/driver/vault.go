@@ -22,8 +22,11 @@ const (
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
 
+// UnspentTokensIterator models an iterator of unspent tokens
 type UnspentTokensIterator interface {
+	// Close must be invoked when the iterator is not needed anymore
 	Close()
+	// Next returns the next available unspent tokens. If next is nil, no more tokens are available.
 	Next() (*token.UnspentToken, error)
 }
 
@@ -32,8 +35,9 @@ type Vault interface {
 	// GetLastTxID returns the last transaction ID committed into the vault
 	GetLastTxID() (string, error)
 
-	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
-	UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error)
+	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed wallet id and whose type is the passed on.
+	// The token type can be empty. In that case, tokens of any type are returned.
+	UnspentTokensIteratorBy(walletID, tokenType string) (UnspentTokensIterator, error)
 
 	// UnspentTokensIterator returns an iterator over all unspent tokens
 	UnspentTokensIterator() (UnspentTokensIterator, error)

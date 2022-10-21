@@ -27,6 +27,8 @@ type PublicParamsLoader interface {
 
 type QueryEngine interface {
 	IsMine(id *token2.ID) (bool, error)
+	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+	// The token type can be empty. In that case, tokens of any type are returned.
 	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 	ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error)
 	ListHistoryIssuedTokens() (*token2.IssuedTokens, error)

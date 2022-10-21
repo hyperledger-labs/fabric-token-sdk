@@ -17,7 +17,7 @@ require (
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20221020114120-edab5a58aa14
+	github.com/hyperledger-labs/fabric-smart-client v0.0.0-20221020154320-d8bb4b365cdf
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20220128025611-fad7f691a967
@@ -105,8 +105,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 // indirect
-	github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8 // indirect
 	github.com/hyperledger/fabric-config v0.1.0 // indirect
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect

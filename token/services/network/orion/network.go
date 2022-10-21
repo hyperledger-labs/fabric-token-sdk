@@ -99,7 +99,7 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.Vault().StoreEnvelope(id, env)
 }
 
-func (n *Network) ExistEnvelope(id string) bool {
+func (n *Network) EnvelopeExists(id string) bool {
 	return n.n.EnvelopeService().Exists(id)
 }
 
@@ -130,7 +130,7 @@ func (n *Network) StoreTransient(id string, transient driver.TransientMap) error
 	return n.n.Vault().StoreTransient(id, orion.TransientMap(transient))
 }
 
-func (n *Network) ExistTransient(id string) bool {
+func (n *Network) TransientExists(id string) bool {
 	return n.n.MetadataService().Exists(id)
 }
 

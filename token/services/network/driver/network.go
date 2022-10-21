@@ -51,8 +51,8 @@ type Network interface {
 	// StoreEnvelope stores locally the passed envelope mapping it to the passed id
 	StoreEnvelope(id string, env []byte) error
 
-	// ExistEnvelope returns true if an envelope exists for the passed id, false otherwise
-	ExistEnvelope(id string) bool
+	// EnvelopeExists returns true if an envelope exists for the passed id, false otherwise
+	EnvelopeExists(id string) bool
 
 	// Broadcast sends the passed blob to the network
 	Broadcast(blob interface{}) error
@@ -73,8 +73,8 @@ type Network interface {
 	// StoreTransient stores the passed transient map and maps it to the passed id
 	StoreTransient(id string, transient TransientMap) error
 
-	// ExistTransient returns true if a transient map exists for the passed id, false otherwise
-	ExistTransient(id string) bool
+	// TransientExists returns true if a transient map exists for the passed id, false otherwise
+	TransientExists(id string) bool
 
 	// GetTransient retrieves the transient map bound to the passed id
 	GetTransient(id string) (TransientMap, error)
@@ -111,5 +111,6 @@ type Network interface {
 	// The operation gets canceled if the passed timeout elapses.
 	LookupTransferMetadataKey(namespace string, startingTxID string, subKey string, timeout time.Duration) ([]byte, error)
 
+	// Ledger gives access to the remote ledger
 	Ledger() (Ledger, error)
 }

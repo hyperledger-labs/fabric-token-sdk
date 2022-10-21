@@ -34,24 +34,24 @@ type OwnerWallet struct {
 	bufferSize   int
 }
 
-// ListExpired returns a list of tokens with a passed deadline whose sender id is contained within the wallet
+// ListExpired returns a list of expired htlc-tokens whose sender id is in this wallet
 func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, true, DeadlineBefore)
+	return w.filter(compiledOpts.TokenType, true, SelectExpired)
 }
 
-// ListExpiredIterator returns an iterator of tokens with a passed deadline whose sender id is contained within the wallet
+// ListExpiredIterator returns a iterator of expired htlc-tokens whose sender id is in this wallet
 func (w *OwnerWallet) ListExpiredIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, true, DeadlineBefore)
+	return w.filterIterator(compiledOpts.TokenType, true, SelectExpired)
 }
 
 // ListByPreImage returns a list of tokens whose recipient is this wallet and with a matching preimage
@@ -61,17 +61,17 @@ func (w *OwnerWallet) ListByPreImage(preImage []byte, opts ...token.ListTokensOp
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, false, (&PreImageFilter{preImage: preImage}).Filter)
+	return w.filter(compiledOpts.TokenType, false, (&PreImageSelector{preImage: preImage}).Filter)
 }
 
-// ListByPreImageIterator returns am iterator of tokens whose recipient is this wallet and with a matching preimage
+// ListByPreImageIterator returns an iterator of tokens whose recipient is this wallet and with a matching preimage
 func (w *OwnerWallet) ListByPreImageIterator(preImage []byte, opts ...token.ListTokensOption) (*FilteredIterator, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, false, (&PreImageFilter{preImage: preImage}).Filter)
+	return w.filterIterator(compiledOpts.TokenType, false, (&PreImageSelector{preImage: preImage}).Filter)
 }
 
 // ListTokens returns a list of tokens that matches the passed options and whose recipient belongs to this wallet
@@ -81,7 +81,7 @@ func (w *OwnerWallet) ListTokens(opts ...token.ListTokensOption) (*token2.Unspen
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, false, DeadlineAfter)
+	return w.filter(compiledOpts.TokenType, false, SelectNonExpired)
 }
 
 // ListTokensIterator returns an iterator of tokens that matches the passed options and whose recipient belongs to this wallet
@@ -91,7 +91,7 @@ func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (*Filte
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, false, DeadlineAfter)
+	return w.filterIterator(compiledOpts.TokenType, false, SelectNonExpired)
 }
 
 // ListExpiredReceivedTokens returns a list of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
@@ -101,7 +101,7 @@ func (w *OwnerWallet) ListExpiredReceivedTokens(opts ...token.ListTokensOption) 
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filter(compiledOpts.TokenType, false, DeadlineBefore)
+	return w.filter(compiledOpts.TokenType, false, SelectExpired)
 }
 
 // ListExpiredReceivedTokensIterator returns an iterator of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
@@ -111,9 +111,10 @@ func (w *OwnerWallet) ListExpiredReceivedTokensIterator(opts ...token.ListTokens
 		return nil, errors.Wrapf(err, "failed to compile options")
 	}
 
-	return w.filterIterator(compiledOpts.TokenType, false, DeadlineBefore)
+	return w.filterIterator(compiledOpts.TokenType, false, SelectExpired)
 }
 
+// DeleteExpiredReceivedTokens removes the expired htlc-tokens that have been reclaimed
 func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...token.ListTokensOption) error {
 	it, err := w.ListExpiredReceivedTokensIterator(opts...)
 	if err != nil {
@@ -184,8 +185,8 @@ func (w *OwnerWallet) deleteExpiredReceivedTokens(context view.Context, expiredT
 	return nil
 }
 
-func (w *OwnerWallet) filter(tokenType string, sender bool, pick PickFunction) (*token2.UnspentTokens, error) {
-	it, err := w.filterIterator(tokenType, sender, pick)
+func (w *OwnerWallet) filter(tokenType string, sender bool, selector SelectFunction) (*token2.UnspentTokens, error) {
+	it, err := w.filterIterator(tokenType, sender, selector)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -204,7 +205,7 @@ func (w *OwnerWallet) filter(tokenType string, sender bool, pick PickFunction) (
 	return &token2.UnspentTokens{Tokens: tokens}, nil
 }
 
-func (w *OwnerWallet) filterIterator(tokenType string, sender bool, pick PickFunction) (*FilteredIterator, error) {
+func (w *OwnerWallet) filterIterator(tokenType string, sender bool, selector SelectFunction) (*FilteredIterator, error) {
 	var walletID string
 	if sender {
 		walletID = senderWallet(w.wallet)
@@ -216,8 +217,8 @@ func (w *OwnerWallet) filterIterator(tokenType string, sender bool, pick PickFun
 		return nil, errors.WithMessagef(err, "failed to get iterator over unspent tokens")
 	}
 	return &FilteredIterator{
-		it:   it,
-		pick: pick,
+		it:       it,
+		selector: selector,
 	}, nil
 }
 
@@ -248,8 +249,8 @@ func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet, opts ...token.S
 }
 
 type FilteredIterator struct {
-	it   driver.UnspentTokensIterator
-	pick PickFunction
+	it       driver.UnspentTokensIterator
+	selector SelectFunction
 }
 
 func (f *FilteredIterator) Close() {
@@ -279,9 +280,9 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 			}
 			logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
 
-			pickItem, err := f.pick(tok, script)
+			pickItem, err := f.selector(tok, script)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to pick (token,script)[%v:%v] pair", tok, script)
+				return nil, errors.Wrapf(err, "failed to select (token,script)[%v:%v] pair", tok, script)
 			}
 			if pickItem {
 				return tok, nil
@@ -290,7 +291,8 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 	}
 }
 
-// Sum consumes the iterator and computes the sum of the quantities of the tokens in the iterator
+// Sum  computes the sum of the quantities of the tokens in the iterator.
+// Sum closes the iterator at the end of the execution.
 func (f *FilteredIterator) Sum(precision uint64) (token2.Quantity, error) {
 	defer f.Close()
 	sum := token2.NewZeroQuantity(precision)
