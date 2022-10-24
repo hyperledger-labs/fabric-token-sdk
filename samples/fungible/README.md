@@ -663,6 +663,19 @@ The above topology takes in input the token driver name.
 
 ### Boostrap the networks
 
+Bootstrap of the networks requires both Fabric Docker images and Fabric binaries. To ensure you have the required images you can use the following Makefile target in the project root directory:
+
+```shell
+make fabric-docker-images
+```
+
+To ensure you have the required fabric binary files and set the `FAB_BINS` environment variable to the correct place you can do the following in the project root directory
+
+```shell
+make download-fabric
+export FAB_BINS=$PWD/../fabric/bin
+```
+
 To help us bootstrap the networks and then invoke the business views, the `fungible` command line tool is provided.
 To build it, we need to run the following command from the folder `$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk/samples/fabric/fungible`.
 

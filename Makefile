@@ -1,6 +1,11 @@
 # pinned versions
-FABRIC_VERSION=2.2
+FABRIC_VERSION ?= 2.2.8
+FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
 ORION_VERSION=v0.2.5
+
+# need to install fabric binaries outside of fts tree for now (due to chaincode packaging issues)
+FABRIC_BINARY_BASE=$(PWD)/../fabric
+FAB_BINS ?= $(FABRIC_BINARY_BASE)/bin
 
 # integration test options
 GINKGO_TEST_OPTS ?=
@@ -16,6 +21,10 @@ install-tools:
 # Thanks for great inspiration https://marcofranssen.nl/manage-go-tools-via-go-modules
 	@echo Installing tools from tools/tools.go
 	@cd tools; cat tools.go | grep _ | awk -F'"' '{print $$2}' | xargs -tI % go install %
+
+.PHONY: download-fabric
+download-fabric:
+	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION)
 
 # include the checks target
 include $(TOP)/checks.mk
@@ -43,10 +52,10 @@ docker-images: fabric-docker-images orion-server-images monitoring-docker-images
 
 .PHONY: fabric-docker-images
 fabric-docker-images:
-	docker pull hyperledger/fabric-baseos:$(FABRIC_VERSION)
-	docker image tag hyperledger/fabric-baseos:$(FABRIC_VERSION) hyperledger/fabric-baseos:latest
-	docker pull hyperledger/fabric-ccenv:$(FABRIC_VERSION)
-	docker image tag hyperledger/fabric-ccenv:$(FABRIC_VERSION) hyperledger/fabric-ccenv:latest
+	docker pull hyperledger/fabric-baseos:$(FABRIC_TWO_DIGIT_VERSION)
+	docker image tag hyperledger/fabric-baseos:$(FABRIC_TWO_DIGIT_VERSION) hyperledger/fabric-baseos:latest
+	docker pull hyperledger/fabric-ccenv:$(FABRIC_TWO_DIGIT_VERSION)
+	docker image tag hyperledger/fabric-ccenv:$(FABRIC_TWO_DIGIT_VERSION) hyperledger/fabric-ccenv:latest
 
 .PHONY: monitoring-docker-images
 monitoring-docker-images:
@@ -63,11 +72,11 @@ orion-server-images:
 
 .PHONY: integration-tests-nft-dlog
 integration-tests-nft-dlog:
-	cd ./integration/token/nft/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+	cd ./integration/token/nft/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-fabtoken
 integration-tests-nft-fabtoken:
-	cd ./integration/token/nft/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
+	cd ./integration/token/nft/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-nft-dlog-orion
 integration-tests-nft-dlog-orion:
@@ -79,11 +88,11 @@ integration-tests-nft-fabtoken-orion:
 
 .PHONY: integration-tests-dvp-fabtoken
 integration-tests-dvp-fabtoken:
-	cd ./integration/token/dvp/fabtoken; ginkgo $(GINKGO_TEST_OPTS) .
+	cd ./integration/token/dvp/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: integration-tests-dvp-dlog
 integration-tests-dvp-dlog:
-	cd ./integration/token/dvp/dlog; ginkgo $(GINKGO_TEST_OPTS) .
+	cd ./integration/token/dvp/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
 
 .PHONY: tidy
 tidy:
