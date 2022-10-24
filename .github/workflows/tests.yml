@@ -126,6 +126,10 @@ jobs:
         working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
 
+      - name: Download fabric binaries
+        working-directory: ${{ env.FTS_PATH }}
+        run: make download-fabric
+
       - name: Docker
         working-directory: ${{ env.FTS_PATH }}
         run: make docker-images
