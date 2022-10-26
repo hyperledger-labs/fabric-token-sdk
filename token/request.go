@@ -1099,6 +1099,7 @@ func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType 
 					Quantity: restQ.Hex(),
 				})
 			}
+			logger.Debugf("value [%d] > maxTokenValue [%d], split tokens in [%d] + rest of [%d]", value, maxTokenValue, num, rest)
 		} else {
 			// single output is fine
 			outputTokens = append(outputTokens, &token.Token{

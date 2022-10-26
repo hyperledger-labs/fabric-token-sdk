@@ -210,6 +210,10 @@ func (pp *PublicParams) ComputeHash() ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
+func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
+	return uint64(math.Pow(float64(len(pp.RangeProofParams.SignedValues)), float64(pp.RangeProofParams.Exponent))) - 1
+}
+
 func Setup(base uint, exponent uint, nymPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters, idemixCurveID)
 }
@@ -232,7 +236,7 @@ func SetupWithCustomLabel(base uint, exponent uint, nymPK []byte, label string, 
 	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision
-	pp.MaxToken = uint64(math.Pow(float64(len(pp.RangeProofParams.SignedValues)), float64(pp.RangeProofParams.Exponent)-1))
+	pp.MaxToken = pp.ComputeMaxTokenValue()
 	// max value of any given token is max = base^exponent - 1
 	if err := pp.Validate(); err != nil {
 		return nil, errors.Wrapf(err, "failed to validate public parameters")
@@ -271,7 +275,7 @@ func (pp *PublicParams) Validate() error {
 	if len(pp.IdemixIssuerPK) == 0 {
 		return errors.New("invalid public parameters: empty idemix issuer")
 	}
-	maxToken := uint64(math.Pow(float64(len(pp.RangeProofParams.SignedValues)), float64(pp.RangeProofParams.Exponent)-1))
+	maxToken := pp.ComputeMaxTokenValue()
 	if maxToken != pp.MaxToken {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, pp.MaxToken)
 	}
