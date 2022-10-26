@@ -983,7 +983,7 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
+func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 	for _, owner := range owners {
 		if redeem {
 			if !owner.IsNone() {
@@ -1000,31 +1000,20 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 	var err error
 	// if inputs have been passed, parse and certify them, if needed
 	if len(transferOpts.TokenIDs) != 0 {
-		tokenIDs, inputSum, typ, err = r.parseInputIDs(transferOpts.TokenIDs)
+		tokenIDs, inputSum, tokenType, err = r.parseInputIDs(transferOpts.TokenIDs)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed parsing passed input tokens")
 		}
 	}
 
-	if typ == "" {
+	if tokenType == "" {
 		return nil, nil, errors.Errorf("type is empty")
 	}
 
 	// Compute output tokens
-	precision := r.TokenService.PublicParametersManager().Precision()
-	outputSum := token.NewZeroQuantity(precision)
-	var outputTokens []*token.Token
-	for i, value := range values {
-		q, err := token.UInt64ToQuantity(value, precision)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", value, precision)
-		}
-		outputSum = outputSum.Add(q)
-		outputTokens = append(outputTokens, &token.Token{
-			Owner:    &token.Owner{Raw: owners[i]},
-			Type:     typ,
-			Quantity: q.Hex(),
-		})
+	outputTokens, outputSum, err := r.genOutputs(values, owners, tokenType)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to generate outputs")
 	}
 
 	// Select input tokens, if not passed as opt
@@ -1037,7 +1026,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}
 		}
-		tokenIDs, inputSum, err = selector.Select(wallet, outputSum.Decimal(), typ)
+		tokenIDs, inputSum, err = selector.Select(wallet, outputSum.Decimal(), tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed selecting tokens")
 		}
@@ -1055,7 +1044,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 
 		outputTokens = append(outputTokens, &token.Token{
 			Owner:    &token.Owner{Raw: pseudonym},
-			Type:     typ,
+			Type:     tokenType,
 			Quantity: diff.Hex(),
 		})
 	}
@@ -1070,6 +1059,57 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 	}
 
 	return tokenIDs, outputTokens, nil
+}
+
+func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
+	precision := r.TokenService.PublicParametersManager().Precision()
+	maxTokenValue := r.TokenService.PublicParametersManager().MaxTokenValue()
+	outputSum := token.NewZeroQuantity(precision)
+	var outputTokens []*token.Token
+	for i, value := range values {
+		q, err := token.UInt64ToQuantity(value, precision)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", value, precision)
+		}
+		outputSum = outputSum.Add(q)
+
+		if value > maxTokenValue {
+			// splits outputs
+			num := int(value / maxTokenValue)
+			maxTokenQ, err := token.UInt64ToQuantity(maxTokenValue, precision)
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", maxTokenValue, precision)
+			}
+			for i := 0; i < num; i++ {
+				outputTokens = append(outputTokens, &token.Token{
+					Owner:    &token.Owner{Raw: owners[i]},
+					Type:     tokenType,
+					Quantity: maxTokenQ.Hex(),
+				})
+			}
+			rest := value % maxTokenValue
+			if rest > 0 {
+				restQ, err := token.UInt64ToQuantity(maxTokenValue, rest)
+				if err != nil {
+					return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", rest, precision)
+				}
+				outputTokens = append(outputTokens, &token.Token{
+					Owner:    &token.Owner{Raw: owners[i]},
+					Type:     tokenType,
+					Quantity: restQ.Hex(),
+				})
+			}
+		} else {
+			// single output is fine
+			outputTokens = append(outputTokens, &token.Token{
+				Owner:    &token.Owner{Raw: owners[i]},
+				Type:     tokenType,
+				Quantity: q.Hex(),
+			})
+		}
+	}
+
+	return outputTokens, outputSum, nil
 }
 
 type requestSer struct {

@@ -30,7 +30,8 @@ type PublicParams struct {
 	// This is set when audit is enabled
 	Auditor []byte
 	// This encodes the list of authorized issuers
-	Issuers [][]byte
+	Issuers  [][]byte
+	MaxToken uint64
 }
 
 // NewPublicParamsFromBytes deserializes the raw bytes into public parameters
@@ -70,7 +71,7 @@ func (pp *PublicParams) GraphHiding() bool {
 
 // MaxTokenValue returns the maximum value that a token can hold according to PublicParams
 func (pp *PublicParams) MaxTokenValue() uint64 {
-	return 2 ^ pp.Precision() - 1
+	return pp.MaxToken
 }
 
 // Bytes marshals PublicParams
@@ -130,6 +131,9 @@ func (pp *PublicParams) Precision() uint64 {
 
 // Validate validates the public parameters
 func (pp *PublicParams) Validate() error {
+	if pp.MaxToken != 2^pp.Precision()-1 {
+		return errors.Errorf("max token value is invalid [%d]!=[%d]", pp.MaxToken, 2^pp.Precision()-1)
+	}
 	return nil
 }
 
@@ -138,5 +142,6 @@ func Setup() (*PublicParams, error) {
 	return &PublicParams{
 		Label:             PublicParameters,
 		QuantityPrecision: DefaultPrecision,
+		MaxToken:          2 ^ DefaultPrecision - 1,
 	}, nil
 }
