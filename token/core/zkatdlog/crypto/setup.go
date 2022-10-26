@@ -228,18 +228,15 @@ func SetupWithCustomLabel(base uint, exponent uint, nymPK []byte, label string, 
 	if err := pp.GenerateRangeProofParameters(signer, base); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
 	}
-	if base != uint(len(pp.RangeProofParams.SignedValues)) {
-		return nil, errors.Errorf("base incosistency [%d]!=[%d]", base, len(pp.RangeProofParams.SignedValues))
-	}
-	if exponent != pp.RangeProofParams.Exponent {
-		return nil, errors.Errorf("exponent incosistency [%d]!=[%d]", exponent, pp.RangeProofParams.Exponent)
-	}
 	pp.IdemixIssuerPK = nymPK
 	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = uint64(math.Pow(float64(len(pp.RangeProofParams.SignedValues)), float64(pp.RangeProofParams.Exponent)-1))
 	// max value of any given token is max = base^exponent - 1
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
+	}
 	return pp, nil
 }
 
