@@ -1080,7 +1080,7 @@ func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType 
 			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", value, precision)
 		}
 		if q.Cmp(maxTokenValueQ) == 1 {
-			return nil, nil, errors.Errorf("cannot create output with value [%s], max [%d]", q.Decimal(), maxTokenValueQ.Decimal())
+			return nil, nil, errors.Errorf("cannot create output with value [%s], max [%s]", q.Decimal(), maxTokenValueQ.Decimal())
 		}
 		outputSum = outputSum.Add(q)
 

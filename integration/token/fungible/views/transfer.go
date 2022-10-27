@@ -78,8 +78,8 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	err = tx.Transfer(
 		senderWallet,
 		t.Type,
-		[]uint64{t.Amount / 2, t.Amount / 2},
-		[]view.Identity{recipient, recipient},
+		[]uint64{t.Amount},
+		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
 	assert.NoError(err, "failed adding new tokens")
