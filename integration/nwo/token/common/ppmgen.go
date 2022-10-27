@@ -91,7 +91,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if !ok {
 		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
 	}
-	base, err := strconv.ParseInt(baseArg, 10, 64)
+	base, err := strconv.ParseUint(baseArg, 10, 32)
 	if err != nil {
 		return nil, err
 	}
@@ -99,11 +99,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if !ok {
 		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[2])
 	}
-	exp, err := strconv.ParseInt(expArg, 10, 32)
+	exp, err := strconv.ParseUint(expArg, 10, 32)
 	if err != nil {
 		return nil, err
 	}
-	pp, err := cryptodlog.Setup(base, int(exp), ipkBytes, d.CurveID)
+	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, d.CurveID)
 	if err != nil {
 		return nil, err
 	}

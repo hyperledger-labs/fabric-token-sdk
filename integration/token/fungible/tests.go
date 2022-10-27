@@ -601,6 +601,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
 
+	// Check consistency
 	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
 	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
