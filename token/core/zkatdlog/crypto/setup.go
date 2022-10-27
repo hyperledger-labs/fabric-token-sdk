@@ -237,10 +237,6 @@ func SetupWithCustomLabel(base uint, exponent uint, nymPK []byte, label string, 
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = pp.ComputeMaxTokenValue()
-	// max value of any given token is max = base^exponent - 1
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "failed to validate public parameters")
-	}
 	return pp, nil
 }
 

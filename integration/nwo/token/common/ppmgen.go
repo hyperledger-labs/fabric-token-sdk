@@ -107,6 +107,9 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if err != nil {
 		return nil, err
 	}
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
+	}
 
 	if len(tms.Auditors) != 0 {
 		if len(wallets.Auditors) == 0 {

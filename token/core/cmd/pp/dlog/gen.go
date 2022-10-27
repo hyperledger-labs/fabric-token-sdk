@@ -118,6 +118,9 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
+	}
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, err
 	}
