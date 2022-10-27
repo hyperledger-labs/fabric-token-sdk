@@ -41,6 +41,9 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	// Just a fancy query to show the capabilities of the services we are using.
 	precision := tx.TokenService().PublicParametersManager().Precision()
 	for _, output := range outputs.ByRecipient(id).Outputs() {
+		if output.Type == "EXP" {
+			continue
+		}
 		unspentTokens, err := ttx.MyWallet(context).ListUnspentTokens(ttx.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		upperBound, err := token2.UInt64ToQuantity(3000, precision)

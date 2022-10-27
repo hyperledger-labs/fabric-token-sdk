@@ -91,7 +91,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if !ok {
 		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
 	}
-	base, err := strconv.ParseUint(baseArg, 10, 64)
+	base, err := strconv.ParseUint(baseArg, 10, 32)
 	if err != nil {
 		return nil, err
 	}

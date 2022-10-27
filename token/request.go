@@ -1033,7 +1033,9 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	}
 
 	// Is there a rest?
-	if inputSum.Cmp(outputSum) == 1 {
+	cmp := inputSum.Cmp(outputSum)
+	switch cmp {
+	case 1:
 		diff := inputSum.Sub(outputSum)
 		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
@@ -1047,6 +1049,8 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 			Type:     tokenType,
 			Quantity: diff.Hex(),
 		})
+	case -1:
+		return nil, nil, errors.Errorf("the sum of the ouputs is larger then the sum of the inputs [%s][%s]", inputSum.Decimal(), outputSum.Decimal())
 	}
 
 	if r.TokenService.PublicParametersManager().GraphHiding() {
@@ -1089,7 +1093,7 @@ func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType 
 			}
 			rest := value % maxTokenValue
 			if rest > 0 {
-				restQ, err := token.UInt64ToQuantity(maxTokenValue, rest)
+				restQ, err := token.UInt64ToQuantity(maxTokenValue, precision)
 				if err != nil {
 					return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", rest, precision)
 				}
