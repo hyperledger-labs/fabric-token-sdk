@@ -72,6 +72,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	for _, eID := range eIDs {
 		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
+			if tokenType == "MAX" {
+				continue
+			}
 			// compute the payment done in the transaction
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
@@ -92,6 +95,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	for _, eID := range eIDs {
 		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
+			if tokenType == "MAX" {
+				continue
+			}
 			// compute the payment done in the transaction
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
@@ -121,6 +127,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	for _, eID := range eIDs {
 		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
+			if tokenType == "MAX" {
+				continue
+			}
 			// compute the amount received
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()

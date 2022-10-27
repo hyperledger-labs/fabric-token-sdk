@@ -149,5 +149,5 @@ func walletIDToString(w string) string {
 		return strings.ToValidUTF8(w, "X")
 	}
 
-	return fmt.Sprintf("%s~%s", w[:20], hash.Hashable(w).String())
+	return fmt.Sprintf("%s~%s", strings.ToValidUTF8(w[:20], "X"), hash.Hashable(w).String())
 }

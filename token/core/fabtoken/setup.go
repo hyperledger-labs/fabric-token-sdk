@@ -8,6 +8,7 @@ package fabtoken
 
 import (
 	"encoding/json"
+	"math"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -143,6 +144,6 @@ func Setup() (*PublicParams, error) {
 	return &PublicParams{
 		Label:             PublicParameters,
 		QuantityPrecision: DefaultPrecision,
-		MaxToken:          2 ^ DefaultPrecision - 1,
+		MaxToken:          math.MaxUint64,
 	}, nil
 }

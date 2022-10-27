@@ -196,6 +196,11 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	if q == 0 {
 		return nil, errors.Errorf("q is zero")
 	}
+	maxTokenValue := r.TokenService.PublicParametersManager().MaxTokenValue()
+	if q > maxTokenValue {
+		return nil, errors.Errorf("q is larger than max token value [%d]", maxTokenValue)
+	}
+
 	if receiver.IsNone() {
 		return nil, errors.Errorf("all recipients should be defined")
 	}

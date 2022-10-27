@@ -8,6 +8,7 @@ package nogh
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"sync"
 
@@ -101,7 +102,7 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to compute the hash of the public params")
 	}
-	logger.Infof("Deserialize: [%s][%s]", newHash, d.oldHash)
+	logger.Infof("Deserialize: [%s][%s]", base64.StdEncoding.EncodeToString(newHash), base64.StdEncoding.EncodeToString(d.oldHash))
 	if bytes.Equal(d.oldHash, newHash) {
 		return d.des, nil
 	}

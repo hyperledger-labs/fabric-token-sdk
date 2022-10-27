@@ -66,7 +66,7 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 		assert.NoError(err, "failed to covert to quantity")
 		upperBound, err := token2.UInt64ToQuantity(241, precision)
 		assert.NoError(err, "failed to covert to quantity")
-		assert.True(history.Sum(precision).Add(q).Cmp(upperBound) <= 0)
+		assert.True(history.Sum(precision).Add(q).Cmp(upperBound) <= 0, "no more USD can be issued, reached quota of 241")
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.

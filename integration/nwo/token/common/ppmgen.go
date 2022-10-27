@@ -33,6 +33,19 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 	if err != nil {
 		return nil, err
 	}
+	if len(args) == 2 {
+		// First is empty
+		// Second is the max token value
+		maxTokenValueStr, ok := args[1].(string)
+		if !ok {
+			return nil, errors.Errorf("expected string as first argument")
+		}
+		maxTokenValue, err := strconv.ParseUint(maxTokenValueStr, 10, 64)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse max token value [%s] to uint64", maxTokenValueStr)
+		}
+		pp.MaxToken = maxTokenValue
+	}
 
 	if len(tms.Auditors) != 0 {
 		if len(wallets.Auditors) == 0 {

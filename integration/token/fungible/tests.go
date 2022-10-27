@@ -462,7 +462,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10)
 
 	// no more USD can be issued, reached quota of 220
-	IssueCashFail(network, "USD", 10, "alice")
+	IssueCash(network, "", "USD", 10, "alice", auditor, true, "no more USD can be issued, reached quota of 241")
 
 	CheckBalanceAndHolding(network, "alice", "", "USD", 0)
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 10)
@@ -600,6 +600,12 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	// the previous call should not keep the token locked if release is successful
 	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
 	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
+
+	// Test Max Token Value
+	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true)
+	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true)
+	TransferCash(network, "charlie", "", "MAX", 10000, "alice", auditor, "cannot create output with value [10000], max [9999]")
+	IssueCash(network, "", "MAX", 10000, "charlie", auditor, true, "q is larger than max token value [9999]")
 
 	// Check consistency
 	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
