@@ -133,10 +133,14 @@ func (pp *PublicParams) Precision() uint64 {
 
 // Validate validates the public parameters
 func (pp *PublicParams) Validate() error {
-	if pp.MaxToken != 2^pp.Precision()-1 {
-		return errors.Errorf("max token value is invalid [%d]!=[%d]", pp.MaxToken, 2^pp.Precision()-1)
+	if pp.MaxToken > pp.ComputeMaxTokenValue() {
+		return errors.Errorf("max token value is invalid [%d]>[%d]", pp.MaxToken, pp.ComputeMaxTokenValue())
 	}
 	return nil
+}
+
+func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
+	return 1<<pp.Precision() - 1
 }
 
 // Setup initializes PublicParams
