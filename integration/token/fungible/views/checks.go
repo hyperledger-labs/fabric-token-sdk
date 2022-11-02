@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -133,6 +135,25 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		}
+	}
+
+	uit, err := v.UnspentTokensIterator()
+	assert.NoError(err, "failed to get unspent tokens")
+	defer uit.Close()
+	var unspentTokenIDs []*token2.ID
+	for {
+		tok, err := uit.Next()
+		assert.NoError(err, "failed to get next unspent token")
+		if tok == nil {
+			break
+		}
+		unspentTokenIDs = append(unspentTokenIDs, tok.Id)
+	}
+	tokValue, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
+	if err != nil {
+		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
+	} else {
+		assert.Equal(len(unspentTokenIDs), len(tokValue))
 	}
 
 	return errorMessages, nil
