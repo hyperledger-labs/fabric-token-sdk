@@ -7,8 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 
@@ -137,6 +140,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
+	// Match unspent tokens with the ledger
 	uit, err := v.UnspentTokensIterator()
 	assert.NoError(err, "failed to get unspent tokens")
 	defer uit.Close()
@@ -149,12 +153,21 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 		unspentTokenIDs = append(unspentTokenIDs, tok.Id)
 	}
-	tokValue, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
+	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
 	if err != nil {
 		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
 	} else {
-		assert.Equal(len(unspentTokenIDs), len(tokValue))
+		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
 	}
+	index := 0
+	assert.NoError(v.TokenVault().QueryEngine().GetTokenCommitments(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+		if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
+			errorMessages = append(errorMessages, fmt.Sprintf("token content do not match at [%d], [%s]!=[%s]", index,
+				hash.Hashable(ledgerTokenContent[index]), hash.Hashable(tokenRaw)))
+		}
+		index++
+		return nil
+	}), "failed to match ledger token content with local")
 
 	return errorMessages, nil
 }
