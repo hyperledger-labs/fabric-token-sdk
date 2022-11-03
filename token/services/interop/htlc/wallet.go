@@ -34,6 +34,16 @@ type OwnerWallet struct {
 	bufferSize   int
 }
 
+// ListTokensAsSender returns a list of non-expired htlc-tokens whose sender id is in this wallet
+func (w *OwnerWallet) ListTokensAsSender(opts ...token.ListTokensOption) (*FilteredIterator, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	return w.filterIterator(compiledOpts.TokenType, true, SelectNonExpired)
+}
+
 // ListExpired returns a list of expired htlc-tokens whose sender id is in this wallet
 func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
@@ -131,27 +141,57 @@ func (w *OwnerWallet) DeleteExpiredReceivedTokens(context view.Context, opts ...
 		}
 		buffer = append(buffer, tok)
 		if len(buffer) > w.bufferSize {
-			if err := w.deleteExpiredReceivedTokens(context, buffer); err != nil {
+			if err := w.deleteTokens(context, buffer); err != nil {
 				return errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
 			}
 			buffer = nil
 		}
 	}
-	if err := w.deleteExpiredReceivedTokens(context, buffer); err != nil {
+	if err := w.deleteTokens(context, buffer); err != nil {
 		return errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
 	}
 
 	return nil
 }
 
-func (w *OwnerWallet) deleteExpiredReceivedTokens(context view.Context, expiredTokens []*token2.UnspentToken) error {
-	if len(expiredTokens) == 0 {
+// DeleteClaimedSentTokens removes the claimed htlc-tokens whose sender id is in this wallet
+func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...token.ListTokensOption) error {
+	it, err := w.ListTokensAsSender(opts...)
+	if err != nil {
+		return errors.WithMessage(err, "failed to get an iterator of expired received tokens")
+	}
+	var buffer []*token2.UnspentToken
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get next expired received token")
+		}
+		if tok == nil {
+			break
+		}
+		buffer = append(buffer, tok)
+		if len(buffer) > w.bufferSize {
+			if err := w.deleteTokens(context, buffer); err != nil {
+				return errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+			}
+			buffer = nil
+		}
+	}
+	if err := w.deleteTokens(context, buffer); err != nil {
+		return errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+	}
+
+	return nil
+}
+
+func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.UnspentToken) error {
+	if len(tokens) == 0 {
 		return nil
 	}
 
 	// get spent flags
-	ids := make([]*token2.ID, len(expiredTokens))
-	for i, tok := range expiredTokens {
+	ids := make([]*token2.ID, len(tokens))
+	for i, tok := range tokens {
 		ids[i] = tok.Id
 	}
 	tms := w.wallet.TMS()
@@ -170,12 +210,12 @@ func (w *OwnerWallet) deleteExpiredReceivedTokens(context view.Context, expiredT
 
 	// remove the tokens flagged as spent
 	var toDelete []*token2.ID
-	for i, unspentToken := range expiredTokens {
+	for i, tok := range tokens {
 		if spent[i] {
-			logger.Debugf("token [%s] is spent", unspentToken.Id)
-			toDelete = append(toDelete, unspentToken.Id)
+			logger.Debugf("token [%s] is spent", tok.Id)
+			toDelete = append(toDelete, tok.Id)
 		} else {
-			logger.Debugf("token [%s] is not spent", unspentToken.Id)
+			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
 	if err := w.vault.DeleteTokens(tms.Namespace(), toDelete...); err != nil {
@@ -229,6 +269,10 @@ func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption)
 
 // Wallet returns an OwnerWallet which contains a wallet and a query service
 func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet, opts ...token.ServiceOption) *OwnerWallet {
+	if wallet == nil {
+		return nil
+	}
+
 	tms := token.GetManagementService(sp, opts...)
 	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
 	if nw == nil {

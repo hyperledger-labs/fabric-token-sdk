@@ -174,7 +174,11 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
-	panic("implement me")
+	resBoxed, err := view2.GetManager(context).InitiateView(NewRequestQueryTokensView(n, namespace, IDs))
+	if err != nil {
+		return nil, err
+	}
+	return resBoxed.([][]byte), nil
 }
 
 func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
