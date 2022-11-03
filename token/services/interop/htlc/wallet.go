@@ -185,6 +185,7 @@ func (w *OwnerWallet) DeleteClaimedSentTokens(context view.Context, opts ...toke
 }
 
 func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.UnspentToken) error {
+	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
 	if len(tokens) == 0 {
 		return nil
 	}
@@ -240,6 +241,8 @@ func (w *OwnerWallet) filter(tokenType string, sender bool, selector SelectFunct
 		if tok == nil {
 			break
 		}
+		logger.Debugf("filtered token [%s]", tok.Id)
+
 		tokens = append(tokens, tok)
 	}
 	return &token2.UnspentTokens{Tokens: tokens}, nil
@@ -268,12 +271,12 @@ func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption)
 }
 
 // Wallet returns an OwnerWallet which contains a wallet and a query service
-func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet, opts ...token.ServiceOption) *OwnerWallet {
+func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	if wallet == nil {
 		return nil
 	}
 
-	tms := token.GetManagementService(sp, opts...)
+	tms := wallet.TMS()
 	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
 	if nw == nil {
 		return nil
@@ -308,10 +311,14 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 			return nil, err
 		}
 		if tok == nil {
+			logger.Debugf("no more tokens!")
 			return nil, nil
 		}
 		owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
-		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
+		if err != nil {
+			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
+			continue
+		}
 		if owner.Type == ScriptType {
 			script := &Script{}
 			if err := json.Unmarshal(owner.Identity, script); err != nil {

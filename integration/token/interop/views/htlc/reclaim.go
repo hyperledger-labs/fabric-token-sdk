@@ -35,7 +35,7 @@ func (r *ReclaimAllView) Call(context view.Context) (interface{}, error) {
 	senderWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", r.Wallet)
 
-	expired, err := htlc.Wallet(context, senderWallet, token.WithTMSID(r.TMSID)).ListExpired()
+	expired, err := htlc.Wallet(context, senderWallet).ListExpired()
 	assert.NoError(err, "cannot retrieve list of expired tokens")
 	assert.True(expired.Count() > 0, "no htlc script has expired")
 

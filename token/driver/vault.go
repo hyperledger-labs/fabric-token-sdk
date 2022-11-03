@@ -54,4 +54,7 @@ type QueryEngine interface {
 	GetTokenInfoAndCommitments(ids []*token.ID, callback QueryCallback2Func) error
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
+	// WhoDeletedTokens returns info about who deleted the passed tokens.
+	// The bool array is an indicator used to tell if the token at a given position has been deleted or not
+	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 }

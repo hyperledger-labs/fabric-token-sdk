@@ -150,16 +150,25 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	IssueCashWithTMS(network, beta, "issuer", "", "USD", 30, "bob")
 	CheckBalanceAndHolding(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
+
 	_, preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
 	htlcLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
 
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
+
 	htlcClaim(network, beta, "alice", "", preImage)
+
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
+
 	htlcClaim(network, alpha, "bob", "", preImage)
 
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
+
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
 
 	// Try to claim again and get an error
 
@@ -171,9 +180,14 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1, token.WithTMSID(beta))
 
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
+
 	// Try to claim without locking
 
 	htlcClaim(network, beta, "alice", "", nil, "expected only one htlc script to match")
+
+	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
+
 	htlcClaim(network, alpha, "bob", "", nil, "expected only one htlc script to match")
 
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))

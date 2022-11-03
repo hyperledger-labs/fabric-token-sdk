@@ -21,6 +21,7 @@ const (
 	CompositeKeyNamespace       = "\x00"
 	TokenKeyPrefix              = "ztoken"
 	FabTokenKeyPrefix           = "token"
+	DeletedTokenKeyPrefix       = "deltoken"
 	FabTokenExtendedKeyPrefix   = "etoken"
 	AuditTokenKeyPrefix         = "audittoken"
 	TokenMineKeyPrefix          = "mine"
@@ -107,6 +108,10 @@ func CreateSNKey(sn string) (string, error) {
 
 func CreateFabTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(FabTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
+}
+
+func CreateDeletedTokenKey(txID string, index uint64) (string, error) {
+	return CreateCompositeKey(DeletedTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }
 
 func CreateExtendedFabTokenKey(id string, typ string, txID string, index uint64) (string, error) {

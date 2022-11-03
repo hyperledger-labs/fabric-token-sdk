@@ -143,11 +143,12 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 
 	// but first delete the claimed tokens
 	// TODO: check all owner wallets
-	defaultOwnerWallet := htlc.GetWallet(context, "")
+	defaultOwnerWallet := htlc.GetWallet(context, "", token.WithTMSID(m.TMSID))
 	if defaultOwnerWallet != nil {
 		htlcWallet := htlc.Wallet(context, defaultOwnerWallet)
 		assert.NotNil(htlcWallet, "cannot load htlc wallet")
 		assert.NoError(htlcWallet.DeleteClaimedSentTokens(context), "failed to delete claimed sent tokens")
+		assert.NoError(htlcWallet.DeleteExpiredReceivedTokens(context), "failed to delete expired received tokens")
 
 		uit, err := v.UnspentTokensIterator()
 		assert.NoError(err, "failed to get unspent tokens")
