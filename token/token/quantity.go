@@ -25,7 +25,12 @@ type Quantity interface {
 	// If an overflow occurs, it returns an error.
 	Sub(b Quantity) Quantity
 
-	// Cmp compare this with b
+	// Cmp compares this and b and returns:
+	//
+	//   -1 if this <  b
+	//    0 if this == b
+	//   +1 if this >  b
+	//
 	Cmp(b Quantity) int
 
 	// Hex returns the hexadecimal representation of this quantity
@@ -165,6 +170,12 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 	return q
 }
 
+// Cmp compares x and y and returns:
+//
+//   -1 if x <  y
+//    0 if x == y
+//   +1 if x >  y
+//
 func (q *BigQuantity) Cmp(b Quantity) int {
 	bq, ok := b.(*BigQuantity)
 	if !ok {

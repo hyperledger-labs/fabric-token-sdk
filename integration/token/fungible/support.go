@@ -36,7 +36,7 @@ func RegisterCertifier(network *integration.Infrastructure) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool) string {
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, expectedErrorMsgs ...string) string {
 	if auditor == "issuer" {
 		// the issuer is the auditor, choose default identity
 		auditor = ""
@@ -49,20 +49,19 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 		Quantity:     amount,
 		Recipient:    network.Identity(receiver),
 	}))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 
-	return common.JSONUnmarshalString(txid)
-}
+	if len(expectedErrorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		return common.JSONUnmarshalString(txid)
+	}
 
-func IssueCashFail(network *integration.Infrastructure, typ string, amount uint64, receiver string) {
-	_, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
-		TokenType: typ,
-		Quantity:  amount,
-		Recipient: network.Identity(receiver),
-	}))
 	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	return ""
 }
 
 func CheckAuditedTransactions(network *integration.Infrastructure, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
@@ -221,7 +220,7 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 		}
 		time.Sleep(5 * time.Second)
 	}
@@ -244,7 +243,7 @@ func PrepareTransferCash(network *integration.Infrastructure, id string, wallet 
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 		}
 		time.Sleep(5 * time.Second)
 	}
@@ -291,7 +290,7 @@ func BroadcastPreparedTransferCash(network *integration.Infrastructure, id strin
 	Expect(err).To(HaveOccurred())
 	fmt.Println("Failed to broadcast ", err)
 	for _, msg := range expectedErrorMsgs {
-		Expect(err.Error()).To(ContainSubstring(msg))
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
 }
@@ -336,7 +335,7 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 		}
 		time.Sleep(5 * time.Second)
 		return ""
@@ -358,7 +357,7 @@ func TransferCashWithSelector(network *integration.Infrastructure, id string, wa
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
+			Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 		}
 		time.Sleep(5 * time.Second)
 	}

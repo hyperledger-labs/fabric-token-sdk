@@ -32,9 +32,9 @@ type GeneratorArgs struct {
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
 	// Base is a dlog driver related parameter
-	Base int64
+	Base uint
 	// Exponent is a dlog driver related parameter
-	Exponent int
+	Exponent uint
 }
 
 var (
@@ -50,10 +50,10 @@ var (
 	Auditors []string
 	// Base is a dlog driver related parameter.
 	// It is used to define the maximum quantity a token can contain as Base^Exponent
-	Base int64
+	Base uint
 	// Exponent is a dlog driver related parameter
 	// It is used to define the maximum quantity a token can contain as Base^Exponent
-	Exponent int
+	Exponent uint
 )
 
 // Cmd returns the Cobra Command for Version
@@ -65,8 +65,8 @@ func Cmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
-	flags.Int64VarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
-	flags.IntVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.UintVarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
 
 	return cobraCommand
 }
@@ -117,6 +117,9 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BN254)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
+	}
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, err
