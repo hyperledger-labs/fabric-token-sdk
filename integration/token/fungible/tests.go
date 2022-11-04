@@ -604,11 +604,15 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "charlie", "", "YUAN", 7)
 
 	// Transfer by IDs
-	txID := IssueCash(network, "", "CHF", 17, "alice", auditor, true)
-	TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, true, "test release")
-	// the previous call should not keep the token locked if release is successful
-	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
-	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
+	{
+		txID1 := IssueCash(network, "", "CHF", 17, "alice", auditor, true)
+		TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, true, "test release")
+		// the previous call should not keep the token locked if release is successful
+		txID2 := TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, false)
+		WhoDeletedToken(network, "alice", []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+		// redeem newly created token
+		RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
+	}
 
 	// Test Max Token Value
 	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true)
@@ -620,4 +624,5 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
 	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
+	PruneInvalidUnspentTokens(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
 }

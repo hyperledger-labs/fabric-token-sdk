@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
@@ -58,6 +59,14 @@ func (n *Network) Channel() string {
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
+	if len(namespace) == 0 {
+		tms := token2.GetManagementService(n.sp, token2.WithNetwork(n.n.Name()))
+		if tms == nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s]", n.n.Name())
+		}
+		namespace = tms.Namespace()
+	}
+
 	// check cache
 	n.vaultCacheLock.RLock()
 	v, ok := n.vaultCache[namespace]

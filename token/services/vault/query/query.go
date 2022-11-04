@@ -418,9 +418,11 @@ func (e *Engine) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 			return nil, nil, errors.Wrapf(err, "failed getting token for key [%v]", idKey)
 		}
 		if len(who) == 0 {
+			logger.Debugf("token [%s][%s] was not deleted", id, idKey)
 			deleted = append(deleted, false)
 			toBlame = append(toBlame, "")
 		} else {
+			logger.Debugf("token [%s][%s] was deleted by [%s]", id, idKey, string(who))
 			deleted = append(deleted, true)
 			toBlame = append(toBlame, string(who))
 		}

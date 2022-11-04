@@ -193,3 +193,30 @@ func (p *CheckTTXDBViewFactory) NewView(in []byte) (view.View, error) {
 
 	return f, nil
 }
+
+type PruneInvalidUnspentTokens struct {
+	TMSID token.TMSID
+}
+
+type PruneInvalidUnspentTokensView struct {
+	*PruneInvalidUnspentTokens
+}
+
+func (p *PruneInvalidUnspentTokensView) Call(context view.Context) (interface{}, error) {
+	net := network.GetInstance(context, p.TMSID.Network, p.TMSID.Channel)
+	assert.NotNil(net, "cannot find network [%s:%s]", p.TMSID.Network, p.TMSID.Channel)
+	vault, err := net.Vault(p.TMSID.Namespace)
+	assert.NoError(err, "failed to get vault for [%s:%s:%s]", p.TMSID.Network, p.TMSID.Channel, p.TMSID.Namespace)
+
+	return vault.PruneInvalidUnspentTokens(context)
+}
+
+type PruneInvalidUnspentTokensViewFactory struct{}
+
+func (p *PruneInvalidUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
+	f := &PruneInvalidUnspentTokensView{PruneInvalidUnspentTokens: &PruneInvalidUnspentTokens{}}
+	err := json.Unmarshal(in, f.PruneInvalidUnspentTokens)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}

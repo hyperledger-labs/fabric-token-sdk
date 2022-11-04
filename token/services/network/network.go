@@ -154,7 +154,9 @@ func (s *RWSet) Done() {
 }
 
 type Vault struct {
-	v driver.Vault
+	n  *Network
+	v  driver.Vault
+	ns string
 }
 
 func (v *Vault) GetLastTxID() (string, error) {
@@ -192,6 +194,83 @@ func (v *Vault) Status(id string) (ValidationCode, error) {
 
 func (v *Vault) DiscardTx(id string) error {
 	return v.v.DiscardTx(id)
+}
+
+// PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
+// Those that are not available are deleted.
+// The function returns the list of deleted token ids
+func (v *Vault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
+	it, err := v.UnspentTokensIterator()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
+	}
+
+	var deleted []*token2.ID
+	tms := token.GetManagementService(context, token.WithTMS(v.n.Name(), v.n.Channel(), v.ns))
+	var buffer []*token2.UnspentToken
+	bufferSize := 50
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
+		}
+		if tok == nil {
+			break
+		}
+		buffer = append(buffer, tok)
+		if len(buffer) > bufferSize {
+			newDeleted, err := v.deleteTokens(context, tms, buffer)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+			}
+			deleted = append(deleted, newDeleted...)
+			buffer = nil
+		}
+	}
+	newDeleted, err := v.deleteTokens(context, tms, buffer)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+	}
+	deleted = append(deleted, newDeleted...)
+
+	return deleted, nil
+}
+
+func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+
+	// get spent flags
+	ids := make([]*token2.ID, len(tokens))
+	for i, tok := range tokens {
+		ids[i] = tok.Id
+	}
+	spentIDs, err := tms.WalletManager().SpentIDs(ids)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
+	}
+	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), spentIDs)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
+	}
+
+	// remove the tokens flagged as spent
+	var toDelete []*token2.ID
+	for i, tok := range tokens {
+		if spent[i] {
+			logger.Debugf("token [%s] is spent", tok.Id)
+			toDelete = append(toDelete, tok.Id)
+		} else {
+			logger.Debugf("token [%s] is not spent", tok.Id)
+		}
+	}
+	if err := v.v.TokenVault().DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
+	}
+
+	return toDelete, nil
 }
 
 type LocalMembership struct {
@@ -243,7 +322,7 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Vault{v: v}, nil
+	return &Vault{n: n, v: v, ns: namespace}, nil
 }
 
 // GetRWSet returns the read-write set unmarshalled from the given bytes and bound to the given id

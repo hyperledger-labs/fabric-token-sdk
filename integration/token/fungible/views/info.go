@@ -13,6 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 type GetEnrollmentID struct {
@@ -77,6 +79,45 @@ type CheckPublicParamsMatchViewFactory struct{}
 func (p *CheckPublicParamsMatchViewFactory) NewView(in []byte) (view.View, error) {
 	f := &CheckPublicParamsMatchView{CheckPublicParamsMatch: &CheckPublicParamsMatch{}}
 	err := json.Unmarshal(in, f.CheckPublicParamsMatch)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}
+
+type WhoDeletedTokenResult struct {
+	Who     []string
+	Deleted []bool
+}
+
+type WhoDeletedToken struct {
+	TMSID    token.TMSID
+	TokenIDs []*token2.ID
+}
+
+type WhoDeletedTokenView struct {
+	*WhoDeletedToken
+}
+
+func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
+	net := network.GetInstance(context, w.TMSID.Network, w.TMSID.Channel)
+	assert.NotNil(net, "cannot find network [%s:%s]", w.TMSID.Network, w.TMSID.Channel)
+	vault, err := net.Vault(w.TMSID.Namespace)
+	assert.NoError(err, "failed to get vault for [%s:%s:%s]", w.TMSID.Network, w.TMSID.Channel, w.TMSID.Namespace)
+
+	who, deleted, err := vault.TokenVault().QueryEngine().WhoDeletedTokens(w.TokenIDs...)
+	assert.NoError(err, "failed to lookup who deleted tokens")
+
+	return &WhoDeletedTokenResult{
+		Who:     who,
+		Deleted: deleted,
+	}, nil
+}
+
+type WhoDeletedTokenViewFactory struct{}
+
+func (p *WhoDeletedTokenViewFactory) NewView(in []byte) (view.View, error) {
+	f := &WhoDeletedTokenView{WhoDeletedToken: &WhoDeletedToken{}}
+	err := json.Unmarshal(in, f.WhoDeletedToken)
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil

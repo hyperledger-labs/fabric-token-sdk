@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -160,7 +162,7 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	if err != nil {
 		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
 	}
-	logger.Infof("ledger status of [%s] is [%d]", id, tx.ValidationCode())
+	logger.Debugf("ledger status of [%s] is [%d]", id, tx.ValidationCode())
 	switch peer.TxValidationCode(tx.ValidationCode()) {
 	case peer.TxValidationCode_VALID:
 		return driver.Valid, nil
@@ -198,6 +200,14 @@ func (n *Network) Channel() string {
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
+	if len(namespace) == 0 {
+		tms := token2.GetManagementService(n.sp, token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
+		if tms == nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]", n.n.Name(), n.ch.Name())
+		}
+		namespace = tms.Namespace()
+	}
+
 	// check cache
 	n.vaultCacheLock.RLock()
 	v, ok := n.vaultCache[namespace]
