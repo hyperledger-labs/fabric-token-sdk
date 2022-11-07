@@ -111,7 +111,7 @@ func (r *RequestSpentTokensResponderView) process(context view.Context, request 
 	if tms.PublicParametersManager().GraphHiding() {
 		for i, id := range request.IDs {
 			oID := orionKey(id)
-			v, _, err := qe.Get(oID)
+			v, err := qe.Get(oID)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
 			}
@@ -120,7 +120,7 @@ func (r *RequestSpentTokensResponderView) process(context view.Context, request 
 	} else {
 		for i, id := range request.IDs {
 			oID := orionKey(id)
-			v, _, err := qe.Get(oID)
+			v, err := qe.Get(oID)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
 			}
