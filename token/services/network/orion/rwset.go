@@ -33,8 +33,7 @@ func (r *ReadOnlyRWSWrapper) SetState(namespace string, key string, value []byte
 
 func (r *ReadOnlyRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
 	key = orionKey(key)
-	res, _, err := r.qe.Get(key)
-	return res, err
+	return r.qe.Get(key)
 }
 
 func (r *ReadOnlyRWSWrapper) DeleteState(namespace string, key string) error {
@@ -71,8 +70,7 @@ func (r *TxRWSWrapper) SetState(namespace string, key string, value []byte) erro
 
 func (r *TxRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
 	key = orionKey(key)
-	res, _, err := r.tx.Get(r.db, key)
-	return res, err
+	return r.tx.Get(r.db, key)
 }
 
 func (r *TxRWSWrapper) DeleteState(namespace string, key string) error {

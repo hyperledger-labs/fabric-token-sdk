@@ -140,7 +140,7 @@ func LookupKey(context view.Context, request *LookupKeyRequest) ([]byte, error) 
 			return nil, errors.Errorf("view context done")
 		case <-timeout.C:
 			timeout.Stop()
-			v, _, err := qe.Get(request.Key)
+			v, err := qe.Get(request.Key)
 			if err != nil {
 				logger.Errorf("failed to get key [%s] from [%s:%s]", request.Key, request.Network, request.Namespace)
 			}
