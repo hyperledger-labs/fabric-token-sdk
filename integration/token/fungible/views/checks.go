@@ -220,3 +220,67 @@ func (p *PruneInvalidUnspentTokensViewFactory) NewView(in []byte) (view.View, er
 
 	return f, nil
 }
+
+type ListVaultUnspentTokens struct {
+	TMSID token.TMSID
+}
+
+type ListVaultUnspentTokensView struct {
+	*ListVaultUnspentTokens
+}
+
+func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, error) {
+	net := network.GetInstance(context, l.TMSID.Network, l.TMSID.Channel)
+	assert.NotNil(net, "cannot find network [%s:%s]", l.TMSID.Network, l.TMSID.Channel)
+	vault, err := net.Vault(l.TMSID.Namespace)
+	assert.NoError(err, "failed to get vault for [%s:%s:%s]", l.TMSID.Network, l.TMSID.Channel, l.TMSID.Namespace)
+
+	return vault.ListUnspentTokens()
+}
+
+type ListVaultUnspentTokensViewFactory struct{}
+
+func (l *ListVaultUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
+	f := &ListVaultUnspentTokensView{ListVaultUnspentTokens: &ListVaultUnspentTokens{}}
+	err := json.Unmarshal(in, f.ListVaultUnspentTokens)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}
+
+type CheckIfExistsInVault struct {
+	TMSID token.TMSID
+	IDs   []*token2.ID
+}
+
+type CheckIfExistsInVaultView struct {
+	*CheckIfExistsInVault
+}
+
+func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, error) {
+	net := network.GetInstance(context, c.TMSID.Network, c.TMSID.Channel)
+	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
+	vault, err := net.Vault(c.TMSID.Namespace)
+	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
+	qe := vault.TokenVault().QueryEngine()
+	var IDs []*token2.ID
+	count := 0
+	assert.NoError(qe.GetTokenCommitments(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+		IDs = append(IDs, id)
+		count++
+		return nil
+	}), "failed to match tokens")
+	assert.Equal(len(c.IDs), count, "got a mismatch; count is [%d] while there are [%d] ids", count, len(c.IDs))
+	return IDs, err
+}
+
+type CheckIfExistsInVaultViewFactory struct {
+}
+
+func (c *CheckIfExistsInVaultViewFactory) NewView(in []byte) (view.View, error) {
+	f := &CheckIfExistsInVaultView{CheckIfExistsInVault: &CheckIfExistsInVault{}}
+	err := json.Unmarshal(in, f.CheckIfExistsInVault)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}

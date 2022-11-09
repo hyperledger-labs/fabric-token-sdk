@@ -626,4 +626,11 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
 	PruneInvalidUnspentTokens(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+
+	aIDs := ListVaultUnspentTokens(network, "alice")
+	CheckIfExistsInVault(network, "auditor", aIDs)
+	bIDs := ListVaultUnspentTokens(network, "bob")
+	CheckIfExistsInVault(network, "auditor", bIDs)
+	cIDs := ListVaultUnspentTokens(network, "charlie")
+	CheckIfExistsInVault(network, "auditor", cIDs)
 }

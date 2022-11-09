@@ -97,6 +97,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 		auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
+		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -125,6 +127,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{})
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
+	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -155,6 +158,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterViewFactory("SetTransactionOwnerStatus", &views.SetTransactionOwnerStatusViewFactory{})
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
+	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -180,6 +184,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	charlie.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	charlie.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	charlie.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
+	charlie.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),

@@ -456,6 +456,26 @@ func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...strin
 	}
 }
 
+func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*token2.ID {
+	res, err := network.Client(id).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{}))
+	Expect(err).NotTo(HaveOccurred())
+
+	unspentTokens := &token2.UnspentTokens{}
+	common.JSONUnmarshal(res.([]byte), unspentTokens)
+	count := unspentTokens.Count()
+	var IDs []*token2.ID
+	for i := 0; i < count; i++ {
+		tok := unspentTokens.At(i)
+		IDs = append(IDs, tok.Id)
+	}
+	return IDs
+}
+
+func CheckIfExistsInVault(network *integration.Infrastructure, id string, tokenIDs []*token2.ID) {
+	_, err := network.Client(id).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{IDs: tokenIDs}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []*token2.ID, txIDs ...string) *views.WhoDeletedTokenResult {
 	boxed, err := network.Client(id).CallView("WhoDeletedToken", common.JSONMarshall(&views.WhoDeletedToken{
 		TokenIDs: tokenIDs,
