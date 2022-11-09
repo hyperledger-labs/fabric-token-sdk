@@ -153,3 +153,7 @@ type Deserializer interface {
 	// GetOwnerMatcher returns an identity matcher for the passed identity audit data.
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
 }
+
+type Serializer interface {
+	MarshalToSign(request *TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
+}

@@ -661,11 +661,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	req := &driver.TokenRequest{
-		Issues:    r.Actions.Issues,
-		Transfers: r.Actions.Transfers,
-	}
-	return req.Bytes()
+	return r.TokenService.tms.MarshalToSign(r.Actions, r.Metadata)
 }
 
 // RequestToBytes marshals the request's actions to bytes.
