@@ -119,7 +119,7 @@ func (r *RequestQueryTokensResponderView) process(context view.Context, request 
 			// return nil, errors.Errorf("error creating output ID: %s", err)
 		}
 		logger.Debugf("query state [%s:%s]", id, outputID)
-		bytes, _, err := qe.Get(orionKey(outputID))
+		bytes, err := qe.Get(orionKey(outputID))
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
 			// return nil, errors.Wrapf(err, "failed getting output for [%s]", outputID)
