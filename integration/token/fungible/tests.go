@@ -209,7 +209,7 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 func TestAll(network *integration.Infrastructure, auditor string) {
 	RegisterAuditor(network, auditor)
 
-	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()
 	// Rest of the test
@@ -226,6 +226,18 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	t2 := time.Now()
 	IssueCash(network, "", "USD", 10, "alice", auditor, false)
 	t3 := time.Now()
+	CheckBalanceAndHolding(network, "alice", "", "USD", 120)
+	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120)
+	CheckAuditedTransactions(network, AuditedTransactions[:2], nil, nil)
+	CheckAuditedTransactions(network, AuditedTransactions[:2], &t0, &t3)
+	CheckAuditedTransactions(network, AuditedTransactions[1:2], &t2, &t3)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], nil, nil, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
+
+	Restart(network, true, auditor)
+	RegisterAuditor(network, auditor)
+
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120)
 	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120)
 	CheckAuditedTransactions(network, AuditedTransactions[:2], nil, nil)
@@ -355,7 +367,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
 
 	// Restart the auditor
-	Restart(network, false, auditor)
+	Restart(network, true, auditor)
 	RegisterAuditor(network, auditor)
 
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
@@ -393,14 +405,14 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckOwnerDB(network, nil, "bob")
 	BroadcastPreparedTransferCash(network, "alice", tx1, true)
 	Expect(network.Client("bob").IsTxFinal(txID1)).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(txID1)).NotTo(HaveOccurred())
+	Expect(network.Client(auditor).IsTxFinal(txID1)).NotTo(HaveOccurred())
 	CheckBalance(network, "alice", "", "PINE", 0)
 	CheckHolding(network, "alice", "", "PINE", -55)
 	CheckBalance(network, "bob", "", "PINE", 55)
 	CheckHolding(network, "bob", "", "PINE", 110)
 	BroadcastPreparedTransferCash(network, "alice", tx2, true, "is not valid")
 	Expect(network.Client("bob").IsTxFinal(txID2)).To(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(txID2)).To(HaveOccurred())
+	Expect(network.Client(auditor).IsTxFinal(txID2)).To(HaveOccurred())
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
 	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
@@ -622,15 +634,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	IssueCash(network, "", "MAX", 10000, "charlie", auditor, true, "q is larger than max token value [9999]")
 
 	// Check consistency
-	CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
 	CheckAuditorDB(network, auditor, "")
-	PruneInvalidUnspentTokens(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
-	aIDs := ListVaultUnspentTokens(network, "alice")
-	CheckIfExistsInVault(network, "auditor", aIDs)
-	bIDs := ListVaultUnspentTokens(network, "bob")
-	CheckIfExistsInVault(network, "auditor", bIDs)
-	cIDs := ListVaultUnspentTokens(network, "charlie")
-	CheckIfExistsInVault(network, "auditor", cIDs)
+	for _, name := range []string{"alice", "bob", "charlie", "manager"} {
+		aIDs := ListVaultUnspentTokens(network, name)
+		CheckIfExistsInVault(network, auditor, aIDs)
+	}
 }

@@ -118,6 +118,10 @@ clean:
 	rm -rf ./samples/fungible/cmd
 	rm -rf ./samples/nft/cmd
 
+.PHONY: clean-fabric-peer-images
+clean-fabric-peer-images:
+	docker images -a | grep "_peer_" | awk '{print $3}' | xargs docker rmi
+
 .PHONY: tokengen
 tokengen:
 	@go install ./cmd/tokengen

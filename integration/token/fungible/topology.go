@@ -79,6 +79,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		issuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		issuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
 		issuer.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
+		issuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+		issuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		auditor = issuer
 	} else {
 		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
@@ -211,6 +213,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	manager.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	manager.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	manager.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
+	manager.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
