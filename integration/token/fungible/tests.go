@@ -640,7 +640,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	for _, name := range []string{"alice", "bob", "charlie", "manager"} {
-		aIDs := ListVaultUnspentTokens(network, name)
-		CheckIfExistsInVault(network, auditor, aIDs)
+		IDs := ListVaultUnspentTokens(network, name)
+		CheckIfExistsInVault(network, auditor, IDs)
 	}
 }
