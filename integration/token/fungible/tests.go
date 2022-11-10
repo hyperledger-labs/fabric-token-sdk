@@ -225,7 +225,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	// Register an issuer wallet and issue with that wallet
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	RegisterIssuerWallet(network, "issuer", "newIssuerWallet",
-		tokenPlatform.GenIssuerCryptoMaterial("default", "issuer", "issuer.ExtraId"))
+		tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId"))
 
 	t2 := time.Now()
 	IssueCash(network, "", "USD", 10, "alice", auditor, false)
