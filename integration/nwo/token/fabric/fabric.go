@@ -265,7 +265,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if opts.Certifier() {
 		ids := cmGenerator.GenerateCertifierIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
-			wallet.Auditors = append(wallet.Auditors, ids...)
+			wallet.Certifiers = append(wallet.Certifiers, ids...)
 			wallet.Certifiers[len(wallet.Certifiers)-1].Default = true
 		}
 	}
