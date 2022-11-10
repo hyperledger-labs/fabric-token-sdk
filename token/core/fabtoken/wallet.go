@@ -23,6 +23,10 @@ func (s *Service) RegisterOwnerWallet(id string, path string) error {
 	return s.IP.RegisterOwnerWallet(id, path)
 }
 
+func (s *Service) RegisterIssuerWallet(id string, path string) error {
+	return s.IP.RegisterIssuerWallet(id, path)
+}
+
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 	// recognize identity and register it

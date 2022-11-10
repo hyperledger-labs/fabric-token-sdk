@@ -24,6 +24,10 @@ func (s *Service) RegisterOwnerWallet(id string, path string) error {
 	return s.identityProvider.RegisterOwnerWallet(id, path)
 }
 
+func (s *Service) RegisterIssuerWallet(id string, path string) error {
+	return s.identityProvider.RegisterIssuerWallet(id, path)
+}
+
 func (s *Service) GetAuditInfo(id view.Identity) ([]byte, error) {
 	return s.identityProvider.GetAuditInfo(id)
 }

@@ -40,9 +40,14 @@ func (wm *WalletManager) IsMe(id view.Identity) bool {
 	return err == nil && s != nil
 }
 
-// RegisterOwnerWallet registers a new owner wallet with type passed id
+// RegisterOwnerWallet registers a new owner wallet with the passed id
 func (wm *WalletManager) RegisterOwnerWallet(id string, path string) error {
 	return wm.managementService.tms.RegisterOwnerWallet(id, path)
+}
+
+// RegisterIssuerWallet registers a new issuer wallet with the passed id
+func (wm *WalletManager) RegisterIssuerWallet(id string, path string) error {
+	return wm.managementService.tms.RegisterIssuerWallet(id, path)
 }
 
 // RegisterRecipientIdentity registers a new recipient identity
