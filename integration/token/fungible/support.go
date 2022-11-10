@@ -485,3 +485,11 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 		time.Sleep(30 * time.Second)
 	}
 }
+
+func RegisterIssuerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
+	_, err := network.Client(id).CallView("RegisterIssuerWallet", common.JSONMarshall(&views.RegisterIssuerWallet{
+		ID:   walletID,
+		Path: walletPath,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}

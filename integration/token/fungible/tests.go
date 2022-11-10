@@ -14,6 +14,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -221,6 +222,11 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil, nil)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
+	// Register an issuer wallet and issue with that wallet
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	RegisterIssuerWallet(network, "issuer", "newIssuerWallet",
+		tokenPlatform.GenIssuerCryptoMaterial("default", "issuer", "issuer.ExtraId"))
+
 	t2 := time.Now()
 	IssueCash(network, "", "USD", 10, "alice", auditor, false)
 	t3 := time.Now()
@@ -242,13 +248,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
 	t4 := time.Now()
-	IssueCash(network, "", "EUR", 10, "bob", auditor, false)
+	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, false)
 	//t5 := time.Now()
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 10)
-	IssueCash(network, "", "EUR", 10, "bob", auditor, true)
+	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, true)
 	//t6 := time.Now()
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
-	IssueCash(network, "", "EUR", 10, "bob", auditor, false)
+	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, false)
 	t7 := time.Now()
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
 	CheckAuditedTransactions(network, AuditedTransactions[:5], nil, nil)
@@ -262,7 +268,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "newIssuerWallet", "EUR")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
@@ -328,7 +334,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	// Check self endpoints
 	IssueCash(network, "", "USD", 110, "issuer", auditor, true)
-	IssueCash(network, "", "EUR", 150, "issuer", auditor, true)
+	IssueCash(network, "newIssuerWallet", "EUR", 150, "issuer", auditor, true)
 	IssueCash(network, "issuer.id1", "EUR", 10, "issuer.owner", auditor, true)
 
 	h = ListIssuerHistory(network, "", "USD")
@@ -336,7 +342,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "newIssuerWallet", "EUR")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))

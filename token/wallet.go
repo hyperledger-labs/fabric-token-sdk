@@ -8,8 +8,8 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -160,14 +160,14 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 }
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs
-func (wm *WalletManager) SpentIDs(ids []*token2.ID) ([]string, error) {
+func (wm *WalletManager) SpentIDs(ids []*token.ID) ([]string, error) {
 	return wm.managementService.tms.SpentIDs(ids...)
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
 // These identities own tokens.
 type Wallet struct {
-	w                 api2.Wallet
+	w                 driver.Wallet
 	managementService *ManagementService
 }
 
@@ -187,14 +187,14 @@ func (w *Wallet) Contains(identity view.Identity) bool {
 }
 
 // ContainsToken returns true if the wallet contains an identity that owns the passed token.
-func (w *Wallet) ContainsToken(token *token2.UnspentToken) bool {
+func (w *Wallet) ContainsToken(token *token.UnspentToken) bool {
 	return w.w.ContainsToken(token)
 }
 
 // AuditorWallet models the wallet of an auditor
 type AuditorWallet struct {
 	*Wallet
-	w api2.AuditorWallet
+	w driver.AuditorWallet
 }
 
 // GetAuditorIdentity returns the auditor identity. This can be a long term identity or a pseudonym depending
@@ -204,14 +204,14 @@ func (a *AuditorWallet) GetAuditorIdentity() (view.Identity, error) {
 }
 
 // GetSigner returns the signer bound to the passed auditor identity.
-func (a *AuditorWallet) GetSigner(id view.Identity) (api2.Signer, error) {
+func (a *AuditorWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 	return a.w.GetSigner(id)
 }
 
 // CertifierWallet models the wallet of a certifier
 type CertifierWallet struct {
 	*Wallet
-	w api2.CertifierWallet
+	w driver.CertifierWallet
 }
 
 // GetCertifierIdentity returns the certifier identity. This can be a long term identity or a pseudonym depending
@@ -221,14 +221,14 @@ func (a *CertifierWallet) GetCertifierIdentity() (view.Identity, error) {
 }
 
 // GetSigner returns the signer bound to the passed certifier identity.
-func (a *CertifierWallet) GetSigner(id view.Identity) (api2.Signer, error) {
+func (a *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 	return a.w.GetSigner(id)
 }
 
 // OwnerWallet models the wallet of an owner
 type OwnerWallet struct {
 	*Wallet
-	w api2.OwnerWallet
+	w driver.OwnerWallet
 }
 
 // GetRecipientIdentity returns the owner identity. This can be a long term identity or a pseudonym depending
@@ -243,7 +243,7 @@ func (o *OwnerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
 }
 
 // GetSigner returns the signer bound to the passed owner identity.
-func (o *OwnerWallet) GetSigner(identity view.Identity) (api2.Signer, error) {
+func (o *OwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return o.w.GetSigner(identity)
 }
 
@@ -254,7 +254,7 @@ func (o *OwnerWallet) GetTokenMetadata(token []byte) ([]byte, error) {
 
 // ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
-func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token2.UnspentTokens, error) {
+func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.UnspentTokens, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
@@ -283,7 +283,7 @@ func (o *OwnerWallet) EnrollmentID() string {
 // IssuerWallet models the wallet of an issuer
 type IssuerWallet struct {
 	*Wallet
-	w api2.IssuerWallet
+	w driver.IssuerWallet
 }
 
 // GetIssuerIdentity returns the issuer identity. This can be a long term identity or a pseudonym depending
@@ -299,7 +299,7 @@ func (i *IssuerWallet) GetSigner(identity view.Identity) (Signer, error) {
 
 // ListIssuedTokens returns the list of tokens issued by identities in this wallet and filter by the passed options.
 // Options: WithType
-func (i *IssuerWallet) ListIssuedTokens(opts ...ListTokensOption) (*token2.IssuedTokens, error) {
+func (i *IssuerWallet) ListIssuedTokens(opts ...ListTokensOption) (*token.IssuedTokens, error) {
 	compiledOpts, err := CompileListTokensOption(opts...)
 	if err != nil {
 		return nil, err
@@ -307,14 +307,14 @@ func (i *IssuerWallet) ListIssuedTokens(opts ...ListTokensOption) (*token2.Issue
 	return i.w.HistoryTokens(compiledOpts)
 }
 
-func CompileListTokensOption(opts ...ListTokensOption) (*api2.ListTokensOptions, error) {
+func CompileListTokensOption(opts ...ListTokensOption) (*driver.ListTokensOptions, error) {
 	txOptions := &ListTokensOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
 			return nil, err
 		}
 	}
-	return &api2.ListTokensOptions{
+	return &driver.ListTokensOptions{
 		TokenType: txOptions.TokenType,
 	}, nil
 }
