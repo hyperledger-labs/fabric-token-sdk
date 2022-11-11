@@ -154,6 +154,8 @@ type Deserializer interface {
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
 }
 
+// Serializer models the serialization needs of the Token Service
 type Serializer interface {
-	MarshalToSign(request *TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
+	// MarshalTokenRequestToSign marshals the to token request to a byte array representation on which a signature must be produced
+	MarshalTokenRequestToSign(request *TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
 }

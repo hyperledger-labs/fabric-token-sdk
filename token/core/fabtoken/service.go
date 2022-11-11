@@ -112,7 +112,7 @@ func (s *Service) ConfigManager() config.Manager {
 	return s.CM
 }
 
-func (s *Service) MarshalToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
 	newReq := &driver.TokenRequest{
 		Issues:    request.Issues,
 		Transfers: request.Transfers,

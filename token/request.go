@@ -661,7 +661,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	return r.TokenService.tms.MarshalToSign(r.Actions, r.Metadata)
+	return r.TokenService.tms.MarshalTokenRequestToSign(r.Actions, r.Metadata)
 }
 
 // RequestToBytes marshals the request's actions to bytes.
