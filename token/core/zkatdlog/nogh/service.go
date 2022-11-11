@@ -170,3 +170,11 @@ func (s *Service) Deserializer() (driver.Deserializer, error) {
 	}
 	return d, nil
 }
+
+func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	newReq := &driver.TokenRequest{
+		Issues:    request.Issues,
+		Transfers: request.Transfers,
+	}
+	return newReq.Bytes()
+}

@@ -17,6 +17,7 @@ type TokenManagerService interface {
 	WalletService
 	CertificationService
 	Deserializer
+	Serializer
 
 	IdentityProvider() IdentityProvider
 	Validator() Validator

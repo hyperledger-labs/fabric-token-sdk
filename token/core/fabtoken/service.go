@@ -111,3 +111,11 @@ func (s *Service) PublicParamsManager() driver.PublicParamsManager {
 func (s *Service) ConfigManager() config.Manager {
 	return s.CM
 }
+
+func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	newReq := &driver.TokenRequest{
+		Issues:    request.Issues,
+		Transfers: request.Transfers,
+	}
+	return newReq.Bytes()
+}
