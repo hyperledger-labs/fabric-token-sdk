@@ -12,9 +12,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -222,11 +223,6 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil, nil)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
-	// Register an issuer wallet and issue with that wallet
-	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	RegisterIssuerWallet(network, "issuer", "newIssuerWallet",
-		tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId"))
-
 	t2 := time.Now()
 	IssueCash(network, "", "USD", 10, "alice", auditor, false)
 	t3 := time.Now()
@@ -247,6 +243,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
+	// Register a new issuer wallet and issue with that wallet
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	// Gen crypto material for the new issuer wallet
+	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
+	// Register it
+	RegisterIssuerWallet(network, "issuer", "newIssuerWallet", newIssuerWalletPath)
+	// Issuer tokens with this new wallet
 	t4 := time.Now()
 	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, false)
 	//t5 := time.Now()
