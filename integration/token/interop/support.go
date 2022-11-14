@@ -20,7 +20,6 @@ import (
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
@@ -85,11 +84,15 @@ func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ s
 }
 
 func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
-	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ, opts...)
+	res, err := network.Client(id).CallView("balance", common.JSONMarshall(&views2.Balance{
+		Wallet: wallet,
+		Type:   typ,
+	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(len(b)).To(BeEquivalentTo(1))
-	Expect(b[0].Type).To(BeEquivalentTo(typ))
-	q, err := token2.ToQuantity(b[0].Quantity, 64)
+	b := &views2.BalanceResult{}
+	common.JSONUnmarshal(res.([]byte), b)
+	Expect(b.Type).To(BeEquivalentTo(typ))
+	q, err := token2.ToQuantity(b.Quantity, 64)
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
