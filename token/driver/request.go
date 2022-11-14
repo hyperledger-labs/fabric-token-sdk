@@ -100,7 +100,7 @@ type TokenRequestMetadata struct {
 	Issues []IssueMetadata
 	// Transfers is the list of transfer actions metadata
 	Transfers []TransferMetadata
-	// Application allows to attach more info to the TokenRequestMetadata
+	// Application enables attaching more info to the TokenRequestMetadata
 	Application map[string][]byte
 }
 
