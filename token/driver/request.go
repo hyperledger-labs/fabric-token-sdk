@@ -94,12 +94,16 @@ func (tm *TransferMetadata) TokenIDAt(index int) *token2.ID {
 	return tm.TokenIDs[index]
 }
 
+// TokenRequestMetadata is the collection of actions metadata
 type TokenRequestMetadata struct {
-	Issues      []IssueMetadata
+	// Issues is the list of issue actions metadata
+	Issues []IssueMetadata
+	// Transfers is the list of transfer actions metadata
 	Transfers   []TransferMetadata
 	Application map[string][]byte
 }
 
+// GetTokenInfo returns the TokenInfo that matches the given token
 func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 	for _, issue := range m.Issues {
 		for i, output := range issue.Outputs {
@@ -116,57 +120,6 @@ func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 		}
 	}
 	return nil
-}
-
-func (m *TokenRequestMetadata) Recipients() ([][]byte, error) {
-	var res [][]byte
-	for j, issue := range m.Issues {
-		for i, r := range issue.Receivers {
-			if r.IsNone() {
-				return nil, errors.Errorf("cannot serialize [%dth] receiver in issue at index [%d]: nil recipient", i, j)
-			}
-			res = append(res, r.Bytes())
-		}
-	}
-	for _, transfer := range m.Transfers {
-		for _, r := range transfer.Receivers {
-			if r.IsNone() {
-				// this is potentially the receiver of a redeemed output
-				res = append(res, []byte{})
-			}
-			res = append(res, r.Bytes())
-		}
-	}
-	return res, nil
-}
-
-func (m *TokenRequestMetadata) Senders() ([][]byte, error) {
-	var res [][]byte
-	for j, transfer := range m.Transfers {
-		for i, s := range transfer.Senders {
-			if s.IsNone() {
-				return nil, errors.Errorf("cannot serialize [%dth] sender in transfer at index [%d]: nil sender", i, j)
-			}
-			res = append(res, s.Bytes())
-		}
-	}
-	return res, nil
-}
-
-func (m *TokenRequestMetadata) Issuers() [][]byte {
-	var res [][]byte
-	for _, issue := range m.Issues {
-		res = append(res, issue.Issuer)
-	}
-	return res
-}
-
-func (m *TokenRequestMetadata) Inputs() []*token2.ID {
-	var res []*token2.ID
-	for _, transfer := range m.Transfers {
-		res = append(res, transfer.TokenIDs...)
-	}
-	return res
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
