@@ -11,7 +11,7 @@ import (
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -63,7 +63,7 @@ type IssueMetadata struct {
 // - A Flag to indicate if the receiver is a sender in this very same action
 type TransferMetadata struct {
 	// TokenIDs is the list of TokenIDs spent by this action
-	TokenIDs []*token2.ID
+	TokenIDs []*token.ID
 	// Senders is the list of senders
 	Senders []view.Identity
 	// SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
@@ -87,19 +87,24 @@ type TransferMetadata struct {
 
 // TokenIDAt returns the TokenID at the given index.
 // It returns nil if the index is out of bounds.
-func (tm *TransferMetadata) TokenIDAt(index int) *token2.ID {
+func (tm *TransferMetadata) TokenIDAt(index int) *token.ID {
 	if index < 0 || index >= len(tm.TokenIDs) {
 		return nil
 	}
 	return tm.TokenIDs[index]
 }
 
+// TokenRequestMetadata is a collection of actions metadata
 type TokenRequestMetadata struct {
-	Issues      []IssueMetadata
-	Transfers   []TransferMetadata
+	// Issues is the list of issue actions metadata
+	Issues []IssueMetadata
+	// Transfers is the list of transfer actions metadata
+	Transfers []TransferMetadata
+	// Application enables attaching more info to the TokenRequestMetadata
 	Application map[string][]byte
 }
 
+// GetTokenInfo returns the TokenInfo that matches the given token
 func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 	for _, issue := range m.Issues {
 		for i, output := range issue.Outputs {
@@ -116,57 +121,6 @@ func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 		}
 	}
 	return nil
-}
-
-func (m *TokenRequestMetadata) Recipients() ([][]byte, error) {
-	var res [][]byte
-	for j, issue := range m.Issues {
-		for i, r := range issue.Receivers {
-			if r.IsNone() {
-				return nil, errors.Errorf("cannot serialize [%dth] receiver in issue at index [%d]: nil recipient", i, j)
-			}
-			res = append(res, r.Bytes())
-		}
-	}
-	for _, transfer := range m.Transfers {
-		for _, r := range transfer.Receivers {
-			if r.IsNone() {
-				// this is potentially the receiver of a redeemed output
-				res = append(res, []byte{})
-			}
-			res = append(res, r.Bytes())
-		}
-	}
-	return res, nil
-}
-
-func (m *TokenRequestMetadata) Senders() ([][]byte, error) {
-	var res [][]byte
-	for j, transfer := range m.Transfers {
-		for i, s := range transfer.Senders {
-			if s.IsNone() {
-				return nil, errors.Errorf("cannot serialize [%dth] sender in transfer at index [%d]: nil sender", i, j)
-			}
-			res = append(res, s.Bytes())
-		}
-	}
-	return res, nil
-}
-
-func (m *TokenRequestMetadata) Issuers() [][]byte {
-	var res [][]byte
-	for _, issue := range m.Issues {
-		res = append(res, issue.Issuer)
-	}
-	return res
-}
-
-func (m *TokenRequestMetadata) Inputs() []*token2.ID {
-	var res []*token2.ID
-	for _, transfer := range m.Transfers {
-		res = append(res, transfer.TokenIDs...)
-	}
-	return res
 }
 
 func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
@@ -212,9 +166,9 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	m.Issues = ser.Issues
 	m.Transfers = make([]TransferMetadata, len(ser.Transfers))
 	for i, transfer := range ser.Transfers {
-		TokenIDs := make([]*token2.ID, len(transfer.TokenIDs))
+		TokenIDs := make([]*token.ID, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {
-			TokenIDs[j] = &token2.ID{
+			TokenIDs[j] = &token.ID{
 				TxId:  tokenID.TxId,
 				Index: uint64(tokenID.Index),
 			}
