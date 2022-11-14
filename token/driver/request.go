@@ -94,7 +94,7 @@ func (tm *TransferMetadata) TokenIDAt(index int) *token.ID {
 	return tm.TokenIDs[index]
 }
 
-// TokenRequestMetadata is the collection of actions metadata
+// TokenRequestMetadata is a collection of actions metadata
 type TokenRequestMetadata struct {
 	// Issues is the list of issue actions metadata
 	Issues []IssueMetadata
