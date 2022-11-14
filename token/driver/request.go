@@ -11,7 +11,7 @@ import (
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -63,7 +63,7 @@ type IssueMetadata struct {
 // - A Flag to indicate if the receiver is a sender in this very same action
 type TransferMetadata struct {
 	// TokenIDs is the list of TokenIDs spent by this action
-	TokenIDs []*token2.ID
+	TokenIDs []*token.ID
 	// Senders is the list of senders
 	Senders []view.Identity
 	// SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
@@ -87,7 +87,7 @@ type TransferMetadata struct {
 
 // TokenIDAt returns the TokenID at the given index.
 // It returns nil if the index is out of bounds.
-func (tm *TransferMetadata) TokenIDAt(index int) *token2.ID {
+func (tm *TransferMetadata) TokenIDAt(index int) *token.ID {
 	if index < 0 || index >= len(tm.TokenIDs) {
 		return nil
 	}
@@ -166,9 +166,9 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 	m.Issues = ser.Issues
 	m.Transfers = make([]TransferMetadata, len(ser.Transfers))
 	for i, transfer := range ser.Transfers {
-		TokenIDs := make([]*token2.ID, len(transfer.TokenIDs))
+		TokenIDs := make([]*token.ID, len(transfer.TokenIDs))
 		for j, tokenID := range transfer.TokenIDs {
-			TokenIDs[j] = &token2.ID{
+			TokenIDs[j] = &token.ID{
 				TxId:  tokenID.TxId,
 				Index: uint64(tokenID.Index),
 			}
