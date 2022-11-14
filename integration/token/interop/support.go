@@ -84,9 +84,16 @@ func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ s
 }
 
 func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, opts ...token.ServiceOption) {
+	options, err := token.CompileServiceOptions(opts...)
+	Expect(err).NotTo(HaveOccurred())
 	res, err := network.Client(id).CallView("balance", common.JSONMarshall(&views2.Balance{
 		Wallet: wallet,
 		Type:   typ,
+		TMSID: token.TMSID{
+			Network:   options.Network,
+			Channel:   options.Channel,
+			Namespace: options.Namespace,
+		},
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	b := &views2.BalanceResult{}
