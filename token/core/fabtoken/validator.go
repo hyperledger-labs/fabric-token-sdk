@@ -72,9 +72,9 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
 	}
 	// get issue and transfer actions from the token request
-	ia, ta, err := UnmarshalIssueTransferActions(tr, binding)
+	ia, ta, err := UnmarshalIssueTransferActions(tr)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to unmarshal actions [%s]", binding)
 	}
 	// verify issue actions
 	err = v.VerifyIssues(ia, signatureProvider)
@@ -142,6 +142,29 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 
 	backend := common.NewBackend(getState, signed, signatures)
 	return v.VerifyTokenRequest(backend, backend, binding, tr)
+}
+
+// UnmarshalActions returns the actions contained in the serialized token request
+func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
+	tr := &driver.TokenRequest{}
+	err := tr.FromBytes(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal token request")
+	}
+
+	ia, ta, err := UnmarshalIssueTransferActions(tr)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal actions")
+	}
+
+	var res []interface{}
+	for _, action := range ia {
+		res = append(res, action)
+	}
+	for _, action := range ta {
+		res = append(res, action)
+	}
+	return res, nil
 }
 
 // VerifyAuditorSignature checks if the content of the token request concatenated with the binding
