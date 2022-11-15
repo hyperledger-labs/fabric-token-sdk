@@ -20,6 +20,11 @@ type Validator struct {
 	backend driver.Validator
 }
 
+// UnmarshalActions returns the actions contained in the serialized token request
+func (c *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
+	return c.backend.UnmarshalActions(raw)
+}
+
 // UnmarshallAndVerify unmarshalls the token request and verifies it against the passed ledger and anchor
 func (c *Validator) UnmarshallAndVerify(ledger Ledger, anchor string, raw []byte) ([]interface{}, error) {
 	actions, err := c.backend.VerifyTokenRequestFromRaw(func(key string) ([]byte, error) {
