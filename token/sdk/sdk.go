@@ -30,7 +30,6 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
@@ -98,9 +97,6 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(p.auditorManager))
 	p.ownerManager = owner.NewManager(p.registry, kvs.GetService(p.registry))
 	assert.NoError(p.registry.RegisterService(p.ownerManager))
-
-	logger.Infof("Install View Handlers")
-	query.InstallQueryViewFactories(p.registry)
 
 	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))
 	assert.NoError(err, "failed to get custodian status")

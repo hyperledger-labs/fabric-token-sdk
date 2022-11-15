@@ -73,6 +73,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	seller.RegisterResponder(&house.AcceptHouseView{}, &house.IssueHouseView{})
 	seller.RegisterViewFactory("sell", &views2.SellHouseViewFactory{})
 	seller.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
+	seller.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	buyer := fscTopology.AddNodeByName("buyer").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -82,6 +83,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	buyer.RegisterResponder(&cash.AcceptCashView{}, &cash.IssueCashView{})
 	buyer.RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{})
 	buyer.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
+	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetDefaultSDK(fscTopology)

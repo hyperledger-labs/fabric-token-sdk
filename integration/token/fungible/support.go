@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -124,12 +123,15 @@ func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wall
 }
 
 func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
-	// check balance
-	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ)
+	res, err := network.Client(id).CallView("balance", common.JSONMarshall(&views.BalanceQuery{
+		Wallet: wallet,
+		Type:   typ,
+	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(len(b)).To(BeEquivalentTo(1))
-	Expect(b[0].Type).To(BeEquivalentTo(typ))
-	q, err := token2.ToQuantity(b[0].Quantity, 64)
+	b := &views.Balance{}
+	common.JSONUnmarshal(res.([]byte), b)
+	Expect(b.Type).To(BeEquivalentTo(typ))
+	q, err := token2.ToQuantity(b.Quantity, 64)
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
