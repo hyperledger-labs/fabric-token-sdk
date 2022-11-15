@@ -40,6 +40,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
+	//fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -62,6 +63,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
+	issuer.RegisterViewFactory("RegisterIssuerWallet", &views.RegisterIssuerWalletViewFactory{})
 
 	var auditor *node.Node
 	if auditorAsIssuer {

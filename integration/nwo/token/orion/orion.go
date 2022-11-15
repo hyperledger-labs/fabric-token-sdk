@@ -169,6 +169,21 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction")
 }
 
+func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
+	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
+	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+
+	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
+	for _, node := range fscTopology.Nodes {
+		if node.ID() == nodeID {
+			ids := cmGenerator.GenerateIssuerIdentities(tms, node, walletID)
+			return ids[0].Path
+		}
+	}
+	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	return ""
+}
+
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
 	p.CryptoMaterialGenerators[driver] = generator
 }
@@ -191,8 +206,8 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if len(issuers) != 0 {
 		var index int
 		found := false
-		for i, owner := range issuers {
-			if owner == node.ID() || owner == "_default_" {
+		for i, issuer := range issuers {
+			if issuer == node.ID() || issuer == "_default_" {
 				index = i
 				found = true
 				issuers[i] = node.ID()

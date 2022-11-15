@@ -8,11 +8,9 @@ package fabric
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"text/template"
 	"time"
 
@@ -173,6 +171,21 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	}
 }
 
+func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
+	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
+	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+
+	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
+	for _, node := range fscTopology.Nodes {
+		if node.ID() == nodeID {
+			ids := cmGenerator.GenerateIssuerIdentities(tms, node, walletID)
+			return ids[0].Path
+		}
+	}
+	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	return ""
+}
+
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
 	p.CryptoMaterialGenerators[driver] = generator
 }
@@ -195,8 +208,8 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if len(issuers) != 0 {
 		var index int
 		found := false
-		for i, owner := range issuers {
-			if owner == node.ID() || owner == "_default_" {
+		for i, issuer := range issuers {
+			if issuer == node.ID() || issuer == "_default_" {
 				index = i
 				found = true
 				issuers[i] = node.ID()
@@ -210,9 +223,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 
 		ids := cmGenerator.GenerateIssuerIdentities(tms, node, issuers...)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Issuers = append(wallet.Issuers, generators.Identity(id))
-			}
+			wallet.Issuers = append(wallet.Issuers, ids...)
 			wallet.Issuers[index].Default = true
 		}
 	}
@@ -236,9 +247,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 		}
 		ids := cmGenerator.GenerateOwnerIdentities(tms, node, owners...)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Owners = append(wallet.Owners, generators.Identity(id))
-			}
+			wallet.Owners = append(wallet.Owners, ids...)
 			wallet.Owners[index].Default = true
 		}
 	}
@@ -247,9 +256,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if opts.Auditor() {
 		ids := cmGenerator.GenerateAuditorIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Auditors = append(wallet.Auditors, generators.Identity(id))
-			}
+			wallet.Auditors = append(wallet.Auditors, ids...)
 			wallet.Auditors[len(wallet.Auditors)-1].Default = true
 		}
 	}
@@ -258,9 +265,7 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if opts.Certifier() {
 		ids := cmGenerator.GenerateCertifierIdentities(tms, node, node.Name)
 		if len(ids) > 0 {
-			for _, id := range ids {
-				wallet.Certifiers = append(wallet.Certifiers, generators.Identity(id))
-			}
+			wallet.Certifiers = append(wallet.Certifiers, ids...)
 			wallet.Certifiers[len(wallet.Certifiers)-1].Default = true
 		}
 	}
@@ -268,18 +273,6 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 
 func (p *NetworkHandler) Fabric(tms *topology2.TMS) fabricPlatform {
 	return p.TokenPlatform.GetContext().PlatformByName(tms.Network).(fabricPlatform)
-}
-
-func (p *NetworkHandler) FSCCertifierCryptoMaterialDir(tms *topology2.TMS, peer *sfcnode.Node) string {
-	return filepath.Join(
-		p.TokenPlatform.GetContext().RootDir(),
-		"crypto",
-		"fsc",
-		peer.ID(),
-		"wallets",
-		"certifier",
-		fmt.Sprintf("%s_%s_%s_%s", tms.Network, tms.Channel, tms.Namespace, tms.Driver),
-	)
 }
 
 func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {

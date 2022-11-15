@@ -20,6 +20,7 @@ import (
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/context"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -38,6 +39,7 @@ type NetworkHandler interface {
 	GenerateArtifacts(tms *topology2.TMS)
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
 	PostRun(load bool, tms *topology2.TMS)
+	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
 }
 
 type Platform struct {
@@ -67,6 +69,20 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 	p.PublicParamsGenerators["dlog"] = common2.NewDLogPublicParamsGenerator(curveID)
 
 	return p
+}
+
+// GetPlatform returns the token platform from the passed context bound to the passed id.
+// It returns nil, if nothing is found
+func GetPlatform(ctx *context.Context, id string) *Platform {
+	p := ctx.PlatformByName(id)
+	if p == nil {
+		return nil
+	}
+	fp, ok := p.(*Platform)
+	if ok {
+		return fp
+	}
+	return nil
 }
 
 func (p *Platform) Name() string {
@@ -171,6 +187,19 @@ func (p *Platform) PublicParameters(tms *topology2.TMS) []byte {
 	raw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 	return raw
+}
+
+func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string {
+	var targetTMS *topology2.TMS
+	for _, tms := range p.Topology.TMSs {
+		if tms.Network == tmsNetwork {
+			targetTMS = tms
+		}
+	}
+	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
+
+	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
+	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
 }
 
 func (p *Platform) AddNetworkHandler(label string, nh NetworkHandler) {
