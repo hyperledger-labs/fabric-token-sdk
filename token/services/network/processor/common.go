@@ -33,8 +33,7 @@ type RWSet interface {
 
 type TokenStore interface {
 	// DeleteFabToken adds to the passed rws the deletion of the passed token
-	// TODO: we should delete also the extra tokens for the ids
-	DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error
+	DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
 	StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error
 	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error
 	StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error
@@ -55,7 +54,7 @@ func NewCommonTokenStore(sp view2.ServiceProvider) *CommonTokenStore {
 	return &CommonTokenStore{notifier: notifier}
 }
 
-func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
+func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -108,6 +107,16 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 	err = rws.SetStateMetadata(ns, outputID, nil)
 	if err != nil {
 		return errors.Wrapf(err, "error deleting metadata for key [%s]", outputID)
+	}
+
+	// append a key reporting which transaction deleted this
+	deletedTokenKey, err := keys.CreateDeletedTokenKey(txID, index)
+	if err != nil {
+		return errors.Wrapf(err, "error creating deleted key output ID: %s", err)
+	}
+	err = rws.SetState(ns, deletedTokenKey, []byte(deletedBy))
+	if err != nil {
+		return errors.Wrapf(err, "failed to aadd deleted token key for key [%s]", outputID)
 	}
 
 	return nil

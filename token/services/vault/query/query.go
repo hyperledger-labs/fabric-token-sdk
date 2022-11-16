@@ -398,6 +398,39 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	return resKeys, res, nil
 }
 
+func (e *Engine) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error) {
+	logger.Debugf("retrieve deleted tokens from ids...")
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer qe.Done()
+
+	var deleted []bool
+	var toBlame []string
+	for _, id := range inputs {
+		idKey, err := keys.CreateDeletedTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed generating deleted token key [%v]", id)
+		}
+		who, err := qe.GetState(e.namespace, idKey)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting token for key [%v]", idKey)
+		}
+		if len(who) == 0 {
+			logger.Debugf("token [%s][%s] was not deleted", id, idKey)
+			deleted = append(deleted, false)
+			toBlame = append(toBlame, "")
+		} else {
+			logger.Debugf("token [%s][%s] was deleted by [%s]", id, idKey, string(who))
+			deleted = append(deleted, true)
+			toBlame = append(toBlame, string(who))
+		}
+	}
+	logger.Debugf("retrieve deleted tokens from ids done")
+	return toBlame, deleted, nil
+}
+
 func (e *Engine) unmarshalUnspentToken(key string, raw []byte, extended bool) (*token.UnspentToken, error) {
 	// lookup cache first
 	if tok, ok := e.unspentTokensCache.Get(key); ok {

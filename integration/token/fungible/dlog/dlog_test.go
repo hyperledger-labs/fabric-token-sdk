@@ -24,7 +24,7 @@ var _ = Describe("EndToEnd", func() {
 		network.Stop()
 	})
 
-	Describe("Fungible", func() {
+	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", fungible.Topology("fabric", "dlog", false)...)

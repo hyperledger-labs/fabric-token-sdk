@@ -112,7 +112,7 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	if err := t.db.SetStatus(txID, txStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
-	logger.Infof("tx status changed for tx %s: %s done", txID, status)
+	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
 	go func() {
 		logger.Debugf("unsubscribe for tx %s...", txID)
 		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {

@@ -135,6 +135,11 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 		}
 		return nil
 	})
+	PruneInvalidUnspentTokens(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
+	for _, name := range []string{"alice", "bob"} {
+		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)
+		CheckIfExistsInVault(network, defaultTMSID, "auditor", IDs)
+	}
 }
 
 func TestHTLCTwoNetworks(network *integration.Infrastructure) {
@@ -152,7 +157,6 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 
 	_, preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
 	htlcLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
-
 	htlcClaim(network, beta, "alice", "", preImage)
 	htlcClaim(network, alpha, "bob", "", preImage)
 
@@ -187,6 +191,14 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	CheckOwnerDB(network, beta, nil, "issuer", "auditor", "alice", "bob")
 	CheckAuditorDB(network, alpha, "auditor", "", nil)
 	CheckAuditorDB(network, beta, "auditor", "", nil)
+	PruneInvalidUnspentTokens(network, alpha, "issuer", "auditor", "alice", "bob")
+	PruneInvalidUnspentTokens(network, beta, "issuer", "auditor", "alice", "bob")
+	for _, name := range []string{"alice", "bob"} {
+		aIDs := ListVaultUnspentTokens(network, alpha, name)
+		CheckIfExistsInVault(network, alpha, "auditor", aIDs)
+		bIDs := ListVaultUnspentTokens(network, beta, name)
+		CheckIfExistsInVault(network, beta, "auditor", bIDs)
+	}
 }
 
 func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
@@ -229,6 +241,16 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	CheckOwnerDB(network, beta, nil, "issuer")
 	CheckAuditorDB(network, alpha, "auditor", "", nil)
 	CheckAuditorDB(network, beta, "auditor", "", nil)
+	PruneInvalidUnspentTokens(network, alpha, "issuer", "auditor")
+	PruneInvalidUnspentTokens(network, beta, "issuer", "auditor")
+
+	PruneInvalidUnspentTokens(network, alpha, "alice")
+	aIDs := ListVaultUnspentTokens(network, alpha, "alice")
+	CheckIfExistsInVault(network, alpha, "auditor", aIDs)
+
+	PruneInvalidUnspentTokens(network, beta, "bob")
+	bIDs := ListVaultUnspentTokens(network, beta, "bob")
+	CheckIfExistsInVault(network, beta, "auditor", bIDs)
 }
 
 func TestFastExchange(network *integration.Infrastructure) {

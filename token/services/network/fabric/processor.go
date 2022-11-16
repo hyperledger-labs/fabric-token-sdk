@@ -153,7 +153,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		for _, id := range ids {
-			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 		}
@@ -216,7 +216,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
 			}
-			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 			continue

@@ -213,6 +213,37 @@ func CheckAuditorDB(network *integration.Infrastructure, tmsID token.TMSID, audi
 	}
 }
 
+func PruneInvalidUnspentTokens(network *integration.Infrastructure, tmsID token.TMSID, ids ...string) {
+	for _, id := range ids {
+		eIDBoxed, err := network.Client(id).CallView("PruneInvalidUnspentTokens", common.JSONMarshall(&views.PruneInvalidUnspentTokens{TMSID: tmsID}))
+		Expect(err).NotTo(HaveOccurred())
+
+		var deleted []*token2.ID
+		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
+		Expect(len(deleted)).To(BeZero())
+	}
+}
+
+func ListVaultUnspentTokens(network *integration.Infrastructure, tmsID token.TMSID, id string) []*token2.ID {
+	res, err := network.Client(id).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{TMSID: tmsID}))
+	Expect(err).NotTo(HaveOccurred())
+
+	unspentTokens := &token2.UnspentTokens{}
+	common.JSONUnmarshal(res.([]byte), unspentTokens)
+	count := unspentTokens.Count()
+	var IDs []*token2.ID
+	for i := 0; i < count; i++ {
+		tok := unspentTokens.At(i)
+		IDs = append(IDs, tok.Id)
+	}
+	return IDs
+}
+
+func CheckIfExistsInVault(network *integration.Infrastructure, tmsID token.TMSID, id string, tokenIDs []*token2.ID) {
+	_, err := network.Client(id).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{TMSID: tmsID, IDs: tokenIDs}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
 func Restart(network *integration.Infrastructure, ids ...string) {
 	for _, id := range ids {
 		network.StopFSCNode(id)

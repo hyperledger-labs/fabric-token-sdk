@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"runtime/debug"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
@@ -54,7 +56,7 @@ func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
 
 	wrappedRWS := &rwsWrapper{RWSet: rws}
 	for _, id := range ids {
-		if err := v.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
+		if err := v.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS, string(debug.Stack())); err != nil {
 			return errors.Wrapf(err, "failed to append deletion of [%s]", id)
 		}
 	}

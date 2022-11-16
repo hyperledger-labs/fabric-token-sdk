@@ -195,7 +195,7 @@ func ListUnspentTokens(network *integration.Infrastructure, id string, wallet st
 	return unspentTokens
 }
 
-func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) {
+func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
 	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Auditor:   auditor,
 		Wallet:    wallet,
@@ -204,28 +204,31 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 		Recipient: network.Identity(receiver),
 	}))
 	if len(expectedErrorMsgs) == 0 {
+		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txidBoxed))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txidBoxed))).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
 
 		signers := []string{auditor}
 		if !strings.HasPrefix(receiver, id) {
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
-		txInfo := GetTransactionInfo(network, id, common.JSONUnmarshalString(txidBoxed))
+		txInfo := GetTransactionInfo(network, id, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
 			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
-	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
-		}
-		time.Sleep(5 * time.Second)
+		return txID
 	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
 }
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token2.ID, expectedErrorMsgs ...string) (string, []byte) {
@@ -320,7 +323,7 @@ func GetTransactionInfo(network *integration.Infrastructure, id string, txnId st
 }
 
 func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, auditor string, failToRelease bool, expectedErrorMsgs ...string) string {
-	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
+	txIDBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Auditor:       auditor,
 		Wallet:        wallet,
 		Type:          "",
@@ -331,9 +334,9 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		return common.JSONUnmarshalString(txid)
+		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txIDBoxed))).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txIDBoxed))).NotTo(HaveOccurred())
+		return common.JSONUnmarshalString(txIDBoxed)
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
@@ -440,6 +443,53 @@ func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walle
 	var errorMessages []string
 	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
 	Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+}
+
+func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...string) {
+	for _, id := range ids {
+		eIDBoxed, err := network.Client(id).CallView("PruneInvalidUnspentTokens", common.JSONMarshall(&views.PruneInvalidUnspentTokens{}))
+		Expect(err).NotTo(HaveOccurred())
+
+		var deleted []*token2.ID
+		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
+		Expect(len(deleted)).To(BeZero())
+	}
+}
+
+func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*token2.ID {
+	res, err := network.Client(id).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{}))
+	Expect(err).NotTo(HaveOccurred())
+
+	unspentTokens := &token2.UnspentTokens{}
+	common.JSONUnmarshal(res.([]byte), unspentTokens)
+	count := unspentTokens.Count()
+	var IDs []*token2.ID
+	for i := 0; i < count; i++ {
+		tok := unspentTokens.At(i)
+		IDs = append(IDs, tok.Id)
+	}
+	return IDs
+}
+
+func CheckIfExistsInVault(network *integration.Infrastructure, id string, tokenIDs []*token2.ID) {
+	_, err := network.Client(id).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{IDs: tokenIDs}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []*token2.ID, txIDs ...string) *views.WhoDeletedTokenResult {
+	boxed, err := network.Client(id).CallView("WhoDeletedToken", common.JSONMarshall(&views.WhoDeletedToken{
+		TokenIDs: tokenIDs,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+
+	var result *views.WhoDeletedTokenResult
+	common.JSONUnmarshal(boxed.([]byte), &result)
+	Expect(len(result.Deleted)).To(BeEquivalentTo(len(tokenIDs)))
+	for i, txID := range txIDs {
+		Expect(result.Deleted[i]).To(BeTrue())
+		Expect(result.Who[i]).To(BeEquivalentTo(txID))
+	}
+	return result
 }
 
 func JSONUnmarshalFloat64(v interface{}) float64 {

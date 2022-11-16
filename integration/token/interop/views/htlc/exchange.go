@@ -136,7 +136,7 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(v.TMSID2))
 		assert.NotNil(wallet, "wallet not found")
 
-		matched, err := htlc.Wallet(context, wallet, token.WithTMSID(v.TMSID2)).ListByPreImage(preImage)
+		matched, err := htlc.Wallet(context, wallet).ListByPreImage(preImage)
 		assert.NoError(err, "cannot retrieve list of expired tokens")
 		assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
@@ -267,7 +267,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		// claim initiator's script
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(terms.TMSID1))
 		assert.NotNil(wallet, "wallet not found")
-		matched, err := htlc.Wallet(context, wallet, token.WithTMSID(terms.TMSID1)).ListByPreImage(preImage)
+		matched, err := htlc.Wallet(context, wallet).ListByPreImage(preImage)
 		assert.NoError(err, "cannot retrieve list of expired tokens")
 		assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 

@@ -4,7 +4,7 @@ integration-tests-dlog-fabric:
 
 .PHONY: integration-tests-dlog-fabric-t1
 integration-tests-dlog-fabric-t1:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor ne Issuer" .
 
 .PHONY: integration-tests-dlog-fabric-t2
 integration-tests-dlog-fabric-t2:

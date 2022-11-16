@@ -311,7 +311,7 @@ func (db *DB) AcquireLocks(eIDs ...string) error {
 
 // Unlock unlocks the locks for the passed enrollment ids.
 func (db *DB) Unlock(eIDs ...string) {
-	logger.Debugf("Unlock locks for [% x] enrollment ids", eIDs)
+	logger.Debugf("Unlock locks for [%v] enrollment ids", eIDs)
 	for _, id := range deduplicate(eIDs) {
 		lock, ok := db.eIDsLocks.Load(id)
 		if !ok {
@@ -418,7 +418,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 		// All ins should be for same EID, check this
 		inEIDs := ins.EnrollmentIDs()
 		if len(inEIDs) > 1 {
-			return errors.Errorf("expected at most 1 input enrollment id, got %d", len(inEIDs))
+			return errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
 		}
 		inEID := ""
 		if len(inEIDs) == 1 {
@@ -455,7 +455,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					Timestamp:    timestamp,
 				}); err != nil {
 					if err1 := db.db.Discard(); err1 != nil {
-						logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
 					}
 					return err
 				}
