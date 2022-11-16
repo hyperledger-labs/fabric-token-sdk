@@ -140,7 +140,6 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Match unspent tokens with the ledger
-
 	// but first delete the claimed tokens
 	// TODO: check all owner wallets
 	defaultOwnerWallet := htlc.GetWallet(context, "", token.WithTMSID(m.TMSID))

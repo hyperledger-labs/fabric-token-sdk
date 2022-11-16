@@ -116,7 +116,6 @@ func (r *RequestQueryTokensResponderView) process(context view.Context, request 
 		if err != nil {
 			errs = append(errs, errors.Errorf("error creating output ID: %s", err))
 			continue
-			// return nil, errors.Errorf("error creating output ID: %s", err)
 		}
 		logger.Debugf("query state [%s:%s]", id, outputID)
 		bytes, err := qe.Get(orionKey(outputID))
@@ -127,7 +126,6 @@ func (r *RequestQueryTokensResponderView) process(context view.Context, request 
 		}
 		if len(bytes) == 0 {
 			errs = append(errs, errors.Errorf("output for key [%s] does not exist", outputID))
-			// return nil, errors.Errorf("output for key [%s] does not exist", outputID)
 			continue
 		}
 		res = append(res, bytes)
