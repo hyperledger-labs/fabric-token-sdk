@@ -273,21 +273,21 @@ type rwsWrapper struct {
 }
 
 func (r *rwsWrapper) SetState(namespace string, key string, value []byte) error {
-	return r.RWSet.SetState(namespace, notOrionKey(key), value)
+	return r.RWSet.SetState(namespace, key, value)
 }
 
 func (r *rwsWrapper) GetState(namespace string, key string) ([]byte, error) {
-	return r.RWSet.GetState(namespace, notOrionKey(key), orion.FromStorage)
+	return r.RWSet.GetState(namespace, key, orion.FromStorage)
 }
 
 func (r *rwsWrapper) GetStateMetadata(namespace, key string) (map[string][]byte, error) {
-	return r.RWSet.GetStateMetadata(namespace, notOrionKey(key), orion.FromStorage)
+	return r.RWSet.GetStateMetadata(namespace, key, orion.FromStorage)
 }
 
 func (r *rwsWrapper) DeleteState(namespace string, key string) error {
-	return r.RWSet.DeleteState(namespace, notOrionKey(key))
+	return r.RWSet.DeleteState(namespace, key)
 }
 
 func (r *rwsWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return r.RWSet.SetStateMetadata(namespace, notOrionKey(key), metadata)
+	return r.RWSet.SetStateMetadata(namespace, key, metadata)
 }

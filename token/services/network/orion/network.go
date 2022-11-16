@@ -231,7 +231,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 			n.Name(),
 			namespace,
 			startingTxID,
-			orionKey(k),
+			k,
 			timeout,
 		),
 	)
