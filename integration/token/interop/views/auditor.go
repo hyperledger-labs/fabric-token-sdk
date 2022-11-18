@@ -40,10 +40,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	// extract inputs and outputs
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
-
-	// acquire locks on inputs and outputs' enrollment IDs
-	assert.NoError(auditor.AcquireLocks(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...)...), "failed acquiring locks")
-	defer auditor.Unlock(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...))
+	defer auditor.Release(tx)
 
 	// For example, all payments of an amount less than or equal to payment limit is valid
 	eIDs := inputs.EnrollmentIDs()

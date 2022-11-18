@@ -53,12 +53,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
 	logger.Debugf("AuditView: audit done [%s]", tx.ID())
-
-	// acquire locks on inputs and outputs' enrollment IDs
-	logger.Debugf("AuditView: acquire locks [%s]", tx.ID())
-	assert.NoError(auditor.AcquireLocks(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...)...), "failed acquiring locks")
-	defer auditor.Unlock(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...))
-	logger.Debugf("AuditView: acquire locks done [%s]", tx.ID())
+	defer auditor.Release(tx)
 
 	logger.Debugf("AuditView: [%s] get query executor... ", tx.ID())
 	aqe := auditor.NewQueryExecutor()

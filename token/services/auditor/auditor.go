@@ -68,8 +68,11 @@ func (a *Auditor) Validate(request *token.Request) error {
 	return request.AuditCheck()
 }
 
-// Audit evaluates the passed token request and returns the list on inputs and outputs in the request
-func (a *Auditor) Audit(request *token.Request) (*token.InputStream, *token.OutputStream, error) {
+// Audit extracts the list of inputs and outputs from the passed transaction.
+// In addition, the Audit locks the enrollment named ids.
+// Release must be invoked in case
+func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
+	request := tx.Request()
 	inputs, err := request.AuditInputs()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed getting inputs")
@@ -79,16 +82,21 @@ func (a *Auditor) Audit(request *token.Request) (*token.InputStream, *token.Outp
 		return nil, nil, errors.WithMessagef(err, "failed getting outputs")
 	}
 
+	var eids []string
+	eids = append(eids, inputs.EnrollmentIDs()...)
+	eids = append(eids, outputs.EnrollmentIDs()...)
+	if err := a.db.AcquireLocks(request.Anchor, eids...); err != nil {
+		return nil, nil, err
+	}
+
 	return inputs, outputs, nil
 }
 
-// NewQueryExecutor returns a new query executor
-func (a *Auditor) NewQueryExecutor() *QueryExecutor {
-	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
-}
-
-// Append adds the passed transaction to the auditor database
+// Append adds the passed transaction to the auditor database.
+// It also releases the locks aquired by Audit.
 func (a *Auditor) Append(tx Transaction) error {
+	defer a.Release(tx)
+
 	// append request to audit db
 	if err := a.db.Append(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
@@ -105,6 +113,16 @@ func (a *Auditor) Append(tx Transaction) error {
 	}
 	logger.Debugf("append done for request %s", tx.ID())
 	return nil
+}
+
+// Release releases the lock acquired of the passed transaction.
+func (a *Auditor) Release(tx Transaction) {
+	a.db.ReleaseLocks(tx.Request().Anchor)
+}
+
+// NewQueryExecutor returns a new query executor
+func (a *Auditor) NewQueryExecutor() *QueryExecutor {
+	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status

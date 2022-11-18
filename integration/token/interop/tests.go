@@ -116,6 +116,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
 		),
 	)
+	htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")

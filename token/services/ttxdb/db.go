@@ -298,28 +298,41 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 	return nil
 }
 
-// AcquireLocks acquires locks for the passed enrollment ids.
+// AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (db *DB) AcquireLocks(eIDs ...string) error {
-	logger.Debugf("Acquire locks for [% x] enrollment ids", eIDs)
-	for _, id := range deduplicate(eIDs) {
+func (db *DB) AcquireLocks(anchor string, eIDs ...string) error {
+	dedup := deduplicate(eIDs)
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
+	db.eIDsLocks.LoadOrStore(anchor, dedup)
+	for _, id := range dedup {
 		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
+		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
 	return nil
 }
 
-// Unlock unlocks the locks for the passed enrollment ids.
-func (db *DB) Unlock(eIDs ...string) {
-	logger.Debugf("Unlock locks for [%v] enrollment ids", eIDs)
-	for _, id := range deduplicate(eIDs) {
+// ReleaseLocks releases the locks associated to the passed anchor
+func (db *DB) ReleaseLocks(anchor string) {
+	dedupBoxed, ok := db.eIDsLocks.LoadAndDelete(anchor)
+	if !ok {
+		logger.Debugf("nothing to release for [%s] ", anchor)
+		return
+	}
+	dedup := dedupBoxed.([]string)
+	logger.Debugf("Release locks for [%s:%v] enrollment ids", anchor, dedup)
+	for _, id := range dedup {
 		lock, ok := db.eIDsLocks.Load(id)
 		if !ok {
-			logger.Warnf("unlock for enrollment id [%s] not possible, lock never acquired", id)
+			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
 			continue
 		}
+		logger.Debugf("unlock lock for [%s:%v] enrollment id done", anchor, id)
 		lock.(*sync.RWMutex).Unlock()
 	}
+	logger.Debugf("Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
+
 }
 
 func (db *DB) appendSendMovements(record *token.AuditRecord) error {
