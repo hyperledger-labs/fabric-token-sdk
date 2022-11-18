@@ -58,7 +58,11 @@ func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
 		if e := recover(); e != nil {
 			if tx != nil {
 				fmt.Printf("add to err tx id [%s]", tx.ID())
-				err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), err)
+				if err == nil {
+					err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), e)
+				} else {
+					err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), err)
+				}
 			}
 		}
 	}()

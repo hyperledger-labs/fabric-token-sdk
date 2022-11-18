@@ -38,8 +38,12 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			if tx != nil {
-				fmt.Printf("add to err tx id [%s]", tx.ID())
-				err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), err)
+				fmt.Printf("add to err tx id [%s]\n", tx.ID())
+				if err == nil {
+					err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), e)
+				} else {
+					err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), err)
+				}
 			}
 		}
 	}()
