@@ -8,7 +8,6 @@ package htlc
 
 import (
 	"encoding/json"
-	"fmt"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -37,13 +36,14 @@ func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
 	var tx *htlc.Transaction
 	defer func() {
 		if e := recover(); e != nil {
+			txID := "none"
 			if tx != nil {
-				fmt.Printf("add to err tx id [%s]\n", tx.ID())
-				if err == nil {
-					err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), e)
-				} else {
-					err = errors.Errorf("<<<[%s]>>>: %s", tx.ID(), err)
-				}
+				txID = tx.ID()
+			}
+			if err == nil {
+				err = errors.Errorf("<<<[%s]>>>: %s", txID, e)
+			} else {
+				err = errors.Errorf("<<<[%s]>>>: %s", txID, err)
 			}
 		}
 	}()
