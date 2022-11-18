@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
 
@@ -131,9 +131,9 @@ func CheckBalance(network *integration.Infrastructure, id string, wallet string,
 	b := &views.Balance{}
 	common.JSONUnmarshal(res.([]byte), b)
 	Expect(b.Type).To(BeEquivalentTo(typ))
-	q, err := token2.ToQuantity(b.Quantity, 64)
+	q, err := token.ToQuantity(b.Quantity, 64)
 	Expect(err).NotTo(HaveOccurred())
-	expectedQ := token2.NewQuantityFromUInt64(expected)
+	expectedQ := token.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
@@ -171,26 +171,26 @@ func CheckSpending(network *integration.Infrastructure, id string, wallet string
 	Expect(spending).To(Equal(expected))
 }
 
-func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
+func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token.IssuedTokens {
 	res, err := network.Client("issuer").CallView("historyIssuedToken", common.JSONMarshall(&views.ListIssuedTokens{
 		Wallet:    wallet,
 		TokenType: typ,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 
-	issuedTokens := &token2.IssuedTokens{}
+	issuedTokens := &token.IssuedTokens{}
 	common.JSONUnmarshal(res.([]byte), issuedTokens)
 	return issuedTokens
 }
 
-func ListUnspentTokens(network *integration.Infrastructure, id string, wallet string, typ string) *token2.UnspentTokens {
+func ListUnspentTokens(network *integration.Infrastructure, id string, wallet string, typ string) *token.UnspentTokens {
 	res, err := network.Client(id).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
 		Wallet:    wallet,
 		TokenType: typ,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 
-	unspentTokens := &token2.UnspentTokens{}
+	unspentTokens := &token.UnspentTokens{}
 	common.JSONUnmarshal(res.([]byte), unspentTokens)
 	return unspentTokens
 }
@@ -231,7 +231,7 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 	return ""
 }
 
-func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token2.ID, expectedErrorMsgs ...string) (string, []byte) {
+func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
 	transferInput := &views.Transfer{
 		Auditor:   auditor,
 		Wallet:    wallet,
@@ -240,7 +240,7 @@ func PrepareTransferCash(network *integration.Infrastructure, id string, wallet 
 		Recipient: network.Identity(receiver),
 	}
 	if tokenID != nil {
-		transferInput.TokenIDs = []*token2.ID{tokenID}
+		transferInput.TokenIDs = []*token.ID{tokenID}
 	}
 	txBoxed, err := network.Client(id).CallView("prepareTransfer", common.JSONMarshall(transferInput))
 	if len(expectedErrorMsgs) == 0 {
@@ -322,7 +322,7 @@ func GetTransactionInfo(network *integration.Infrastructure, id string, txnId st
 	return info
 }
 
-func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, auditor string, failToRelease bool, expectedErrorMsgs ...string) string {
+func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token.ID, amount uint64, receiver string, auditor string, failToRelease bool, expectedErrorMsgs ...string) string {
 	txIDBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
 		Auditor:       auditor,
 		Wallet:        wallet,
@@ -379,7 +379,7 @@ func RedeemCash(network *integration.Infrastructure, id string, wallet string, t
 	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
 
-func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, auditor string) {
+func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token.ID, amount uint64, auditor string) {
 	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Auditor:  auditor,
 		Wallet:   wallet,
@@ -450,20 +450,20 @@ func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...strin
 		eIDBoxed, err := network.Client(id).CallView("PruneInvalidUnspentTokens", common.JSONMarshall(&views.PruneInvalidUnspentTokens{}))
 		Expect(err).NotTo(HaveOccurred())
 
-		var deleted []*token2.ID
+		var deleted []*token.ID
 		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
 		Expect(len(deleted)).To(BeZero())
 	}
 }
 
-func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*token2.ID {
+func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*token.ID {
 	res, err := network.Client(id).CallView("ListVaultUnspentTokens", common.JSONMarshall(&views.ListVaultUnspentTokens{}))
 	Expect(err).NotTo(HaveOccurred())
 
-	unspentTokens := &token2.UnspentTokens{}
+	unspentTokens := &token.UnspentTokens{}
 	common.JSONUnmarshal(res.([]byte), unspentTokens)
 	count := unspentTokens.Count()
-	var IDs []*token2.ID
+	var IDs []*token.ID
 	for i := 0; i < count; i++ {
 		tok := unspentTokens.At(i)
 		IDs = append(IDs, tok.Id)
@@ -471,12 +471,12 @@ func ListVaultUnspentTokens(network *integration.Infrastructure, id string) []*t
 	return IDs
 }
 
-func CheckIfExistsInVault(network *integration.Infrastructure, id string, tokenIDs []*token2.ID) {
+func CheckIfExistsInVault(network *integration.Infrastructure, id string, tokenIDs []*token.ID) {
 	_, err := network.Client(id).CallView("CheckIfExistsInVault", common.JSONMarshall(&views.CheckIfExistsInVault{IDs: tokenIDs}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []*token2.ID, txIDs ...string) *views.WhoDeletedTokenResult {
+func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []*token.ID, txIDs ...string) *views.WhoDeletedTokenResult {
 	boxed, err := network.Client(id).CallView("WhoDeletedToken", common.JSONMarshall(&views.WhoDeletedToken{
 		TokenIDs: tokenIDs,
 	}))
@@ -544,7 +544,7 @@ func RegisterIssuerWallet(network *integration.Infrastructure, id string, wallet
 		Path: walletPath,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	network.Ctx.ViewIdentities[walletID] = network.Identity(id)
+	network.Ctx.SetViewClient(walletPath, network.Client(id))
 }
 
 func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
@@ -553,5 +553,5 @@ func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletI
 		Path: walletPath,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	network.Ctx.ViewIdentities[walletID] = network.Identity(id)
+	network.Ctx.SetViewClient(walletID, network.Client(id))
 }
