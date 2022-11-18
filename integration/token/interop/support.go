@@ -325,7 +325,7 @@ func htlcReclaimAll(network *integration.Infrastructure, id string, wallet strin
 	}
 }
 
-func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) {
+func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, preImage []byte, errorMsgs ...string) string {
 	txIDBoxed, err := network.Client(id).CallView("htlc.claim", common.JSONMarshall(&htlc.Claim{
 		TMSID:    tmsID,
 		Wallet:   wallet,
@@ -344,12 +344,23 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id string
 			api.WithNetwork(tmsID.Network),
 			api.WithChannel(tmsID.Channel),
 		)).NotTo(HaveOccurred())
+		return txID
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
 			Expect(err.Error()).To(ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
+
+		errMsg := err.Error()
+		fmt.Printf("Got error message [%s]\n", errMsg)
+		txID := ""
+		index := strings.Index(err.Error(), "<<<[")
+		if index != -1 {
+			txID = errMsg[index+4 : index+strings.Index(err.Error()[index:], "]>>>")]
+		}
+		fmt.Printf("Got error message, extracted tx id [%s]\n", txID)
+		return txID
 	}
 }
 

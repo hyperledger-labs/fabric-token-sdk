@@ -93,7 +93,7 @@ func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 }
 
 // Append adds the passed transaction to the auditor database.
-// It also releases the locks aquired by Audit.
+// It also releases the locks acquired by Audit.
 func (a *Auditor) Append(tx Transaction) error {
 	defer a.Release(tx)
 

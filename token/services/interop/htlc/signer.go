@@ -97,11 +97,14 @@ type Verifier struct {
 func (v *Verifier) Verify(msg []byte, sigma []byte) error {
 	// if timeout has not elapsed, only claim is allowed
 	if time.Now().Before(v.Deadline) {
-		cv := &ClaimVerifier{Recipient: v.Recipient, HashInfo: HashInfo{
-			Hash:         v.HashInfo.Hash,
-			HashFunc:     v.HashInfo.HashFunc,
-			HashEncoding: v.HashInfo.HashEncoding,
-		}}
+		cv := &ClaimVerifier{
+			Recipient: v.Recipient,
+			HashInfo: HashInfo{
+				Hash:         v.HashInfo.Hash,
+				HashFunc:     v.HashInfo.HashFunc,
+				HashEncoding: v.HashInfo.HashEncoding,
+			},
+		}
 		if err := cv.Verify(msg, sigma); err != nil {
 			return errors.WithMessagef(err, "failed verifying htlc claim signature")
 		}
@@ -109,7 +112,7 @@ func (v *Verifier) Verify(msg []byte, sigma []byte) error {
 	}
 	// if timeout has elapsed, only a reclaim is possible
 	if err := v.Sender.Verify(msg, sigma); err != nil {
-		return errors.WithMessagef(err, "failed verifying htlc reclaim signature")
+		return errors.WithMessagef(err, "deadline elapsed, failed verifying htlc reclaim signature")
 	}
 	return nil
 }
