@@ -328,6 +328,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true)
 
+	testTwoGeneratedOwnerWalletsSameNode(network, auditor)
+
 	CheckBalanceAndHolding(network, "alice", "", "USD", 10)
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 0)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
@@ -643,4 +645,20 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		IDs := ListVaultUnspentTokens(network, name)
 		CheckIfExistsInVault(network, auditor, IDs)
 	}
+}
+
+func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1")
+	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
+	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
+
+	IssueCash(network, "", "SPE", 100, "charlie", auditor, true)
+	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
+	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
+
+	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15)
 }

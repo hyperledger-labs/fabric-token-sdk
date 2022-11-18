@@ -40,6 +40,7 @@ type NetworkHandler interface {
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
+	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
 }
 
 type Platform struct {
@@ -200,6 +201,19 @@ func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, wa
 
 	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
 	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
+}
+
+func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string {
+	var targetTMS *topology2.TMS
+	for _, tms := range p.Topology.TMSs {
+		if tms.Network == tmsNetwork {
+			targetTMS = tms
+		}
+	}
+	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
+
+	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
+	return nh.GenOwnerCryptoMaterial(targetTMS, fscNode, walletID)
 }
 
 func (p *Platform) AddNetworkHandler(label string, nh NetworkHandler) {

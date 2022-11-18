@@ -544,4 +544,14 @@ func RegisterIssuerWallet(network *integration.Infrastructure, id string, wallet
 		Path: walletPath,
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	network.Ctx.ViewIdentities[walletID] = network.Identity(id)
+}
+
+func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
+	_, err := network.Client(id).CallView("RegisterOwnerWallet", common.JSONMarshall(&views.RegisterOwnerWallet{
+		ID:   walletID,
+		Path: walletPath,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	network.Ctx.ViewIdentities[walletID] = network.Identity(id)
 }
