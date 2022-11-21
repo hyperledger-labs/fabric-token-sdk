@@ -113,7 +113,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
 		fmt.Printf("Got errors [%v]", errs)
 		if len(errs) != 4 {
-			return errors.Errorf("expected 8 errors, got [%d]", len(errs))
+			return errors.Errorf("expected 4 errors, got [%d]", len(errs))
 		}
 		for _, err := range errs {
 			if strings.Contains(err, failedClaimTXID) {
@@ -139,7 +139,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
 		fmt.Printf("Got errors [%v]", errs)
 		if len(errs) != 12 {
-			return errors.Errorf("expected 8 errors, got [%d]", len(errs))
+			return errors.Errorf("expected 12 errors, got [%d]", len(errs))
 		}
 		for _, err := range errs[:4] {
 			if strings.Contains(err, failedClaimTXID) {
