@@ -24,6 +24,7 @@ import (
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure) {
+	defaultTMSID := token.TMSID{}
 	RegisterAuditor(network)
 
 	IssueCash(network, "", "USD", 110, "alice")
@@ -64,13 +65,18 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	Restart(network, "issuer", "auditor", "alice", "bob")
 	RegisterAuditor(network)
 
-	// htlc (lock, reclaim)
-	htlcLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
+	// htlc (lock, failing claim, reclaim)
+	_, preImage, _ := htlcLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 10, 0, -1)
 	time.Sleep(15 * time.Second)
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 10, -1)
+	htlcClaim(network, defaultTMSID, "bob", "", preImage, "deadline elapsed")
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
@@ -83,14 +89,13 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 0, -1)
 
 	// htlc (lock, claim)
-	defaultTMSID := token.TMSID{}
-	_, preImage, _ := htlcLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	_, preImage, _ = htlcLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 20, 0, -1)
 
-	htlcClaim(network, defaultTMSID, "bob", "", preImage)
+	failedClaimTXID := htlcClaim(network, defaultTMSID, "bob", "", preImage)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
@@ -105,7 +110,18 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, token.TMSID{}, "auditor", "", nil)
+	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
+		fmt.Printf("Got errors [%v]", errs)
+		if len(errs) != 4 {
+			return errors.Errorf("expected 4 errors, got [%d]", len(errs))
+		}
+		for _, err := range errs {
+			if strings.Contains(err, failedClaimTXID) {
+				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
+			}
+		}
+		return nil
+	})
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
@@ -116,19 +132,25 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
 		),
 	)
+	htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
 	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
 		fmt.Printf("Got errors [%v]", errs)
-		if len(errs) != 8 {
-			return errors.Errorf("expected 8 errors, got [%d]", len(errs))
+		if len(errs) != 12 {
+			return errors.Errorf("expected 12 errors, got [%d]", len(errs))
+		}
+		for _, err := range errs[:4] {
+			if strings.Contains(err, failedClaimTXID) {
+				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
+			}
 		}
 		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.Pending)
-		if errs[0] != firstError {
+		if errs[4] != firstError {
 			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
 		}
-		for _, err := range errs {
+		for _, err := range errs[4:] {
 			if !strings.Contains(err, failedLockTXID) {
 				return errors.Errorf("[%s] does not contain [%s]", err, failedLockTXID)
 			}

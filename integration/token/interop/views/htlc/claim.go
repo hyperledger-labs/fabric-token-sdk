@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/pkg/errors"
 )
 
 // Claim contains the input information to claim a token
@@ -31,7 +32,22 @@ type ClaimView struct {
 	*Claim
 }
 
-func (r *ClaimView) Call(context view.Context) (interface{}, error) {
+func (r *ClaimView) Call(context view.Context) (res interface{}, err error) {
+	var tx *htlc.Transaction
+	defer func() {
+		if e := recover(); e != nil {
+			txID := "none"
+			if tx != nil {
+				txID = tx.ID()
+			}
+			if err == nil {
+				err = errors.Errorf("<<<[%s]>>>: %s", txID, e)
+			} else {
+				err = errors.Errorf("<<<[%s]>>>: %s", txID, err)
+			}
+		}
+	}()
+
 	claimWallet := htlc.GetWallet(context, r.Wallet, token.WithTMSID(r.TMSID))
 	assert.NotNil(claimWallet, "wallet [%s] not found", r.Wallet)
 
@@ -39,7 +55,7 @@ func (r *ClaimView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "htlc script has expired")
 	assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
-	tx, err := htlc.NewAnonymousTransaction(
+	tx, err = htlc.NewAnonymousTransaction(
 		context,
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(r.TMSID),

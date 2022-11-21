@@ -40,6 +40,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
+	defer auditor.Release(tx)
 
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()

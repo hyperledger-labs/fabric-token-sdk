@@ -35,18 +35,20 @@ const (
 )
 
 type txAuditor struct {
-	sp      view2.ServiceProvider
-	w       *token.AuditorWallet
-	auditor *auditor.Auditor
-	db      *ttxdb.DB
+	sp                      view2.ServiceProvider
+	w                       *token.AuditorWallet
+	auditor                 *auditor.Auditor
+	db                      *ttxdb.DB
+	transactionInfoProvider *TransactionInfoProvider
 }
 
 func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *txAuditor {
 	return &txAuditor{
-		sp:      sp,
-		w:       w,
-		auditor: auditor.New(sp, w),
-		db:      ttxdb.Get(sp, w),
+		sp:                      sp,
+		w:                       w,
+		auditor:                 auditor.New(sp, w),
+		db:                      ttxdb.Get(sp, w),
+		transactionInfoProvider: NewTransactionInfoProvider(sp, w.TMS()),
 	}
 }
 
@@ -55,7 +57,12 @@ func (a *txAuditor) Validate(tx *Transaction) error {
 }
 
 func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
-	return a.auditor.Audit(tx.TokenRequest)
+	return a.auditor.Audit(tx)
+}
+
+// Release unlocks the passed enrollment IDs.
+func (a *txAuditor) Release(tx *Transaction) {
+	a.auditor.Release(tx)
 }
 
 // NewQueryExecutor returns a new query executor. The query executor is used to
@@ -65,19 +72,14 @@ func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
 
-// AcquireLocks try to acquire a lock on the passed enrollment IDs. The call blocks until all locks can be acquired.
-func (a *txAuditor) AcquireLocks(eIDs ...string) error {
-	return a.db.AcquireLocks(eIDs...)
-}
-
-// Unlock unlocks the passed enrollment IDs.
-func (a *txAuditor) Unlock(eIDs []string) {
-	a.db.Unlock(eIDs...)
-}
-
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *txAuditor) SetStatus(txID string, status TxStatus) error {
 	return a.db.SetStatus(txID, status)
+}
+
+// TransactionInfo returns the transaction info for the given transaction ID.
+func (a *txAuditor) TransactionInfo(txID string) (*TransactionInfo, error) {
+	return a.transactionInfoProvider.TransactionInfo(txID)
 }
 
 type RegisterAuditorView struct {
