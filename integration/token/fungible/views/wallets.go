@@ -49,7 +49,7 @@ type RegisterOwnerWallet struct {
 	Path  string
 }
 
-// RegisterOwnerWalletView is a view that register an owner wallet
+// RegisterOwnerWalletView is a view that registers an owner wallet
 type RegisterOwnerWalletView struct {
 	*RegisterOwnerWallet
 }
