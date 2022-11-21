@@ -184,6 +184,21 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 	return ""
 }
 
+func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
+	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
+	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+
+	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
+	for _, node := range fscTopology.Nodes {
+		if node.ID() == nodeID {
+			ids := cmGenerator.GenerateOwnerIdentities(tms, node, walletID)
+			return ids[0].Path
+		}
+	}
+	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	return ""
+}
+
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
 	p.CryptoMaterialGenerators[driver] = generator
 }

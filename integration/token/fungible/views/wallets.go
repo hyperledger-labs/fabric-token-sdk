@@ -42,3 +42,32 @@ func (p *RegisterIssuerWalletViewFactory) NewView(in []byte) (view.View, error) 
 
 	return f, nil
 }
+
+type RegisterOwnerWallet struct {
+	TMSID token.TMSID
+	ID    string
+	Path  string
+}
+
+// RegisterOwnerWalletView is a view that registers an owner wallet
+type RegisterOwnerWalletView struct {
+	*RegisterOwnerWallet
+}
+
+func (r *RegisterOwnerWalletView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+	err := tms.WalletManager().RegisterOwnerWallet(r.ID, r.Path)
+	assert.NoError(err, "failed to register owner wallet [%s:%s]", r.ID, r.TMSID)
+	return nil, nil
+}
+
+type RegisterOwnerWalletViewFactory struct{}
+
+func (p *RegisterOwnerWalletViewFactory) NewView(in []byte) (view.View, error) {
+	f := &RegisterOwnerWalletView{RegisterOwnerWallet: &RegisterOwnerWallet{}}
+	err := json.Unmarshal(in, f.RegisterOwnerWallet)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}

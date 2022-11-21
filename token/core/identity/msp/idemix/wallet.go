@@ -148,5 +148,6 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 
 // RegisterIdentity registers the given identity
 func (w *wallet) RegisterIdentity(id string, path string) error {
+	logger.Debugf("register idemix identity [%s:%s]", id, path)
 	return w.localMembership.RegisterIdentity(id, path)
 }

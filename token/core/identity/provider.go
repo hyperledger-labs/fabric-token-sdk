@@ -172,10 +172,12 @@ func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 }
 
 func (p *Provider) RegisterOwnerWallet(id string, path string) error {
+	logger.Debugf("register owner wallet [%s:%s]", id, path)
 	return p.wallets[driver.OwnerRole].RegisterIdentity(id, path)
 }
 
 func (p *Provider) RegisterIssuerWallet(id string, path string) error {
+	logger.Debugf("register issuer wallet [%s:%s]", id, path)
 	return p.wallets[driver.IssuerRole].RegisterIdentity(id, path)
 }
 
