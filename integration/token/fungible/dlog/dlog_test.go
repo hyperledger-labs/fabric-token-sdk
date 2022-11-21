@@ -63,7 +63,7 @@ var _ = Describe("EndToEnd", func() {
 			ppBytes, err = pp.Serialize()
 			Expect(err).NotTo(HaveOccurred())
 
-			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms)
+			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms, false)
 		})
 	})
 
@@ -79,6 +79,31 @@ var _ = Describe("EndToEnd", func() {
 
 		It("succeeded", func() {
 			fungible.TestAll(network, "issuer")
+		})
+
+		It("Update public params", func() {
+			auditorId := fungible.GetAuditorIdentity(network, "newIssuer")
+
+			issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
+			p := network.Ctx.PlatformsByName["token"]
+
+			tms := fungible.GetTms(network, "default")
+			Expect(tms).NotTo(BeNil())
+
+			nh := p.(*token.Platform).NetworkHandlers[p.(*token.Platform).Context.TopologyByName(tms.Network).Type()]
+			ppBytes, err := ioutil.ReadFile(nh.(*fabric.NetworkHandler).TokenPlatform.PublicParametersFile(tms))
+			Expect(err).NotTo(HaveOccurred())
+
+			pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+			Expect(err).NotTo(HaveOccurred())
+
+			pp.Auditor = auditorId
+			pp.Issuers = [][]byte{issuerId}
+
+			ppBytes, err = pp.Serialize()
+			Expect(err).NotTo(HaveOccurred())
+
+			fungible.TestPublicParamsUpdate(network, "newIssuer", ppBytes, tms, true)
 		})
 
 	})

@@ -164,7 +164,7 @@ type GetIssuerWalletIdentityViewFactory struct{}
 func (g *GetIssuerWalletIdentity) Call(context view.Context) (interface{}, error) {
 	defaultIssuerWallet := token.GetManagementService(context).WalletManager().IssuerWallet(g.ID)
 	assert.NotNil(defaultIssuerWallet, "no default issuer wallet")
-	id, err := defaultIssuerWallet.GetIssuerIdentity("fabToken")
+	id, err := defaultIssuerWallet.GetIssuerIdentity("")
 	assert.NoError(err, "failed getting issuer Identity ")
 	return id, err
 }

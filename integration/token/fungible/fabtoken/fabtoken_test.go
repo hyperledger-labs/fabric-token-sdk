@@ -56,7 +56,7 @@ var _ = Describe("EndToEnd", func() {
 
 			tms := fungible.GetTms(network, "default")
 			Expect(tms).NotTo(BeNil())
-			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms)
+			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms, false)
 		})
 	})
 

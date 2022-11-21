@@ -38,7 +38,7 @@ func RegisterCertifier(network *integration.Infrastructure) {
 }
 
 func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, IssuerId string, expectedErrorMsgs ...string) string {
-	if auditor == "issuer" {
+	if auditor == "issuer" || auditor == "newIssuer" {
 		// the issuer is the auditor, choose default identity
 		auditor = ""
 	}

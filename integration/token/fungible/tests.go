@@ -648,25 +648,41 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	}
 
 }
-func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS) {
-	RegisterAuditor(network, "auditor")
-	RegisterAuditor(network, auditor)
+func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {
 
-	txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
-	Expect(txId).NotTo(BeEmpty())
-	CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
+	if issuerAsAuditor {
+		RegisterAuditor(network, "issuer")
+
+		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
+		Expect(txId).NotTo(BeEmpty())
+		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
+
+	} else {
+		RegisterAuditor(network, "auditor")
+		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
+		Expect(txId).NotTo(BeEmpty())
+		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
+	}
+	RegisterAuditor(network, auditor)
 
 	UpdatePublicParams(network, ppBytes, "token-chaincode", "Version-1.0", tms)
 
-	Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
-	Eventually(GetPublicParams).WithArguments(network, auditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	var errorMessage string
+	if issuerAsAuditor {
+		errorMessage = "failed verifying auditor signature"
+		Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	} else {
+		errorMessage = "failed to verify issuers' signatures"
+		Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+		Eventually(GetPublicParams).WithArguments(network, auditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	}
 
-	txId = IssueCash(network, "", "USD", 110, "alice", auditor, true, "newIssuer")
+	txId := IssueCash(network, "", "USD", 110, "alice", auditor, true, "newIssuer")
 	Expect(txId).NotTo(BeEmpty())
 	CheckBalance(network, "alice", "", "USD", 220)
 	CheckHolding(network, "alice", "", "USD", 110, auditor)
 
-	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer", "failed to verify issuers' signatures")
+	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer", errorMessage)
 }
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
@@ -676,11 +692,11 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
 
-	IssueCash(network, "", "SPE", 100, "charlie", auditor, true,"issuer")
+	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
 	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
 	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
 
-	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75,auditor)
-	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10,auditor)
-	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15,auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10, auditor)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
 }

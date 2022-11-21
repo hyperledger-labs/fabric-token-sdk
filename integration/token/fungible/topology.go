@@ -80,6 +80,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
+	newIssuer.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
 
 	var auditor *node.Node
 	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
@@ -107,6 +108,21 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		issuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 		auditor = issuer
+
+		newIssuer.AddOptions(
+			orion.WithRole("auditor"),
+			token.WithAuditorIdentity(),
+			fsc.WithAlias("auditor"),
+		)
+		newIssuer.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+		newIssuer.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
+		newIssuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+		newIssuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
+		newIssuer.RegisterViewFactory("SetTransactionAuditStatus", &views.SetTransactionAuditStatusViewFactory{})
+		newIssuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+		newIssuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+		newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+		newIssuer.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	} else {
 		auditor = fscTopology.AddNodeByName("auditor").AddOptions(
 			fabric.WithOrganization("Org1"),
@@ -126,7 +142,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
-		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	}
 

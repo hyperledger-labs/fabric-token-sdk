@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"fmt"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -158,6 +159,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 
 	validAuditing := false
+	fmt.Println("PublicParametersManager().Auditors()", a.tx.TokenService().PublicParametersManager().Auditors())
 	for _, auditor := range a.tx.TokenService().PublicParametersManager().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
 		if err != nil {
