@@ -69,8 +69,8 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 	return ""
 }
 
-func CheckAuditedTransactions(network *integration.Infrastructure, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
-	txsBoxed, err := network.Client("auditor").CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
+func CheckAuditedTransactions(network *integration.Infrastructure, auditor string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
+	txsBoxed, err := network.Client(auditor).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
 		From: start,
 		To:   end,
 	}))
@@ -159,7 +159,7 @@ func CheckHolding(network *integration.Infrastructure, id string, wallet string,
 	Expect(holding).To(Equal(int(expected)))
 }
 
-func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, expected uint64) {
+func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, auditor string, expected uint64) {
 	// check spending
 	// first get the enrollment id
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
@@ -167,7 +167,7 @@ func CheckSpending(network *integration.Infrastructure, id string, wallet string
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
-	spendingBoxed, err := network.Client("auditor").CallView("spending", common.JSONMarshall(&views.CurrentSpending{
+	spendingBoxed, err := network.Client(auditor).CallView("spending", common.JSONMarshall(&views.CurrentSpending{
 		EnrollmentID: eID,
 		TokenType:    tokenType,
 	}))
