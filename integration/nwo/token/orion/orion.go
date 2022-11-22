@@ -169,6 +169,9 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction")
 }
 
+func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte) {
+	panic("Should not be invoked")
+}
 func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)

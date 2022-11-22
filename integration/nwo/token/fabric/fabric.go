@@ -11,6 +11,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 	"text/template"
 	"time"
 
@@ -18,6 +20,7 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
@@ -56,7 +59,7 @@ type tokenPlatform interface {
 	PublicParametersDir() string
 	GetBuilder() api2.Builder
 	TokenDir() string
-	UpdatePublicParams(tms *topology2.TMS, pp []byte, chaincodeId string, chaincodeVersion string)
+	UpdatePublicParams(tms *topology2.TMS, pp []byte)
 }
 
 type Entry struct {
@@ -172,6 +175,53 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	}
 }
 
+func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte) {
+	var cc *topology.ChannelChaincode
+	for _, chaincode := range p.Fabric(tms).Topology().Chaincodes {
+		if chaincode.Chaincode.Name == tms.Namespace {
+			cc = chaincode
+			break
+		}
+	}
+	Expect(cc).NotTo(BeNil(), "failed to find chaincode [%s]", tms.Namespace)
+
+	packageDir := filepath.Join(
+		p.TokenPlatform.GetContext().RootDir(),
+		"token",
+		"chaincodes",
+		"tcc",
+		tms.Network,
+		tms.Channel,
+		tms.Namespace,
+	)
+	newChaincodeVersion := cc.Chaincode.Version + ".1"
+	packageFile := filepath.Join(
+		packageDir,
+		cc.Chaincode.Name+newChaincodeVersion+".tar.gz",
+	)
+	Expect(os.MkdirAll(packageDir, 0766)).ToNot(HaveOccurred())
+
+	paramsFile := PublicPramasTemplate(ppRaw)
+
+	err := packager.New().PackageChaincode(
+		cc.Chaincode.Path,
+		cc.Chaincode.Lang,
+		cc.Chaincode.Label,
+		packageFile,
+		func(filePath string, fileName string) (string, []byte) {
+			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
+				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
+				return "", paramsFile.Bytes()
+			}
+			return "", nil
+		},
+	)
+	Expect(err).ToNot(HaveOccurred())
+	cc.Chaincode.PackageFile = packageFile
+	p.Fabric(tms).(*fabric.Platform).UpdateChaincode(cc.Chaincode.Name,
+		newChaincodeVersion,
+		cc.Chaincode.Path, cc.Chaincode.PackageFile)
+}
 func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)

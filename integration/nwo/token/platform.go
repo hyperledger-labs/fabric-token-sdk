@@ -21,10 +21,8 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/context"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/onsi/ginkgo/v2"
@@ -43,6 +41,7 @@ type NetworkHandler interface {
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
 	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
+	UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte)
 }
 
 type Platform struct {
@@ -226,17 +225,9 @@ func (p *Platform) SetPublicParamsGenerator(name string, gen generators.PublicPa
 	p.PublicParamsGenerators[name] = gen
 }
 
-func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte, chaincodeId string, chaincodeVersion string) {
-	var cc *topology.ChannelChaincode
-	nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()].(*fabric.NetworkHandler)
-	for _, chaincode := range nh.Fabric(tms).Topology().Chaincodes {
-		if chaincode.Chaincode.Name == chaincodeId {
-			cc = chaincode
-			break
-		}
-	}
-	Expect(cc).NotTo(BeNil(), "failed to find chaincode [%s]", chaincodeId)
-	nh.UpdateChaincodePublicParams(tms, cc, publicParams, chaincodeVersion)
+func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
+	nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+	nh.UpdateChaincodePublicParams(tms, publicParams)
 }
 
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {

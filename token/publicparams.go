@@ -62,6 +62,7 @@ func (c *PublicParametersManager) Update() error {
 	return c.ppm.Update()
 }
 
+// UpdateByValue updates the public parameters with the passed value
 func (c *PublicParametersManager) UpdateByValue(pp driver.PublicParameters) error {
 	return c.ppm.UpdateByValue(pp)
 }

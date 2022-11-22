@@ -18,7 +18,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/packager"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -95,44 +94,6 @@ func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChainc
 	cc.Chaincode.PackageFile = packageFile
 
 	return cc, port
-}
-
-func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology3.TMS, cc *topology.ChannelChaincode, ppRaw []byte, version string) {
-	packageDir := filepath.Join(
-		p.TokenPlatform.GetContext().RootDir(),
-		"token",
-		"chaincodes",
-		"tcc",
-		tms.Network,
-		tms.Channel,
-		tms.Namespace,
-	)
-	packageFile := filepath.Join(
-		packageDir,
-		cc.Chaincode.Name+version+".tar.gz",
-	)
-	Expect(os.MkdirAll(packageDir, 0766)).ToNot(HaveOccurred())
-
-	paramsFile := PublicPramasTemplate(ppRaw)
-
-	err := packager.New().PackageChaincode(
-		cc.Chaincode.Path,
-		cc.Chaincode.Lang,
-		cc.Chaincode.Label,
-		packageFile,
-		func(filePath string, fileName string) (string, []byte) {
-			if strings.HasSuffix(filePath, p.TokenChaincodeParamsReplaceSuffix) {
-				logger.Debugf("replace [%s:%s]? Yes, this is tcc params", filePath, fileName)
-				return "", paramsFile.Bytes()
-			}
-			return "", nil
-		},
-	)
-	Expect(err).ToNot(HaveOccurred())
-	cc.Chaincode.PackageFile = packageFile
-	p.Fabric(tms).(*fabric.Platform).UpdateChaincode(cc.Chaincode.Name,
-		version,
-		cc.Chaincode.Path, cc.Chaincode.PackageFile)
 }
 
 func (p *NetworkHandler) PrepareTCC(tms *topology3.TMS, orgs []string) (*topology.ChannelChaincode, uint16) {

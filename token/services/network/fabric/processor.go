@@ -8,7 +8,6 @@ package fabric
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -117,8 +116,12 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Parsing write key [%s]", key)
 		}
-
-		if strings.Contains(key, keys.TokenKeyPrefix) {
+		setUpKey, err := keys.CreateSetupKey()
+		if err != nil {
+			logger.Errorf("failed creating setup key")
+			return err
+		}
+		if key == setUpKey {
 			pp, err := core.PublicParametersFromBytes(val)
 			if err != nil {
 				logger.Errorf("failed unmarshalling public params [%s,%s]", key, string(val))

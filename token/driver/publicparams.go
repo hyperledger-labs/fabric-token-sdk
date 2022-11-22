@@ -58,7 +58,7 @@ type PublicParamsManager interface {
 	NewCertifierKeyPair() ([]byte, []byte, error)
 	// Update fetches the public parameters from the backend and write them locally
 	Update() error
-	// Update updates the public parameters with the passed value
+	// UpdateByValue updates the public parameters with the passed value
 	UpdateByValue(pp PublicParameters) error
 	// Fetch fetches the public parameters
 	Fetch() ([]byte, error)
