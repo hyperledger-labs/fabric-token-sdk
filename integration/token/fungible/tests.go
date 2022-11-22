@@ -649,8 +649,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 }
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {
-
+	var errorMessage string
 	if issuerAsAuditor {
+		errorMessage = "failed verifying auditor signature"
 		RegisterAuditor(network, "issuer")
 
 		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
@@ -658,6 +659,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
 
 	} else {
+		errorMessage = "failed to verify issuers' signatures"
 		RegisterAuditor(network, "auditor")
 		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
@@ -667,13 +669,8 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 
 	UpdatePublicParams(network, ppBytes, "token-chaincode", "Version-1.0", tms)
 
-	var errorMessage string
-	if issuerAsAuditor {
-		errorMessage = "failed verifying auditor signature"
-		Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
-	} else {
-		errorMessage = "failed to verify issuers' signatures"
-		Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	if !issuerAsAuditor {
 		Eventually(GetPublicParams).WithArguments(network, auditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	}
 

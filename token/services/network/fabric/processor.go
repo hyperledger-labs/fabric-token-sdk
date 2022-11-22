@@ -8,11 +8,13 @@ package fabric
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -72,7 +74,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	case "setup":
 		return r.setup(req, tx, rws, ns)
 	case "init":
-		return r.init(tx, ns)
+		return r.init(tx, rws, ns)
 	default:
 		return r.tokenRequest(req, tx, rws, ns)
 	}
@@ -95,8 +97,8 @@ func (r *RWSetProcessor) setup(req fabric.Request, tx fabric.ProcessTransaction,
 	return nil
 }
 
-//init when invoked fetches the public params from backend and updates the local version
-func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, ns string) error {
+//init when invoked extracts the public params from rwset and updates the local version
+func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
 	tms := token.GetManagementService(
 		r.sp,
 		token.WithNetwork(tx.Network()),
@@ -106,9 +108,29 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, ns string) error {
 	if tms == nil {
 		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
 	}
-	err := tms.PublicParametersManager().Update()
-	if err != nil {
-		return errors.Wrapf(err, "failed updating public params ")
+
+	for i := 0; i < rws.NumWrites(ns); i++ {
+		key, val, err := rws.GetWriteAt(ns, i)
+		if err != nil {
+			return err
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("Parsing write key [%s]", key)
+		}
+
+		if strings.Contains(key, keys.TokenKeyPrefix) {
+			pp, err := core.PublicParametersFromBytes(val)
+			if err != nil {
+				logger.Errorf("failed unmarshalling public params [%s,%s]", key, string(val))
+				return err
+			}
+
+			err = tms.PublicParametersManager().UpdateByValue(pp)
+			if err != nil {
+				return errors.Wrapf(err, "failed updating public params ")
+			}
+			break
+		}
 	}
 	logger.Debugf("Successfully updated public parameters")
 	return nil

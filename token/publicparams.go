@@ -62,6 +62,10 @@ func (c *PublicParametersManager) Update() error {
 	return c.ppm.Update()
 }
 
+func (c *PublicParametersManager) UpdateByValue(pp driver.PublicParameters) error {
+	return c.ppm.UpdateByValue(pp)
+}
+
 // Identifier returns the identifier of the public parameters
 func (c *PublicParametersManager) Identifier() string {
 	return c.ppm.PublicParameters().Identifier()
