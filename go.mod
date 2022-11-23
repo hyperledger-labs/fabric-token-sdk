@@ -2,8 +2,6 @@ module github.com/hyperledger-labs/fabric-token-sdk
 
 go 1.18
 
-replace github.com/hyperledger-labs/fabric-smart-client => github.com/sapthasurendran/fabric-smart-client v0.0.0-20221114125719-a099f6fadc20
-
 require (
 	github.com/IBM/idemix v0.0.0-20220113150823-80dd4cb2d74e
 	github.com/IBM/mathlib v0.0.0-20220112091634-0a7378db6912
@@ -99,8 +97,6 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/huin/goupnp v1.0.0 // indirect
-	github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 // indirect
-	github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8 // indirect
 	github.com/hyperledger/fabric-config v0.1.0 // indirect
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
