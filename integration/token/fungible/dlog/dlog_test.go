@@ -7,12 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"io/ioutil"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -37,6 +40,11 @@ var _ = Describe("EndToEnd", func() {
 		It("succeeded", func() {
 			fungible.TestAll(network, "auditor")
 		})
+
+		It("Update public params", func() {
+			tms := fungible.GetTMS(network, "default")
+			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, "newAuditor", tms), tms, false)
+		})
 	})
 
 	Describe("Fungible with Auditor = Issuer", func() {
@@ -49,9 +57,38 @@ var _ = Describe("EndToEnd", func() {
 			network.Start()
 		})
 
-		It("succeeded", func() {
-			fungible.TestAll(network, "issuer")
+		//It("succeeded", func() {
+		//	fungible.TestAll(network, "issuer")
+		//})
+
+		It("Update public params", func() {
+			tms := fungible.GetTMS(network, "default")
+			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
 		})
+
 	})
 
 })
+
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, tms *topology.TMS) []byte {
+	auditorId := fungible.GetAuditorIdentity(network, auditor)
+	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := ioutil.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Update PP
+	pp.Auditor = auditorId
+	pp.Issuers = [][]byte{issuerId}
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+
+	return ppBytes
+}

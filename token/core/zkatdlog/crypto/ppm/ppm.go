@@ -72,6 +72,18 @@ func (v *PublicParamsManager) Update() error {
 	return nil
 }
 
+// UpdateByValue updates the public parameters with the passed value
+func (v *PublicParamsManager) UpdateByValue(pp driver.PublicParameters) error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	pp, ok := pp.(*crypto.PublicParams)
+	if !ok {
+		return errors.Errorf("invalid argument type, expected *crypto.PublicParams")
+	}
+	v.pp = pp.(*crypto.PublicParams)
+	return nil
+}
+
 func (v *PublicParamsManager) Fetch() ([]byte, error) {
 	logger.Debugf("fetch public parameters...")
 	if v.publicParamsLoader == nil {

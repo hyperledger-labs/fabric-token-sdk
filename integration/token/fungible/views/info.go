@@ -58,14 +58,13 @@ func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, er
 	assert.NotNil(tms, "failed to get TMS")
 
 	assert.NoError(tms.PublicParametersManager().Validate(), "failed to validate local public parameters")
-
-	ppRaw, err := tms.PublicParametersManager().SerializePublicParameters()
-	assert.NoError(err, "failed to marshal public params")
+	ppRaw := GetTMSPublicParams(tms)
 
 	fetchedPPRaw, err := tms.PublicParametersManager().Fetch()
-	assert.NoError(err, "failed to fetch public params")
 
+	assert.NoError(err, "failed to fetch public params")
 	ppm, err := token.NewPublicParametersManagerFromPublicParams(fetchedPPRaw)
+
 	assert.NoError(err, "failed to instantiate public params manager from fetch params")
 	assert.NoError(ppm.Validate(), "failed to validate remote public parameters")
 
@@ -120,5 +119,59 @@ func (p *WhoDeletedTokenViewFactory) NewView(in []byte) (view.View, error) {
 	err := json.Unmarshal(in, f.WhoDeletedToken)
 	assert.NoError(err, "failed unmarshalling input")
 
+	return f, nil
+}
+
+type GetPublicParams struct {
+	TMSID token.TMSID
+}
+
+type GetPublicParamsView struct {
+	*GetPublicParams
+}
+
+func (p *GetPublicParamsView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NotNil(tms, "failed to get TMS")
+	return GetTMSPublicParams(tms), nil
+}
+
+type GetPublicParamsViewFactory struct{}
+
+func (p *GetPublicParamsViewFactory) NewView(in []byte) (view.View, error) {
+	f := &GetPublicParamsView{GetPublicParams: &GetPublicParams{}}
+	err := json.Unmarshal(in, f)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+func GetTMSPublicParams(tms *token.ManagementService) []byte {
+	ppBytes, err := tms.PublicParametersManager().SerializePublicParameters()
+	assert.NoError(err, "failed to marshal public params")
+	return ppBytes
+}
+
+type GetIssuerWalletIdentity struct {
+	ID string
+}
+
+type GetIssuerWalletIdentityView struct {
+	*GetIssuerWalletIdentity
+}
+
+type GetIssuerWalletIdentityViewFactory struct{}
+
+func (g *GetIssuerWalletIdentity) Call(context view.Context) (interface{}, error) {
+	defaultIssuerWallet := token.GetManagementService(context).WalletManager().IssuerWallet(g.ID)
+	assert.NotNil(defaultIssuerWallet, "no default issuer wallet")
+	id, err := defaultIssuerWallet.GetIssuerIdentity("")
+	assert.NoError(err, "failed getting issuer Identity ")
+	return id, err
+}
+
+func (p *GetIssuerWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
+	f := &GetIssuerWalletIdentityView{GetIssuerWalletIdentity: &GetIssuerWalletIdentity{}}
+	err := json.Unmarshal(in, f.GetIssuerWalletIdentity)
+	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

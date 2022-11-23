@@ -41,6 +41,7 @@ type NetworkHandler interface {
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
 	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
+	UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte)
 }
 
 type Platform struct {
@@ -222,6 +223,11 @@ func (p *Platform) AddNetworkHandler(label string, nh NetworkHandler) {
 
 func (p *Platform) SetPublicParamsGenerator(name string, gen generators.PublicParamsGenerator) {
 	p.PublicParamsGenerators[name] = gen
+}
+
+func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
+	nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+	nh.UpdateChaincodePublicParams(tms, publicParams)
 }
 
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {

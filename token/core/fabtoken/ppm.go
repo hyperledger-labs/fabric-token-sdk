@@ -72,6 +72,18 @@ func (v *PublicParamsManager) Update() error {
 	return nil
 }
 
+// UpdateByValue updates the public parameters with the passed value
+func (v *PublicParamsManager) UpdateByValue(pp driver.PublicParameters) error {
+	v.mutex.Lock()
+	defer v.mutex.Unlock()
+	pp, ok := pp.(*PublicParams)
+	if !ok {
+		return errors.Errorf("invalid argument type, expected *fabtoken.PublicParams")
+	}
+	v.pp = pp.(*PublicParams)
+	return nil
+}
+
 // Fetch fetches the public parameters from the backend
 func (v *PublicParamsManager) Fetch() ([]byte, error) {
 	if v.publicParamsLoader == nil {

@@ -17,6 +17,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	platform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -35,12 +37,12 @@ func RegisterCertifier(network *integration.Infrastructure) {
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, expectedErrorMsgs ...string) string {
-	if auditor == "issuer" {
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, IssuerId string, expectedErrorMsgs ...string) string {
+	if auditor == "issuer" || auditor == "newIssuer" {
 		// the issuer is the auditor, choose default identity
 		auditor = ""
 	}
-	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
+	txid, err := network.Client(IssuerId).CallView("issue", common.JSONMarshall(&views.IssueCash{
 		Anonymous:    anonymous,
 		Auditor:      auditor,
 		IssuerWallet: wallet,
@@ -52,7 +54,11 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		if len(auditor) == 0 {
+			Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		} else {
+			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		}
 		return common.JSONUnmarshalString(txid)
 	}
 
@@ -63,8 +69,8 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 	return ""
 }
 
-func CheckAuditedTransactions(network *integration.Infrastructure, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
-	txsBoxed, err := network.Client("auditor").CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
+func CheckAuditedTransactions(network *integration.Infrastructure, auditor string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
+	txsBoxed, err := network.Client(auditor).CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
 		From: start,
 		To:   end,
 	}))
@@ -117,9 +123,9 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id string, w
 	}
 }
 
-func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
+func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64, auditorId string) {
 	CheckBalance(network, id, wallet, typ, expected)
-	CheckHolding(network, id, wallet, typ, int64(expected))
+	CheckHolding(network, id, wallet, typ, int64(expected), auditorId)
 }
 
 func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
@@ -137,13 +143,13 @@ func CheckBalance(network *integration.Infrastructure, id string, wallet string,
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
 }
 
-func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64) {
+func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64, auditorId string) {
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
-	holdingBoxed, err := network.Client("auditor").CallView("holding", common.JSONMarshall(&views.CurrentHolding{
+	holdingBoxed, err := network.Client(auditorId).CallView("holding", common.JSONMarshall(&views.CurrentHolding{
 		EnrollmentID: eID,
 		TokenType:    typ,
 	}))
@@ -153,7 +159,7 @@ func CheckHolding(network *integration.Infrastructure, id string, wallet string,
 	Expect(holding).To(Equal(int(expected)))
 }
 
-func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, expected uint64) {
+func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, auditor string, expected uint64) {
 	// check spending
 	// first get the enrollment id
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
@@ -161,7 +167,7 @@ func CheckSpending(network *integration.Infrastructure, id string, wallet string
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
-	spendingBoxed, err := network.Client("auditor").CallView("spending", common.JSONMarshall(&views.CurrentSpending{
+	spendingBoxed, err := network.Client(auditor).CallView("spending", common.JSONMarshall(&views.CurrentSpending{
 		EnrollmentID: eID,
 		TokenType:    tokenType,
 	}))
@@ -413,6 +419,30 @@ func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	}
 }
 
+func GetTMS(network *integration.Infrastructure, networkName string) *topology.TMS {
+	var tms *topology.TMS
+	p := network.Ctx.PlatformsByName["token"]
+	for _, TMS := range p.(*platform.Platform).Topology.TMSs {
+		if TMS.Network == networkName {
+			tms = TMS
+			break
+		}
+	}
+	Expect(tms).NotTo(BeNil())
+	return tms
+}
+
+func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS) {
+	p := network.Ctx.PlatformsByName["token"]
+	p.(*platform.Platform).UpdatePublicParams(tms, publicParams)
+}
+
+func GetPublicParams(network *integration.Infrastructure, id string) []byte {
+	pp, err := network.Client(id).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParamsViewFactory{}))
+	Expect(err).NotTo(HaveOccurred())
+	return pp.([]byte)
+}
+
 func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...string) {
 	for _, id := range ids {
 		errorMessagesBoxed, err := network.Client(id).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{}))
@@ -490,6 +520,26 @@ func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []
 		Expect(result.Who[i]).To(BeEquivalentTo(txID))
 	}
 	return result
+}
+
+func GetAuditorIdentity(network *integration.Infrastructure, Id string) []byte {
+	auditorIdentity, err := network.Client(Id).CallView("GetAuditorWalletIdentity", common.JSONMarshall(&views.GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &views.GetAuditorWalletIdentity{}}))
+	Expect(err).NotTo(HaveOccurred())
+
+	auditorId := auditorIdentity.([]byte)
+	var aID []byte
+	common.JSONUnmarshal(auditorId, &aID)
+	return aID
+}
+
+func GetIssuerIdentity(network *integration.Infrastructure, Id string) []byte {
+	issuerIdentity, err := network.Client(Id).CallView("GetIssuerWalletIdentity", common.JSONMarshall(&views.GetIssuerWalletIdentityView{GetIssuerWalletIdentity: &views.GetIssuerWalletIdentity{}}))
+	Expect(err).NotTo(HaveOccurred())
+
+	issuerId := issuerIdentity.([]byte)
+	var aID []byte
+	common.JSONUnmarshal(issuerId, &aID)
+	return aID
 }
 
 func JSONUnmarshalFloat64(v interface{}) float64 {

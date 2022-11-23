@@ -61,7 +61,9 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
-			pp.AddAuditor(id)
+			if tms.Auditors[0] == auditor.ID {
+				pp.AddAuditor(id)
+			}
 		}
 	}
 
@@ -138,7 +140,9 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to get identity")
 			}
-			pp.AddAuditor(id)
+			if tms.Auditors[0] == auditor.ID {
+				pp.AddAuditor(id)
+			}
 		}
 	}
 
