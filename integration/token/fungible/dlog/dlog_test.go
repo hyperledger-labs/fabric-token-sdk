@@ -43,7 +43,7 @@ var _ = Describe("EndToEnd", func() {
 
 		It("Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
-			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, tms), tms, false)
+			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, "newAuditor", tms), tms, false)
 		})
 	})
 
@@ -57,21 +57,21 @@ var _ = Describe("EndToEnd", func() {
 			network.Start()
 		})
 
-		It("succeeded", func() {
-			fungible.TestAll(network, "issuer")
-		})
+		//It("succeeded", func() {
+		//	fungible.TestAll(network, "issuer")
+		//})
 
 		It("Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
-			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, tms), tms, true)
+			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
 		})
 
 	})
 
 })
 
-func PrepareUpdatedPublicParams(network *integration.Infrastructure, tms *topology.TMS) []byte {
-	auditorId := fungible.GetAuditorIdentity(network, "newAuditor")
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, tms *topology.TMS) []byte {
+	auditorId := fungible.GetAuditorIdentity(network, auditor)
 	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
 	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
 	Expect(ok).To(BeTrue(), "failed to get token platform from context")
