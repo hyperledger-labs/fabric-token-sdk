@@ -653,11 +653,9 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	if issuerAsAuditor {
 		errorMessage = "failed verifying auditor signature"
 		RegisterAuditor(network, "issuer")
-
 		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
-
 	} else {
 		errorMessage = "failed to verify issuers' signatures"
 		RegisterAuditor(network, "auditor")
@@ -665,9 +663,9 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 		Expect(txId).NotTo(BeEmpty())
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
 	}
-	RegisterAuditor(network, auditor)
 
-	UpdatePublicParams(network, ppBytes, "token-chaincode", "Version-1.0", tms)
+	RegisterAuditor(network, auditor)
+	UpdatePublicParams(network, ppBytes, tms)
 
 	Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	if !issuerAsAuditor {
@@ -678,7 +676,6 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	Expect(txId).NotTo(BeEmpty())
 	CheckBalance(network, "alice", "", "USD", 220)
 	CheckHolding(network, "alice", "", "USD", 110, auditor)
-
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer", errorMessage)
 }
 

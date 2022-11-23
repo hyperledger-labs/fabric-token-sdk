@@ -43,7 +43,7 @@ var _ = Describe("EndToEnd", func() {
 
 		It("Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
-			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, tms), tms, false)
+			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, tms), tms, false)
 		})
 	})
 

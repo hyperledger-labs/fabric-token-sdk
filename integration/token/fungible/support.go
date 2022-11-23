@@ -432,7 +432,7 @@ func GetTMS(network *integration.Infrastructure, networkName string) *topology.T
 	return tms
 }
 
-func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte, chaincodeId string, version string, tms *topology.TMS) {
+func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS) {
 	p := network.Ctx.PlatformsByName["token"]
 	p.(*platform.Platform).UpdatePublicParams(tms, publicParams)
 }
