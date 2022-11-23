@@ -11,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -96,6 +97,9 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	tms.AddAuditor(auditor)
 
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
@@ -281,6 +285,9 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
+
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
@@ -378,6 +385,9 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
+
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
 
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
@@ -486,6 +496,9 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	orionTopology.AddDB(tmsOrion.Namespace, "custodian", "issuer", "auditor", "bob")
 	orionTopology.SetDefaultSDK(fscTopology)
+
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
 
 	return []api.Topology{f1Topology, orionTopology, tokenTopology, fscTopology}
 }
