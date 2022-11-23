@@ -11,8 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	. "github.com/onsi/ginkgo/v2"
@@ -43,27 +42,8 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("Update public params", func() {
-			auditorId := fungible.GetAuditorIdentity(network, "newAuditor")
-			issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
-			p := network.Ctx.PlatformsByName["token"]
-
-			tms := fungible.GetTms(network, "default")
-			Expect(tms).NotTo(BeNil())
-
-			nh := p.(*token.Platform).NetworkHandlers[p.(*token.Platform).Context.TopologyByName(tms.Network).Type()]
-			ppBytes, err := ioutil.ReadFile(nh.(*fabric.NetworkHandler).TokenPlatform.PublicParametersFile(tms))
-			Expect(err).NotTo(HaveOccurred())
-
-			pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
-			Expect(err).NotTo(HaveOccurred())
-
-			pp.Auditor = auditorId
-			pp.Issuers = [][]byte{issuerId}
-
-			ppBytes, err = pp.Serialize()
-			Expect(err).NotTo(HaveOccurred())
-
-			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms, false)
+			tms := fungible.GetTMS(network, "default")
+			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, tms), tms, false)
 		})
 	})
 
@@ -82,30 +62,33 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("Update public params", func() {
-			auditorId := fungible.GetAuditorIdentity(network, "newIssuer")
-
-			issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
-			p := network.Ctx.PlatformsByName["token"]
-
-			tms := fungible.GetTms(network, "default")
-			Expect(tms).NotTo(BeNil())
-
-			nh := p.(*token.Platform).NetworkHandlers[p.(*token.Platform).Context.TopologyByName(tms.Network).Type()]
-			ppBytes, err := ioutil.ReadFile(nh.(*fabric.NetworkHandler).TokenPlatform.PublicParametersFile(tms))
-			Expect(err).NotTo(HaveOccurred())
-
-			pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
-			Expect(err).NotTo(HaveOccurred())
-
-			pp.Auditor = auditorId
-			pp.Issuers = [][]byte{issuerId}
-
-			ppBytes, err = pp.Serialize()
-			Expect(err).NotTo(HaveOccurred())
-
-			fungible.TestPublicParamsUpdate(network, "newIssuer", ppBytes, tms, true)
+			tms := fungible.GetTMS(network, "default")
+			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, tms), tms, true)
 		})
 
 	})
 
 })
+
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, tms *topology.TMS) []byte {
+	auditorId := fungible.GetAuditorIdentity(network, "newAuditor")
+	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := ioutil.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	Expect(err).NotTo(HaveOccurred())
+
+	// Update PP
+	pp.Auditor = auditorId
+	pp.Issuers = [][]byte{issuerId}
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+
+	return ppBytes
+}

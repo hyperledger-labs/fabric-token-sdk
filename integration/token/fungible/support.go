@@ -418,7 +418,8 @@ func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 		Expect(err).NotTo(HaveOccurred())
 	}
 }
-func GetTms(network *integration.Infrastructure, networkName string) *topology.TMS {
+
+func GetTMS(network *integration.Infrastructure, networkName string) *topology.TMS {
 	var tms *topology.TMS
 	p := network.Ctx.PlatformsByName["token"]
 	for _, TMS := range p.(*platform.Platform).Topology.TMSs {
@@ -427,6 +428,7 @@ func GetTms(network *integration.Infrastructure, networkName string) *topology.T
 			break
 		}
 	}
+	Expect(tms).NotTo(BeNil())
 	return tms
 }
 
@@ -519,6 +521,7 @@ func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []
 	}
 	return result
 }
+
 func GetAuditorIdentity(network *integration.Infrastructure, Id string) []byte {
 	auditorIdentity, err := network.Client(Id).CallView("GetAuditorWalletIdentity", common.JSONMarshall(&views.GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &views.GetAuditorWalletIdentity{}}))
 	Expect(err).NotTo(HaveOccurred())

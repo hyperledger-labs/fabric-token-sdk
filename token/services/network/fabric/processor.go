@@ -70,30 +70,11 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	fn, _ := tx.FunctionAndParameters()
 	logger.Debugf("process namespace and function [%s:%s]", ns, fn)
 	switch fn {
-	case "setup":
-		return r.setup(req, tx, rws, ns)
 	case "init":
 		return r.init(tx, rws, ns)
 	default:
 		return r.tokenRequest(req, tx, rws, ns)
 	}
-}
-
-func (r *RWSetProcessor) setup(req fabric.Request, tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
-	logger.Debugf("[setup] store setup bundle")
-	key, err := keys.CreateSetupBundleKey()
-	if err != nil {
-		return err
-	}
-	logger.Debugf("[setup] store setup bundle [%s,%s]", key, req.ID())
-	err = rws.SetState(ns, key, []byte(req.ID()))
-	if err != nil {
-		logger.Errorf("failed setting setup bundle state [%s,%s]", key, req.ID())
-		return errors.Wrapf(err, "failed setting setup bundle state [%s,%s]", key, req.ID())
-	}
-	logger.Debugf("[setup] store setup bundle done")
-
-	return nil
 }
 
 //init when invoked extracts the public params from rwset and updates the local version
@@ -108,6 +89,10 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
 	}
 
+	setUpKey, err := keys.CreateSetupKey()
+	if err != nil {
+		return errors.Errorf("failed creating setup key")
+	}
 	for i := 0; i < rws.NumWrites(ns); i++ {
 		key, val, err := rws.GetWriteAt(ns, i)
 		if err != nil {
@@ -116,18 +101,11 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Parsing write key [%s]", key)
 		}
-		setUpKey, err := keys.CreateSetupKey()
-		if err != nil {
-			logger.Errorf("failed creating setup key")
-			return err
-		}
 		if key == setUpKey {
 			pp, err := core.PublicParametersFromBytes(val)
 			if err != nil {
-				logger.Errorf("failed unmarshalling public params [%s,%s]", key, string(val))
-				return err
+				return errors.Wrapf(err, "failed unmarshalling public params [%s,%s]", key, string(val))
 			}
-
 			err = tms.PublicParametersManager().UpdateByValue(pp)
 			if err != nil {
 				return errors.Wrapf(err, "failed updating public params ")
