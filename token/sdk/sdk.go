@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -63,7 +65,7 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set TMS Provider")
-	pm := NewProcessorManager(p.registry)
+	pm := tms.NewProcessorManager(p.registry)
 	tmsProvider := core.NewTMSProvider(
 		p.registry,
 		pm.New,
