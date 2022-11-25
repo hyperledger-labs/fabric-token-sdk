@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package topology
 
 import (
-	"fmt"
 	"regexp"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	. "github.com/onsi/gomega"
@@ -80,7 +80,17 @@ func (t *TMS) SetTokenGenPublicParams(publicParamsGenArgs ...string) {
 }
 
 func (t *TMS) ID() string {
-	return fmt.Sprintf("%s-%s-%s", t.Network, t.Channel, t.Namespace)
+	b := strings.Builder{}
+	b.WriteString(t.Network)
+	if len(t.Channel) != 0 {
+		b.WriteRune('-')
+		b.WriteString(t.Channel)
+	}
+	if len(t.Namespace) != 0 {
+		b.WriteRune('-')
+		b.WriteString(t.Namespace)
+	}
+	return b.String()
 }
 
 // SetNamespace sets the namespace of the TMS

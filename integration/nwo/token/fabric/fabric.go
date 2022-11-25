@@ -157,6 +157,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
 	t, err := template.New("peer").Funcs(template.FuncMap{
+		"TMSID":   func() string { return tms.ID() },
 		"TMS":     func() *topology2.TMS { return tms },
 		"Wallets": func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 	}).Parse(Extension)

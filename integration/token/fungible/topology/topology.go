@@ -291,7 +291,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 
 	if backend != "orion" {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
-	} else {
 		// Add Fabric SDK to FSC Nodes
 		fscTopology.AddSDK(&fabric3.SDK{})
 	}
