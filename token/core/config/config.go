@@ -13,6 +13,7 @@ import (
 
 type configProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
+	IsSet(key string) bool
 	TranslatePath(path string) string
 }
 
@@ -40,6 +41,10 @@ func (m *TMS) TranslatePath(path string) string {
 // UnmarshalKey takes a single key and unmarshals it into a Struct
 func (m *TMS) UnmarshalKey(key string, rawVal interface{}) error {
 	return m.cp.UnmarshalKey("token.tms."+m.id+"."+key, rawVal)
+}
+
+func (m *TMS) IsSet(key string) bool {
+	return m.cp.IsSet("token.tms." + m.id + "." + key)
 }
 
 // TokenSDK is the configuration of the TokenSDK

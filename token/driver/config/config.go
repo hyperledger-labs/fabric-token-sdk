@@ -44,5 +44,6 @@ type TMS struct {
 type Manager interface {
 	TMS() *TMS
 	TranslatePath(path string) string
+	IsSet(key string) bool
 	UnmarshalKey(key string, rawVal interface{}) error
 }
