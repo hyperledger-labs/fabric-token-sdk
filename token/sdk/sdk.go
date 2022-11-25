@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -27,13 +25,15 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")

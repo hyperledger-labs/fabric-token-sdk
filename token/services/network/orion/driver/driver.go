@@ -4,13 +4,14 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package orion
+package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/pkg/errors"
 )
 
@@ -23,7 +24,7 @@ func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.N
 		return nil, errors.Errorf("network %s not found", network)
 	}
 
-	return NewNetwork(
+	return orion2.NewNetwork(
 		sp,
 		view.GetIdentityProvider(sp),
 		n,

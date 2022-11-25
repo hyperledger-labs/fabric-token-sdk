@@ -4,11 +4,12 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -28,7 +29,7 @@ func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.N
 		return nil, errors.WithMessagef(err, "fabric channel [%s:%s] not found", network, channel)
 	}
 
-	return NewNetwork(sp, n, ch), nil
+	return fabric2.NewNetwork(sp, n, ch), nil
 }
 
 func init() {
