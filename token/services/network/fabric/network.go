@@ -284,9 +284,9 @@ func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
 	return driver.TransientMap(tm), nil
 }
 
-func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	env, err := chaincode.NewEndorseView(
-		namespace,
+		tms.Namespace(),
 		InvokeFunction,
 	).WithNetwork(
 		n.n.Name(),

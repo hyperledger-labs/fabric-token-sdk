@@ -114,7 +114,7 @@ func (m *TokenSDK) tmss() (map[string]*config.TMS, error) {
 	}
 
 	tmsConfigs := map[string]*config.TMS{}
-	for k, _ := range boxedConfig {
+	for k := range boxedConfig {
 		id := k.(string)
 		var tmsConfig *config.TMS
 		if err := m.cp.UnmarshalKey("token.tms."+id, &tmsConfig); err != nil {
