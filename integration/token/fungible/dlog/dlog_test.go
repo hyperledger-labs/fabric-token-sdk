@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
+	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -30,7 +31,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology("fabric", "dlog", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -50,7 +51,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor = Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology("fabric", "dlog", true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", true)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

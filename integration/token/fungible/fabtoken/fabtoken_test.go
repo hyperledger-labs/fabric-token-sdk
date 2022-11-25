@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
