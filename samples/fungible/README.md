@@ -650,7 +650,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	charlie.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
 	tms.SetNamespace([]string{"Org1"}, "100", "2")
     tms.AddAuditor(auditor)

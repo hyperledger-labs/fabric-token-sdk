@@ -16,6 +16,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Topology(backend, tokenSDKDriver string) []api.Topology {
@@ -99,7 +100,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		// Add Fabric SDK to FSC Nodes
 		fscTopology.AddSDK(&fabric3.SDK{})
 	}
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms.AddAuditor(auditor)
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}

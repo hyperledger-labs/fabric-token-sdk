@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Fabric(tokenSDKDriver string) []api.Topology {
@@ -96,7 +97,7 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	charlie.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.SetTokenGenPublicParams("100", "2")

@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Orion(tokenSDKDriver string) []api.Topology {
@@ -96,7 +97,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie")
 	orionTopology.SetDefaultSDK(fscTopology)
 
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms.AddAuditor(auditor)
 
 	return []api.Topology{

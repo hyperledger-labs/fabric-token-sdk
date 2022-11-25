@@ -17,6 +17,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/gomega"
 )
 
@@ -244,7 +245,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		orionTopology.SetDefaultSDK(fscTopology)
 		fscTopology.SetBootstrapNode(custodian)
 	}
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms.AddAuditor(auditor)
 
 	if backend != "orion" {
