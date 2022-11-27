@@ -14,8 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -57,9 +55,9 @@ var _ = Describe("EndToEnd", func() {
 			network.Start()
 		})
 
-		//It("succeeded", func() {
-		//	fungible.TestAll(network, "issuer")
-		//})
+		It("succeeded", func() {
+			fungible.TestAll(network, "issuer")
+		})
 
 		It("Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
