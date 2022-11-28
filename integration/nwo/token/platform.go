@@ -35,6 +35,12 @@ const (
 	DefaultTokenGenPath = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 
+type PF interface {
+	GetTopology() *Topology
+	GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
+	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
+}
+
 type NetworkHandler interface {
 	GenerateArtifacts(tms *topology2.TMS)
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
@@ -75,12 +81,12 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 
 // GetPlatform returns the token platform from the passed context bound to the passed id.
 // It returns nil, if nothing is found
-func GetPlatform(ctx *context.Context, id string) *Platform {
+func GetPlatform(ctx *context.Context, id string) PF {
 	p := ctx.PlatformByName(id)
 	if p == nil {
 		return nil
 	}
-	fp, ok := p.(*Platform)
+	fp, ok := p.(PF)
 	if ok {
 		return fp
 	}
@@ -268,6 +274,10 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, err
 
 func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
 	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "kvs")
+}
+
+func (p *Platform) GetTopology() *Topology {
+	return p.Topology
 }
 
 func (p *Platform) nextColor() string {

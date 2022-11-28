@@ -258,10 +258,10 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	// Register a new issuer wallet and issue with that wallet
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
-	Expect(tokenPlatform.Topology).ToNot(BeNil(), "invalid token topology, it is nil")
-	Expect(len(tokenPlatform.Topology.TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
+	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
+	Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
 	// Gen crypto material for the new issuer wallet
-	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
+	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
 	// Register it
 	RegisterIssuerWallet(network, "issuer", "newIssuerWallet", newIssuerWalletPath)
 	// Issuer tokens with this new wallet
@@ -684,9 +684,9 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1")
+	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1")
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
-	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
 
 	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
