@@ -257,6 +257,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	// Register a new issuer wallet and issue with that wallet
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
+	Expect(tokenPlatform.Topology).ToNot(BeNil(), "invalid token topology, it is nil")
+	Expect(len(tokenPlatform.Topology.TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
 	// Gen crypto material for the new issuer wallet
 	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
 	// Register it
