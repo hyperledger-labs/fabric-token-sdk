@@ -632,6 +632,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
 	}
 
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
 	// Test Max Token Value
 	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
 	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
