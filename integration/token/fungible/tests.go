@@ -506,6 +506,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
@@ -518,7 +520,9 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 1820, auditor)
 	CheckSpending(network, "alice", "", "EUR", auditor, 1800)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
+
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
