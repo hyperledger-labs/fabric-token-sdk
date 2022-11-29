@@ -523,12 +523,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "EUR", 1000, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor, "holding limit reached", "bob", "[EUR][3020]")
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
 
 	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
-	
+
 	// Routing
 	IssueCash(network, "", "EUR", 10, "alice.id1", auditor, true, "issuer")
 	CheckAcceptedTransactions(network, "alice", "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
