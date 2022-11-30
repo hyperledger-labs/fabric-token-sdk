@@ -12,9 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 

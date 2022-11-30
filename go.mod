@@ -9,7 +9,7 @@ require (
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/golang/protobuf v1.5.2
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.1.1-0.20221130080148-42fa21707b52
+	github.com/hyperledger-labs/fabric-smart-client v0.1.1-0.20221130093032-0fd809931af6
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20220808214918-83596078d0c3
