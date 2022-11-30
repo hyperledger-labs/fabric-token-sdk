@@ -10,12 +10,19 @@ import (
 	"fmt"
 	"reflect"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
+
+type KVS interface {
+	Exists(id string) bool
+	Put(id string, state interface{}) error
+	Get(id string, state interface{}) error
+	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
+}
 
 // GetIdentityFunc is a function that returns an Identity and its associated audit info for the given options
 type GetIdentityFunc func(opts *driver.IdentityOptions) (view.Identity, []byte, error)
