@@ -106,3 +106,14 @@ func MyAuditorWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *tok
 	}
 	return w
 }
+
+// GetAuditorWallet returns the wallet whose id is the passed id.
+// If the passed id is empty, GetAuditorWallet has the same behaviour of MyAuditorWallet.
+// It returns nil, if no wallet is found.
+func GetAuditorWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *token.AuditorWallet {
+	w := token.GetManagementService(sp, opts...).WalletManager().AuditorWallet("")
+	if w == nil {
+		return nil
+	}
+	return w
+}
