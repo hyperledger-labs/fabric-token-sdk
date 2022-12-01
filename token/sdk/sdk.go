@@ -64,12 +64,11 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set TMS TMSProvider")
-	pm := tms.NewProcessorManager(p.registry)
 	vaultProvider := vault.NewProvider(p.registry)
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
 		&vault.PublicParamsProvider{Provider: vaultProvider},
-		pm.New,
+		tms.NewPostInitializer(p.registry).PostInit,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 

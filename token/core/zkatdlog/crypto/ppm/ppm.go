@@ -74,12 +74,7 @@ func (v *PublicParamsManager) Load() error {
 		return errors.WithMessage(err, "failed to fetch public params from vault")
 	}
 	if len(ppRaw) == 0 {
-		// fetch it, but does not fail if the fetching failed
-		ppRaw, err = v.PublicParamsLoader.Fetch()
-		if err != nil {
-			logger.Errorf("failed to load public parameters from remote network [%s]", err)
-			return nil
-		}
+		return nil
 	}
 
 	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(ppRaw).String())

@@ -10,25 +10,28 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/pkg/errors"
 )
 
-type ProcessorManager struct {
+type PostInitializer struct {
 	sp view.ServiceProvider
 }
 
-func NewProcessorManager(sp view.ServiceProvider) *ProcessorManager {
-	return &ProcessorManager{sp: sp}
+func NewPostInitializer(sp view.ServiceProvider) *PostInitializer {
+	return &PostInitializer{sp: sp}
 }
 
-func (p *ProcessorManager) New(network, channel, namespace string) error {
-	n := fabric.GetFabricNetworkService(p.sp, network)
-	if n == nil && orion.GetOrionNetworkService(p.sp, network) != nil {
-		ons := orion.GetOrionNetworkService(p.sp, network)
+func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, channel, namespace string) error {
+	n := fabric.GetFabricNetworkService(p.sp, networkID)
+	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
+		// register processor
+		ons := orion.GetOrionNetworkService(p.sp, networkID)
 		if err := ons.ProcessorManager().AddProcessor(
 			namespace,
 			orion2.NewTokenRWSetProcessor(
@@ -39,11 +42,21 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 			),
 		); err != nil {
-			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", network)
+			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", networkID)
+		}
+		// fetch public params
+		nw := network.GetInstance(p.sp, networkID, channel)
+		ppRaw, err := nw.FetchPublicParameters(namespace)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to fetch public parameters for [%s:%s:%s]", networkID, channel, namespace)
+		}
+		if err := tms.PublicParamsManager().SetPublicParameters(ppRaw); err != nil {
+			return errors.WithMessagef(err, "failed to set public params for [%s:%s:%s]", networkID, channel, namespace)
 		}
 		return nil
 	}
 
+	// register processor
 	if err := n.ProcessorManager().AddProcessor(
 		namespace,
 		fabric2.NewTokenRWSetProcessor(
@@ -54,7 +67,7 @@ func (p *ProcessorManager) New(network, channel, namespace string) error {
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 		),
 	); err != nil {
-		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", network)
+		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
 	return nil
 

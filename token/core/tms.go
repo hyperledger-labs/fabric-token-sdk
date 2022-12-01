@@ -18,7 +18,7 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.core")
 
-type CallbackFunc func(network, channel, namespace string) error
+type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
 
 type Vault interface {
 	PublicParams(networkID string, channel string, namespace string) ([]byte, error)
@@ -93,7 +93,7 @@ func (m *TMSProvider) newTMS(networkID string, channel string, namespace string,
 	}
 
 	if m.callbackFunc != nil {
-		if err := m.callbackFunc(networkID, channel, namespace); err != nil {
+		if err := m.callbackFunc(ts, networkID, channel, namespace); err != nil {
 			return nil, err
 		}
 	}
