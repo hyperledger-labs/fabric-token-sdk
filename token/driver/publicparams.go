@@ -59,7 +59,7 @@ type PublicParamsManager interface {
 	// PublicParameters returns the public parameters.
 	PublicParameters() PublicParameters
 	// SetPublicParameters updates the public parameters with the passed value
-	SetPublicParameters(pp PublicParameters) error
+	SetPublicParameters(raw []byte) error
 	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
 	NewCertifierKeyPair() ([]byte, []byte, error)
 	// SerializePublicParameters returns the public params in a serialized form

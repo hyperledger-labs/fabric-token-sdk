@@ -58,8 +58,8 @@ func (c *PublicParametersManager) Validate() error {
 }
 
 // SetPublicParameters updates the public parameters with the passed value
-func (c *PublicParametersManager) SetPublicParameters(pp driver.PublicParameters) error {
-	return c.ppm.SetPublicParameters(pp)
+func (c *PublicParametersManager) SetPublicParameters(raw []byte) error {
+	return c.ppm.SetPublicParameters(raw)
 }
 
 // Identifier returns the identifier of the public parameters

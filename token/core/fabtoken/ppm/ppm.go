@@ -104,21 +104,21 @@ func (v *PublicParamsManager) Load() error {
 }
 
 // SetPublicParameters updates the public parameters with the passed value
-func (v *PublicParamsManager) SetPublicParameters(pp driver.PublicParameters) error {
+func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
 
-	ppCasted, ok := pp.(*fabtoken.PublicParams)
-	if !ok {
-		return errors.Errorf("invalid argument type, expected *fabtoken.PublicParams")
+	pp, err := fabtoken.NewPublicParamsFromBytes(raw, v.PPLabel)
+	if err != nil {
+		return err
 	}
 	logger.Debugf("setting new public parameters...")
 
-	if err := ppCasted.Validate(); err != nil {
+	if err := pp.Validate(); err != nil {
 		return errors.WithMessage(err, "invalid public parameters")
 	}
 
-	v.PP = ppCasted
+	v.PP = pp
 	return nil
 }
 

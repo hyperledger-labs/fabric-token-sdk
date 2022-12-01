@@ -13,7 +13,6 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
@@ -103,11 +102,7 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 		}
 		if key == setUpKey {
 			logger.Debugf("setting new public parameters...")
-			pp, err := core.PublicParametersFromBytes(val)
-			if err != nil {
-				return errors.Wrapf(err, "failed unmarshalling public params [%s,%s]", key, string(val))
-			}
-			err = tms.PublicParametersManager().SetPublicParameters(pp)
+			err = tms.PublicParametersManager().SetPublicParameters(val)
 			if err != nil {
 				return errors.Wrapf(err, "failed updating public params ")
 			}

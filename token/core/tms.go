@@ -19,19 +19,25 @@ var logger = flogging.MustGetLogger("token-sdk.core")
 
 type CallbackFunc func(network, channel, namespace string) error
 
+type Vault interface {
+	PublicParams(networkID string, channel string, namespace string) ([]byte, error)
+}
+
 // TMSProvider is a token management service provider.
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
 	sp           view.ServiceProvider
+	vault        Vault
 	callbackFunc CallbackFunc
 
 	lock     sync.Mutex
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(sp view.ServiceProvider, callbackFunc CallbackFunc) *TMSProvider {
+func NewTMSProvider(sp view.ServiceProvider, vault Vault, callbackFunc CallbackFunc) *TMSProvider {
 	ms := &TMSProvider{
 		sp:           sp,
+		vault:        vault,
 		callbackFunc: callbackFunc,
 		services:     map[string]driver.TokenManagerService{},
 	}
@@ -40,7 +46,7 @@ func NewTMSProvider(sp view.ServiceProvider, callbackFunc CallbackFunc) *TMSProv
 
 // GetTokenManagerService returns a driver.TokenManagerService instance for the passed parameters.
 // If a TokenManagerService is not available, it creates one by first fetching the public parameters using the passed driver.PublicParamsFetcher.
-// If no driver is registered for the public params' identifier, it returns an error.
+// If no driver is registered for the public params identifier, it returns an error.
 func (m *TMSProvider) GetTokenManagerService(network string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (driver.TokenManagerService, error) {
 	if len(network) == 0 {
 		return nil, errors.Errorf("network not specified")
@@ -69,13 +75,9 @@ func (m *TMSProvider) GetTokenManagerService(network string, channel string, nam
 }
 
 func (m *TMSProvider) newTMS(networkID string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (driver.TokenManagerService, error) {
-	ppRaw, err := publicParamsFetcher.Fetch()
+	pp, err := m.loadPublicParams(networkID, channel, namespace, publicParamsFetcher)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed fetching public parameters")
-	}
-	pp, err := SerializedPublicParametersFromBytes(ppRaw)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed unmarshalling public parameters")
+		return nil, errors.WithMessagef(err, "failed to load public parameters for [%s:%s:%s]", networkID, channel, namespace)
 	}
 	d, ok := drivers[pp.Identifier]
 	if !ok {
@@ -85,7 +87,7 @@ func (m *TMSProvider) newTMS(networkID string, channel string, namespace string,
 
 	ts, err := d.NewTokenService(m.sp, publicParamsFetcher, networkID, channel, namespace)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed instantiating token service")
+		return nil, errors.WithMessagef(err, "failed to instantiate token service for [%s:%s:%s]", networkID, channel, namespace)
 	}
 
 	if m.callbackFunc != nil {
@@ -94,4 +96,22 @@ func (m *TMSProvider) newTMS(networkID string, channel string, namespace string,
 		}
 	}
 	return ts, nil
+}
+
+func (m *TMSProvider) loadPublicParams(networkID string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (*driver.SerializedPublicParameters, error) {
+	ppRaw, err := m.vault.PublicParams(networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to load public params from the vault")
+	}
+	if len(ppRaw) == 0 {
+		ppRaw, err = publicParamsFetcher.Fetch()
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed fetching public parameters")
+		}
+	}
+	pp, err := SerializedPublicParametersFromBytes(ppRaw)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed unmarshalling public parameters")
+	}
+	return pp, nil
 }

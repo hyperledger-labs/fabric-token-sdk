@@ -12,12 +12,11 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 var driver string
