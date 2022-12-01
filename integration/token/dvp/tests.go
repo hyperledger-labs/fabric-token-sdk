@@ -20,8 +20,7 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure) {
-	// Give some time for the network to start
-	// TODO: remove this in the future by makings sure that the FSC nodes are connected to the p2p network.
+	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
 	// Ready to go

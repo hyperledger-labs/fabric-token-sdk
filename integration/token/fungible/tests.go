@@ -209,6 +209,9 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 func TestAll(network *integration.Infrastructure, auditor string) {
 	RegisterAuditor(network, auditor)
 
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()

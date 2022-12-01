@@ -17,6 +17,9 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure) {
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
 	registerAuditor(network)
 	houseID := issueHouse(network, "alice", 4)
 	queryHouse(network, "alice", houseID, "5th Avenue")

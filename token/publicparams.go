@@ -57,14 +57,9 @@ func (c *PublicParametersManager) Validate() error {
 	return c.ppm.Validate()
 }
 
-// Update fetches the public parameters from the backend and update the local one accordingly
-func (c *PublicParametersManager) Update() error {
-	return c.ppm.Update()
-}
-
-// UpdateByValue updates the public parameters with the passed value
-func (c *PublicParametersManager) UpdateByValue(pp driver.PublicParameters) error {
-	return c.ppm.UpdateByValue(pp)
+// SetPublicParameters updates the public parameters with the passed value
+func (c *PublicParametersManager) SetPublicParameters(pp driver.PublicParameters) error {
+	return c.ppm.SetPublicParameters(pp)
 }
 
 // Identifier returns the identifier of the public parameters

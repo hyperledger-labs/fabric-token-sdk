@@ -11,18 +11,20 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
+var logger = flogging.MustGetLogger("token-sdk.fabtoken")
 
 type PublicParamsLoader interface {
 	// Fetch fetches the public parameters from the backend
 	Fetch() ([]byte, error)
-	// FetchParams fetches the public parameters from the backend and unmarshal them
-	FetchParams() (*crypto.PublicParams, error)
+	// FetchParams fetches the public parameters from the backend and unmarshal them.
+	// The public parameters are also validated.
+	FetchParams() (*fabtoken.PublicParams, error)
 }
 
 type Vault interface {
@@ -30,8 +32,11 @@ type Vault interface {
 	PublicParams() ([]byte, error)
 }
 
+// PublicParamsManager loads fabtoken public parameters
 type PublicParamsManager struct {
-	PP                 *crypto.PublicParams
+	// fabtoken public parameters
+	PP *fabtoken.PublicParams
+	// a loader for fabric public parameters
 	PublicParamsLoader PublicParamsLoader
 	// the vault
 	Vault Vault
@@ -41,17 +46,20 @@ type PublicParamsManager struct {
 	Mutex sync.RWMutex
 }
 
+// NewPublicParamsManager initializes a PublicParamsManager with the passed PublicParamsLoader
 func NewPublicParamsManager(PPLabel string, vault Vault, publicParamsLoader PublicParamsLoader) *PublicParamsManager {
 	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, PublicParamsLoader: publicParamsLoader, Mutex: sync.RWMutex{}}
 }
 
-func NewFromParams(pp *crypto.PublicParams) (*PublicParamsManager, error) {
+// NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
+func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) *PublicParamsManager {
 	if pp == nil {
-		return nil, errors.New("public parameters not set")
+		panic("public parameters must be non-nil")
 	}
-	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}, nil
+	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}
 }
 
+// PublicParameters returns the public parameters of PublicParamsManager
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
 	return v.PublicParams()
 }
@@ -61,10 +69,14 @@ func (v *PublicParamsManager) SerializePublicParameters() ([]byte, error) {
 	return v.PublicParams().Serialize()
 }
 
+// NewCertifierKeyPair returns the key pair of a certifier, in this instantiation, the method panics
+// fabtoken does not support token certification
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
-	panic("not supported")
+	panic("NewCertifierKeyPair cannot be called from fabtoken")
 }
 
+// Load sets the public parameters of the PublicParamsManager to the public parameters
+// associated with its PublicParamsLoader
 func (v *PublicParamsManager) Load() error {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
@@ -78,7 +90,7 @@ func (v *PublicParamsManager) Load() error {
 	}
 
 	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(ppRaw).String())
-	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, v.PPLabel)
+	pp, err := fabtoken.NewPublicParamsFromBytes(ppRaw, v.PPLabel)
 	if err != nil {
 		return err
 	}
@@ -88,7 +100,6 @@ func (v *PublicParamsManager) Load() error {
 	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(ppRaw).String())
 
 	v.PP = pp
-
 	return nil
 }
 
@@ -96,10 +107,12 @@ func (v *PublicParamsManager) Load() error {
 func (v *PublicParamsManager) SetPublicParameters(pp driver.PublicParameters) error {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
-	ppCasted, ok := pp.(*crypto.PublicParams)
+
+	ppCasted, ok := pp.(*fabtoken.PublicParams)
 	if !ok {
-		return errors.Errorf("invalid argument type, expected *crypto.PublicParams")
+		return errors.Errorf("invalid argument type, expected *fabtoken.PublicParams")
 	}
+	logger.Debugf("setting new public parameters...")
 
 	if err := ppCasted.Validate(); err != nil {
 		return errors.WithMessage(err, "invalid public parameters")
@@ -109,8 +122,8 @@ func (v *PublicParamsManager) SetPublicParameters(pp driver.PublicParameters) er
 	return nil
 }
 
+// Fetch fetches the public parameters from the backend
 func (v *PublicParamsManager) Fetch() ([]byte, error) {
-	logger.Debugf("fetch public parameters...")
 	if v.PublicParamsLoader == nil {
 		return nil, errors.New("public parameters loader not set")
 	}
@@ -118,12 +131,23 @@ func (v *PublicParamsManager) Fetch() ([]byte, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed force fetching public parameters")
 	}
-	logger.Debugf("fetched public parameters [%s]", hash.Hashable(raw).String())
-
 	return raw, nil
 }
 
-func (v *PublicParamsManager) PublicParams() *crypto.PublicParams {
+// AuditorIdentity returns the identity of the auditor
+func (v *PublicParamsManager) AuditorIdentity() view.Identity {
+	return v.PublicParams().Auditor
+}
+
+// Issuers returns the array of admissible issuers
+func (v *PublicParamsManager) Issuers() [][]byte {
+	return v.PublicParams().Issuers
+}
+
+// PublicParams returns the fabtoken public parameters
+func (v *PublicParamsManager) PublicParams() *fabtoken.PublicParams {
+	logger.Debugf("getting new public parameters...")
+
 	v.Mutex.RLock()
 	defer v.Mutex.RUnlock()
 	return v.PP

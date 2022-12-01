@@ -102,14 +102,16 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			logger.Debugf("Parsing write key [%s]", key)
 		}
 		if key == setUpKey {
+			logger.Debugf("setting new public parameters...")
 			pp, err := core.PublicParametersFromBytes(val)
 			if err != nil {
 				return errors.Wrapf(err, "failed unmarshalling public params [%s,%s]", key, string(val))
 			}
-			err = tms.PublicParametersManager().UpdateByValue(pp)
+			err = tms.PublicParametersManager().SetPublicParameters(pp)
 			if err != nil {
 				return errors.Wrapf(err, "failed updating public params ")
 			}
+			logger.Debugf("setting new public parameters...done.")
 			break
 		}
 	}

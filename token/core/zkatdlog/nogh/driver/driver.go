@@ -91,7 +91,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	service, err := zkatdlog.NewTokenService(
 		sp,
 		tmsID,
-		ppm.New(zkatdlog.NewVaultPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters)),
+		ppm.New(zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters)),
 		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
 		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
 		v.TokenVault().QueryEngine(),

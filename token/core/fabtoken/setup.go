@@ -42,7 +42,7 @@ func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 	pp := &PublicParams{}
 	pp.Label = label
 	if err := pp.Deserialize(raw); err != nil {
-		return nil, errors.Wrap(err, "failed parsing public parameters")
+		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
 	return pp, nil
 }

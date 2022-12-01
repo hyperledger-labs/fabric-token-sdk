@@ -415,7 +415,7 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	for _, id := range ids {
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{}))
-		Expect(err).NotTo(HaveOccurred())
+		Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
 	}
 }
 

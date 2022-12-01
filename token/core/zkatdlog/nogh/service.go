@@ -159,7 +159,7 @@ func (s *Service) PublicParams() *crypto.PublicParams {
 }
 
 func (s *Service) FetchPublicParams() error {
-	return s.PPM.Update()
+	return s.PPM.Load()
 }
 
 func (s *Service) Deserializer() (driver.Deserializer, error) {
