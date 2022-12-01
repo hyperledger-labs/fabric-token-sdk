@@ -1,7 +1,8 @@
 token:
   enabled: true
   tms:
-    - certification: null
+    n1c1ns1:
+      certification: null
       network: n1
       channel: c1
       namespace: ns1
@@ -30,7 +31,8 @@ token:
           - default: false
             id: alice.id1
             path: /token/crypto/default-testchannel-zkat/idemix/alice.id1
-    - certification: null
+    n2c2ns2:
+      certification: null
       network: n2
       channel: c2
       namespace: ns2

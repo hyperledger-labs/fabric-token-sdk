@@ -257,8 +257,11 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	// Register a new issuer wallet and issue with that wallet
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
+	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
+	Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
 	// Gen crypto material for the new issuer wallet
-	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
+	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
 	// Register it
 	RegisterIssuerWallet(network, "issuer", "newIssuerWallet", newIssuerWalletPath)
 	// Issuer tokens with this new wallet
@@ -503,6 +506,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
@@ -515,14 +520,19 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 1820, auditor)
 	CheckSpending(network, "alice", "", "EUR", auditor, 1800)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
+
+	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "EUR", 1000, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor, "holding limit reached", "bob", "[EUR][3020]")
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
+
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	// Routing
 	IssueCash(network, "", "EUR", 10, "alice.id1", auditor, true, "issuer")
@@ -629,6 +639,8 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
 	}
 
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
 	// Test Max Token Value
 	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
 	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
@@ -681,9 +693,9 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1")
+	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1")
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
-	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.Topology.TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
 
 	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")

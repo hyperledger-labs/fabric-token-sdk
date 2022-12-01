@@ -10,11 +10,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Topology(tokenSDKDriver string) []api.Topology {
@@ -86,11 +88,14 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
 
 	return []api.Topology{
 		fabricTopology,

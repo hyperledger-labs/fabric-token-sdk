@@ -395,8 +395,8 @@ func (n *Network) GetTransient(id string) (TransientMap, error) {
 }
 
 // RequestApproval requests approval for the given token request
-func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
-	env, err := n.n.RequestApproval(context, namespace, requestRaw, signer, driver.TxID{
+func (n *Network) RequestApproval(context view.Context, tms *token.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
+	env, err := n.n.RequestApproval(context, tms, requestRaw, signer, driver.TxID{
 		Nonce:   txID.Nonce,
 		Creator: txID.Creator,
 	})

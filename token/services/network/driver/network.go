@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -80,7 +81,7 @@ type Network interface {
 	GetTransient(id string) (TransientMap, error)
 
 	// RequestApproval requests approval for the passed request and returns the returned envelope
-	RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
+	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
 
 	// ComputeTxID computes the network transaction id from the passed abstract transaction id
 	ComputeTxID(id *TxID) string

@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -22,18 +20,21 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -63,7 +64,7 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set TMS Provider")
-	pm := NewProcessorManager(p.registry)
+	pm := tms.NewProcessorManager(p.registry)
 	tmsProvider := core.NewTMSProvider(
 		p.registry,
 		pm.New,

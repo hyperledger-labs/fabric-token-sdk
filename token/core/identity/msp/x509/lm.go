@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/config"
@@ -28,6 +29,7 @@ type LocalMembership struct {
 	signerService          common.SignerService
 	binderService          common.BinderService
 	deserializerManager    common.DeserializerManager
+	kvs                    common.KVS
 	mspID                  string
 
 	resolversMutex           sync.RWMutex
@@ -43,6 +45,7 @@ func NewLocalMembership(
 	signerService common.SignerService,
 	binderService common.BinderService,
 	deserializerManager common.DeserializerManager,
+	kvs common.KVS,
 	mspID string,
 ) *LocalMembership {
 	return &LocalMembership{
@@ -51,6 +54,7 @@ func NewLocalMembership(
 		signerService:            signerService,
 		binderService:            binderService,
 		deserializerManager:      deserializerManager,
+		kvs:                      kvs,
 		mspID:                    mspID,
 		bccspResolversByIdentity: map[string]*common.Resolver{},
 		resolversByEnrollmentID:  map[string]*common.Resolver{},
@@ -61,11 +65,17 @@ func NewLocalMembership(
 func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	logger.Debugf("Load x509 Wallets: [%+q]", identities)
 
+	// load identities from configuration
 	for _, identityConfig := range identities {
 		logger.Debugf("Load x509 Wallet: [%v]", identityConfig)
 		if err := lm.registerIdentity(identityConfig, identityConfig.Default); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
+	}
+
+	// load identity from KVS
+	if err := lm.loadFromKVS(); err != nil {
+		return errors.Wrapf(err, "failed to load identity from KVS")
 	}
 
 	// if no default identity, use the first one
@@ -128,6 +138,9 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
+	if err := lm.storeEntryInKVS(id, path); err != nil {
+		return err
+	}
 	return lm.registerIdentity(&config.Identity{
 		ID:   id,
 		Path: path,
@@ -249,6 +262,44 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("identity info not found for label [%s][%v]", label, lm.bccspResolversByIdentity)
+	}
+	return nil
+}
+
+func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
+	k, err := kvs.CreateCompositeKey("fabric-sdk", []string{"msp", "idemix", "registeredIdentity", id})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create identity key")
+	}
+	return lm.kvs.Put(k, path)
+}
+
+func (lm *LocalMembership) loadFromKVS() error {
+	it, err := lm.kvs.GetByPartialCompositeID("fabric-sdk", []string{"msp", "idemix", "registeredIdentity"})
+	if err != nil {
+		return errors.WithMessage(err, "failed to get registered identities from kvs")
+	}
+	defer it.Close()
+	for it.HasNext() {
+		var path string
+		k, err := it.Next(&path)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
+		}
+
+		_, attrs, err := kvs.SplitCompositeKey(k)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to split key [%s]", k)
+		}
+
+		id := attrs[3]
+		if lm.getResolver(id) != nil {
+			continue
+		}
+
+		if err := lm.registerIdentity(&config.Identity{ID: id, Path: path}, lm.GetDefaultIdentifier() == ""); err != nil {
+			return err
+		}
 	}
 	return nil
 }

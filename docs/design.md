@@ -36,3 +36,7 @@ The `Smart Client` allows the `Token SDK` to:
 - Orchestrate very complex token-dependent business processes via [`views`](https://github.com/hyperledger-labs/fabric-smart-client/blob/main/docs/view/api.md);
 - Store the tokens inside the Vault for easy lookup and manipulation;
 - To listen to events from the backends related to token transaction, and more.
+
+## Configuration
+
+You can find an example of the configuration required for the Token SDK in [Example Core File Section](./core-token.md)

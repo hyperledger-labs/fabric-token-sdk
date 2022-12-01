@@ -482,7 +482,7 @@ func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...strin
 
 		var deleted []*token.ID
 		common.JSONUnmarshal(eIDBoxed.([]byte), &deleted)
-		Expect(len(deleted)).To(BeZero())
+		Expect(len(deleted)).To(BeZero(), "expected 0 tokens to be deleted at [%s], got [%d]", id, len(deleted))
 	}
 }
 

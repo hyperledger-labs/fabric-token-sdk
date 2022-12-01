@@ -45,8 +45,3 @@ type TMS struct {
 	Certification *Certification `yaml:"certification,omitempty"`
 	Wallets       *Wallets       `yaml:"wallets,omitempty"`
 }
-
-type Token struct {
-	Enabled bool   `yaml:"enabled,omitempty"`
-	TMS     []*TMS `yaml:"tms,omitempty"`
-}

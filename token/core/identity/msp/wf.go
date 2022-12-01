@@ -9,6 +9,7 @@ package msp
 import (
 	"github.com/IBM/idemix/common/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
@@ -85,6 +86,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole) (identity.Wall
 		f.SignerService,
 		f.BinderService,
 		common.GetDeserializerManager(f.SP),
+		kvs.GetService(f.SP),
 		RoleToMSPID[role],
 	)
 	if err := lm.Load(identities); err != nil {
@@ -105,6 +107,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity.Wallet
 		f.SignerService,
 		f.BinderService,
 		common.GetDeserializerManager(f.SP),
+		kvs.GetService(f.SP),
 		RoleToMSPID[role],
 	)
 	if err := lm.Load(identities); err != nil {

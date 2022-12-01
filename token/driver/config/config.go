@@ -41,12 +41,9 @@ type TMS struct {
 	Wallets       *Wallets       `yaml:"wallets,omitempty"`
 }
 
-type Token struct {
-	Enabled bool   `yaml:"enabled,omitempty"`
-	TMS     []*TMS `yaml:"tms,omitempty"`
-}
-
 type Manager interface {
 	TMS() *TMS
 	TranslatePath(path string) string
+	IsSet(key string) bool
+	UnmarshalKey(key string, rawVal interface{}) error
 }

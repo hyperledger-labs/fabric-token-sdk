@@ -354,7 +354,7 @@ func (c *collectEndorsementsView) requestApproval(context view.Context) (*networ
 	agent.EmitKey(0, "ttx", "start", "callChaincodeRequest", c.tx.ID())
 	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
 		context,
-		c.tx.Namespace(),
+		c.tx.TokenRequest.TokenService,
 		requestRaw,
 		c.tx.Signer,
 		c.tx.Payload.TxID,
