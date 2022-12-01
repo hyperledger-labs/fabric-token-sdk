@@ -107,7 +107,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	if err := service.FetchPublicParams(); err != nil {
+	if err := service.LoadPublicParams(); err != nil {
 		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 

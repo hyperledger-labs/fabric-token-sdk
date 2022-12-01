@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -64,6 +65,7 @@ func (m *TMSProvider) GetTokenManagerService(network string, channel string, nam
 			return nil, errors.Errorf("public params fetcher not specified")
 		}
 		logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", network, channel, namespace)
+
 		var err error
 		service, err = m.newTMS(network, channel, namespace, publicParamsFetcher)
 		if err != nil {
@@ -75,15 +77,15 @@ func (m *TMSProvider) GetTokenManagerService(network string, channel string, nam
 }
 
 func (m *TMSProvider) newTMS(networkID string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (driver.TokenManagerService, error) {
-	pp, err := m.loadPublicParams(networkID, channel, namespace, publicParamsFetcher)
+	driverName, err := m.driverFor(networkID, channel, namespace, publicParamsFetcher)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to load public parameters for [%s:%s:%s]", networkID, channel, namespace)
+		return nil, errors.WithMessagef(err, "failed to get driver for [%s:%s:%s]", networkID, channel, namespace)
 	}
-	d, ok := drivers[pp.Identifier]
+	d, ok := drivers[driverName]
 	if !ok {
-		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", pp.Identifier)
+		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", driverName)
 	}
-	logger.Debugf("instantiating token service for network [%s], channel [%s], namespace [%s], with driver identifier [%s]", networkID, channel, namespace, pp.Identifier)
+	logger.Debugf("instantiating token service for network [%s], channel [%s], namespace [%s], with driver identifier [%s]", networkID, channel, namespace, driverName)
 
 	ts, err := d.NewTokenService(m.sp, publicParamsFetcher, networkID, channel, namespace)
 	if err != nil {
@@ -96,6 +98,24 @@ func (m *TMSProvider) newTMS(networkID string, channel string, namespace string,
 		}
 	}
 	return ts, nil
+}
+
+func (m *TMSProvider) driverFor(networkID string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (string, error) {
+	pp, err := m.loadPublicParams(networkID, channel, namespace, publicParamsFetcher)
+	if err != nil {
+		// resort to configuration
+		tmsConfig, err2 := config.NewTokenSDK(view.GetConfigService(m.sp)).GetTMS(networkID, channel, namespace)
+		if err2 != nil {
+			return "", errors.WithMessagef(err, "failed to identify driver from the configuration of [%s:%s:%s], loading driver from public parameters failed too [%s]", networkID, channel, namespace, err)
+		}
+
+		driverName := tmsConfig.TMS().Driver
+		if len(driverName) != 0 {
+			return driverName, nil
+		}
+		return "", errors.WithMessagef(err, "failed to identify driver for [%s:%s:%s]", networkID, channel, namespace)
+	}
+	return pp.Identifier, nil
 }
 
 func (m *TMSProvider) loadPublicParams(networkID string, channel string, namespace string, publicParamsFetcher driver.PublicParamsFetcher) (*driver.SerializedPublicParameters, error) {

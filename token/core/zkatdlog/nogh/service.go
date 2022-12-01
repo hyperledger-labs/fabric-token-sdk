@@ -158,7 +158,7 @@ func (s *Service) PublicParams() *crypto.PublicParams {
 	return s.PPM.PublicParams()
 }
 
-func (s *Service) FetchPublicParams() error {
+func (s *Service) LoadPublicParams() error {
 	return s.PPM.Load()
 }
 

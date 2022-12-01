@@ -12,6 +12,10 @@ token:
       network: default # the name of the network this TMS refers to (Fabric, Orion, etc)
       channel: testchannel # the name of the network's channel this TMS refers to, if applicable
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
+      # the name of the driver that provides the implementation of the Driver API.
+      # This field is optional. If not specified, the Token-SDK will derive this information by fetching the public parameters
+      # from the remote network
+      driver: zkatdlog 
       # sections dedicated to the definition of the wallets 
       wallets: 
         # owner wallets
