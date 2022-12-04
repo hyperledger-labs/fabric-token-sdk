@@ -205,7 +205,11 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 
 // Validator returns a new token validator for this TMS
 func (t *ManagementService) Validator() *Validator {
-	return &Validator{backend: t.tms.Validator()}
+	v, err := t.tms.Validator()
+	if err != nil {
+		panic(err)
+	}
+	return &Validator{backend: v}
 }
 
 // Vault returns the Token Vault for this TMS
@@ -224,14 +228,14 @@ func (t *ManagementService) CertificationManager() *CertificationManager {
 }
 
 // CertificationClient returns the certification client for this TMS
-func (t *ManagementService) CertificationClient() *CertificationClient {
+func (t *ManagementService) CertificationClient() (*CertificationClient, error) {
 	certificationClient, err := t.certificationClientProvider.New(
 		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().CertificationDriver(),
 	)
 	if err != nil {
-		panic(err)
+		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")
 	}
-	return &CertificationClient{cc: certificationClient}
+	return &CertificationClient{cc: certificationClient}, nil
 }
 
 // PublicParametersManager returns a manager that gives access to the public parameters
@@ -267,6 +271,7 @@ func (t *ManagementService) ConfigManager() *ConfigManager {
 // GetManagementService returns the management service for the passed options. If no options are passed,
 // the default management service is returned.
 // Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
+// The function panics if an error occurs. Use GetManagementServiceProvider(sp).GetManagementService(opts...) to handle any error directly
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
 	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
 	if err != nil {

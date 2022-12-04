@@ -20,7 +20,7 @@ type TokenManagerService interface {
 	Serializer
 
 	IdentityProvider() IdentityProvider
-	Validator() Validator
+	Validator() (Validator, error)
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
 }

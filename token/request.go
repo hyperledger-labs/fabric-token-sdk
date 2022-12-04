@@ -1057,7 +1057,10 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	if r.TokenService.PublicParametersManager().GraphHiding() {
 		logger.Debugf("graph hiding enabled, request certification")
 		// Check token certification
-		cc := r.TokenService.CertificationClient()
+		cc, err := r.TokenService.CertificationClient()
+		if err != nil {
+			return nil, nil, errors.WithMessagef(err, "cannot get certification client")
+		}
 		if err := cc.RequestCertification(tokenIDs...); err != nil {
 			return nil, nil, errors.WithMessagef(err, "failed certifiying inputs")
 		}

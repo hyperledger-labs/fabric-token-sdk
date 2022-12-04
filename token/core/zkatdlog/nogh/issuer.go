@@ -26,7 +26,11 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 		}
 	}
 
-	signer, err := s.IssuerWalletByIdentity(issuerIdentity).GetSigner(issuerIdentity)
+	w, err := s.IssuerWalletByIdentity(issuerIdentity)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	signer, err := w.GetSigner(issuerIdentity)
 	if err != nil {
 		return nil, nil, nil, err
 	}

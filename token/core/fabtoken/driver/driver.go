@@ -124,7 +124,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return ppm.NewPublicParamsManagerFromParams(pp), nil
+	return ppm.NewPublicParamsManagerFromParams(pp)
 }
 
 func init() {

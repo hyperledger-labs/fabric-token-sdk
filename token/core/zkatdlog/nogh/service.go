@@ -131,16 +131,13 @@ func (s *Service) IdentityProvider() driver.IdentityProvider {
 }
 
 // Validator returns the validator associated with the service
-func (s *Service) Validator() driver.Validator {
+func (s *Service) Validator() (driver.Validator, error) {
 	d, err := s.Deserializer()
 	if err != nil {
-		panic(err)
+		return nil, errors.WithMessagef(err, "failed to get deserializer")
 	}
 	pp := s.PublicParams()
-	return validator.New(
-		pp,
-		d,
-	)
+	return validator.New(pp, d), nil
 }
 
 // PublicParamsManager returns the manager of the public parameters associated with the service

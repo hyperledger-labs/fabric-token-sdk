@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -192,17 +194,17 @@ func (is *InputStream) Owners() *OwnerStream {
 }
 
 // IsAnyMine returns true if any of the inputs are mine
-func (is *InputStream) IsAnyMine() bool {
+func (is *InputStream) IsAnyMine() (bool, error) {
 	for _, input := range is.inputs {
 		mine, err := is.qs.IsMine(input.Id)
 		if err != nil {
-			panic(err)
+			return false, errors.WithMessagef(err, "failed to query the vault")
 		}
 		if mine {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // String returns a string representation of the input stream

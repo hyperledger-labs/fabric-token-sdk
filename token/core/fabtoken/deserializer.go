@@ -9,6 +9,8 @@ package fabtoken
 import (
 	"encoding/json"
 
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
@@ -56,7 +58,7 @@ func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 // GetOwnerMatcher is not needed in fabtoken, as identities are in the clear
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	panic("not supported")
+	return nil, errors.Errorf("not supported")
 }
 
 // enrollmentService returns enrollment IDs behind the owners of token

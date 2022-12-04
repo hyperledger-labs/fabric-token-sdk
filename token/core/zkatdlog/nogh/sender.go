@@ -122,7 +122,8 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 	receiverIsSender := make([]bool, len(ownerIdentities))
 	for i, receiver := range ownerIdentities {
-		receiverIsSender[i] = s.OwnerWalletByID(receiver) != nil
+		_, err := s.OwnerWalletByID(receiver)
+		receiverIsSender[i] = err == nil
 	}
 
 	metadata := &driver.TransferMetadata{
