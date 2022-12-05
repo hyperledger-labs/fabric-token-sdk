@@ -1,0 +1,362 @@
+topologies:
+- name: default
+  type: fabric
+  default: true
+  logging:
+    spec: info
+    format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
+      -> %{level:.4s} %{id:03x}%{color:reset} %{message}'''
+  organizations:
+  - msp_id: OrdererMSP
+    msp_type: bccsp
+    name: OrdererOrg
+    domain: example.com
+    enable_node_organizational_units: false
+    ca:
+      hostname: ca
+  - id: IdemixOrg
+    msp_id: IdemixOrgMSP
+    msp_type: idemix
+    name: IdemixOrg
+    domain: idemixorg.example.com
+    enable_node_organizational_units: false
+    ca:
+      hostname: ca
+  - id: Org1
+    msp_id: Org1MSP
+    msp_type: bccsp
+    name: Org1
+    domain: org1.example.com
+    enable_node_organizational_units: false
+    users: 1
+    ca:
+      hostname: ca
+  - id: Org2
+    msp_id: Org2MSP
+    msp_type: bccsp
+    name: Org2
+    domain: org2.example.com
+    enable_node_organizational_units: false
+    users: 1
+    ca:
+      hostname: ca
+  peers:
+  - name: Org1_peer_0
+    organization: Org1
+    type: FabricPeer
+    channels:
+    - name: testchannel
+      anchor: true
+    devmode: false
+  - name: Org2_peer_0
+    organization: Org2
+    type: FabricPeer
+    channels:
+    - name: testchannel
+      anchor: true
+    devmode: false
+  consortiums:
+  - name: SampleConsortium
+    organizations:
+    - IdemixOrg
+    - Org1
+    - Org2
+  system_channel:
+    name: systemchannel
+    profile: OrgsOrdererGenesis
+  channels:
+  - name: testchannel
+    profile: OrgsChannel
+    default: true
+  consensus:
+    type: solo
+  orderers:
+  - name: orderer
+    organization: OrdererOrg
+  profiles:
+  - name: OrgsOrdererGenesis
+    orderers:
+    - orderer
+  - name: OrgsChannel
+    consortium: SampleConsortium
+    organizations:
+    - IdemixOrg
+    - Org1
+    - Org2
+    policies:
+    - name: Readers
+      type: ImplicitMeta
+      rule: ANY Readers
+    - name: Writers
+      type: ImplicitMeta
+      rule: ANY Writers
+    - name: Admins
+      type: ImplicitMeta
+      rule: ANY Admins
+    - name: LifecycleEndorsement
+      type: Signature
+      rule: AND ('Org1MSP.member')
+    - name: Endorsement
+      type: ImplicitMeta
+      rule: ANY Endorsement
+  grpcLogging: true
+  logPeersToFile: true
+  logOrderersToFile: true
+- name: token
+  type: token
+  tmss:
+  - network: default
+    channel: testchannel
+    namespace: tns
+    driver: dlog
+    publicparamsgenargs:
+    - "100"
+    - "2"
+    auditors:
+    - auditor
+    certifiers: []
+    issuers: []
+    backendparams:
+      fabric.orgs:
+      - Org1
+- name: fsc
+  type: fsc
+  peers:
+  - Synthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
+          original: sdk
+          alias: sdk1
+        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
+      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: issue
+        type: '&views.IssueCashViewFactory{}'
+      - id: issued
+        type: '&views.ListIssuedTokensViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      - id: ""
+        type: sdk1.NewSDK(n)
+    name: issuer
+    bootstrap: true
+    options:
+      mapping:
+        Aliases:
+        - issuer.id1
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization:
+            - Network: ""
+              Org: Org1
+        token:
+          mapping:
+            Issuers:
+            - _default_
+            - issuer.id1
+  - Synthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
+          original: sdk
+          alias: sdk1
+        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
+      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: register
+        type: '&views.RegisterAuditorViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      - id: ""
+        type: sdk1.NewSDK(n)
+    name: auditor
+    options:
+      mapping:
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization:
+            - Network: ""
+              Org: Org1
+        token:
+          mapping:
+            Auditor: true
+  - Synthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
+          original: sdk
+          alias: sdk1
+        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
+      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: transfer
+        type: '&views.TransferViewFactory{}'
+      - id: redeem
+        type: '&views.RedeemViewFactory{}'
+      - id: swap
+        type: '&views.SwapInitiatorViewFactory{}'
+      - id: unspent
+        type: '&views.ListUnspentTokensViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      - id: ""
+        type: sdk1.NewSDK(n)
+      Responders:
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.IssueCashView{}'
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.TransferView{}'
+    name: alice
+    options:
+      mapping:
+        Aliases:
+        - alice.id1
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization:
+            - Network: ""
+              Org: Org2
+        token:
+          mapping:
+            Owners:
+            - _default_
+            - alice.id1
+  - Synthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
+          original: sdk
+          alias: sdk1
+        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
+      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: transfer
+        type: '&views.TransferViewFactory{}'
+      - id: redeem
+        type: '&views.RedeemViewFactory{}'
+      - id: swap
+        type: '&views.SwapInitiatorViewFactory{}'
+      - id: unspent
+        type: '&views.ListUnspentTokensViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      - id: ""
+        type: sdk1.NewSDK(n)
+      Responders:
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.IssueCashView{}'
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.TransferView{}'
+      - responder: '&views.SwapResponderView{}'
+        initiator: '&views.SwapInitiatorView{}'
+    name: bob
+    options:
+      mapping:
+        Aliases:
+        - bob.id1
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization:
+            - Network: ""
+              Org: Org2
+        token:
+          mapping:
+            Owners:
+            - _default_
+            - bob.id1
+  - Synthesizer:
+      Aliases:
+        github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
+          original: sdk
+          alias: sdk1
+        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+          original: views
+          alias: views
+        github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
+          original: sdk
+          alias: sdk
+      Imports:
+      - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
+      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
+      Factories:
+      - id: transfer
+        type: '&views.TransferViewFactory{}'
+      - id: redeem
+        type: '&views.RedeemViewFactory{}'
+      - id: swap
+        type: '&views.SwapInitiatorViewFactory{}'
+      - id: unspent
+        type: '&views.ListUnspentTokensViewFactory{}'
+      SDKs:
+      - id: ""
+        type: sdk.NewSDK(n)
+      - id: ""
+        type: sdk1.NewSDK(n)
+      Responders:
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.IssueCashView{}'
+      - responder: '&views.AcceptCashView{}'
+        initiator: '&views.TransferView{}'
+      - responder: '&views.SwapResponderView{}'
+        initiator: '&views.SwapInitiatorView{}'
+    name: charlie
+    options:
+      mapping:
+        Aliases:
+        - charlie.id1
+        fabric:
+          mapping:
+            AnonymousIdentity: true
+            Organization:
+            - Network: ""
+              Org: Org2
+        token:
+          mapping:
+            Owners:
+            - _default_
+            - charlie.id1
+  logging:
+    spec: info
+    format: '''%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc}
+      -> %{level:.4s} %{id:03x}%{color:reset} %{message}'''
+  logToFile: true
+  tracingType: none
+  metricsType: prometheus

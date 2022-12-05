@@ -16,6 +16,11 @@ The `tokengen` command has five subcommands, as follows:
 
 ## tokengen artifacts
 
+This command is used to centrally generate key material and configuration files.
+It takes in input a `topology` file, in `yaml` format, that describes the topologies of the networks involved.
+An example can be found [`here`](./samples/topology/fungible.yaml). 
+Topology files can be edited directly or they can be generated programmatically as shown [`here`](./samples/topology/fungible.go). 
+
 ```
 Read topology from file and generates artifacts.
 

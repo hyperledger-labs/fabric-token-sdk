@@ -62,6 +62,12 @@ FABRIC_VERSION=2.4.6 make download-fabric
 
 If you want to provide your own versions of the fabric binaries then just set `FAB_BINS` to the directory where all the fabric binaries are stored.
   
+# Utilities
+
+- [`tokengen`](./cmd/tokengen/README.md) is an utility for generating Fabric Token-SDK material.
+  It is provided as a means of preconfiguring public parameters, token chaincode, and so.
+  It would normally not be used in the operation of a production network.
+
 # Additional Resources
 
 - (March 17, 2022) [`Hyperledger in-Depth: Tokens in Hyperledger Fabric: What’s possible today and what’s coming`](https://www.hyperledger.org/learn/webinars/hyperledger-in-depth-tokens-in-hyperledger-fabric-whats-possible-today-and-whats-coming):
