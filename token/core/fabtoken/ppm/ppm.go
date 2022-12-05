@@ -52,11 +52,11 @@ func NewPublicParamsManager(PPLabel string, vault Vault, publicParamsLoader Publ
 }
 
 // NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
-func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) *PublicParamsManager {
+func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) (*PublicParamsManager, error) {
 	if pp == nil {
-		panic("public parameters must be non-nil")
+		return nil, errors.Errorf("public parameters must be non-nil")
 	}
-	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}
+	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}, nil
 }
 
 // PublicParameters returns the public parameters of PublicParamsManager
