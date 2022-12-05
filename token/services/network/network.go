@@ -285,10 +285,6 @@ func (l *LocalMembership) AnonymousIdentity() view.Identity {
 	return l.lm.AnonymousIdentity()
 }
 
-func (l *LocalMembership) IsMe(id view.Identity) bool {
-	return l.lm.IsMe(id)
-}
-
 type Ledger struct {
 	l driver.Ledger
 }

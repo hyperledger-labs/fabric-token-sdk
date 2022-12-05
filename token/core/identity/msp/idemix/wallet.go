@@ -9,6 +9,7 @@ package idemix
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -53,7 +54,7 @@ func (w *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 }
 
 // MapToID returns the identity for the given argument
-func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
+func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultID := w.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
@@ -78,27 +79,27 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed empty identity")
 			}
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case id.Equal(defaultID):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed default identity")
 			}
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case string(id) == defaultIdentifier:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed 'idemix' identity")
 			}
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case id.Equal(w.nodeIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is the node identity (same bytes)")
 			}
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case w.localMembership.IsMe(id):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is me")
 			}
-			return id, ""
+			return id, "", nil
 		}
 		label := string(id)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -106,12 +107,12 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 		}
 
 		if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
-			return nil, idIdentifier
+			return nil, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", vv)
 		}
-		return nil, string(id)
+		return nil, string(id), nil
 	case string:
 		label := vv
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -119,30 +120,30 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 		}
 		switch {
 		case len(label) == 0:
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case label == defaultIdentifier:
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case label == defaultID.UniqueID():
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case label == string(defaultID):
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case defaultID.Equal(view.Identity(label)):
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case w.nodeIdentity.Equal(view.Identity(label)):
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		case w.localMembership.IsMe(view.Identity(label)):
-			return nil, defaultIdentifier
+			return nil, defaultIdentifier, nil
 		}
 
 		if idIdentifier, err := w.localMembership.GetIdentifier(view.Identity(label)); err == nil {
-			return nil, idIdentifier
+			return nil, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", vv)
 		}
-		return nil, label
+		return nil, label, nil
 	default:
-		panic("[AnonymousIdentity] identifier not recognised, expected []byte or view.Identity")
+		return nil, "", errors.Errorf("[AnonymousIdentity] identifier not recognised, expected []byte or view.Identity")
 	}
 }
 

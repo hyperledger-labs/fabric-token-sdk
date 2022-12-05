@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"fmt"
 	"io/ioutil"
 	"path/filepath"
 	"sync"
@@ -190,7 +189,9 @@ func (lm *LocalMembership) registerMSPProvider(c *config.Identity, translatedPat
 
 	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", c.ID, provider.EnrollmentID(), walletId.String())
 	lm.deserializerManager.AddDeserializer(provider)
-	lm.addResolver(c.ID, provider.EnrollmentID(), setDefault, provider.Identity)
+	if err := lm.addResolver(c.ID, provider.EnrollmentID(), setDefault, provider.Identity); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -213,7 +214,7 @@ func (lm *LocalMembership) registerMSPProviders(c *config.Identity, translatedPa
 	return nil
 }
 
-func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, IdentityGetter common.GetIdentityFunc) {
+func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, IdentityGetter common.GetIdentityFunc) error {
 	logger.Debugf("Adding resolver [%s:%s]", id, eID)
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
@@ -221,10 +222,10 @@ func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, Id
 	if lm.binderService != nil {
 		id, _, err := IdentityGetter(nil)
 		if err != nil {
-			panic(fmt.Sprintf("cannot get identity for [%s,%s][%s]", id, eID, err))
+			return errors.WithMessagef(err, "cannot get identity for [%s,%s]", id, eID)
 		}
 		if err := lm.binderService.Bind(lm.defaultNetworkIdentity, id); err != nil {
-			panic(fmt.Sprintf("cannot bing identity for [%s,%s][%s]", id, eID, err))
+			return errors.WithMessagef(err, "cannot bing identity for [%s,%s]", id, eID)
 		}
 	}
 
@@ -236,7 +237,7 @@ func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, Id
 	}
 	identity, _, err := IdentityGetter(nil)
 	if err != nil {
-		panic(fmt.Sprintf("cannot get identity for [%s,%s][%s]", id, eID, err))
+		return errors.WithMessagef(err, "cannot get identity for [%s,%s]", id, eID)
 	}
 	lm.bccspResolversByIdentity[identity.String()] = resolver
 	lm.resolversByName[id] = resolver
@@ -244,6 +245,8 @@ func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, Id
 		lm.resolversByEnrollmentID[eID] = resolver
 	}
 	lm.resolvers = append(lm.resolvers, resolver)
+
+	return nil
 }
 
 func (lm *LocalMembership) getResolver(label string) *common.Resolver {

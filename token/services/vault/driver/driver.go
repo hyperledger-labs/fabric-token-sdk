@@ -13,7 +13,6 @@ type RWSet interface {
 	SetState(namespace string, key string, value []byte) error
 	GetState(namespace string, key string) ([]byte, error)
 	DeleteState(namespace string, key string) error
-	Equals(rwset interface{}, namespace string) error
 }
 
 type Entry interface {

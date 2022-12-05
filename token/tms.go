@@ -204,12 +204,12 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 }
 
 // Validator returns a new token validator for this TMS
-func (t *ManagementService) Validator() *Validator {
+func (t *ManagementService) Validator() (*Validator, error) {
 	v, err := t.tms.Validator()
 	if err != nil {
-		panic(err)
+		return nil, errors.WithMessagef(err, "failed to get validator")
 	}
-	return &Validator{backend: v}
+	return &Validator{backend: v}, nil
 }
 
 // Vault returns the Token Vault for this TMS

@@ -93,7 +93,7 @@ func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, ny
 		}
 	}
 
-	id := NewIdentityWithVerType(
+	id, err := NewIdentityWithVerType(
 		idCommon,
 		NymPublicKey,
 		role,
@@ -101,6 +101,9 @@ func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, ny
 		serialized.Proof,
 		c.VerType,
 	)
+	if err != nil {
+		return nil, errors.Wrap(err, "cannot deserialize")
+	}
 	if checkValidity {
 		if err := id.Validate(); err != nil {
 			return nil, errors.Wrap(err, "cannot deserialize, invalid identity")

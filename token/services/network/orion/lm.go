@@ -23,7 +23,3 @@ func (n *lm) DefaultIdentity() view.Identity {
 func (n *lm) AnonymousIdentity() view.Identity {
 	return view.Identity(n.lm.Me())
 }
-
-func (n *lm) IsMe(id view.Identity) bool {
-	panic("implement me")
-}

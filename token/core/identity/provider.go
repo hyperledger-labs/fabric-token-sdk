@@ -71,7 +71,10 @@ func (p *Provider) LookupIdentifier(role driver.IdentityRole, v interface{}) (vi
 	if !ok {
 		return nil, "", errors.Errorf("wallet not found for role [%d]", role)
 	}
-	id, label := wallet.MapToID(v)
+	id, label, err := wallet.MapToID(v)
+	if err != nil {
+		return nil, "", err
+	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, walletIDToString(label))
 	}

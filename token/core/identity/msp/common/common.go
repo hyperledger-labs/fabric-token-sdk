@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"fmt"
 	"reflect"
+
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -75,10 +76,10 @@ type DeserializerManager interface {
 	AddDeserializer(deserializer sig.Deserializer)
 }
 
-func GetDeserializerManager(sp view2.ServiceProvider) DeserializerManager {
+func GetDeserializerManager(sp view2.ServiceProvider) (DeserializerManager, error) {
 	dm, err := sp.GetService(reflect.TypeOf((*DeserializerManager)(nil)))
 	if err != nil {
-		panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
+		return nil, errors.WithMessagef(err, "failed looking up deserializer manager")
 	}
-	return dm.(DeserializerManager)
+	return dm.(DeserializerManager), nil
 }

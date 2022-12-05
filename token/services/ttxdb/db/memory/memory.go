@@ -9,6 +9,7 @@ package memory
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	"github.com/pkg/errors"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 )
@@ -28,7 +29,7 @@ func (p *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dri
 	case driver.FromLast:
 		cursor = len(p.movementRecords)
 	default:
-		panic("direction not valid")
+		return nil, errors.Errorf("direction not valid")
 	}
 	counter := 0
 	for {

@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -103,7 +105,7 @@ func (d *CertificationClient) RequestCertification(ids ...*token.ID) error {
 	}
 	certifications, ok := resultBoxed.(map[*token.ID][]byte)
 	if !ok {
-		panic("invalid type, expected map[token.ID][]byte")
+		return errors.Errorf("invalid type, expected map[token.ID][]byte")
 	}
 	if err := d.certificationStorage.Store(certifications); err != nil {
 		return err
