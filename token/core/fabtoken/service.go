@@ -17,14 +17,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type PublicParamsLoader interface {
-	// Fetch fetches the public parameters from the backend
-	Fetch() ([]byte, error)
-	// FetchParams fetches the public parameters from the backend and unmarshal them.
-	// The public parameters are also validated.
-	FetchParams() (*PublicParams, error)
-}
-
 type QueryEngine interface {
 	IsMine(id *token2.ID) (bool, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.

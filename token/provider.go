@@ -8,6 +8,7 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -77,10 +78,10 @@ func NewManagementServiceProvider(
 
 // GetManagementService returns an instance of the management service for the passed options.
 // If the management service has not been created yet, it will be created.
-func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) *ManagementService {
+func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) (*ManagementService, error) {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrapf(err, "failed to parse options")
 	}
 	opt = p.normalizer.Normalize(opt)
 
@@ -93,7 +94,7 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 	)
 	if err != nil {
 		logger.Errorf("failed getting TMS for [%s]: [%s]", opt.TMSID(), err)
-		return nil
+		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt.TMSID())
 	}
 
 	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
@@ -111,7 +112,7 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 			deserializer: tokenService,
 			ip:           tokenService.IdentityProvider(),
 		},
-	}
+	}, nil
 }
 
 // GetManagementServiceProvider returns the management service provider from the passed service provider

@@ -24,6 +24,9 @@ import (
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure) {
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
 	defaultTMSID := token.TMSID{}
 	RegisterAuditor(network)
 
@@ -165,6 +168,9 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 }
 
 func TestHTLCTwoNetworks(network *integration.Infrastructure) {
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 
@@ -224,6 +230,9 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 }
 
 func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 
@@ -276,6 +285,9 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 }
 
 func TestFastExchange(network *integration.Infrastructure) {
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
 	alpha := token.TMSID{Network: "alpha"}
 	beta := token.TMSID{Network: "beta"}
 

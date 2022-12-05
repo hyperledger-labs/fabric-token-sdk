@@ -93,17 +93,17 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	return inputIDs, tokens, inputInf, signerIds, nil
 }
 
-type VaultPublicParamsLoader struct {
+type PublicParamsLoader struct {
 	PublicParamsFetcher driver.PublicParamsFetcher
 	PPLabel             string
 }
 
-func NewVaultPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, PPLabel string) *VaultPublicParamsLoader {
-	return &VaultPublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
+func NewPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, PPLabel string) *PublicParamsLoader {
+	return &PublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
 }
 
 // Fetch fetches the public parameters from the backend
-func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
+func (s *PublicParamsLoader) Fetch() ([]byte, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
@@ -115,7 +115,7 @@ func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 }
 
 // FetchParams fetches the public parameters from the backend and unmarshal them
-func (s *VaultPublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
+func (s *PublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {

@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -89,10 +90,14 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	service := fabtoken.NewService(
 		sp,
 		tmsID,
-		fabtoken.NewPublicParamsManager(&fabtoken.VaultPublicParamsLoader{
-			PublicParamsFetcher: publicParamsFetcher,
-			PPLabel:             fabtoken.PublicParameters,
-		}),
+		ppm.NewPublicParamsManager(
+			fabtoken.PublicParameters,
+			qe,
+			&fabtoken.PublicParamsLoader{
+				PublicParamsFetcher: publicParamsFetcher,
+				PPLabel:             fabtoken.PublicParameters,
+			},
+		),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
 		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), wallets),
@@ -100,7 +105,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		tmsConfig,
 		kvs.GetService(sp),
 	)
-	if err := service.PPM.Update(); err != nil {
+	if err := service.PPM.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to update public parameters")
 	}
 	return service, nil
@@ -119,7 +124,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewPublicParamsManagerFromParams(pp), nil
+	return ppm.NewPublicParamsManagerFromParams(pp), nil
 }
 
 func init() {

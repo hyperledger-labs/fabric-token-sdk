@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	tms2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
@@ -63,11 +63,12 @@ func (p *SDK) Install() error {
 	}
 	logger.Infof("Token platform enabled, installing...")
 
-	logger.Infof("Set TMS Provider")
-	pm := tms.NewProcessorManager(p.registry)
-	tmsProvider := core.NewTMSProvider(
+	logger.Infof("Set TMS TMSProvider")
+	vaultProvider := vault.NewProvider(p.registry)
+	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
-		pm.New,
+		&vault.PublicParamsProvider{Provider: vaultProvider},
+		tms.NewPostInitializer(p.registry).PostInit,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
@@ -76,7 +77,7 @@ func (p *SDK) Install() error {
 		p.registry,
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
-		vault.NewVaultProvider(p.registry),
+		vaultProvider,
 		network2.NewCertificationClientProvider(p.registry),
 		selector.NewProvider(
 			p.registry,

@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	tcc "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fetcher"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 )
 
@@ -80,7 +79,7 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions 
 		}
 	}
 	if opt.PublicParamsFetcher == nil {
-		opt.PublicParamsFetcher = tcc.NewPublicParamsFetcher(n.sp, opt.Network, opt.Channel, opt.Namespace)
+		opt.PublicParamsFetcher = NewPublicParamsFetcher(n.sp, opt.Network, opt.Channel, opt.Namespace)
 	}
 	return opt
 }

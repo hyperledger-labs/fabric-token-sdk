@@ -37,6 +37,7 @@ type TMS struct {
 	Network       string         `yaml:"network,omitempty"`
 	Channel       string         `yaml:"channel,omitempty"`
 	Namespace     string         `yaml:"namespace,omitempty"`
+	Driver        string         `yaml:"driver,omitempty"`
 	Certification *Certification `yaml:"certification,omitempty"`
 	Wallets       *Wallets       `yaml:"wallets,omitempty"`
 }

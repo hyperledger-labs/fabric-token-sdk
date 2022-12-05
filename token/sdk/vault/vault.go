@@ -18,18 +18,18 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 )
 
-type VaultProvider struct {
+type Provider struct {
 	sp view.ServiceProvider
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 }
 
-func NewVaultProvider(sp view.ServiceProvider) *VaultProvider {
-	return &VaultProvider{sp: sp, vaultCache: make(map[string]driver.Vault)}
+func NewProvider(sp view.ServiceProvider) *Provider {
+	return &Provider{sp: sp, vaultCache: make(map[string]driver.Vault)}
 }
 
-func (v *VaultProvider) Vault(network string, channel string, namespace string) driver.Vault {
+func (v *Provider) Vault(network string, channel string, namespace string) driver.Vault {
 	k := network + channel + namespace
 	// Check cache
 	v.vaultCacheLock.RLock()
@@ -75,4 +75,12 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 	v.vaultCache[k] = res
 
 	return res
+}
+
+type PublicParamsProvider struct {
+	Provider *Provider
+}
+
+func (p *PublicParamsProvider) PublicParams(networkID string, channel string, namespace string) ([]byte, error) {
+	return p.Provider.Vault(networkID, channel, namespace).QueryEngine().PublicParams()
 }
