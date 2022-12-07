@@ -136,7 +136,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		}
 		prefix, components, err := keys.SplitCompositeKey(strings.ReplaceAll(key, "~", string(rune(0))))
 		if err != nil {
-			panic(err)
+			return errors.WithMessagef(err, "failed to split key [%s]", key)
 		}
 		if prefix != keys.TokenKeyPrefix {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {

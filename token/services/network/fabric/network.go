@@ -32,9 +32,6 @@ import (
 )
 
 const (
-	IdemixMSP = "idemix"
-	BccspMSP  = "bccsp"
-
 	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
@@ -53,59 +50,6 @@ func (n *lm) DefaultIdentity() view.Identity {
 
 func (n *lm) AnonymousIdentity() view.Identity {
 	return n.lm.AnonymousIdentity()
-}
-
-func (n *lm) IsMe(id view.Identity) bool {
-	return n.lm.IsMe(id)
-}
-
-func (n *lm) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, driver.GetFunc, error) {
-	if idInfo := n.lm.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
-		ai := auditInfo
-		return idInfo.ID, idInfo.EnrollmentID, func() (view.Identity, []byte, error) {
-			opts := []fabric.IdentityOption{fabric.WithIdemixEIDExtension()}
-			if len(auditInfo) != 0 {
-				opts = append(opts, fabric.WithAuditInfo(ai))
-			}
-			return idInfo.GetIdentity(opts...)
-		}, nil
-	}
-	return "", "", nil, errors.New("not found")
-}
-
-func (n *lm) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
-	if idInfo := n.lm.GetIdentityInfoByLabel(BccspMSP, label); idInfo != nil {
-		id, _, err := idInfo.GetIdentity()
-		if err != nil {
-			return "", "", nil, errors.New("failed to get identity")
-		}
-		return idInfo.ID, idInfo.EnrollmentID, id, err
-	}
-	return "", "", nil, errors.New("not found")
-}
-
-func (n *lm) GetLongTermIdentifier(id view.Identity) (string, error) {
-	if idInfo := n.lm.GetIdentityInfoByIdentity(BccspMSP, id); idInfo != nil {
-		return idInfo.ID, nil
-	}
-	return "", errors.New("not found")
-}
-
-func (n *lm) RegisterIdentity(id string, typ string, path string) error {
-	// split type in type and msp id
-	typeAndMspID := strings.Split(typ, ":")
-	if len(typeAndMspID) < 2 {
-		return errors.Errorf("invalid identity type '%s'", typ)
-	}
-
-	switch typeAndMspID[0] {
-	case IdemixMSP:
-		return n.lm.RegisterIdemixMSP(id, path, typeAndMspID[1])
-	case BccspMSP:
-		return n.lm.RegisterX509MSP(id, path, typeAndMspID[1])
-	default:
-		return errors.Errorf("invalid identity type '%s'", typ)
-	}
 }
 
 type nv struct {

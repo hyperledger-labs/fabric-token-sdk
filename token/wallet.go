@@ -72,8 +72,9 @@ func (wm *WalletManager) Wallet(identity view.Identity) *Wallet {
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) OwnerWallet(id string) *OwnerWallet {
-	w := wm.managementService.tms.OwnerWallet(id)
-	if w == nil {
+	w, err := wm.managementService.tms.OwnerWallet(id)
+	if err != nil {
+		logger.Debugf("failed to get owner wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -82,8 +83,9 @@ func (wm *WalletManager) OwnerWallet(id string) *OwnerWallet {
 // OwnerWalletByIdentity returns the owner wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWallet {
-	w := wm.managementService.tms.OwnerWalletByIdentity(identity)
-	if w == nil {
+	w, err := wm.managementService.tms.OwnerWalletByIdentity(identity)
+	if err != nil {
+		logger.Debugf("failed to get owner wallet for id [%s]: [%s]", identity, err)
 		return nil
 	}
 	return &OwnerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -93,8 +95,9 @@ func (wm *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWal
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) IssuerWallet(id string) *IssuerWallet {
-	w := wm.managementService.tms.IssuerWallet(id)
-	if w == nil {
+	w, err := wm.managementService.tms.IssuerWallet(id)
+	if err != nil {
+		logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -103,8 +106,9 @@ func (wm *WalletManager) IssuerWallet(id string) *IssuerWallet {
 // IssuerWalletByIdentity returns the issuer wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWallet {
-	w := wm.managementService.tms.IssuerWalletByIdentity(identity)
-	if w == nil {
+	w, err := wm.managementService.tms.IssuerWalletByIdentity(identity)
+	if err != nil {
+		logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", identity, err)
 		return nil
 	}
 	return &IssuerWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -114,16 +118,18 @@ func (wm *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerW
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) AuditorWallet(id string) *AuditorWallet {
-	w := wm.managementService.tms.AuditorWallet(id)
-	if w == nil {
+	w, err := wm.managementService.tms.AuditorWallet(id)
+	if err != nil {
+		logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
 }
 
 func (wm *WalletManager) AuditorWalletByIdentity(id view.Identity) *AuditorWallet {
-	w := wm.managementService.tms.AuditorWalletByIdentity(id)
-	if w == nil {
+	w, err := wm.managementService.tms.AuditorWalletByIdentity(id)
+	if err != nil {
+		logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &AuditorWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -133,8 +139,9 @@ func (wm *WalletManager) AuditorWalletByIdentity(id view.Identity) *AuditorWalle
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) CertifierWallet(id string) *CertifierWallet {
-	w := wm.managementService.tms.CertifierWallet(id)
-	if w == nil {
+	w, err := wm.managementService.tms.CertifierWallet(id)
+	if err != nil {
+		logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", id, err)
 		return nil
 	}
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}
@@ -143,8 +150,9 @@ func (wm *WalletManager) CertifierWallet(id string) *CertifierWallet {
 // CertifierWalletByIdentity returns the certifier wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) CertifierWalletByIdentity(identity view.Identity) *CertifierWallet {
-	w := wm.managementService.tms.CertifierWalletByIdentity(identity)
-	if w == nil {
+	w, err := wm.managementService.tms.CertifierWalletByIdentity(identity)
+	if err != nil {
+		logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", identity, err)
 		return nil
 	}
 	return &CertifierWallet{Wallet: &Wallet{w: w, managementService: wm.managementService}, w: w}

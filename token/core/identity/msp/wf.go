@@ -79,13 +79,18 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole) (identity.Wall
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
+
+	dm, err := common.GetDeserializerManager(f.SP)
+	if err != nil {
+		return nil, err
+	}
 	lm := idemix.NewLocalMembership(
 		f.SP,
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.BinderService,
-		common.GetDeserializerManager(f.SP),
+		dm,
 		kvs.GetService(f.SP),
 		RoleToMSPID[role],
 	)
@@ -101,12 +106,16 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity.Wallet
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
+	dm, err := common.GetDeserializerManager(f.SP)
+	if err != nil {
+		return nil, err
+	}
 	lm := x509.NewLocalMembership(
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.BinderService,
-		common.GetDeserializerManager(f.SP),
+		dm,
 		kvs.GetService(f.SP),
 		RoleToMSPID[role],
 	)

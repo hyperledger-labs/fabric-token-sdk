@@ -11,9 +11,6 @@ type SigningIdentity interface {
 	// Sign signs message bytes and returns the signature or an error on failure.
 	Sign(raw []byte) ([]byte, error)
 
-	// Verify verifies a signature over a message
-	Verify(message, sigma []byte) error
-
 	// Serialize serializes the signing identity
 	Serialize() ([]byte, error)
 }

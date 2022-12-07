@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -32,7 +32,7 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
+func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
 	n := network.GetInstance(sp, networkID, channel)
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
@@ -44,7 +44,7 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 	qe := v.TokenVault().QueryEngine()
 	networkLocalMembership := n.LocalMembership()
 
-	tmsConfig, err := config.NewTokenSDK(view2.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
+	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
@@ -55,10 +55,10 @@ func (d *Driver) NewTokenService(sp view2.ServiceProvider, publicParamsFetcher d
 		sp,        // service provider
 		networkID, // network ID
 		tmsConfig, // config manager
-		view2.GetIdentityProvider(sp).DefaultIdentity(), // FSC identity
-		networkLocalMembership.DefaultIdentity(),        // network default identity
-		msp.NewSigService(view2.GetSigService(sp)),      // signer service
-		view2.GetEndpointService(sp),                    // endpoint service
+		view.GetIdentityProvider(sp).DefaultIdentity(), // FSC identity
+		networkLocalMembership.DefaultIdentity(),       // network default identity
+		msp.NewSigService(view.GetSigService(sp)),      // signer service
+		view.GetEndpointService(sp),                    // endpoint service
 	)
 	wallet, err := mspWalletFactory.NewX509Wallet(driver.OwnerRole)
 	if err != nil {
@@ -124,7 +124,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return ppm.NewPublicParamsManagerFromParams(pp), nil
+	return ppm.NewPublicParamsManagerFromParams(pp)
 }
 
 func init() {

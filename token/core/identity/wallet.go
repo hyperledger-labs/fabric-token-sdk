@@ -14,7 +14,7 @@ import (
 // Wallet helps to find identity identifiers and retrieve the corresponding identities
 type Wallet interface {
 	// MapToID returns the identity for the given argument
-	MapToID(v interface{}) (view.Identity, string)
+	MapToID(v interface{}) (view.Identity, string, error)
 	// GetIdentityInfo returns the identity information for the given identity identifier
 	GetIdentityInfo(id string) driver.IdentityInfo
 	// RegisterIdentity registers the given identity

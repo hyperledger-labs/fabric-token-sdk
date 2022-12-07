@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package tcc
 
 import (
@@ -23,15 +24,4 @@ func (rwset *rwsWrapper) GetState(namespace string, key string) ([]byte, error) 
 
 func (rwset *rwsWrapper) DeleteState(namespace string, key string) error {
 	return rwset.stub.DelState(key)
-}
-
-func (rwset *rwsWrapper) Bytes() ([]byte, error) {
-	return nil, nil
-}
-
-func (rwset *rwsWrapper) Done() {
-}
-
-func (rwset *rwsWrapper) Equals(r interface{}, namespace string) error {
-	panic("implement me")
 }

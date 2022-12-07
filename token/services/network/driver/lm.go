@@ -19,7 +19,4 @@ type LocalMembership interface {
 
 	// AnonymousIdentity returns a fresh anonymous identity
 	AnonymousIdentity() view.Identity
-
-	// IsMe returns true if the given identity belongs to the caller
-	IsMe(id view.Identity) bool
 }

@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"fmt"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -88,12 +86,8 @@ func (s *Service) IdentityProvider() driver.IdentityProvider {
 	return s.IP
 }
 
-func (s *Service) Validator() driver.Validator {
-	v, err := NewValidator(s.PPM.PublicParams(), s.Deserializer)
-	if err != nil {
-		panic(fmt.Sprintf("failed to create validator: %s", err))
-	}
-	return v
+func (s *Service) Validator() (driver.Validator, error) {
+	return NewValidator(s.PPM.PublicParams(), s.Deserializer)
 }
 
 func (s *Service) PublicParamsManager() driver.PublicParamsManager {

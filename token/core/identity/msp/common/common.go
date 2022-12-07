@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"fmt"
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -15,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/pkg/errors"
 )
 
 type KVS interface {
@@ -75,10 +75,10 @@ type DeserializerManager interface {
 	AddDeserializer(deserializer sig.Deserializer)
 }
 
-func GetDeserializerManager(sp view2.ServiceProvider) DeserializerManager {
+func GetDeserializerManager(sp view2.ServiceProvider) (DeserializerManager, error) {
 	dm, err := sp.GetService(reflect.TypeOf((*DeserializerManager)(nil)))
 	if err != nil {
-		panic(fmt.Sprintf("failed looking up deserializer manager [%s]", err))
+		return nil, errors.WithMessagef(err, "failed looking up deserializer manager")
 	}
-	return dm.(DeserializerManager)
+	return dm.(DeserializerManager), nil
 }

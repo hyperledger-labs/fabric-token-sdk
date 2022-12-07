@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.certifier.interactive")
@@ -103,7 +104,7 @@ func (d *CertificationClient) RequestCertification(ids ...*token.ID) error {
 	}
 	certifications, ok := resultBoxed.(map[*token.ID][]byte)
 	if !ok {
-		panic("invalid type, expected map[token.ID][]byte")
+		return errors.Errorf("invalid type, expected map[token.ID][]byte")
 	}
 	if err := d.certificationStorage.Store(certifications); err != nil {
 		return err

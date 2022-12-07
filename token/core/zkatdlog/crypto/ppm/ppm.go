@@ -62,7 +62,7 @@ func (v *PublicParamsManager) SerializePublicParameters() ([]byte, error) {
 }
 
 func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
-	panic("not supported")
+	return nil, nil, errors.Errorf("not supported")
 }
 
 func (v *PublicParamsManager) Load() error {

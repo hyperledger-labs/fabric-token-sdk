@@ -80,7 +80,9 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 			return errors.Wrapf(err, "error getting token for key [%s]", outputID)
 		}
 		token := token2.Token{}
-		UnmarshalOrPanic(tokenRaw, &token)
+		if err := Unmarshal(tokenRaw, &token); err != nil {
+			return errors.Wrapf(err, "failed to unmarshal token")
+		}
 		for _, id := range ids {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("delete extended key [%s]", id)
@@ -127,7 +129,10 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	raw := MarshalOrPanic(tok)
+	raw, err := Marshal(tok)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token")
+	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s], append fabtoken output [%s,%s,%v]", txID, outputID, view.Identity(tok.Owner.Raw), string(raw))
@@ -139,7 +144,11 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	meta := map[string][]byte{}
 	meta[keys.Info] = infoRaw
 	if len(ids) > 0 {
-		meta[keys.IDs] = MarshalOrPanic(ids)
+		meta[keys.IDs], err = Marshal(ids)
+		if err != nil {
+			return errors.Wrapf(err, "failed to marshal token ids")
+		}
+
 	}
 	if err := rws.SetStateMetadata(ns, outputID, meta); err != nil {
 		return err
@@ -193,7 +202,10 @@ func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, ind
 			Raw: issuer,
 		},
 	}
-	raw := MarshalOrPanic(issuedToken)
+	raw, err := Marshal(issuedToken)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal issued token")
+	}
 
 	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
@@ -222,7 +234,10 @@ func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint6
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	raw := MarshalOrPanic(tok)
+	raw, err := Marshal(tok)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token")
+	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s], append audit token output [%s,%v]", txID, outputID, string(raw))
@@ -235,19 +250,4 @@ func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint6
 		return err
 	}
 	return nil
-}
-
-func MarshalOrPanic(o interface{}) []byte {
-	data, err := json.Marshal(o)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
-func UnmarshalOrPanic(raw []byte, o interface{}) {
-	err := json.Unmarshal(raw, o)
-	if err != nil {
-		panic(err)
-	}
 }

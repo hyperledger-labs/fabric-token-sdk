@@ -8,7 +8,6 @@ package idemix
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	bccsp "github.com/IBM/idemix/bccsp/schemes"
@@ -32,11 +31,11 @@ type Identity struct {
 	VerificationType bccsp.VerificationType
 }
 
-func NewIdentity(provider *Common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte) *Identity {
+func NewIdentity(provider *Common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte) (*Identity, error) {
 	return NewIdentityWithVerType(provider, NymPublicKey, role, ou, proof, bccsp.ExpectEidNym)
 }
 
-func NewIdentityWithVerType(common *Common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) *Identity {
+func NewIdentityWithVerType(common *Common, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) (*Identity, error) {
 	id := &Identity{}
 	id.Common = common
 	id.NymPublicKey = NymPublicKey
@@ -47,14 +46,13 @@ func NewIdentityWithVerType(common *Common, NymPublicKey bccsp.Key, role *m.MSPR
 
 	raw, err := NymPublicKey.Bytes()
 	if err != nil {
-		panic(fmt.Sprintf("unexpected condition, failed marshalling nym public key [%s]", err))
+		return nil, errors.WithMessagef(err, "unexpected condition, failed marshalling nym public key")
 	}
 	id.ID = &msp.IdentityIdentifier{
 		Mspid: common.Name,
 		Id:    bytes.NewBuffer(raw).String(),
 	}
-
-	return id
+	return id, nil
 }
 
 func (id *Identity) Anonymous() bool {
@@ -107,7 +105,7 @@ func (id *Identity) Verify(msg []byte, sig []byte) error {
 }
 
 func (id *Identity) SatisfiesPrincipal(principal *m.MSPPrincipal) error {
-	panic("not implemented yet")
+	return errors.Errorf("not implemented")
 }
 
 func (id *Identity) Serialize() ([]byte, error) {
@@ -178,7 +176,7 @@ func (id *Identity) verifyProof() error {
 		},
 	)
 	if err == nil && !valid {
-		panic("unexpected condition, an error should be returned for an invalid signature")
+		return errors.Errorf("invalid signature")
 	}
 
 	return err

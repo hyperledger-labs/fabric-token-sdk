@@ -9,6 +9,7 @@ package x509
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -53,7 +54,7 @@ func (w *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 }
 
 // MapToID returns the identity for the given argument
-func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
+func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultID := w.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
@@ -79,21 +80,21 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 		id := vv
 		switch {
 		case id.IsNone():
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case id.Equal(defaultID):
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case id.Equal(w.nodeIdentity):
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case w.localMembership.IsMe(id):
 			if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
-				return id, idIdentifier
+				return id, idIdentifier, nil
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 			}
-			return id, ""
+			return id, "", nil
 		case string(id) == defaultIdentifier:
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		}
 
 		label := string(id)
@@ -103,18 +104,18 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 				}
-				return nil, info.ID()
+				return nil, info.ID(), nil
 			}
-			return id, label
+			return id, label, nil
 		}
 		if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
-			return id, idIdentifier
+			return id, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", vv)
 		}
 
-		return id, ""
+		return id, "", nil
 	case string:
 		label := vv
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -122,26 +123,26 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 		}
 		switch {
 		case len(label) == 0:
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case label == defaultIdentifier:
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case label == defaultID.UniqueID():
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case label == string(defaultID):
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case defaultID.Equal(view.Identity(label)):
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case w.nodeIdentity.Equal(view.Identity(label)):
-			return defaultID, defaultIdentifier
+			return defaultID, defaultIdentifier, nil
 		case w.localMembership.IsMe(view.Identity(label)):
 			id := view.Identity(label)
 			if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
-				return id, idIdentifier
+				return id, idIdentifier, nil
 			}
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[LongTermIdentity] failed getting identity info for [%s], returning the identity", id)
 			}
-			return id, ""
+			return id, "", nil
 		}
 
 		if info, err := w.localMembership.GetIdentityInfo(label, nil); err == nil {
@@ -150,16 +151,16 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string) {
 				if logger.IsEnabledFor(zapcore.DebugLevel) {
 					logger.Debugf("failed getting identity info for [%s], returning the identity", id)
 				}
-				return nil, info.ID()
+				return nil, info.ID(), nil
 			}
-			return id, label
+			return id, label, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", vv)
 		}
-		return nil, label
+		return nil, label, nil
 	default:
-		panic("[LongTermIdentity] identifier not recognised, expected []byte or view.Identity")
+		return nil, "", errors.Errorf("[LongTermIdentity] identifier not recognised, expected []byte or view.Identity")
 	}
 }
 

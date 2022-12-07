@@ -108,31 +108,31 @@ type WalletService interface {
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	OwnerWallet(id string) OwnerWallet
+	OwnerWallet(id string) (OwnerWallet, error)
 
 	// OwnerWalletByIdentity returns the OwnerWallet the passed identity belongs to.
-	OwnerWalletByIdentity(identity view.Identity) OwnerWallet
+	OwnerWalletByIdentity(identity view.Identity) (OwnerWallet, error)
 
 	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	IssuerWallet(id string) IssuerWallet
+	IssuerWallet(id string) (IssuerWallet, error)
 
 	// IssuerWalletByIdentity returns an instance of the IssuerWallet interface that contains the passed identity.
-	IssuerWalletByIdentity(identity view.Identity) IssuerWallet
+	IssuerWalletByIdentity(identity view.Identity) (IssuerWallet, error)
 
 	// AuditorWalletByIdentity returns an instance of the AuditorWallet interface that contains the passed identity.
-	AuditorWalletByIdentity(identity view.Identity) AuditorWallet
+	AuditorWalletByIdentity(identity view.Identity) (AuditorWallet, error)
 
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	AuditorWallet(id string) AuditorWallet
+	AuditorWallet(id string) (AuditorWallet, error)
 
 	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	CertifierWallet(id string) CertifierWallet
+	CertifierWallet(id string) (CertifierWallet, error)
 
 	// CertifierWalletByIdentity returns an instance of the CertifierWallet interface that contains the passed identity.
-	CertifierWalletByIdentity(identity view.Identity) CertifierWallet
+	CertifierWalletByIdentity(identity view.Identity) (CertifierWallet, error)
 
 	// SpentIDs returns the spend ids for the passed token ids
 	SpentIDs(ids ...*token.ID) ([]string, error)

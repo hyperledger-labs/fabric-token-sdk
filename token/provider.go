@@ -18,7 +18,7 @@ var (
 // Normalizer is used to set default values of ServiceOptions struct, if needed.
 type Normalizer interface {
 	// Normalize normalizes the given ServiceOptions struct.
-	Normalize(opt *ServiceOptions) *ServiceOptions
+	Normalize(opt *ServiceOptions) (*ServiceOptions, error)
 }
 
 // VaultProvider provides token vault instances
@@ -81,9 +81,12 @@ func NewManagementServiceProvider(
 func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) (*ManagementService, error) {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse options")
+		return nil, errors.Wrap(err, "failed to compile options")
 	}
-	opt = p.normalizer.Normalize(opt)
+	opt, err = p.normalizer.Normalize(opt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to normalize options")
+	}
 
 	logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 	tokenService, err := p.tmsProvider.GetTokenManagerService(
@@ -93,7 +96,6 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 		opt.PublicParamsFetcher,
 	)
 	if err != nil {
-		logger.Errorf("failed getting TMS for [%s]: [%s]", opt.TMSID(), err)
 		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt.TMSID())
 	}
 
@@ -115,7 +117,9 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 	}, nil
 }
 
-// GetManagementServiceProvider returns the management service provider from the passed service provider
+// GetManagementServiceProvider returns the management service provider from the passed service provider.
+// The function panics if an error occurs.
+// An alternative way is to use `s, err := sp.GetService(&ManagementServiceProvider{}) and catch the error manually.`
 func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
 	s, err := sp.GetService(managementServiceProviderIndex)
 	if err != nil {

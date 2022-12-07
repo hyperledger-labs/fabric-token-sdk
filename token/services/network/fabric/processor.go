@@ -190,7 +190,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		}
 		prefix, components, err := keys.SplitCompositeKey(key)
 		if err != nil {
-			panic(err)
+			return errors.WithMessagef(err, "failed to split key [%s]", key)
 		}
 		if prefix != keys.TokenKeyPrefix {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
