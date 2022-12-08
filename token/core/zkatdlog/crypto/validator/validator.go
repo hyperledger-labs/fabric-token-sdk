@@ -46,14 +46,14 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, ancho
 	if len(raw) == 0 {
 		return nil, nil, errors.New("empty token request")
 	}
-	tr := &driver.TokenRequest{}
+	tr := &common.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
 
 	// Prepare message expected to be signed
-	req := &driver.TokenRequest{}
+	req := &common.TokenRequest{}
 	req.Transfers = tr.Transfers
 	req.Issues = tr.Issues
 	raqRaw, err := req.Bytes()
@@ -75,7 +75,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, ancho
 	return v.VerifyTokenRequest(backend, backend, anchor, tr)
 }
 
-func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest) ([]interface{}, map[string][]byte, error) {
+func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *common.TokenRequest) ([]interface{}, map[string][]byte, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", anchor)
 	}
@@ -103,7 +103,7 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 }
 
 func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
-	tr := &driver.TokenRequest{}
+	tr := &common.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal token request")
@@ -125,7 +125,7 @@ func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
 }
 
 // UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in TokenRequest
-func (v *Validator) UnmarshalIssueTransferActions(tr *driver.TokenRequest) ([]driver.IssueAction, []driver.TransferAction, error) {
+func (v *Validator) UnmarshalIssueTransferActions(tr *common.TokenRequest) ([]driver.IssueAction, []driver.TransferAction, error) {
 	ia, err := v.UnmarshalIssueActions(tr.Issues)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to unmarshal issue actions")

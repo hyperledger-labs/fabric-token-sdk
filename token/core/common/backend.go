@@ -17,9 +17,9 @@ type Backend struct {
 	Ledger driver.GetStateFnc
 	// signed Message
 	Message []byte
-	// Cursor is used to iterate over the signatures
+	// Cursor is used to iterate over the Signatures
 	Cursor int
-	// signatures on Message
+	// Signatures on Message
 	Sigs [][]byte
 }
 
@@ -31,7 +31,7 @@ func NewBackend(ledger driver.GetStateFnc, message []byte, sigs [][]byte) *Backe
 // the passed verifier
 func (b *Backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) ([]byte, error) {
 	if b.Cursor >= len(b.Sigs) {
-		return nil, errors.New("invalid state, insufficient number of signatures")
+		return nil, errors.New("invalid state, insufficient number of Signatures")
 	}
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++

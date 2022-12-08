@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+
 	math "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
@@ -70,9 +72,9 @@ var _ = Describe("Auditor", func() {
 				transfer, metadata, tokens := createTransfer(pp)
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&common2.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).NotTo(HaveOccurred())
-				sig, err := auditor.Endorse(&driver.TokenRequest{Transfers: [][]byte{raw}}, "1")
+				sig, err := auditor.Endorse(&common2.TokenRequest{Transfers: [][]byte{raw}}, "1")
 				Expect(err).NotTo(HaveOccurred())
 				Expect(sig).To(Equal([]byte("auditor-signature")))
 			})
@@ -82,7 +84,7 @@ var _ = Describe("Auditor", func() {
 				transfer, metadata, tokens := createTransferWithBogusOutput(pp)
 				raw, err := transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&common2.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(fakeSigningIdentity.SignCallCount()).To(Equal(0))
 			})
@@ -97,7 +99,7 @@ var _ = Describe("Auditor", func() {
 				metadata.SenderAuditInfos[0] = raw
 				raw, err = transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&common2.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("owner at index [0] does not match the provided opening"))
 				Expect(err.Error()).NotTo(ContainSubstring("attribute mistmatch"))
@@ -114,7 +116,7 @@ var _ = Describe("Auditor", func() {
 				metadata.ReceiverAuditInfos[0] = raw
 				raw, err = transfer.Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				err = auditor.Check(&driver.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
+				err = auditor.Check(&common2.TokenRequest{Transfers: [][]byte{raw}}, &driver.TokenRequestMetadata{Transfers: []driver.TransferMetadata{metadata}}, tokens, "1")
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("owner at index [0] does not match the provided opening"))
 				Expect(err.Error()).To(ContainSubstring("does not match the provided opening"))

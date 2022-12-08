@@ -21,20 +21,16 @@ import (
 // The actions in the collection are independent. An action cannot spend tokens created by another action
 // in the same Token Request.
 // In addition, actions comes with a set of Witnesses to verify the right to spend or the right to issue a given token
-type TokenRequest struct {
-	Issues            [][]byte
-	Transfers         [][]byte
-	Signatures        [][]byte
-	AuditorSignatures [][]byte
-}
-
-func (r *TokenRequest) Bytes() ([]byte, error) {
-	return asn1.Marshal(*r)
-}
-
-func (r *TokenRequest) FromBytes(raw []byte) error {
-	_, err := asn1.Unmarshal(raw, r)
-	return err
+type TokenRequest interface {
+	Bytes() ([]byte, error)
+	FromBytes(raw []byte) error
+	GetTransfers() [][]byte
+	GetIssues() [][]byte
+	AppendIssue(raw []byte)
+	AppendTransfer(raw []byte)
+	AppendAuditorSignature(sigma []byte)
+	AppendSignature(sigma []byte)
+	Import(actions TokenRequest)
 }
 
 // IssueMetadata contains the metadata of an issue action.

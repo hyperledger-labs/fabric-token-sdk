@@ -81,7 +81,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 
 func (i *Issuer) SignTokenActions(raw []byte, txID string) ([]byte, error) {
 	if i.Signer == nil {
-		return nil, errors.New("failed to sign Token Actions: please initialize signer")
+		return nil, errors.New("failed to sign Token Request: please initialize signer")
 	}
 	return i.Signer.Sign(append(raw, []byte(txID)...))
 }

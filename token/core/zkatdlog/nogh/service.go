@@ -7,11 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"encoding/asn1"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -175,6 +178,10 @@ func (s *Service) PublicParams() *crypto.PublicParams {
 	return s.PPM.PublicParams()
 }
 
+func (s *Service) NewRequest() driver.TokenRequest {
+	return &common.TokenRequest{}
+}
+
 func (s *Service) LoadPublicParams() error {
 	return s.PPM.Load()
 }
@@ -191,10 +198,20 @@ func (s *Service) Deserializer() (driver.Deserializer, error) {
 	return d, nil
 }
 
-func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
+func (s *Service) MarshalTokenRequestToSign(request driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	req := request.(*common.TokenRequest)
+	newReq := &common.TokenRequest{
+		Issues:    req.GetIssues(),
+		Transfers: req.GetTransfers(),
 	}
 	return newReq.Bytes()
+}
+
+func (s *Service) MarshalToAudit(anchor string, request driver.TokenRequest, metadata *driver.TokenRequestMetadata) ([]byte, error) {
+	req := request.(*common.TokenRequest)
+	bytes, err := asn1.Marshal(common.TokenRequest{Issues: req.GetIssues(), Transfers: req.GetIssues()})
+	if err != nil {
+		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", anchor)
+	}
+	return append(bytes, []byte(anchor)...), nil
 }

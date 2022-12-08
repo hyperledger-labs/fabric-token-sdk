@@ -8,6 +8,7 @@ package nogh
 
 import (
 	math "github.com/IBM/mathlib"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -15,10 +16,10 @@ import (
 )
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
-func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
+func (s *Service) AuditorCheck(request driver.TokenRequest, metadata *driver.TokenRequestMetadata, anchor string) error {
 	logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(tokenRequestMetadata.Transfers))
 	var inputTokens [][]*token.Token
-	for i, transfer := range tokenRequestMetadata.Transfers {
+	for i, transfer := range metadata.Transfers {
 		logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.TokenIDs))
 		inputs, err := s.TokenCommitmentLoader.GetTokenOutputs(transfer.TokenIDs)
 		if err != nil {
@@ -37,10 +38,10 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 		return errors.Errorf("public parameters not inizialized")
 	}
 	if err := audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, nil, math.Curves[pp.Curve]).Check(
-		tokenRequest,
-		tokenRequestMetadata,
+		request.(*common2.TokenRequest),
+		metadata,
 		inputTokens,
-		txID,
+		anchor,
 	); err != nil {
 		return errors.WithMessagef(err, "failed to perform auditor check")
 	}

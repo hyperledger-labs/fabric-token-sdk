@@ -12,6 +12,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+
 	math "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
@@ -63,10 +65,10 @@ var _ = Describe("validator", func() {
 		auditor *audit.Auditor
 		ipk     []byte
 
-		ir *driver.TokenRequest // regular issue request
-		rr *driver.TokenRequest // redeem request
-		tr *driver.TokenRequest // transfer request
-		ar *driver.TokenRequest // atomic action request
+		ir *common.TokenRequest // regular issue request
+		rr *common.TokenRequest // redeem request
+		tr *common.TokenRequest // transfer request
+		ar *common.TokenRequest // atomic action request
 	)
 	BeforeEach(func() {
 		fakeldger = &mock.Ledger{}
@@ -107,7 +109,7 @@ var _ = Describe("validator", func() {
 		Expect(trmetadata).NotTo(BeNil())
 
 		// atomic action request
-		ar = &driver.TokenRequest{Transfers: tr.Transfers}
+		ar = &common.TokenRequest{Transfers: tr.Transfers}
 		raw, err := asn1.Marshal(*ar)
 		Expect(err).NotTo(HaveOccurred())
 
@@ -256,7 +258,7 @@ var _ = Describe("validator", func() {
 
 			Context("when the sender's signature is not valid: wrong txID", func() {
 				BeforeEach(func() {
-					request := &driver.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
+					request := &common.TokenRequest{Issues: ar.Issues, Transfers: ar.Transfers}
 					raw, err = asn1.Marshal(*request)
 					Expect(err).NotTo(HaveOccurred())
 
@@ -284,7 +286,7 @@ func prepareECDSASigner() (*ecdsa.ECDSASigner, *ecdsa.ECDSAVerifier) {
 	return signer, signer.ECDSAVerifier
 }
 
-func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*nonanonym.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*nonanonym.Issuer, *common.TokenRequest, *driver.TokenRequestMetadata) {
 	signer, err := ecdsa.NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
@@ -295,7 +297,7 @@ func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Aud
 	return issuer, ir, metadata
 }
 
-func prepareRedeemRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareRedeemRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *common.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
@@ -303,7 +305,7 @@ func prepareRedeemRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*tra
 	return prepareTransfer(pp, signer, auditor, auditInfo, id, owners)
 }
 
-func prepareTransferRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransferRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*transfer.Sender, *common.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 	id, auditInfo, signer := getIdemixInfo("./testdata/idemix")
 	owners := make([][]byte, 2)
 	owners[0] = id
@@ -429,9 +431,9 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	return id, auditInfo, signer
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*common.TokenRequest, *driver.TokenRequestMetadata) {
 	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
-	ir := &driver.TokenRequest{}
+	ir := &common.TokenRequest{}
 	owners := make([][]byte, 1)
 	owners[0] = id
 	values := []uint64{40}
@@ -461,7 +463,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 	Expect(err).NotTo(HaveOccurred())
 
 	// sign token request
-	ir = &driver.TokenRequest{Issues: [][]byte{raw}}
+	ir = &common.TokenRequest{Issues: [][]byte{raw}}
 	raw, err = asn1.Marshal(*ir)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -479,7 +481,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 	return ir, issueMetadata
 }
 
-func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *common.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
@@ -521,7 +523,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	raw, err := transfer.Serialize()
 	Expect(err).NotTo(HaveOccurred())
 
-	tr := &driver.TokenRequest{Transfers: [][]byte{raw}}
+	tr := &common.TokenRequest{Transfers: [][]byte{raw}}
 	raw, err = asn1.Marshal(*tr)
 	Expect(err).NotTo(HaveOccurred())
 

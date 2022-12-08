@@ -315,20 +315,20 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	t.Payload.Transient = payload.Transient
 	return nil
 
-	// for _, bytes := range payload.Request.Issues {
-	//	t.Payload.Request.Issues = append(t.Payload.Request.Issues, bytes)
+	// for _, bytes := range payload.Request.GetIssues {
+	//	t.Payload.Request.GetIssues = append(t.Payload.Request.GetIssues, bytes)
 	// }
-	// for _, bytes := range payload.Request.Transfers {
-	//	t.Payload.Request.Transfers = append(t.Payload.Request.Transfers, bytes)
+	// for _, bytes := range payload.Request.GetTransfers {
+	//	t.Payload.Request.GetTransfers = append(t.Payload.Request.GetTransfers, bytes)
 	// }
 	// for _, info := range payload.TokenInfos {
 	//	t.Payload.TokenInfos = append(t.Payload.TokenInfos, info)
 	// }
-	// for _, issueMetadata := range payload.ValidationRecords.Issues {
-	//	t.Payload.ValidationRecords.Issues = append(t.Payload.ValidationRecords.Issues, issueMetadata)
+	// for _, issueMetadata := range payload.ValidationRecords.GetIssues {
+	//	t.Payload.ValidationRecords.GetIssues = append(t.Payload.ValidationRecords.GetIssues, issueMetadata)
 	// }
-	// for _, transferMetadata := range payload.ValidationRecords.Transfers {
-	//	t.Payload.ValidationRecords.Transfers = append(t.Payload.ValidationRecords.Transfers, transferMetadata)
+	// for _, transferMetadata := range payload.ValidationRecords.GetTransfers {
+	//	t.Payload.ValidationRecords.GetTransfers = append(t.Payload.ValidationRecords.GetTransfers, transferMetadata)
 	// }
 	//
 	// for key, value := range payload.Transient {

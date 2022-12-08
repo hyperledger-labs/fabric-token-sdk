@@ -9,6 +9,8 @@ package fabtoken
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -196,7 +198,7 @@ func (t *TransferAction) GetMetadata() map[string][]byte {
 }
 
 // UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in the passed TokenRequest
-func UnmarshalIssueTransferActions(tr *driver.TokenRequest) ([]*IssueAction, []*TransferAction, error) {
+func UnmarshalIssueTransferActions(tr *common.TokenRequest) ([]*IssueAction, []*TransferAction, error) {
 	ia, err := UnmarshalIssueActions(tr.Issues)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to unmarshal issue actions")

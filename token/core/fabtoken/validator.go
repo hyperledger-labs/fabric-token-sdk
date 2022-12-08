@@ -52,7 +52,7 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 }
 
 // VerifyTokenRequest validates the passed token request against data in the ledger, the signature provided and the anchor
-func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest) ([]interface{}, map[string][]byte, error) {
+func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *common.TokenRequest) ([]interface{}, map[string][]byte, error) {
 	// validate arguments
 	if ledger == nil {
 		return nil, nil, errors.New("please provide a non-nil ledger")
@@ -111,7 +111,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, ancho
 		return nil, nil, errors.New("empty token request")
 	}
 	// un-marshal token request
-	tr := &driver.TokenRequest{}
+	tr := &common.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
@@ -119,7 +119,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, ancho
 
 	// Prepare Message expected to be signed
 	// TODO: encapsulate this somewhere
-	req := &driver.TokenRequest{}
+	req := &common.TokenRequest{}
 	req.Transfers = tr.Transfers
 	req.Issues = tr.Issues
 	bytes, err := req.Bytes()
@@ -146,7 +146,7 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, ancho
 
 // UnmarshalActions returns the actions contained in the serialized token request
 func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
-	tr := &driver.TokenRequest{}
+	tr := &common.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal token request")

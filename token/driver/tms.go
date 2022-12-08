@@ -23,6 +23,7 @@ type TokenManagerService interface {
 	Validator() (Validator, error)
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
+	NewRequest() TokenRequest
 }
 
 type TokenManagerServiceProvider interface {

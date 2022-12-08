@@ -4,19 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package token
+package common
 
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/stretchr/testify/assert"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 func TestRequestSerialization(t *testing.T) {
-	r := NewRequest(nil, "hello world")
-	r.Actions = &driver.TokenRequest{
+	r := token.NewRequest(nil, "hello world")
+	r.Request = &TokenRequest{
 		Issues: [][]byte{
 			[]byte("issue1"),
 			[]byte("issue2"),
@@ -28,7 +27,7 @@ func TestRequestSerialization(t *testing.T) {
 	raw, err := r.Bytes()
 	assert.NoError(t, err)
 
-	r2 := NewRequest(nil, "")
+	r2 := token.NewRequest(nil, "")
 	err = r2.FromBytes(raw)
 	assert.NoError(t, err)
 	raw2, err := r2.Bytes()
