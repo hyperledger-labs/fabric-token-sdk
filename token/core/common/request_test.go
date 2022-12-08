@@ -9,13 +9,11 @@ package common
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRequestSerialization(t *testing.T) {
-	r := token.NewRequest(nil, "hello world")
-	r.Request = &TokenRequest{
+	r := &TokenRequest{
 		Issues: [][]byte{
 			[]byte("issue1"),
 			[]byte("issue2"),
@@ -27,7 +25,7 @@ func TestRequestSerialization(t *testing.T) {
 	raw, err := r.Bytes()
 	assert.NoError(t, err)
 
-	r2 := token.NewRequest(nil, "")
+	r2 := &TokenRequest{}
 	err = r2.FromBytes(raw)
 	assert.NoError(t, err)
 	raw2, err := r2.Bytes()
@@ -35,9 +33,9 @@ func TestRequestSerialization(t *testing.T) {
 
 	assert.Equal(t, raw, raw2)
 
-	mRaw, err := r.MarshalToAudit()
+	mRaw, err := r.MarshalToAudit("id", nil)
 	assert.NoError(t, err)
-	mRaw2, err := r2.MarshalToAudit()
+	mRaw2, err := r2.MarshalToAudit("id", nil)
 	assert.NoError(t, err)
 
 	assert.Equal(t, mRaw, mRaw2)

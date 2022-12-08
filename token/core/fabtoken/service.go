@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -109,24 +108,17 @@ func (s *Service) NewRequest() driver.TokenRequest {
 }
 
 func (s *Service) MarshalTokenRequestToSign(request driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	req := request.(*common.TokenRequest)
-	newReq := &common.TokenRequest{
-		Issues:    req.GetIssues(),
-		Transfers: req.GetTransfers(),
+	req, ok := request.(*common.TokenRequest)
+	if !ok {
+		return nil, errors.Errorf("expect *common.TokenRequest, got [%T]", request)
 	}
-	return newReq.Bytes()
+	return req.MarshalTokenRequestToSign(meta)
 }
 
 func (s *Service) MarshalToAudit(anchor string, request driver.TokenRequest, metadata *driver.TokenRequestMetadata) ([]byte, error) {
-	req := request.(*common.TokenRequest)
-
-	newReq := &common.TokenRequest{}
-	newReq.Transfers = req.Transfers
-	newReq.Issues = req.Issues
-	bytes, err := newReq.Bytes()
-	if err != nil {
-		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", anchor)
+	req, ok := request.(*common.TokenRequest)
+	if !ok {
+		return nil, errors.Errorf("expect *common.TokenRequest, got [%T]", request)
 	}
-	logger.Debugf("MarshalToAudit [%s][%s]", hash.Hashable(bytes).String(), anchor)
-	return append(bytes, []byte(anchor)...), nil
+	return req.MarshalToAudit(anchor, metadata)
 }

@@ -9,6 +9,8 @@ package common
 import (
 	"encoding/asn1"
 
+	"github.com/pkg/errors"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
@@ -56,4 +58,24 @@ func (r *TokenRequest) Bytes() ([]byte, error) {
 func (r *TokenRequest) FromBytes(raw []byte) error {
 	_, err := asn1.Unmarshal(raw, r)
 	return err
+}
+
+func (r *TokenRequest) MarshalToAudit(anchor string, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	newReq := &TokenRequest{}
+	newReq.Transfers = r.Transfers
+	newReq.Issues = r.Issues
+	bytes, err := newReq.Bytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", anchor)
+	}
+	//logger.Debugf("MarshalToAudit [%s][%s]", hash.Hashable(bytes).String(), anchor)
+	return append(bytes, []byte(anchor)...), nil
+}
+
+func (r *TokenRequest) MarshalTokenRequestToSign(meta *driver.TokenRequestMetadata) ([]byte, error) {
+	newReq := &TokenRequest{
+		Issues:    r.Issues,
+		Transfers: r.Transfers,
+	}
+	return newReq.Bytes()
 }
