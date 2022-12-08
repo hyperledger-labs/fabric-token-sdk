@@ -57,7 +57,7 @@ func main() {
 	flogging.Init(flogging.Config{
 		Format:  "'%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'",
 		Writer:  os.Stderr,
-		LogSpec: "debug",
+		LogSpec: os.Getenv("CHAINCODE_LOG_LEVEL"),
 	})
 
 	fmt.Printf("metrics server at [%s], enabled [%v]", config.MetricsServer, config.MetricsEnabled)

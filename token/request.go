@@ -739,7 +739,6 @@ func (r *Request) IsValid() error {
 }
 
 // MarshalToAudit marshals the request to a message suitable for audit signature.
-// In particular, metadata is not included.
 func (r *Request) MarshalToAudit() ([]byte, error) {
 	if r.Request == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for audit", r.Anchor)

@@ -11,8 +11,6 @@ import (
 	"os"
 	"time"
 
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-
 	math "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
@@ -20,10 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -32,6 +27,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	msp2 "github.com/hyperledger/fabric/msp"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
 type idemix interface {

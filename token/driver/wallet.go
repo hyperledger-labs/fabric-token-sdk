@@ -165,5 +165,6 @@ type Serializer interface {
 	// MarshalTokenRequestToSign marshals the to token request to a byte array representation on which a signature must be produced
 	MarshalTokenRequestToSign(request TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
 
+	// MarshalToAudit marshals the request to a message suitable for audit signature.
 	MarshalToAudit(anchor string, actions TokenRequest, metadata *TokenRequestMetadata) ([]byte, error)
 }

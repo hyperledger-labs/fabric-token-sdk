@@ -113,13 +113,6 @@ func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) 
 		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
 	}
 
-	tx.TokenRequest.SetTokenService(
-		token.GetManagementService(sp,
-			token.WithNetwork(tx.Network()),
-			token.WithChannel(tx.Channel()),
-			token.WithNamespace(tx.Namespace()),
-		),
-	)
 	if tx.ID() != tx.TokenRequest.ID() {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
@@ -445,6 +438,7 @@ func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
 			if err != nil {
 				return errors.WithMessagef(err, "failed to create a new token request for [%s:%s:%s]", p.Network, p.Channel, p.Namespace)
 			}
+			p.TokenRequest.TokenService = tms
 		}
 		if err := p.TokenRequest.FromBytes(ser.TokenRequest); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token request")
