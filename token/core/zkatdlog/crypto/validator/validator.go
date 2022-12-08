@@ -9,6 +9,8 @@ package validator
 import (
 	"bytes"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -166,6 +168,10 @@ func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignaturePro
 		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.Auditor)
 		if err != nil {
 			return errors.Errorf("failed to deserialize auditor's public key")
+		}
+
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("verify audit signature with identity [%s]", v.pp.Auditor)
 		}
 
 		_, err = signatureProvider.HasBeenSignedBy(v.pp.Auditor, verifier)

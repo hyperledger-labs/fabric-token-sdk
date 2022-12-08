@@ -100,8 +100,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) {
 	tx := &Transaction{
 		Payload: &Payload{
-			Transient:    map[string][]byte{},
-			TokenRequest: token.NewRequest(nil, ""),
+			Transient: map[string][]byte{},
 		},
 		SP: sp,
 	}
@@ -432,6 +431,21 @@ func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
 		p.Transient = meta
 	}
 	if len(ser.TokenRequest) != 0 {
+		if p.TokenRequest == nil {
+			tms := token.GetManagementService(sp,
+				token.WithNetwork(p.Network),
+				token.WithChannel(p.Channel),
+				token.WithNamespace(p.Namespace),
+			)
+			if tms == nil {
+				return errors.Errorf("failed to find TMS for [%s:%s:%s]", p.Network, p.Channel, p.Namespace)
+			}
+			var err error
+			p.TokenRequest, err = tms.NewRequest("")
+			if err != nil {
+				return errors.WithMessagef(err, "failed to create a new token request for [%s:%s:%s]", p.Network, p.Channel, p.Namespace)
+			}
+		}
 		if err := p.TokenRequest.FromBytes(ser.TokenRequest); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token request")
 		}

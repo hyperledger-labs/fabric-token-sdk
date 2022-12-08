@@ -30,6 +30,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		fabricTopology.EnableIdemix()
 		fabricTopology.AddOrganizationsByName("Org1", "Org2")
 		fabricTopology.SetNamespaceApproverOrgs("Org1")
+		fabricTopology.SetLogging("debug", "")
 		backendNetwork = fabricTopology
 		backendChannel = fabricTopology.Channels[0].Name
 	case "orion":
@@ -42,7 +43,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),

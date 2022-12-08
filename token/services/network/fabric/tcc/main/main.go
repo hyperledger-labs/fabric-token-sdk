@@ -54,6 +54,12 @@ func main() {
 		Writer:  os.Stderr,
 	})
 
+	flogging.Init(flogging.Config{
+		Format:  "'%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'",
+		Writer:  os.Stderr,
+		LogSpec: "debug",
+	})
+
 	fmt.Printf("metrics server at [%s], enabled [%v]", config.MetricsServer, config.MetricsEnabled)
 
 	if config.CCID == "" || config.CCaddress == "" {

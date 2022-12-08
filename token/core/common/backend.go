@@ -7,10 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/base64"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.zkatdlog.validator")
 
 type Backend struct {
 	// Ledger to access the ledger state
@@ -35,6 +42,10 @@ func (b *Backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) ([
 	}
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("verify signature [%s] on message [%s]", base64.StdEncoding.EncodeToString(sigma), hash.Hashable(b.Message))
+	}
 
 	return sigma, verifier.Verify(b.Message, sigma)
 }
