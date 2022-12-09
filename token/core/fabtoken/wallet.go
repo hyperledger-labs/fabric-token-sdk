@@ -19,11 +19,7 @@ import (
 
 // OwnerWalletID returns the wallet id associated to the passed identity, if any
 func (s *Service) OwnerWalletID(identity view.Identity) (string, error) {
-	wallet, err := s.OwnerWalletByIdentity(identity)
-	if err != nil {
-		return "", err
-	}
-	return wallet.ID(), nil
+	return s.OwnerWalletsRegistry.GetWallet(identity)
 }
 
 func (s *Service) RegisterOwnerWallet(id string, path string) error {
