@@ -251,9 +251,9 @@ func (w *OwnerWallet) filter(tokenType string, sender bool, selector SelectFunct
 func (w *OwnerWallet) filterIterator(tokenType string, sender bool, selector SelectFunction) (*FilteredIterator, error) {
 	var walletID string
 	if sender {
-		walletID = senderWallet(w.wallet)
+		walletID = senderWallet(w.wallet.ID())
 	} else {
-		walletID = recipientWallet(w.wallet)
+		walletID = recipientWallet(w.wallet.ID())
 	}
 	it, err := w.queryService.UnspentTokensIteratorBy(walletID, tokenType)
 	if err != nil {

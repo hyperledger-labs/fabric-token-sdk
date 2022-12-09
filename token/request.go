@@ -782,8 +782,8 @@ func (r *Request) Bytes() ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed marshalling metadata to bytes")
 	}
 	return asn1.Marshal(requestSer{
-		TxID:     r.Anchor,
-		Actions:  req,
+		Anchor:   r.Anchor,
+		Request:  req,
 		Metadata: meta,
 	})
 }
@@ -795,9 +795,9 @@ func (r *Request) FromBytes(request []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling request")
 	}
-	r.Anchor = req.TxID
-	if len(req.Actions) > 0 {
-		if err := r.Request.FromBytes(req.Actions); err != nil {
+	r.Anchor = req.Anchor
+	if len(req.Request) > 0 {
+		if err := r.Request.FromBytes(req.Request); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling actions")
 		}
 	}
@@ -1153,7 +1153,7 @@ func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType 
 }
 
 type requestSer struct {
-	TxID     string
-	Actions  []byte
+	Anchor   string
+	Request  []byte
 	Metadata []byte
 }

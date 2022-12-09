@@ -88,6 +88,9 @@ type CertifierWallet interface {
 
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
+	// OwnerWalletID returns the wallet id associated to the passed identity, if any
+	OwnerWalletID(identity view.Identity) (string, error)
+
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error
 

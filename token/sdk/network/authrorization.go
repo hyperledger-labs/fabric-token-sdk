@@ -26,11 +26,11 @@ type TMSAuthorization struct{}
 
 // IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
 func (w *TMSAuthorization) IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool) {
-	wallet := tms.WalletManager().OwnerWalletByIdentity(tok.Owner.Raw)
-	if wallet == nil {
-		return nil, false
+	id, valid := tms.WalletManager().IsMine(tok)
+	if !valid {
+		return nil, valid
 	}
-	return []string{wallet.ID()}, true
+	return []string{id}, true
 }
 
 // AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities

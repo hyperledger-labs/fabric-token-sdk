@@ -120,26 +120,26 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 	var ids []string
 	// I'm either the sender
 	logger.Debugf("Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if wallet := tms.WalletManager().OwnerWalletByIdentity(script.Sender); wallet != nil {
+	if wID, found := tms.WalletManager().OwnerWalletID(script.Sender); found {
 		logger.Debugf("Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-		ids = append(ids, senderWallet(wallet))
+		ids = append(ids, senderWallet(wID))
 	}
 
 	// or the recipient
 	logger.Debugf("Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if wallet := tms.WalletManager().OwnerWalletByIdentity(script.Recipient); wallet != nil {
+	if wID, found := tms.WalletManager().OwnerWalletID(script.Recipient); found {
 		logger.Debugf("Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-		ids = append(ids, recipientWallet(wallet))
+		ids = append(ids, recipientWallet(wID))
 	}
 
 	logger.Debugf("Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
 	return ids, len(ids) != 0
 }
 
-func senderWallet(w *token.OwnerWallet) string {
-	return "htlc.sender" + w.ID()
+func senderWallet(id string) string {
+	return "htlc.sender" + id
 }
 
-func recipientWallet(w *token.OwnerWallet) string {
-	return "htlc.recipient" + w.ID()
+func recipientWallet(id string) string {
+	return "htlc.recipient" + id
 }
