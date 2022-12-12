@@ -97,6 +97,9 @@ type WalletService interface {
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
+	// GetRevocationHandler extracts the revocation handler from the passed audit information
+	GetRevocationHandler(auditInfo []byte) (string, error)
+
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(identity view.Identity) Wallet
 
@@ -122,6 +125,12 @@ type WalletService interface {
 
 	// AuditorWalletByIdentity returns an instance of the AuditorWallet interface that contains the passed identity.
 	AuditorWalletByIdentity(identity view.Identity) (AuditorWallet, error)
+
+	// GetRevocationList returns the list of revoked identities.
+	GetRevocationList() ([]string, error)
+
+	// UpdateRevocationList updates the list of revoked identities.
+	UpdateRevocationList(revocationHandle string) error
 
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.

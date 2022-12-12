@@ -30,6 +30,8 @@ type Deserializer interface {
 type EnrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
+
+	GetRevocationHandler(auditInfo []byte) (string, error)
 }
 
 // Provider implements the driver.IdentityProvider interface
@@ -172,6 +174,10 @@ func (p *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
 
 func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return p.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
+}
+
+func (p *Provider) GetRevocationHandler(auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetRevocationHandler(auditInfo)
 }
 
 func (p *Provider) RegisterOwnerWallet(id string, path string) error {

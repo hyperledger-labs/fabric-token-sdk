@@ -77,6 +77,10 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.IP.GetEnrollmentID(auditInfo)
 }
 
+func (s *Service) GetRevocationHandler(auditInfo []byte) (string, error) {
+	return s.IP.GetRevocationHandler(auditInfo)
+}
+
 func (s *Service) Wallet(identity view.Identity) driver.Wallet {
 	w, _ := s.OwnerWalletByIdentity(identity)
 	if w != nil {
@@ -207,6 +211,13 @@ func (s *Service) CertifierWallet(id string) (driver.CertifierWallet, error) {
 
 func (s *Service) CertifierWalletByIdentity(identity view.Identity) (driver.CertifierWallet, error) {
 	return nil, nil
+}
+func (s *Service) GetRevocationList() ([]string, error) {
+	return s.AuditorWalletsRegistry.GetRevocationList()
+}
+
+func (s *Service) UpdateRevocationList(revocationHandle string) error {
+	return s.AuditorWalletsRegistry.UpdateRevocationList(revocationHandle)
 }
 
 // SpentIDs returns the spend ids for the passed token ids

@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/pkg/errors"
 )
 
 type AuditView struct{}
@@ -149,6 +150,30 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			assert.True(total.Cmp(big.NewInt(3000)) < 0, "holding limit reached [%s][%s][%s]", eID, tokenType, total.Text(10))
 		}
 	}
+
+	tms := token.GetManagementService(context)
+	assert.NotNil(tms, "tms not found ")
+	list, err := tms.WalletManager().GetRevocationList()
+	if err != nil {
+		logger.Errorf("failed to get revocation handler list")
+		return nil, errors.WithMessagef(err, "failed to get revocation handler list")
+	}
+	for _, rID := range inputs.RevocationHandles() {
+		for _, l := range list {
+			if rID == l {
+				return nil, errors.Errorf("%s Identity is in revoked state", rID)
+			}
+		}
+	}
+
+	for _, rID := range outputs.RevocationHandles() {
+		for _, l := range list {
+			if rID == l {
+				return nil, errors.Errorf("%s Identity is in revoked state", rID)
+			}
+		}
+	}
+
 	aqe.Done()
 
 	logger.Debugf("AuditView: Approve... [%s]", tx.ID())
@@ -313,6 +338,57 @@ func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, erro
 func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &GetAuditorWalletIdentity{}}
 	err := json.Unmarshal(in, f.GetAuditorWalletIdentity)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+type RevokeIdentity struct {
+	RevocationHandler string
+}
+
+type AuditorRevocationView struct {
+	*RevokeIdentity
+}
+
+type AuditorRevocationViewFactory struct{}
+
+func (r *RevokeIdentity) Call(context view.Context) (interface{}, error) {
+	result, err := context.RunView(ttx.RevokeView(r.RevocationHandler))
+	return result, err
+}
+
+type GetRevocationHandle struct {
+	TMSID  token.TMSID
+	Label  string
+	Wallet string
+}
+
+type GetRevocationHandleView struct {
+	*GetRevocationHandle
+}
+
+type GetRevocationHandleViewFactory struct{}
+
+func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+	w := tms.WalletManager().OwnerWallet(r.Wallet)
+	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
+	id, err := w.GetRecipientIdentity()
+	assert.NoError(err, "error getting recipient id")
+	return tms.WalletManager().GetRevocationHandle(id)
+}
+
+func (p *AuditorRevocationViewFactory) NewView(in []byte) (view.View, error) {
+	f := &AuditorRevocationView{RevokeIdentity: &RevokeIdentity{}}
+	err := json.Unmarshal(in, f.RevokeIdentity)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+func (p *GetRevocationHandleViewFactory) NewView(in []byte) (view.View, error) {
+	f := &GetRevocationHandleView{GetRevocationHandle: &GetRevocationHandle{}}
+	err := json.Unmarshal(in, f.GetRevocationHandle)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

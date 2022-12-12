@@ -10,6 +10,7 @@ import (
 	"crypto/rand"
 	"math/big"
 	"strings"
+
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -675,10 +676,10 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
 	} else {
 		errorMessage = "failed to verify issuers' signatures"
-		RegisterAuditor(network, "auditor")
-		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
+		RegisterAuditor(network, auditor)
+		txId := IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
-		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
+		CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
 	}
 
 	RegisterAuditor(network, auditor)
@@ -710,4 +711,10 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)
 	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10, auditor)
 	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
+}
+
+func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
+	IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer")
+	RevokeIdentity(network, auditor, revocationHandle)
+	IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer", errorMessage)
 }

@@ -30,6 +30,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+replace github.com/hyperledger-labs/fabric-smart-client => github.com/sapthasurendran/fabric-smart-client v0.0.0-20221223103708-6c8bd4a1e3e2
+
 require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect

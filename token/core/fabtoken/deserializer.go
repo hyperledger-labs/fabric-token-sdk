@@ -8,7 +8,6 @@ package fabtoken
 
 import (
 	"encoding/json"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
@@ -83,4 +82,32 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 		return "", nil
 	}
 	return string(auditInfo), nil
+}
+
+// GetRevocationHandler returns the revocation handler associated with the identity matched to the passed auditInfo
+func (e *enrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
+	if len(auditInfo) == 0 {
+		return "", nil
+	}
+
+	// Try to unmarshal it as ScriptInfo
+	si := &htlc.ScriptInfo{}
+	err := json.Unmarshal(auditInfo, si)
+	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
+		if len(si.Recipient) != 0 {
+			ai := &x509.AuditInfo{}
+			if err := ai.FromBytes(si.Recipient); err != nil {
+				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+			}
+			return ai.GetRevocationHandle(), nil
+		}
+
+		return "", nil
+	}
+
+	ai := &x509.AuditInfo{}
+	if err := ai.FromBytes(auditInfo); err != nil {
+		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
+	}
+	return ai.GetRevocationHandle(), nil
 }

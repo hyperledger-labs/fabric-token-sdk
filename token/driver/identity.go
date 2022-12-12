@@ -57,6 +57,9 @@ type IdentityProvider interface {
 	// GetEnrollmentID extracts the enrollment ID from the passed audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
+	// GetRevocationHandler extracts the revocation handler from the passed audit info
+	GetRevocationHandler(auditInfo []byte) (string, error)
+
 	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id.
 	Bind(id view.Identity, longTerm view.Identity) error

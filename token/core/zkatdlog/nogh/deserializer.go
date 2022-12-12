@@ -152,3 +152,31 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	}
 	return ai.EnrollmentID(), nil
 }
+
+// GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
+func (e *enrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
+	if len(auditInfo) == 0 {
+		return "", nil
+	}
+
+	// Try to unmarshal it as ScriptInfo
+	si := &htlc.ScriptInfo{}
+	err := json.Unmarshal(auditInfo, si)
+	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
+		if len(si.Recipient) != 0 {
+			ai := &idemix2.AuditInfo{}
+			if err := ai.FromBytes(si.Recipient); err != nil {
+				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+			}
+			return ai.RevocationHandle(), nil
+		}
+
+		return "", nil
+	}
+
+	ai := &idemix2.AuditInfo{}
+	if err := ai.FromBytes(auditInfo); err != nil {
+		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+	}
+	return ai.RevocationHandle(), nil
+}
