@@ -47,6 +47,8 @@ const (
 	ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks
 	ZKATDLogInteropHTLCOrion
 	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
+	FabTokenInteropAssetTransfer
+	ZKATDLogInteropAssetTransfer
 )
 
 // StartPortForNode On linux, the default ephemeral port range is 32768-60999 and can be

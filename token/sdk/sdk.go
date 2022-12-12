@@ -26,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
@@ -107,6 +108,11 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(p.auditorManager))
 	p.ownerManager = owner.NewManager(p.registry, kvs.GetService(p.registry))
 	assert.NoError(p.registry.RegisterService(p.ownerManager))
+
+	// State Service Provider
+	provider, err := pledge.NewProvider(tms2.NewStateServiceProvider(p.registry))
+	assert.NoError(err, "failed instantiating interoperability prover provider")
+	assert.NoError(p.registry.RegisterService(provider), "failed registering interoperability prover provider")
 
 	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))
 	assert.NoError(err, "failed to get custodian status")

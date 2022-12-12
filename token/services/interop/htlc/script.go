@@ -14,11 +14,13 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
+
+const ScriptType = "htlc" // htlc script
 
 // HashInfo contains the information regarding the hashing
 type HashInfo struct {
@@ -99,7 +101,7 @@ func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
 
 // IsMine returns true if one is either a sender or a recipient of an htlc script
 func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
-	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	owner, err := owner.UnmarshallTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 		return nil, false

@@ -4,15 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package htlc
+package interop
 
 import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/pkg/errors"
 )
 
@@ -29,24 +30,47 @@ func NewDeserializer(ownerDeserializer VerifierDES) *Deserializer {
 }
 
 func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := identity.UnmarshallRawOwner(id)
+	si, err := owner.UnmarshallTypedIdentity(id)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal RawOwner")
+		return nil, errors.Wrap(err, "failed to unmarshal TypedIdentity")
 	}
-	if si.Type == identity.SerializedIdentityType {
+
+	switch t := si.Type; t {
+	case owner.SerializedIdentityType:
 		return d.OwnerDeserializer.DeserializeVerifier(id)
-	}
-	if si.Type == htlc.ScriptType {
+	case pledge.ScriptType:
+		return d.getPledgeVerifier(si.Identity)
+	case htlc.ScriptType:
 		return d.getHTLCVerifier(si.Identity)
+	default:
+		return nil, errors.Errorf("failed to deserialize TypedIdentity: Unknown owner type %s", t)
 	}
-	return nil, errors.Errorf("failed to deserialize RawOwner: Unknown owner type %s", si.Type)
+}
+
+func (d *Deserializer) getPledgeVerifier(raw []byte) (driver.Verifier, error) {
+	script := &pledge.Script{}
+	err := json.Unmarshal(raw, script)
+	if err != nil {
+		return nil, errors.Errorf("failed to unmarshal TypedIdentity as a pledge script")
+	}
+	v := &pledge.Verifier{}
+	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal the identity of the sender [%v]", script.Sender.String())
+	}
+	v.Issuer, err = d.OwnerDeserializer.DeserializeVerifier(script.Issuer)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal the identity of the issuer [%s]", script.Issuer.String())
+	}
+	v.PledgeID = script.ID
+	return v, nil
 }
 
 func (d *Deserializer) getHTLCVerifier(raw []byte) (driver.Verifier, error) {
 	script := &htlc.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as an htlc script")
+		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
 	v := &htlc.Verifier{}
 	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)

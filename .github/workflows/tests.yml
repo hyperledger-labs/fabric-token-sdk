@@ -106,12 +106,14 @@ jobs:
           interop-fabtoken-t4,
           interop-fabtoken-t5,
           interop-fabtoken-t6,
+          interop-fabtoken-t7,
           interop-dlog-t1,
           interop-dlog-t2,
           interop-dlog-t3,
           interop-dlog-t4,
           interop-dlog-t5,
           interop-dlog-t6,
+          interop-dlog-t7,
         ]
 
     steps:

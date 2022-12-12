@@ -142,4 +142,23 @@ var _ = Describe("FabToken end to end", func() {
 		})
 	})
 
+	Describe("Asset Transfer With Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropAssetTransfer.StartPortForNode(),
+				"",
+				interop.AssetTransferTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed a cross network asset transfer", func() {
+			interop.TestAssetTransferWithTwoNetworks(ii)
+		})
+	})
+
 })

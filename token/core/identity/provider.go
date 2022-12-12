@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -158,8 +159,8 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 	// give it a second chance
 
-	// is the identity wrapped in RawOwner?
-	ro, err2 := UnmarshallRawOwner(identity)
+	// is the identity wrapped in TypedIdentity?
+	ro, err2 := owner.UnmarshallTypedIdentity(identity)
 	if err2 != nil {
 		// No
 		signer, err := p.tryDeserialization(identity)

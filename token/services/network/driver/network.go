@@ -117,4 +117,7 @@ type Network interface {
 
 	// ProcessNamespace indicates to the commit pipeline to process all transaction in the passed namespace
 	ProcessNamespace(namespace string) error
+
+	// InteropURL returns the interoperability url for this network and the passed namespace
+	InteropURL(namespace string) string
 }

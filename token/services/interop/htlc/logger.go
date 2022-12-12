@@ -8,4 +8,4 @@ package htlc
 
 import "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 
-var logger = flogging.MustGetLogger("token-sdk.htlc")
+var logger = flogging.MustGetLogger("token-sdk.services.htlc")

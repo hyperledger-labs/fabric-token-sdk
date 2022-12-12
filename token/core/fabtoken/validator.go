@@ -41,6 +41,7 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,
+		TransferPledgeValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 	v := &Validator{

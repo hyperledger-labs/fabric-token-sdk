@@ -12,9 +12,9 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -350,7 +350,7 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 			logger.Debugf("no more tokens!")
 			return nil, nil
 		}
-		owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+		owner, err := owner.UnmarshallTypedIdentity(tok.Owner.Raw)
 		if err != nil {
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 			continue

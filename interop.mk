@@ -30,6 +30,10 @@ integration-tests-interop-dlog-t5:
 integration-tests-interop-dlog-t6:
 	cd ./integration/token/interop/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "HTLC No Cross Claim with Orion and Fabric Networks" .
 
+.PHONY: integration-tests-interop-dlog-t7
+integration-tests-interop-dlog-t7:
+	cd ./integration/token/interop/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Asset Transfer With Two Fabric Networks" .
+
 .PHONY: integration-tests-interop-fabtoken-t1
 integration-tests-interop-fabtoken-t1:
 	cd ./integration/token/interop/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "HTLC Single Fabric Network" .
@@ -53,3 +57,7 @@ integration-tests-interop-fabtoken-t5:
 .PHONY: integration-tests-interop-fabtoken-t6
 integration-tests-interop-fabtoken-t6:
 	cd ./integration/token/interop/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "HTLC No Cross Claim with Orion and Fabric Networks" .
+
+.PHONY: integration-tests-interop-fabtoken-t7
+integration-tests-interop-fabtoken-t7:
+	cd ./integration/token/interop/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Asset Transfer With Two Fabric Networks" .

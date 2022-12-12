@@ -467,6 +467,10 @@ func (n *Network) ProcessNamespace(namespace string) error {
 	return n.n.ProcessNamespace(namespace)
 }
 
+func (n *Network) InteropURL(namespace string) string {
+	return n.n.InteropURL(namespace)
+}
+
 // Provider returns an instance of network provider
 type Provider struct {
 	sp view2.ServiceProvider

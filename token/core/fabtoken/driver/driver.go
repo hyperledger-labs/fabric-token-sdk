@@ -7,22 +7,42 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	fabric2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	weaver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/weaver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	fabric3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/state/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
 
-type Driver struct {
+type Driver struct{}
+
+func (d *Driver) NewStateQueryExecutor(sp driver.ServiceProvider, url string) (driver.StateQueryExecutor, error) {
+	return fabric3.NewStateQueryExecutor(weaver2.GetProvider(sp), url, fabric2.GetDefaultFNS(sp))
+}
+
+func (d *Driver) NewStateVerifier(sp driver.ServiceProvider, url string) (driver.StateVerifier, error) {
+	return fabric3.NewStateVerifier(
+		weaver2.GetProvider(sp),
+		pledge.Vault(sp),
+		func(id string) *fabric2.NetworkService {
+			return fabric2.GetFabricNetworkService(sp, id)
+		},
+		url,
+		fabric2.GetDefaultFNS(sp),
+	)
 }
 
 func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParameters, error) {
@@ -208,5 +228,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 }
 
 func init() {
-	core.Register(fabtoken.PublicParameters, &Driver{})
+	d := &Driver{}
+	core.Register(fabtoken.PublicParameters, d)
+	fabric.RegisterStateDriver(fabtoken.PublicParameters, d)
 }

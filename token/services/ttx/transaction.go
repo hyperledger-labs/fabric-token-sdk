@@ -41,7 +41,7 @@ type Transaction struct {
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
 func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, error) {
-	txOpts, err := compile(opts...)
+	txOpts, err := CompileTxOption(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
@@ -56,7 +56,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 // A valid signer is a signer that the target network recognizes as so. For example, in case of fabric, the signer must be a valid fabric identity.
 // If the passed signer is nil, then the default identity is used.
 func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*Transaction, error) {
-	txOpts, err := compile(opts...)
+	txOpts, err := CompileTxOption(opts...)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed compiling tx options")
 	}
@@ -136,7 +136,7 @@ func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) 
 }
 
 func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
-	opt, err := compile(opts...)
+	opt, err := CompileTxOption(opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to parse options")
 	}

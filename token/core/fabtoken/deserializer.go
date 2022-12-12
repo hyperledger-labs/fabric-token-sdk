@@ -10,10 +10,10 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/pkg/errors"
 )
 
@@ -36,7 +36,7 @@ func NewDeserializer() *Deserializer {
 	return &Deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{})),
+		ownerDeserializer:   interop.NewDeserializer(owner.NewTypedIdentityDeserializer(&x509.MSPIdentityDeserializer{})),
 	}
 }
 
@@ -80,7 +80,7 @@ func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	}
 
 	// Try to unmarshal it as ScriptInfo
-	si := &htlc.ScriptInfo{}
+	si := &interop.ScriptInfo{}
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {
@@ -108,7 +108,7 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 	}
 
 	// Try to unmarshal it as ScriptInfo
-	si := &htlc.ScriptInfo{}
+	si := &interop.ScriptInfo{}
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {

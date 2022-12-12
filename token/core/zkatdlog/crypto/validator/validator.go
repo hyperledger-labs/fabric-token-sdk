@@ -33,6 +33,7 @@ func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidat
 		TransferSignatureValidate,
 		TransferZKProofValidate,
 		TransferHTLCValidate,
+		TransferPledgeValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
 	return &Validator{

@@ -129,7 +129,6 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 		bytes, err := w.RWSet.GetState(w.namespace, outputID)
 		if err != nil {
 			errs = append(errs, errors.Wrapf(err, "failed getting output for [%s]", outputID))
-			// return nil, errors.Wrapf(err, "failed getting output for [%s]", outputID)
 			continue
 		}
 		if len(bytes) == 0 {
@@ -185,12 +184,12 @@ func (w *Translator) checkIssue(issue IssueAction) error {
 }
 
 func (w *Translator) checkTransfer(t TransferAction) error {
-	keys, err := t.GetInputs()
+	inputKeys, err := t.GetInputs()
 	if err != nil {
 		return errors.Wrapf(err, "invalid transfer: failed getting input IDs")
 	}
 	if !t.IsGraphHiding() {
-		for _, key := range keys {
+		for _, key := range inputKeys {
 			bytes, err := w.RWSet.GetState(w.namespace, key)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)
@@ -200,7 +199,7 @@ func (w *Translator) checkTransfer(t TransferAction) error {
 			}
 		}
 	} else {
-		for _, key := range keys {
+		for _, key := range inputKeys {
 			bytes, err := w.RWSet.GetState(w.namespace, key)
 			if err != nil {
 				return errors.Wrapf(err, "invalid transfer: failed getting state [%s]", key)

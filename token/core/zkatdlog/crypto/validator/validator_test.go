@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
@@ -32,6 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator/mock"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -411,7 +411,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	signer, err := p.DeserializeSigningIdentity(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	id, err = identity.MarshallRawOwner(&identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType})
+	id, err = owner.MarshallTypedIdentity(&owner.TypedIdentity{Identity: id, Type: owner.SerializedIdentityType})
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo, signer

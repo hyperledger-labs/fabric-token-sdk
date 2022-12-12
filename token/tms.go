@@ -19,20 +19,7 @@ import (
 var logger = flogging.MustGetLogger("token-sdk")
 
 // TMSID models a TMS identifier
-type TMSID struct {
-	Network   string
-	Channel   string
-	Namespace string
-}
-
-// String returns a string representation of the TMSID
-func (t TMSID) String() string {
-	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
-}
-
-func (t TMSID) Equal(tmsid TMSID) bool {
-	return t.Network == tmsid.Network && t.Channel == tmsid.Channel && t.Namespace == tmsid.Namespace
-}
+type TMSID = driver.TMSID
 
 // ServiceProvider is used to return instances of a given type
 type ServiceProvider interface {

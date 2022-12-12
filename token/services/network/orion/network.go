@@ -258,6 +258,10 @@ func (n *Network) ProcessNamespace(namespace string) error {
 	return nil
 }
 
+func (n *Network) InteropURL(namespace string) string {
+	panic("not supported")
+}
+
 type nv struct {
 	v          *orion.Vault
 	tokenVault *vault.Vault

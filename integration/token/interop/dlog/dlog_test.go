@@ -142,4 +142,23 @@ var _ = Describe("DLog end to end", func() {
 		})
 	})
 
+	Describe("Asset Transfer With Two Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.ZKATDLogInteropAssetTransfer.StartPortForNode(),
+				"",
+				interop.AssetTransferTopology("dlog")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed a cross network asset transfer", func() {
+			interop.TestAssetTransferWithTwoNetworks(ii)
+		})
+	})
+
 })

@@ -9,8 +9,9 @@ package htlc
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 )
 
 // OutputStream models a stream over a set of outputs
@@ -31,7 +32,7 @@ func (o *OutputStream) Filter(f func(t *token.Output) bool) *OutputStream {
 // ByScript filters the OutputStream to only include outputs that are owned by an htlc script
 func (o *OutputStream) ByScript() *OutputStream {
 	return o.Filter(func(t *token.Output) bool {
-		owner, err := identity.UnmarshallRawOwner(t.Owner)
+		owner, err := owner.UnmarshallTypedIdentity(t.Owner)
 		if err != nil {
 			return false
 		}
@@ -46,7 +47,7 @@ func (o *OutputStream) ByScript() *OutputStream {
 // ScriptAt returns an htlc script that is the owner of the output at the passed index of the OutputStream
 func (o *OutputStream) ScriptAt(i int) *Script {
 	tok := o.OutputStream.At(i)
-	owner, err := identity.UnmarshallRawOwner(tok.Owner)
+	owner, err := owner.UnmarshallTypedIdentity(tok.Owner)
 	if err != nil {
 		logger.Debugf("failed unmarshalling raw owner [%s]: [%s]", tok, err)
 		return nil

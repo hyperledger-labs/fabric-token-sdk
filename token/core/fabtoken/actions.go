@@ -47,6 +47,13 @@ func (t *Output) IsRedeem() bool {
 	return len(t.Output.Owner.Raw) == 0
 }
 
+type IssueMetadata struct {
+	// OriginTokenID is the identifier of the pledged token in the origin network
+	OriginTokenID *token.ID
+	// OriginNetwork is the network where the pledge took place
+	OriginNetwork string
+}
+
 // IssueAction encodes a fabtoken Issue
 type IssueAction struct {
 	// issuer's public key
