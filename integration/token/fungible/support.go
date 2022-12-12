@@ -684,3 +684,19 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...
 		Expect(found).To(BeTrue(), "[%s] is not in [%v]", wID, wIDs)
 	}
 }
+
+func RevokeIdentity(network *integration.Infrastructure, auditor string, id string) {
+	_, err := network.Client(auditor).CallView("AuditorRevocationView", common.JSONMarshall(&views.RevokeIdentity{
+		RevocationHandler: id,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func GetRevocationHandle(network *integration.Infrastructure, id string) string {
+	revocationHandle, err := network.Client(id).CallView("GetRevocationHandleView", common.JSONMarshall(&views.GetRevocationHandle{}))
+	Expect(err).NotTo(HaveOccurred())
+	rH := revocationHandle.([]byte)
+	var rID string
+	common.JSONUnmarshal(rH, &rID)
+	return rID
+}

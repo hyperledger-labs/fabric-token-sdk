@@ -32,7 +32,8 @@ type Output struct {
 	// EnrollmentID is the enrollment ID of the owner of this output
 	EnrollmentID string
 	// Type is the type of token
-	Type string
+	RevocationHandler string
+	Type              string
 	// Quantity is the quantity of tokens
 	Quantity token2.Quantity
 }
@@ -43,13 +44,14 @@ func (o Output) ID(txID string) *token2.ID {
 
 // Input models an input of a token action
 type Input struct {
-	ActionIndex    int
-	Id             *token2.ID
-	Owner          view.Identity
-	OwnerAuditInfo []byte
-	EnrollmentID   string
-	Type           string
-	Quantity       token2.Quantity
+	ActionIndex       int
+	Id                *token2.ID
+	Owner             view.Identity
+	OwnerAuditInfo    []byte
+	EnrollmentID      string
+	RevocationHandler string
+	Type              string
+	Quantity          token2.Quantity
 }
 
 // OutputStream models a stream over a set of outputs (Output).
@@ -135,6 +137,22 @@ func (o *OutputStream) EnrollmentIDs() []string {
 	return eIDs
 }
 
+// RevocationHandlers returns the Revocation Handlers of the outputs in the OutputStream.
+func (o *OutputStream) RevocationHandlers() []string {
+	duplicates := map[string]interface{}{}
+	var rIDs []string
+	for _, output := range o.outputs {
+		if len(output.RevocationHandler) == 0 {
+			continue
+		}
+		if _, ok := duplicates[output.RevocationHandler]; !ok {
+			rIDs = append(rIDs, output.RevocationHandler)
+			duplicates[output.RevocationHandler] = true
+		}
+	}
+	return rIDs
+}
+
 // TokenTypes returns the token types of the outputs in the OutputStream.
 func (o *OutputStream) TokenTypes() []string {
 	duplicates := map[string]interface{}{}
@@ -146,6 +164,25 @@ func (o *OutputStream) TokenTypes() []string {
 		}
 	}
 	return types
+}
+
+// RevocationHandles returns the Revocation Handles of the owners of the outputs.
+// It might be empty, if not available.
+func (is *OutputStream) RevocationHandles() []string {
+	duplicates := map[string]interface{}{}
+	var rIDs []string
+	for _, output := range is.outputs {
+		if len(output.RevocationHandler) == 0 {
+			continue
+		}
+
+		_, ok := duplicates[output.RevocationHandler]
+		if !ok {
+			rIDs = append(rIDs, output.RevocationHandler)
+			duplicates[output.RevocationHandler] = true
+		}
+	}
+	return rIDs
 }
 
 // InputStream models a stream over a set of inputs (Input).
@@ -242,6 +279,25 @@ func (is *InputStream) EnrollmentIDs() []string {
 		}
 	}
 	return eIDs
+}
+
+// RevocationHandles returns the Revocation Handles of the owners of the inputs.
+// It might be empty, if not available.
+func (is *InputStream) RevocationHandles() []string {
+	duplicates := map[string]interface{}{}
+	var rIDs []string
+	for _, input := range is.inputs {
+		if len(input.RevocationHandler) == 0 {
+			continue
+		}
+
+		_, ok := duplicates[input.RevocationHandler]
+		if !ok {
+			rIDs = append(rIDs, input.RevocationHandler)
+			duplicates[input.RevocationHandler] = true
+		}
+	}
+	return rIDs
 }
 
 // TokenTypes returns the token types of the inputs.

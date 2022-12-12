@@ -472,21 +472,29 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
+
+		rID, err := tms.GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+		}
+
 		q, err := token.ToQuantity(tok.Quantity, precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
 		}
 
 		outputs = append(outputs, &Output{
-			ActionIndex:    i,
-			Index:          counter,
-			Owner:          tok.Owner.Raw,
-			OwnerAuditInfo: issueMeta.ReceiversAuditInfos[j],
-			EnrollmentID:   eID,
-			Type:           tok.Type,
-			Quantity:       q,
+			ActionIndex:       i,
+			Index:             counter,
+			Owner:             tok.Owner.Raw,
+			OwnerAuditInfo:    issueMeta.ReceiversAuditInfos[j],
+			EnrollmentID:      eID,
+			RevocationHandler: rID,
+			Type:              tok.Type,
+			Quantity:          q,
 		})
 		counter++
+
 	}
 	return outputs, nil
 }
@@ -615,12 +623,18 @@ func (r *Request) extractInputs(i int, transferMeta *TransferMetadata, failOnMis
 			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
 
+		rID, err := tms.GetRevocationHandler(senderAuditInfo)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+		}
+
 		inputs = append(inputs, &Input{
-			ActionIndex:    i,
-			Id:             transferMeta.TokenIDAt(j),
-			Owner:          transferMeta.Senders[j],
-			OwnerAuditInfo: senderAuditInfo,
-			EnrollmentID:   eID,
+			ActionIndex:       i,
+			Id:                transferMeta.TokenIDAt(j),
+			Owner:             transferMeta.Senders[j],
+			OwnerAuditInfo:    senderAuditInfo,
+			EnrollmentID:      eID,
+			RevocationHandler: rID,
 		})
 	}
 	return inputs, nil
@@ -959,6 +973,7 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
 		in.OwnerAuditInfo = ownerAuditInfo
+
 	}
 
 	return &AuditRecord{

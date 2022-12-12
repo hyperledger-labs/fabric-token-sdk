@@ -34,6 +34,10 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.identityProvider.GetEnrollmentID(auditInfo)
 }
 
+func (s *Service) GetRevocationHandler(auditInfo []byte) (string, error) {
+	return s.identityProvider.GetRevocationHandler(auditInfo)
+}
+
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 
@@ -124,6 +128,12 @@ func (s *Service) IssuerWallet(id string) (driver.IssuerWallet, error) {
 
 func (s *Service) IssuerWalletByIdentity(identity view.Identity) (driver.IssuerWallet, error) {
 	return s.issuerWallet(identity)
+}
+func (s *Service) GetRevocationList() ([]string, error) {
+	return s.AuditorWalletsRegistry.GetRevocationList()
+}
+func (s *Service) UpdateRevocationList(revocationHandle string) error {
+	return s.AuditorWalletsRegistry.UpdateRevocationList(revocationHandle)
 }
 
 func (s *Service) issuerWallet(id interface{}) (driver.IssuerWallet, error) {
