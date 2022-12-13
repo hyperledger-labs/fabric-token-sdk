@@ -187,7 +187,6 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 
 // Reclaim appends a reclaim (transfer) action to the token request of the transaction
 func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error {
-	// TODO: handle this properly
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
@@ -233,7 +232,10 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 
 // Claim appends a claim (transfer) action to the token request of the transaction
 func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error {
-	// TODO: handle this properly
+	if len(preImage) == 0 {
+		return errors.New("preImage is nil")
+	}
+
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
@@ -250,12 +252,6 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
-
-	if len(preImage) == 0 {
-		return errors.New("preImage is nil")
-	}
-
-	// TODO: does the pre-image match?
 
 	// Register the signer for the claim
 	logger.Debugf("registering signer for claim...")
