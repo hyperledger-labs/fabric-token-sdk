@@ -3,10 +3,13 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package vault
 
 import (
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
@@ -29,14 +32,14 @@ func NewProvider(sp view.ServiceProvider) *Provider {
 	return &Provider{sp: sp, vaultCache: make(map[string]driver.Vault)}
 }
 
-func (v *Provider) Vault(network string, channel string, namespace string) driver.Vault {
+func (v *Provider) Vault(network string, channel string, namespace string) (driver.Vault, error) {
 	k := network + channel + namespace
 	// Check cache
 	v.vaultCacheLock.RLock()
 	res, ok := v.vaultCache[k]
 	v.vaultCacheLock.RUnlock()
 	if ok {
-		return res
+		return res, nil
 	}
 
 	// lock
@@ -46,7 +49,12 @@ func (v *Provider) Vault(network string, channel string, namespace string) drive
 	// check cache again
 	res, ok = v.vaultCache[k]
 	if ok {
-		return res
+		return res, nil
+	}
+
+	tokenStore, err := processor.NewCommonTokenStore(v.sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token store")
 	}
 
 	// Create new vault
@@ -57,7 +65,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) drive
 			v.sp,
 			ch.Name(),
 			namespace,
-			fabric2.NewVault(ch, processor.NewCommonTokenStore(v.sp)),
+			fabric2.NewVault(ch, tokenStore),
 		)
 	} else {
 		ons := orion.GetOrionNetworkService(v.sp, network)
@@ -66,7 +74,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) drive
 				v.sp,
 				"",
 				namespace,
-				orion2.NewVault(ons, processor.NewCommonTokenStore(v.sp)),
+				orion2.NewVault(ons, tokenStore),
 			)
 		}
 	}
@@ -74,7 +82,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) drive
 	// update cache
 	v.vaultCache[k] = res
 
-	return res
+	return res, nil
 }
 
 type PublicParamsProvider struct {
@@ -82,5 +90,9 @@ type PublicParamsProvider struct {
 }
 
 func (p *PublicParamsProvider) PublicParams(networkID string, channel string, namespace string) ([]byte, error) {
-	return p.Provider.Vault(networkID, channel, namespace).QueryEngine().PublicParams()
+	v, err := p.Provider.Vault(networkID, channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", networkID, channel, namespace)
+	}
+	return v.QueryEngine().PublicParams()
 }

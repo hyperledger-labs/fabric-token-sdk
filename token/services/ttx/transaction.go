@@ -99,7 +99,6 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 }
 
 func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) {
-	// TODO: remove the need of network by introducing custom Pyaload unmarshalling
 	tx := &Transaction{
 		Payload: &Payload{
 			Transient:    map[string][]byte{},

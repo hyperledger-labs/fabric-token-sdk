@@ -169,7 +169,11 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch, processor.NewCommonTokenStore(n.sp)))
+	tokenStore, err := processor.NewCommonTokenStore(n.sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token store")
+	}
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch, tokenStore))
 	nv := &nv{
 		v:          n.ch.Vault(),
 		tokenVault: tokenVault,
@@ -363,11 +367,11 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	var keyValue []byte
 	c, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-	vault := n.ch.Vault()
+	v := n.ch.Vault()
 	if err := n.ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
 		logger.Debugf("scanning [%s]...", tx.TxID())
 
-		rws, err := vault.GetEphemeralRWSet(tx.Results())
+		rws, err := v.GetEphemeralRWSet(tx.Results())
 		if err != nil {
 			return false, err
 		}
