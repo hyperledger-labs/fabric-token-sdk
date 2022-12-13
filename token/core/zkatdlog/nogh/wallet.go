@@ -46,6 +46,25 @@ func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, 
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for [%s]", id)
 	}
+	matcher, err := d.GetOwnerMatcher(auditInfo)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
+	}
+
+	// match identity and audit info
+	recipient, err := identity.UnmarshallRawOwner(id)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
+	}
+	if recipient.Type != identity.SerializedIdentityType {
+		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
+	}
+	err = matcher.Match(recipient.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed match identity to audit infor for [%s:%s]", id, hash.Hashable(auditInfo))
+	}
+
+	// register verifier and audit info
 	if err := view2.GetSigService(s.SP).RegisterVerifier(id, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", id)
 	}

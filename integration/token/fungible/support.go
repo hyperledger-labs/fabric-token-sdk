@@ -49,6 +49,7 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 		TokenType:    typ,
 		Quantity:     amount,
 		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
 	}))
 
 	if len(expectedErrorMsgs) == 0 {
@@ -203,11 +204,12 @@ func ListUnspentTokens(network *integration.Infrastructure, id string, wallet st
 
 func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
 	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
+		Auditor:      auditor,
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amount,
+		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
@@ -239,11 +241,12 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
 	transferInput := &views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
+		Auditor:      auditor,
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amount,
+		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
 	}
 	if tokenID != nil {
 		transferInput.TokenIDs = []*token.ID{tokenID}
@@ -336,6 +339,7 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 		TokenIDs:      ids,
 		Amount:        amount,
 		Recipient:     network.Identity(receiver),
+		RecipientEID:  receiver,
 		FailToRelease: failToRelease,
 	}))
 	if len(expectedErrorMsgs) == 0 {
@@ -355,11 +359,12 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 
 func TransferCashWithSelector(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) {
 	txid, err := network.Client(id).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
+		Auditor:      auditor,
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amount,
+		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())

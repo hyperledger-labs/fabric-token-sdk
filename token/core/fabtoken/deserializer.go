@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
 // VerifierDES is the interface for verifiers' deserializer
@@ -57,7 +56,7 @@ func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 // GetOwnerMatcher is not needed in fabtoken, as identities are in the clear
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return nil, errors.Errorf("not supported")
+	return &x509.AuditInfoDeserializer{CommonName: string(raw)}, nil
 }
 
 // enrollmentService returns enrollment IDs behind the owners of token

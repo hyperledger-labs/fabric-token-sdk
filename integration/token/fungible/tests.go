@@ -557,12 +557,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		sum += v
 		go func() {
 			_, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:   auditor,
-				Wallet:    "",
-				Type:      "EUR",
-				Amount:    v,
-				Recipient: network.Identity("alice"),
-				Retry:     true,
+				Auditor:      auditor,
+				Wallet:       "",
+				Type:         "EUR",
+				Amount:       v,
+				Recipient:    network.Identity("alice"),
+				RecipientEID: "alice",
+				Retry:        true,
 			}))
 			if err != nil {
 				transfer <- err
@@ -594,12 +595,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		transferError := transferErrors[i]
 		go func() {
 			txid, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:   auditor,
-				Wallet:    "",
-				Type:      "YUAN",
-				Amount:    7,
-				Recipient: network.Identity("charlie"),
-				Retry:     false,
+				Auditor:      auditor,
+				Wallet:       "",
+				Type:         "YUAN",
+				Amount:       7,
+				Recipient:    network.Identity("charlie"),
+				RecipientEID: "charlie",
+				Retry:        false,
 			}))
 			if err != nil {
 				// The transaction failed, we return the error to the caller.

@@ -10,6 +10,7 @@ import (
 	ecdsa2 "crypto/ecdsa"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -37,4 +38,27 @@ func (deserializer *MSPIdentityDeserializer) DeserializeVerifier(id view.Identit
 		return nil, errors.New("expected *ecdsa.PublicKey")
 	}
 	return NewVerifier(publicKey), nil
+}
+
+type AuditInfoDeserializer struct {
+	CommonName string
+}
+
+func (a *AuditInfoDeserializer) Match(id []byte) error {
+	si := &msp.SerializedIdentity{}
+	err := proto.Unmarshal(id, si)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
+	}
+
+	cert, err := x509.PemDecodeCert(si.IdBytes)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode certificate")
+	}
+
+	if cert.Subject.CommonName != a.CommonName {
+		return errors.Errorf("expected [%s], got [%s]", a.CommonName, cert.Subject.CommonName)
+	}
+
+	return nil
 }
