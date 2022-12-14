@@ -52,8 +52,6 @@ type MembershipWitness struct {
 	value *math.Zr
 	// hash is hash of value and it is also signed with Pointcheval-Sandes signature
 	hash *math.Zr
-	// sigBlindingFactor is the randomness used to obfuscate signature
-	sigBlindingFactor *math.Zr
 	// comBlindingFactor is the randomness used to compute the Pedersen commitment of value
 	comBlindingFactor *math.Zr
 }
