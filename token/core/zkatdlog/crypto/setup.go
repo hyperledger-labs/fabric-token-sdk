@@ -142,14 +142,13 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if publicParams.Identifier != pp.Label {
 		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", pp.Label, publicParams.Identifier)
 	}
-	// logger.Debugf("unmarshall zkatdlog public params [%s]", string(publicParams.Raw))
 	if err := json.Unmarshal(publicParams.Raw, pp); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters")
 	}
-	// TODO: perform additional checks:
-	// the curve exists
-	// the idemix params are all set,
-	// and so on
+	err := pp.Validate()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -275,8 +274,8 @@ func (pp *PublicParams) Validate() error {
 	if maxToken != pp.MaxToken {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, pp.MaxToken)
 	}
-	//if len(pp.Issuers) == 0 {
-	//	return errors.New("invalid public parameters: empty list of issuers")
-	//}
+	if len(pp.Issuers) == 0 {
+		return errors.New("invalid public parameters: empty list of issuers")
+	}
 	return nil
 }

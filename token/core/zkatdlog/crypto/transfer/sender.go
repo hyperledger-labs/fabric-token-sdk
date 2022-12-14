@@ -89,7 +89,6 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 
 // SignTokenActions produces a signature for each input spent by the Sender
 func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
-	//todo check token actions (is this still needed?)
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {

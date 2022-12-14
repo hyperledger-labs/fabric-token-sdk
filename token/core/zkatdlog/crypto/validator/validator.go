@@ -53,7 +53,6 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	}
 
 	// Prepare message expected to be signed
-	// TODO: encapsulate this somewhere
 	req := &driver.TokenRequest{}
 	req.Transfers = tr.Transfers
 	req.Issues = tr.Issues

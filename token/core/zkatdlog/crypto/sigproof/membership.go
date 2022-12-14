@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package sigproof
 
 import (
@@ -51,7 +52,6 @@ type MembershipWitness struct {
 	value *math.Zr
 	// hash is hash of value and it is also signed with Pointcheval-Sandes signature
 	hash *math.Zr
-	//lint:ignore U1000 TODO @Kaoutar: Is this field still needed?
 	// sigBlindingFactor is the randomness used to obfuscate signature
 	sigBlindingFactor *math.Zr
 	// comBlindingFactor is the randomness used to compute the Pedersen commitment of value

@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package rangeproof
 
 import (
@@ -209,19 +210,20 @@ func (p *Prover) Prove() ([]byte, error) {
 }
 
 func (v *Verifier) Verify(raw []byte) error {
-	// todo check length of public parameters
 	proof := &RangeProof{}
 	err := json.Unmarshal(raw, proof)
 	if err != nil {
 		return err
 	}
-
 	if len(proof.MembershipProofs) != len(v.Tokens) {
 		return errors.Errorf("range proof not well formed")
 	}
 
 	var verifications []func()
 	parallelErr := &atomic.Value{}
+	if len(v.PedersenParams) != 3 {
+		return errors.Errorf("invalid verifier parameters: Pedersen parameters should have length 3.")
+	}
 
 	// verify membership
 	// each committed value v_i is signed (i.e., v_i < Base)
@@ -286,6 +288,12 @@ func (v *Verifier) Verify(raw []byte) error {
 // preProcess computes commitment to values v_i such that v = v = \sum_{i=0}^Exponent values[i] Base^i
 // preProcess returns the corresponding rangeProofWitness
 func (p *Prover) preProcess() (*rangeProofWitness, error) {
+	if p.Curve == nil {
+		return nil, errors.New("please set the curve for the range proof")
+	}
+	if int(p.Base) > len(p.Signatures) {
+		return nil, errors.New("invalid range proof parameters")
+	}
 	rand, err := p.Curve.Rand()
 	if err != nil {
 		return nil, err
@@ -296,6 +304,9 @@ func (p *Prover) preProcess() (*rangeProofWitness, error) {
 
 	for k := 0; k < len(p.tokenWitness); k++ {
 		values := make([]int, p.Exponent)
+		if p.tokenWitness[k] == nil || p.tokenWitness[k].Value == nil {
+			return nil, errors.New("can't compute range proof: please provide valid token witness")
+		}
 		v, err := p.tokenWitness[k].Value.Int()
 		if err != nil {
 			return nil, err
@@ -315,6 +326,10 @@ func (p *Prover) preProcess() (*rangeProofWitness, error) {
 		membershipWitness[k] = make([]*sigproof.MembershipWitness, p.Exponent)
 		commitmentBlindingFactor[k] = p.Curve.NewZrFromInt(0)
 		coms[k] = make([]*mathlib.G1, p.Exponent)
+		if len(p.PedersenParams) != 3 {
+			return nil, errors.New("invalid Pedersen parameters")
+		}
+
 		for i := 0; i < p.Exponent; i++ {
 			bf := p.Curve.NewRandomZr(rand)
 			// compute Pedersen commitment to values[i]
