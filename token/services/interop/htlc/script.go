@@ -54,7 +54,7 @@ func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
 
 // Compare compares the passed image with the hash contained in this struct
 func (i *HashInfo) Compare(image []byte) error {
-	if bytes.Compare(image, i.Hash) == 0 {
+	if bytes.Equal(image, i.Hash) {
 		return nil
 	}
 	return errors.Errorf("passed image [%v] does not match the hash [%v]", image, i.Hash)
