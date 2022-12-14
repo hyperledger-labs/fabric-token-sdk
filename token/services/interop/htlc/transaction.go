@@ -253,6 +253,15 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
 
+	image, err := script.HashInfo.Image(preImage)
+	if err != nil {
+		return errors.Wrapf(err, "failed to compute image of [%x]", preImage)
+	}
+
+	if err := script.HashInfo.Compare(image); err != nil {
+		return errors.Wrap(err, "passed preImage does not match the hash in the passed script")
+	}
+
 	// Register the signer for the claim
 	logger.Debugf("registering signer for claim...")
 	sigService := t.TokenService().SigService()
@@ -284,11 +293,6 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 
 	if err := view2.GetEndpointService(t.SP).Bind(script.Recipient, tok.Owner.Raw); err != nil {
 		return err
-	}
-
-	image, err := script.HashInfo.Image(preImage)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to compute image of [%x]", preImage)
 	}
 
 	return t.Transfer(

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"bytes"
 	"crypto"
 	"encoding/json"
 	"time"
@@ -49,6 +50,14 @@ func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
 	image := hash.Sum(nil)
 	image = []byte(i.HashEncoding.New().EncodeToString(image))
 	return image, nil
+}
+
+// Compare compares the passed image with the hash contained in this struct
+func (i *HashInfo) Compare(image []byte) error {
+	if bytes.Compare(image, i.Hash) == 0 {
+		return nil
+	}
+	return errors.Errorf("passed image [%v] does not match the hash [%v]", image, i.Hash)
 }
 
 // Script contains the details of an htlc
