@@ -274,8 +274,8 @@ func (pp *PublicParams) Validate() error {
 	if maxToken != pp.MaxToken {
 		return errors.Errorf("invalid maxt token, [%d]!=[%d]", maxToken, pp.MaxToken)
 	}
-	if len(pp.Issuers) == 0 {
-		return errors.New("invalid public parameters: empty list of issuers")
-	}
+	//if len(pp.Issuers) == 0 {
+	//	return errors.New("invalid public parameters: empty list of issuers")
+	//}
 	return nil
 }
