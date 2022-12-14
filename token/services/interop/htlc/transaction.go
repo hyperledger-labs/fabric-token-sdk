@@ -187,7 +187,6 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 
 // Reclaim appends a reclaim (transfer) action to the token request of the transaction
 func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error {
-	// TODO: handle this properly
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
@@ -233,7 +232,10 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 
 // Claim appends a claim (transfer) action to the token request of the transaction
 func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error {
-	// TODO: handle this properly
+	if len(preImage) == 0 {
+		return errors.New("preImage is nil")
+	}
+
 	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
@@ -251,11 +253,14 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
 
-	if len(preImage) == 0 {
-		return errors.New("preImage is nil")
+	image, err := script.HashInfo.Image(preImage)
+	if err != nil {
+		return errors.Wrapf(err, "failed to compute image of [%x]", preImage)
 	}
 
-	// TODO: does the pre-image match?
+	if err := script.HashInfo.Compare(image); err != nil {
+		return errors.Wrap(err, "passed preImage does not match the hash in the passed script")
+	}
 
 	// Register the signer for the claim
 	logger.Debugf("registering signer for claim...")
@@ -288,11 +293,6 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 
 	if err := view2.GetEndpointService(t.SP).Bind(script.Recipient, tok.Owner.Raw); err != nil {
 		return err
-	}
-
-	image, err := script.HashInfo.Image(preImage)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to compute image of [%x]", preImage)
 	}
 
 	return t.Transfer(
