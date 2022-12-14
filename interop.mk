@@ -49,3 +49,7 @@ integration-tests-interop-fabtoken-t4:
 .PHONY: integration-tests-interop-fabtoken-t5
 integration-tests-interop-fabtoken-t5:
 	cd ./integration/token/interop/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "HTLC No Cross Claim Two Fabric Networks" .
+
+.PHONY: integration-tests-interop-fabtoken-t6
+integration-tests-interop-fabtoken-t6:
+	cd ./integration/token/interop/fabtoken; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "HTLC No Cross Claim with Orion and Fabric Networks" .
