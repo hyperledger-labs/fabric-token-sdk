@@ -125,7 +125,6 @@ func (t *Transaction) setStateID(s interface{}) (string, error) {
 		key = GenerateUUID()
 		key = d.SetLinearID(key)
 	default:
-		// TODO: should we return an error here?
 		return "", nil
 	}
 	return key, nil
