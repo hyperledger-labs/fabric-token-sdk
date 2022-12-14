@@ -119,19 +119,21 @@ func (d *locker) Lock(id *token2.ID, txID string, reclaim bool) (string, error) 
 	return "", nil
 }
 
-func (d *locker) UnlockIDs(ids ...*token2.ID) {
+// UnlockIDs unlocks the passed IDS. It returns the list of tokens that were not locked in the first place among
+// those passed.
+func (d *locker) UnlockIDs(ids ...*token2.ID) []*token2.ID {
 	d.lock.Lock()
 	defer d.lock.Unlock()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("unlocking tokens [%v]", ids)
 	}
+	var notFound []*token2.ID
 	for _, id := range ids {
 		k := *id
 		entry, ok := d.locked[k]
 		if !ok {
-			// TODO: shall we panic
-			// return errors.Errorf("already locked by [%s]", tx)
+			notFound = append(notFound, &k)
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Warnf("unlocking [%s] hold by no one, skipping", id, entry)
 			}
@@ -142,6 +144,7 @@ func (d *locker) UnlockIDs(ids ...*token2.ID) {
 		}
 		delete(d.locked, k)
 	}
+	return notFound
 }
 
 func (d *locker) UnlockByTxID(txID string) {

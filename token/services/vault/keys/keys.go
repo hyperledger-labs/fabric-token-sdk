@@ -97,7 +97,6 @@ func SplitCompositeKey(compositeKey string) (string, []string, error) {
 
 // CreateTokenKey Creates a rwset key for an individual output in a token transaction, as a function of
 // the token owner, transaction ID, and index of the output
-// TODO: move index to uint32 of uint64
 func CreateTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }

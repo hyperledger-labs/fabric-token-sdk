@@ -43,15 +43,13 @@ type CommonTokenStore struct {
 	notifier events.Publisher
 }
 
-func NewCommonTokenStore(sp view2.ServiceProvider) *CommonTokenStore {
+func NewCommonTokenStore(sp view2.ServiceProvider) (*CommonTokenStore, error) {
 	notifier, err := events.GetPublisher(sp)
 	if err != nil {
-		// TODO how to handle error here?
-		logger.Warnf("cannot get notifier instance")
-		// just return nil?
+		return nil, errors.WithMessagef(err, "failed to get event publisher")
 	}
 
-	return &CommonTokenStore{notifier: notifier}
+	return &CommonTokenStore{notifier: notifier}, nil
 }
 
 func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {

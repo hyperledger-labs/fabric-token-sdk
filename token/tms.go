@@ -158,6 +158,7 @@ type ManagementService struct {
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	signatureService            *SignatureService
+	vault                       *Vault
 }
 
 // String returns a string representation of the TMS
@@ -214,7 +215,7 @@ func (t *ManagementService) Validator() (*Validator, error) {
 
 // Vault returns the Token Vault for this TMS
 func (t *ManagementService) Vault() *Vault {
-	return &Vault{v: t.vaultProvider.Vault(t.network, t.channel, t.namespace)}
+	return t.vault
 }
 
 // WalletManager returns the wallet manager for this TMS
@@ -266,6 +267,15 @@ func (t *ManagementService) ID() TMSID {
 // ConfigManager returns the configuration manager for this TMS
 func (t *ManagementService) ConfigManager() *ConfigManager {
 	return &ConfigManager{cm: t.tms.ConfigManager()}
+}
+
+func (t *ManagementService) init() error {
+	v, err := t.vaultProvider.Vault(t.network, t.channel, t.namespace)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", t.namespace, t.channel, t.namespace)
+	}
+	t.vault = &Vault{v: v}
+	return nil
 }
 
 // GetManagementService returns the management service for the passed options. If no options are passed,

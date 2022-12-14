@@ -27,7 +27,9 @@ type QueryService interface {
 
 type Locker interface {
 	Lock(id *token2.ID, txID string, reclaim bool) (string, error)
-	UnlockIDs(id ...*token2.ID)
+	// UnlockIDs unlocks the passed IDS. It returns the list of tokens that were not locked in the first place among
+	// those passed.
+	UnlockIDs(ids ...*token2.ID) []*token2.ID
 	UnlockByTxID(txID string)
 	IsLocked(id *token2.ID) bool
 }

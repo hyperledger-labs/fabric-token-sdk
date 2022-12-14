@@ -85,7 +85,11 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.n, processor.NewCommonTokenStore(n.sp)))
+	tokenStore, err := processor.NewCommonTokenStore(n.sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token store")
+	}
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.n, tokenStore))
 	nv := &nv{
 		v:          n.n.Vault(),
 		tokenVault: tokenVault,

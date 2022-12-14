@@ -811,26 +811,6 @@ func (r *Request) Transfers() []*Transfer {
 	return transfers
 }
 
-// Import imports the actions and metadata from the passed request.
-// TODO: check that the anchor is the same.
-func (r *Request) Import(request *Request) error {
-	if request.Actions == nil || request.Metadata == nil {
-		return errors.New("cannot import request: invalid request")
-	}
-	if r.Actions == nil {
-		r.Actions = &driver.TokenRequest{}
-	}
-	if r.Metadata == nil {
-		r.Metadata = &driver.TokenRequestMetadata{}
-	}
-
-	r.Actions.Issues = append(r.Actions.Issues, request.Actions.Issues...)
-	r.Actions.Transfers = append(r.Actions.Transfers, request.Actions.Transfers...)
-	r.Metadata.Issues = append(r.Metadata.Issues, request.Metadata.Issues...)
-	r.Metadata.Transfers = append(r.Metadata.Transfers, request.Metadata.Transfers...)
-	return nil
-}
-
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck() error {

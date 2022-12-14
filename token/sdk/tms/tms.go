@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/pkg/errors"
 )
 
@@ -32,6 +33,10 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
 		// register processor
 		ons := orion.GetOrionNetworkService(p.sp, networkID)
+		tokenStore, err := processor.NewCommonTokenStore(p.sp)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get token store")
+		}
 		if err := ons.ProcessorManager().AddProcessor(
 			namespace,
 			orion2.NewTokenRWSetProcessor(
@@ -40,6 +45,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 				p.sp,
 				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
+				tokenStore,
 			),
 		); err != nil {
 			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", networkID)
@@ -57,6 +63,10 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	}
 
 	// register processor
+	tokenStore, err := processor.NewCommonTokenStore(p.sp)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get token store")
+	}
 	if err := n.ProcessorManager().AddProcessor(
 		namespace,
 		fabric2.NewTokenRWSetProcessor(
@@ -65,6 +75,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 			p.sp,
 			network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
+			tokenStore,
 		),
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)

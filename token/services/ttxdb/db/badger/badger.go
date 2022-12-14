@@ -71,8 +71,14 @@ func OpenDB(path string) (*Persistence, error) {
 }
 
 func (db *Persistence) Close() error {
+	db.txnLock.Lock()
+	defer db.txnLock.Unlock()
 
-	// TODO: what to do with db.txn if it's not nil?
+	// discard current transaction, if any
+	if db.txn != nil {
+		db.txn.Discard()
+		db.txn = nil
+	}
 
 	if err := db.seq.Release(); err != nil {
 		logger.Errorf("failed closing seq [%s]", err)

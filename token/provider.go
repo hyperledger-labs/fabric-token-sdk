@@ -24,7 +24,7 @@ type Normalizer interface {
 // VaultProvider provides token vault instances
 type VaultProvider interface {
 	// Vault returns a token vault instance for the passed inputs
-	Vault(network string, channel string, namespace string) driver.Vault
+	Vault(network string, channel string, namespace string) (driver.Vault, error)
 }
 
 // SelectorManager handles token selection operations
@@ -101,7 +101,7 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 
 	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
-	return &ManagementService{
+	ms := &ManagementService{
 		sp:                          p.sp,
 		network:                     opt.Network,
 		channel:                     opt.Channel,
@@ -114,7 +114,11 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 			deserializer: tokenService,
 			ip:           tokenService.IdentityProvider(),
 		},
-	}, nil
+	}
+	if err := ms.init(); err != nil {
+		return nil, errors.WithMessagef(err, "failed to initialize token management service")
+	}
+	return ms, nil
 }
 
 // GetManagementServiceProvider returns the management service provider from the passed service provider.

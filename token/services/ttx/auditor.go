@@ -146,8 +146,6 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 		return nil, errors.New(string(msg.Payload))
 	}
 
-	// TODO: IsValid it?
-
 	// Check signature
 	signed, err := a.tx.MarshallToAudit()
 	if err != nil {
