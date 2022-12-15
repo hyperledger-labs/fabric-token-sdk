@@ -92,6 +92,23 @@ Flags:
 
 The public parameters are stored in the output folder with name `zkatdlog_pp.json`.
 
+## tokengen pp
+
+The `tokengen pp` command has the following subcommands:
+
+- print: Inspect public parameters
+
+### tokengen pp print
+
+```
+Usage:
+  tokengen pp print [flags]
+
+Flags:
+  -h, --help           help for print
+  -i, --input string   public param file
+```
+
 ## tokengen help
 
 ```
