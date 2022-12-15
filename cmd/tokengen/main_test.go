@@ -36,9 +36,10 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput, err := ioutil.TempDir("", "tokengen-test")
-	gt.Expect(err).NotTo(HaveOccurred())
-	defer os.RemoveAll(tempOutput)
+	//tempOutput, err := ioutil.TempDir("", "tokengen-test")
+	//gt.Expect(err).NotTo(HaveOccurred())
+	tempOutput := "/home/vagrant"
+	//defer os.RemoveAll(tempOutput)
 
 	testGenRun(
 		gt,

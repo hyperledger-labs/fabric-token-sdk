@@ -11,13 +11,12 @@ import (
 	"os"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/artifactgen/gen"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/certfier"
 	pp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/version"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 const CmdRoot = "core"
@@ -41,7 +40,8 @@ func main() {
 	viper.BindPFlag("logging_level", mainFlags.Lookup("logging-level"))
 	mainFlags.MarkHidden("logging-level")
 
-	mainCmd.AddCommand(pp2.Cmd())
+	mainCmd.AddCommand(pp2.GenCmd())
+	mainCmd.AddCommand(pp2.UtilsCmd())
 	mainCmd.AddCommand(certfier.KeyPairGenCmd())
 	mainCmd.AddCommand(gen.Cmd())
 	mainCmd.AddCommand(version.Cmd())

@@ -48,6 +48,8 @@ type PublicParameters interface {
 	Auditors() []view.Identity
 	// Precision returns the precision used to represent the token value.
 	Precision() uint64
+	// String returns a readable version of the public parameters
+	String() string
 }
 
 // PublicParamsManager is the interface that must be implemented by the driver public parameters manager.

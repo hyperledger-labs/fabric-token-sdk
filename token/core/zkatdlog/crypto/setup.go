@@ -209,6 +209,14 @@ func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
 	return uint64(math.Pow(float64(len(pp.RangeProofParams.SignedValues)), float64(pp.RangeProofParams.Exponent))) - 1
 }
 
+func (pp *PublicParams) String() string {
+	res, err := json.MarshalIndent(pp, " ", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(res)
+}
+
 func Setup(base uint, exponent uint, nymPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters, idemixCurveID)
 }
