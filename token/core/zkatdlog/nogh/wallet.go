@@ -61,7 +61,7 @@ func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, 
 	}
 	err = matcher.Match(recipient.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed match identity to audit infor for [%s:%s]", id, hash.Hashable(auditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", id, hash.Hashable(auditInfo))
 	}
 
 	// register verifier and audit info
