@@ -35,6 +35,8 @@ type Transfer struct {
 	Amount uint64
 	// Recipient is the identity of the recipient's FSC node
 	Recipient view.Identity
+	// RecipientEID is the expected enrolment id of the recipient
+	RecipientEID string
 	// Retry tells if a retry must happen in case of a failure
 	Retry bool
 	// FailToRelease if true, it fails after transfer to trigger the Release function on the token transaction
@@ -52,6 +54,11 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// identity the recipient wants to use.
 	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient)
 	assert.NoError(err, "failed getting recipient")
+
+	// match recipient EID
+	eID, err := token2.GetManagementService(context).WalletManager().GetEnrollmentID(recipient)
+	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
+	assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
 
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),

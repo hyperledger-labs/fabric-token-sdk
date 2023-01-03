@@ -9,6 +9,7 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -33,6 +34,8 @@ type IssueCash struct {
 	Quantity uint64
 	// Recipient is the identity of the recipient's FSC node
 	Recipient view.Identity
+	// RecipientEID is the expected enrolment id of the recipient
+	RecipientEID string
 }
 
 type IssueCashView struct {
@@ -46,6 +49,11 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// identity the recipient wants to use.
 	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient)
 	assert.NoError(err, "failed getting recipient identity")
+
+	// match recipient EID
+	eID, err := token.GetManagementService(context).WalletManager().GetEnrollmentID(recipient)
+	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
+	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 	// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD

@@ -28,10 +28,30 @@ func (s *Service) RegisterIssuerWallet(id string, path string) error {
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 	// recognize identity and register it
-	v, err := s.Deserializer.GetOwnerVerifier(id)
+	v, err := s.GetOwnerVerifier(id)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for [%s]", id)
 	}
+	matcher, err := s.GetOwnerMatcher(auditInfo)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
+	}
+
+	// match identity and audit info
+	recipient, err := identity.UnmarshallRawOwner(id)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
+	}
+	if recipient.Type != identity.SerializedIdentityType {
+		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
+	}
+	err = matcher.Match(recipient.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", id, hash.Hashable(auditInfo))
+	}
+
+	// register verifier and audit info
+
 	if err := view2.GetSigService(s.SP).RegisterVerifier(id, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", id)
 	}
