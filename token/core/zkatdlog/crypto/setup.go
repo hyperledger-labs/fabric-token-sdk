@@ -142,14 +142,9 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if publicParams.Identifier != pp.Label {
 		return errors.Errorf("invalid identifier, expecting [%s], got [%s]", pp.Label, publicParams.Identifier)
 	}
-	// logger.Debugf("unmarshall zkatdlog public params [%s]", string(publicParams.Raw))
 	if err := json.Unmarshal(publicParams.Raw, pp); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters")
 	}
-	// TODO: perform additional checks:
-	// the curve exists
-	// the idemix params are all set,
-	// and so on
 	return nil
 }
 
