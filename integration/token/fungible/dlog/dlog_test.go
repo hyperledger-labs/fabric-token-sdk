@@ -82,6 +82,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	Expect(err).NotTo(HaveOccurred())
 	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
 	Expect(err).NotTo(HaveOccurred())
+	Expect(pp.Validate()).NotTo(HaveOccurred())
 
 	// Update PP
 	pp.Auditor = auditorId

@@ -63,6 +63,7 @@ func TestGenFullSuccess(t *testing.T) {
 
 	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, crypto.DLogPublicParameters)
 	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
 
 	auditors := pp.Auditors()
 	auditor, err := common.GetMSPIdentity("./testdata/auditors/msp", msp.AuditorMSPID)

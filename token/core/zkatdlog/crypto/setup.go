@@ -145,10 +145,6 @@ func (pp *PublicParams) Deserialize(raw []byte) error {
 	if err := json.Unmarshal(publicParams.Raw, pp); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling public parameters")
 	}
-	err := pp.Validate()
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
