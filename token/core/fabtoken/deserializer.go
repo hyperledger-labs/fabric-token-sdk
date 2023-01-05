@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 // VerifierDES is the interface for verifiers' deserializer
