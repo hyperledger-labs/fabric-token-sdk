@@ -69,6 +69,11 @@ func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
 	return nil
 }
 
+func (v *Vault) TransactionStatus(txID string) (driver.ValidationCode, error) {
+	vc, err := v.ons.Vault().Status(txID)
+	return driver.ValidationCode(vc), err
+}
+
 type Executor struct {
 	qe *orion.QueryExecutor
 }

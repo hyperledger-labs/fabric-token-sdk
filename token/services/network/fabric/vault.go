@@ -72,6 +72,11 @@ func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
 	return nil
 }
 
+func (v *Vault) TransactionStatus(txID string) (driver.ValidationCode, error) {
+	vc, _, err := v.ch.Vault().Status(txID)
+	return driver.ValidationCode(vc), err
+}
+
 type Executor struct {
 	qe *fabric.QueryExecutor
 }

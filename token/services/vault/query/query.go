@@ -8,6 +8,7 @@ package query
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -29,6 +30,8 @@ type Engine struct {
 	namespace string
 
 	unspentTokensCache cache
+	GetStatNumRetries  int
+	GetStateRetryDelay time.Duration
 }
 
 func NewEngine(vault driver.Vault, namespace string, cache cache) *Engine {
@@ -36,6 +39,8 @@ func NewEngine(vault driver.Vault, namespace string, cache cache) *Engine {
 		Vault:              vault,
 		namespace:          namespace,
 		unspentTokensCache: cache,
+		GetStatNumRetries:  3,
+		GetStateRetryDelay: 5 * time.Second,
 	}
 }
 
@@ -310,17 +315,21 @@ func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCall
 	if err != nil {
 		return err
 	}
-	defer qe.Done()
+	defer func() {
+		if qe != nil {
+			qe.Done()
+		}
+	}()
 	for _, id := range ids {
 		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
 		if err != nil {
 			return errors.Wrapf(err, "error creating output ID: %v", id)
 		}
-		val, err := qe.GetState(e.namespace, outputID)
+		var val []byte
+		qe, val, err = e.getState(qe, e.namespace, outputID, id)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting state for id [%v]", id)
 		}
-
 		if err := callback(id, val); err != nil {
 			return err
 		}
@@ -466,6 +475,46 @@ func (e *Engine) unmarshalUnspentToken(key string, raw []byte, extended bool) (*
 	// store in cache and return
 	e.unspentTokensCache.Add(key, ut)
 	return ut, nil
+}
+
+func (e *Engine) getState(qe driver.Executor, namespace, key string, id *token.ID) (driver.Executor, []byte, error) {
+	var val []byte
+	var err error
+	for i := 0; i < e.GetStatNumRetries; i++ {
+		val, err = qe.GetState(namespace, key)
+		if err != nil {
+			// check the transaction status
+			vc, tsErr := e.Vault.TransactionStatus(id.TxId)
+			logger.Warnf("cannot get state for id [%d] because transaction's status is [%d:%s], retry at [%d]", id, vc, tsErr, i)
+			if i == e.GetStatNumRetries-1 || vc != driver.Busy {
+				return qe, nil, errors.Wrapf(err, "failed getting state for id [%v], transaction's status is [%d:%s]", id, vc, tsErr)
+			}
+			qe.Done()
+			qe, err = e.Vault.NewQueryExecutor()
+			if err != nil {
+				return nil, nil, err
+			}
+			time.Sleep(e.GetStateRetryDelay)
+			continue
+		}
+		if len(val) == 0 {
+			// check the transaction status
+			vc, tsErr := e.Vault.TransactionStatus(id.TxId)
+			logger.Warnf("nil state value for id [%d] because transaction's status is [%d:%s], retry at [%d]", id, vc, tsErr, i)
+			if i == e.GetStatNumRetries-1 || vc != driver.Busy {
+				return qe, nil, errors.Wrapf(err, "found empty state for id [%v], transaction's status is [%d:%s]", id, vc, tsErr)
+			}
+			qe.Done()
+			qe, err = e.Vault.NewQueryExecutor()
+			if err != nil {
+				return nil, nil, err
+			}
+			time.Sleep(e.GetStateRetryDelay)
+			continue
+		}
+		break
+	}
+	return qe, val, err
 }
 
 type UnspentTokensIterator struct {

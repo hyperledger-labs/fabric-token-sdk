@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type CheckTTXDB struct {
@@ -265,6 +266,9 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 	var IDs []*token2.ID
 	count := 0
 	assert.NoError(qe.GetTokenCommitments(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+		if len(tokenRaw) == 0 {
+			return errors.Errorf("token id [%s] is nil", id)
+		}
 		IDs = append(IDs, id)
 		count++
 		return nil
