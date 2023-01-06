@@ -77,6 +77,9 @@ func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token
 
 			return nil, errors.Wrapf(err, "failed to get token outputs")
 		}
+
+		// The execution was successful, we can stop
+		break
 	}
 
 	return tokens, nil
