@@ -30,6 +30,9 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, nil, errors.Errorf("public parameters not inizialized")
+	}
 	for _, id := range signerIds {
 		// get signers for each input token
 		si, err := s.identityProvider.GetSigner(id)
@@ -152,6 +155,9 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [
 
 	// get commitments from outputs
 	pp := s.PublicParams()
+	if pp == nil {
+		return errors.Errorf("public parameters not inizialized")
+	}
 	com := make([]*math.G1, len(tr.OutputTokens))
 	for i := 0; i < len(tr.OutputTokens); i++ {
 		com[i] = tr.OutputTokens[i].Data

@@ -118,6 +118,9 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 		return nil, nil, errors.Wrap(err, "failed to deserialize token information")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, nil, errors.Errorf("public parameters not inizialized")
+	}
 	to, err := output.GetTokenInTheClear(ti, pp)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token")
@@ -138,6 +141,9 @@ func (s *Service) Validator() (driver.Validator, error) {
 		return nil, errors.WithMessagef(err, "failed to get deserializer")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not inizialized")
+	}
 	return validator.New(pp, d), nil
 }
 
@@ -162,6 +168,9 @@ func (s *Service) LoadPublicParams() error {
 
 func (s *Service) Deserializer() (driver.Deserializer, error) {
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not inizialized")
+	}
 	d, err := s.DeserializerProvider(pp)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get deserializer")

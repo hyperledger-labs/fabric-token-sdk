@@ -31,6 +31,9 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 		return errors.WithMessagef(err, "failed getting deserializer for auditor check")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return errors.Errorf("public parameters not inizialized")
+	}
 	if err := audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
 		tokenRequestMetadata,

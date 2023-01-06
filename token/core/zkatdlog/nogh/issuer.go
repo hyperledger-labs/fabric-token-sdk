@@ -36,6 +36,9 @@ func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint6
 	}
 
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, nil, nil, errors.Errorf("public parameters not inizialized")
+	}
 	issuer := &nonanonym.Issuer{}
 	issuer.New(typ, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
@@ -74,6 +77,9 @@ func (s *Service) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) e
 		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return errors.Errorf("public parameters not inizialized")
+	}
 	coms, err := action.GetCommitments()
 	if err != nil {
 		return errors.New("failed to verify issue")
