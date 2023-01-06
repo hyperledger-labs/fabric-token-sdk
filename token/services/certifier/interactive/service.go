@@ -56,7 +56,7 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 
 	// TODO: 2. validate request, if needed
 
-	// 3. invoke chaincode to get token commitment
+	// 3. invoke chaincode to get token outputs
 	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
 	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
 	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
@@ -69,7 +69,7 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
 	}
 
-	// 4. certify token commitment
+	// 4. certify token output
 	logger.Debugf("certify commitments for [%v]...", cr.IDs)
 	tms := token2.GetManagementService(
 		context,

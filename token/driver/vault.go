@@ -29,6 +29,8 @@ type CertificationStorage interface {
 }
 
 type QueryEngine interface {
+	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
+	IsPending(id *token.ID) (bool, error)
 	// IsMine returns true if the passed id is owned by any known wallet
 	IsMine(id *token.ID) (bool, error)
 	// UnspentTokensIterator returns an iterator over all unspent tokens
@@ -47,11 +49,11 @@ type QueryEngine interface {
 	// GetTokenInfos retrieves the token information for the passed ids.
 	// For each id, the callback is invoked to unmarshal the token information
 	GetTokenInfos(ids []*token.ID, callback QueryCallbackFunc) error
-	// GetTokenCommitments retrieves the token commitments for the passed ids.
-	// For each id, the callback is invoked to unmarshal the token commitment
-	GetTokenCommitments(ids []*token.ID, callback QueryCallbackFunc) error
-
-	GetTokenInfoAndCommitments(ids []*token.ID, callback QueryCallback2Func) error
+	// GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
+	// For each id, the callback is invoked to unmarshal the output
+	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
+	// GetTokenInfoAndOutputs retrieves both the token output and information the passed ids.
+	GetTokenInfoAndOutputs(ids []*token.ID, callback QueryCallback2Func) error
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
 	// WhoDeletedTokens returns info about who deleted the passed tokens.

@@ -19,9 +19,9 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 	logger.Debugf("check token request validity...")
 	var inputTokens [][]*token.Token
 	for _, transfer := range tokenRequestMetadata.Transfers {
-		inputs, err := s.TokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
+		inputs, err := s.TokenCommitmentLoader.GetTokenOutputs(transfer.TokenIDs)
 		if err != nil {
-			return errors.Wrapf(err, "failed getting token commitments to perform auditor check")
+			return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 		}
 		inputTokens = append(inputTokens, inputs)
 	}

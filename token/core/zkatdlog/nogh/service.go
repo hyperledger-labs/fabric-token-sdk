@@ -21,10 +21,11 @@ import (
 )
 
 type TokenCommitmentLoader interface {
-	GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error)
+	GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error)
 }
 
 type QueryEngine interface {
+	IsPending(id *token3.ID) (bool, error)
 	IsMine(id *token3.ID) (bool, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 	// The token type can be empty. In that case, tokens of any type are returned.

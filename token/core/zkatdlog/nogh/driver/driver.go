@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -88,6 +90,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		Channel:   channel,
 		Namespace: namespace,
 	}
+	qe := v.TokenVault().QueryEngine()
 	service, err := zkatdlog.NewTokenService(
 		sp,
 		tmsID,
@@ -95,9 +98,9 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 			crypto.DLogPublicParameters,
 			v.TokenVault().QueryEngine(),
 			zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters)),
-		&zkatdlog.VaultTokenLoader{TokenVault: v.TokenVault().QueryEngine()},
-		&zkatdlog.VaultTokenCommitmentLoader{TokenVault: v.TokenVault().QueryEngine()},
-		v.TokenVault().QueryEngine(),
+		&zkatdlog.VaultTokenLoader{TokenVault: qe},
+		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
+		qe,
 		identity.NewProvider(sp, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		crypto.DLogPublicParameters,

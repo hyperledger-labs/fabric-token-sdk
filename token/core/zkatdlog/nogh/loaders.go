@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -17,31 +19,58 @@ import (
 )
 
 type TokenVault interface {
-	PublicParams() ([]byte, error)
-	GetTokenInfoAndCommitments(ids []*token3.ID, callback driver.QueryCallback2Func) error
-	GetTokenCommitments(ids []*token3.ID, callback driver.QueryCallbackFunc) error
+	IsPending(id *token3.ID) (bool, error)
+	GetTokenInfoAndOutputs(ids []*token3.ID, callback driver.QueryCallback2Func) error
+	GetTokenOutputs(ids []*token3.ID, callback driver.QueryCallbackFunc) error
 }
 
 type VaultTokenCommitmentLoader struct {
 	TokenVault TokenVault
+	// Variable used to control retry condition
+	NumRetries int
+	RetryDelay time.Duration
 }
 
-// GetTokenCommitments takes an array of token identifiers (txID, index) and returns the corresponding tokens
-func (s *VaultTokenCommitmentLoader) GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error) {
+func NewVaultTokenCommitmentLoader(tokenVault TokenVault, numRetries int, retryDelay time.Duration) *VaultTokenCommitmentLoader {
+	return &VaultTokenCommitmentLoader{TokenVault: tokenVault, NumRetries: numRetries, RetryDelay: retryDelay}
+}
+
+// GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
+func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error) {
 	var tokens []*token.Token
-	if err := s.TokenVault.GetTokenCommitments(ids, func(id *token3.ID, bytes []byte) error {
-		if len(bytes) == 0 {
-			return errors.Errorf("failed getting state for id [%v], nil value", id)
+
+	for i := 0; i < s.NumRetries; i++ {
+		if err := s.TokenVault.GetTokenOutputs(ids, func(id *token3.ID, bytes []byte) error {
+			if len(bytes) == 0 {
+				return errors.Errorf("failed getting state for id [%v], nil value", id)
+			}
+			ti := &token.Token{}
+			if err := ti.Deserialize(bytes); err != nil {
+				return errors.Wrapf(err, "failed deserializeing token for id [%v][%s]", id, string(bytes))
+			}
+			tokens = append(tokens, ti)
+			return nil
+		}); err != nil {
+			// check if there is any token id is pending
+			for _, id := range ids {
+				pending, err := s.TokenVault.IsPending(id)
+				if err != nil {
+					break
+				}
+				if pending {
+					logger.Warnf("cannot get state for id [%d] because the relative transaction is pending, retry at [%d]", id, i)
+					if i == s.NumRetries-1 {
+						return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
+					}
+					time.Sleep(s.RetryDelay)
+					continue
+				}
+			}
+
+			return nil, errors.Wrapf(err, "failed to get token outputs")
 		}
-		ti := &token.Token{}
-		if err := ti.Deserialize(bytes); err != nil {
-			return errors.Wrapf(err, "failed deserializeing token for id [%v][%s]", id, string(bytes))
-		}
-		tokens = append(tokens, ti)
-		return nil
-	}); err != nil {
-		return nil, err
 	}
+
 	return tokens, nil
 }
 
@@ -59,8 +88,8 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	var inputInf []*token.Metadata
 	var signerIds []view.Identity
 
-	// return token commitments and the corresponding opening
-	if err := s.TokenVault.GetTokenInfoAndCommitments(ids, func(id *token3.ID, key string, comm, info []byte) error {
+	// return token outputs and the corresponding opening
+	if err := s.TokenVault.GetTokenInfoAndOutputs(ids, func(id *token3.ID, key string, comm, info []byte) error {
 		if len(comm) == 0 {
 			return errors.Errorf("failed getting state for id [%v], nil comm value", id)
 		}
