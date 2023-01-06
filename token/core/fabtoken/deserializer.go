@@ -57,7 +57,12 @@ func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 // GetOwnerMatcher is not needed in fabtoken, as identities are in the clear
 func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return &x509.AuditInfoDeserializer{CommonName: string(raw)}, nil
+	ai := &x509.AuditInfo{}
+	err := ai.FromBytes(raw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal")
+	}
+	return &x509.AuditInfoDeserializer{CommonName: string(ai.EnrollmentId)}, nil
 }
 
 // enrollmentService returns enrollment IDs behind the owners of token
@@ -79,11 +84,21 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {
-			return string(si.Recipient), nil
+			ai := &x509.AuditInfo{}
+			if err := ai.FromBytes(si.Recipient); err != nil {
+				return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
+			}
+			return ai.EnrollmentID(), nil
 		}
+
 		return "", nil
 	}
-	return string(auditInfo), nil
+
+	ai := &x509.AuditInfo{}
+	if err := ai.FromBytes(auditInfo); err != nil {
+		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
+	}
+	return ai.EnrollmentID(), nil
 }
 
 // GetRevocationHandler returns the revocation handler associated with the identity matched to the passed auditInfo

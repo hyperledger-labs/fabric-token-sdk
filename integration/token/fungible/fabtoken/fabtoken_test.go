@@ -58,12 +58,11 @@ var _ = Describe("EndToEnd", func() {
 			Expect(tms).NotTo(BeNil())
 			fungible.TestPublicParamsUpdate(network, "newAuditor", ppBytes, tms, false)
 		})
-
 		It("Test Identity Revocation", func() {
 			fungible.RegisterAuditor(network, "auditor")
 			rId := fungible.GetRevocationHandle(network, "bob")
-			fungible.TestRevokeIdentity(network, "auditor", rId, rId+" Identity is in revoked state")
+			fungible.TestRevokeIdentity(network, "auditor", rId, " Identity is in revoked state")
 		})
-
 	})
+
 })
