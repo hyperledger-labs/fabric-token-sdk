@@ -51,7 +51,9 @@ func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token
 			tokens = append(tokens, ti)
 			return nil
 		}); err != nil {
-			// check if there is any token id is pending
+			// check if there is any token id whose corresponding transaction is pending
+			// if there is, then wait a bit and retry to load the outputs
+			retry := false
 			for _, id := range ids {
 				pending, err := s.TokenVault.IsPending(id)
 				if err != nil {
@@ -63,8 +65,14 @@ func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token
 						return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
 					}
 					time.Sleep(s.RetryDelay)
-					continue
+					retry = true
+					break
 				}
+			}
+
+			if retry {
+				tokens = nil
+				continue
 			}
 
 			return nil, errors.Wrapf(err, "failed to get token outputs")
