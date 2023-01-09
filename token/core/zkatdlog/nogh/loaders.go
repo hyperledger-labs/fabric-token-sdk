@@ -26,7 +26,7 @@ type TokenVault interface {
 
 type VaultTokenCommitmentLoader struct {
 	TokenVault TokenVault
-	// Variable used to control retry condition
+	// Variables used to control retry condition
 	NumRetries int
 	RetryDelay time.Duration
 }
@@ -42,11 +42,11 @@ func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token
 	for i := 0; i < s.NumRetries; i++ {
 		if err := s.TokenVault.GetTokenOutputs(ids, func(id *token3.ID, bytes []byte) error {
 			if len(bytes) == 0 {
-				return errors.Errorf("failed getting state for id [%v], nil value", id)
+				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
 			}
 			ti := &token.Token{}
 			if err := ti.Deserialize(bytes); err != nil {
-				return errors.Wrapf(err, "failed deserializeing token for id [%v][%s]", id, string(bytes))
+				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
 			}
 			tokens = append(tokens, ti)
 			return nil
@@ -60,7 +60,7 @@ func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token
 					break
 				}
 				if pending {
-					logger.Warnf("cannot get state for id [%d] because the relative transaction is pending, retry at [%d]", id, i)
+					logger.Warnf("failed getting serialized token output for id [%v] because the relative transaction is pending, retry at [%d]", id, i)
 					if i == s.NumRetries-1 {
 						return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
 					}

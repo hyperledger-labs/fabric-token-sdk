@@ -18,7 +18,7 @@ import (
 type QueryEngine struct {
 	qe driver.QueryEngine
 
-	// Variable used to control retry condition
+	// Variables used to control retry condition
 	NumRetries int
 	RetryDelay time.Duration
 }

@@ -25,6 +25,7 @@ type TokenCommitmentLoader interface {
 }
 
 type QueryEngine interface {
+	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
 	IsPending(id *token3.ID) (bool, error)
 	IsMine(id *token3.ID) (bool, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
