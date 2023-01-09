@@ -21,10 +21,12 @@ import (
 )
 
 type TokenCommitmentLoader interface {
-	GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error)
+	GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error)
 }
 
 type QueryEngine interface {
+	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
+	IsPending(id *token3.ID) (bool, error)
 	IsMine(id *token3.ID) (bool, error)
 	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 	// The token type can be empty. In that case, tokens of any type are returned.
@@ -117,6 +119,9 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 		return nil, nil, errors.Wrap(err, "failed to deserialize token information")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, nil, errors.Errorf("public parameters not inizialized")
+	}
 	to, err := output.GetTokenInTheClear(ti, pp)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token")
@@ -137,6 +142,9 @@ func (s *Service) Validator() (driver.Validator, error) {
 		return nil, errors.WithMessagef(err, "failed to get deserializer")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not inizialized")
+	}
 	return validator.New(pp, d), nil
 }
 
@@ -161,6 +169,9 @@ func (s *Service) LoadPublicParams() error {
 
 func (s *Service) Deserializer() (driver.Deserializer, error) {
 	pp := s.PublicParams()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not inizialized")
+	}
 	d, err := s.DeserializerProvider(pp)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get deserializer")

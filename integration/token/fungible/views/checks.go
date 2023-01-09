@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type CheckTTXDB struct {
@@ -167,7 +168,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		} else {
 			assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
 			index := 0
-			assert.NoError(v.TokenVault().QueryEngine().GetTokenCommitments(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+			assert.NoError(v.TokenVault().QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 				if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
 					errorMessages = append(errorMessages, fmt.Sprintf("[ow:%s] token content do not match at [%d], [%s]!=[%s]",
 						defaultOwnerWallet.ID(),
@@ -264,7 +265,10 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 	qe := vault.TokenVault().QueryEngine()
 	var IDs []*token2.ID
 	count := 0
-	assert.NoError(qe.GetTokenCommitments(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
+		if len(tokenRaw) == 0 {
+			return errors.Errorf("token id [%s] is nil", id)
+		}
 		IDs = append(IDs, id)
 		count++
 		return nil

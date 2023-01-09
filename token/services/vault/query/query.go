@@ -39,6 +39,14 @@ func NewEngine(vault driver.Vault, namespace string, cache cache) *Engine {
 	}
 }
 
+func (e *Engine) IsPending(id *token.ID) (bool, error) {
+	vc, err := e.Vault.TransactionStatus(id.TxId)
+	if err != nil {
+		return false, err
+	}
+	return vc == driver.Busy, nil
+}
+
 func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
@@ -305,12 +313,13 @@ func (e *Engine) GetTokenInfos(ids []*token.ID, callback driver2.QueryCallbackFu
 	return nil
 }
 
-func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCallbackFunc) error {
+func (e *Engine) GetTokenOutputs(ids []*token.ID, callback driver2.QueryCallbackFunc) error {
 	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return err
 	}
 	defer qe.Done()
+
 	for _, id := range ids {
 		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
 		if err != nil {
@@ -320,7 +329,6 @@ func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCall
 		if err != nil {
 			return errors.Wrapf(err, "failed getting state for id [%v]", id)
 		}
-
 		if err := callback(id, val); err != nil {
 			return err
 		}
@@ -328,7 +336,7 @@ func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCall
 	return nil
 }
 
-func (e *Engine) GetTokenInfoAndCommitments(ids []*token.ID, callback driver2.QueryCallback2Func) error {
+func (e *Engine) GetTokenInfoAndOutputs(ids []*token.ID, callback driver2.QueryCallback2Func) error {
 	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return err

@@ -376,7 +376,8 @@ func fastExchange(network *integration.Infrastructure, id string, recipient stri
 		ReclamationDeadline: deadline,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	time.Sleep(5 * time.Second)
+	// give time to bob to commit the transaction
+	time.Sleep(10 * time.Second)
 }
 
 func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, opts ...token.ServiceOption) {

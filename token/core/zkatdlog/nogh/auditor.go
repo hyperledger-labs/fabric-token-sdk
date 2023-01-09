@@ -19,9 +19,9 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 	logger.Debugf("check token request validity...")
 	var inputTokens [][]*token.Token
 	for _, transfer := range tokenRequestMetadata.Transfers {
-		inputs, err := s.TokenCommitmentLoader.GetTokenCommitments(transfer.TokenIDs)
+		inputs, err := s.TokenCommitmentLoader.GetTokenOutputs(transfer.TokenIDs)
 		if err != nil {
-			return errors.Wrapf(err, "failed getting token commitments to perform auditor check")
+			return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 		}
 		inputTokens = append(inputTokens, inputs)
 	}
@@ -31,6 +31,9 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 		return errors.WithMessagef(err, "failed getting deserializer for auditor check")
 	}
 	pp := s.PublicParams()
+	if pp == nil {
+		return errors.Errorf("public parameters not inizialized")
+	}
 	if err := audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
 		tokenRequestMetadata,
