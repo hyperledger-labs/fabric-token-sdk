@@ -143,6 +143,14 @@ func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
 	return 1<<pp.Precision() - 1
 }
 
+func (pp *PublicParams) String() string {
+	res, err := json.MarshalIndent(pp, " ", "  ")
+	if err != nil {
+		return err.Error()
+	}
+	return string(res)
+}
+
 // Setup initializes PublicParams
 func Setup() (*PublicParams, error) {
 	return &PublicParams{
