@@ -125,7 +125,8 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] is not known to this node, no need to extract tokens", txID)
 		}
-		return nil
+		// no metadata found for this transaction, maybe it is updating the public params?
+		return r.init(tx, rws, ns)
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
