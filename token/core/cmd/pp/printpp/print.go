@@ -16,12 +16,12 @@ import (
 )
 
 var (
-	// InputFile if the file that contains the public parameters
+	// InputFile is the file that contains the public parameters
 	InputFile string
 )
 
 type Args struct {
-	// InputFile if the file that contains the public parameters
+	// InputFile is the file that contains the public parameters
 	InputFile string
 }
 
