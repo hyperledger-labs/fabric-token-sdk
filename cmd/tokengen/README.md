@@ -106,7 +106,7 @@ Usage:
 
 Flags:
   -h, --help           help for print
-  -i, --input string   public param file
+  -i, --input string   path of the public param file
 ```
 
 ## tokengen help

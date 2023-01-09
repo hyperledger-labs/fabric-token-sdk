@@ -29,7 +29,7 @@ type Args struct {
 func Cmd() *cobra.Command {
 	// Set the flags on the node start command.
 	flags := cobraCommand.Flags()
-	flags.StringVarP(&InputFile, "input", "i", "", "public param file")
+	flags.StringVarP(&InputFile, "input", "i", "", "path of the public param file")
 
 	return cobraCommand
 }
