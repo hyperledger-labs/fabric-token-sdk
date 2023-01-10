@@ -145,7 +145,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
-		auditor.RegisterViewFactory("AuditorRevocationView", &views.AuditorRevocationViewFactory{})
+		auditor.RegisterViewFactory("UpdateRevocationListView", &views.UpdateRevocationListViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(

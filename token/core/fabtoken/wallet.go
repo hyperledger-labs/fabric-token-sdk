@@ -212,13 +212,6 @@ func (s *Service) CertifierWallet(id string) (driver.CertifierWallet, error) {
 func (s *Service) CertifierWalletByIdentity(identity view.Identity) (driver.CertifierWallet, error) {
 	return nil, nil
 }
-func (s *Service) GetRevocationList() ([]string, error) {
-	return s.AuditorWalletsRegistry.GetRevocationList()
-}
-
-func (s *Service) UpdateRevocationList(revocationHandle string) error {
-	return s.AuditorWalletsRegistry.UpdateRevocationList(revocationHandle)
-}
 
 // SpentIDs returns the spend ids for the passed token ids
 func (s *Service) SpentIDs(ids ...*token.ID) ([]string, error) {

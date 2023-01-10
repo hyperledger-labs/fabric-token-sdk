@@ -138,54 +138,6 @@ func (r *WalletsRegistry) GetWallet(identity view.Identity) (string, error) {
 	return wID, nil
 }
 
-// GetRevocationList returns the list of revocation handle
-func (r *WalletsRegistry) GetRevocationList() ([]string, error) {
-	var list []string
-	if bool := r.KVS.Exists("RevocationHandler"); !bool {
-		err := r.KVS.Put("RevocationHandler", list)
-		if err != nil {
-			logger.Errorf("failed create revocation handler list")
-			return nil, errors.WithMessagef(err, "failed to create revocation handler list")
-		}
-	}
-	if err := r.KVS.Get("RevocationHandler", &list); err != nil {
-		return nil, err
-	}
-	return list, nil
-}
-
-// UpdateRevocationList addes the passed revocation handle to the list
-func (r *WalletsRegistry) UpdateRevocationList(revocationHandle string) error {
-	var list []string
-	if bool := r.KVS.Exists("RevocationHandler"); !bool {
-		list = append(list, revocationHandle)
-		err := r.KVS.Put("RevocationHandler", list)
-		if err != nil {
-			logger.Errorf("failed create revocation handler list")
-			return errors.WithMessagef(err, "failed to create revocation handler list")
-		}
-		return nil
-	}
-	if err := r.KVS.Get("RevocationHandler", &list); err != nil {
-		return err
-	}
-
-	for _, rid := range list {
-		if rid == revocationHandle {
-			return errors.Errorf("Id is in revoked state already")
-		}
-	}
-
-	list = append(list, revocationHandle)
-
-	err := r.KVS.Put("RevocationHandler", list)
-	if err != nil {
-		logger.Errorf("failed updating revocation handler list")
-		return errors.WithMessagef(err, "failed to update revocation handler list")
-	}
-	return nil
-}
-
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
 func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {

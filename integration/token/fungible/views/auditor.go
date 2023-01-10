@@ -10,8 +10,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -151,26 +153,21 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 		}
 	}
 
-	tms := token.GetManagementService(context)
-	assert.NotNil(tms, "tms not found ")
-	list, err := tms.WalletManager().GetRevocationList()
-	if err != nil {
-		logger.Errorf("failed to get revocation handler list")
-		return nil, errors.WithMessagef(err, "failed to get revocation handler list")
-	}
+	kvsInstance := kvs.GetService(context)
+
 	for _, rID := range inputs.RevocationHandles() {
-		for _, l := range list {
-			if rID == l {
-				return nil, errors.Errorf("%s Identity is in revoked state", rID)
-			}
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{strconv.QuoteToASCII(rID)})
+		if kvsInstance.Exists(k) {
+			return nil, errors.Errorf("%s Identity is in revoked state", rID)
+
 		}
 	}
 
 	for _, rID := range outputs.RevocationHandles() {
-		for _, l := range list {
-			if rID == l {
-				return nil, errors.Errorf("%s Identity is in revoked state", rID)
-			}
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{strconv.QuoteToASCII(rID)})
+		if kvsInstance.Exists(k) {
+			return nil, errors.Errorf("%s Identity is in revoked state", rID)
+
 		}
 	}
 
@@ -342,21 +339,6 @@ func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, err
 	return f, nil
 }
 
-type RevokeIdentity struct {
-	RevocationHandler string
-}
-
-type AuditorRevocationView struct {
-	*RevokeIdentity
-}
-
-type AuditorRevocationViewFactory struct{}
-
-func (r *RevokeIdentity) Call(context view.Context) (interface{}, error) {
-	result, err := context.RunView(ttx.RevokeView(r.RevocationHandler))
-	return result, err
-}
-
 type GetRevocationHandle struct {
 	TMSID  token.TMSID
 	Label  string
@@ -377,13 +359,6 @@ func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
 	id, err := w.GetRecipientIdentity()
 	assert.NoError(err, "error getting recipient id")
 	return tms.WalletManager().GetRevocationHandle(id)
-}
-
-func (p *AuditorRevocationViewFactory) NewView(in []byte) (view.View, error) {
-	f := &AuditorRevocationView{RevokeIdentity: &RevokeIdentity{}}
-	err := json.Unmarshal(in, f.RevokeIdentity)
-	assert.NoError(err, "failed unmarshalling input")
-	return f, nil
 }
 
 func (p *GetRevocationHandleViewFactory) NewView(in []byte) (view.View, error) {

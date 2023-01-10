@@ -30,7 +30,7 @@ type Deserializer interface {
 type EnrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
-
+	// GetRevocationHandler returns the revocation handle from the audit info
 	GetRevocationHandler(auditInfo []byte) (string, error)
 }
 

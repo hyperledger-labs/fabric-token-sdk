@@ -126,12 +126,6 @@ type WalletService interface {
 	// AuditorWalletByIdentity returns an instance of the AuditorWallet interface that contains the passed identity.
 	AuditorWalletByIdentity(identity view.Identity) (AuditorWallet, error)
 
-	// GetRevocationList returns the list of revoked identities.
-	GetRevocationList() ([]string, error)
-
-	// UpdateRevocationList updates the list of revoked identities.
-	UpdateRevocationList(revocationHandle string) error
-
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	AuditorWallet(id string) (AuditorWallet, error)
