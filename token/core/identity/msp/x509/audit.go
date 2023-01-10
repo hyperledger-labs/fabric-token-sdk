@@ -20,12 +20,3 @@ func (a *AuditInfo) Bytes() ([]byte, error) {
 func (a *AuditInfo) FromBytes(raw []byte) error {
 	return json.Unmarshal(raw, a)
 }
-
-func (a *AuditInfo) EnrollmentID() string {
-	return string(a.EnrollmentId)
-}
-
-//RevocationHandle
-func (a *AuditInfo) GetRevocationHandle() string {
-	return string(a.RevocationHandle)
-}

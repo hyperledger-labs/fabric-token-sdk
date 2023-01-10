@@ -779,7 +779,7 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 }
 
 func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
-	// IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer")
+	IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer")
 	RevokeIdentity(network, auditor, revocationHandle)
 	IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer", errorMessage)
 }

@@ -32,7 +32,7 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
-replace github.com/hyperledger-labs/fabric-smart-client => github.com/sapthasurendran/fabric-smart-client v0.0.0-20221223103708-6c8bd4a1e3e2
+replace github.com/hyperledger-labs/fabric-smart-client => github.com/sapthasurendran/fabric-smart-client v0.0.0-20230102070055-7a4c0956013c
 
 require (
 	github.com/libp2p/go-libp2p-asn-util v0.2.0 // indirect

@@ -686,8 +686,8 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...
 }
 
 func RevokeIdentity(network *integration.Infrastructure, auditor string, id string) {
-	_, err := network.Client(auditor).CallView("AuditorRevocationView", common.JSONMarshall(&views.RevokeIdentity{
-		RevocationHandler: id,
+	_, err := network.Client(auditor).CallView("UpdateRevocationListView", common.JSONMarshall(&views.UpdateRevocationList{
+		RH: id,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
