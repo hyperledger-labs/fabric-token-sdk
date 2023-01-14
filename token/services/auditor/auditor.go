@@ -73,23 +73,19 @@ func (a *Auditor) Validate(request *token.Request) error {
 // Release must be invoked in case
 func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
 	request := tx.Request()
-	inputs, err := request.AuditInputs()
+	record, err := request.AuditRecord()
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting inputs")
-	}
-	outputs, err := request.AuditOutputs()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting outputs")
+		return nil, nil, errors.WithMessagef(err, "failed getting transaction audit record")
 	}
 
 	var eids []string
-	eids = append(eids, inputs.EnrollmentIDs()...)
-	eids = append(eids, outputs.EnrollmentIDs()...)
+	eids = append(eids, record.Inputs.EnrollmentIDs()...)
+	eids = append(eids, record.Outputs.EnrollmentIDs()...)
 	if err := a.db.AcquireLocks(request.Anchor, eids...); err != nil {
 		return nil, nil, err
 	}
 
-	return inputs, outputs, nil
+	return record.Inputs, record.Outputs, nil
 }
 
 // Append adds the passed transaction to the auditor database.
@@ -128,6 +124,12 @@ func (a *Auditor) NewQueryExecutor() *QueryExecutor {
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *Auditor) SetStatus(txID string, status TxStatus) error {
 	return a.db.SetStatus(txID, status)
+}
+
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (a *Auditor) GetStatus(txID string) (TxStatus, error) {
+	return a.db.GetStatus(txID)
 }
 
 type TxStatusChangesListener struct {

@@ -26,7 +26,7 @@ func main() {
 		return nil
 	}
 	network.StartCMDPostStart = func(infrastructure *integration.Infrastructure) error {
-		_, err := infrastructure.Client("auditor").CallView("register", nil)
+		_, err := infrastructure.Client("auditor").CallView("registerAuditor", nil)
 		if err != nil {
 			return errors.WithMessage(err, "failed to register auditor")
 		}

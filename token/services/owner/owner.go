@@ -23,6 +23,7 @@ type QueryTransactionsParams = ttxdb.QueryTransactionsParams
 type TxStatus = ttxdb.TxStatus
 
 const (
+	Unknown = ttxdb.Unknown
 	// Pending is the status of a transaction that has been submitted to the ledger
 	Pending = ttxdb.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
@@ -42,21 +43,6 @@ type Transaction interface {
 // QueryExecutor defines the interface for the query executor
 type QueryExecutor struct {
 	*ttxdb.QueryExecutor
-}
-
-// NewPaymentsFilter returns a new filter for payments
-func (a *QueryExecutor) NewPaymentsFilter() *ttxdb.PaymentsFilter {
-	return a.QueryExecutor.NewPaymentsFilter()
-}
-
-// NewHoldingsFilter returns a new filter for holdings
-func (a *QueryExecutor) NewHoldingsFilter() *ttxdb.HoldingsFilter {
-	return a.QueryExecutor.NewHoldingsFilter()
-}
-
-// Done closes the query executor. It must be called when the query executor is no longer needed.
-func (a *QueryExecutor) Done() {
-	a.QueryExecutor.Done()
 }
 
 // Owner is the interface for the owner service
@@ -93,6 +79,12 @@ func (a *Owner) Append(tx Transaction) error {
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *Owner) SetStatus(txID string, status TxStatus) error {
 	return a.db.SetStatus(txID, status)
+}
+
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (a *Owner) GetStatus(txID string) (TxStatus, error) {
+	return a.db.GetStatus(txID)
 }
 
 type TxStatusChangesListener struct {

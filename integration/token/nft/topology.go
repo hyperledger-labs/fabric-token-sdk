@@ -55,7 +55,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),

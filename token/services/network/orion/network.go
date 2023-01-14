@@ -116,7 +116,7 @@ func (n *Network) EnvelopeExists(id string) bool {
 	return n.n.EnvelopeService().Exists(id)
 }
 
-func (n *Network) Broadcast(blob interface{}) error {
+func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
 	case driver.Envelope:

@@ -8,12 +8,10 @@ package ttx
 
 import (
 	"encoding/base64"
-	"strconv"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -57,9 +55,7 @@ func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
 func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "collectEndorsements", c.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "collectEndorsements", c.tx.ID())
+	metrics := GetMetrics(context)
 
 	// Store transient
 	err := c.tx.storeTransient()
@@ -107,6 +103,13 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collectEndorsementsView done.")
 	}
+
+	labels := []string{
+		"network", c.tx.Network(),
+		"channel", c.tx.Channel(),
+		"namespace", c.tx.Namespace(),
+	}
+	metrics.EndorsedTransactions.With(labels...).Add(1)
 	return nil, nil
 }
 
@@ -119,10 +122,6 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 	if len(issues) == 0 {
 		return nil, nil
 	}
-
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "requestSignaturesOnIssues", c.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "requestSignaturesOnIssues", c.tx.ID())
 
 	requestRaw, err := c.requestBytes()
 	if err != nil {
@@ -218,10 +217,6 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	if len(transfers) == 0 {
 		return nil, nil
 	}
-
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "requestSignaturesOnTransfers", c.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "requestSignaturesOnTransfers", c.tx.ID())
 
 	requestRaw, err := c.requestBytes()
 	if err != nil {
@@ -337,21 +332,15 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 }
 
 func (c *collectEndorsementsView) requestApproval(context view.Context) (*network.Envelope, error) {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "requestApproval", c.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "requestApproval", c.tx.ID())
-
 	requestRaw, err := c.tx.TokenRequest.RequestToBytes()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling request")
 	}
-	agent.EmitKey(0, "ttx", "size", "callChaincodeSize", c.tx.ID(), strconv.Itoa(len(requestRaw)))
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("call chaincode for endorsement [nonce=%s]", base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
 	}
 
-	agent.EmitKey(0, "ttx", "start", "callChaincodeRequest", c.tx.ID())
 	env, err := network.GetInstance(context, c.tx.Network(), c.tx.Channel()).RequestApproval(
 		context,
 		c.tx.TokenRequest.TokenService,
@@ -359,7 +348,6 @@ func (c *collectEndorsementsView) requestApproval(context view.Context) (*networ
 		c.tx.Signer,
 		c.tx.Payload.TxID,
 	)
-	agent.EmitKey(0, "ttx", "end", "callChaincodeRequest", c.tx.ID())
 	if err != nil {
 		return nil, err
 	}
@@ -397,10 +385,6 @@ func (c *collectEndorsementsView) cleanupAudit(context view.Context) error {
 }
 
 func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "distributeEnv", c.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "distributeEnv", c.tx.ID())
-
 	if env == nil {
 		return errors.New("transaction envelope is empty")
 	}
@@ -571,7 +555,6 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 				return errors.Wrap(err, "failed marshalling transaction content")
 			}
 		}
-		agent.EmitKey(0, "ttx", "size", "distributeEnvSize", c.tx.ID(), strconv.Itoa(len(txRaw)))
 
 		// Open a session to the party. and send the transaction.
 		session, err := c.getSession(context, entry.ID)
@@ -585,7 +568,6 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if err != nil {
 			return errors.Wrap(err, "failed sending transaction content")
 		}
-		agent.EmitKey(0, "ttx", "sent", "tx", c.tx.ID())
 
 		timeout := time.NewTimer(time.Minute * 4)
 
@@ -607,8 +589,6 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		logger.Debugf("received ack from [%s] [%s], checking signature on [%s]", entry.LongTerm, hash.Hashable(sigma).String(),
 			hash.Hashable(txRaw).String())
 
-		agent.EmitKey(0, "ttx", "received", "txAck", c.tx.ID())
-
 		verifier, err := view2.GetSigService(context).GetVerifier(entry.LongTerm)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", entry.ID)
@@ -624,8 +604,6 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
 			return errors.Wrapf(err, "failed appending transaction endorsement ack to transaction %s", c.tx.ID())
 		}
-
-		agent.EmitKey(0, "ttx", "stored", "signature", c.tx.ID())
 	}
 
 	return nil
@@ -668,10 +646,6 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		tx, err := NewTransactionFromBytes(context, msg.Payload)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to receive transaction")
-		}
-		// Check that the transaction is valid
-		if err := tx.IsValid(); err != nil {
-			return nil, errors.WithMessagef(err, "invalid transaction %s", tx.ID())
 		}
 		return tx, nil
 	case <-timeout.C:
@@ -803,9 +777,6 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
-
 	return s.tx, nil
 }
 
@@ -836,8 +807,6 @@ func (s *endorseView) receiveTransaction(context view.Context) (*Transaction, []
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed receiving transaction")
 	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "received", "env", tx.ID())
 
 	// TODO: compare with the existing transaction
 	if logger.IsEnabledFor(zapcore.DebugLevel) {

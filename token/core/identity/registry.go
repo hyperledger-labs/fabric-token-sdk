@@ -111,17 +111,35 @@ func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) {
 	}
 }
 
-// RegisterIdentity binds the passed identity to the passed wallet identifier
-func (r *WalletsRegistry) RegisterIdentity(identity view.Identity, wID string) error {
+// RegisterIdentity binds the passed identity to the passed wallet identifier.
+// Additional metadata can be bound to the identity.
+func (r *WalletsRegistry) RegisterIdentity(identity view.Identity, wID string, meta any) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
 	idHash := identity.Hash()
 	if err := r.KVS.Put(idHash, wID); err != nil {
-		return err
+		return errors.WithMessagef(err, "failed to store identity's wallet [%s]", identity)
+	}
+	if meta != nil {
+		if err := r.KVS.Put("meta"+idHash, meta); err != nil {
+			return errors.WithMessagef(err, "failed to store identity's metadata [%s]", identity)
+		}
 	}
 	if err := r.KVS.Put(r.Wallets[wID].Prefix+idHash, wID); err != nil {
-		return err
+		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
+	}
+	return nil
+}
+
+// GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
+func (r *WalletsRegistry) GetIdentityMetadata(identity view.Identity, wID string, meta any) error {
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
+	}
+	idHash := identity.Hash()
+	if err := r.KVS.Get("meta"+idHash, meta); err != nil {
+		return errors.WithMessagef(err, "failed to retrieve identity's metadata [%s]", identity)
 	}
 	return nil
 }

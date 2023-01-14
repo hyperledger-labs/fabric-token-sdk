@@ -16,8 +16,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -108,13 +106,6 @@ func (cc *TokenChaincode) Invoke(stub shim.ChaincodeStubInterface) (res pb.Respo
 	case 0:
 		return shim.Error("missing parameters")
 	default:
-		agent, err := cc.NewMetricsAgent(string(args[0]))
-		if err != nil {
-			return shim.Error(err.Error())
-		}
-		agent.EmitKey(0, "tcc", "start", "TokenChaincodeInvoke"+string(args[0]), stub.GetTxID())
-		defer agent.EmitKey(0, "tcc", "end", "TokenChaincodeInvoke"+string(args[0]), stub.GetTxID())
-
 		logger.Infof("running function [%s]", string(args[0]))
 		switch f := string(args[0]); f {
 		case InvokeFunction:
@@ -316,28 +307,4 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 		return shim.Error(fmt.Sprintf("failed marshalling spent flags: [%s]", err))
 	}
 	return shim.Success(raw)
-}
-
-func (cc *TokenChaincode) NewMetricsAgent(id string) (Agent, error) {
-	cc.MetricsLock.Lock()
-	defer cc.MetricsLock.Unlock()
-
-	if cc.MetricsAgent != nil {
-		return cc.MetricsAgent, nil
-	}
-
-	if !cc.MetricsEnabled {
-		cc.MetricsAgent = metrics.NewNullAgent()
-		return cc.MetricsAgent, nil
-	}
-
-	var err error
-	cc.MetricsAgent, err = metrics.NewStatsdAgent(
-		tracing.Host(id),
-		tracing.StatsDSink(cc.MetricsServer),
-	)
-	if err != nil {
-		return nil, err
-	}
-	return cc.MetricsAgent, nil
 }

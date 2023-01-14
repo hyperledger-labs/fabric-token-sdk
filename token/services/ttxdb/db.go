@@ -63,12 +63,14 @@ func Drivers() []string {
 type TxStatus = driver.TxStatus
 
 const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown = driver.Unknown
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = "Pending"
+	Pending = driver.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = "Confirmed"
+	Confirmed = driver.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = "Deleted"
+	Deleted = driver.Deleted
 )
 
 // ActionType is the type of action performed by a transaction.
@@ -244,15 +246,10 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	ins, err := req.Inputs()
+	ins, outs, err := req.InputsAndOutputs()
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting inputs for request [%s]", req.Anchor)
+		return errors.WithMessagef(err, "failed getting inputs and outputs for request [%s]", req.Anchor)
 	}
-	outs, err := req.Outputs()
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting outputs for request [%s]", req.Anchor)
-	}
-
 	record := &token.AuditRecord{
 		Anchor:  req.Anchor,
 		Inputs:  ins,
@@ -296,6 +293,22 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 	}
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
 	return nil
+}
+
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (db *DB) GetStatus(txID string) (TxStatus, error) {
+	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
+
+	status, err := db.db.GetStatus(txID)
+	if err != nil {
+		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
+	}
+	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
+	return status, nil
 }
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.

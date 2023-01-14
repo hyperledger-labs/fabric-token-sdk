@@ -10,7 +10,6 @@ import (
 	"encoding/asn1"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -135,7 +134,11 @@ func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) 
 	return tx, nil
 }
 
-func ReceiveTransaction(context view.Context) (*Transaction, error) {
+func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
+	opt, err := compile(opts...)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to parse options")
+	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("receive a new transaction...")
 	}
@@ -152,9 +155,12 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("received transaction with id [%s]", cctx.ID())
 	}
-
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "received", "tx", cctx.ID())
+	if !opt.NoTransactionVerification {
+		// Check that the transaction is valid
+		if err := cctx.IsValid(); err != nil {
+			return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
+		}
+	}
 
 	return cctx, nil
 }
@@ -211,6 +217,10 @@ func (t *Transaction) Outputs() (*token.OutputStream, error) {
 
 func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs()
+}
+
+func (t *Transaction) InputsAndOutputs() (*token.InputStream, *token.OutputStream, error) {
+	return t.TokenRequest.InputsAndOutputs()
 }
 
 // IsValid checks that the transaction is well-formed.
@@ -293,8 +303,9 @@ func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
 	}
 	t.Envelope = envelope
 
-	logger.Debugf("setting envelope [%s]", envelope.String())
-
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("setting envelope [%s]", envelope.String())
+	}
 	return nil
 }
 
@@ -376,7 +387,9 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
-		logger.Debugf("transaction evelope [%s]", t.Envelope.String())
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction envelope [%s]", t.Envelope.String())
+		}
 	}
 
 	res, err := asn1.Marshal(TransactionSer{

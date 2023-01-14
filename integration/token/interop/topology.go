@@ -49,7 +49,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
@@ -131,7 +131,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
@@ -226,7 +226,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
@@ -326,7 +326,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
@@ -428,7 +428,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	auditor.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	auditor.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})

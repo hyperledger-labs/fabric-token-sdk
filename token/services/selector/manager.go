@@ -21,7 +21,7 @@ type manager struct {
 	timeout              time.Duration
 	requestCertification bool
 	precision            uint64
-	metricsAgent         MetricsAgent
+	metricsAgent         Tracer
 }
 
 func NewManager(
@@ -31,7 +31,7 @@ func NewManager(
 	timeout time.Duration,
 	requestCertification bool,
 	precision uint64,
-	metricsAgent MetricsAgent,
+	metricsAgent Tracer,
 ) *manager {
 	return &manager{
 		locker:               locker,

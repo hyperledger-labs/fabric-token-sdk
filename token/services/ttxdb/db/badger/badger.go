@@ -275,6 +275,57 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	return nil
 }
 
+func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
+	// search for all matching keys
+	type Entry struct {
+		key   string
+		value []byte
+	}
+	var entries []Entry
+	stream := db.db.NewStream()
+	stream.NumGo = db.numGoStream
+	stream.LogPrefix = streamLogPrefixStatus
+	txIdAsBytes := []byte(txID)
+	stream.ChooseKey = func(item *badger.Item) bool {
+		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+	}
+	stream.Send = func(buf *z.Buffer) error {
+		list, err := badger.BufferToKVList(buf)
+		if err != nil {
+			return err
+		}
+		for _, kv := range list.Kv {
+			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
+		}
+		return nil
+
+	}
+	if err := stream.Orchestrate(context.Background()); err != nil {
+		return driver.Unknown, err
+	}
+
+	if len(entries) == 0 {
+		// nothing to update
+		logger.Debugf("no entries found for txID %s, skipping", txID)
+		return driver.Unknown, nil
+	}
+
+	// update status for all matching keys
+	for _, entry := range entries {
+		switch {
+		case strings.HasPrefix(entry.key, "tx"):
+			record, err := UnmarshalTransactionRecord(entry.value)
+			if err != nil {
+				return driver.Unknown, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			return record.Record.Status, nil
+		default:
+			continue
+		}
+	}
+	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
+}
+
 func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*driver.MovementRecord, error) {
 	// TODO: Move to stream
 	txn := db.db.NewTransaction(false)
