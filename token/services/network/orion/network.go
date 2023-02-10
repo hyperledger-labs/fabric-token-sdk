@@ -249,6 +249,11 @@ func (n *Network) Ledger() (driver.Ledger, error) {
 	return n.ledger, nil
 }
 
+func (n *Network) ProcessNamespace(namespace string) error {
+	// Not supported
+	return nil
+}
+
 type nv struct {
 	v          *orion.Vault
 	tokenVault *vault.Vault

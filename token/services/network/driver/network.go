@@ -114,4 +114,6 @@ type Network interface {
 
 	// Ledger gives access to the remote ledger
 	Ledger() (Ledger, error)
+
+	ProcessNamespace(namespace string) error
 }
