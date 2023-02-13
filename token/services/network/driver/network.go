@@ -114,4 +114,7 @@ type Network interface {
 
 	// Ledger gives access to the remote ledger
 	Ledger() (Ledger, error)
+
+	// ProcessNamespace indicates to the commit pipeline to process all transaction in the passed namespace
+	ProcessNamespace(namespace string) error
 }

@@ -99,10 +99,22 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+	// register responder
 	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
 	}
-
+	// enable processing all token transactions for the given network and namespace
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	if tms == nil {
+		return nil, errors.Errorf("cannot find tms for [%s]", r.TMSID)
+	}
+	net := network.GetInstance(context, tms.Network(), tms.Channel())
+	if tms == nil {
+		return nil, errors.Errorf("cannot find netowkr for [%s]", tms.ID())
+	}
+	if err := net.ProcessNamespace(tms.Namespace()); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register namespace for processing [%s]", tms.Network())
+	}
 	return nil, nil
 }
 
@@ -282,6 +294,11 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", context.Me())
 	}
 
+	err = a.tx.storeTransient()
+	if err != nil {
+		return errors.Wrapf(err, "failed storing transient for [%s]", a.tx.ID())
+	}
+
 	logger.Debug("signer at auditor", signer, aid)
 
 	raw, err := a.tx.MarshallToAudit()
@@ -332,11 +349,6 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	rawRequest, err := tx.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
-	}
-
-	err = tx.storeTransient()
-	if err != nil {
-		return errors.Wrapf(err, "failed storing transient")
 	}
 
 	backend := network.GetInstance(context, tx.Network(), tx.Channel())
