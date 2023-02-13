@@ -114,9 +114,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
 	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
-		fmt.Printf("Got errors [%v]", errs)
-		if len(errs) != 4 {
-			return errors.Errorf("expected 4 errors, got [%d]", len(errs))
+		if len(errs) != 2 {
+			return errors.Errorf("expected 2 errors, got [%d][%v][%s]", len(errs), errs, failedClaimTXID)
 		}
 		for _, err := range errs {
 			if strings.Contains(err, failedClaimTXID) {
