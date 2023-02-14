@@ -116,7 +116,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}
 		if len(auditInfo) == 0 {
-			logger.Errorf("empty audit info for token [%s] ith owner [%s]", ids[i].String(), view.Identity(t.Owner))
+			logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i].String(), view.Identity(t.Owner))
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo)
 	}
