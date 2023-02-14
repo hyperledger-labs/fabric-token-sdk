@@ -39,8 +39,9 @@ func NewVaultTokenCommitmentLoader(tokenVault TokenVault, numRetries int, retryD
 func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error) {
 	var tokens []*token.Token
 
+	var err error
 	for i := 0; i < s.NumRetries; i++ {
-		if err := s.TokenVault.GetTokenOutputs(ids, func(id *token3.ID, bytes []byte) error {
+		err = s.TokenVault.GetTokenOutputs(ids, func(id *token3.ID, bytes []byte) error {
 			if len(bytes) == 0 {
 				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
 			}
@@ -50,39 +51,40 @@ func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token
 			}
 			tokens = append(tokens, ti)
 			return nil
-		}); err != nil {
-			// check if there is any token id whose corresponding transaction is pending
-			// if there is, then wait a bit and retry to load the outputs
-			retry := false
-			for _, id := range ids {
-				pending, err := s.TokenVault.IsPending(id)
-				if err != nil {
-					break
-				}
-				if pending {
-					logger.Warnf("failed getting serialized token output for id [%v] because the relative transaction is pending, retry at [%d]", id, i)
-					if i == s.NumRetries-1 {
-						return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
-					}
-					time.Sleep(s.RetryDelay)
-					retry = true
-					break
-				}
-			}
-
-			if retry {
-				tokens = nil
-				continue
-			}
-
-			return nil, errors.Wrapf(err, "failed to get token outputs")
+		})
+		if err == nil {
+			return tokens, nil
 		}
 
-		// The execution was successful, we can stop
-		break
+		// check if there is any token id whose corresponding transaction is pending
+		// if there is, then wait a bit and retry to load the outputs
+		retry := false
+		for _, id := range ids {
+			pending, err := s.TokenVault.IsPending(id)
+			if err != nil {
+				break
+			}
+			if pending {
+				logger.Warnf("failed getting serialized token output for id [%v] because the relative transaction is pending, retry at [%d]", id, i)
+				if i >= s.NumRetries-1 {
+					// too late, we tried already too many times
+					return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
+				}
+				time.Sleep(s.RetryDelay)
+				retry = true
+				break
+			}
+		}
+
+		if retry {
+			tokens = nil
+			continue
+		}
+
+		return nil, errors.Wrapf(err, "failed to get token outputs")
 	}
 
-	return tokens, nil
+	return nil, errors.Wrapf(err, "failed to get token outputs")
 }
 
 type VaultTokenLoader struct {

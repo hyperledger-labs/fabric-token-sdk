@@ -16,13 +16,15 @@ import (
 
 // AuditorCheck verifies if the passed tokenRequest matches the tokenRequestMetadata
 func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, txID string) error {
-	logger.Debugf("check token request validity...")
+	logger.Debugf("[%s] check token request validity, number of transfer actions [%d]...", txID, len(tokenRequestMetadata.Transfers))
 	var inputTokens [][]*token.Token
-	for _, transfer := range tokenRequestMetadata.Transfers {
+	for i, transfer := range tokenRequestMetadata.Transfers {
+		logger.Debugf("[%s] transfer action [%d] contains [%d] inputs", txID, i, len(transfer.TokenIDs))
 		inputs, err := s.TokenCommitmentLoader.GetTokenOutputs(transfer.TokenIDs)
 		if err != nil {
 			return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 		}
+		logger.Debugf("[%s] transfer action [%d] contains [%d] inputs, loaded corresponding inputs [%d]", txID, i, len(transfer.TokenIDs), len(inputs))
 		inputTokens = append(inputTokens, inputs)
 	}
 

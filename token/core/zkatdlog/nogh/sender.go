@@ -110,10 +110,13 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 	// audit info for senders
 	var senderAuditInfos [][]byte
-	for _, t := range tokens {
+	for i, t := range tokens {
 		auditInfo, err := htlc.GetOwnerAuditInfo(t.Owner, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
+		}
+		if len(auditInfo) == 0 {
+			logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i].String(), view.Identity(t.Owner))
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo)
 	}
@@ -128,6 +131,8 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		_, err := s.OwnerWalletByID(receiver)
 		receiverIsSender[i] = err == nil
 	}
+
+	logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(ids), len(senderAuditInfos), len(outputs))
 
 	metadata := &driver.TransferMetadata{
 		Outputs:            outputs,

@@ -114,9 +114,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
 	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
-		fmt.Printf("Got errors [%v]", errs)
-		if len(errs) != 4 {
-			return errors.Errorf("expected 4 errors, got [%d]", len(errs))
+		if len(errs) != 2 {
+			return errors.Errorf("expected 2 errors, got [%d][%v][%s]", len(errs), errs, failedClaimTXID)
 		}
 		for _, err := range errs {
 			if strings.Contains(err, failedClaimTXID) {
@@ -141,19 +140,19 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
 	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
 		fmt.Printf("Got errors [%v]", errs)
-		if len(errs) != 12 {
-			return errors.Errorf("expected 12 errors, got [%d]", len(errs))
+		if len(errs) != 6 {
+			return errors.Errorf("expected 6 errors, got [%d]", len(errs))
 		}
-		for _, err := range errs[:4] {
+		for _, err := range errs[:2] {
 			if strings.Contains(err, failedClaimTXID) {
 				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
 			}
 		}
 		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.Pending)
-		if errs[4] != firstError {
+		if errs[2] != firstError {
 			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
 		}
-		for _, err := range errs[4:] {
+		for _, err := range errs[2:] {
 			if !strings.Contains(err, failedLockTXID) {
 				return errors.Errorf("[%s] does not contain [%s]", err, failedLockTXID)
 			}

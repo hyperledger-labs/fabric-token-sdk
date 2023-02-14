@@ -463,6 +463,10 @@ func (n *Network) Ledger(namespace string) (*Ledger, error) {
 	return &Ledger{l: l}, nil
 }
 
+func (n *Network) ProcessNamespace(namespace string) error {
+	return n.n.ProcessNamespace(namespace)
+}
+
 // Provider returns an instance of network provider
 type Provider struct {
 	sp view2.ServiceProvider

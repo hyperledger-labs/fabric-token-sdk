@@ -1065,7 +1065,7 @@ token:
   tms:
     - channel: testchannel # Channel identifier within the specified network
       namespace: zkat # Namespace identifier within the specified channel
-      # Network identifier this TMS refers to. It must match the identifier of a Fabric or Orion netowkr
+      # Network identifier this TMS refers to. It must match the identifier of a Fabric or Orion network
       network: default
       # Wallets associated with this TMS
       wallets:
