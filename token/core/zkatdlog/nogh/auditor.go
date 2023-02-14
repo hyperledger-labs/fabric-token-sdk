@@ -24,7 +24,7 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 		if err != nil {
 			return errors.Wrapf(err, "failed getting token outputs to perform auditor check")
 		}
-		logger.Debugf("[%s] transfer action [%d] contains [%d] inputs, loaded corresponding outputs [%d]", txID, i, len(transfer.TokenIDs), len(inputs))
+		logger.Debugf("[%s] transfer action [%d] contains [%d] inputs, loaded corresponding inputs [%d]", txID, i, len(transfer.TokenIDs), len(inputs))
 		inputTokens = append(inputTokens, inputs)
 	}
 
