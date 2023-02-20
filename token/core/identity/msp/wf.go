@@ -74,7 +74,7 @@ func NewWalletFactory(
 }
 
 // NewIdemixWallet creates a new Idemix wallet
-func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole) (identity.Wallet, error) {
+func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int) (identity.Wallet, error) {
 	identities, err := f.ConfigFor(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -93,6 +93,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole) (identity.Wall
 		dm,
 		kvs.GetService(f.SP),
 		RoleToMSPID[role],
+		cacheSize,
 	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")

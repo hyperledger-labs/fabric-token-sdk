@@ -39,6 +39,7 @@ type LocalMembership struct {
 	deserializerManager    common.DeserializerManager
 	kvs                    common.KVS
 	mspID                  string
+	cacheSize              int
 
 	resolversMutex          sync.RWMutex
 	resolvers               []*common.Resolver
@@ -55,6 +56,7 @@ func NewLocalMembership(
 	deserializerManager common.DeserializerManager,
 	kvs common.KVS,
 	mspID string,
+	cacheSize int,
 ) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
@@ -65,6 +67,7 @@ func NewLocalMembership(
 		deserializerManager:     deserializerManager,
 		kvs:                     kvs,
 		mspID:                   mspID,
+		cacheSize:               cacheSize,
 		resolversByEnrollmentID: map[string]*common.Resolver{},
 		resolversByName:         map[string]*common.Resolver{},
 	}
@@ -191,7 +194,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 
 	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, cacheSize).Identity)
-	logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), DefaultCacheSize)
+	logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), cacheSize)
 	return nil
 }
 
@@ -263,9 +266,9 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 		}
 	}
 
-	logger.Debugf("cache size for %s not configured, using default (%d)", id, DefaultCacheSize)
+	logger.Debugf("cache size for %s not configured, using default (%d)", id, lm.cacheSize)
 
-	return DefaultCacheSize, nil
+	return lm.cacheSize, nil
 }
 
 func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {

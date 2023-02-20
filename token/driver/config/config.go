@@ -6,6 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package config
 
+const (
+	DefaultCacheSize = 3
+)
+
 type InteractiveCertification struct {
 	IDs []string `yaml:"ids,omitempty"`
 }
@@ -27,10 +31,11 @@ func (i *Identity) String() string {
 }
 
 type Wallets struct {
-	Certifiers []*Identity `yaml:"certifiers,omitempty"`
-	Owners     []*Identity `yaml:"owners,omitempty"`
-	Issuers    []*Identity `yaml:"issuers,omitempty"`
-	Auditors   []*Identity `yaml:"auditors,omitempty"`
+	DefaultCacheSize int         `yaml:"DefaultCacheSize,omitempty"`
+	Certifiers       []*Identity `yaml:"certifiers,omitempty"`
+	Owners           []*Identity `yaml:"owners,omitempty"`
+	Issuers          []*Identity `yaml:"issuers,omitempty"`
+	Auditors         []*Identity `yaml:"auditors,omitempty"`
 }
 
 type TMS struct {
@@ -56,6 +61,13 @@ func (t *TMS) GetOwnerWallet(id string) *Identity {
 		}
 	}
 	return nil
+}
+
+func (t *TMS) GetWalletDefaultCacheSize() int {
+	if t.Wallets == nil {
+		return DefaultCacheSize
+	}
+	return t.Wallets.DefaultCacheSize
 }
 
 type Manager interface {

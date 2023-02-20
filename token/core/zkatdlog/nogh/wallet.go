@@ -232,9 +232,10 @@ func newOwnerWallet(tokenService *Service, id string, identityInfo driver.Identi
 	tokenService.OwnerWalletsRegistry.RegisterWallet(id, w)
 
 	cacheSize := 0
-	conf := tokenService.ConfigManager().TMS().GetOwnerWallet(id)
+	tmsConfig := tokenService.ConfigManager().TMS()
+	conf := tmsConfig.GetOwnerWallet(id)
 	if conf == nil {
-		cacheSize = idemix.DefaultCacheSize
+		cacheSize = tmsConfig.GetWalletDefaultCacheSize()
 	} else {
 		cacheSize = conf.CacheSize
 	}

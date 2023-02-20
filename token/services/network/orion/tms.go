@@ -22,10 +22,11 @@ type Identity struct {
 }
 
 type Wallets struct {
-	Certifiers []*Identity `yaml:"certifiers,omitempty"`
-	Owners     []*Identity `yaml:"owners,omitempty"`
-	Issuers    []*Identity `yaml:"issuers,omitempty"`
-	Auditors   []*Identity `yaml:"auditors,omitempty"`
+	DefaultCacheSize int         `yaml:"DefaultCacheSize,omitempty"`
+	Certifiers       []*Identity `yaml:"certifiers,omitempty"`
+	Owners           []*Identity `yaml:"owners,omitempty"`
+	Issuers          []*Identity `yaml:"issuers,omitempty"`
+	Auditors         []*Identity `yaml:"auditors,omitempty"`
 }
 
 type Orion struct {
