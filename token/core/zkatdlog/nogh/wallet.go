@@ -230,8 +230,17 @@ func newOwnerWallet(tokenService *Service, id string, identityInfo driver.Identi
 		identityInfo: identityInfo,
 	}
 	tokenService.OwnerWalletsRegistry.RegisterWallet(id, w)
-	w.cache = idemix.NewWalletIdentityCache(w.getRecipientIdentity, idemix.DefaultCacheSize)
-	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), idemix.DefaultCacheSize)
+
+	cacheSize := 0
+	conf := tokenService.ConfigManager().TMS().GetOwnerWallet(id)
+	if conf == nil {
+		cacheSize = idemix.DefaultCacheSize
+	} else {
+		cacheSize = conf.CacheSize
+	}
+
+	w.cache = idemix.NewWalletIdentityCache(w.getRecipientIdentity, cacheSize)
+	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w
 }
 

@@ -42,6 +42,22 @@ type TMS struct {
 	Wallets       *Wallets       `yaml:"wallets,omitempty"`
 }
 
+func (t *TMS) GetOwnerWallet(id string) *Identity {
+	if t.Wallets == nil {
+		return nil
+	}
+	owners := t.Wallets.Owners
+	if len(owners) == 0 {
+		return nil
+	}
+	for _, owner := range owners {
+		if owner.ID == id {
+			return owner
+		}
+	}
+	return nil
+}
+
 type Manager interface {
 	TMS() *TMS
 	TranslatePath(path string) string
