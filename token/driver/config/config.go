@@ -31,7 +31,7 @@ func (i *Identity) String() string {
 }
 
 type Wallets struct {
-	DefaultCacheSize int         `yaml:"DefaultCacheSize,omitempty"`
+	DefaultCacheSize int         `yaml:"defaultCacheSize,omitempty"`
 	Certifiers       []*Identity `yaml:"certifiers,omitempty"`
 	Owners           []*Identity `yaml:"owners,omitempty"`
 	Issuers          []*Identity `yaml:"issuers,omitempty"`

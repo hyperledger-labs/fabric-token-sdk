@@ -17,7 +17,9 @@ token:
       # from the remote network
       driver: zkatdlog 
       # sections dedicated to the definition of the wallets 
-      wallets: 
+      wallets:
+        # Default cache size reference that can be used by any wallet that support caching
+        defaultCacheSize: 3
         # owner wallets
         owners:
         - id: alice # the unique identifier of this wallet. Here is an example of use: `ttx.GetWallet(context, "alice")` 
@@ -25,6 +27,8 @@ token:
           # path to the folder containing the cryptographic material associated to wallet.
           # The content of the folder is driver dependent
           path:  /path/to/alice-wallet
+          # Cache size, in case the wallet supports caching (e.g. idemix-based wallet)
+          cacheSize: 3
         - id: alice.id1
           path: /path/to/alice.id1-wallet
         # issuer wallets

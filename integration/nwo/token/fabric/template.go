@@ -27,7 +27,7 @@ token:
       {{ if Wallets }}
       # Wallets associated with this TMS
       wallets:
-        DefaultCacheSize: 3
+        defaultCacheSize: 3
         {{ if Wallets.Certifiers }}
         # Certifiers wallets are used to certify tokens
         certifiers: {{ range Wallets.Certifiers }}
