@@ -6,6 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package config
 
+const (
+	DefaultCacheSize = 3
+)
+
 type InteractiveCertification struct {
 	IDs []string `yaml:"ids,omitempty"`
 }
@@ -27,10 +31,11 @@ func (i *Identity) String() string {
 }
 
 type Wallets struct {
-	Certifiers []*Identity `yaml:"certifiers,omitempty"`
-	Owners     []*Identity `yaml:"owners,omitempty"`
-	Issuers    []*Identity `yaml:"issuers,omitempty"`
-	Auditors   []*Identity `yaml:"auditors,omitempty"`
+	DefaultCacheSize int         `yaml:"defaultCacheSize,omitempty"`
+	Certifiers       []*Identity `yaml:"certifiers,omitempty"`
+	Owners           []*Identity `yaml:"owners,omitempty"`
+	Issuers          []*Identity `yaml:"issuers,omitempty"`
+	Auditors         []*Identity `yaml:"auditors,omitempty"`
 }
 
 type TMS struct {
@@ -40,6 +45,29 @@ type TMS struct {
 	Driver        string         `yaml:"driver,omitempty"`
 	Certification *Certification `yaml:"certification,omitempty"`
 	Wallets       *Wallets       `yaml:"wallets,omitempty"`
+}
+
+func (t *TMS) GetOwnerWallet(id string) *Identity {
+	if t.Wallets == nil {
+		return nil
+	}
+	owners := t.Wallets.Owners
+	if len(owners) == 0 {
+		return nil
+	}
+	for _, owner := range owners {
+		if owner.ID == id {
+			return owner
+		}
+	}
+	return nil
+}
+
+func (t *TMS) GetWalletDefaultCacheSize() int {
+	if t.Wallets == nil {
+		return DefaultCacheSize
+	}
+	return t.Wallets.DefaultCacheSize
 }
 
 type Manager interface {
