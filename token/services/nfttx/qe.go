@@ -10,7 +10,7 @@ import (
 	"encoding/base64"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -45,7 +45,7 @@ func NewQueryExecutor(sp view.ServiceProvider, wallet string, precision uint64, 
 			wallet,
 			qe,
 			tms.PublicParametersManager().Precision(),
-			metrics.Get(sp),
+			tracing.Get(sp).GetTracer(),
 		),
 		vault:     qe,
 		precision: precision,

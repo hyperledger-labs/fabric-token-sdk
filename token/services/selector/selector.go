@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package selector
 
 import (
-	"strconv"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -34,9 +35,7 @@ type Locker interface {
 	IsLocked(id *token2.ID) bool
 }
 
-type MetricsAgent interface {
-	EmitKey(val float32, event ...string)
-}
+type Tracer tracing.Tracer
 
 type selector struct {
 	txID         string
@@ -48,7 +47,7 @@ type selector struct {
 	timeout              time.Duration
 	requestCertification bool
 
-	metricsAgent MetricsAgent
+	tracer Tracer
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
@@ -74,8 +73,8 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate UUID")
 	}
-	s.metricsAgent.EmitKey(0, "selector", "start", "selectByID", uuid)
-	defer s.metricsAgent.EmitKey(0, "selector", "end", "selectByID", uuid)
+	s.tracer.Start("selector.selectByID" + uuid)
+	defer s.tracer.End("selector.selectByID" + uuid)
 
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
@@ -152,8 +151,6 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				break
 			}
 		}
-
-		s.metricsAgent.EmitKey(0, "selector", "count", "selectByIDNumNext", uuid+strconv.Itoa(i), strconv.Itoa(numNext))
 
 		concurrencyIssue := false
 		if target.Cmp(sum) <= 0 {

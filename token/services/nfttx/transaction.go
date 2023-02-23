@@ -68,6 +68,10 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("received transaction with id [%s]", cctx.ID())
 	}
+	// Check that the transaction is valid
+	if err := cctx.IsValid(); err != nil {
+		return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
+	}
 
 	return &Transaction{Transaction: cctx}, nil
 }

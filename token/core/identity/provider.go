@@ -138,12 +138,22 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	}
 
 	// give it a second chance
+
+	// is the identity wrapped in RawOwner?
 	ro, err2 := UnmarshallRawOwner(identity)
 	if err2 != nil {
+		// No
+		signer, err := p.tryDeserialization(identity)
+		if err == nil {
+			found = true
+			return signer, nil
+		}
+
 		found = false
-		return nil, errors.Wrapf(err, "failed to unmarshal raw owner for identity [%s]", identity.String())
+		return nil, errors.Wrapf(err2, "failed to unmarshal raw owner for identity [%s] and failed deserialization [%s]", identity.String(), err)
 	}
 
+	// yes, check ro.Identity
 	signer, err = view2.GetSigService(p.sp).GetSigner(ro.Identity)
 	if err == nil {
 		found = true
@@ -152,12 +162,10 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 	// give it a third chance
 	// deserializer using the provider's deserializers
-	for _, d := range p.deserializers {
-		signer, err = d.DeserializeSigner(ro.Identity)
-		if err == nil {
-			found = true
-			return signer, nil
-		}
+	signer, err = p.tryDeserialization(ro.Identity)
+	if err == nil {
+		found = true
+		return signer, nil
 	}
 
 	return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
@@ -231,6 +239,16 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 
 func (p *Provider) AddDeserializer(d Deserializer) {
 	p.deserializers = append(p.deserializers, d)
+}
+
+func (p *Provider) tryDeserialization(id view.Identity) (driver.Signer, error) {
+	for _, d := range p.deserializers {
+		signer, err := d.DeserializeSigner(id)
+		if err == nil {
+			return signer, nil
+		}
+	}
+	return nil, errors.Errorf("deserialization failed")
 }
 
 // Info wraps a driver.IdentityInfo to further register the audit info,

@@ -23,7 +23,7 @@ type AuditView struct{}
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
-	tx, err := ttx.ReceiveTransaction(context)
+	tx, err := ttx.ReceiveTransaction(context, ttx.WithNoTransactionVerification())
 
 	assert.NoError(err, "failed receiving transaction")
 	logger.Debugf("AuditView: [%s]", tx.ID())

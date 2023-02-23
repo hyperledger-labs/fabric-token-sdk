@@ -9,7 +9,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -40,10 +39,6 @@ func NewFinalityWithTimeoutView(tx *Transaction, timeout time.Duration) *finalit
 // The view does the following: It waits for the finality of the passed transaction.
 // If the transaction is final, the vault is updated.
 func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
-	agent := metrics.Get(ctx)
-	agent.EmitKey(0, "ttx", "start", "finalityView", f.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "finalityView", f.tx.ID())
-
 	if len(f.endpoints) != 0 {
 		return nil, network.GetInstance(ctx, f.tx.Network(), f.tx.Channel()).IsFinalForParties(f.tx.ID(), f.endpoints...)
 	}

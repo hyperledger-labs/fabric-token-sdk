@@ -36,7 +36,7 @@ var _ = Describe("Orion EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor")
+			fungible.TestAll(network, "auditor", nil)
 		})
 	})
 

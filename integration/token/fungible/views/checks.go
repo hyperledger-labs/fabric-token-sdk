@@ -132,6 +132,8 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
+		case vc == network.Busy && lVC == network.Busy:
+			// this is fine, let's continue
 		case vc == network.Busy && lVC != network.Unknown:
 			if err != nil {
 				errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))

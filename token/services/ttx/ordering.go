@@ -9,7 +9,6 @@ package ttx
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
@@ -31,10 +30,6 @@ func NewOrderingView(tx *Transaction) *orderingView {
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "orderingView", o.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "orderingView", o.tx.ID())
-
 	if o.tx.Payload.Envelope == nil {
 		return nil, errors.Errorf("envelope is nil for token transaction [%s]", o.tx.ID())
 	}
@@ -43,7 +38,7 @@ func (o *orderingView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("txID is empty for token transaction [%s]", o.tx.ID())
 	}
 
-	if err := network.GetInstance(context, o.tx.Network(), "").Broadcast(o.tx.Payload.Envelope); err != nil {
+	if err := network.GetInstance(context, o.tx.Network(), o.tx.Channel()).Broadcast(context.Context(), o.tx.Payload.Envelope); err != nil {
 		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 	return nil, nil
@@ -77,10 +72,6 @@ func NewOrderingAndFinalityWithTimeoutView(tx *Transaction, timeout time.Duratio
 // 2. It waits for finality of the token transaction.
 // It returns in case the operation is not completed before the passed timeout.
 func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
-	agent := metrics.Get(ctx)
-	agent.EmitKey(0, "ttx", "start", "orderingAndFinalityView", o.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "orderingAndFinalityView", o.tx.ID())
-
 	nw := network.GetInstance(ctx, o.tx.Network(), o.tx.Channel())
 	if nw == nil {
 		return nil, errors.Errorf("network [%s] not found", o.tx.Network())
@@ -109,7 +100,7 @@ func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
 		}
 	}
 
-	if err := nw.Broadcast(env); err != nil {
+	if err := nw.Broadcast(ctx.Context(), env); err != nil {
 		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 

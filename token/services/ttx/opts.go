@@ -12,10 +12,11 @@ import (
 )
 
 type TxOptions struct {
-	Auditor   view.Identity
-	Network   string
-	Channel   string
-	Namespace string
+	Auditor                   view.Identity
+	Network                   string
+	Channel                   string
+	Namespace                 string
+	NoTransactionVerification bool
 }
 
 func compile(opts ...TxOption) (*TxOptions, error) {
@@ -74,6 +75,13 @@ func WithTMSID(id token.TMSID) TxOption {
 		o.Network = id.Network
 		o.Channel = id.Channel
 		o.Namespace = id.Namespace
+		return nil
+	}
+}
+
+func WithNoTransactionVerification() TxOption {
+	return func(o *TxOptions) error {
+		o.NoTransactionVerification = true
 		return nil
 	}
 }

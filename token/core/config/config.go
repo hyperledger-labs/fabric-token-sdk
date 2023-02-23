@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
+	"sync"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 )
@@ -50,6 +52,9 @@ func (m *TMS) IsSet(key string) bool {
 // TokenSDK is the configuration of the TokenSDK
 type TokenSDK struct {
 	cp configProvider
+
+	tmsConfigsLock sync.RWMutex
+	tmsConfigs     map[string]*config.TMS
 }
 
 // NewTokenSDK creates a new TokenSDK configuration.
@@ -113,6 +118,23 @@ func (m *TokenSDK) GetTMSs() ([]*TMS, error) {
 }
 
 func (m *TokenSDK) tmss() (map[string]*config.TMS, error) {
+	// check if available
+	m.tmsConfigsLock.RLock()
+	if m.tmsConfigs != nil {
+		m.tmsConfigsLock.RUnlock()
+		return m.tmsConfigs, nil
+	}
+	m.tmsConfigsLock.RUnlock()
+
+	m.tmsConfigsLock.Lock()
+	defer m.tmsConfigsLock.Unlock()
+
+	// check again
+	if m.tmsConfigs != nil {
+		return m.tmsConfigs, nil
+	}
+
+	//load
 	var boxedConfig map[interface{}]interface{}
 	if err := m.cp.UnmarshalKey("token.tms", &boxedConfig); err != nil {
 		return nil, errors.WithMessagef(err, "cannot load token-sdk configurations")
@@ -127,5 +149,6 @@ func (m *TokenSDK) tmss() (map[string]*config.TMS, error) {
 		}
 		tmsConfigs[id] = tmsConfig
 	}
-	return tmsConfigs, nil
+	m.tmsConfigs = tmsConfigs
+	return m.tmsConfigs, nil
 }

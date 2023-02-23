@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package nfttx
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -27,23 +28,21 @@ type QueryService interface {
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
 
-type MetricsAgent interface {
-	EmitKey(val float32, event ...string)
-}
+type Tracer tracing.Tracer
 
 type filter struct {
 	wallet       string
 	queryService QueryService
 	precision    uint64
-	metricsAgent MetricsAgent
+	tracer       Tracer
 }
 
-func NewFilter(wallet string, service QueryService, precision uint64, metricsAgent MetricsAgent) *filter {
+func NewFilter(wallet string, service QueryService, precision uint64, tracer Tracer) *filter {
 	return &filter{
 		wallet:       wallet,
 		queryService: service,
 		precision:    precision,
-		metricsAgent: metricsAgent,
+		tracer:       tracer,
 	}
 }
 
