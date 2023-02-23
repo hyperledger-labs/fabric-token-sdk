@@ -71,8 +71,6 @@ type TokenChaincode struct {
 
 	MetricsEnabled bool
 	MetricsServer  string
-	MetricsLock    sync.Mutex
-	MetricsAgent   Agent
 }
 
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -212,23 +210,18 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 }
 
 func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInterface) pb.Response {
-	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	validator, err := cc.GetValidator(Params)
-	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestGetValidator", stub.GetTxID())
 	if err != nil {
 		return shim.Error(err.Error())
 	}
 
 	// Verify
-	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 	actions, err := validator.UnmarshallAndVerify(stub, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
-	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequestUnmarshallAndVerify", stub.GetTxID())
 
 	// Write
-	cc.MetricsAgent.EmitKey(0, "tcc", "start", "TokenChaincodeProcessRequestWrite", stub.GetTxID())
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	for _, action := range actions {
@@ -241,7 +234,6 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())
 	}
-	cc.MetricsAgent.EmitKey(0, "tcc", "end", "TokenChaincodeProcessRequest", stub.GetTxID())
 
 	return shim.Success(nil)
 }

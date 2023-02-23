@@ -34,15 +34,15 @@ type filter struct {
 	wallet       string
 	queryService QueryService
 	precision    uint64
-	metricsAgent Tracer
+	tracer       Tracer
 }
 
-func NewFilter(wallet string, service QueryService, precision uint64, metricsAgent Tracer) *filter {
+func NewFilter(wallet string, service QueryService, precision uint64, tracer Tracer) *filter {
 	return &filter{
 		wallet:       wallet,
 		queryService: service,
 		precision:    precision,
-		metricsAgent: metricsAgent,
+		tracer:       tracer,
 	}
 }
 

@@ -47,7 +47,7 @@ type selector struct {
 	timeout              time.Duration
 	requestCertification bool
 
-	metricsAgent Tracer
+	tracer Tracer
 }
 
 // Select selects tokens to be spent based on ownership, quantity, and type
@@ -73,8 +73,8 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to generate UUID")
 	}
-	s.metricsAgent.Start("selector.selectByID" + uuid)
-	defer s.metricsAgent.End("selector.selectByID" + uuid)
+	s.tracer.Start("selector.selectByID" + uuid)
+	defer s.tracer.End("selector.selectByID" + uuid)
 
 	var toBeSpent []*token2.ID
 	var sum token2.Quantity
