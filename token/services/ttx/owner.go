@@ -54,6 +54,12 @@ func (a *txOwner) SetStatus(txID string, status TxStatus) error {
 	return a.owner.SetStatus(txID, status)
 }
 
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (a *txOwner) GetStatus(txID string) (TxStatus, error) {
+	return a.owner.GetStatus(txID)
+}
+
 func (a *txOwner) appendTransactionEndorseAck(tx *Transaction, id view.Identity, sigma []byte) error {
 	k := kvs.GetService(a.sp)
 	ackKey, err := kvs.CreateCompositeKey(EndorsementAckPrefix, []string{tx.ID(), id.UniqueID()})

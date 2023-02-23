@@ -40,7 +40,7 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),

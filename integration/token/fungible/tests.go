@@ -206,8 +206,10 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 	},
 }
 
-func TestAll(network *integration.Infrastructure, auditor string) {
-	RegisterAuditor(network, auditor)
+type OnAuditorRestartFunc = func(*integration.Infrastructure, string)
+
+func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc) {
+	RegisterAuditor(network, auditor, nil)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
@@ -239,7 +241,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
 	Restart(network, true, auditor)
-	RegisterAuditor(network, auditor)
+	RegisterAuditor(network, auditor, onAuditorRestart)
 
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120, auditor)
@@ -376,7 +378,7 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	// Restart the auditor
 	Restart(network, true, auditor)
-	RegisterAuditor(network, auditor)
+	RegisterAuditor(network, auditor, onAuditorRestart)
 
 	CheckBalanceAndHolding(network, "issuer", "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150, auditor)
@@ -405,20 +407,20 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	Restart(network, true, "bob")
 	Restart(network, false, auditor)
-	RegisterAuditor(network, auditor)
+	RegisterAuditor(network, auditor, onAuditorRestart)
 	CheckBalance(network, "bob", "", "PINE", 0)
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	CheckOwnerDB(network, nil, "bob")
-	BroadcastPreparedTransferCash(network, "alice", tx1, true)
+	BroadcastPreparedTransferCash(network, "alice", txID1, tx1, true)
 	Expect(network.Client("bob").IsTxFinal(txID1)).NotTo(HaveOccurred())
 	Expect(network.Client(auditor).IsTxFinal(txID1)).NotTo(HaveOccurred())
 	CheckBalance(network, "alice", "", "PINE", 0)
 	CheckHolding(network, "alice", "", "PINE", -55, auditor)
 	CheckBalance(network, "bob", "", "PINE", 55)
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
-	BroadcastPreparedTransferCash(network, "alice", tx2, true, "is not valid")
+	BroadcastPreparedTransferCash(network, "alice", txID2, tx2, true, "is not valid")
 	Expect(network.Client("bob").IsTxFinal(txID2)).To(HaveOccurred())
 	Expect(network.Client(auditor).IsTxFinal(txID2)).To(HaveOccurred())
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0, auditor)
@@ -669,19 +671,19 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	var errorMessage string
 	if issuerAsAuditor {
 		errorMessage = "failed verifying auditor signature"
-		RegisterAuditor(network, "issuer")
+		RegisterAuditor(network, "issuer", nil)
 		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
 	} else {
 		errorMessage = "failed to verify issuers' signatures"
-		RegisterAuditor(network, "auditor")
+		RegisterAuditor(network, "auditor", nil)
 		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
 		Expect(txId).NotTo(BeEmpty())
 		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
 	}
 
-	RegisterAuditor(network, auditor)
+	RegisterAuditor(network, auditor, nil)
 	UpdatePublicParams(network, ppBytes, tms)
 
 	Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))

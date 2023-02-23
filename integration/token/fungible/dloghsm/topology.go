@@ -76,7 +76,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 			token.WithAuditorIdentityWithHSM(),
 			fsc.WithAlias("auditor"),
 		)
-		issuer.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+		issuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 		issuer.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		issuer.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		issuer.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})
@@ -91,7 +91,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentityWithHSM(),
 		)
-		auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+		auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 		auditor.RegisterViewFactory("spending", &views.CurrentSpendingViewFactory{})

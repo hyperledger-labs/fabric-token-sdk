@@ -28,7 +28,7 @@ func RegisterAuditor(network *integration.Infrastructure, opts ...token.ServiceO
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
-	_, err = network.Client("auditor").CallView("register", common.JSONMarshall(&views2.RegisterAuditor{
+	_, err = network.Client("auditor").CallView("registerAuditor", common.JSONMarshall(&views2.RegisterAuditor{
 		TMSID: options.TMSID(),
 	}))
 	Expect(err).NotTo(HaveOccurred())

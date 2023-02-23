@@ -53,6 +53,8 @@ const (
 type TxStatus string
 
 const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown TxStatus = "Unknown"
 	// Pending is the status of a transaction that has been submitted to the ledger
 	Pending TxStatus = "Pending"
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
@@ -193,6 +195,10 @@ type TokenTransactionDB interface {
 
 	// SetStatus sets the status of a transaction
 	SetStatus(txID string, status TxStatus) error
+
+	// GetStatus returns the status of a given transaction.
+	// It returns an error if the transaction is not found
+	GetStatus(txID string) (TxStatus, error)
 
 	// AddMovement adds a movement record to the database.
 	// Each token transaction can be seen as a list of movements.

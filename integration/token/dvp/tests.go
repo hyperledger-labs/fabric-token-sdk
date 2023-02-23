@@ -39,7 +39,7 @@ func TestAll(network *integration.Infrastructure) {
 }
 
 func registerAuditor(network *integration.Infrastructure) {
-	_, err := network.Client("auditor").CallView("register", nil)
+	_, err := network.Client("auditor").CallView("registerAuditor", nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 

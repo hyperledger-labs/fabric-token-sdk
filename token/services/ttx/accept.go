@@ -9,7 +9,6 @@ package ttx
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -24,10 +23,6 @@ func NewAcceptView(tx *Transaction) *acceptView {
 }
 
 func (s *acceptView) Call(context view.Context) (interface{}, error) {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "acceptView", s.tx.ID())
-	defer agent.EmitKey(0, "ttx", "end", "acceptView", s.tx.ID())
-
 	var err error
 	rawRequest, err := s.tx.Bytes()
 	if err != nil {
@@ -40,12 +35,10 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Store transient
-	agent.EmitKey(0, "ttx", "start", "acceptViewStoreTransient", s.tx.ID())
 	err = s.tx.storeTransient()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed storing transient")
 	}
-	agent.EmitKey(0, "ttx", "end", "acceptViewStoreTransient", s.tx.ID())
 
 	// Store envelope
 	if err := StoreEnvelope(context, s.tx); err != nil {
@@ -80,7 +73,12 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.WithMessage(err, "failed sending ack")
 	}
 
-	agent.EmitKey(0, "ttx", "sent", "txAck", s.tx.ID())
+	labels := []string{
+		"network", s.tx.Network(),
+		"channel", s.tx.Channel(),
+		"namespace", s.tx.Namespace(),
+	}
+	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
 
 	return s.tx, nil
 }

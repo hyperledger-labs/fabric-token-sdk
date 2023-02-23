@@ -51,7 +51,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
 	// issuers
 	fscTopology.AddNodeByName("cash_issuer").AddOptions(

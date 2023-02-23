@@ -175,6 +175,16 @@ func (p *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	return nil
 }
 
+func (p *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
+	// transactions
+	for _, record := range p.transactionRecords {
+		if record.TxID == txID {
+			return record.Status, nil
+		}
+	}
+	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
+}
+
 func (p *Persistence) Close() error {
 	return nil
 }

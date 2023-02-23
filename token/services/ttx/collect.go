@@ -175,6 +175,11 @@ func (r *receiveActionsView) Call(context view.Context) (interface{}, error) {
 	}
 	cctx := txBoxed.(*Transaction)
 
+	// Check that the transaction is valid
+	if err := cctx.IsValid(); err != nil {
+		return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
+	}
+
 	// actions
 	payload, err := session2.ReadMessageWithTimeout(context.Session(), 120*time.Second)
 	if err != nil {
