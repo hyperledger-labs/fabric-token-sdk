@@ -26,14 +26,16 @@ token:
           - {{ . }}{{ end }}{{ end }}
       {{ if Wallets }}
       # Wallets associated with this TMS
-      wallets:{{ if Wallets.Certifiers }}
+      wallets:
+        defaultCacheSize: 3
+        {{ if Wallets.Certifiers }}
         # Certifiers wallets are used to certify tokens
         certifiers: {{ range Wallets.Certifiers }}
         - id: {{ .ID }}
           default: {{ .Default }}
           path: {{ .Path }}
         {{ end }}
-      {{ end }}{{ if Wallets.Issuers }}
+        {{ end }}{{ if Wallets.Issuers }}
         # Issuers wallets are used to issue tokens
         issuers: {{ range Wallets.Issuers }}
         - id: {{ .ID }}

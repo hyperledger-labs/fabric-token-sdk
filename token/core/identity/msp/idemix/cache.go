@@ -46,9 +46,11 @@ func (c *IdentityCache) Identity(opts *driver2.IdentityOptions) (view.Identity, 
 	}
 
 	c.once.Do(func() {
-		// Spin up as many background goroutines as we need to prepare identities in the background.
-		for i := 0; i < runtime.NumCPU(); i++ {
-			go c.provisionIdentities()
+		if cap(c.cache) > 0 {
+			// Spin up as many background goroutines as we need to prepare identities in the background.
+			for i := 0; i < runtime.NumCPU(); i++ {
+				go c.provisionIdentities()
+			}
 		}
 	})
 
@@ -65,16 +67,11 @@ func (c *IdentityCache) fetchIdentityFromCache(opts *driver2.IdentityOptions) (v
 	var audit []byte
 
 	var start time.Time
-
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		start = time.Now()
 	}
 
-	timeout := time.NewTimer(time.Second)
-	defer timeout.Stop()
-
 	select {
-
 	case entry := <-c.cache:
 		identity = entry.Identity
 		audit = entry.Audit
@@ -82,8 +79,7 @@ func (c *IdentityCache) fetchIdentityFromCache(opts *driver2.IdentityOptions) (v
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("fetching identity from cache [%s][%d] took %v", identity, len(audit), time.Since(start))
 		}
-
-	case <-timeout.C:
+	default:
 		id, a, err := c.backed(opts)
 		if err != nil {
 			return nil, nil, err
@@ -139,22 +135,20 @@ func NewWalletIdentityCache(backed WalletIdentityCacheBackendFunc, size int) *Wa
 		ch:      make(chan view.Identity, size),
 		timeout: time.Millisecond * 100,
 	}
-	go ci.run()
-
+	if size > 0 {
+		go ci.run()
+	}
 	return ci
 }
 
 func (c *WalletIdentityCache) Identity() (view.Identity, error) {
-	timeout := time.NewTimer(c.timeout)
-	defer timeout.Stop()
-
 	select {
 	case entry := <-c.ch:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("fetch identity from producer channel done [%s][%d]", entry)
 		}
 		return entry, nil
-	case <-timeout.C:
+	default:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("fetch identity from producer channel timeout")
 		}

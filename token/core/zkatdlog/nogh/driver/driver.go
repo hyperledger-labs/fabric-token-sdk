@@ -63,7 +63,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		msp.NewSigService(view.GetSigService(sp)),      // signer service
 		view.GetEndpointService(sp),                    // endpoint service
 	)
-	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole)
+	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize())
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner wallet")
 	}
