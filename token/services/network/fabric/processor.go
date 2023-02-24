@@ -76,7 +76,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	}
 }
 
-//init when invoked extracts the public params from rwset and updates the local version
+// init when invoked extracts the public params from rwset and updates the local version
 func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
 	tms := token.GetManagementService(
 		r.sp,

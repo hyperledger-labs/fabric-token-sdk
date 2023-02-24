@@ -174,7 +174,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		index := 0
 		assert.NoError(v.TokenVault().QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
-				errorMessages = append(errorMessages, fmt.Sprintf("[ow:%s] token content do not match at [%d], [%s]!=[%s]",
+				errorMessages = append(errorMessages, fmt.Sprintf("[ow:%s] token content does not match at [%d], [%s]!=[%s]",
 					defaultOwnerWallet.ID(),
 					index,
 					hash.Hashable(ledgerTokenContent[index]), hash.Hashable(tokenRaw)))
