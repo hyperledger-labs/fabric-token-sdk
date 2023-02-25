@@ -68,14 +68,16 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 		)
 	} else {
 		ons := orion.GetOrionNetworkService(v.sp, network)
-		if ons != nil {
-			res = vault.New(
-				v.sp,
-				"",
-				namespace,
-				orion2.NewVault(ons, tokenStore),
-			)
+		if ons == nil {
+			return nil, errors.Errorf("cannot find network [%s]", network)
 		}
+
+		res = vault.New(
+			v.sp,
+			"",
+			namespace,
+			orion2.NewVault(ons, tokenStore),
+		)
 	}
 
 	// update cache

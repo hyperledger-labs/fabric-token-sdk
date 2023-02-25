@@ -66,7 +66,7 @@ func (s *Signer) KeyGen(length int) error {
 }
 
 // NewSigner returns a Signer as function of an array of secret keys
-//and the corresponding array of public keys
+// and the corresponding array of public keys
 func NewSigner(SK []*math.Zr, PK []*math.G2, Q *math.G2, c *math.Curve) *Signer {
 	return &Signer{SK: SK, SignVerifier: NewVerifier(PK, Q, c)}
 }

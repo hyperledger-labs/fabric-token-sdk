@@ -172,10 +172,9 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 
 // Cmp compares x and y and returns:
 //
-//   -1 if x <  y
-//    0 if x == y
-//   +1 if x >  y
-//
+//	-1 if x <  y
+//	 0 if x == y
+//	+1 if x >  y
 func (q *BigQuantity) Cmp(b Quantity) int {
 	bq, ok := b.(*BigQuantity)
 	if !ok {
