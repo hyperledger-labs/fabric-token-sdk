@@ -192,7 +192,7 @@ type WellFormednessVerifier struct {
 	Anonymous bool
 }
 
-//NewWellFormednessVerifier returns a WellFormednessVerifier corresponding to the passed parameters
+// NewWellFormednessVerifier returns a WellFormednessVerifier corresponding to the passed parameters
 func NewWellFormednessVerifier(tokens []*math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *WellFormednessVerifier {
 	return &WellFormednessVerifier{
 		Tokens:    tokens,

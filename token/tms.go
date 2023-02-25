@@ -285,7 +285,8 @@ func (t *ManagementService) init() error {
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
 	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
 	if err != nil {
-		panic(err)
+		logger.Warnf("failed to get token manager service [%s]", err)
+		return nil
 	}
 	return ms
 }
