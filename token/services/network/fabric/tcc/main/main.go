@@ -58,8 +58,12 @@ func main() {
 		}
 		err := shim.Start(
 			&tcc.TokenChaincode{
-				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
-					return token.NewServicesFromPublicParams(bytes)
+				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
+					ppm, v, err := token.NewServicesFromPublicParams(bytes)
+					if err != nil {
+						return nil, nil, err
+					}
+					return ppm.PublicParameters(), v, nil
 				},
 				MetricsEnabled: config.MetricsEnabled,
 				MetricsServer:  config.MetricsServer,
@@ -77,8 +81,12 @@ func main() {
 			CCID:    config.CCID,
 			Address: config.CCaddress,
 			CC: &tcc.TokenChaincode{
-				TokenServicesFactory: func(bytes []byte) (tcc.PublicParametersManager, tcc.Validator, error) {
-					return token.NewServicesFromPublicParams(bytes)
+				TokenServicesFactory: func(bytes []byte) (tcc.PublicParameters, tcc.Validator, error) {
+					ppm, v, err := token.NewServicesFromPublicParams(bytes)
+					if err != nil {
+						return nil, nil, err
+					}
+					return ppm.PublicParameters(), v, nil
 				},
 				LogLevel:       config.LogLevel,
 				MetricsEnabled: config.MetricsEnabled,

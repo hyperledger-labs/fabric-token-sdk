@@ -231,7 +231,7 @@ func (t *ManagementService) CertificationManager() *CertificationManager {
 // CertificationClient returns the certification client for this TMS
 func (t *ManagementService) CertificationClient() (*CertificationClient, error) {
 	certificationClient, err := t.certificationClientProvider.New(
-		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().CertificationDriver(),
+		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().PublicParameters().CertificationDriver(),
 	)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")

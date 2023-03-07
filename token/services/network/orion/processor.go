@@ -113,7 +113,8 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 	wrappedRWS := &rwsWrapper{RWSet: rws}
 
-	if tms.PublicParametersManager().GraphHiding() {
+	pp := tms.PublicParametersManager().PublicParameters()
+	if pp.GraphHiding() {
 		// Delete inputs
 		ids := metadata.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -252,7 +253,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, pp.Precision()); err != nil {
 				return err
 			}
 		}

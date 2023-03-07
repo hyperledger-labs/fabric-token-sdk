@@ -167,7 +167,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 
 	validAuditing := false
-	for _, auditor := range a.tx.TokenService().PublicParametersManager().Auditors() {
+	for _, auditor := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
 		if err != nil {
 			logger.Debugf("Failed to get auditor verifier for %s", auditor.UniqueID())

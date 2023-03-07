@@ -146,7 +146,7 @@ func (p *GetPublicParamsViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 func GetTMSPublicParams(tms *token.ManagementService) []byte {
-	ppBytes, err := tms.PublicParametersManager().SerializePublicParameters()
+	ppBytes, err := tms.PublicParametersManager().PublicParameters().Serialize()
 	assert.NoError(err, "failed to marshal public params")
 	return ppBytes
 }

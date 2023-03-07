@@ -108,7 +108,7 @@ func (r *RequestSpentTokensResponderView) process(context view.Context, request 
 	}
 
 	flags := make([]bool, len(request.IDs))
-	if tms.PublicParametersManager().GraphHiding() {
+	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
 		for i, id := range request.IDs {
 			oID := orionKey(id)
 			v, err := qe.Get(oID)

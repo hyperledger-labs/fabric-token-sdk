@@ -30,7 +30,7 @@ var _ = Describe("ccvalidator", func() {
 		fakeValidator = &mock.Validator{}
 		fakePPM = &mock.PublicParametersManager{}
 		chaincode = &chaincode2.TokenChaincode{
-			TokenServicesFactory: func(i []byte) (chaincode2.PublicParametersManager, chaincode2.Validator, error) {
+			TokenServicesFactory: func(i []byte) (chaincode2.PublicParameters, chaincode2.Validator, error) {
 				return fakePPM, fakeValidator, nil
 			},
 		}

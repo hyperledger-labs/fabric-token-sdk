@@ -164,7 +164,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
 	// If no specific tokens are requested, then a custom token selection process start
-	precision := token2.GetManagementService(context).PublicParametersManager().Precision()
+	precision := token2.GetManagementService(context).PublicParametersManager().PublicParameters().Precision()
 	amount, err := token.UInt64ToQuantity(t.Amount, precision)
 	assert.NoError(err, "failed to convert to quantity")
 

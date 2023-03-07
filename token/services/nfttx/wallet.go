@@ -44,7 +44,7 @@ func MyWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *OwnerWalle
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // MyWalletFromTx returns the default wallet for the tuple (network, channel, namespace) as identified by the passed
@@ -60,7 +60,7 @@ func MyWalletFromTx(sp view2.ServiceProvider, tx *Transaction) *OwnerWallet {
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // GetWallet returns the wallet whose id is the passed id.
@@ -72,7 +72,7 @@ func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption)
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // GetWalletForChannel returns the wallet whose id is the passed id for the passed channel.
@@ -84,7 +84,7 @@ func GetWalletForChannel(sp view2.ServiceProvider, channel, id string, opts ...t
 	if w == nil {
 		return nil
 	}
-	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().Precision()}
+	return &OwnerWallet{OwnerWallet: w, ServiceProvider: sp, Precision: tms.PublicParametersManager().PublicParameters().Precision()}
 }
 
 // MyIssuerWallet returns the default issuer wallet, nil if not found
