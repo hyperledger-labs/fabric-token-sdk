@@ -42,6 +42,7 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Start Certifier
+	logger.Debugf("start certification service...")
 	c, err := certifier.NewCertificationService(
 		context,
 		tms.Network(),
