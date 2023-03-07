@@ -42,6 +42,7 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 	}
 	pp := tms.PublicParametersManager().PublicParameters()
 	if pp == nil {
+		logger.Debugf("public parameters not yet available, start a background task...")
 		go func() {
 			for {
 				pp := tms.PublicParametersManager().PublicParameters()
@@ -58,6 +59,7 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 			}
 		}()
 	} else {
+		logger.Debugf("public parameters available, set certification service...")
 		if err := r.startCertificationService(context, tms, pp); err != nil {
 			return nil, err
 		}
