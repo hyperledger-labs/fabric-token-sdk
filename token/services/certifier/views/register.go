@@ -7,12 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package certifier
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/pkg/errors"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.certifier")
@@ -36,13 +37,43 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 		token.WithChannel(r.Channel),
 		token.WithNamespace(r.Namespace),
 	)
-	if !tms.PublicParametersManager().GraphHiding() {
+	if tms == nil {
+		return nil, errors.Errorf("tms not found [%s:%s:%s]", r.Namespace, r.Channel, r.Namespace)
+	}
+	pp := tms.PublicParametersManager().PublicParameters()
+	if pp == nil {
+		go func() {
+			for {
+				pp := tms.PublicParametersManager().PublicParameters()
+				if pp == nil {
+					logger.Debugf("public parameters not yet available, wait...")
+					time.Sleep(500 * time.Millisecond)
+					continue
+				}
+				logger.Debugf("public parameters available, set certification service...")
+				if err := r.startCertificationService(context, tms, pp); err != nil {
+					logger.Errorf("failed to start certification service [%s]", err)
+				}
+				break
+			}
+		}()
+	} else {
+		if err := r.startCertificationService(context, tms, pp); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, nil
+}
+
+func (r *RegisterView) startCertificationService(context view.Context, tms *token.ManagementService, pp *token.PublicParameters) error {
+	if !pp.GraphHiding() {
 		logger.Warnf("the token management system for [%s:%s] does not support graph hiding, skipping certifier registration", r.Channel, r.Namespace)
-		return nil, nil
+		return nil
 	}
 
 	// Start Certifier
-	certificationDriver := tms.PublicParametersManager().CertificationDriver()
+	certificationDriver := pp.CertificationDriver()
 	logger.Debugf("start certification service with driver [%s]...", certificationDriver)
 	c, err := certifier.NewCertificationService(
 		context,
@@ -53,11 +84,10 @@ func (r *RegisterView) Call(context view.Context) (interface{}, error) {
 		certificationDriver,
 	)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed instantiating certifier [%s]", tms)
+		return errors.WithMessagef(err, "failed instantiating certifier [%s]", tms)
 	}
 	if err := c.Start(); err != nil {
-		return nil, errors.WithMessagef(err, "failed starting certifier [%s]", tms)
+		return errors.WithMessagef(err, "failed starting certifier [%s]", tms)
 	}
-
-	return nil, nil
+	return nil
 }

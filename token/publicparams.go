@@ -11,6 +11,51 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+type PublicParameters struct {
+	driver.PublicParameters
+	ppm driver.PublicParamsManager
+}
+
+// Precision returns the precision used to represent the token quantity
+func (c *PublicParameters) Precision() uint64 {
+	return c.PublicParameters.Precision()
+}
+
+// CertificationDriver return the certification driver used to certify that tokens exist
+func (c *PublicParameters) CertificationDriver() string {
+	return c.PublicParameters.CertificationDriver()
+}
+
+// GraphHiding returns true if graph hiding is enabled
+func (c *PublicParameters) GraphHiding() bool {
+	return c.PublicParameters.GraphHiding()
+}
+
+// TokenDataHiding returns true if data hiding is enabled
+func (c *PublicParameters) TokenDataHiding() bool {
+	return c.PublicParameters.TokenDataHiding()
+}
+
+// MaxTokenValue returns the maximum value a token can contain
+func (c *PublicParameters) MaxTokenValue() uint64 {
+	return c.PublicParameters.MaxTokenValue()
+}
+
+// Serialize returns the public parameters in their serialized form
+func (c *PublicParameters) Serialize() ([]byte, error) {
+	return c.ppm.SerializePublicParameters()
+}
+
+// Identifier returns the identifier of the public parameters
+func (c *PublicParameters) Identifier() string {
+	return c.ppm.PublicParameters().Identifier()
+}
+
+// Auditors returns the list of auditors' identities
+func (c *PublicParameters) Auditors() []view.Identity {
+	return c.ppm.PublicParameters().Auditors()
+}
+
 // PublicParamsFetcher models the public parameters fetcher
 type PublicParamsFetcher interface {
 	// Fetch fetches the public parameters from the backend
@@ -22,34 +67,13 @@ type PublicParametersManager struct {
 	ppm driver.PublicParamsManager
 }
 
-// Precision returns the precision used to represent the token quantity
-func (c *PublicParametersManager) Precision() uint64 {
-	return c.ppm.PublicParameters().Precision()
-}
-
-// CertificationDriver return the certification driver used to certify that tokens exist
-func (c *PublicParametersManager) CertificationDriver() string {
-	return c.ppm.PublicParameters().CertificationDriver()
-}
-
-// GraphHiding returns true if graph hiding is enabled
-func (c *PublicParametersManager) GraphHiding() bool {
-	return c.ppm.PublicParameters().GraphHiding()
-}
-
-// TokenDataHiding returns true if data hiding is enabled
-func (c *PublicParametersManager) TokenDataHiding() bool {
-	return c.ppm.PublicParameters().TokenDataHiding()
-}
-
-// MaxTokenValue returns the maximum value a token can contain
-func (c *PublicParametersManager) MaxTokenValue() uint64 {
-	return c.ppm.PublicParameters().MaxTokenValue()
-}
-
-// SerializePublicParameters returns the public parameters in their serialized form
-func (c *PublicParametersManager) SerializePublicParameters() ([]byte, error) {
-	return c.ppm.SerializePublicParameters()
+// PublicParameters returns the public parameters, nil if not set yet.
+func (c *PublicParametersManager) PublicParameters() *PublicParameters {
+	pp := c.ppm.PublicParameters()
+	if pp == nil {
+		return nil
+	}
+	return &PublicParameters{PublicParameters: pp, ppm: c.ppm}
 }
 
 // Validate validates the public parameters
@@ -60,16 +84,6 @@ func (c *PublicParametersManager) Validate() error {
 // SetPublicParameters updates the public parameters with the passed value
 func (c *PublicParametersManager) SetPublicParameters(raw []byte) error {
 	return c.ppm.SetPublicParameters(raw)
-}
-
-// Identifier returns the identifier of the public parameters
-func (c *PublicParametersManager) Identifier() string {
-	return c.ppm.PublicParameters().Identifier()
-}
-
-// Auditors returns the list of auditors' identities
-func (c *PublicParametersManager) Auditors() []view.Identity {
-	return c.ppm.PublicParameters().Auditors()
 }
 
 // Fetch fetches the public parameters from the backend

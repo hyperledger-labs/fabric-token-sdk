@@ -198,7 +198,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	if q == 0 {
 		return nil, errors.Errorf("q is zero")
 	}
-	maxTokenValue := r.TokenService.PublicParametersManager().MaxTokenValue()
+	maxTokenValue := r.TokenService.PublicParametersManager().PublicParameters().MaxTokenValue()
 	if q > maxTokenValue {
 		return nil, errors.Errorf("q is larger than max token value [%d]", maxTokenValue)
 	}
@@ -1103,7 +1103,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		return nil, nil, errors.Errorf("the sum of the outputs is larger then the sum of the inputs [%s][%s]", inputSum.Decimal(), outputSum.Decimal())
 	}
 
-	if r.TokenService.PublicParametersManager().GraphHiding() {
+	if r.TokenService.PublicParametersManager().PublicParameters().GraphHiding() {
 		logger.Debugf("graph hiding enabled, request certification")
 		// Check token certification
 		cc, err := r.TokenService.CertificationClient()
@@ -1119,8 +1119,9 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 }
 
 func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
-	precision := r.TokenService.PublicParametersManager().Precision()
-	maxTokenValue := r.TokenService.PublicParametersManager().MaxTokenValue()
+	pp := r.TokenService.PublicParametersManager().PublicParameters()
+	precision := pp.Precision()
+	maxTokenValue := pp.MaxTokenValue()
 	maxTokenValueQ, err := token.UInt64ToQuantity(maxTokenValue, precision)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", maxTokenValue, precision)

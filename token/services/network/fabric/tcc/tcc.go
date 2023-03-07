@@ -56,18 +56,18 @@ type Validator interface {
 
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
 
-type PublicParametersManager interface {
+type PublicParameters interface {
 	GraphHiding() bool
 }
 
 type TokenChaincode struct {
-	initOnce                sync.Once
-	LogLevel                string
-	Validator               Validator
-	PublicParametersManager PublicParametersManager
+	initOnce         sync.Once
+	LogLevel         string
+	Validator        Validator
+	PublicParameters PublicParameters
 
 	PPDigest             []byte
-	TokenServicesFactory func([]byte) (PublicParametersManager, Validator, error)
+	TokenServicesFactory func([]byte) (PublicParameters, Validator, error)
 
 	MetricsEnabled bool
 	MetricsServer  string
@@ -184,7 +184,7 @@ func (cc *TokenChaincode) Initialize(builtInParams string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to instantiate public parameter manager and validator")
 	}
-	cc.PublicParametersManager = ppm
+	cc.PublicParameters = ppm
 	cc.Validator = validator
 
 	return nil
@@ -288,7 +288,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	logger.Debugf("check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
-	res, err := w.AreTokensSpent(ids, cc.PublicParametersManager.GraphHiding())
+	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())
 	if err != nil {
 		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))

@@ -97,7 +97,7 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		s.numRetry,
 		s.timeout,
 		s.requestCertification,
-		tms.PublicParametersManager().Precision(),
+		tms.PublicParametersManager().PublicParameters().Precision(),
 		tracing.Get(s.sp).GetTracer(),
 	)
 	s.managers[key] = manager

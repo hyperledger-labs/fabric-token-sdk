@@ -44,7 +44,7 @@ func NewQueryExecutor(sp view.ServiceProvider, wallet string, precision uint64, 
 		selector: NewFilter(
 			wallet,
 			qe,
-			tms.PublicParametersManager().Precision(),
+			tms.PublicParametersManager().PublicParameters().Precision(),
 			tracing.Get(sp).GetTracer(),
 		),
 		vault:     qe,
