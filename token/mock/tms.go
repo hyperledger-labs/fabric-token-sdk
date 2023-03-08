@@ -6,6 +6,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	tokena "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -37,6 +38,20 @@ type TMS struct {
 	}
 	getEnrollmentIDReturnsOnCall map[int]struct {
 		result1 string
+		result2 error
+	}
+	GetTokenInfoStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
+	getTokenInfoMutex       sync.RWMutex
+	getTokenInfoArgsForCall []struct {
+		arg1 *driver.TokenRequestMetadata
+		arg2 []byte
+	}
+	getTokenInfoReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getTokenInfoReturnsOnCall map[int]struct {
+		result1 []byte
 		result2 error
 	}
 	invocations      map[string][][]interface{}
@@ -190,6 +205,76 @@ func (fake *TMS) GetEnrollmentIDReturnsOnCall(i int, result1 string, result2 err
 	}{result1, result2}
 }
 
+func (fake *TMS) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getTokenInfoMutex.Lock()
+	ret, specificReturn := fake.getTokenInfoReturnsOnCall[len(fake.getTokenInfoArgsForCall)]
+	fake.getTokenInfoArgsForCall = append(fake.getTokenInfoArgsForCall, struct {
+		arg1 *driver.TokenRequestMetadata
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.GetTokenInfoStub
+	fakeReturns := fake.getTokenInfoReturns
+	fake.recordInvocation("GetTokenInfo", []interface{}{arg1, arg2Copy})
+	fake.getTokenInfoMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *TMS) GetTokenInfoCallCount() int {
+	fake.getTokenInfoMutex.RLock()
+	defer fake.getTokenInfoMutex.RUnlock()
+	return len(fake.getTokenInfoArgsForCall)
+}
+
+func (fake *TMS) GetTokenInfoCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
+	fake.getTokenInfoMutex.Lock()
+	defer fake.getTokenInfoMutex.Unlock()
+	fake.GetTokenInfoStub = stub
+}
+
+func (fake *TMS) GetTokenInfoArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
+	fake.getTokenInfoMutex.RLock()
+	defer fake.getTokenInfoMutex.RUnlock()
+	argsForCall := fake.getTokenInfoArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *TMS) GetTokenInfoReturns(result1 []byte, result2 error) {
+	fake.getTokenInfoMutex.Lock()
+	defer fake.getTokenInfoMutex.Unlock()
+	fake.GetTokenInfoStub = nil
+	fake.getTokenInfoReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *TMS) GetTokenInfoReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getTokenInfoMutex.Lock()
+	defer fake.getTokenInfoMutex.Unlock()
+	fake.GetTokenInfoStub = nil
+	if fake.getTokenInfoReturnsOnCall == nil {
+		fake.getTokenInfoReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getTokenInfoReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
 func (fake *TMS) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
@@ -197,6 +282,8 @@ func (fake *TMS) Invocations() map[string][][]interface{} {
 	defer fake.deserializeTokenMutex.RUnlock()
 	fake.getEnrollmentIDMutex.RLock()
 	defer fake.getEnrollmentIDMutex.RUnlock()
+	fake.getTokenInfoMutex.RLock()
+	defer fake.getTokenInfoMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
