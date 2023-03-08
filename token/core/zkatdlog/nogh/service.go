@@ -8,6 +8,7 @@ package nogh
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -128,6 +129,15 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 	}
 
 	return to, ti.Issuer, nil
+}
+
+func (s *Service) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
+	tokenInfoRaw := meta.GetTokenInfo(target)
+	if len(tokenInfoRaw) == 0 {
+		logger.Debugf("metadata for [%s] not found", hash.Hashable(target).String())
+		return nil, errors.Errorf("metadata for [%s] not found", hash.Hashable(target).String())
+	}
+	return tokenInfoRaw, nil
 }
 
 // IdentityProvider returns the identity provider associated with the service
