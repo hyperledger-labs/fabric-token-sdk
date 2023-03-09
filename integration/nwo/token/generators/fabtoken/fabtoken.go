@@ -101,7 +101,7 @@ type FSCPlatform interface {
 type CryptoMaterialGenerator struct {
 	TokenPlatform     generators.TokenPlatform
 	EventuallyTimeout time.Duration
-	colorIndex        int
+	ColorIndex        int
 	Builder           *components.Builder
 }
 
@@ -255,11 +255,11 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 }
 
 func (d *CryptoMaterialGenerator) NextColor() string {
-	color := d.colorIndex%14 + 31
+	color := d.ColorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37
 	}
 
-	d.colorIndex++
+	d.ColorIndex++
 	return fmt.Sprintf("%dm", color)
 }

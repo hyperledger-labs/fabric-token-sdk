@@ -31,19 +31,19 @@ import (
 var logger = flogging.MustGetLogger("integration.token.generators.dlog")
 
 type CryptoMaterialGenerator struct {
-	fabTokenGenerator *fabtoken.CryptoMaterialGenerator
+	FabTokenGenerator *fabtoken.CryptoMaterialGenerator
 
 	TokenPlatform     generators.TokenPlatform
 	Curve             string
 	EventuallyTimeout time.Duration
 
-	colorIndex             int
-	revocationHandlerIndex int
+	ColorIndex             int
+	RevocationHandlerIndex int
 }
 
 func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, curveID math3.CurveID, builder api.Builder) *CryptoMaterialGenerator {
 	return &CryptoMaterialGenerator{
-		fabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+		FabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
 		Curve:             CurveIDToString(curveID),
@@ -89,7 +89,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			Output:           userOutput,
 			OrgUnit:          tmsID + ".example.com",
 			EnrollmentID:     owner,
-			RevocationHandle: fmt.Sprintf("1%d%d", d.revocationHandlerIndex, i),
+			RevocationHandle: fmt.Sprintf("1%d%d", d.RevocationHandlerIndex, i),
 			Curve:            d.Curve,
 		})
 		Expect(err).NotTo(HaveOccurred())
@@ -100,16 +100,16 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			Path: userOutput,
 		})
 	}
-	d.revocationHandlerIndex++
+	d.RevocationHandlerIndex++
 	return res
 }
 
 func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
-	return d.fabTokenGenerator.GenerateIssuerIdentities(tms, n, issuers...)
+	return d.FabTokenGenerator.GenerateIssuerIdentities(tms, n, issuers...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
-	return d.fabTokenGenerator.GenerateAuditorIdentities(tms, n, auditors...)
+	return d.FabTokenGenerator.GenerateAuditorIdentities(tms, n, auditors...)
 }
 
 func (d *CryptoMaterialGenerator) Idemixgen(command common.Command) (*gexec.Session, error) {
@@ -141,12 +141,12 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 }
 
 func (d *CryptoMaterialGenerator) nextColor() string {
-	color := d.colorIndex%14 + 31
+	color := d.ColorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37
 	}
 
-	d.colorIndex++
+	d.ColorIndex++
 	return fmt.Sprintf("%dm", color)
 }
 
