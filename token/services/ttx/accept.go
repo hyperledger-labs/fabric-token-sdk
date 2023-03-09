@@ -7,9 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
+	"time"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -23,7 +26,10 @@ func NewAcceptView(tx *Transaction) *acceptView {
 }
 
 func (s *acceptView) Call(context view.Context) (interface{}, error) {
-	var err error
+	if err := s.respondToSignatureRequests(context); err != nil {
+		return nil, err
+	}
+
 	rawRequest, err := s.tx.Bytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal token request")
@@ -81,4 +87,85 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
 
 	return s.tx, nil
+}
+
+func (s *acceptView) respondToSignatureRequests(context view.Context) error {
+	requestsToBeSigned, err := s.requestsToBeSigned()
+	if err != nil {
+		return errors.Wrapf(err, "failed collecting requests of signature")
+	}
+
+	session := context.Session()
+	for range requestsToBeSigned {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("Receiving signature request...")
+		}
+
+		timeout := time.NewTimer(time.Minute)
+
+		sessionChannel := session.Receive()
+		var msg *view.Message
+		select {
+		case msg = <-sessionChannel:
+			logger.Debug("message received from %s", session.Info().Caller)
+			timeout.Stop()
+		case <-timeout.C:
+			timeout.Stop()
+			return errors.Errorf("Timeout from party %s", session.Info().Caller)
+		}
+		if msg.Status == view.ERROR {
+			return errors.New(string(msg.Payload))
+		}
+
+		// TODO: check what is signed...
+		signatureRequest := &signatureRequest{}
+		err := Unmarshal(msg.Payload, signatureRequest)
+		if err != nil {
+			return errors.Wrap(err, "failed unmarshalling signature request")
+		}
+
+		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
+		if tms == nil {
+			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
+		}
+
+		if !tms.WalletManager().IsMe(signatureRequest.Signer) {
+			return errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
+		}
+		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)
+		if err != nil {
+			return errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
+		}
+		sigma, err := signer.Sign(signatureRequest.MessageToSign())
+		if err != nil {
+			return errors.Wrapf(err, "failed signing request")
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("Send back signature...")
+		}
+		err = session.Send(sigma)
+		if err != nil {
+			return errors.Wrapf(err, "failed sending signature back")
+		}
+	}
+	return nil
+}
+
+func (s *acceptView) requestsToBeSigned() ([]*token.Transfer, error) {
+	var res []*token.Transfer
+	transfers := s.tx.TokenRequest.Transfers()
+	sigService := s.tx.TokenService().SigService()
+	for _, transfer := range transfers {
+		for _, sender := range transfer.Senders {
+			if _, err := sigService.GetSigner(sender); err == nil {
+				res = append(res, transfer)
+			}
+		}
+		for _, sender := range transfer.ExtraSigners {
+			if _, err := sigService.GetSigner(sender); err == nil {
+				res = append(res, transfer)
+			}
+		}
+	}
+	return res, nil
 }
