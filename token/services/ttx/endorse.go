@@ -783,14 +783,15 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
 	var res []*token.Transfer
 	transfers := s.tx.TokenRequest.Transfers()
+	sigService := s.tx.TokenService().SigService()
 	for _, transfer := range transfers {
 		for _, sender := range transfer.Senders {
-			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
+			if _, err := sigService.GetSigner(sender); err == nil {
 				res = append(res, transfer)
 			}
 		}
 		for _, sender := range transfer.ExtraSigners {
-			if _, err := s.tx.TokenService().SigService().GetSigner(sender); err == nil {
+			if _, err := sigService.GetSigner(sender); err == nil {
 				res = append(res, transfer)
 			}
 		}
