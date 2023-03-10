@@ -324,11 +324,11 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	// for _, info := range payload.TokenInfos {
 	//	t.Payload.TokenInfos = append(t.Payload.TokenInfos, info)
 	// }
-	// for _, issueMetadata := range payload.Metadata.Issues {
-	//	t.Payload.Metadata.Issues = append(t.Payload.Metadata.Issues, issueMetadata)
+	// for _, issueMetadata := range payload.ValidationRecords.Issues {
+	//	t.Payload.ValidationRecords.Issues = append(t.Payload.ValidationRecords.Issues, issueMetadata)
 	// }
-	// for _, transferMetadata := range payload.Metadata.Transfers {
-	//	t.Payload.Metadata.Transfers = append(t.Payload.Metadata.Transfers, transferMetadata)
+	// for _, transferMetadata := range payload.ValidationRecords.Transfers {
+	//	t.Payload.ValidationRecords.Transfers = append(t.Payload.ValidationRecords.Transfers, transferMetadata)
 	// }
 	//
 	// for key, value := range payload.Transient {

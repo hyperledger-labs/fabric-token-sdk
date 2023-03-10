@@ -99,12 +99,12 @@ type MovementRecord = driver.MovementRecord
 // in that action.
 type TransactionRecord = driver.TransactionRecord
 
-// TransactionRecord is a more finer-grained version of a movement record.
+// ValidationRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
 // a transaction record is created for each unique enrollment ID found in the outputs.
 // The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
 // in that action.
-type MetadataRecord = driver.MetadataRecord
+type ValidationRecord = driver.ValidationRecord
 
 // TransactionIterator is an iterator over transaction records
 type TransactionIterator struct {
@@ -129,19 +129,19 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	return next, nil
 }
 
-// MetadataIterator is an iterator over metadata records
-type MetadataIterator struct {
-	it driver.MetadataIterator
+// ValidationRecordsIterator is an iterator over validation records
+type ValidationRecordsIterator struct {
+	it driver.ValidationRecordsIterator
 }
 
 // Close closes the iterator. It must be called when done with the iterator.
-func (t *MetadataIterator) Close() {
+func (t *ValidationRecordsIterator) Close() {
 	t.it.Close()
 }
 
-// Next returns the next metadata record, if any.
+// Next returns the next validation record, if any.
 // It returns nil, nil if there are no more records.
-func (t *MetadataIterator) Next() (*MetadataRecord, error) {
+func (t *ValidationRecordsIterator) Next() (*ValidationRecord, error) {
 	next, err := t.it.Next()
 	if err != nil {
 		return nil, err
@@ -155,8 +155,8 @@ func (t *MetadataIterator) Next() (*MetadataRecord, error) {
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
 
-// QueryMetadataParams defines the parameters for querying movements
-type QueryMetadataParams = driver.QueryMetadataParams
+// QueryValidationRecordsParams defines the parameters for querying movements
+type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 
 // QueryExecutor executors queries against the DB
 type QueryExecutor struct {
@@ -178,7 +178,7 @@ func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
 	}
 }
 
-// Transactions returns an iterators of transaction records in the given time internal.
+// Transactions returns an iterators of transaction records filtered by the given params.
 func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
 	it, err := qe.db.db.QueryTransactions(params)
 	if err != nil {
@@ -187,13 +187,13 @@ func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*Transact
 	return &TransactionIterator{it: it}, nil
 }
 
-// Metadata returns an iterators of transaction records in the given time internal.
-func (qe *QueryExecutor) Metadata(params QueryMetadataParams) (*MetadataIterator, error) {
-	it, err := qe.db.db.QueryMetadata(params)
+// ValidationRecords returns an iterators of validation records filtered by the given params.
+func (qe *QueryExecutor) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
+	it, err := qe.db.db.QueryValidations(params)
 	if err != nil {
-		return nil, errors.Errorf("failed to query transactions: %s", err)
+		return nil, errors.Errorf("failed to query validation records: %s", err)
 	}
-	return &MetadataIterator{it: it}, nil
+	return &ValidationRecordsIterator{it: it}, nil
 }
 
 // Done closes the query executor. It must be called when the query executor is no longer needed.s
@@ -314,8 +314,9 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	return nil
 }
 
-func (db *DB) AppendMetadata(txID string, tr []byte, meta map[string][]byte, indices ...string) error {
-	logger.Debugf("Appending new metadata... [%d]", db.counter)
+// AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
+func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+	logger.Debugf("Appending new validation record... [%d]", db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
@@ -324,16 +325,16 @@ func (db *DB) AppendMetadata(txID string, tr []byte, meta map[string][]byte, ind
 		db.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := db.db.AddMetadata(txID, tr, meta); err != nil {
+	if err := db.db.AddValidationRecord(txID, tr, meta); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append metadata for txid [%s] failed", txID)
+		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
 	if err := db.db.Commit(); err != nil {
 		db.rollback(err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
 	}
 
-	logger.Debugf("Appending metadata completed without errors")
+	logger.Debugf("Appending validation record completed without errors")
 	return nil
 }
 

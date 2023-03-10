@@ -37,8 +37,8 @@ type TransactionRecordSelector interface {
 	Select(record *TransactionRecord) (bool, bool)
 }
 
-type MetadataRecordSelector interface {
-	Select(record *MetadataRecord) (bool, bool)
+type ValidationRecordSelector interface {
+	Select(record *ValidationRecord) (bool, bool)
 }
 
 type MovementRecord struct {
@@ -51,9 +51,9 @@ type TransactionRecord struct {
 	Record *driver.TransactionRecord
 }
 
-type MetadataRecord struct {
+type ValidationRecord struct {
 	Id     uint64
-	Record *driver.MetadataRecord
+	Record *driver.ValidationRecord
 }
 
 type Persistence struct {
@@ -198,16 +198,16 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 	return nil
 }
 
-func (db *Persistence) AddMetadata(txID string, tr []byte, meta map[string][]byte) error {
-	next, key, err := db.metadataKey(txID)
+func (db *Persistence) AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+	next, key, err := db.validationRecordKey(txID)
 	if err != nil {
-		return errors.Wrapf(err, "could not get key for metadata %s", txID)
+		return errors.Wrapf(err, "could not get key for validation record %s", txID)
 	}
-	logger.Debugf("Adding metadata record [%s] with key", txID, key)
+	logger.Debugf("Adding validation record [%s] with key", txID, key)
 
-	value := &MetadataRecord{
+	value := &ValidationRecord{
 		Id: next,
-		Record: &driver.MetadataRecord{
+		Record: &driver.ValidationRecord{
 			TxID:         txID,
 			Timestamp:    time.Now(),
 			TokenRequest: tr,
@@ -215,7 +215,7 @@ func (db *Persistence) AddMetadata(txID string, tr []byte, meta map[string][]byt
 		},
 	}
 
-	bytes, err := MarshalMetadataRecord(value)
+	bytes, err := MarshalValidationRecord(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
@@ -299,15 +299,15 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 	return res, nil
 }
 
-func (db *Persistence) QueryMetadata(params driver.QueryMetadataParams) (driver.MetadataIterator, error) {
+func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	it.Seek([]byte("mt"))
 
-	selector := &MetadataSelector{
+	selector := &ValidationRecordsSelector{
 		params: params,
 	}
-	return &MetadataIterator{it: it, selector: selector}, nil
+	return &ValidationRecordsIterator{it: it, selector: selector}, nil
 }
 
 func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
@@ -371,12 +371,12 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
 		case strings.HasPrefix(entry.key, "mt"):
-			record, err := UnmarshalMetadataRecord(entry.value)
+			record, err := UnmarshalValidationRecord(entry.value)
 			if err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
-			bytes, err = MarshalMetadataRecord(record)
+			bytes, err = MarshalValidationRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
@@ -463,7 +463,7 @@ func (db *Persistence) movementKey(txID string) (uint64, string, error) {
 	return next, dbKey("mv", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
 }
 
-func (db *Persistence) metadataKey(txID string) (uint64, string, error) {
+func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) {
 	next, err := db.seq.Next()
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "failed getting next index")
@@ -670,14 +670,14 @@ func (t *TransactionSelector) Select(record *TransactionRecord) (bool, bool) {
 	return true, false
 }
 
-// MetadataSelector is used to select a set of transaction records
-type MetadataSelector struct {
-	params driver.QueryMetadataParams
+// ValidationRecordsSelector is used to select a set of transaction records
+type ValidationRecordsSelector struct {
+	params driver.QueryValidationRecordsParams
 }
 
 // Select returns true is the record matches the selection criteria.
 // Additionally, it returns another flag indicating if it is time to stop or not.
-func (t *MetadataSelector) Select(record *MetadataRecord) (bool, bool) {
+func (t *ValidationRecordsSelector) Select(record *ValidationRecord) (bool, bool) {
 	// match the time constraints
 	if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
 		logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
@@ -688,21 +688,38 @@ func (t *MetadataSelector) Select(record *MetadataRecord) (bool, bool) {
 		return false, true
 	}
 
-	// TODO: match the attribute values
+	if len(t.params.Statuses) != 0 {
+		found := false
+		for _, statusType := range t.params.Statuses {
+			if statusType == record.Record.Status {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
+
+	if t.params.Filter != nil {
+		if !t.params.Filter(record.Record) {
+			return false, false
+		}
+	}
 
 	return true, false
 }
 
-type MetadataIterator struct {
+type ValidationRecordsIterator struct {
 	it       *badger.Iterator
-	selector MetadataRecordSelector
+	selector ValidationRecordSelector
 }
 
-func (t *MetadataIterator) Close() {
+func (t *ValidationRecordsIterator) Close() {
 	t.it.Close()
 }
 
-func (t *MetadataIterator) Next() (*driver.MetadataRecord, error) {
+func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	for {
 		if !t.it.Valid() {
 			return nil, nil
@@ -717,16 +734,16 @@ func (t *MetadataIterator) Next() (*driver.MetadataRecord, error) {
 			continue
 		}
 
-		var record *MetadataRecord
+		var record *ValidationRecord
 		err := item.Value(func(val []byte) error {
 			var err error
-			if record, err = UnmarshalMetadataRecord(val); err != nil {
+			if record, err = UnmarshalValidationRecord(val); err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
 			}
 			return nil
 		})
 		if err != nil {
-			return nil, errors.Wrapf(err, "could not get Metadata for key %s", string(item.Key()))
+			return nil, errors.Wrapf(err, "could not get ValidationRecords for key %s", string(item.Key()))
 		}
 
 		t.it.Next()
@@ -738,7 +755,7 @@ func (t *MetadataIterator) Next() (*driver.MetadataRecord, error) {
 		if !matched {
 			continue
 		}
-		logger.Debugf("found metadata [%s,%s]", string(item.Key()), record.Record.TxID)
+		logger.Debugf("found validation record [%s,%s]", string(item.Key()), record.Record.TxID)
 		return record.Record, nil
 	}
 }
