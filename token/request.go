@@ -247,7 +247,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		return nil, err
 	}
 	if r.Metadata == nil {
-		return nil, errors.New("failed to complete issue: nil Metadata in token request")
+		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
 	}
 	r.Metadata.Issues = append(r.Metadata.Issues,
 		driver.IssueMetadata{

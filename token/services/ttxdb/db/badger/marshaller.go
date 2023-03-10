@@ -18,8 +18,8 @@ func MarshalMovementRecord(movementRecord *MovementRecord) ([]byte, error) {
 	return json.Marshal(movementRecord)
 }
 
-// MarshalMetadataRecord marshals a MetadataRecord into a byte array
-func MarshalMetadataRecord(mr *MetadataRecord) ([]byte, error) {
+// MarshalValidationRecord marshals a ValidationRecord into a byte array
+func MarshalValidationRecord(mr *ValidationRecord) ([]byte, error) {
 	return json.Marshal(mr)
 }
 
@@ -43,12 +43,12 @@ func UnmarshalMovementRecord(data []byte) (*MovementRecord, error) {
 	return &movementRecord, nil
 }
 
-// UnmarshalMetadataRecord unmarshals a MetadataRecord from a byte array
-func UnmarshalMetadataRecord(data []byte) (*MetadataRecord, error) {
-	var MetadataRecord MetadataRecord
-	err := json.Unmarshal(data, &MetadataRecord)
+// UnmarshalValidationRecord unmarshals a ValidationRecord from a byte array
+func UnmarshalValidationRecord(data []byte) (*ValidationRecord, error) {
+	var record ValidationRecord
+	err := json.Unmarshal(data, &record)
 	if err != nil {
 		return nil, err
 	}
-	return &MetadataRecord, nil
+	return &record, nil
 }

@@ -185,11 +185,11 @@ func (p *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
 	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
 }
 
-func (p *Persistence) AddMetadata(id string, tr []byte, meta map[string][]byte) error {
+func (p *Persistence) AddValidationRecord(id string, tr []byte, meta map[string][]byte) error {
 	panic("not implemented")
 }
 
-func (p *Persistence) QueryMetadata(params driver.QueryMetadataParams) (driver.MetadataIterator, error) {
+func (p *Persistence) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	panic("not implemented")
 }
 
