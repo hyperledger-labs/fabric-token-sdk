@@ -99,6 +99,13 @@ type MovementRecord = driver.MovementRecord
 // in that action.
 type TransactionRecord = driver.TransactionRecord
 
+// TransactionRecord is a more finer-grained version of a movement record.
+// Given a Token Transaction, for each token action in the Token Request,
+// a transaction record is created for each unique enrollment ID found in the outputs.
+// The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
+// in that action.
+type MetadataRecord = driver.MetadataRecord
+
 // TransactionIterator is an iterator over transaction records
 type TransactionIterator struct {
 	it driver.TransactionIterator
@@ -122,8 +129,34 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	return next, nil
 }
 
+// MetadataIterator is an iterator over metadata records
+type MetadataIterator struct {
+	it driver.MetadataIterator
+}
+
+// Close closes the iterator. It must be called when done with the iterator.
+func (t *MetadataIterator) Close() {
+	t.it.Close()
+}
+
+// Next returns the next metadata record, if any.
+// It returns nil, nil if there are no more records.
+func (t *MetadataIterator) Next() (*MetadataRecord, error) {
+	next, err := t.it.Next()
+	if err != nil {
+		return nil, err
+	}
+	if next == nil {
+		return nil, nil
+	}
+	return next, nil
+}
+
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
+
+// QueryMetadataParams defines the parameters for querying movements
+type QueryMetadataParams = driver.QueryMetadataParams
 
 // QueryExecutor executors queries against the DB
 type QueryExecutor struct {
@@ -152,6 +185,15 @@ func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*Transact
 		return nil, errors.Errorf("failed to query transactions: %s", err)
 	}
 	return &TransactionIterator{it: it}, nil
+}
+
+// Metadata returns an iterators of transaction records in the given time internal.
+func (qe *QueryExecutor) Metadata(params QueryMetadataParams) (*MetadataIterator, error) {
+	it, err := qe.db.db.QueryMetadata(params)
+	if err != nil {
+		return nil, errors.Errorf("failed to query transactions: %s", err)
+	}
+	return &MetadataIterator{it: it}, nil
 }
 
 // Done closes the query executor. It must be called when the query executor is no longer needed.s
@@ -216,23 +258,23 @@ func (db *DB) Append(req *token.Request) error {
 
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendSendMovements(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append send movements for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append send movements for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendReceivedMovements(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append received movements for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
 	if err := db.db.Commit(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
 	logger.Debugf("Appending new completed without errors")
@@ -257,18 +299,41 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	}
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
 	if err := db.db.Commit(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
-	logger.Debugf("Appending new completed without errors")
+	logger.Debugf("Appending transaction record new completed without errors")
+	return nil
+}
+
+func (db *DB) AppendMetadata(txID string, tr []byte, meta map[string][]byte, indices ...string) error {
+	logger.Debugf("Appending new metadata... [%d]", db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
+
+	if err := db.db.BeginUpdate(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
+	}
+	if err := db.db.AddMetadata(txID, tr, meta); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append metadata for txid [%s] failed", txID)
+	}
+	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
+	}
+
+	logger.Debugf("Appending metadata completed without errors")
 	return nil
 }
 

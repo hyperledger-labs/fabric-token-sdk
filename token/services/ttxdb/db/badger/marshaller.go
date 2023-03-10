@@ -18,6 +18,11 @@ func MarshalMovementRecord(movementRecord *MovementRecord) ([]byte, error) {
 	return json.Marshal(movementRecord)
 }
 
+// MarshalMetadataRecord marshals a MetadataRecord into a byte array
+func MarshalMetadataRecord(mr *MetadataRecord) ([]byte, error) {
+	return json.Marshal(mr)
+}
+
 // UnmarshalTransactionRecord unmarshals a TransactionRecord from a byte array
 func UnmarshalTransactionRecord(data []byte) (*TransactionRecord, error) {
 	var txnRecord TransactionRecord
@@ -36,4 +41,14 @@ func UnmarshalMovementRecord(data []byte) (*MovementRecord, error) {
 		return nil, err
 	}
 	return &movementRecord, nil
+}
+
+// UnmarshalMetadataRecord unmarshals a MetadataRecord from a byte array
+func UnmarshalMetadataRecord(data []byte) (*MetadataRecord, error) {
+	var MetadataRecord MetadataRecord
+	err := json.Unmarshal(data, &MetadataRecord)
+	if err != nil {
+		return nil, err
+	}
+	return &MetadataRecord, nil
 }
