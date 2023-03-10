@@ -20,6 +20,7 @@ import (
 )
 
 type signatureRequest struct {
+	TX      []byte
 	Request []byte
 	TxID    []byte
 	Signer  view.Identity
@@ -127,6 +128,10 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 	if err != nil {
 		return nil, err
 	}
+	txRaw, err := c.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
 
 	var distributionList []view.Identity
 	for _, issue := range issues {
@@ -161,6 +166,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 		ch := session.Receive()
 
 		signatureRequest := &signatureRequest{
+			TX:      txRaw,
 			Request: requestRaw,
 			TxID:    []byte(c.tx.ID()),
 			Signer:  party,
@@ -222,6 +228,10 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	if err != nil {
 		return nil, err
 	}
+	txRaw, err := c.tx.Bytes()
+	if err != nil {
+		return nil, err
+	}
 
 	var distributionList []view.Identity
 	for i, transfer := range transfers {
@@ -239,6 +249,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 
 		for _, party := range signers {
 			signatureRequest := &signatureRequest{
+				TX:      txRaw,
 				Request: requestRaw,
 				TxID:    []byte(c.tx.ID()),
 				Signer:  party,
@@ -645,12 +656,32 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
 		tx, err := NewTransactionFromBytes(context, msg.Payload)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to receive transaction")
+			// try to unmarshal pay
+			tx, err = f.unmarshalAsSignatureRequest(context, msg.Payload)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to receive transaction")
+			}
 		}
 		return tx, nil
 	case <-timeout.C:
 		return nil, errors.New("timeout reached")
 	}
+}
+
+func (f *receiveTransactionView) unmarshalAsSignatureRequest(context view.Context, raw []byte) (*Transaction, error) {
+	signatureRequest := &signatureRequest{}
+	err := Unmarshal(raw, signatureRequest)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling signature request")
+	}
+	if len(signatureRequest.TX) == 0 {
+		return nil, errors.Wrap(err, "no transaction received")
+	}
+	tx, err := NewTransactionFromBytes(context, signatureRequest.TX)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to receive transaction")
+	}
+	return tx, nil
 }
 
 type endorseView struct {

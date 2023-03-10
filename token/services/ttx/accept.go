@@ -148,6 +148,17 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 			return errors.Wrapf(err, "failed sending signature back")
 		}
 	}
+
+	if len(requestsToBeSigned) > 0 {
+		// expect again to receive a transaction
+		tx, err := ReceiveTransaction(context)
+		if err != nil {
+			return errors.Wrapf(err, "expected to receive a transaction")
+		}
+		// TODO: check that the token requests match
+		s.tx = tx
+	}
+
 	return nil
 }
 
