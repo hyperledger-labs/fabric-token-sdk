@@ -10,6 +10,9 @@ import (
 	"encoding/base64"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -680,6 +683,13 @@ func (f *receiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	tx, err := NewTransactionFromBytes(context, signatureRequest.TX)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
+	}
+	k, err := keys.CreateCompositeKey("signatureRequest", []string{tx.ID()})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to generate key to store signature request")
+	}
+	if err := kvs.GetService(context).Put(k, raw); err != nil {
+		return nil, errors.Wrap(err, "failed to to store signature request")
 	}
 	return tx, nil
 }

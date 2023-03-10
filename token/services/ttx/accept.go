@@ -9,6 +9,9 @@ package ttx
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -96,34 +99,48 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 	}
 
 	session := context.Session()
-	for range requestsToBeSigned {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Receiving signature request...")
-		}
-
-		timeout := time.NewTimer(time.Minute)
-
-		sessionChannel := session.Receive()
-		var msg *view.Message
-		select {
-		case msg = <-sessionChannel:
-			logger.Debug("message received from %s", session.Info().Caller)
-			timeout.Stop()
-		case <-timeout.C:
-			timeout.Stop()
-			return errors.Errorf("Timeout from party %s", session.Info().Caller)
-		}
-		if msg.Status == view.ERROR {
-			return errors.New(string(msg.Payload))
-		}
-
-		// TODO: check what is signed...
+	for i := 0; i < len(requestsToBeSigned); i++ {
 		signatureRequest := &signatureRequest{}
-		err := Unmarshal(msg.Payload, signatureRequest)
-		if err != nil {
-			return errors.Wrap(err, "failed unmarshalling signature request")
-		}
 
+		if i == 0 {
+			k, err := keys.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
+			if err != nil {
+				return errors.Wrap(err, "failed to generate key to store signature request")
+			}
+			var srRaw []byte
+			if err := kvs.GetService(context).Get(k, &srRaw); err != nil {
+				return errors.Wrap(err, "failed to to store signature request")
+			}
+			if err := Unmarshal(srRaw, signatureRequest); err != nil {
+				return errors.Wrap(err, "failed unmarshalling signature request")
+			}
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("Receiving signature request...")
+			}
+
+			timeout := time.NewTimer(time.Minute)
+
+			sessionChannel := session.Receive()
+			var msg *view.Message
+			select {
+			case msg = <-sessionChannel:
+				logger.Debug("message received from %s", session.Info().Caller)
+				timeout.Stop()
+			case <-timeout.C:
+				timeout.Stop()
+				return errors.Errorf("Timeout from party %s", session.Info().Caller)
+			}
+			if msg.Status == view.ERROR {
+				return errors.New(string(msg.Payload))
+			}
+
+			// TODO: check what is signed...
+			err := Unmarshal(msg.Payload, signatureRequest)
+			if err != nil {
+				return errors.Wrap(err, "failed unmarshalling signature request")
+			}
+		}
 		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
 		if tms == nil {
 			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
