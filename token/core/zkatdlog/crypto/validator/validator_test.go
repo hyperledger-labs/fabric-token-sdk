@@ -142,7 +142,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(fakeldger.GetStateStub, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(fakeldger.GetStateStub, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -177,7 +177,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -212,7 +212,7 @@ var _ = Describe("validator", func() {
 
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -249,7 +249,7 @@ var _ = Describe("validator", func() {
 
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -269,7 +269,7 @@ var _ = Describe("validator", func() {
 
 				})
 				It("fails", func() {
-					_, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
+					_, _, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
 					Expect(err.Error()).To(ContainSubstring("pseudonym signature invalid"))
 
 				})

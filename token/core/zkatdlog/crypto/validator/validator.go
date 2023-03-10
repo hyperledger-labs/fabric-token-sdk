@@ -42,14 +42,14 @@ func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidat
 	}
 }
 
-func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
+func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, map[string][]byte, error) {
 	if len(raw) == 0 {
-		return nil, errors.New("empty token request")
+		return nil, nil, errors.New("empty token request")
 	}
 	tr := &driver.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal token request")
+		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
 
 	// Prepare message expected to be signed
@@ -58,11 +58,11 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	req.Issues = tr.Issues
 	raqRaw, err := req.Bytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal signed token request")
+		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
 
-	logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(raqRaw).String(), binding)
-	signed := append(raqRaw, []byte(binding)...)
+	logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(raqRaw).String(), anchor)
+	signed := append(raqRaw, []byte(anchor)...)
 	var signatures [][]byte
 	if len(v.pp.Auditor) != 0 {
 		signatures = append(signatures, tr.AuditorSignatures...)
@@ -72,24 +72,24 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	}
 
 	backend := common.NewBackend(getState, signed, signatures)
-	return v.VerifyTokenRequest(backend, backend, binding, tr)
+	return v.VerifyTokenRequest(backend, backend, anchor, tr)
 }
 
-func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
+func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest) ([]interface{}, map[string][]byte, error) {
 	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
-		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", anchor)
 	}
 	ia, ta, err := v.UnmarshalIssueTransferActions(tr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal actions [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to unmarshal actions [%s]", anchor)
 	}
 	err = v.verifyIssues(ia, signatureProvider)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", anchor)
 	}
 	err = v.verifyTransfers(ledger, ta, signatureProvider)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", anchor)
 	}
 
 	var actions []interface{}
@@ -99,7 +99,7 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	for _, action := range ta {
 		actions = append(actions, action)
 	}
-	return actions, nil
+	return actions, nil, nil
 }
 
 func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
