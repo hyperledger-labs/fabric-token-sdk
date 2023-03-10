@@ -302,7 +302,7 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 func (db *Persistence) QueryMetadata(params driver.QueryMetadataParams) (driver.MetadataIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	it.Seek([]byte("tx"))
+	it.Seek([]byte("mt"))
 
 	selector := &MetadataSelector{
 		params: params,
