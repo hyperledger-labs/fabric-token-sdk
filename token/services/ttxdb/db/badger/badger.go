@@ -199,11 +199,11 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 }
 
 func (db *Persistence) AddMetadata(txID string, tr []byte, meta map[string][]byte) error {
-	logger.Debugf("Adding metadata record [%s]", txID)
 	next, key, err := db.metadataKey(txID)
 	if err != nil {
 		return errors.Wrapf(err, "could not get key for metadata %s", txID)
 	}
+	logger.Debugf("Adding metadata record [%s] with key", txID, key)
 
 	value := &MetadataRecord{
 		Id: next,
@@ -367,6 +367,16 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			}
 			record.Record.Status = status
 			bytes, err = MarshalTransactionRecord(record)
+			if err != nil {
+				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
+			}
+		case strings.HasPrefix(entry.key, "mt"):
+			record, err := UnmarshalMetadataRecord(entry.value)
+			if err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			record.Record.Status = status
+			bytes, err = MarshalMetadataRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
@@ -702,7 +712,7 @@ func (t *MetadataIterator) Next() (*driver.MetadataRecord, error) {
 			return nil, nil
 		}
 
-		if !strings.HasPrefix(string(item.Key()), "tx") {
+		if !strings.HasPrefix(string(item.Key()), "mt") {
 			t.it.Next()
 			continue
 		}
