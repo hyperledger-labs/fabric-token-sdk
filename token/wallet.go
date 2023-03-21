@@ -68,6 +68,15 @@ func (wm *WalletManager) Wallet(identity view.Identity) *Wallet {
 	return &Wallet{w: w, managementService: wm.managementService}
 }
 
+// OwnerWalletIDs returns the list of owner wallet identifiers
+func (wm *WalletManager) OwnerWalletIDs() ([]string, error) {
+	ids, err := wm.managementService.tms.OwnerWalletIDs()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get the list of owner wallet identifiers")
+	}
+	return ids, nil
+}
+
 // OwnerWallet returns the owner wallet bound to the passed identifier, if any is available.
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.

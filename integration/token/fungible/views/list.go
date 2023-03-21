@@ -9,6 +9,8 @@ package views
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -41,5 +43,18 @@ func (i *ListUnspentTokensViewFactory) NewView(in []byte) (view.View, error) {
 	f := &ListUnspentTokensView{ListUnspentTokens: &ListUnspentTokens{}}
 	err := json.Unmarshal(in, f.ListUnspentTokens)
 	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+type ListOwnerWalletIDsView struct{}
+
+func (p *ListOwnerWalletIDsView) Call(context view.Context) (interface{}, error) {
+	return token.GetManagementService(context).WalletManager().OwnerWalletIDs()
+}
+
+type ListOwnerWalletIDsViewFactory struct{}
+
+func (i *ListOwnerWalletIDsViewFactory) NewView(in []byte) (view.View, error) {
+	f := &ListOwnerWalletIDsView{}
 	return f, nil
 }

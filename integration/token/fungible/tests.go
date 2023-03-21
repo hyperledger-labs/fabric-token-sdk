@@ -696,6 +696,8 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	CheckBalance(network, "alice", "", "USD", 220)
 	CheckHolding(network, "alice", "", "USD", 110, auditor)
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer", errorMessage)
+
+	CheckOwnerWalletIDs(network, "manager", "manager.id1", "manager.id2", "manager.id3")
 }
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
