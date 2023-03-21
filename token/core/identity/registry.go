@@ -174,20 +174,33 @@ func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) b
 
 // WalletIDs returns the list of owner wallet identifiers
 func (r *WalletsRegistry) WalletIDs() ([]string, error) {
+	walletIDs, err := r.IdentityProvider.WalletIDs(r.IdentityRole)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet identifiers from identity provider")
+	}
 	it, err := r.KVS.GetByPartialCompositeID("wallets", []string{r.ID.Network, r.ID.Channel, r.ID.Namespace})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
 	}
-	var res []string
+	duplicates := map[string]bool{}
+	for _, id := range walletIDs {
+		duplicates[id] = true
+	}
+
 	for it.HasNext() {
 		entry := &WalletEntry{}
 		_, err := it.Next(entry)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get next wallets from iterator")
 		}
-		res = append(res, entry.ID)
+		_, found := duplicates[entry.ID]
+		if !found {
+			walletIDs = append(walletIDs, entry.ID)
+			duplicates[entry.ID] = true
+		}
 	}
-	return res, nil
+
+	return walletIDs, nil
 }
 
 func walletIDToString(w string) string {

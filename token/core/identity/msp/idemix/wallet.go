@@ -20,6 +20,7 @@ type localMembership interface {
 	GetIdentifier(id view.Identity) (string, error)
 	GetDefaultIdentifier() string
 	RegisterIdentity(id string, path string) error
+	IDs() ([]string, error)
 }
 
 // wallet maps an identifier to an identity
@@ -151,4 +152,8 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 func (w *wallet) RegisterIdentity(id string, path string) error {
 	logger.Debugf("register idemix identity [%s:%s]", id, path)
 	return w.localMembership.RegisterIdentity(id, path)
+}
+
+func (w *wallet) IDs() ([]string, error) {
+	return w.localMembership.IDs()
 }

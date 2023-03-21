@@ -237,6 +237,14 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	return nil
 }
 
+func (p *Provider) WalletIDs(role driver.IdentityRole) ([]string, error) {
+	wallet, ok := p.wallets[role]
+	if !ok {
+		return nil, errors.Errorf("wallet not found for role [%d]", role)
+	}
+	return wallet.IDs()
+}
+
 func (p *Provider) AddDeserializer(d Deserializer) {
 	p.deserializers = append(p.deserializers, d)
 }
