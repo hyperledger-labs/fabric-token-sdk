@@ -106,6 +106,9 @@ type WalletService interface {
 	// RegisterIssuerWallet registers an issuer wallet
 	RegisterIssuerWallet(id string, path string) error
 
+	// OwnerWalletIDs returns the list of owner wallet identifiers
+	OwnerWalletIDs() ([]string, error)
+
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
 	OwnerWallet(id string) (OwnerWallet, error)

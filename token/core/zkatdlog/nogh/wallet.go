@@ -87,6 +87,10 @@ func (s *Service) Wallet(identity view.Identity) driver.Wallet {
 	return nil
 }
 
+func (s *Service) OwnerWalletIDs() ([]string, error) {
+	return s.OwnerWalletsRegistry.WalletIDs()
+}
+
 func (s *Service) OwnerWallet(id string) (driver.OwnerWallet, error) {
 	return s.OwnerWalletByID(id)
 }
