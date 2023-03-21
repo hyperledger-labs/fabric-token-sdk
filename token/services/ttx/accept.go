@@ -93,7 +93,7 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 }
 
 func (s *acceptView) respondToSignatureRequests(context view.Context) error {
-	requestsToBeSigned, err := s.requestsToBeSigned()
+	requestsToBeSigned, err := requestsToBeSigned(s.tx.TokenRequest)
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
 	}
@@ -177,23 +177,4 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 	}
 
 	return nil
-}
-
-func (s *acceptView) requestsToBeSigned() ([]*token.Transfer, error) {
-	var res []*token.Transfer
-	transfers := s.tx.TokenRequest.Transfers()
-	sigService := s.tx.TokenService().SigService()
-	for _, transfer := range transfers {
-		for _, sender := range transfer.Senders {
-			if _, err := sigService.GetSigner(sender); err == nil {
-				res = append(res, transfer)
-			}
-		}
-		for _, sender := range transfer.ExtraSigners {
-			if _, err := sigService.GetSigner(sender); err == nil {
-				res = append(res, transfer)
-			}
-		}
-	}
-	return res, nil
 }
