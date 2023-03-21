@@ -19,6 +19,8 @@ type Wallet interface {
 	GetIdentityInfo(id string) driver.IdentityInfo
 	// RegisterIdentity registers the given identity
 	RegisterIdentity(id string, path string) error
+	// IDs returns the identifiers contains in this wallet
+	IDs() ([]string, error)
 }
 
 // Wallets is a map of Wallet, one for each identity role

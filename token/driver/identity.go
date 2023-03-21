@@ -69,4 +69,6 @@ type IdentityProvider interface {
 
 	// RegisterIssuerWallet registers the passed wallet ad the issuer wallet of the passed identity.
 	RegisterIssuerWallet(id string, path string) error
+
+	WalletIDs(role IdentityRole) ([]string, error)
 }

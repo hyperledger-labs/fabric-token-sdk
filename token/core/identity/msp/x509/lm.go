@@ -146,6 +146,14 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	}, lm.GetDefaultIdentifier() == "")
 }
 
+func (lm *LocalMembership) IDs() ([]string, error) {
+	var ids []string
+	for _, resolver := range lm.resolvers {
+		ids = append(ids, resolver.Name)
+	}
+	return ids, nil
+}
+
 func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(c.Path)
