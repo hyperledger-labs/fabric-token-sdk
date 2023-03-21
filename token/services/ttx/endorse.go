@@ -725,7 +725,7 @@ func NewEndorseView(tx *Transaction) *endorseView {
 // 4. It sends back an ack.
 func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
-	requestsToBeSigned, err := s.requestsToBeSigned()
+	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed collecting requests of signature")
 	}
@@ -828,11 +828,11 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	return s.tx, nil
 }
 
-func (s *endorseView) requestsToBeSigned() ([]any, error) {
+func requestsToBeSigned(request *token.Request) ([]any, error) {
 	var res []any
-	transfers := s.tx.TokenRequest.Transfers()
-	issues := s.tx.TokenRequest.Issues()
-	sigService := s.tx.TokenService().SigService()
+	transfers := request.Transfers()
+	issues := request.Issues()
+	sigService := request.TokenService.SigService()
 	for _, issue := range issues {
 		for _, sender := range issue.ExtraSigners {
 			if _, err := sigService.GetSigner(sender); err == nil {
