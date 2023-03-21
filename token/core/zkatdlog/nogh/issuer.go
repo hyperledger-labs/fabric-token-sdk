@@ -18,53 +18,57 @@ import (
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization TokenInformation associated with issued tokens
 // and the identity of the issuer
-func (s *Service) Issue(issuerIdentity view.Identity, typ string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, [][]byte, view.Identity, error) {
+func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
-			return nil, nil, nil, errors.Errorf("all recipients should be defined")
+			return nil, nil, errors.Errorf("all recipients should be defined")
 		}
 	}
 
 	w, err := s.IssuerWalletByIdentity(issuerIdentity)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	signer, err := w.GetSigner(issuerIdentity)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	pp := s.PublicParams()
 	if pp == nil {
-		return nil, nil, nil, errors.Errorf("public parameters not inizialized")
+		return nil, nil, errors.Errorf("public parameters not inizialized")
 	}
 	issuer := &nonanonym.Issuer{}
-	issuer.New(typ, &common.WrappedSigningIdentity{
+	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
 	}, pp)
 
 	issue, outputMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	var outputMetadataRaw [][]byte
 	for _, meta := range outputMetadata {
 		raw, err := meta.Serialize()
 		if err != nil {
-			return nil, nil, nil, errors.WithMessage(err, "failed serializing token info")
+			return nil, nil, errors.WithMessage(err, "failed serializing token info")
 		}
 		outputMetadataRaw = append(outputMetadataRaw, raw)
 	}
 
-	fid, err := issuer.Signer.Serialize()
+	issuerSerializedIdentity, err := issuer.Signer.Serialize()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
-	return issue, outputMetadataRaw, fid, err
+	meta := &driver.IssueMetadata{
+		Issuer:    issuerSerializedIdentity,
+		TokenInfo: outputMetadataRaw,
+	}
+	return issue, meta, err
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed metadata

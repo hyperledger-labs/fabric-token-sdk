@@ -69,7 +69,8 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	// filter issues
 	for _, issue := range m.TokenRequestMetadata.Issues {
 		issueRes := driver.IssueMetadata{
-			Issuer: issue.Issuer,
+			Issuer:       issue.Issuer,
+			ExtraSigners: issue.ExtraSigners,
 		}
 
 		for i, auditInfo := range issue.ReceiversAuditInfos {
