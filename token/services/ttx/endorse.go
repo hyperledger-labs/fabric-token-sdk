@@ -10,14 +10,13 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -137,81 +136,89 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 	}
 
 	var distributionList []view.Identity
-	for _, issue := range issues {
+	for i, issue := range issues {
 		distributionList = append(distributionList, issue.Issuer)
 		distributionList = append(distributionList, issue.Receivers...)
 
-		// contact issuer and ask for the signature unless it is me
-		party := issue.Issuer
+		var signers []view.Identity
+		signers = append(signers, issue.Issuer)
+		signers = append(signers, issue.ExtraSigners...)
+
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collecting signature on request (issue) from [%s]", party.UniqueID())
+			logger.Debugf("collecting signature on [%d]-th request (issue), signers [%d]", i, len(signers))
 		}
-		if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
+
+		for _, party := range signers {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("signing [%s][%s]", hash.Hashable(requestRaw).String(), c.tx.ID())
+				logger.Debugf("collecting signature on request (issue) from [%s]", party.UniqueID())
 			}
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
+			if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("signing [%s][%s]", hash.Hashable(requestRaw).String(), c.tx.ID())
+				}
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
+				}
+				sigma, err := signer.Sign(append(requestRaw, []byte(c.tx.ID())...))
+				if err != nil {
+					return nil, err
+				}
+				c.tx.TokenRequest.AppendSignature(sigma)
+				continue
 			}
-			sigma, err := signer.Sign(append(requestRaw, []byte(c.tx.ID())...))
+
+			session, err := context.GetSession(context.Initiator(), party)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed getting session")
+			}
+			// Wait to receive a content back
+			ch := session.Receive()
+
+			signatureRequest := &signatureRequest{
+				TX:      txRaw,
+				Request: requestRaw,
+				TxID:    []byte(c.tx.ID()),
+				Signer:  party,
+			}
+			signatureRequestRaw, err := Marshal(signatureRequest)
 			if err != nil {
 				return nil, err
 			}
-			c.tx.TokenRequest.AppendSignature(sigma)
-			continue
-		}
-
-		session, err := context.GetSession(context.Initiator(), party)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed getting session")
-		}
-		// Wait to receive a content back
-		ch := session.Receive()
-
-		signatureRequest := &signatureRequest{
-			TX:      txRaw,
-			Request: requestRaw,
-			TxID:    []byte(c.tx.ID()),
-			Signer:  party,
-		}
-		signatureRequestRaw, err := Marshal(signatureRequest)
-		if err != nil {
-			return nil, err
-		}
-		err = session.Send(signatureRequestRaw)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed sending transaction content")
-		}
-
-		timeout := time.NewTimer(time.Minute)
-
-		var msg *view.Message
-		select {
-		case msg = <-ch:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("collect signatures on issue: reply received from [%s]", party)
+			err = session.Send(signatureRequestRaw)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed sending transaction content")
 			}
-			timeout.Stop()
-		case <-timeout.C:
-			timeout.Stop()
-			return nil, errors.Errorf("Timeout from party %s", party)
-		}
-		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
-		}
 
-		sigma := msg.Payload
+			timeout := time.NewTimer(time.Minute)
 
-		verifier, err := c.tx.TokenService().SigService().IssuerVerifier(party)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
-		}
-		err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed verifying signature from [%s]", party)
-		}
+			var msg *view.Message
+			select {
+			case msg = <-ch:
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("collect signatures on issue: reply received from [%s]", party)
+				}
+				timeout.Stop()
+			case <-timeout.C:
+				timeout.Stop()
+				return nil, errors.Errorf("Timeout from party %s", party)
+			}
+			if msg.Status == view.ERROR {
+				return nil, errors.New(string(msg.Payload))
+			}
 
-		c.tx.TokenRequest.AppendSignature(sigma)
+			sigma := msg.Payload
+
+			verifier, err := c.tx.TokenService().SigService().IssuerVerifier(party)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
+			}
+			err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed verifying signature from [%s]", party)
+			}
+
+			c.tx.TokenRequest.AppendSignature(sigma)
+		}
 	}
 
 	return distributionList, nil
@@ -821,10 +828,18 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	return s.tx, nil
 }
 
-func (s *endorseView) requestsToBeSigned() ([]*token.Transfer, error) {
-	var res []*token.Transfer
+func (s *endorseView) requestsToBeSigned() ([]any, error) {
+	var res []any
 	transfers := s.tx.TokenRequest.Transfers()
+	issues := s.tx.TokenRequest.Issues()
 	sigService := s.tx.TokenService().SigService()
+	for _, issue := range issues {
+		for _, sender := range issue.ExtraSigners {
+			if _, err := sigService.GetSigner(sender); err == nil {
+				res = append(res, issue)
+			}
+		}
+	}
 	for _, transfer := range transfers {
 		for _, sender := range transfer.Senders {
 			if _, err := sigService.GetSigner(sender); err == nil {

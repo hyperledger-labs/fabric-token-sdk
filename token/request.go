@@ -118,8 +118,14 @@ type AuditRecord struct {
 // Issue contains information about an issue operation.
 // In particular, it carries the identities of the issuer and the receivers
 type Issue struct {
-	Issuer    view.Identity
+	// Issuer is the issuer of the tokens
+	Issuer view.Identity
+	// Receivers is the list of identities of the receivers
 	Receivers []view.Identity
+	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
+	// This field is to be used by the token drivers to list any additional identities that must
+	// sign the token request.
+	ExtraSigners []view.Identity
 }
 
 // Transfer contains information about a transfer operation.
@@ -218,7 +224,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	// Compute Issue
-	issue, tokenInfos, issuer, err := r.TokenService.tms.Issue(
+	issue, meta, err := r.TokenService.tms.Issue(
 		id,
 		typ,
 		[]uint64{q},
@@ -249,13 +255,15 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	if r.Metadata == nil {
 		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
 	}
+
 	r.Metadata.Issues = append(r.Metadata.Issues,
 		driver.IssueMetadata{
-			Issuer:              issuer,
+			Issuer:              meta.Issuer,
 			Outputs:             outputs,
-			TokenInfo:           tokenInfos,
+			TokenInfo:           meta.TokenInfo,
 			Receivers:           []view.Identity{receiver},
 			ReceiversAuditInfos: [][]byte{auditInfo},
+			ExtraSigners:        meta.ExtraSigners,
 		},
 	)
 
@@ -848,7 +856,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind extra sginer [%s] to [%s]", eid, party)
+			logger.Debugf("bind extra signer [%s] to [%s]", eid, party)
 			if err := resolver.Bind(longTermIdentity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
@@ -878,8 +886,9 @@ func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range r.Metadata.Issues {
 		issues = append(issues, &Issue{
-			Issuer:    issue.Issuer,
-			Receivers: issue.Receivers,
+			Issuer:       issue.Issuer,
+			Receivers:    issue.Receivers,
+			ExtraSigners: issue.ExtraSigners,
 		})
 	}
 	return issues
