@@ -50,6 +50,15 @@ func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, curveID 
 	}
 }
 
+func NewCryptoMaterialGeneratorWithCurveIdentifier(tokenPlatform generators.TokenPlatform, curveID string, builder api.Builder) *CryptoMaterialGenerator {
+	return &CryptoMaterialGenerator{
+		FabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+		TokenPlatform:     tokenPlatform,
+		EventuallyTimeout: 10 * time.Minute,
+		Curve:             curveID,
+	}
+}
+
 func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), "idemix")
 	if err := os.MkdirAll(output, 0766); err != nil {
