@@ -42,6 +42,8 @@ func newDeserializer(ipk []byte, verType bccsp.VerificationType, nymEID []byte, 
 	switch curveID {
 	case math.BN254:
 		tr = &amcl.Gurvy{C: curve}
+	case math.BLS12_377_GURVY:
+		tr = &amcl.Gurvy{C: curve}
 	case math.FP256BN_AMCL:
 		tr = &amcl.Fp256bn{C: curve}
 	case math.FP256BN_AMCL_MIRACL:

@@ -167,6 +167,8 @@ func CurveIDToString(id math3.CurveID) string {
 		return "FP256BN_AMCL"
 	case math3.FP256BN_AMCL_MIRACL:
 		return "FP256BN_AMCL_MIRACL"
+	case math3.BLS12_377_GURVY:
+		return "BLS12_377_GURVY"
 	default:
 		panic("invalid curve id")
 	}

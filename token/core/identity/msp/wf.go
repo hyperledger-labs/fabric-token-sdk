@@ -8,6 +8,7 @@ package msp
 
 import (
 	"github.com/IBM/idemix/common/flogging"
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -74,7 +75,7 @@ func NewWalletFactory(
 }
 
 // NewIdemixWallet creates a new Idemix wallet
-func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int) (identity.Wallet, error) {
+func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity.Wallet, error) {
 	identities, err := f.ConfigFor(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -94,6 +95,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int)
 		kvs.GetService(f.SP),
 		RoleToMSPID[role],
 		cacheSize,
+		curveID,
 	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
