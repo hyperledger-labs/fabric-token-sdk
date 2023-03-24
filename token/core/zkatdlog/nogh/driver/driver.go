@@ -9,6 +9,7 @@ package driver
 import (
 	"time"
 
+	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -63,7 +64,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		msp.NewSigService(view.GetSigService(sp)),      // signer service
 		view.GetEndpointService(sp),                    // endpoint service
 	)
-	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize())
+	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BN254)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner wallet")
 	}
