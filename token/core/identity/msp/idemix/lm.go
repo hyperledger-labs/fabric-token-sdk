@@ -178,6 +178,7 @@ func (lm *LocalMembership) registerIdentity(id string, path string, setDefault b
 	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(path)
 	if err := lm.registerMSPProvider(id, translatedPath, lm.curveID, setDefault); err != nil {
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s]", translatedPath, err)
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerMSPProviders(translatedPath, lm.curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
