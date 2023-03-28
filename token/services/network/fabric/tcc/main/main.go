@@ -10,6 +10,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -48,6 +50,11 @@ func main() {
 	if len(config.MetricsServer) == 0 {
 		config.MetricsServer = "localhost:8125"
 	}
+	flogging.Init(flogging.Config{
+		Format:  "'%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'",
+		LogSpec: "debug",
+		Writer:  os.Stderr,
+	})
 
 	fmt.Printf("metrics server at [%s], enabled [%v]", config.MetricsServer, config.MetricsEnabled)
 

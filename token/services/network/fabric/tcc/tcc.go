@@ -247,6 +247,9 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 	if len(raw) == 0 {
 		return shim.Error("need to initialize public parameters")
 	}
+
+	logger.Debugf("query public params, size[%d]", len(raw))
+
 	return shim.Success(raw)
 }
 
