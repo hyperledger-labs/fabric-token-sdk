@@ -52,7 +52,7 @@ func main() {
 	}
 	flogging.Init(flogging.Config{
 		Format:  "'%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'",
-		LogSpec: "debug",
+		LogSpec: "info",
 		Writer:  os.Stderr,
 	})
 
