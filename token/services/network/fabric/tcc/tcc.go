@@ -247,7 +247,7 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 		return shim.Error("need to initialize public parameters")
 	}
 
-	logger.Debugf("query public params, size[%d]", len(raw))
+	logger.Infof("query public params, size[%d]", len(raw))
 
 	return shim.Success(raw)
 }
@@ -259,7 +259,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 		return shim.Error(err.Error())
 	}
 
-	logger.Debugf("query tokens [%v]...", ids)
+	logger.Infof("query tokens [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	res, err := w.QueryTokens(ids)
@@ -287,7 +287,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 		return shim.Error(err.Error())
 	}
 
-	logger.Debugf("check if tokens are spent [%v]...", ids)
+	logger.Infof("check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())
