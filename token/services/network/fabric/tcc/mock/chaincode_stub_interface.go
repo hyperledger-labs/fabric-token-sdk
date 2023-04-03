@@ -4,214 +4,18 @@ package mock
 import (
 	"sync"
 
-	"github.com/golang/protobuf/ptypes/timestamp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
-	pb "github.com/hyperledger/fabric-protos-go/peer"
+	"github.com/hyperledger/fabric-protos-go/peer"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type ChaincodeStubInterface struct {
-	GetArgsStub        func() [][]byte
-	getArgsMutex       sync.RWMutex
-	getArgsArgsForCall []struct{}
-	getArgsReturns     struct {
-		result1 [][]byte
-	}
-	getArgsReturnsOnCall map[int]struct {
-		result1 [][]byte
-	}
-	GetStringArgsStub        func() []string
-	getStringArgsMutex       sync.RWMutex
-	getStringArgsArgsForCall []struct{}
-	getStringArgsReturns     struct {
-		result1 []string
-	}
-	getStringArgsReturnsOnCall map[int]struct {
-		result1 []string
-	}
-	GetFunctionAndParametersStub        func() (string, []string)
-	getFunctionAndParametersMutex       sync.RWMutex
-	getFunctionAndParametersArgsForCall []struct{}
-	getFunctionAndParametersReturns     struct {
-		result1 string
-		result2 []string
-	}
-	getFunctionAndParametersReturnsOnCall map[int]struct {
-		result1 string
-		result2 []string
-	}
-	GetArgsSliceStub        func() ([]byte, error)
-	getArgsSliceMutex       sync.RWMutex
-	getArgsSliceArgsForCall []struct{}
-	getArgsSliceReturns     struct {
-		result1 []byte
-		result2 error
-	}
-	getArgsSliceReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetTxIDStub        func() string
-	getTxIDMutex       sync.RWMutex
-	getTxIDArgsForCall []struct{}
-	getTxIDReturns     struct {
-		result1 string
-	}
-	getTxIDReturnsOnCall map[int]struct {
-		result1 string
-	}
-	GetChannelIDStub        func() string
-	getChannelIDMutex       sync.RWMutex
-	getChannelIDArgsForCall []struct{}
-	getChannelIDReturns     struct {
-		result1 string
-	}
-	getChannelIDReturnsOnCall map[int]struct {
-		result1 string
-	}
-	InvokeChaincodeStub        func(chaincodeName string, args [][]byte, channel string) pb.Response
-	invokeChaincodeMutex       sync.RWMutex
-	invokeChaincodeArgsForCall []struct {
-		chaincodeName string
-		args          [][]byte
-		channel       string
-	}
-	invokeChaincodeReturns struct {
-		result1 pb.Response
-	}
-	invokeChaincodeReturnsOnCall map[int]struct {
-		result1 pb.Response
-	}
-	GetStateStub        func(key string) ([]byte, error)
-	getStateMutex       sync.RWMutex
-	getStateArgsForCall []struct {
-		key string
-	}
-	getStateReturns struct {
-		result1 []byte
-		result2 error
-	}
-	getStateReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	PutStateStub        func(key string, value []byte) error
-	putStateMutex       sync.RWMutex
-	putStateArgsForCall []struct {
-		key   string
-		value []byte
-	}
-	putStateReturns struct {
-		result1 error
-	}
-	putStateReturnsOnCall map[int]struct {
-		result1 error
-	}
-	DelStateStub        func(key string) error
-	delStateMutex       sync.RWMutex
-	delStateArgsForCall []struct {
-		key string
-	}
-	delStateReturns struct {
-		result1 error
-	}
-	delStateReturnsOnCall map[int]struct {
-		result1 error
-	}
-	SetStateValidationParameterStub        func(key string, ep []byte) error
-	setStateValidationParameterMutex       sync.RWMutex
-	setStateValidationParameterArgsForCall []struct {
-		key string
-		ep  []byte
-	}
-	setStateValidationParameterReturns struct {
-		result1 error
-	}
-	setStateValidationParameterReturnsOnCall map[int]struct {
-		result1 error
-	}
-	GetStateValidationParameterStub        func(key string) ([]byte, error)
-	getStateValidationParameterMutex       sync.RWMutex
-	getStateValidationParameterArgsForCall []struct {
-		key string
-	}
-	getStateValidationParameterReturns struct {
-		result1 []byte
-		result2 error
-	}
-	getStateValidationParameterReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetStateByRangeStub        func(startKey, endKey string) (shim.StateQueryIteratorInterface, error)
-	getStateByRangeMutex       sync.RWMutex
-	getStateByRangeArgsForCall []struct {
-		startKey string
-		endKey   string
-	}
-	getStateByRangeReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	getStateByRangeReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	GetStateByRangeWithPaginationStub        func(startKey, endKey string, pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *pb.QueryResponseMetadata, error)
-	getStateByRangeWithPaginationMutex       sync.RWMutex
-	getStateByRangeWithPaginationArgsForCall []struct {
-		startKey string
-		endKey   string
-		pageSize int32
-		bookmark string
-	}
-	getStateByRangeWithPaginationReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}
-	getStateByRangeWithPaginationReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}
-	GetStateByPartialCompositeKeyStub        func(objectType string, keys []string) (shim.StateQueryIteratorInterface, error)
-	getStateByPartialCompositeKeyMutex       sync.RWMutex
-	getStateByPartialCompositeKeyArgsForCall []struct {
-		objectType string
-		keys       []string
-	}
-	getStateByPartialCompositeKeyReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	getStateByPartialCompositeKeyReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	GetStateByPartialCompositeKeyWithPaginationStub        func(objectType string, keys []string, pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *pb.QueryResponseMetadata, error)
-	getStateByPartialCompositeKeyWithPaginationMutex       sync.RWMutex
-	getStateByPartialCompositeKeyWithPaginationArgsForCall []struct {
-		objectType string
-		keys       []string
-		pageSize   int32
-		bookmark   string
-	}
-	getStateByPartialCompositeKeyWithPaginationReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}
-	getStateByPartialCompositeKeyWithPaginationReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}
-	CreateCompositeKeyStub        func(objectType string, attributes []string) (string, error)
+	CreateCompositeKeyStub        func(string, []string) (string, error)
 	createCompositeKeyMutex       sync.RWMutex
 	createCompositeKeyArgsForCall []struct {
-		objectType string
-		attributes []string
+		arg1 string
+		arg2 []string
 	}
 	createCompositeKeyReturns struct {
 		result1 string
@@ -221,10 +25,473 @@ type ChaincodeStubInterface struct {
 		result1 string
 		result2 error
 	}
-	SplitCompositeKeyStub        func(compositeKey string) (string, []string, error)
+	DelPrivateDataStub        func(string, string) error
+	delPrivateDataMutex       sync.RWMutex
+	delPrivateDataArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	delPrivateDataReturns struct {
+		result1 error
+	}
+	delPrivateDataReturnsOnCall map[int]struct {
+		result1 error
+	}
+	DelStateStub        func(string) error
+	delStateMutex       sync.RWMutex
+	delStateArgsForCall []struct {
+		arg1 string
+	}
+	delStateReturns struct {
+		result1 error
+	}
+	delStateReturnsOnCall map[int]struct {
+		result1 error
+	}
+	GetArgsStub        func() [][]byte
+	getArgsMutex       sync.RWMutex
+	getArgsArgsForCall []struct {
+	}
+	getArgsReturns struct {
+		result1 [][]byte
+	}
+	getArgsReturnsOnCall map[int]struct {
+		result1 [][]byte
+	}
+	GetArgsSliceStub        func() ([]byte, error)
+	getArgsSliceMutex       sync.RWMutex
+	getArgsSliceArgsForCall []struct {
+	}
+	getArgsSliceReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getArgsSliceReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetBindingStub        func() ([]byte, error)
+	getBindingMutex       sync.RWMutex
+	getBindingArgsForCall []struct {
+	}
+	getBindingReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getBindingReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetChannelIDStub        func() string
+	getChannelIDMutex       sync.RWMutex
+	getChannelIDArgsForCall []struct {
+	}
+	getChannelIDReturns struct {
+		result1 string
+	}
+	getChannelIDReturnsOnCall map[int]struct {
+		result1 string
+	}
+	GetCreatorStub        func() ([]byte, error)
+	getCreatorMutex       sync.RWMutex
+	getCreatorArgsForCall []struct {
+	}
+	getCreatorReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getCreatorReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetDecorationsStub        func() map[string][]byte
+	getDecorationsMutex       sync.RWMutex
+	getDecorationsArgsForCall []struct {
+	}
+	getDecorationsReturns struct {
+		result1 map[string][]byte
+	}
+	getDecorationsReturnsOnCall map[int]struct {
+		result1 map[string][]byte
+	}
+	GetFunctionAndParametersStub        func() (string, []string)
+	getFunctionAndParametersMutex       sync.RWMutex
+	getFunctionAndParametersArgsForCall []struct {
+	}
+	getFunctionAndParametersReturns struct {
+		result1 string
+		result2 []string
+	}
+	getFunctionAndParametersReturnsOnCall map[int]struct {
+		result1 string
+		result2 []string
+	}
+	GetHistoryForKeyStub        func(string) (shim.HistoryQueryIteratorInterface, error)
+	getHistoryForKeyMutex       sync.RWMutex
+	getHistoryForKeyArgsForCall []struct {
+		arg1 string
+	}
+	getHistoryForKeyReturns struct {
+		result1 shim.HistoryQueryIteratorInterface
+		result2 error
+	}
+	getHistoryForKeyReturnsOnCall map[int]struct {
+		result1 shim.HistoryQueryIteratorInterface
+		result2 error
+	}
+	GetPrivateDataStub        func(string, string) ([]byte, error)
+	getPrivateDataMutex       sync.RWMutex
+	getPrivateDataArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getPrivateDataReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getPrivateDataReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetPrivateDataByPartialCompositeKeyStub        func(string, string, []string) (shim.StateQueryIteratorInterface, error)
+	getPrivateDataByPartialCompositeKeyMutex       sync.RWMutex
+	getPrivateDataByPartialCompositeKeyArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 []string
+	}
+	getPrivateDataByPartialCompositeKeyReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	getPrivateDataByPartialCompositeKeyReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	GetPrivateDataByRangeStub        func(string, string, string) (shim.StateQueryIteratorInterface, error)
+	getPrivateDataByRangeMutex       sync.RWMutex
+	getPrivateDataByRangeArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}
+	getPrivateDataByRangeReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	getPrivateDataByRangeReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	GetPrivateDataHashStub        func(string, string) ([]byte, error)
+	getPrivateDataHashMutex       sync.RWMutex
+	getPrivateDataHashArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getPrivateDataHashReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getPrivateDataHashReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetPrivateDataQueryResultStub        func(string, string) (shim.StateQueryIteratorInterface, error)
+	getPrivateDataQueryResultMutex       sync.RWMutex
+	getPrivateDataQueryResultArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getPrivateDataQueryResultReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	getPrivateDataQueryResultReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	GetPrivateDataValidationParameterStub        func(string, string) ([]byte, error)
+	getPrivateDataValidationParameterMutex       sync.RWMutex
+	getPrivateDataValidationParameterArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getPrivateDataValidationParameterReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getPrivateDataValidationParameterReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetQueryResultStub        func(string) (shim.StateQueryIteratorInterface, error)
+	getQueryResultMutex       sync.RWMutex
+	getQueryResultArgsForCall []struct {
+		arg1 string
+	}
+	getQueryResultReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	getQueryResultReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	GetQueryResultWithPaginationStub        func(string, int32, string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error)
+	getQueryResultWithPaginationMutex       sync.RWMutex
+	getQueryResultWithPaginationArgsForCall []struct {
+		arg1 string
+		arg2 int32
+		arg3 string
+	}
+	getQueryResultWithPaginationReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}
+	getQueryResultWithPaginationReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}
+	GetSignedProposalStub        func() (*peer.SignedProposal, error)
+	getSignedProposalMutex       sync.RWMutex
+	getSignedProposalArgsForCall []struct {
+	}
+	getSignedProposalReturns struct {
+		result1 *peer.SignedProposal
+		result2 error
+	}
+	getSignedProposalReturnsOnCall map[int]struct {
+		result1 *peer.SignedProposal
+		result2 error
+	}
+	GetStateStub        func(string) ([]byte, error)
+	getStateMutex       sync.RWMutex
+	getStateArgsForCall []struct {
+		arg1 string
+	}
+	getStateReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getStateReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetStateByPartialCompositeKeyStub        func(string, []string) (shim.StateQueryIteratorInterface, error)
+	getStateByPartialCompositeKeyMutex       sync.RWMutex
+	getStateByPartialCompositeKeyArgsForCall []struct {
+		arg1 string
+		arg2 []string
+	}
+	getStateByPartialCompositeKeyReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	getStateByPartialCompositeKeyReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	GetStateByPartialCompositeKeyWithPaginationStub        func(string, []string, int32, string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error)
+	getStateByPartialCompositeKeyWithPaginationMutex       sync.RWMutex
+	getStateByPartialCompositeKeyWithPaginationArgsForCall []struct {
+		arg1 string
+		arg2 []string
+		arg3 int32
+		arg4 string
+	}
+	getStateByPartialCompositeKeyWithPaginationReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}
+	getStateByPartialCompositeKeyWithPaginationReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}
+	GetStateByRangeStub        func(string, string) (shim.StateQueryIteratorInterface, error)
+	getStateByRangeMutex       sync.RWMutex
+	getStateByRangeArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	getStateByRangeReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	getStateByRangeReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}
+	GetStateByRangeWithPaginationStub        func(string, string, int32, string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error)
+	getStateByRangeWithPaginationMutex       sync.RWMutex
+	getStateByRangeWithPaginationArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 int32
+		arg4 string
+	}
+	getStateByRangeWithPaginationReturns struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}
+	getStateByRangeWithPaginationReturnsOnCall map[int]struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}
+	GetStateValidationParameterStub        func(string) ([]byte, error)
+	getStateValidationParameterMutex       sync.RWMutex
+	getStateValidationParameterArgsForCall []struct {
+		arg1 string
+	}
+	getStateValidationParameterReturns struct {
+		result1 []byte
+		result2 error
+	}
+	getStateValidationParameterReturnsOnCall map[int]struct {
+		result1 []byte
+		result2 error
+	}
+	GetStringArgsStub        func() []string
+	getStringArgsMutex       sync.RWMutex
+	getStringArgsArgsForCall []struct {
+	}
+	getStringArgsReturns struct {
+		result1 []string
+	}
+	getStringArgsReturnsOnCall map[int]struct {
+		result1 []string
+	}
+	GetTransientStub        func() (map[string][]byte, error)
+	getTransientMutex       sync.RWMutex
+	getTransientArgsForCall []struct {
+	}
+	getTransientReturns struct {
+		result1 map[string][]byte
+		result2 error
+	}
+	getTransientReturnsOnCall map[int]struct {
+		result1 map[string][]byte
+		result2 error
+	}
+	GetTxIDStub        func() string
+	getTxIDMutex       sync.RWMutex
+	getTxIDArgsForCall []struct {
+	}
+	getTxIDReturns struct {
+		result1 string
+	}
+	getTxIDReturnsOnCall map[int]struct {
+		result1 string
+	}
+	GetTxTimestampStub        func() (*timestamppb.Timestamp, error)
+	getTxTimestampMutex       sync.RWMutex
+	getTxTimestampArgsForCall []struct {
+	}
+	getTxTimestampReturns struct {
+		result1 *timestamppb.Timestamp
+		result2 error
+	}
+	getTxTimestampReturnsOnCall map[int]struct {
+		result1 *timestamppb.Timestamp
+		result2 error
+	}
+	InvokeChaincodeStub        func(string, [][]byte, string) peer.Response
+	invokeChaincodeMutex       sync.RWMutex
+	invokeChaincodeArgsForCall []struct {
+		arg1 string
+		arg2 [][]byte
+		arg3 string
+	}
+	invokeChaincodeReturns struct {
+		result1 peer.Response
+	}
+	invokeChaincodeReturnsOnCall map[int]struct {
+		result1 peer.Response
+	}
+	PurgePrivateDataStub        func(string, string) error
+	purgePrivateDataMutex       sync.RWMutex
+	purgePrivateDataArgsForCall []struct {
+		arg1 string
+		arg2 string
+	}
+	purgePrivateDataReturns struct {
+		result1 error
+	}
+	purgePrivateDataReturnsOnCall map[int]struct {
+		result1 error
+	}
+	PutPrivateDataStub        func(string, string, []byte) error
+	putPrivateDataMutex       sync.RWMutex
+	putPrivateDataArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 []byte
+	}
+	putPrivateDataReturns struct {
+		result1 error
+	}
+	putPrivateDataReturnsOnCall map[int]struct {
+		result1 error
+	}
+	PutStateStub        func(string, []byte) error
+	putStateMutex       sync.RWMutex
+	putStateArgsForCall []struct {
+		arg1 string
+		arg2 []byte
+	}
+	putStateReturns struct {
+		result1 error
+	}
+	putStateReturnsOnCall map[int]struct {
+		result1 error
+	}
+	SetEventStub        func(string, []byte) error
+	setEventMutex       sync.RWMutex
+	setEventArgsForCall []struct {
+		arg1 string
+		arg2 []byte
+	}
+	setEventReturns struct {
+		result1 error
+	}
+	setEventReturnsOnCall map[int]struct {
+		result1 error
+	}
+	SetPrivateDataValidationParameterStub        func(string, string, []byte) error
+	setPrivateDataValidationParameterMutex       sync.RWMutex
+	setPrivateDataValidationParameterArgsForCall []struct {
+		arg1 string
+		arg2 string
+		arg3 []byte
+	}
+	setPrivateDataValidationParameterReturns struct {
+		result1 error
+	}
+	setPrivateDataValidationParameterReturnsOnCall map[int]struct {
+		result1 error
+	}
+	SetStateValidationParameterStub        func(string, []byte) error
+	setStateValidationParameterMutex       sync.RWMutex
+	setStateValidationParameterArgsForCall []struct {
+		arg1 string
+		arg2 []byte
+	}
+	setStateValidationParameterReturns struct {
+		result1 error
+	}
+	setStateValidationParameterReturnsOnCall map[int]struct {
+		result1 error
+	}
+	SplitCompositeKeyStub        func(string) (string, []string, error)
 	splitCompositeKeyMutex       sync.RWMutex
 	splitCompositeKeyArgsForCall []struct {
-		compositeKey string
+		arg1 string
 	}
 	splitCompositeKeyReturns struct {
 		result1 string
@@ -236,1061 +503,33 @@ type ChaincodeStubInterface struct {
 		result2 []string
 		result3 error
 	}
-	GetQueryResultStub        func(query string) (shim.StateQueryIteratorInterface, error)
-	getQueryResultMutex       sync.RWMutex
-	getQueryResultArgsForCall []struct {
-		query string
-	}
-	getQueryResultReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	getQueryResultReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	GetQueryResultWithPaginationStub        func(query string, pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *pb.QueryResponseMetadata, error)
-	getQueryResultWithPaginationMutex       sync.RWMutex
-	getQueryResultWithPaginationArgsForCall []struct {
-		query    string
-		pageSize int32
-		bookmark string
-	}
-	getQueryResultWithPaginationReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}
-	getQueryResultWithPaginationReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}
-	GetHistoryForKeyStub        func(key string) (shim.HistoryQueryIteratorInterface, error)
-	getHistoryForKeyMutex       sync.RWMutex
-	getHistoryForKeyArgsForCall []struct {
-		key string
-	}
-	getHistoryForKeyReturns struct {
-		result1 shim.HistoryQueryIteratorInterface
-		result2 error
-	}
-	getHistoryForKeyReturnsOnCall map[int]struct {
-		result1 shim.HistoryQueryIteratorInterface
-		result2 error
-	}
-	GetPrivateDataStub        func(collection, key string) ([]byte, error)
-	getPrivateDataMutex       sync.RWMutex
-	getPrivateDataArgsForCall []struct {
-		collection string
-		key        string
-	}
-	getPrivateDataReturns struct {
-		result1 []byte
-		result2 error
-	}
-	getPrivateDataReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetPrivateDataHashStub        func(collection, key string) ([]byte, error)
-	getPrivateDataHashMutex       sync.RWMutex
-	getPrivateDataHashArgsForCall []struct {
-		collection string
-		key        string
-	}
-	getPrivateDataHashReturns struct {
-		result1 []byte
-		result2 error
-	}
-	getPrivateDataHashReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	PutPrivateDataStub        func(collection string, key string, value []byte) error
-	putPrivateDataMutex       sync.RWMutex
-	putPrivateDataArgsForCall []struct {
-		collection string
-		key        string
-		value      []byte
-	}
-	putPrivateDataReturns struct {
-		result1 error
-	}
-	putPrivateDataReturnsOnCall map[int]struct {
-		result1 error
-	}
-	DelPrivateDataStub        func(collection, key string) error
-	delPrivateDataMutex       sync.RWMutex
-	delPrivateDataArgsForCall []struct {
-		collection string
-		key        string
-	}
-	delPrivateDataReturns struct {
-		result1 error
-	}
-	delPrivateDataReturnsOnCall map[int]struct {
-		result1 error
-	}
-	SetPrivateDataValidationParameterStub        func(collection, key string, ep []byte) error
-	setPrivateDataValidationParameterMutex       sync.RWMutex
-	setPrivateDataValidationParameterArgsForCall []struct {
-		collection string
-		key        string
-		ep         []byte
-	}
-	setPrivateDataValidationParameterReturns struct {
-		result1 error
-	}
-	setPrivateDataValidationParameterReturnsOnCall map[int]struct {
-		result1 error
-	}
-	GetPrivateDataValidationParameterStub        func(collection, key string) ([]byte, error)
-	getPrivateDataValidationParameterMutex       sync.RWMutex
-	getPrivateDataValidationParameterArgsForCall []struct {
-		collection string
-		key        string
-	}
-	getPrivateDataValidationParameterReturns struct {
-		result1 []byte
-		result2 error
-	}
-	getPrivateDataValidationParameterReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetPrivateDataByRangeStub        func(collection, startKey, endKey string) (shim.StateQueryIteratorInterface, error)
-	getPrivateDataByRangeMutex       sync.RWMutex
-	getPrivateDataByRangeArgsForCall []struct {
-		collection string
-		startKey   string
-		endKey     string
-	}
-	getPrivateDataByRangeReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	getPrivateDataByRangeReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	GetPrivateDataByPartialCompositeKeyStub        func(collection, objectType string, keys []string) (shim.StateQueryIteratorInterface, error)
-	getPrivateDataByPartialCompositeKeyMutex       sync.RWMutex
-	getPrivateDataByPartialCompositeKeyArgsForCall []struct {
-		collection string
-		objectType string
-		keys       []string
-	}
-	getPrivateDataByPartialCompositeKeyReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	getPrivateDataByPartialCompositeKeyReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	GetPrivateDataQueryResultStub        func(collection, query string) (shim.StateQueryIteratorInterface, error)
-	getPrivateDataQueryResultMutex       sync.RWMutex
-	getPrivateDataQueryResultArgsForCall []struct {
-		collection string
-		query      string
-	}
-	getPrivateDataQueryResultReturns struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	getPrivateDataQueryResultReturnsOnCall map[int]struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}
-	GetCreatorStub        func() ([]byte, error)
-	getCreatorMutex       sync.RWMutex
-	getCreatorArgsForCall []struct{}
-	getCreatorReturns     struct {
-		result1 []byte
-		result2 error
-	}
-	getCreatorReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetTransientStub        func() (map[string][]byte, error)
-	getTransientMutex       sync.RWMutex
-	getTransientArgsForCall []struct{}
-	getTransientReturns     struct {
-		result1 map[string][]byte
-		result2 error
-	}
-	getTransientReturnsOnCall map[int]struct {
-		result1 map[string][]byte
-		result2 error
-	}
-	GetBindingStub        func() ([]byte, error)
-	getBindingMutex       sync.RWMutex
-	getBindingArgsForCall []struct{}
-	getBindingReturns     struct {
-		result1 []byte
-		result2 error
-	}
-	getBindingReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	GetDecorationsStub        func() map[string][]byte
-	getDecorationsMutex       sync.RWMutex
-	getDecorationsArgsForCall []struct{}
-	getDecorationsReturns     struct {
-		result1 map[string][]byte
-	}
-	getDecorationsReturnsOnCall map[int]struct {
-		result1 map[string][]byte
-	}
-	GetSignedProposalStub        func() (*pb.SignedProposal, error)
-	getSignedProposalMutex       sync.RWMutex
-	getSignedProposalArgsForCall []struct{}
-	getSignedProposalReturns     struct {
-		result1 *pb.SignedProposal
-		result2 error
-	}
-	getSignedProposalReturnsOnCall map[int]struct {
-		result1 *pb.SignedProposal
-		result2 error
-	}
-	GetTxTimestampStub        func() (*timestamp.Timestamp, error)
-	getTxTimestampMutex       sync.RWMutex
-	getTxTimestampArgsForCall []struct{}
-	getTxTimestampReturns     struct {
-		result1 *timestamp.Timestamp
-		result2 error
-	}
-	getTxTimestampReturnsOnCall map[int]struct {
-		result1 *timestamp.Timestamp
-		result2 error
-	}
-	SetEventStub        func(name string, payload []byte) error
-	setEventMutex       sync.RWMutex
-	setEventArgsForCall []struct {
-		name    string
-		payload []byte
-	}
-	setEventReturns struct {
-		result1 error
-	}
-	setEventReturnsOnCall map[int]struct {
-		result1 error
-	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *ChaincodeStubInterface) GetArgs() [][]byte {
-	fake.getArgsMutex.Lock()
-	ret, specificReturn := fake.getArgsReturnsOnCall[len(fake.getArgsArgsForCall)]
-	fake.getArgsArgsForCall = append(fake.getArgsArgsForCall, struct{}{})
-	fake.recordInvocation("GetArgs", []interface{}{})
-	fake.getArgsMutex.Unlock()
-	if fake.GetArgsStub != nil {
-		return fake.GetArgsStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.getArgsReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) GetArgsCallCount() int {
-	fake.getArgsMutex.RLock()
-	defer fake.getArgsMutex.RUnlock()
-	return len(fake.getArgsArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetArgsReturns(result1 [][]byte) {
-	fake.GetArgsStub = nil
-	fake.getArgsReturns = struct {
-		result1 [][]byte
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetArgsReturnsOnCall(i int, result1 [][]byte) {
-	fake.GetArgsStub = nil
-	if fake.getArgsReturnsOnCall == nil {
-		fake.getArgsReturnsOnCall = make(map[int]struct {
-			result1 [][]byte
-		})
-	}
-	fake.getArgsReturnsOnCall[i] = struct {
-		result1 [][]byte
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetStringArgs() []string {
-	fake.getStringArgsMutex.Lock()
-	ret, specificReturn := fake.getStringArgsReturnsOnCall[len(fake.getStringArgsArgsForCall)]
-	fake.getStringArgsArgsForCall = append(fake.getStringArgsArgsForCall, struct{}{})
-	fake.recordInvocation("GetStringArgs", []interface{}{})
-	fake.getStringArgsMutex.Unlock()
-	if fake.GetStringArgsStub != nil {
-		return fake.GetStringArgsStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.getStringArgsReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) GetStringArgsCallCount() int {
-	fake.getStringArgsMutex.RLock()
-	defer fake.getStringArgsMutex.RUnlock()
-	return len(fake.getStringArgsArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStringArgsReturns(result1 []string) {
-	fake.GetStringArgsStub = nil
-	fake.getStringArgsReturns = struct {
-		result1 []string
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetStringArgsReturnsOnCall(i int, result1 []string) {
-	fake.GetStringArgsStub = nil
-	if fake.getStringArgsReturnsOnCall == nil {
-		fake.getStringArgsReturnsOnCall = make(map[int]struct {
-			result1 []string
-		})
-	}
-	fake.getStringArgsReturnsOnCall[i] = struct {
-		result1 []string
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetFunctionAndParameters() (string, []string) {
-	fake.getFunctionAndParametersMutex.Lock()
-	ret, specificReturn := fake.getFunctionAndParametersReturnsOnCall[len(fake.getFunctionAndParametersArgsForCall)]
-	fake.getFunctionAndParametersArgsForCall = append(fake.getFunctionAndParametersArgsForCall, struct{}{})
-	fake.recordInvocation("GetFunctionAndParameters", []interface{}{})
-	fake.getFunctionAndParametersMutex.Unlock()
-	if fake.GetFunctionAndParametersStub != nil {
-		return fake.GetFunctionAndParametersStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getFunctionAndParametersReturns.result1, fake.getFunctionAndParametersReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetFunctionAndParametersCallCount() int {
-	fake.getFunctionAndParametersMutex.RLock()
-	defer fake.getFunctionAndParametersMutex.RUnlock()
-	return len(fake.getFunctionAndParametersArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetFunctionAndParametersReturns(result1 string, result2 []string) {
-	fake.GetFunctionAndParametersStub = nil
-	fake.getFunctionAndParametersReturns = struct {
-		result1 string
-		result2 []string
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetFunctionAndParametersReturnsOnCall(i int, result1 string, result2 []string) {
-	fake.GetFunctionAndParametersStub = nil
-	if fake.getFunctionAndParametersReturnsOnCall == nil {
-		fake.getFunctionAndParametersReturnsOnCall = make(map[int]struct {
-			result1 string
-			result2 []string
-		})
-	}
-	fake.getFunctionAndParametersReturnsOnCall[i] = struct {
-		result1 string
-		result2 []string
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetArgsSlice() ([]byte, error) {
-	fake.getArgsSliceMutex.Lock()
-	ret, specificReturn := fake.getArgsSliceReturnsOnCall[len(fake.getArgsSliceArgsForCall)]
-	fake.getArgsSliceArgsForCall = append(fake.getArgsSliceArgsForCall, struct{}{})
-	fake.recordInvocation("GetArgsSlice", []interface{}{})
-	fake.getArgsSliceMutex.Unlock()
-	if fake.GetArgsSliceStub != nil {
-		return fake.GetArgsSliceStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getArgsSliceReturns.result1, fake.getArgsSliceReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetArgsSliceCallCount() int {
-	fake.getArgsSliceMutex.RLock()
-	defer fake.getArgsSliceMutex.RUnlock()
-	return len(fake.getArgsSliceArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetArgsSliceReturns(result1 []byte, result2 error) {
-	fake.GetArgsSliceStub = nil
-	fake.getArgsSliceReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetArgsSliceReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetArgsSliceStub = nil
-	if fake.getArgsSliceReturnsOnCall == nil {
-		fake.getArgsSliceReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getArgsSliceReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetTxID() string {
-	fake.getTxIDMutex.Lock()
-	ret, specificReturn := fake.getTxIDReturnsOnCall[len(fake.getTxIDArgsForCall)]
-	fake.getTxIDArgsForCall = append(fake.getTxIDArgsForCall, struct{}{})
-	fake.recordInvocation("GetTxID", []interface{}{})
-	fake.getTxIDMutex.Unlock()
-	if fake.GetTxIDStub != nil {
-		return fake.GetTxIDStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.getTxIDReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) GetTxIDCallCount() int {
-	fake.getTxIDMutex.RLock()
-	defer fake.getTxIDMutex.RUnlock()
-	return len(fake.getTxIDArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetTxIDReturns(result1 string) {
-	fake.GetTxIDStub = nil
-	fake.getTxIDReturns = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetTxIDReturnsOnCall(i int, result1 string) {
-	fake.GetTxIDStub = nil
-	if fake.getTxIDReturnsOnCall == nil {
-		fake.getTxIDReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.getTxIDReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetChannelID() string {
-	fake.getChannelIDMutex.Lock()
-	ret, specificReturn := fake.getChannelIDReturnsOnCall[len(fake.getChannelIDArgsForCall)]
-	fake.getChannelIDArgsForCall = append(fake.getChannelIDArgsForCall, struct{}{})
-	fake.recordInvocation("GetChannelID", []interface{}{})
-	fake.getChannelIDMutex.Unlock()
-	if fake.GetChannelIDStub != nil {
-		return fake.GetChannelIDStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.getChannelIDReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) GetChannelIDCallCount() int {
-	fake.getChannelIDMutex.RLock()
-	defer fake.getChannelIDMutex.RUnlock()
-	return len(fake.getChannelIDArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetChannelIDReturns(result1 string) {
-	fake.GetChannelIDStub = nil
-	fake.getChannelIDReturns = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetChannelIDReturnsOnCall(i int, result1 string) {
-	fake.GetChannelIDStub = nil
-	if fake.getChannelIDReturnsOnCall == nil {
-		fake.getChannelIDReturnsOnCall = make(map[int]struct {
-			result1 string
-		})
-	}
-	fake.getChannelIDReturnsOnCall[i] = struct {
-		result1 string
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) InvokeChaincode(chaincodeName string, args [][]byte, channel string) pb.Response {
-	var argsCopy [][]byte
-	if args != nil {
-		argsCopy = make([][]byte, len(args))
-		copy(argsCopy, args)
-	}
-	fake.invokeChaincodeMutex.Lock()
-	ret, specificReturn := fake.invokeChaincodeReturnsOnCall[len(fake.invokeChaincodeArgsForCall)]
-	fake.invokeChaincodeArgsForCall = append(fake.invokeChaincodeArgsForCall, struct {
-		chaincodeName string
-		args          [][]byte
-		channel       string
-	}{chaincodeName, argsCopy, channel})
-	fake.recordInvocation("InvokeChaincode", []interface{}{chaincodeName, argsCopy, channel})
-	fake.invokeChaincodeMutex.Unlock()
-	if fake.InvokeChaincodeStub != nil {
-		return fake.InvokeChaincodeStub(chaincodeName, args, channel)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.invokeChaincodeReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) InvokeChaincodeCallCount() int {
-	fake.invokeChaincodeMutex.RLock()
-	defer fake.invokeChaincodeMutex.RUnlock()
-	return len(fake.invokeChaincodeArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) InvokeChaincodeArgsForCall(i int) (string, [][]byte, string) {
-	fake.invokeChaincodeMutex.RLock()
-	defer fake.invokeChaincodeMutex.RUnlock()
-	return fake.invokeChaincodeArgsForCall[i].chaincodeName, fake.invokeChaincodeArgsForCall[i].args, fake.invokeChaincodeArgsForCall[i].channel
-}
-
-func (fake *ChaincodeStubInterface) InvokeChaincodeReturns(result1 pb.Response) {
-	fake.InvokeChaincodeStub = nil
-	fake.invokeChaincodeReturns = struct {
-		result1 pb.Response
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) InvokeChaincodeReturnsOnCall(i int, result1 pb.Response) {
-	fake.InvokeChaincodeStub = nil
-	if fake.invokeChaincodeReturnsOnCall == nil {
-		fake.invokeChaincodeReturnsOnCall = make(map[int]struct {
-			result1 pb.Response
-		})
-	}
-	fake.invokeChaincodeReturnsOnCall[i] = struct {
-		result1 pb.Response
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetState(key string) ([]byte, error) {
-	fake.getStateMutex.Lock()
-	ret, specificReturn := fake.getStateReturnsOnCall[len(fake.getStateArgsForCall)]
-	fake.getStateArgsForCall = append(fake.getStateArgsForCall, struct {
-		key string
-	}{key})
-	fake.recordInvocation("GetState", []interface{}{key})
-	fake.getStateMutex.Unlock()
-	if fake.GetStateStub != nil {
-		return fake.GetStateStub(key)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getStateReturns.result1, fake.getStateReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetStateCallCount() int {
-	fake.getStateMutex.RLock()
-	defer fake.getStateMutex.RUnlock()
-	return len(fake.getStateArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStateArgsForCall(i int) string {
-	fake.getStateMutex.RLock()
-	defer fake.getStateMutex.RUnlock()
-	return fake.getStateArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) GetStateReturns(result1 []byte, result2 error) {
-	fake.GetStateStub = nil
-	fake.getStateReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetStateStub = nil
-	if fake.getStateReturnsOnCall == nil {
-		fake.getStateReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getStateReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) PutState(key string, value []byte) error {
-	var valueCopy []byte
-	if value != nil {
-		valueCopy = make([]byte, len(value))
-		copy(valueCopy, value)
-	}
-	fake.putStateMutex.Lock()
-	ret, specificReturn := fake.putStateReturnsOnCall[len(fake.putStateArgsForCall)]
-	fake.putStateArgsForCall = append(fake.putStateArgsForCall, struct {
-		key   string
-		value []byte
-	}{key, valueCopy})
-	fake.recordInvocation("PutState", []interface{}{key, valueCopy})
-	fake.putStateMutex.Unlock()
-	if fake.PutStateStub != nil {
-		return fake.PutStateStub(key, value)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.putStateReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) PutStateCallCount() int {
-	fake.putStateMutex.RLock()
-	defer fake.putStateMutex.RUnlock()
-	return len(fake.putStateArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) PutStateArgsForCall(i int) (string, []byte) {
-	fake.putStateMutex.RLock()
-	defer fake.putStateMutex.RUnlock()
-	return fake.putStateArgsForCall[i].key, fake.putStateArgsForCall[i].value
-}
-
-func (fake *ChaincodeStubInterface) PutStateReturns(result1 error) {
-	fake.PutStateStub = nil
-	fake.putStateReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) PutStateReturnsOnCall(i int, result1 error) {
-	fake.PutStateStub = nil
-	if fake.putStateReturnsOnCall == nil {
-		fake.putStateReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.putStateReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) DelState(key string) error {
-	fake.delStateMutex.Lock()
-	ret, specificReturn := fake.delStateReturnsOnCall[len(fake.delStateArgsForCall)]
-	fake.delStateArgsForCall = append(fake.delStateArgsForCall, struct {
-		key string
-	}{key})
-	fake.recordInvocation("DelState", []interface{}{key})
-	fake.delStateMutex.Unlock()
-	if fake.DelStateStub != nil {
-		return fake.DelStateStub(key)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.delStateReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) DelStateCallCount() int {
-	fake.delStateMutex.RLock()
-	defer fake.delStateMutex.RUnlock()
-	return len(fake.delStateArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) DelStateArgsForCall(i int) string {
-	fake.delStateMutex.RLock()
-	defer fake.delStateMutex.RUnlock()
-	return fake.delStateArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) DelStateReturns(result1 error) {
-	fake.DelStateStub = nil
-	fake.delStateReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) DelStateReturnsOnCall(i int, result1 error) {
-	fake.DelStateStub = nil
-	if fake.delStateReturnsOnCall == nil {
-		fake.delStateReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.delStateReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) SetStateValidationParameter(key string, ep []byte) error {
-	var epCopy []byte
-	if ep != nil {
-		epCopy = make([]byte, len(ep))
-		copy(epCopy, ep)
-	}
-	fake.setStateValidationParameterMutex.Lock()
-	ret, specificReturn := fake.setStateValidationParameterReturnsOnCall[len(fake.setStateValidationParameterArgsForCall)]
-	fake.setStateValidationParameterArgsForCall = append(fake.setStateValidationParameterArgsForCall, struct {
-		key string
-		ep  []byte
-	}{key, epCopy})
-	fake.recordInvocation("SetStateValidationParameter", []interface{}{key, epCopy})
-	fake.setStateValidationParameterMutex.Unlock()
-	if fake.SetStateValidationParameterStub != nil {
-		return fake.SetStateValidationParameterStub(key, ep)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.setStateValidationParameterReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) SetStateValidationParameterCallCount() int {
-	fake.setStateValidationParameterMutex.RLock()
-	defer fake.setStateValidationParameterMutex.RUnlock()
-	return len(fake.setStateValidationParameterArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) SetStateValidationParameterArgsForCall(i int) (string, []byte) {
-	fake.setStateValidationParameterMutex.RLock()
-	defer fake.setStateValidationParameterMutex.RUnlock()
-	return fake.setStateValidationParameterArgsForCall[i].key, fake.setStateValidationParameterArgsForCall[i].ep
-}
-
-func (fake *ChaincodeStubInterface) SetStateValidationParameterReturns(result1 error) {
-	fake.SetStateValidationParameterStub = nil
-	fake.setStateValidationParameterReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) SetStateValidationParameterReturnsOnCall(i int, result1 error) {
-	fake.SetStateValidationParameterStub = nil
-	if fake.setStateValidationParameterReturnsOnCall == nil {
-		fake.setStateValidationParameterReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.setStateValidationParameterReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetStateValidationParameter(key string) ([]byte, error) {
-	fake.getStateValidationParameterMutex.Lock()
-	ret, specificReturn := fake.getStateValidationParameterReturnsOnCall[len(fake.getStateValidationParameterArgsForCall)]
-	fake.getStateValidationParameterArgsForCall = append(fake.getStateValidationParameterArgsForCall, struct {
-		key string
-	}{key})
-	fake.recordInvocation("GetStateValidationParameter", []interface{}{key})
-	fake.getStateValidationParameterMutex.Unlock()
-	if fake.GetStateValidationParameterStub != nil {
-		return fake.GetStateValidationParameterStub(key)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getStateValidationParameterReturns.result1, fake.getStateValidationParameterReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetStateValidationParameterCallCount() int {
-	fake.getStateValidationParameterMutex.RLock()
-	defer fake.getStateValidationParameterMutex.RUnlock()
-	return len(fake.getStateValidationParameterArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStateValidationParameterArgsForCall(i int) string {
-	fake.getStateValidationParameterMutex.RLock()
-	defer fake.getStateValidationParameterMutex.RUnlock()
-	return fake.getStateValidationParameterArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) GetStateValidationParameterReturns(result1 []byte, result2 error) {
-	fake.GetStateValidationParameterStub = nil
-	fake.getStateValidationParameterReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateValidationParameterReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetStateValidationParameterStub = nil
-	if fake.getStateValidationParameterReturnsOnCall == nil {
-		fake.getStateValidationParameterReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getStateValidationParameterReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRange(startKey string, endKey string) (shim.StateQueryIteratorInterface, error) {
-	fake.getStateByRangeMutex.Lock()
-	ret, specificReturn := fake.getStateByRangeReturnsOnCall[len(fake.getStateByRangeArgsForCall)]
-	fake.getStateByRangeArgsForCall = append(fake.getStateByRangeArgsForCall, struct {
-		startKey string
-		endKey   string
-	}{startKey, endKey})
-	fake.recordInvocation("GetStateByRange", []interface{}{startKey, endKey})
-	fake.getStateByRangeMutex.Unlock()
-	if fake.GetStateByRangeStub != nil {
-		return fake.GetStateByRangeStub(startKey, endKey)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getStateByRangeReturns.result1, fake.getStateByRangeReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeCallCount() int {
-	fake.getStateByRangeMutex.RLock()
-	defer fake.getStateByRangeMutex.RUnlock()
-	return len(fake.getStateByRangeArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeArgsForCall(i int) (string, string) {
-	fake.getStateByRangeMutex.RLock()
-	defer fake.getStateByRangeMutex.RUnlock()
-	return fake.getStateByRangeArgsForCall[i].startKey, fake.getStateByRangeArgsForCall[i].endKey
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetStateByRangeStub = nil
-	fake.getStateByRangeReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetStateByRangeStub = nil
-	if fake.getStateByRangeReturnsOnCall == nil {
-		fake.getStateByRangeReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getStateByRangeReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeWithPagination(startKey string, endKey string, pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *pb.QueryResponseMetadata, error) {
-	fake.getStateByRangeWithPaginationMutex.Lock()
-	ret, specificReturn := fake.getStateByRangeWithPaginationReturnsOnCall[len(fake.getStateByRangeWithPaginationArgsForCall)]
-	fake.getStateByRangeWithPaginationArgsForCall = append(fake.getStateByRangeWithPaginationArgsForCall, struct {
-		startKey string
-		endKey   string
-		pageSize int32
-		bookmark string
-	}{startKey, endKey, pageSize, bookmark})
-	fake.recordInvocation("GetStateByRangeWithPagination", []interface{}{startKey, endKey, pageSize, bookmark})
-	fake.getStateByRangeWithPaginationMutex.Unlock()
-	if fake.GetStateByRangeWithPaginationStub != nil {
-		return fake.GetStateByRangeWithPaginationStub(startKey, endKey, pageSize, bookmark)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
-	}
-	return fake.getStateByRangeWithPaginationReturns.result1, fake.getStateByRangeWithPaginationReturns.result2, fake.getStateByRangeWithPaginationReturns.result3
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationCallCount() int {
-	fake.getStateByRangeWithPaginationMutex.RLock()
-	defer fake.getStateByRangeWithPaginationMutex.RUnlock()
-	return len(fake.getStateByRangeWithPaginationArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationArgsForCall(i int) (string, string, int32, string) {
-	fake.getStateByRangeWithPaginationMutex.RLock()
-	defer fake.getStateByRangeWithPaginationMutex.RUnlock()
-	return fake.getStateByRangeWithPaginationArgsForCall[i].startKey, fake.getStateByRangeWithPaginationArgsForCall[i].endKey, fake.getStateByRangeWithPaginationArgsForCall[i].pageSize, fake.getStateByRangeWithPaginationArgsForCall[i].bookmark
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationReturns(result1 shim.StateQueryIteratorInterface, result2 *pb.QueryResponseMetadata, result3 error) {
-	fake.GetStateByRangeWithPaginationStub = nil
-	fake.getStateByRangeWithPaginationReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 *pb.QueryResponseMetadata, result3 error) {
-	fake.GetStateByRangeWithPaginationStub = nil
-	if fake.getStateByRangeWithPaginationReturnsOnCall == nil {
-		fake.getStateByRangeWithPaginationReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 *pb.QueryResponseMetadata
-			result3 error
-		})
-	}
-	fake.getStateByRangeWithPaginationReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKey(objectType string, keys []string) (shim.StateQueryIteratorInterface, error) {
-	var keysCopy []string
-	if keys != nil {
-		keysCopy = make([]string, len(keys))
-		copy(keysCopy, keys)
-	}
-	fake.getStateByPartialCompositeKeyMutex.Lock()
-	ret, specificReturn := fake.getStateByPartialCompositeKeyReturnsOnCall[len(fake.getStateByPartialCompositeKeyArgsForCall)]
-	fake.getStateByPartialCompositeKeyArgsForCall = append(fake.getStateByPartialCompositeKeyArgsForCall, struct {
-		objectType string
-		keys       []string
-	}{objectType, keysCopy})
-	fake.recordInvocation("GetStateByPartialCompositeKey", []interface{}{objectType, keysCopy})
-	fake.getStateByPartialCompositeKeyMutex.Unlock()
-	if fake.GetStateByPartialCompositeKeyStub != nil {
-		return fake.GetStateByPartialCompositeKeyStub(objectType, keys)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getStateByPartialCompositeKeyReturns.result1, fake.getStateByPartialCompositeKeyReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyCallCount() int {
-	fake.getStateByPartialCompositeKeyMutex.RLock()
-	defer fake.getStateByPartialCompositeKeyMutex.RUnlock()
-	return len(fake.getStateByPartialCompositeKeyArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyArgsForCall(i int) (string, []string) {
-	fake.getStateByPartialCompositeKeyMutex.RLock()
-	defer fake.getStateByPartialCompositeKeyMutex.RUnlock()
-	return fake.getStateByPartialCompositeKeyArgsForCall[i].objectType, fake.getStateByPartialCompositeKeyArgsForCall[i].keys
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetStateByPartialCompositeKeyStub = nil
-	fake.getStateByPartialCompositeKeyReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetStateByPartialCompositeKeyStub = nil
-	if fake.getStateByPartialCompositeKeyReturnsOnCall == nil {
-		fake.getStateByPartialCompositeKeyReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getStateByPartialCompositeKeyReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPagination(objectType string, keys []string, pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *pb.QueryResponseMetadata, error) {
-	var keysCopy []string
-	if keys != nil {
-		keysCopy = make([]string, len(keys))
-		copy(keysCopy, keys)
-	}
-	fake.getStateByPartialCompositeKeyWithPaginationMutex.Lock()
-	ret, specificReturn := fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall[len(fake.getStateByPartialCompositeKeyWithPaginationArgsForCall)]
-	fake.getStateByPartialCompositeKeyWithPaginationArgsForCall = append(fake.getStateByPartialCompositeKeyWithPaginationArgsForCall, struct {
-		objectType string
-		keys       []string
-		pageSize   int32
-		bookmark   string
-	}{objectType, keysCopy, pageSize, bookmark})
-	fake.recordInvocation("GetStateByPartialCompositeKeyWithPagination", []interface{}{objectType, keysCopy, pageSize, bookmark})
-	fake.getStateByPartialCompositeKeyWithPaginationMutex.Unlock()
-	if fake.GetStateByPartialCompositeKeyWithPaginationStub != nil {
-		return fake.GetStateByPartialCompositeKeyWithPaginationStub(objectType, keys, pageSize, bookmark)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
-	}
-	return fake.getStateByPartialCompositeKeyWithPaginationReturns.result1, fake.getStateByPartialCompositeKeyWithPaginationReturns.result2, fake.getStateByPartialCompositeKeyWithPaginationReturns.result3
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationCallCount() int {
-	fake.getStateByPartialCompositeKeyWithPaginationMutex.RLock()
-	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.RUnlock()
-	return len(fake.getStateByPartialCompositeKeyWithPaginationArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationArgsForCall(i int) (string, []string, int32, string) {
-	fake.getStateByPartialCompositeKeyWithPaginationMutex.RLock()
-	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.RUnlock()
-	return fake.getStateByPartialCompositeKeyWithPaginationArgsForCall[i].objectType, fake.getStateByPartialCompositeKeyWithPaginationArgsForCall[i].keys, fake.getStateByPartialCompositeKeyWithPaginationArgsForCall[i].pageSize, fake.getStateByPartialCompositeKeyWithPaginationArgsForCall[i].bookmark
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationReturns(result1 shim.StateQueryIteratorInterface, result2 *pb.QueryResponseMetadata, result3 error) {
-	fake.GetStateByPartialCompositeKeyWithPaginationStub = nil
-	fake.getStateByPartialCompositeKeyWithPaginationReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 *pb.QueryResponseMetadata, result3 error) {
-	fake.GetStateByPartialCompositeKeyWithPaginationStub = nil
-	if fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall == nil {
-		fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 *pb.QueryResponseMetadata
-			result3 error
-		})
-	}
-	fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *ChaincodeStubInterface) CreateCompositeKey(objectType string, attributes []string) (string, error) {
-	var attributesCopy []string
-	if attributes != nil {
-		attributesCopy = make([]string, len(attributes))
-		copy(attributesCopy, attributes)
+func (fake *ChaincodeStubInterface) CreateCompositeKey(arg1 string, arg2 []string) (string, error) {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
 	}
 	fake.createCompositeKeyMutex.Lock()
 	ret, specificReturn := fake.createCompositeKeyReturnsOnCall[len(fake.createCompositeKeyArgsForCall)]
 	fake.createCompositeKeyArgsForCall = append(fake.createCompositeKeyArgsForCall, struct {
-		objectType string
-		attributes []string
-	}{objectType, attributesCopy})
-	fake.recordInvocation("CreateCompositeKey", []interface{}{objectType, attributesCopy})
+		arg1 string
+		arg2 []string
+	}{arg1, arg2Copy})
+	stub := fake.CreateCompositeKeyStub
+	fakeReturns := fake.createCompositeKeyReturns
+	fake.recordInvocation("CreateCompositeKey", []interface{}{arg1, arg2Copy})
 	fake.createCompositeKeyMutex.Unlock()
-	if fake.CreateCompositeKeyStub != nil {
-		return fake.CreateCompositeKeyStub(objectType, attributes)
+	if stub != nil {
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
 	}
-	return fake.createCompositeKeyReturns.result1, fake.createCompositeKeyReturns.result2
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *ChaincodeStubInterface) CreateCompositeKeyCallCount() int {
@@ -1299,13 +538,22 @@ func (fake *ChaincodeStubInterface) CreateCompositeKeyCallCount() int {
 	return len(fake.createCompositeKeyArgsForCall)
 }
 
+func (fake *ChaincodeStubInterface) CreateCompositeKeyCalls(stub func(string, []string) (string, error)) {
+	fake.createCompositeKeyMutex.Lock()
+	defer fake.createCompositeKeyMutex.Unlock()
+	fake.CreateCompositeKeyStub = stub
+}
+
 func (fake *ChaincodeStubInterface) CreateCompositeKeyArgsForCall(i int) (string, []string) {
 	fake.createCompositeKeyMutex.RLock()
 	defer fake.createCompositeKeyMutex.RUnlock()
-	return fake.createCompositeKeyArgsForCall[i].objectType, fake.createCompositeKeyArgsForCall[i].attributes
+	argsForCall := fake.createCompositeKeyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
 }
 
 func (fake *ChaincodeStubInterface) CreateCompositeKeyReturns(result1 string, result2 error) {
+	fake.createCompositeKeyMutex.Lock()
+	defer fake.createCompositeKeyMutex.Unlock()
 	fake.CreateCompositeKeyStub = nil
 	fake.createCompositeKeyReturns = struct {
 		result1 string
@@ -1314,6 +562,8 @@ func (fake *ChaincodeStubInterface) CreateCompositeKeyReturns(result1 string, re
 }
 
 func (fake *ChaincodeStubInterface) CreateCompositeKeyReturnsOnCall(i int, result1 string, result2 error) {
+	fake.createCompositeKeyMutex.Lock()
+	defer fake.createCompositeKeyMutex.Unlock()
 	fake.CreateCompositeKeyStub = nil
 	if fake.createCompositeKeyReturnsOnCall == nil {
 		fake.createCompositeKeyReturnsOnCall = make(map[int]struct {
@@ -1327,21 +577,2272 @@ func (fake *ChaincodeStubInterface) CreateCompositeKeyReturnsOnCall(i int, resul
 	}{result1, result2}
 }
 
-func (fake *ChaincodeStubInterface) SplitCompositeKey(compositeKey string) (string, []string, error) {
-	fake.splitCompositeKeyMutex.Lock()
-	ret, specificReturn := fake.splitCompositeKeyReturnsOnCall[len(fake.splitCompositeKeyArgsForCall)]
-	fake.splitCompositeKeyArgsForCall = append(fake.splitCompositeKeyArgsForCall, struct {
-		compositeKey string
-	}{compositeKey})
-	fake.recordInvocation("SplitCompositeKey", []interface{}{compositeKey})
-	fake.splitCompositeKeyMutex.Unlock()
-	if fake.SplitCompositeKeyStub != nil {
-		return fake.SplitCompositeKeyStub(compositeKey)
+func (fake *ChaincodeStubInterface) DelPrivateData(arg1 string, arg2 string) error {
+	fake.delPrivateDataMutex.Lock()
+	ret, specificReturn := fake.delPrivateDataReturnsOnCall[len(fake.delPrivateDataArgsForCall)]
+	fake.delPrivateDataArgsForCall = append(fake.delPrivateDataArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.DelPrivateDataStub
+	fakeReturns := fake.delPrivateDataReturns
+	fake.recordInvocation("DelPrivateData", []interface{}{arg1, arg2})
+	fake.delPrivateDataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) DelPrivateDataCallCount() int {
+	fake.delPrivateDataMutex.RLock()
+	defer fake.delPrivateDataMutex.RUnlock()
+	return len(fake.delPrivateDataArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) DelPrivateDataCalls(stub func(string, string) error) {
+	fake.delPrivateDataMutex.Lock()
+	defer fake.delPrivateDataMutex.Unlock()
+	fake.DelPrivateDataStub = stub
+}
+
+func (fake *ChaincodeStubInterface) DelPrivateDataArgsForCall(i int) (string, string) {
+	fake.delPrivateDataMutex.RLock()
+	defer fake.delPrivateDataMutex.RUnlock()
+	argsForCall := fake.delPrivateDataArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) DelPrivateDataReturns(result1 error) {
+	fake.delPrivateDataMutex.Lock()
+	defer fake.delPrivateDataMutex.Unlock()
+	fake.DelPrivateDataStub = nil
+	fake.delPrivateDataReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) DelPrivateDataReturnsOnCall(i int, result1 error) {
+	fake.delPrivateDataMutex.Lock()
+	defer fake.delPrivateDataMutex.Unlock()
+	fake.DelPrivateDataStub = nil
+	if fake.delPrivateDataReturnsOnCall == nil {
+		fake.delPrivateDataReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.delPrivateDataReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) DelState(arg1 string) error {
+	fake.delStateMutex.Lock()
+	ret, specificReturn := fake.delStateReturnsOnCall[len(fake.delStateArgsForCall)]
+	fake.delStateArgsForCall = append(fake.delStateArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.DelStateStub
+	fakeReturns := fake.delStateReturns
+	fake.recordInvocation("DelState", []interface{}{arg1})
+	fake.delStateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) DelStateCallCount() int {
+	fake.delStateMutex.RLock()
+	defer fake.delStateMutex.RUnlock()
+	return len(fake.delStateArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) DelStateCalls(stub func(string) error) {
+	fake.delStateMutex.Lock()
+	defer fake.delStateMutex.Unlock()
+	fake.DelStateStub = stub
+}
+
+func (fake *ChaincodeStubInterface) DelStateArgsForCall(i int) string {
+	fake.delStateMutex.RLock()
+	defer fake.delStateMutex.RUnlock()
+	argsForCall := fake.delStateArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ChaincodeStubInterface) DelStateReturns(result1 error) {
+	fake.delStateMutex.Lock()
+	defer fake.delStateMutex.Unlock()
+	fake.DelStateStub = nil
+	fake.delStateReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) DelStateReturnsOnCall(i int, result1 error) {
+	fake.delStateMutex.Lock()
+	defer fake.delStateMutex.Unlock()
+	fake.DelStateStub = nil
+	if fake.delStateReturnsOnCall == nil {
+		fake.delStateReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.delStateReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetArgs() [][]byte {
+	fake.getArgsMutex.Lock()
+	ret, specificReturn := fake.getArgsReturnsOnCall[len(fake.getArgsArgsForCall)]
+	fake.getArgsArgsForCall = append(fake.getArgsArgsForCall, struct {
+	}{})
+	stub := fake.GetArgsStub
+	fakeReturns := fake.getArgsReturns
+	fake.recordInvocation("GetArgs", []interface{}{})
+	fake.getArgsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) GetArgsCallCount() int {
+	fake.getArgsMutex.RLock()
+	defer fake.getArgsMutex.RUnlock()
+	return len(fake.getArgsArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetArgsCalls(stub func() [][]byte) {
+	fake.getArgsMutex.Lock()
+	defer fake.getArgsMutex.Unlock()
+	fake.GetArgsStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetArgsReturns(result1 [][]byte) {
+	fake.getArgsMutex.Lock()
+	defer fake.getArgsMutex.Unlock()
+	fake.GetArgsStub = nil
+	fake.getArgsReturns = struct {
+		result1 [][]byte
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetArgsReturnsOnCall(i int, result1 [][]byte) {
+	fake.getArgsMutex.Lock()
+	defer fake.getArgsMutex.Unlock()
+	fake.GetArgsStub = nil
+	if fake.getArgsReturnsOnCall == nil {
+		fake.getArgsReturnsOnCall = make(map[int]struct {
+			result1 [][]byte
+		})
+	}
+	fake.getArgsReturnsOnCall[i] = struct {
+		result1 [][]byte
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetArgsSlice() ([]byte, error) {
+	fake.getArgsSliceMutex.Lock()
+	ret, specificReturn := fake.getArgsSliceReturnsOnCall[len(fake.getArgsSliceArgsForCall)]
+	fake.getArgsSliceArgsForCall = append(fake.getArgsSliceArgsForCall, struct {
+	}{})
+	stub := fake.GetArgsSliceStub
+	fakeReturns := fake.getArgsSliceReturns
+	fake.recordInvocation("GetArgsSlice", []interface{}{})
+	fake.getArgsSliceMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetArgsSliceCallCount() int {
+	fake.getArgsSliceMutex.RLock()
+	defer fake.getArgsSliceMutex.RUnlock()
+	return len(fake.getArgsSliceArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetArgsSliceCalls(stub func() ([]byte, error)) {
+	fake.getArgsSliceMutex.Lock()
+	defer fake.getArgsSliceMutex.Unlock()
+	fake.GetArgsSliceStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetArgsSliceReturns(result1 []byte, result2 error) {
+	fake.getArgsSliceMutex.Lock()
+	defer fake.getArgsSliceMutex.Unlock()
+	fake.GetArgsSliceStub = nil
+	fake.getArgsSliceReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetArgsSliceReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getArgsSliceMutex.Lock()
+	defer fake.getArgsSliceMutex.Unlock()
+	fake.GetArgsSliceStub = nil
+	if fake.getArgsSliceReturnsOnCall == nil {
+		fake.getArgsSliceReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getArgsSliceReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetBinding() ([]byte, error) {
+	fake.getBindingMutex.Lock()
+	ret, specificReturn := fake.getBindingReturnsOnCall[len(fake.getBindingArgsForCall)]
+	fake.getBindingArgsForCall = append(fake.getBindingArgsForCall, struct {
+	}{})
+	stub := fake.GetBindingStub
+	fakeReturns := fake.getBindingReturns
+	fake.recordInvocation("GetBinding", []interface{}{})
+	fake.getBindingMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetBindingCallCount() int {
+	fake.getBindingMutex.RLock()
+	defer fake.getBindingMutex.RUnlock()
+	return len(fake.getBindingArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetBindingCalls(stub func() ([]byte, error)) {
+	fake.getBindingMutex.Lock()
+	defer fake.getBindingMutex.Unlock()
+	fake.GetBindingStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetBindingReturns(result1 []byte, result2 error) {
+	fake.getBindingMutex.Lock()
+	defer fake.getBindingMutex.Unlock()
+	fake.GetBindingStub = nil
+	fake.getBindingReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetBindingReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getBindingMutex.Lock()
+	defer fake.getBindingMutex.Unlock()
+	fake.GetBindingStub = nil
+	if fake.getBindingReturnsOnCall == nil {
+		fake.getBindingReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getBindingReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetChannelID() string {
+	fake.getChannelIDMutex.Lock()
+	ret, specificReturn := fake.getChannelIDReturnsOnCall[len(fake.getChannelIDArgsForCall)]
+	fake.getChannelIDArgsForCall = append(fake.getChannelIDArgsForCall, struct {
+	}{})
+	stub := fake.GetChannelIDStub
+	fakeReturns := fake.getChannelIDReturns
+	fake.recordInvocation("GetChannelID", []interface{}{})
+	fake.getChannelIDMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) GetChannelIDCallCount() int {
+	fake.getChannelIDMutex.RLock()
+	defer fake.getChannelIDMutex.RUnlock()
+	return len(fake.getChannelIDArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetChannelIDCalls(stub func() string) {
+	fake.getChannelIDMutex.Lock()
+	defer fake.getChannelIDMutex.Unlock()
+	fake.GetChannelIDStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetChannelIDReturns(result1 string) {
+	fake.getChannelIDMutex.Lock()
+	defer fake.getChannelIDMutex.Unlock()
+	fake.GetChannelIDStub = nil
+	fake.getChannelIDReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetChannelIDReturnsOnCall(i int, result1 string) {
+	fake.getChannelIDMutex.Lock()
+	defer fake.getChannelIDMutex.Unlock()
+	fake.GetChannelIDStub = nil
+	if fake.getChannelIDReturnsOnCall == nil {
+		fake.getChannelIDReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.getChannelIDReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetCreator() ([]byte, error) {
+	fake.getCreatorMutex.Lock()
+	ret, specificReturn := fake.getCreatorReturnsOnCall[len(fake.getCreatorArgsForCall)]
+	fake.getCreatorArgsForCall = append(fake.getCreatorArgsForCall, struct {
+	}{})
+	stub := fake.GetCreatorStub
+	fakeReturns := fake.getCreatorReturns
+	fake.recordInvocation("GetCreator", []interface{}{})
+	fake.getCreatorMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetCreatorCallCount() int {
+	fake.getCreatorMutex.RLock()
+	defer fake.getCreatorMutex.RUnlock()
+	return len(fake.getCreatorArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetCreatorCalls(stub func() ([]byte, error)) {
+	fake.getCreatorMutex.Lock()
+	defer fake.getCreatorMutex.Unlock()
+	fake.GetCreatorStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetCreatorReturns(result1 []byte, result2 error) {
+	fake.getCreatorMutex.Lock()
+	defer fake.getCreatorMutex.Unlock()
+	fake.GetCreatorStub = nil
+	fake.getCreatorReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetCreatorReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getCreatorMutex.Lock()
+	defer fake.getCreatorMutex.Unlock()
+	fake.GetCreatorStub = nil
+	if fake.getCreatorReturnsOnCall == nil {
+		fake.getCreatorReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getCreatorReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetDecorations() map[string][]byte {
+	fake.getDecorationsMutex.Lock()
+	ret, specificReturn := fake.getDecorationsReturnsOnCall[len(fake.getDecorationsArgsForCall)]
+	fake.getDecorationsArgsForCall = append(fake.getDecorationsArgsForCall, struct {
+	}{})
+	stub := fake.GetDecorationsStub
+	fakeReturns := fake.getDecorationsReturns
+	fake.recordInvocation("GetDecorations", []interface{}{})
+	fake.getDecorationsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) GetDecorationsCallCount() int {
+	fake.getDecorationsMutex.RLock()
+	defer fake.getDecorationsMutex.RUnlock()
+	return len(fake.getDecorationsArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetDecorationsCalls(stub func() map[string][]byte) {
+	fake.getDecorationsMutex.Lock()
+	defer fake.getDecorationsMutex.Unlock()
+	fake.GetDecorationsStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetDecorationsReturns(result1 map[string][]byte) {
+	fake.getDecorationsMutex.Lock()
+	defer fake.getDecorationsMutex.Unlock()
+	fake.GetDecorationsStub = nil
+	fake.getDecorationsReturns = struct {
+		result1 map[string][]byte
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetDecorationsReturnsOnCall(i int, result1 map[string][]byte) {
+	fake.getDecorationsMutex.Lock()
+	defer fake.getDecorationsMutex.Unlock()
+	fake.GetDecorationsStub = nil
+	if fake.getDecorationsReturnsOnCall == nil {
+		fake.getDecorationsReturnsOnCall = make(map[int]struct {
+			result1 map[string][]byte
+		})
+	}
+	fake.getDecorationsReturnsOnCall[i] = struct {
+		result1 map[string][]byte
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetFunctionAndParameters() (string, []string) {
+	fake.getFunctionAndParametersMutex.Lock()
+	ret, specificReturn := fake.getFunctionAndParametersReturnsOnCall[len(fake.getFunctionAndParametersArgsForCall)]
+	fake.getFunctionAndParametersArgsForCall = append(fake.getFunctionAndParametersArgsForCall, struct {
+	}{})
+	stub := fake.GetFunctionAndParametersStub
+	fakeReturns := fake.getFunctionAndParametersReturns
+	fake.recordInvocation("GetFunctionAndParameters", []interface{}{})
+	fake.getFunctionAndParametersMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetFunctionAndParametersCallCount() int {
+	fake.getFunctionAndParametersMutex.RLock()
+	defer fake.getFunctionAndParametersMutex.RUnlock()
+	return len(fake.getFunctionAndParametersArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetFunctionAndParametersCalls(stub func() (string, []string)) {
+	fake.getFunctionAndParametersMutex.Lock()
+	defer fake.getFunctionAndParametersMutex.Unlock()
+	fake.GetFunctionAndParametersStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetFunctionAndParametersReturns(result1 string, result2 []string) {
+	fake.getFunctionAndParametersMutex.Lock()
+	defer fake.getFunctionAndParametersMutex.Unlock()
+	fake.GetFunctionAndParametersStub = nil
+	fake.getFunctionAndParametersReturns = struct {
+		result1 string
+		result2 []string
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetFunctionAndParametersReturnsOnCall(i int, result1 string, result2 []string) {
+	fake.getFunctionAndParametersMutex.Lock()
+	defer fake.getFunctionAndParametersMutex.Unlock()
+	fake.GetFunctionAndParametersStub = nil
+	if fake.getFunctionAndParametersReturnsOnCall == nil {
+		fake.getFunctionAndParametersReturnsOnCall = make(map[int]struct {
+			result1 string
+			result2 []string
+		})
+	}
+	fake.getFunctionAndParametersReturnsOnCall[i] = struct {
+		result1 string
+		result2 []string
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetHistoryForKey(arg1 string) (shim.HistoryQueryIteratorInterface, error) {
+	fake.getHistoryForKeyMutex.Lock()
+	ret, specificReturn := fake.getHistoryForKeyReturnsOnCall[len(fake.getHistoryForKeyArgsForCall)]
+	fake.getHistoryForKeyArgsForCall = append(fake.getHistoryForKeyArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetHistoryForKeyStub
+	fakeReturns := fake.getHistoryForKeyReturns
+	fake.recordInvocation("GetHistoryForKey", []interface{}{arg1})
+	fake.getHistoryForKeyMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetHistoryForKeyCallCount() int {
+	fake.getHistoryForKeyMutex.RLock()
+	defer fake.getHistoryForKeyMutex.RUnlock()
+	return len(fake.getHistoryForKeyArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetHistoryForKeyCalls(stub func(string) (shim.HistoryQueryIteratorInterface, error)) {
+	fake.getHistoryForKeyMutex.Lock()
+	defer fake.getHistoryForKeyMutex.Unlock()
+	fake.GetHistoryForKeyStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetHistoryForKeyArgsForCall(i int) string {
+	fake.getHistoryForKeyMutex.RLock()
+	defer fake.getHistoryForKeyMutex.RUnlock()
+	argsForCall := fake.getHistoryForKeyArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ChaincodeStubInterface) GetHistoryForKeyReturns(result1 shim.HistoryQueryIteratorInterface, result2 error) {
+	fake.getHistoryForKeyMutex.Lock()
+	defer fake.getHistoryForKeyMutex.Unlock()
+	fake.GetHistoryForKeyStub = nil
+	fake.getHistoryForKeyReturns = struct {
+		result1 shim.HistoryQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetHistoryForKeyReturnsOnCall(i int, result1 shim.HistoryQueryIteratorInterface, result2 error) {
+	fake.getHistoryForKeyMutex.Lock()
+	defer fake.getHistoryForKeyMutex.Unlock()
+	fake.GetHistoryForKeyStub = nil
+	if fake.getHistoryForKeyReturnsOnCall == nil {
+		fake.getHistoryForKeyReturnsOnCall = make(map[int]struct {
+			result1 shim.HistoryQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getHistoryForKeyReturnsOnCall[i] = struct {
+		result1 shim.HistoryQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateData(arg1 string, arg2 string) ([]byte, error) {
+	fake.getPrivateDataMutex.Lock()
+	ret, specificReturn := fake.getPrivateDataReturnsOnCall[len(fake.getPrivateDataArgsForCall)]
+	fake.getPrivateDataArgsForCall = append(fake.getPrivateDataArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPrivateDataStub
+	fakeReturns := fake.getPrivateDataReturns
+	fake.recordInvocation("GetPrivateData", []interface{}{arg1, arg2})
+	fake.getPrivateDataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataCallCount() int {
+	fake.getPrivateDataMutex.RLock()
+	defer fake.getPrivateDataMutex.RUnlock()
+	return len(fake.getPrivateDataArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataCalls(stub func(string, string) ([]byte, error)) {
+	fake.getPrivateDataMutex.Lock()
+	defer fake.getPrivateDataMutex.Unlock()
+	fake.GetPrivateDataStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataArgsForCall(i int) (string, string) {
+	fake.getPrivateDataMutex.RLock()
+	defer fake.getPrivateDataMutex.RUnlock()
+	argsForCall := fake.getPrivateDataArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataReturns(result1 []byte, result2 error) {
+	fake.getPrivateDataMutex.Lock()
+	defer fake.getPrivateDataMutex.Unlock()
+	fake.GetPrivateDataStub = nil
+	fake.getPrivateDataReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getPrivateDataMutex.Lock()
+	defer fake.getPrivateDataMutex.Unlock()
+	fake.GetPrivateDataStub = nil
+	if fake.getPrivateDataReturnsOnCall == nil {
+		fake.getPrivateDataReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getPrivateDataReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKey(arg1 string, arg2 string, arg3 []string) (shim.StateQueryIteratorInterface, error) {
+	var arg3Copy []string
+	if arg3 != nil {
+		arg3Copy = make([]string, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.getPrivateDataByPartialCompositeKeyMutex.Lock()
+	ret, specificReturn := fake.getPrivateDataByPartialCompositeKeyReturnsOnCall[len(fake.getPrivateDataByPartialCompositeKeyArgsForCall)]
+	fake.getPrivateDataByPartialCompositeKeyArgsForCall = append(fake.getPrivateDataByPartialCompositeKeyArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 []string
+	}{arg1, arg2, arg3Copy})
+	stub := fake.GetPrivateDataByPartialCompositeKeyStub
+	fakeReturns := fake.getPrivateDataByPartialCompositeKeyReturns
+	fake.recordInvocation("GetPrivateDataByPartialCompositeKey", []interface{}{arg1, arg2, arg3Copy})
+	fake.getPrivateDataByPartialCompositeKeyMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyCallCount() int {
+	fake.getPrivateDataByPartialCompositeKeyMutex.RLock()
+	defer fake.getPrivateDataByPartialCompositeKeyMutex.RUnlock()
+	return len(fake.getPrivateDataByPartialCompositeKeyArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyCalls(stub func(string, string, []string) (shim.StateQueryIteratorInterface, error)) {
+	fake.getPrivateDataByPartialCompositeKeyMutex.Lock()
+	defer fake.getPrivateDataByPartialCompositeKeyMutex.Unlock()
+	fake.GetPrivateDataByPartialCompositeKeyStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyArgsForCall(i int) (string, string, []string) {
+	fake.getPrivateDataByPartialCompositeKeyMutex.RLock()
+	defer fake.getPrivateDataByPartialCompositeKeyMutex.RUnlock()
+	argsForCall := fake.getPrivateDataByPartialCompositeKeyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getPrivateDataByPartialCompositeKeyMutex.Lock()
+	defer fake.getPrivateDataByPartialCompositeKeyMutex.Unlock()
+	fake.GetPrivateDataByPartialCompositeKeyStub = nil
+	fake.getPrivateDataByPartialCompositeKeyReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getPrivateDataByPartialCompositeKeyMutex.Lock()
+	defer fake.getPrivateDataByPartialCompositeKeyMutex.Unlock()
+	fake.GetPrivateDataByPartialCompositeKeyStub = nil
+	if fake.getPrivateDataByPartialCompositeKeyReturnsOnCall == nil {
+		fake.getPrivateDataByPartialCompositeKeyReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getPrivateDataByPartialCompositeKeyReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByRange(arg1 string, arg2 string, arg3 string) (shim.StateQueryIteratorInterface, error) {
+	fake.getPrivateDataByRangeMutex.Lock()
+	ret, specificReturn := fake.getPrivateDataByRangeReturnsOnCall[len(fake.getPrivateDataByRangeArgsForCall)]
+	fake.getPrivateDataByRangeArgsForCall = append(fake.getPrivateDataByRangeArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.GetPrivateDataByRangeStub
+	fakeReturns := fake.getPrivateDataByRangeReturns
+	fake.recordInvocation("GetPrivateDataByRange", []interface{}{arg1, arg2, arg3})
+	fake.getPrivateDataByRangeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByRangeCallCount() int {
+	fake.getPrivateDataByRangeMutex.RLock()
+	defer fake.getPrivateDataByRangeMutex.RUnlock()
+	return len(fake.getPrivateDataByRangeArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByRangeCalls(stub func(string, string, string) (shim.StateQueryIteratorInterface, error)) {
+	fake.getPrivateDataByRangeMutex.Lock()
+	defer fake.getPrivateDataByRangeMutex.Unlock()
+	fake.GetPrivateDataByRangeStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByRangeArgsForCall(i int) (string, string, string) {
+	fake.getPrivateDataByRangeMutex.RLock()
+	defer fake.getPrivateDataByRangeMutex.RUnlock()
+	argsForCall := fake.getPrivateDataByRangeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByRangeReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getPrivateDataByRangeMutex.Lock()
+	defer fake.getPrivateDataByRangeMutex.Unlock()
+	fake.GetPrivateDataByRangeStub = nil
+	fake.getPrivateDataByRangeReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataByRangeReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getPrivateDataByRangeMutex.Lock()
+	defer fake.getPrivateDataByRangeMutex.Unlock()
+	fake.GetPrivateDataByRangeStub = nil
+	if fake.getPrivateDataByRangeReturnsOnCall == nil {
+		fake.getPrivateDataByRangeReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getPrivateDataByRangeReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataHash(arg1 string, arg2 string) ([]byte, error) {
+	fake.getPrivateDataHashMutex.Lock()
+	ret, specificReturn := fake.getPrivateDataHashReturnsOnCall[len(fake.getPrivateDataHashArgsForCall)]
+	fake.getPrivateDataHashArgsForCall = append(fake.getPrivateDataHashArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPrivateDataHashStub
+	fakeReturns := fake.getPrivateDataHashReturns
+	fake.recordInvocation("GetPrivateDataHash", []interface{}{arg1, arg2})
+	fake.getPrivateDataHashMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataHashCallCount() int {
+	fake.getPrivateDataHashMutex.RLock()
+	defer fake.getPrivateDataHashMutex.RUnlock()
+	return len(fake.getPrivateDataHashArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataHashCalls(stub func(string, string) ([]byte, error)) {
+	fake.getPrivateDataHashMutex.Lock()
+	defer fake.getPrivateDataHashMutex.Unlock()
+	fake.GetPrivateDataHashStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataHashArgsForCall(i int) (string, string) {
+	fake.getPrivateDataHashMutex.RLock()
+	defer fake.getPrivateDataHashMutex.RUnlock()
+	argsForCall := fake.getPrivateDataHashArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataHashReturns(result1 []byte, result2 error) {
+	fake.getPrivateDataHashMutex.Lock()
+	defer fake.getPrivateDataHashMutex.Unlock()
+	fake.GetPrivateDataHashStub = nil
+	fake.getPrivateDataHashReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataHashReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getPrivateDataHashMutex.Lock()
+	defer fake.getPrivateDataHashMutex.Unlock()
+	fake.GetPrivateDataHashStub = nil
+	if fake.getPrivateDataHashReturnsOnCall == nil {
+		fake.getPrivateDataHashReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getPrivateDataHashReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataQueryResult(arg1 string, arg2 string) (shim.StateQueryIteratorInterface, error) {
+	fake.getPrivateDataQueryResultMutex.Lock()
+	ret, specificReturn := fake.getPrivateDataQueryResultReturnsOnCall[len(fake.getPrivateDataQueryResultArgsForCall)]
+	fake.getPrivateDataQueryResultArgsForCall = append(fake.getPrivateDataQueryResultArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPrivateDataQueryResultStub
+	fakeReturns := fake.getPrivateDataQueryResultReturns
+	fake.recordInvocation("GetPrivateDataQueryResult", []interface{}{arg1, arg2})
+	fake.getPrivateDataQueryResultMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultCallCount() int {
+	fake.getPrivateDataQueryResultMutex.RLock()
+	defer fake.getPrivateDataQueryResultMutex.RUnlock()
+	return len(fake.getPrivateDataQueryResultArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultCalls(stub func(string, string) (shim.StateQueryIteratorInterface, error)) {
+	fake.getPrivateDataQueryResultMutex.Lock()
+	defer fake.getPrivateDataQueryResultMutex.Unlock()
+	fake.GetPrivateDataQueryResultStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultArgsForCall(i int) (string, string) {
+	fake.getPrivateDataQueryResultMutex.RLock()
+	defer fake.getPrivateDataQueryResultMutex.RUnlock()
+	argsForCall := fake.getPrivateDataQueryResultArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getPrivateDataQueryResultMutex.Lock()
+	defer fake.getPrivateDataQueryResultMutex.Unlock()
+	fake.GetPrivateDataQueryResultStub = nil
+	fake.getPrivateDataQueryResultReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getPrivateDataQueryResultMutex.Lock()
+	defer fake.getPrivateDataQueryResultMutex.Unlock()
+	fake.GetPrivateDataQueryResultStub = nil
+	if fake.getPrivateDataQueryResultReturnsOnCall == nil {
+		fake.getPrivateDataQueryResultReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getPrivateDataQueryResultReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameter(arg1 string, arg2 string) ([]byte, error) {
+	fake.getPrivateDataValidationParameterMutex.Lock()
+	ret, specificReturn := fake.getPrivateDataValidationParameterReturnsOnCall[len(fake.getPrivateDataValidationParameterArgsForCall)]
+	fake.getPrivateDataValidationParameterArgsForCall = append(fake.getPrivateDataValidationParameterArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetPrivateDataValidationParameterStub
+	fakeReturns := fake.getPrivateDataValidationParameterReturns
+	fake.recordInvocation("GetPrivateDataValidationParameter", []interface{}{arg1, arg2})
+	fake.getPrivateDataValidationParameterMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterCallCount() int {
+	fake.getPrivateDataValidationParameterMutex.RLock()
+	defer fake.getPrivateDataValidationParameterMutex.RUnlock()
+	return len(fake.getPrivateDataValidationParameterArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterCalls(stub func(string, string) ([]byte, error)) {
+	fake.getPrivateDataValidationParameterMutex.Lock()
+	defer fake.getPrivateDataValidationParameterMutex.Unlock()
+	fake.GetPrivateDataValidationParameterStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterArgsForCall(i int) (string, string) {
+	fake.getPrivateDataValidationParameterMutex.RLock()
+	defer fake.getPrivateDataValidationParameterMutex.RUnlock()
+	argsForCall := fake.getPrivateDataValidationParameterArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterReturns(result1 []byte, result2 error) {
+	fake.getPrivateDataValidationParameterMutex.Lock()
+	defer fake.getPrivateDataValidationParameterMutex.Unlock()
+	fake.GetPrivateDataValidationParameterStub = nil
+	fake.getPrivateDataValidationParameterReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getPrivateDataValidationParameterMutex.Lock()
+	defer fake.getPrivateDataValidationParameterMutex.Unlock()
+	fake.GetPrivateDataValidationParameterStub = nil
+	if fake.getPrivateDataValidationParameterReturnsOnCall == nil {
+		fake.getPrivateDataValidationParameterReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getPrivateDataValidationParameterReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResult(arg1 string) (shim.StateQueryIteratorInterface, error) {
+	fake.getQueryResultMutex.Lock()
+	ret, specificReturn := fake.getQueryResultReturnsOnCall[len(fake.getQueryResultArgsForCall)]
+	fake.getQueryResultArgsForCall = append(fake.getQueryResultArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetQueryResultStub
+	fakeReturns := fake.getQueryResultReturns
+	fake.recordInvocation("GetQueryResult", []interface{}{arg1})
+	fake.getQueryResultMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultCallCount() int {
+	fake.getQueryResultMutex.RLock()
+	defer fake.getQueryResultMutex.RUnlock()
+	return len(fake.getQueryResultArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultCalls(stub func(string) (shim.StateQueryIteratorInterface, error)) {
+	fake.getQueryResultMutex.Lock()
+	defer fake.getQueryResultMutex.Unlock()
+	fake.GetQueryResultStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultArgsForCall(i int) string {
+	fake.getQueryResultMutex.RLock()
+	defer fake.getQueryResultMutex.RUnlock()
+	argsForCall := fake.getQueryResultArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getQueryResultMutex.Lock()
+	defer fake.getQueryResultMutex.Unlock()
+	fake.GetQueryResultStub = nil
+	fake.getQueryResultReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getQueryResultMutex.Lock()
+	defer fake.getQueryResultMutex.Unlock()
+	fake.GetQueryResultStub = nil
+	if fake.getQueryResultReturnsOnCall == nil {
+		fake.getQueryResultReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getQueryResultReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultWithPagination(arg1 string, arg2 int32, arg3 string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error) {
+	fake.getQueryResultWithPaginationMutex.Lock()
+	ret, specificReturn := fake.getQueryResultWithPaginationReturnsOnCall[len(fake.getQueryResultWithPaginationArgsForCall)]
+	fake.getQueryResultWithPaginationArgsForCall = append(fake.getQueryResultWithPaginationArgsForCall, struct {
+		arg1 string
+		arg2 int32
+		arg3 string
+	}{arg1, arg2, arg3})
+	stub := fake.GetQueryResultWithPaginationStub
+	fakeReturns := fake.getQueryResultWithPaginationReturns
+	fake.recordInvocation("GetQueryResultWithPagination", []interface{}{arg1, arg2, arg3})
+	fake.getQueryResultWithPaginationMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2, ret.result3
 	}
-	return fake.splitCompositeKeyReturns.result1, fake.splitCompositeKeyReturns.result2, fake.splitCompositeKeyReturns.result3
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationCallCount() int {
+	fake.getQueryResultWithPaginationMutex.RLock()
+	defer fake.getQueryResultWithPaginationMutex.RUnlock()
+	return len(fake.getQueryResultWithPaginationArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationCalls(stub func(string, int32, string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error)) {
+	fake.getQueryResultWithPaginationMutex.Lock()
+	defer fake.getQueryResultWithPaginationMutex.Unlock()
+	fake.GetQueryResultWithPaginationStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationArgsForCall(i int) (string, int32, string) {
+	fake.getQueryResultWithPaginationMutex.RLock()
+	defer fake.getQueryResultWithPaginationMutex.RUnlock()
+	argsForCall := fake.getQueryResultWithPaginationArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationReturns(result1 shim.StateQueryIteratorInterface, result2 *peer.QueryResponseMetadata, result3 error) {
+	fake.getQueryResultWithPaginationMutex.Lock()
+	defer fake.getQueryResultWithPaginationMutex.Unlock()
+	fake.GetQueryResultWithPaginationStub = nil
+	fake.getQueryResultWithPaginationReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 *peer.QueryResponseMetadata, result3 error) {
+	fake.getQueryResultWithPaginationMutex.Lock()
+	defer fake.getQueryResultWithPaginationMutex.Unlock()
+	fake.GetQueryResultWithPaginationStub = nil
+	if fake.getQueryResultWithPaginationReturnsOnCall == nil {
+		fake.getQueryResultWithPaginationReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 *peer.QueryResponseMetadata
+			result3 error
+		})
+	}
+	fake.getQueryResultWithPaginationReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ChaincodeStubInterface) GetSignedProposal() (*peer.SignedProposal, error) {
+	fake.getSignedProposalMutex.Lock()
+	ret, specificReturn := fake.getSignedProposalReturnsOnCall[len(fake.getSignedProposalArgsForCall)]
+	fake.getSignedProposalArgsForCall = append(fake.getSignedProposalArgsForCall, struct {
+	}{})
+	stub := fake.GetSignedProposalStub
+	fakeReturns := fake.getSignedProposalReturns
+	fake.recordInvocation("GetSignedProposal", []interface{}{})
+	fake.getSignedProposalMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetSignedProposalCallCount() int {
+	fake.getSignedProposalMutex.RLock()
+	defer fake.getSignedProposalMutex.RUnlock()
+	return len(fake.getSignedProposalArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetSignedProposalCalls(stub func() (*peer.SignedProposal, error)) {
+	fake.getSignedProposalMutex.Lock()
+	defer fake.getSignedProposalMutex.Unlock()
+	fake.GetSignedProposalStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetSignedProposalReturns(result1 *peer.SignedProposal, result2 error) {
+	fake.getSignedProposalMutex.Lock()
+	defer fake.getSignedProposalMutex.Unlock()
+	fake.GetSignedProposalStub = nil
+	fake.getSignedProposalReturns = struct {
+		result1 *peer.SignedProposal
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetSignedProposalReturnsOnCall(i int, result1 *peer.SignedProposal, result2 error) {
+	fake.getSignedProposalMutex.Lock()
+	defer fake.getSignedProposalMutex.Unlock()
+	fake.GetSignedProposalStub = nil
+	if fake.getSignedProposalReturnsOnCall == nil {
+		fake.getSignedProposalReturnsOnCall = make(map[int]struct {
+			result1 *peer.SignedProposal
+			result2 error
+		})
+	}
+	fake.getSignedProposalReturnsOnCall[i] = struct {
+		result1 *peer.SignedProposal
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetState(arg1 string) ([]byte, error) {
+	fake.getStateMutex.Lock()
+	ret, specificReturn := fake.getStateReturnsOnCall[len(fake.getStateArgsForCall)]
+	fake.getStateArgsForCall = append(fake.getStateArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetStateStub
+	fakeReturns := fake.getStateReturns
+	fake.recordInvocation("GetState", []interface{}{arg1})
+	fake.getStateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetStateCallCount() int {
+	fake.getStateMutex.RLock()
+	defer fake.getStateMutex.RUnlock()
+	return len(fake.getStateArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStateCalls(stub func(string) ([]byte, error)) {
+	fake.getStateMutex.Lock()
+	defer fake.getStateMutex.Unlock()
+	fake.GetStateStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStateArgsForCall(i int) string {
+	fake.getStateMutex.RLock()
+	defer fake.getStateMutex.RUnlock()
+	argsForCall := fake.getStateArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ChaincodeStubInterface) GetStateReturns(result1 []byte, result2 error) {
+	fake.getStateMutex.Lock()
+	defer fake.getStateMutex.Unlock()
+	fake.GetStateStub = nil
+	fake.getStateReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getStateMutex.Lock()
+	defer fake.getStateMutex.Unlock()
+	fake.GetStateStub = nil
+	if fake.getStateReturnsOnCall == nil {
+		fake.getStateReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getStateReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKey(arg1 string, arg2 []string) (shim.StateQueryIteratorInterface, error) {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getStateByPartialCompositeKeyMutex.Lock()
+	ret, specificReturn := fake.getStateByPartialCompositeKeyReturnsOnCall[len(fake.getStateByPartialCompositeKeyArgsForCall)]
+	fake.getStateByPartialCompositeKeyArgsForCall = append(fake.getStateByPartialCompositeKeyArgsForCall, struct {
+		arg1 string
+		arg2 []string
+	}{arg1, arg2Copy})
+	stub := fake.GetStateByPartialCompositeKeyStub
+	fakeReturns := fake.getStateByPartialCompositeKeyReturns
+	fake.recordInvocation("GetStateByPartialCompositeKey", []interface{}{arg1, arg2Copy})
+	fake.getStateByPartialCompositeKeyMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyCallCount() int {
+	fake.getStateByPartialCompositeKeyMutex.RLock()
+	defer fake.getStateByPartialCompositeKeyMutex.RUnlock()
+	return len(fake.getStateByPartialCompositeKeyArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyCalls(stub func(string, []string) (shim.StateQueryIteratorInterface, error)) {
+	fake.getStateByPartialCompositeKeyMutex.Lock()
+	defer fake.getStateByPartialCompositeKeyMutex.Unlock()
+	fake.GetStateByPartialCompositeKeyStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyArgsForCall(i int) (string, []string) {
+	fake.getStateByPartialCompositeKeyMutex.RLock()
+	defer fake.getStateByPartialCompositeKeyMutex.RUnlock()
+	argsForCall := fake.getStateByPartialCompositeKeyArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getStateByPartialCompositeKeyMutex.Lock()
+	defer fake.getStateByPartialCompositeKeyMutex.Unlock()
+	fake.GetStateByPartialCompositeKeyStub = nil
+	fake.getStateByPartialCompositeKeyReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getStateByPartialCompositeKeyMutex.Lock()
+	defer fake.getStateByPartialCompositeKeyMutex.Unlock()
+	fake.GetStateByPartialCompositeKeyStub = nil
+	if fake.getStateByPartialCompositeKeyReturnsOnCall == nil {
+		fake.getStateByPartialCompositeKeyReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getStateByPartialCompositeKeyReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPagination(arg1 string, arg2 []string, arg3 int32, arg4 string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error) {
+	var arg2Copy []string
+	if arg2 != nil {
+		arg2Copy = make([]string, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.Lock()
+	ret, specificReturn := fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall[len(fake.getStateByPartialCompositeKeyWithPaginationArgsForCall)]
+	fake.getStateByPartialCompositeKeyWithPaginationArgsForCall = append(fake.getStateByPartialCompositeKeyWithPaginationArgsForCall, struct {
+		arg1 string
+		arg2 []string
+		arg3 int32
+		arg4 string
+	}{arg1, arg2Copy, arg3, arg4})
+	stub := fake.GetStateByPartialCompositeKeyWithPaginationStub
+	fakeReturns := fake.getStateByPartialCompositeKeyWithPaginationReturns
+	fake.recordInvocation("GetStateByPartialCompositeKeyWithPagination", []interface{}{arg1, arg2Copy, arg3, arg4})
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationCallCount() int {
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.RLock()
+	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.RUnlock()
+	return len(fake.getStateByPartialCompositeKeyWithPaginationArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationCalls(stub func(string, []string, int32, string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error)) {
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.Lock()
+	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.Unlock()
+	fake.GetStateByPartialCompositeKeyWithPaginationStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationArgsForCall(i int) (string, []string, int32, string) {
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.RLock()
+	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.RUnlock()
+	argsForCall := fake.getStateByPartialCompositeKeyWithPaginationArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationReturns(result1 shim.StateQueryIteratorInterface, result2 *peer.QueryResponseMetadata, result3 error) {
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.Lock()
+	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.Unlock()
+	fake.GetStateByPartialCompositeKeyWithPaginationStub = nil
+	fake.getStateByPartialCompositeKeyWithPaginationReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByPartialCompositeKeyWithPaginationReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 *peer.QueryResponseMetadata, result3 error) {
+	fake.getStateByPartialCompositeKeyWithPaginationMutex.Lock()
+	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.Unlock()
+	fake.GetStateByPartialCompositeKeyWithPaginationStub = nil
+	if fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall == nil {
+		fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 *peer.QueryResponseMetadata
+			result3 error
+		})
+	}
+	fake.getStateByPartialCompositeKeyWithPaginationReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRange(arg1 string, arg2 string) (shim.StateQueryIteratorInterface, error) {
+	fake.getStateByRangeMutex.Lock()
+	ret, specificReturn := fake.getStateByRangeReturnsOnCall[len(fake.getStateByRangeArgsForCall)]
+	fake.getStateByRangeArgsForCall = append(fake.getStateByRangeArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.GetStateByRangeStub
+	fakeReturns := fake.getStateByRangeReturns
+	fake.recordInvocation("GetStateByRange", []interface{}{arg1, arg2})
+	fake.getStateByRangeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeCallCount() int {
+	fake.getStateByRangeMutex.RLock()
+	defer fake.getStateByRangeMutex.RUnlock()
+	return len(fake.getStateByRangeArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeCalls(stub func(string, string) (shim.StateQueryIteratorInterface, error)) {
+	fake.getStateByRangeMutex.Lock()
+	defer fake.getStateByRangeMutex.Unlock()
+	fake.GetStateByRangeStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeArgsForCall(i int) (string, string) {
+	fake.getStateByRangeMutex.RLock()
+	defer fake.getStateByRangeMutex.RUnlock()
+	argsForCall := fake.getStateByRangeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getStateByRangeMutex.Lock()
+	defer fake.getStateByRangeMutex.Unlock()
+	fake.GetStateByRangeStub = nil
+	fake.getStateByRangeReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
+	fake.getStateByRangeMutex.Lock()
+	defer fake.getStateByRangeMutex.Unlock()
+	fake.GetStateByRangeStub = nil
+	if fake.getStateByRangeReturnsOnCall == nil {
+		fake.getStateByRangeReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 error
+		})
+	}
+	fake.getStateByRangeReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeWithPagination(arg1 string, arg2 string, arg3 int32, arg4 string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error) {
+	fake.getStateByRangeWithPaginationMutex.Lock()
+	ret, specificReturn := fake.getStateByRangeWithPaginationReturnsOnCall[len(fake.getStateByRangeWithPaginationArgsForCall)]
+	fake.getStateByRangeWithPaginationArgsForCall = append(fake.getStateByRangeWithPaginationArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 int32
+		arg4 string
+	}{arg1, arg2, arg3, arg4})
+	stub := fake.GetStateByRangeWithPaginationStub
+	fakeReturns := fake.getStateByRangeWithPaginationReturns
+	fake.recordInvocation("GetStateByRangeWithPagination", []interface{}{arg1, arg2, arg3, arg4})
+	fake.getStateByRangeWithPaginationMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationCallCount() int {
+	fake.getStateByRangeWithPaginationMutex.RLock()
+	defer fake.getStateByRangeWithPaginationMutex.RUnlock()
+	return len(fake.getStateByRangeWithPaginationArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationCalls(stub func(string, string, int32, string) (shim.StateQueryIteratorInterface, *peer.QueryResponseMetadata, error)) {
+	fake.getStateByRangeWithPaginationMutex.Lock()
+	defer fake.getStateByRangeWithPaginationMutex.Unlock()
+	fake.GetStateByRangeWithPaginationStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationArgsForCall(i int) (string, string, int32, string) {
+	fake.getStateByRangeWithPaginationMutex.RLock()
+	defer fake.getStateByRangeWithPaginationMutex.RUnlock()
+	argsForCall := fake.getStateByRangeWithPaginationArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationReturns(result1 shim.StateQueryIteratorInterface, result2 *peer.QueryResponseMetadata, result3 error) {
+	fake.getStateByRangeWithPaginationMutex.Lock()
+	defer fake.getStateByRangeWithPaginationMutex.Unlock()
+	fake.GetStateByRangeWithPaginationStub = nil
+	fake.getStateByRangeWithPaginationReturns = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ChaincodeStubInterface) GetStateByRangeWithPaginationReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 *peer.QueryResponseMetadata, result3 error) {
+	fake.getStateByRangeWithPaginationMutex.Lock()
+	defer fake.getStateByRangeWithPaginationMutex.Unlock()
+	fake.GetStateByRangeWithPaginationStub = nil
+	if fake.getStateByRangeWithPaginationReturnsOnCall == nil {
+		fake.getStateByRangeWithPaginationReturnsOnCall = make(map[int]struct {
+			result1 shim.StateQueryIteratorInterface
+			result2 *peer.QueryResponseMetadata
+			result3 error
+		})
+	}
+	fake.getStateByRangeWithPaginationReturnsOnCall[i] = struct {
+		result1 shim.StateQueryIteratorInterface
+		result2 *peer.QueryResponseMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *ChaincodeStubInterface) GetStateValidationParameter(arg1 string) ([]byte, error) {
+	fake.getStateValidationParameterMutex.Lock()
+	ret, specificReturn := fake.getStateValidationParameterReturnsOnCall[len(fake.getStateValidationParameterArgsForCall)]
+	fake.getStateValidationParameterArgsForCall = append(fake.getStateValidationParameterArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetStateValidationParameterStub
+	fakeReturns := fake.getStateValidationParameterReturns
+	fake.recordInvocation("GetStateValidationParameter", []interface{}{arg1})
+	fake.getStateValidationParameterMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetStateValidationParameterCallCount() int {
+	fake.getStateValidationParameterMutex.RLock()
+	defer fake.getStateValidationParameterMutex.RUnlock()
+	return len(fake.getStateValidationParameterArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStateValidationParameterCalls(stub func(string) ([]byte, error)) {
+	fake.getStateValidationParameterMutex.Lock()
+	defer fake.getStateValidationParameterMutex.Unlock()
+	fake.GetStateValidationParameterStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStateValidationParameterArgsForCall(i int) string {
+	fake.getStateValidationParameterMutex.RLock()
+	defer fake.getStateValidationParameterMutex.RUnlock()
+	argsForCall := fake.getStateValidationParameterArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *ChaincodeStubInterface) GetStateValidationParameterReturns(result1 []byte, result2 error) {
+	fake.getStateValidationParameterMutex.Lock()
+	defer fake.getStateValidationParameterMutex.Unlock()
+	fake.GetStateValidationParameterStub = nil
+	fake.getStateValidationParameterReturns = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStateValidationParameterReturnsOnCall(i int, result1 []byte, result2 error) {
+	fake.getStateValidationParameterMutex.Lock()
+	defer fake.getStateValidationParameterMutex.Unlock()
+	fake.GetStateValidationParameterStub = nil
+	if fake.getStateValidationParameterReturnsOnCall == nil {
+		fake.getStateValidationParameterReturnsOnCall = make(map[int]struct {
+			result1 []byte
+			result2 error
+		})
+	}
+	fake.getStateValidationParameterReturnsOnCall[i] = struct {
+		result1 []byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetStringArgs() []string {
+	fake.getStringArgsMutex.Lock()
+	ret, specificReturn := fake.getStringArgsReturnsOnCall[len(fake.getStringArgsArgsForCall)]
+	fake.getStringArgsArgsForCall = append(fake.getStringArgsArgsForCall, struct {
+	}{})
+	stub := fake.GetStringArgsStub
+	fakeReturns := fake.getStringArgsReturns
+	fake.recordInvocation("GetStringArgs", []interface{}{})
+	fake.getStringArgsMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) GetStringArgsCallCount() int {
+	fake.getStringArgsMutex.RLock()
+	defer fake.getStringArgsMutex.RUnlock()
+	return len(fake.getStringArgsArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetStringArgsCalls(stub func() []string) {
+	fake.getStringArgsMutex.Lock()
+	defer fake.getStringArgsMutex.Unlock()
+	fake.GetStringArgsStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetStringArgsReturns(result1 []string) {
+	fake.getStringArgsMutex.Lock()
+	defer fake.getStringArgsMutex.Unlock()
+	fake.GetStringArgsStub = nil
+	fake.getStringArgsReturns = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetStringArgsReturnsOnCall(i int, result1 []string) {
+	fake.getStringArgsMutex.Lock()
+	defer fake.getStringArgsMutex.Unlock()
+	fake.GetStringArgsStub = nil
+	if fake.getStringArgsReturnsOnCall == nil {
+		fake.getStringArgsReturnsOnCall = make(map[int]struct {
+			result1 []string
+		})
+	}
+	fake.getStringArgsReturnsOnCall[i] = struct {
+		result1 []string
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetTransient() (map[string][]byte, error) {
+	fake.getTransientMutex.Lock()
+	ret, specificReturn := fake.getTransientReturnsOnCall[len(fake.getTransientArgsForCall)]
+	fake.getTransientArgsForCall = append(fake.getTransientArgsForCall, struct {
+	}{})
+	stub := fake.GetTransientStub
+	fakeReturns := fake.getTransientReturns
+	fake.recordInvocation("GetTransient", []interface{}{})
+	fake.getTransientMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetTransientCallCount() int {
+	fake.getTransientMutex.RLock()
+	defer fake.getTransientMutex.RUnlock()
+	return len(fake.getTransientArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetTransientCalls(stub func() (map[string][]byte, error)) {
+	fake.getTransientMutex.Lock()
+	defer fake.getTransientMutex.Unlock()
+	fake.GetTransientStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetTransientReturns(result1 map[string][]byte, result2 error) {
+	fake.getTransientMutex.Lock()
+	defer fake.getTransientMutex.Unlock()
+	fake.GetTransientStub = nil
+	fake.getTransientReturns = struct {
+		result1 map[string][]byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetTransientReturnsOnCall(i int, result1 map[string][]byte, result2 error) {
+	fake.getTransientMutex.Lock()
+	defer fake.getTransientMutex.Unlock()
+	fake.GetTransientStub = nil
+	if fake.getTransientReturnsOnCall == nil {
+		fake.getTransientReturnsOnCall = make(map[int]struct {
+			result1 map[string][]byte
+			result2 error
+		})
+	}
+	fake.getTransientReturnsOnCall[i] = struct {
+		result1 map[string][]byte
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetTxID() string {
+	fake.getTxIDMutex.Lock()
+	ret, specificReturn := fake.getTxIDReturnsOnCall[len(fake.getTxIDArgsForCall)]
+	fake.getTxIDArgsForCall = append(fake.getTxIDArgsForCall, struct {
+	}{})
+	stub := fake.GetTxIDStub
+	fakeReturns := fake.getTxIDReturns
+	fake.recordInvocation("GetTxID", []interface{}{})
+	fake.getTxIDMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) GetTxIDCallCount() int {
+	fake.getTxIDMutex.RLock()
+	defer fake.getTxIDMutex.RUnlock()
+	return len(fake.getTxIDArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetTxIDCalls(stub func() string) {
+	fake.getTxIDMutex.Lock()
+	defer fake.getTxIDMutex.Unlock()
+	fake.GetTxIDStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetTxIDReturns(result1 string) {
+	fake.getTxIDMutex.Lock()
+	defer fake.getTxIDMutex.Unlock()
+	fake.GetTxIDStub = nil
+	fake.getTxIDReturns = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetTxIDReturnsOnCall(i int, result1 string) {
+	fake.getTxIDMutex.Lock()
+	defer fake.getTxIDMutex.Unlock()
+	fake.GetTxIDStub = nil
+	if fake.getTxIDReturnsOnCall == nil {
+		fake.getTxIDReturnsOnCall = make(map[int]struct {
+			result1 string
+		})
+	}
+	fake.getTxIDReturnsOnCall[i] = struct {
+		result1 string
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) GetTxTimestamp() (*timestamppb.Timestamp, error) {
+	fake.getTxTimestampMutex.Lock()
+	ret, specificReturn := fake.getTxTimestampReturnsOnCall[len(fake.getTxTimestampArgsForCall)]
+	fake.getTxTimestampArgsForCall = append(fake.getTxTimestampArgsForCall, struct {
+	}{})
+	stub := fake.GetTxTimestampStub
+	fakeReturns := fake.getTxTimestampReturns
+	fake.recordInvocation("GetTxTimestamp", []interface{}{})
+	fake.getTxTimestampMutex.Unlock()
+	if stub != nil {
+		return stub()
+	}
+	if specificReturn {
+		return ret.result1, ret.result2
+	}
+	return fakeReturns.result1, fakeReturns.result2
+}
+
+func (fake *ChaincodeStubInterface) GetTxTimestampCallCount() int {
+	fake.getTxTimestampMutex.RLock()
+	defer fake.getTxTimestampMutex.RUnlock()
+	return len(fake.getTxTimestampArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) GetTxTimestampCalls(stub func() (*timestamppb.Timestamp, error)) {
+	fake.getTxTimestampMutex.Lock()
+	defer fake.getTxTimestampMutex.Unlock()
+	fake.GetTxTimestampStub = stub
+}
+
+func (fake *ChaincodeStubInterface) GetTxTimestampReturns(result1 *timestamppb.Timestamp, result2 error) {
+	fake.getTxTimestampMutex.Lock()
+	defer fake.getTxTimestampMutex.Unlock()
+	fake.GetTxTimestampStub = nil
+	fake.getTxTimestampReturns = struct {
+		result1 *timestamppb.Timestamp
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) GetTxTimestampReturnsOnCall(i int, result1 *timestamppb.Timestamp, result2 error) {
+	fake.getTxTimestampMutex.Lock()
+	defer fake.getTxTimestampMutex.Unlock()
+	fake.GetTxTimestampStub = nil
+	if fake.getTxTimestampReturnsOnCall == nil {
+		fake.getTxTimestampReturnsOnCall = make(map[int]struct {
+			result1 *timestamppb.Timestamp
+			result2 error
+		})
+	}
+	fake.getTxTimestampReturnsOnCall[i] = struct {
+		result1 *timestamppb.Timestamp
+		result2 error
+	}{result1, result2}
+}
+
+func (fake *ChaincodeStubInterface) InvokeChaincode(arg1 string, arg2 [][]byte, arg3 string) peer.Response {
+	var arg2Copy [][]byte
+	if arg2 != nil {
+		arg2Copy = make([][]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.invokeChaincodeMutex.Lock()
+	ret, specificReturn := fake.invokeChaincodeReturnsOnCall[len(fake.invokeChaincodeArgsForCall)]
+	fake.invokeChaincodeArgsForCall = append(fake.invokeChaincodeArgsForCall, struct {
+		arg1 string
+		arg2 [][]byte
+		arg3 string
+	}{arg1, arg2Copy, arg3})
+	stub := fake.InvokeChaincodeStub
+	fakeReturns := fake.invokeChaincodeReturns
+	fake.recordInvocation("InvokeChaincode", []interface{}{arg1, arg2Copy, arg3})
+	fake.invokeChaincodeMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) InvokeChaincodeCallCount() int {
+	fake.invokeChaincodeMutex.RLock()
+	defer fake.invokeChaincodeMutex.RUnlock()
+	return len(fake.invokeChaincodeArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) InvokeChaincodeCalls(stub func(string, [][]byte, string) peer.Response) {
+	fake.invokeChaincodeMutex.Lock()
+	defer fake.invokeChaincodeMutex.Unlock()
+	fake.InvokeChaincodeStub = stub
+}
+
+func (fake *ChaincodeStubInterface) InvokeChaincodeArgsForCall(i int) (string, [][]byte, string) {
+	fake.invokeChaincodeMutex.RLock()
+	defer fake.invokeChaincodeMutex.RUnlock()
+	argsForCall := fake.invokeChaincodeArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *ChaincodeStubInterface) InvokeChaincodeReturns(result1 peer.Response) {
+	fake.invokeChaincodeMutex.Lock()
+	defer fake.invokeChaincodeMutex.Unlock()
+	fake.InvokeChaincodeStub = nil
+	fake.invokeChaincodeReturns = struct {
+		result1 peer.Response
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) InvokeChaincodeReturnsOnCall(i int, result1 peer.Response) {
+	fake.invokeChaincodeMutex.Lock()
+	defer fake.invokeChaincodeMutex.Unlock()
+	fake.InvokeChaincodeStub = nil
+	if fake.invokeChaincodeReturnsOnCall == nil {
+		fake.invokeChaincodeReturnsOnCall = make(map[int]struct {
+			result1 peer.Response
+		})
+	}
+	fake.invokeChaincodeReturnsOnCall[i] = struct {
+		result1 peer.Response
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) PurgePrivateData(arg1 string, arg2 string) error {
+	fake.purgePrivateDataMutex.Lock()
+	ret, specificReturn := fake.purgePrivateDataReturnsOnCall[len(fake.purgePrivateDataArgsForCall)]
+	fake.purgePrivateDataArgsForCall = append(fake.purgePrivateDataArgsForCall, struct {
+		arg1 string
+		arg2 string
+	}{arg1, arg2})
+	stub := fake.PurgePrivateDataStub
+	fakeReturns := fake.purgePrivateDataReturns
+	fake.recordInvocation("PurgePrivateData", []interface{}{arg1, arg2})
+	fake.purgePrivateDataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) PurgePrivateDataCallCount() int {
+	fake.purgePrivateDataMutex.RLock()
+	defer fake.purgePrivateDataMutex.RUnlock()
+	return len(fake.purgePrivateDataArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) PurgePrivateDataCalls(stub func(string, string) error) {
+	fake.purgePrivateDataMutex.Lock()
+	defer fake.purgePrivateDataMutex.Unlock()
+	fake.PurgePrivateDataStub = stub
+}
+
+func (fake *ChaincodeStubInterface) PurgePrivateDataArgsForCall(i int) (string, string) {
+	fake.purgePrivateDataMutex.RLock()
+	defer fake.purgePrivateDataMutex.RUnlock()
+	argsForCall := fake.purgePrivateDataArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) PurgePrivateDataReturns(result1 error) {
+	fake.purgePrivateDataMutex.Lock()
+	defer fake.purgePrivateDataMutex.Unlock()
+	fake.PurgePrivateDataStub = nil
+	fake.purgePrivateDataReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) PurgePrivateDataReturnsOnCall(i int, result1 error) {
+	fake.purgePrivateDataMutex.Lock()
+	defer fake.purgePrivateDataMutex.Unlock()
+	fake.PurgePrivateDataStub = nil
+	if fake.purgePrivateDataReturnsOnCall == nil {
+		fake.purgePrivateDataReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.purgePrivateDataReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) PutPrivateData(arg1 string, arg2 string, arg3 []byte) error {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.putPrivateDataMutex.Lock()
+	ret, specificReturn := fake.putPrivateDataReturnsOnCall[len(fake.putPrivateDataArgsForCall)]
+	fake.putPrivateDataArgsForCall = append(fake.putPrivateDataArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
+	stub := fake.PutPrivateDataStub
+	fakeReturns := fake.putPrivateDataReturns
+	fake.recordInvocation("PutPrivateData", []interface{}{arg1, arg2, arg3Copy})
+	fake.putPrivateDataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) PutPrivateDataCallCount() int {
+	fake.putPrivateDataMutex.RLock()
+	defer fake.putPrivateDataMutex.RUnlock()
+	return len(fake.putPrivateDataArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) PutPrivateDataCalls(stub func(string, string, []byte) error) {
+	fake.putPrivateDataMutex.Lock()
+	defer fake.putPrivateDataMutex.Unlock()
+	fake.PutPrivateDataStub = stub
+}
+
+func (fake *ChaincodeStubInterface) PutPrivateDataArgsForCall(i int) (string, string, []byte) {
+	fake.putPrivateDataMutex.RLock()
+	defer fake.putPrivateDataMutex.RUnlock()
+	argsForCall := fake.putPrivateDataArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *ChaincodeStubInterface) PutPrivateDataReturns(result1 error) {
+	fake.putPrivateDataMutex.Lock()
+	defer fake.putPrivateDataMutex.Unlock()
+	fake.PutPrivateDataStub = nil
+	fake.putPrivateDataReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) PutPrivateDataReturnsOnCall(i int, result1 error) {
+	fake.putPrivateDataMutex.Lock()
+	defer fake.putPrivateDataMutex.Unlock()
+	fake.PutPrivateDataStub = nil
+	if fake.putPrivateDataReturnsOnCall == nil {
+		fake.putPrivateDataReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.putPrivateDataReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) PutState(arg1 string, arg2 []byte) error {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.putStateMutex.Lock()
+	ret, specificReturn := fake.putStateReturnsOnCall[len(fake.putStateArgsForCall)]
+	fake.putStateArgsForCall = append(fake.putStateArgsForCall, struct {
+		arg1 string
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.PutStateStub
+	fakeReturns := fake.putStateReturns
+	fake.recordInvocation("PutState", []interface{}{arg1, arg2Copy})
+	fake.putStateMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) PutStateCallCount() int {
+	fake.putStateMutex.RLock()
+	defer fake.putStateMutex.RUnlock()
+	return len(fake.putStateArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) PutStateCalls(stub func(string, []byte) error) {
+	fake.putStateMutex.Lock()
+	defer fake.putStateMutex.Unlock()
+	fake.PutStateStub = stub
+}
+
+func (fake *ChaincodeStubInterface) PutStateArgsForCall(i int) (string, []byte) {
+	fake.putStateMutex.RLock()
+	defer fake.putStateMutex.RUnlock()
+	argsForCall := fake.putStateArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) PutStateReturns(result1 error) {
+	fake.putStateMutex.Lock()
+	defer fake.putStateMutex.Unlock()
+	fake.PutStateStub = nil
+	fake.putStateReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) PutStateReturnsOnCall(i int, result1 error) {
+	fake.putStateMutex.Lock()
+	defer fake.putStateMutex.Unlock()
+	fake.PutStateStub = nil
+	if fake.putStateReturnsOnCall == nil {
+		fake.putStateReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.putStateReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SetEvent(arg1 string, arg2 []byte) error {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.setEventMutex.Lock()
+	ret, specificReturn := fake.setEventReturnsOnCall[len(fake.setEventArgsForCall)]
+	fake.setEventArgsForCall = append(fake.setEventArgsForCall, struct {
+		arg1 string
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.SetEventStub
+	fakeReturns := fake.setEventReturns
+	fake.recordInvocation("SetEvent", []interface{}{arg1, arg2Copy})
+	fake.setEventMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) SetEventCallCount() int {
+	fake.setEventMutex.RLock()
+	defer fake.setEventMutex.RUnlock()
+	return len(fake.setEventArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) SetEventCalls(stub func(string, []byte) error) {
+	fake.setEventMutex.Lock()
+	defer fake.setEventMutex.Unlock()
+	fake.SetEventStub = stub
+}
+
+func (fake *ChaincodeStubInterface) SetEventArgsForCall(i int) (string, []byte) {
+	fake.setEventMutex.RLock()
+	defer fake.setEventMutex.RUnlock()
+	argsForCall := fake.setEventArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) SetEventReturns(result1 error) {
+	fake.setEventMutex.Lock()
+	defer fake.setEventMutex.Unlock()
+	fake.SetEventStub = nil
+	fake.setEventReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SetEventReturnsOnCall(i int, result1 error) {
+	fake.setEventMutex.Lock()
+	defer fake.setEventMutex.Unlock()
+	fake.SetEventStub = nil
+	if fake.setEventReturnsOnCall == nil {
+		fake.setEventReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setEventReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameter(arg1 string, arg2 string, arg3 []byte) error {
+	var arg3Copy []byte
+	if arg3 != nil {
+		arg3Copy = make([]byte, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	fake.setPrivateDataValidationParameterMutex.Lock()
+	ret, specificReturn := fake.setPrivateDataValidationParameterReturnsOnCall[len(fake.setPrivateDataValidationParameterArgsForCall)]
+	fake.setPrivateDataValidationParameterArgsForCall = append(fake.setPrivateDataValidationParameterArgsForCall, struct {
+		arg1 string
+		arg2 string
+		arg3 []byte
+	}{arg1, arg2, arg3Copy})
+	stub := fake.SetPrivateDataValidationParameterStub
+	fakeReturns := fake.setPrivateDataValidationParameterReturns
+	fake.recordInvocation("SetPrivateDataValidationParameter", []interface{}{arg1, arg2, arg3Copy})
+	fake.setPrivateDataValidationParameterMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterCallCount() int {
+	fake.setPrivateDataValidationParameterMutex.RLock()
+	defer fake.setPrivateDataValidationParameterMutex.RUnlock()
+	return len(fake.setPrivateDataValidationParameterArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterCalls(stub func(string, string, []byte) error) {
+	fake.setPrivateDataValidationParameterMutex.Lock()
+	defer fake.setPrivateDataValidationParameterMutex.Unlock()
+	fake.SetPrivateDataValidationParameterStub = stub
+}
+
+func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterArgsForCall(i int) (string, string, []byte) {
+	fake.setPrivateDataValidationParameterMutex.RLock()
+	defer fake.setPrivateDataValidationParameterMutex.RUnlock()
+	argsForCall := fake.setPrivateDataValidationParameterArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
+}
+
+func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterReturns(result1 error) {
+	fake.setPrivateDataValidationParameterMutex.Lock()
+	defer fake.setPrivateDataValidationParameterMutex.Unlock()
+	fake.SetPrivateDataValidationParameterStub = nil
+	fake.setPrivateDataValidationParameterReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterReturnsOnCall(i int, result1 error) {
+	fake.setPrivateDataValidationParameterMutex.Lock()
+	defer fake.setPrivateDataValidationParameterMutex.Unlock()
+	fake.SetPrivateDataValidationParameterStub = nil
+	if fake.setPrivateDataValidationParameterReturnsOnCall == nil {
+		fake.setPrivateDataValidationParameterReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setPrivateDataValidationParameterReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SetStateValidationParameter(arg1 string, arg2 []byte) error {
+	var arg2Copy []byte
+	if arg2 != nil {
+		arg2Copy = make([]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.setStateValidationParameterMutex.Lock()
+	ret, specificReturn := fake.setStateValidationParameterReturnsOnCall[len(fake.setStateValidationParameterArgsForCall)]
+	fake.setStateValidationParameterArgsForCall = append(fake.setStateValidationParameterArgsForCall, struct {
+		arg1 string
+		arg2 []byte
+	}{arg1, arg2Copy})
+	stub := fake.SetStateValidationParameterStub
+	fakeReturns := fake.setStateValidationParameterReturns
+	fake.recordInvocation("SetStateValidationParameter", []interface{}{arg1, arg2Copy})
+	fake.setStateValidationParameterMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *ChaincodeStubInterface) SetStateValidationParameterCallCount() int {
+	fake.setStateValidationParameterMutex.RLock()
+	defer fake.setStateValidationParameterMutex.RUnlock()
+	return len(fake.setStateValidationParameterArgsForCall)
+}
+
+func (fake *ChaincodeStubInterface) SetStateValidationParameterCalls(stub func(string, []byte) error) {
+	fake.setStateValidationParameterMutex.Lock()
+	defer fake.setStateValidationParameterMutex.Unlock()
+	fake.SetStateValidationParameterStub = stub
+}
+
+func (fake *ChaincodeStubInterface) SetStateValidationParameterArgsForCall(i int) (string, []byte) {
+	fake.setStateValidationParameterMutex.RLock()
+	defer fake.setStateValidationParameterMutex.RUnlock()
+	argsForCall := fake.setStateValidationParameterArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *ChaincodeStubInterface) SetStateValidationParameterReturns(result1 error) {
+	fake.setStateValidationParameterMutex.Lock()
+	defer fake.setStateValidationParameterMutex.Unlock()
+	fake.SetStateValidationParameterStub = nil
+	fake.setStateValidationParameterReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SetStateValidationParameterReturnsOnCall(i int, result1 error) {
+	fake.setStateValidationParameterMutex.Lock()
+	defer fake.setStateValidationParameterMutex.Unlock()
+	fake.SetStateValidationParameterStub = nil
+	if fake.setStateValidationParameterReturnsOnCall == nil {
+		fake.setStateValidationParameterReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.setStateValidationParameterReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *ChaincodeStubInterface) SplitCompositeKey(arg1 string) (string, []string, error) {
+	fake.splitCompositeKeyMutex.Lock()
+	ret, specificReturn := fake.splitCompositeKeyReturnsOnCall[len(fake.splitCompositeKeyArgsForCall)]
+	fake.splitCompositeKeyArgsForCall = append(fake.splitCompositeKeyArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.SplitCompositeKeyStub
+	fakeReturns := fake.splitCompositeKeyReturns
+	fake.recordInvocation("SplitCompositeKey", []interface{}{arg1})
+	fake.splitCompositeKeyMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
 func (fake *ChaincodeStubInterface) SplitCompositeKeyCallCount() int {
@@ -1350,13 +2851,22 @@ func (fake *ChaincodeStubInterface) SplitCompositeKeyCallCount() int {
 	return len(fake.splitCompositeKeyArgsForCall)
 }
 
+func (fake *ChaincodeStubInterface) SplitCompositeKeyCalls(stub func(string) (string, []string, error)) {
+	fake.splitCompositeKeyMutex.Lock()
+	defer fake.splitCompositeKeyMutex.Unlock()
+	fake.SplitCompositeKeyStub = stub
+}
+
 func (fake *ChaincodeStubInterface) SplitCompositeKeyArgsForCall(i int) string {
 	fake.splitCompositeKeyMutex.RLock()
 	defer fake.splitCompositeKeyMutex.RUnlock()
-	return fake.splitCompositeKeyArgsForCall[i].compositeKey
+	argsForCall := fake.splitCompositeKeyArgsForCall[i]
+	return argsForCall.arg1
 }
 
 func (fake *ChaincodeStubInterface) SplitCompositeKeyReturns(result1 string, result2 []string, result3 error) {
+	fake.splitCompositeKeyMutex.Lock()
+	defer fake.splitCompositeKeyMutex.Unlock()
 	fake.SplitCompositeKeyStub = nil
 	fake.splitCompositeKeyReturns = struct {
 		result1 string
@@ -1366,6 +2876,8 @@ func (fake *ChaincodeStubInterface) SplitCompositeKeyReturns(result1 string, res
 }
 
 func (fake *ChaincodeStubInterface) SplitCompositeKeyReturnsOnCall(i int, result1 string, result2 []string, result3 error) {
+	fake.splitCompositeKeyMutex.Lock()
+	defer fake.splitCompositeKeyMutex.Unlock()
 	fake.SplitCompositeKeyStub = nil
 	if fake.splitCompositeKeyReturnsOnCall == nil {
 		fake.splitCompositeKeyReturnsOnCall = make(map[int]struct {
@@ -1381,1028 +2893,85 @@ func (fake *ChaincodeStubInterface) SplitCompositeKeyReturnsOnCall(i int, result
 	}{result1, result2, result3}
 }
 
-func (fake *ChaincodeStubInterface) GetQueryResult(query string) (shim.StateQueryIteratorInterface, error) {
-	fake.getQueryResultMutex.Lock()
-	ret, specificReturn := fake.getQueryResultReturnsOnCall[len(fake.getQueryResultArgsForCall)]
-	fake.getQueryResultArgsForCall = append(fake.getQueryResultArgsForCall, struct {
-		query string
-	}{query})
-	fake.recordInvocation("GetQueryResult", []interface{}{query})
-	fake.getQueryResultMutex.Unlock()
-	if fake.GetQueryResultStub != nil {
-		return fake.GetQueryResultStub(query)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getQueryResultReturns.result1, fake.getQueryResultReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultCallCount() int {
-	fake.getQueryResultMutex.RLock()
-	defer fake.getQueryResultMutex.RUnlock()
-	return len(fake.getQueryResultArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultArgsForCall(i int) string {
-	fake.getQueryResultMutex.RLock()
-	defer fake.getQueryResultMutex.RUnlock()
-	return fake.getQueryResultArgsForCall[i].query
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetQueryResultStub = nil
-	fake.getQueryResultReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetQueryResultStub = nil
-	if fake.getQueryResultReturnsOnCall == nil {
-		fake.getQueryResultReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getQueryResultReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultWithPagination(query string, pageSize int32, bookmark string) (shim.StateQueryIteratorInterface, *pb.QueryResponseMetadata, error) {
-	fake.getQueryResultWithPaginationMutex.Lock()
-	ret, specificReturn := fake.getQueryResultWithPaginationReturnsOnCall[len(fake.getQueryResultWithPaginationArgsForCall)]
-	fake.getQueryResultWithPaginationArgsForCall = append(fake.getQueryResultWithPaginationArgsForCall, struct {
-		query    string
-		pageSize int32
-		bookmark string
-	}{query, pageSize, bookmark})
-	fake.recordInvocation("GetQueryResultWithPagination", []interface{}{query, pageSize, bookmark})
-	fake.getQueryResultWithPaginationMutex.Unlock()
-	if fake.GetQueryResultWithPaginationStub != nil {
-		return fake.GetQueryResultWithPaginationStub(query, pageSize, bookmark)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
-	}
-	return fake.getQueryResultWithPaginationReturns.result1, fake.getQueryResultWithPaginationReturns.result2, fake.getQueryResultWithPaginationReturns.result3
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationCallCount() int {
-	fake.getQueryResultWithPaginationMutex.RLock()
-	defer fake.getQueryResultWithPaginationMutex.RUnlock()
-	return len(fake.getQueryResultWithPaginationArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationArgsForCall(i int) (string, int32, string) {
-	fake.getQueryResultWithPaginationMutex.RLock()
-	defer fake.getQueryResultWithPaginationMutex.RUnlock()
-	return fake.getQueryResultWithPaginationArgsForCall[i].query, fake.getQueryResultWithPaginationArgsForCall[i].pageSize, fake.getQueryResultWithPaginationArgsForCall[i].bookmark
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationReturns(result1 shim.StateQueryIteratorInterface, result2 *pb.QueryResponseMetadata, result3 error) {
-	fake.GetQueryResultWithPaginationStub = nil
-	fake.getQueryResultWithPaginationReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *ChaincodeStubInterface) GetQueryResultWithPaginationReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 *pb.QueryResponseMetadata, result3 error) {
-	fake.GetQueryResultWithPaginationStub = nil
-	if fake.getQueryResultWithPaginationReturnsOnCall == nil {
-		fake.getQueryResultWithPaginationReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 *pb.QueryResponseMetadata
-			result3 error
-		})
-	}
-	fake.getQueryResultWithPaginationReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 *pb.QueryResponseMetadata
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *ChaincodeStubInterface) GetHistoryForKey(key string) (shim.HistoryQueryIteratorInterface, error) {
-	fake.getHistoryForKeyMutex.Lock()
-	ret, specificReturn := fake.getHistoryForKeyReturnsOnCall[len(fake.getHistoryForKeyArgsForCall)]
-	fake.getHistoryForKeyArgsForCall = append(fake.getHistoryForKeyArgsForCall, struct {
-		key string
-	}{key})
-	fake.recordInvocation("GetHistoryForKey", []interface{}{key})
-	fake.getHistoryForKeyMutex.Unlock()
-	if fake.GetHistoryForKeyStub != nil {
-		return fake.GetHistoryForKeyStub(key)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getHistoryForKeyReturns.result1, fake.getHistoryForKeyReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetHistoryForKeyCallCount() int {
-	fake.getHistoryForKeyMutex.RLock()
-	defer fake.getHistoryForKeyMutex.RUnlock()
-	return len(fake.getHistoryForKeyArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetHistoryForKeyArgsForCall(i int) string {
-	fake.getHistoryForKeyMutex.RLock()
-	defer fake.getHistoryForKeyMutex.RUnlock()
-	return fake.getHistoryForKeyArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) GetHistoryForKeyReturns(result1 shim.HistoryQueryIteratorInterface, result2 error) {
-	fake.GetHistoryForKeyStub = nil
-	fake.getHistoryForKeyReturns = struct {
-		result1 shim.HistoryQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetHistoryForKeyReturnsOnCall(i int, result1 shim.HistoryQueryIteratorInterface, result2 error) {
-	fake.GetHistoryForKeyStub = nil
-	if fake.getHistoryForKeyReturnsOnCall == nil {
-		fake.getHistoryForKeyReturnsOnCall = make(map[int]struct {
-			result1 shim.HistoryQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getHistoryForKeyReturnsOnCall[i] = struct {
-		result1 shim.HistoryQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateData(collection string, key string) ([]byte, error) {
-	fake.getPrivateDataMutex.Lock()
-	ret, specificReturn := fake.getPrivateDataReturnsOnCall[len(fake.getPrivateDataArgsForCall)]
-	fake.getPrivateDataArgsForCall = append(fake.getPrivateDataArgsForCall, struct {
-		collection string
-		key        string
-	}{collection, key})
-	fake.recordInvocation("GetPrivateData", []interface{}{collection, key})
-	fake.getPrivateDataMutex.Unlock()
-	if fake.GetPrivateDataStub != nil {
-		return fake.GetPrivateDataStub(collection, key)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getPrivateDataReturns.result1, fake.getPrivateDataReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataCallCount() int {
-	fake.getPrivateDataMutex.RLock()
-	defer fake.getPrivateDataMutex.RUnlock()
-	return len(fake.getPrivateDataArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataArgsForCall(i int) (string, string) {
-	fake.getPrivateDataMutex.RLock()
-	defer fake.getPrivateDataMutex.RUnlock()
-	return fake.getPrivateDataArgsForCall[i].collection, fake.getPrivateDataArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataReturns(result1 []byte, result2 error) {
-	fake.GetPrivateDataStub = nil
-	fake.getPrivateDataReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetPrivateDataStub = nil
-	if fake.getPrivateDataReturnsOnCall == nil {
-		fake.getPrivateDataReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getPrivateDataReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataHash(collection string, key string) ([]byte, error) {
-	fake.getPrivateDataHashMutex.Lock()
-	ret, specificReturn := fake.getPrivateDataHashReturnsOnCall[len(fake.getPrivateDataHashArgsForCall)]
-	fake.getPrivateDataHashArgsForCall = append(fake.getPrivateDataHashArgsForCall, struct {
-		collection string
-		key        string
-	}{collection, key})
-	fake.recordInvocation("GetPrivateDataHash", []interface{}{collection, key})
-	fake.getPrivateDataHashMutex.Unlock()
-	if fake.GetPrivateDataHashStub != nil {
-		return fake.GetPrivateDataHashStub(collection, key)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getPrivateDataHashReturns.result1, fake.getPrivateDataHashReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataHashCallCount() int {
-	fake.getPrivateDataHashMutex.RLock()
-	defer fake.getPrivateDataHashMutex.RUnlock()
-	return len(fake.getPrivateDataHashArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataHashArgsForCall(i int) (string, string) {
-	fake.getPrivateDataHashMutex.RLock()
-	defer fake.getPrivateDataHashMutex.RUnlock()
-	return fake.getPrivateDataHashArgsForCall[i].collection, fake.getPrivateDataHashArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataHashReturns(result1 []byte, result2 error) {
-	fake.GetPrivateDataHashStub = nil
-	fake.getPrivateDataHashReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataHashReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetPrivateDataHashStub = nil
-	if fake.getPrivateDataHashReturnsOnCall == nil {
-		fake.getPrivateDataHashReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getPrivateDataHashReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) PutPrivateData(collection string, key string, value []byte) error {
-	var valueCopy []byte
-	if value != nil {
-		valueCopy = make([]byte, len(value))
-		copy(valueCopy, value)
-	}
-	fake.putPrivateDataMutex.Lock()
-	ret, specificReturn := fake.putPrivateDataReturnsOnCall[len(fake.putPrivateDataArgsForCall)]
-	fake.putPrivateDataArgsForCall = append(fake.putPrivateDataArgsForCall, struct {
-		collection string
-		key        string
-		value      []byte
-	}{collection, key, valueCopy})
-	fake.recordInvocation("PutPrivateData", []interface{}{collection, key, valueCopy})
-	fake.putPrivateDataMutex.Unlock()
-	if fake.PutPrivateDataStub != nil {
-		return fake.PutPrivateDataStub(collection, key, value)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.putPrivateDataReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) PutPrivateDataCallCount() int {
-	fake.putPrivateDataMutex.RLock()
-	defer fake.putPrivateDataMutex.RUnlock()
-	return len(fake.putPrivateDataArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) PutPrivateDataArgsForCall(i int) (string, string, []byte) {
-	fake.putPrivateDataMutex.RLock()
-	defer fake.putPrivateDataMutex.RUnlock()
-	return fake.putPrivateDataArgsForCall[i].collection, fake.putPrivateDataArgsForCall[i].key, fake.putPrivateDataArgsForCall[i].value
-}
-
-func (fake *ChaincodeStubInterface) PutPrivateDataReturns(result1 error) {
-	fake.PutPrivateDataStub = nil
-	fake.putPrivateDataReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) PutPrivateDataReturnsOnCall(i int, result1 error) {
-	fake.PutPrivateDataStub = nil
-	if fake.putPrivateDataReturnsOnCall == nil {
-		fake.putPrivateDataReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.putPrivateDataReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) DelPrivateData(collection string, key string) error {
-	fake.delPrivateDataMutex.Lock()
-	ret, specificReturn := fake.delPrivateDataReturnsOnCall[len(fake.delPrivateDataArgsForCall)]
-	fake.delPrivateDataArgsForCall = append(fake.delPrivateDataArgsForCall, struct {
-		collection string
-		key        string
-	}{collection, key})
-	fake.recordInvocation("DelPrivateData", []interface{}{collection, key})
-	fake.delPrivateDataMutex.Unlock()
-	if fake.DelPrivateDataStub != nil {
-		return fake.DelPrivateDataStub(collection, key)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.delPrivateDataReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) DelPrivateDataCallCount() int {
-	fake.delPrivateDataMutex.RLock()
-	defer fake.delPrivateDataMutex.RUnlock()
-	return len(fake.delPrivateDataArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) DelPrivateDataArgsForCall(i int) (string, string) {
-	fake.delPrivateDataMutex.RLock()
-	defer fake.delPrivateDataMutex.RUnlock()
-	return fake.delPrivateDataArgsForCall[i].collection, fake.delPrivateDataArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) DelPrivateDataReturns(result1 error) {
-	fake.DelPrivateDataStub = nil
-	fake.delPrivateDataReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) DelPrivateDataReturnsOnCall(i int, result1 error) {
-	fake.DelPrivateDataStub = nil
-	if fake.delPrivateDataReturnsOnCall == nil {
-		fake.delPrivateDataReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.delPrivateDataReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameter(collection string, key string, ep []byte) error {
-	var epCopy []byte
-	if ep != nil {
-		epCopy = make([]byte, len(ep))
-		copy(epCopy, ep)
-	}
-	fake.setPrivateDataValidationParameterMutex.Lock()
-	ret, specificReturn := fake.setPrivateDataValidationParameterReturnsOnCall[len(fake.setPrivateDataValidationParameterArgsForCall)]
-	fake.setPrivateDataValidationParameterArgsForCall = append(fake.setPrivateDataValidationParameterArgsForCall, struct {
-		collection string
-		key        string
-		ep         []byte
-	}{collection, key, epCopy})
-	fake.recordInvocation("SetPrivateDataValidationParameter", []interface{}{collection, key, epCopy})
-	fake.setPrivateDataValidationParameterMutex.Unlock()
-	if fake.SetPrivateDataValidationParameterStub != nil {
-		return fake.SetPrivateDataValidationParameterStub(collection, key, ep)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.setPrivateDataValidationParameterReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterCallCount() int {
-	fake.setPrivateDataValidationParameterMutex.RLock()
-	defer fake.setPrivateDataValidationParameterMutex.RUnlock()
-	return len(fake.setPrivateDataValidationParameterArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterArgsForCall(i int) (string, string, []byte) {
-	fake.setPrivateDataValidationParameterMutex.RLock()
-	defer fake.setPrivateDataValidationParameterMutex.RUnlock()
-	return fake.setPrivateDataValidationParameterArgsForCall[i].collection, fake.setPrivateDataValidationParameterArgsForCall[i].key, fake.setPrivateDataValidationParameterArgsForCall[i].ep
-}
-
-func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterReturns(result1 error) {
-	fake.SetPrivateDataValidationParameterStub = nil
-	fake.setPrivateDataValidationParameterReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) SetPrivateDataValidationParameterReturnsOnCall(i int, result1 error) {
-	fake.SetPrivateDataValidationParameterStub = nil
-	if fake.setPrivateDataValidationParameterReturnsOnCall == nil {
-		fake.setPrivateDataValidationParameterReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.setPrivateDataValidationParameterReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameter(collection string, key string) ([]byte, error) {
-	fake.getPrivateDataValidationParameterMutex.Lock()
-	ret, specificReturn := fake.getPrivateDataValidationParameterReturnsOnCall[len(fake.getPrivateDataValidationParameterArgsForCall)]
-	fake.getPrivateDataValidationParameterArgsForCall = append(fake.getPrivateDataValidationParameterArgsForCall, struct {
-		collection string
-		key        string
-	}{collection, key})
-	fake.recordInvocation("GetPrivateDataValidationParameter", []interface{}{collection, key})
-	fake.getPrivateDataValidationParameterMutex.Unlock()
-	if fake.GetPrivateDataValidationParameterStub != nil {
-		return fake.GetPrivateDataValidationParameterStub(collection, key)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getPrivateDataValidationParameterReturns.result1, fake.getPrivateDataValidationParameterReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterCallCount() int {
-	fake.getPrivateDataValidationParameterMutex.RLock()
-	defer fake.getPrivateDataValidationParameterMutex.RUnlock()
-	return len(fake.getPrivateDataValidationParameterArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterArgsForCall(i int) (string, string) {
-	fake.getPrivateDataValidationParameterMutex.RLock()
-	defer fake.getPrivateDataValidationParameterMutex.RUnlock()
-	return fake.getPrivateDataValidationParameterArgsForCall[i].collection, fake.getPrivateDataValidationParameterArgsForCall[i].key
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterReturns(result1 []byte, result2 error) {
-	fake.GetPrivateDataValidationParameterStub = nil
-	fake.getPrivateDataValidationParameterReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataValidationParameterReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetPrivateDataValidationParameterStub = nil
-	if fake.getPrivateDataValidationParameterReturnsOnCall == nil {
-		fake.getPrivateDataValidationParameterReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getPrivateDataValidationParameterReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByRange(collection string, startKey string, endKey string) (shim.StateQueryIteratorInterface, error) {
-	fake.getPrivateDataByRangeMutex.Lock()
-	ret, specificReturn := fake.getPrivateDataByRangeReturnsOnCall[len(fake.getPrivateDataByRangeArgsForCall)]
-	fake.getPrivateDataByRangeArgsForCall = append(fake.getPrivateDataByRangeArgsForCall, struct {
-		collection string
-		startKey   string
-		endKey     string
-	}{collection, startKey, endKey})
-	fake.recordInvocation("GetPrivateDataByRange", []interface{}{collection, startKey, endKey})
-	fake.getPrivateDataByRangeMutex.Unlock()
-	if fake.GetPrivateDataByRangeStub != nil {
-		return fake.GetPrivateDataByRangeStub(collection, startKey, endKey)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getPrivateDataByRangeReturns.result1, fake.getPrivateDataByRangeReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByRangeCallCount() int {
-	fake.getPrivateDataByRangeMutex.RLock()
-	defer fake.getPrivateDataByRangeMutex.RUnlock()
-	return len(fake.getPrivateDataByRangeArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByRangeArgsForCall(i int) (string, string, string) {
-	fake.getPrivateDataByRangeMutex.RLock()
-	defer fake.getPrivateDataByRangeMutex.RUnlock()
-	return fake.getPrivateDataByRangeArgsForCall[i].collection, fake.getPrivateDataByRangeArgsForCall[i].startKey, fake.getPrivateDataByRangeArgsForCall[i].endKey
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByRangeReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetPrivateDataByRangeStub = nil
-	fake.getPrivateDataByRangeReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByRangeReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetPrivateDataByRangeStub = nil
-	if fake.getPrivateDataByRangeReturnsOnCall == nil {
-		fake.getPrivateDataByRangeReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getPrivateDataByRangeReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKey(collection string, objectType string, keys []string) (shim.StateQueryIteratorInterface, error) {
-	var keysCopy []string
-	if keys != nil {
-		keysCopy = make([]string, len(keys))
-		copy(keysCopy, keys)
-	}
-	fake.getPrivateDataByPartialCompositeKeyMutex.Lock()
-	ret, specificReturn := fake.getPrivateDataByPartialCompositeKeyReturnsOnCall[len(fake.getPrivateDataByPartialCompositeKeyArgsForCall)]
-	fake.getPrivateDataByPartialCompositeKeyArgsForCall = append(fake.getPrivateDataByPartialCompositeKeyArgsForCall, struct {
-		collection string
-		objectType string
-		keys       []string
-	}{collection, objectType, keysCopy})
-	fake.recordInvocation("GetPrivateDataByPartialCompositeKey", []interface{}{collection, objectType, keysCopy})
-	fake.getPrivateDataByPartialCompositeKeyMutex.Unlock()
-	if fake.GetPrivateDataByPartialCompositeKeyStub != nil {
-		return fake.GetPrivateDataByPartialCompositeKeyStub(collection, objectType, keys)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getPrivateDataByPartialCompositeKeyReturns.result1, fake.getPrivateDataByPartialCompositeKeyReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyCallCount() int {
-	fake.getPrivateDataByPartialCompositeKeyMutex.RLock()
-	defer fake.getPrivateDataByPartialCompositeKeyMutex.RUnlock()
-	return len(fake.getPrivateDataByPartialCompositeKeyArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyArgsForCall(i int) (string, string, []string) {
-	fake.getPrivateDataByPartialCompositeKeyMutex.RLock()
-	defer fake.getPrivateDataByPartialCompositeKeyMutex.RUnlock()
-	return fake.getPrivateDataByPartialCompositeKeyArgsForCall[i].collection, fake.getPrivateDataByPartialCompositeKeyArgsForCall[i].objectType, fake.getPrivateDataByPartialCompositeKeyArgsForCall[i].keys
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetPrivateDataByPartialCompositeKeyStub = nil
-	fake.getPrivateDataByPartialCompositeKeyReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataByPartialCompositeKeyReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetPrivateDataByPartialCompositeKeyStub = nil
-	if fake.getPrivateDataByPartialCompositeKeyReturnsOnCall == nil {
-		fake.getPrivateDataByPartialCompositeKeyReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getPrivateDataByPartialCompositeKeyReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataQueryResult(collection string, query string) (shim.StateQueryIteratorInterface, error) {
-	fake.getPrivateDataQueryResultMutex.Lock()
-	ret, specificReturn := fake.getPrivateDataQueryResultReturnsOnCall[len(fake.getPrivateDataQueryResultArgsForCall)]
-	fake.getPrivateDataQueryResultArgsForCall = append(fake.getPrivateDataQueryResultArgsForCall, struct {
-		collection string
-		query      string
-	}{collection, query})
-	fake.recordInvocation("GetPrivateDataQueryResult", []interface{}{collection, query})
-	fake.getPrivateDataQueryResultMutex.Unlock()
-	if fake.GetPrivateDataQueryResultStub != nil {
-		return fake.GetPrivateDataQueryResultStub(collection, query)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getPrivateDataQueryResultReturns.result1, fake.getPrivateDataQueryResultReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultCallCount() int {
-	fake.getPrivateDataQueryResultMutex.RLock()
-	defer fake.getPrivateDataQueryResultMutex.RUnlock()
-	return len(fake.getPrivateDataQueryResultArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultArgsForCall(i int) (string, string) {
-	fake.getPrivateDataQueryResultMutex.RLock()
-	defer fake.getPrivateDataQueryResultMutex.RUnlock()
-	return fake.getPrivateDataQueryResultArgsForCall[i].collection, fake.getPrivateDataQueryResultArgsForCall[i].query
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultReturns(result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetPrivateDataQueryResultStub = nil
-	fake.getPrivateDataQueryResultReturns = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetPrivateDataQueryResultReturnsOnCall(i int, result1 shim.StateQueryIteratorInterface, result2 error) {
-	fake.GetPrivateDataQueryResultStub = nil
-	if fake.getPrivateDataQueryResultReturnsOnCall == nil {
-		fake.getPrivateDataQueryResultReturnsOnCall = make(map[int]struct {
-			result1 shim.StateQueryIteratorInterface
-			result2 error
-		})
-	}
-	fake.getPrivateDataQueryResultReturnsOnCall[i] = struct {
-		result1 shim.StateQueryIteratorInterface
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetCreator() ([]byte, error) {
-	fake.getCreatorMutex.Lock()
-	ret, specificReturn := fake.getCreatorReturnsOnCall[len(fake.getCreatorArgsForCall)]
-	fake.getCreatorArgsForCall = append(fake.getCreatorArgsForCall, struct{}{})
-	fake.recordInvocation("GetCreator", []interface{}{})
-	fake.getCreatorMutex.Unlock()
-	if fake.GetCreatorStub != nil {
-		return fake.GetCreatorStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getCreatorReturns.result1, fake.getCreatorReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetCreatorCallCount() int {
-	fake.getCreatorMutex.RLock()
-	defer fake.getCreatorMutex.RUnlock()
-	return len(fake.getCreatorArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetCreatorReturns(result1 []byte, result2 error) {
-	fake.GetCreatorStub = nil
-	fake.getCreatorReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetCreatorReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetCreatorStub = nil
-	if fake.getCreatorReturnsOnCall == nil {
-		fake.getCreatorReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getCreatorReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetTransient() (map[string][]byte, error) {
-	fake.getTransientMutex.Lock()
-	ret, specificReturn := fake.getTransientReturnsOnCall[len(fake.getTransientArgsForCall)]
-	fake.getTransientArgsForCall = append(fake.getTransientArgsForCall, struct{}{})
-	fake.recordInvocation("GetTransient", []interface{}{})
-	fake.getTransientMutex.Unlock()
-	if fake.GetTransientStub != nil {
-		return fake.GetTransientStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getTransientReturns.result1, fake.getTransientReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetTransientCallCount() int {
-	fake.getTransientMutex.RLock()
-	defer fake.getTransientMutex.RUnlock()
-	return len(fake.getTransientArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetTransientReturns(result1 map[string][]byte, result2 error) {
-	fake.GetTransientStub = nil
-	fake.getTransientReturns = struct {
-		result1 map[string][]byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetTransientReturnsOnCall(i int, result1 map[string][]byte, result2 error) {
-	fake.GetTransientStub = nil
-	if fake.getTransientReturnsOnCall == nil {
-		fake.getTransientReturnsOnCall = make(map[int]struct {
-			result1 map[string][]byte
-			result2 error
-		})
-	}
-	fake.getTransientReturnsOnCall[i] = struct {
-		result1 map[string][]byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetBinding() ([]byte, error) {
-	fake.getBindingMutex.Lock()
-	ret, specificReturn := fake.getBindingReturnsOnCall[len(fake.getBindingArgsForCall)]
-	fake.getBindingArgsForCall = append(fake.getBindingArgsForCall, struct{}{})
-	fake.recordInvocation("GetBinding", []interface{}{})
-	fake.getBindingMutex.Unlock()
-	if fake.GetBindingStub != nil {
-		return fake.GetBindingStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getBindingReturns.result1, fake.getBindingReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetBindingCallCount() int {
-	fake.getBindingMutex.RLock()
-	defer fake.getBindingMutex.RUnlock()
-	return len(fake.getBindingArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetBindingReturns(result1 []byte, result2 error) {
-	fake.GetBindingStub = nil
-	fake.getBindingReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetBindingReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.GetBindingStub = nil
-	if fake.getBindingReturnsOnCall == nil {
-		fake.getBindingReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.getBindingReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetDecorations() map[string][]byte {
-	fake.getDecorationsMutex.Lock()
-	ret, specificReturn := fake.getDecorationsReturnsOnCall[len(fake.getDecorationsArgsForCall)]
-	fake.getDecorationsArgsForCall = append(fake.getDecorationsArgsForCall, struct{}{})
-	fake.recordInvocation("GetDecorations", []interface{}{})
-	fake.getDecorationsMutex.Unlock()
-	if fake.GetDecorationsStub != nil {
-		return fake.GetDecorationsStub()
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.getDecorationsReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) GetDecorationsCallCount() int {
-	fake.getDecorationsMutex.RLock()
-	defer fake.getDecorationsMutex.RUnlock()
-	return len(fake.getDecorationsArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetDecorationsReturns(result1 map[string][]byte) {
-	fake.GetDecorationsStub = nil
-	fake.getDecorationsReturns = struct {
-		result1 map[string][]byte
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetDecorationsReturnsOnCall(i int, result1 map[string][]byte) {
-	fake.GetDecorationsStub = nil
-	if fake.getDecorationsReturnsOnCall == nil {
-		fake.getDecorationsReturnsOnCall = make(map[int]struct {
-			result1 map[string][]byte
-		})
-	}
-	fake.getDecorationsReturnsOnCall[i] = struct {
-		result1 map[string][]byte
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) GetSignedProposal() (*pb.SignedProposal, error) {
-	fake.getSignedProposalMutex.Lock()
-	ret, specificReturn := fake.getSignedProposalReturnsOnCall[len(fake.getSignedProposalArgsForCall)]
-	fake.getSignedProposalArgsForCall = append(fake.getSignedProposalArgsForCall, struct{}{})
-	fake.recordInvocation("GetSignedProposal", []interface{}{})
-	fake.getSignedProposalMutex.Unlock()
-	if fake.GetSignedProposalStub != nil {
-		return fake.GetSignedProposalStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getSignedProposalReturns.result1, fake.getSignedProposalReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetSignedProposalCallCount() int {
-	fake.getSignedProposalMutex.RLock()
-	defer fake.getSignedProposalMutex.RUnlock()
-	return len(fake.getSignedProposalArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetSignedProposalReturns(result1 *pb.SignedProposal, result2 error) {
-	fake.GetSignedProposalStub = nil
-	fake.getSignedProposalReturns = struct {
-		result1 *pb.SignedProposal
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetSignedProposalReturnsOnCall(i int, result1 *pb.SignedProposal, result2 error) {
-	fake.GetSignedProposalStub = nil
-	if fake.getSignedProposalReturnsOnCall == nil {
-		fake.getSignedProposalReturnsOnCall = make(map[int]struct {
-			result1 *pb.SignedProposal
-			result2 error
-		})
-	}
-	fake.getSignedProposalReturnsOnCall[i] = struct {
-		result1 *pb.SignedProposal
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetTxTimestamp() (*timestamp.Timestamp, error) {
-	fake.getTxTimestampMutex.Lock()
-	ret, specificReturn := fake.getTxTimestampReturnsOnCall[len(fake.getTxTimestampArgsForCall)]
-	fake.getTxTimestampArgsForCall = append(fake.getTxTimestampArgsForCall, struct{}{})
-	fake.recordInvocation("GetTxTimestamp", []interface{}{})
-	fake.getTxTimestampMutex.Unlock()
-	if fake.GetTxTimestampStub != nil {
-		return fake.GetTxTimestampStub()
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fake.getTxTimestampReturns.result1, fake.getTxTimestampReturns.result2
-}
-
-func (fake *ChaincodeStubInterface) GetTxTimestampCallCount() int {
-	fake.getTxTimestampMutex.RLock()
-	defer fake.getTxTimestampMutex.RUnlock()
-	return len(fake.getTxTimestampArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) GetTxTimestampReturns(result1 *timestamp.Timestamp, result2 error) {
-	fake.GetTxTimestampStub = nil
-	fake.getTxTimestampReturns = struct {
-		result1 *timestamp.Timestamp
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) GetTxTimestampReturnsOnCall(i int, result1 *timestamp.Timestamp, result2 error) {
-	fake.GetTxTimestampStub = nil
-	if fake.getTxTimestampReturnsOnCall == nil {
-		fake.getTxTimestampReturnsOnCall = make(map[int]struct {
-			result1 *timestamp.Timestamp
-			result2 error
-		})
-	}
-	fake.getTxTimestampReturnsOnCall[i] = struct {
-		result1 *timestamp.Timestamp
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *ChaincodeStubInterface) SetEvent(name string, payload []byte) error {
-	var payloadCopy []byte
-	if payload != nil {
-		payloadCopy = make([]byte, len(payload))
-		copy(payloadCopy, payload)
-	}
-	fake.setEventMutex.Lock()
-	ret, specificReturn := fake.setEventReturnsOnCall[len(fake.setEventArgsForCall)]
-	fake.setEventArgsForCall = append(fake.setEventArgsForCall, struct {
-		name    string
-		payload []byte
-	}{name, payloadCopy})
-	fake.recordInvocation("SetEvent", []interface{}{name, payloadCopy})
-	fake.setEventMutex.Unlock()
-	if fake.SetEventStub != nil {
-		return fake.SetEventStub(name, payload)
-	}
-	if specificReturn {
-		return ret.result1
-	}
-	return fake.setEventReturns.result1
-}
-
-func (fake *ChaincodeStubInterface) SetEventCallCount() int {
-	fake.setEventMutex.RLock()
-	defer fake.setEventMutex.RUnlock()
-	return len(fake.setEventArgsForCall)
-}
-
-func (fake *ChaincodeStubInterface) SetEventArgsForCall(i int) (string, []byte) {
-	fake.setEventMutex.RLock()
-	defer fake.setEventMutex.RUnlock()
-	return fake.setEventArgsForCall[i].name, fake.setEventArgsForCall[i].payload
-}
-
-func (fake *ChaincodeStubInterface) SetEventReturns(result1 error) {
-	fake.SetEventStub = nil
-	fake.setEventReturns = struct {
-		result1 error
-	}{result1}
-}
-
-func (fake *ChaincodeStubInterface) SetEventReturnsOnCall(i int, result1 error) {
-	fake.SetEventStub = nil
-	if fake.setEventReturnsOnCall == nil {
-		fake.setEventReturnsOnCall = make(map[int]struct {
-			result1 error
-		})
-	}
-	fake.setEventReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
-}
-
 func (fake *ChaincodeStubInterface) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.getArgsMutex.RLock()
-	defer fake.getArgsMutex.RUnlock()
-	fake.getStringArgsMutex.RLock()
-	defer fake.getStringArgsMutex.RUnlock()
-	fake.getFunctionAndParametersMutex.RLock()
-	defer fake.getFunctionAndParametersMutex.RUnlock()
-	fake.getArgsSliceMutex.RLock()
-	defer fake.getArgsSliceMutex.RUnlock()
-	fake.getTxIDMutex.RLock()
-	defer fake.getTxIDMutex.RUnlock()
-	fake.getChannelIDMutex.RLock()
-	defer fake.getChannelIDMutex.RUnlock()
-	fake.invokeChaincodeMutex.RLock()
-	defer fake.invokeChaincodeMutex.RUnlock()
-	fake.getStateMutex.RLock()
-	defer fake.getStateMutex.RUnlock()
-	fake.putStateMutex.RLock()
-	defer fake.putStateMutex.RUnlock()
+	fake.createCompositeKeyMutex.RLock()
+	defer fake.createCompositeKeyMutex.RUnlock()
+	fake.delPrivateDataMutex.RLock()
+	defer fake.delPrivateDataMutex.RUnlock()
 	fake.delStateMutex.RLock()
 	defer fake.delStateMutex.RUnlock()
-	fake.setStateValidationParameterMutex.RLock()
-	defer fake.setStateValidationParameterMutex.RUnlock()
-	fake.getStateValidationParameterMutex.RLock()
-	defer fake.getStateValidationParameterMutex.RUnlock()
-	fake.getStateByRangeMutex.RLock()
-	defer fake.getStateByRangeMutex.RUnlock()
-	fake.getStateByRangeWithPaginationMutex.RLock()
-	defer fake.getStateByRangeWithPaginationMutex.RUnlock()
+	fake.getArgsMutex.RLock()
+	defer fake.getArgsMutex.RUnlock()
+	fake.getArgsSliceMutex.RLock()
+	defer fake.getArgsSliceMutex.RUnlock()
+	fake.getBindingMutex.RLock()
+	defer fake.getBindingMutex.RUnlock()
+	fake.getChannelIDMutex.RLock()
+	defer fake.getChannelIDMutex.RUnlock()
+	fake.getCreatorMutex.RLock()
+	defer fake.getCreatorMutex.RUnlock()
+	fake.getDecorationsMutex.RLock()
+	defer fake.getDecorationsMutex.RUnlock()
+	fake.getFunctionAndParametersMutex.RLock()
+	defer fake.getFunctionAndParametersMutex.RUnlock()
+	fake.getHistoryForKeyMutex.RLock()
+	defer fake.getHistoryForKeyMutex.RUnlock()
+	fake.getPrivateDataMutex.RLock()
+	defer fake.getPrivateDataMutex.RUnlock()
+	fake.getPrivateDataByPartialCompositeKeyMutex.RLock()
+	defer fake.getPrivateDataByPartialCompositeKeyMutex.RUnlock()
+	fake.getPrivateDataByRangeMutex.RLock()
+	defer fake.getPrivateDataByRangeMutex.RUnlock()
+	fake.getPrivateDataHashMutex.RLock()
+	defer fake.getPrivateDataHashMutex.RUnlock()
+	fake.getPrivateDataQueryResultMutex.RLock()
+	defer fake.getPrivateDataQueryResultMutex.RUnlock()
+	fake.getPrivateDataValidationParameterMutex.RLock()
+	defer fake.getPrivateDataValidationParameterMutex.RUnlock()
+	fake.getQueryResultMutex.RLock()
+	defer fake.getQueryResultMutex.RUnlock()
+	fake.getQueryResultWithPaginationMutex.RLock()
+	defer fake.getQueryResultWithPaginationMutex.RUnlock()
+	fake.getSignedProposalMutex.RLock()
+	defer fake.getSignedProposalMutex.RUnlock()
+	fake.getStateMutex.RLock()
+	defer fake.getStateMutex.RUnlock()
 	fake.getStateByPartialCompositeKeyMutex.RLock()
 	defer fake.getStateByPartialCompositeKeyMutex.RUnlock()
 	fake.getStateByPartialCompositeKeyWithPaginationMutex.RLock()
 	defer fake.getStateByPartialCompositeKeyWithPaginationMutex.RUnlock()
-	fake.createCompositeKeyMutex.RLock()
-	defer fake.createCompositeKeyMutex.RUnlock()
-	fake.splitCompositeKeyMutex.RLock()
-	defer fake.splitCompositeKeyMutex.RUnlock()
-	fake.getQueryResultMutex.RLock()
-	defer fake.getQueryResultMutex.RUnlock()
-	fake.getQueryResultWithPaginationMutex.RLock()
-	defer fake.getQueryResultWithPaginationMutex.RUnlock()
-	fake.getHistoryForKeyMutex.RLock()
-	defer fake.getHistoryForKeyMutex.RUnlock()
-	fake.getPrivateDataMutex.RLock()
-	defer fake.getPrivateDataMutex.RUnlock()
-	fake.getPrivateDataHashMutex.RLock()
-	defer fake.getPrivateDataHashMutex.RUnlock()
-	fake.putPrivateDataMutex.RLock()
-	defer fake.putPrivateDataMutex.RUnlock()
-	fake.delPrivateDataMutex.RLock()
-	defer fake.delPrivateDataMutex.RUnlock()
-	fake.setPrivateDataValidationParameterMutex.RLock()
-	defer fake.setPrivateDataValidationParameterMutex.RUnlock()
-	fake.getPrivateDataValidationParameterMutex.RLock()
-	defer fake.getPrivateDataValidationParameterMutex.RUnlock()
-	fake.getPrivateDataByRangeMutex.RLock()
-	defer fake.getPrivateDataByRangeMutex.RUnlock()
-	fake.getPrivateDataByPartialCompositeKeyMutex.RLock()
-	defer fake.getPrivateDataByPartialCompositeKeyMutex.RUnlock()
-	fake.getPrivateDataQueryResultMutex.RLock()
-	defer fake.getPrivateDataQueryResultMutex.RUnlock()
-	fake.getCreatorMutex.RLock()
-	defer fake.getCreatorMutex.RUnlock()
+	fake.getStateByRangeMutex.RLock()
+	defer fake.getStateByRangeMutex.RUnlock()
+	fake.getStateByRangeWithPaginationMutex.RLock()
+	defer fake.getStateByRangeWithPaginationMutex.RUnlock()
+	fake.getStateValidationParameterMutex.RLock()
+	defer fake.getStateValidationParameterMutex.RUnlock()
+	fake.getStringArgsMutex.RLock()
+	defer fake.getStringArgsMutex.RUnlock()
 	fake.getTransientMutex.RLock()
 	defer fake.getTransientMutex.RUnlock()
-	fake.getBindingMutex.RLock()
-	defer fake.getBindingMutex.RUnlock()
-	fake.getDecorationsMutex.RLock()
-	defer fake.getDecorationsMutex.RUnlock()
-	fake.getSignedProposalMutex.RLock()
-	defer fake.getSignedProposalMutex.RUnlock()
+	fake.getTxIDMutex.RLock()
+	defer fake.getTxIDMutex.RUnlock()
 	fake.getTxTimestampMutex.RLock()
 	defer fake.getTxTimestampMutex.RUnlock()
+	fake.invokeChaincodeMutex.RLock()
+	defer fake.invokeChaincodeMutex.RUnlock()
+	fake.purgePrivateDataMutex.RLock()
+	defer fake.purgePrivateDataMutex.RUnlock()
+	fake.putPrivateDataMutex.RLock()
+	defer fake.putPrivateDataMutex.RUnlock()
+	fake.putStateMutex.RLock()
+	defer fake.putStateMutex.RUnlock()
 	fake.setEventMutex.RLock()
 	defer fake.setEventMutex.RUnlock()
+	fake.setPrivateDataValidationParameterMutex.RLock()
+	defer fake.setPrivateDataValidationParameterMutex.RUnlock()
+	fake.setStateValidationParameterMutex.RLock()
+	defer fake.setStateValidationParameterMutex.RUnlock()
+	fake.splitCompositeKeyMutex.RLock()
+	defer fake.splitCompositeKeyMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
