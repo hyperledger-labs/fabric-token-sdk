@@ -9,7 +9,6 @@ package orion
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"text/template"
 	"time"
@@ -112,7 +111,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 	// - Store pp
 	Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
-	Expect(ioutil.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
+	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {

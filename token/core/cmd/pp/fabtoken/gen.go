@@ -8,7 +8,7 @@ package fabtoken
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/cc"
@@ -99,7 +99,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
 	path := filepath.Join(args.OutputDir, "fabtoken_pp.json")
-	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
+	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
 

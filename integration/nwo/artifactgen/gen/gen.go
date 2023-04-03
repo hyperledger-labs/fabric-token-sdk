@@ -8,7 +8,7 @@ package gen
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
@@ -67,7 +67,7 @@ func gen(args []string) error {
 	if len(topologyFile) == 0 {
 		return errors.Errorf("expecting topology file path")
 	}
-	raw, err := ioutil.ReadFile(topologyFile)
+	raw, err := os.ReadFile(topologyFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading topology file [%s]", topologyFile)
 	}

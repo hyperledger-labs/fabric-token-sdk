@@ -8,7 +8,7 @@ package audit_test
 
 import (
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"time"
 
 	math "github.com/IBM/mathlib"
@@ -53,7 +53,7 @@ var _ = Describe("Auditor", func() {
 	BeforeEach(func() {
 		var err error
 		fakeSigningIdentity = &mock.SigningIdentity{}
-		ipk, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+		ipk, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())

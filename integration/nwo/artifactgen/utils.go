@@ -8,7 +8,7 @@ package artifactgen
 
 import (
 	"io/fs"
-	"io/ioutil"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/pkg/errors"
@@ -24,7 +24,7 @@ func WriteTopologies(fileName string, topologies []api.Topology, perm fs.FileMod
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal topologies")
 	}
-	if err := ioutil.WriteFile(fileName, raw, perm); err != nil {
+	if err := os.WriteFile(fileName, raw, perm); err != nil {
 		return errors.Wrapf(err, "failed to write to [%s]", fileName)
 	}
 	return nil

@@ -8,7 +8,6 @@ package common
 
 import (
 	"encoding/pem"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,7 +87,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 // certificate in the PEM format.
 // It returns an error if the file contains more than one certificate.
 func ReadSingleCertificateFromFile(file string) ([]byte, error) {
-	bytes, err := ioutil.ReadFile(file)
+	bytes, err := os.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading from file %s failed", file)
 	}
@@ -114,7 +113,7 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 		return nil, err
 	}
 	var content [][]byte
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read directory %s", dir)
 	}
