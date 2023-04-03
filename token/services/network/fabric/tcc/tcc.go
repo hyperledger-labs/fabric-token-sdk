@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -198,7 +197,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	}
 
 	fmt.Println("reading " + publicParamsPath + " ...")
-	paramsAsBytes, err := ioutil.ReadFile(publicParamsPath)
+	paramsAsBytes, err := os.ReadFile(publicParamsPath)
 	if err != nil {
 		fmt.Printf(
 			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),

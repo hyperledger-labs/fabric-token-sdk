@@ -9,7 +9,7 @@ package validator_test
 import (
 	"encoding/asn1"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"time"
 
 	math "github.com/IBM/mathlib"
@@ -72,7 +72,7 @@ var _ = Describe("validator", func() {
 		fakeldger = &mock.Ledger{}
 		var err error
 		// prepare public parameters
-		ipk, err = ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+		ipk, err = os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())

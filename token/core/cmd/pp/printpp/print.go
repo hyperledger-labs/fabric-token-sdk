@@ -8,7 +8,7 @@ package printpp
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/pkg/errors"
@@ -56,7 +56,7 @@ var cobraCommand = &cobra.Command{
 
 // Print prints the public parameters
 func Print(args *Args) error {
-	raw, err := ioutil.ReadFile(args.InputFile)
+	raw, err := os.ReadFile(args.InputFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed to read file at [%s]", args.InputFile)
 	}

@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -199,7 +199,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 }
 
 func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID math3.CurveID) error {
-	entries, err := ioutil.ReadDir(translatedPath)
+	entries, err := os.ReadDir(translatedPath)
 	if err != nil {
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 		return nil

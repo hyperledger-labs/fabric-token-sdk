@@ -7,7 +7,7 @@ package crypto
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -24,7 +24,7 @@ func TestSetup(t *testing.T) {
 }
 
 func TestSerialization(t *testing.T) {
-	raw, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+	raw, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	assert.NoError(t, err)
 	pp, err := Setup(100, 2, raw, math3.BN254)
 	assert.NoError(t, err)

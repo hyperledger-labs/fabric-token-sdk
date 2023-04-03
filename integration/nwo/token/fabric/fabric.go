@@ -9,7 +9,6 @@ package fabric
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -132,7 +131,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 	// - Store pp
 	Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
-	Expect(ioutil.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
+	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
 
 	// Prepare chaincodes
 	var chaincode *topology.ChannelChaincode

@@ -8,7 +8,7 @@ package dlog
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	math3 "github.com/IBM/mathlib"
@@ -131,7 +131,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
 	path := filepath.Join(args.OutputDir, "zkatdlog_pp.json")
-	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
+	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
 

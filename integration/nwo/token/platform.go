@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -192,7 +192,7 @@ func (p *Platform) PublicParametersFile(tms *topology2.TMS) string {
 }
 
 func (p *Platform) PublicParameters(tms *topology2.TMS) []byte {
-	raw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
+	raw, err := os.ReadFile(p.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 	return raw
 }

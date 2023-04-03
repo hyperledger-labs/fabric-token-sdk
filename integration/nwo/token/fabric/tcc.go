@@ -12,7 +12,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,7 +32,7 @@ type TCC struct {
 func (p *NetworkHandler) tccSetup(tms *topology3.TMS, cc *topology.ChannelChaincode) (*topology.ChannelChaincode, uint16) {
 	// Load public parameters
 	logger.Debugf("tcc setup, reading public parameters from [%s]", p.TokenPlatform.PublicParametersFile(tms))
-	ppRaw, err := ioutil.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
+	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 
 	// produce chaincode package
@@ -135,7 +134,7 @@ func (p *NetworkHandler) PrepareTCC(tms *topology3.TMS, orgs []string) (*topolog
 
 func (p *NetworkHandler) TCCCtor(tms *topology3.TMS) string {
 	logger.Debugf("tcc setup, reading public parameters for setting up CTOR [%s]", p.TokenPlatform.PublicParametersFile(tms))
-	ppRaw, err := ioutil.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
+	ppRaw, err := os.ReadFile(p.TokenPlatform.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 
 	return fmt.Sprintf(`{"Args":["init", "%s"]}`, base64.StdEncoding.EncodeToString(ppRaw))
