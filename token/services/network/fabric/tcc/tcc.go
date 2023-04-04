@@ -241,7 +241,7 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	raw, err := w.ReadSetupParameters()
 	if err != nil {
-		shim.Error("failed to retrieve public parameters: " + err.Error())
+		return shim.Error("failed to retrieve public parameters: " + err.Error())
 	}
 	if len(raw) == 0 {
 		return shim.Error("need to initialize public parameters")
