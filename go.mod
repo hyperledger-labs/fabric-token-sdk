@@ -10,7 +10,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230405073557-ac9e6ccba269
+	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230405075140-1a8530eed3a9
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230401164317-bd8e24856939
