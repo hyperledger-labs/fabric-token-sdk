@@ -287,7 +287,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 		return shim.Error(err.Error())
 	}
 
-	logger.Infof("check if tokens are spent [%v]...", ids)
+	logger.Debugf("check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())

@@ -57,7 +57,7 @@ export FAB_BINS=$PWD/../fabric/bin
 You can also use this to download a different version of the fabric binaries for example
 
 ```shell
-FABRIC_VERSION=2.4.6 make download-fabric
+FABRIC_VERSION=2.5 make download-fabric
 ```
 
 If you want to provide your own versions of the fabric binaries then just set `FAB_BINS` to the directory where all the fabric binaries are stored.

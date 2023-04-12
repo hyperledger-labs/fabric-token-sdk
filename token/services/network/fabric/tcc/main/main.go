@@ -11,13 +11,11 @@ import (
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
-	"github.com/hyperledger/fabric-chaincode-go/shim"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	"github.com/hyperledger/fabric-chaincode-go/shim"
 )
 
 type serverConfig struct {
