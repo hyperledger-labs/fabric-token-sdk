@@ -99,4 +99,4 @@ func (fake *PublicParametersManager) recordInvocation(key string, args []interfa
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ tcc.PublicParametersManager = new(PublicParametersManager)
+var _ tcc.PublicParameters = new(PublicParametersManager)

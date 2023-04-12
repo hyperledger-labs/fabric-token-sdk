@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
-	"io/ioutil"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -78,7 +78,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	Expect(ok).To(BeTrue(), "failed to get token platform from context")
 
 	// Deserialize current params
-	ppBytes, err := ioutil.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
 	Expect(err).NotTo(HaveOccurred())
 	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
 	Expect(err).NotTo(HaveOccurred())

@@ -47,7 +47,7 @@ func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
-// GenerateZKTransfer produces a TransferAction and an array of Metadata
+// GenerateZKTransfer produces a TransferAction and an array of ValidationRecords
 // that corresponds to the openings of the newly created outputs
 func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.Metadata, error) {
 	if len(values) != len(owners) {

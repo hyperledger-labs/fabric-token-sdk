@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	"github.com/pkg/errors"
@@ -22,7 +22,7 @@ const (
 func LoadIssuerPublicKey(idemixMSPDir string) (string, []byte, error) {
 	// Load Idemix Issuer Public Key
 	path := filepath.Join(idemixMSPDir, ConfigDirMsp, ConfigFileIssuerPublicKey)
-	ipkBytes, err := ioutil.ReadFile(path)
+	ipkBytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", nil, errors.Wrapf(err, "failed reading idemix issuer public key [%s]", path)
 	}

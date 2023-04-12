@@ -8,6 +8,7 @@ package fabtoken
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -38,6 +39,7 @@ type KVS interface {
 	Exists(id string) bool
 	Put(id string, state interface{}) error
 	Get(id string, state interface{}) error
+	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
 }
 
 type Service struct {

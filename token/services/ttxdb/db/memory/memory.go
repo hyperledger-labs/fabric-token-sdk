@@ -185,6 +185,14 @@ func (p *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
 	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
 }
 
+func (p *Persistence) AddValidationRecord(id string, tr []byte, meta map[string][]byte) error {
+	panic("not implemented")
+}
+
+func (p *Persistence) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
+	panic("not implemented")
+}
+
 func (p *Persistence) Close() error {
 	return nil
 }

@@ -58,7 +58,7 @@ func TestGenFullSuccess(t *testing.T) {
 	)
 
 	// Check output
-	ppRaw, err := ioutil.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
+	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
 
 	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, crypto.DLogPublicParameters)
@@ -75,7 +75,7 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(issuers[0]).To(BeEquivalentTo(issuer))
 
-	idemixPK, err := ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+	idemixPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPK))
 }
@@ -157,13 +157,13 @@ func TestGenFailure(t *testing.T) {
 
 	defer os.RemoveAll(tempOutput)
 	testGenRun(gt, tokengen, []string{"gen", "fabtoken", "--output", tempOutput})
-	raw, err := ioutil.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
+	raw, err := os.ReadFile(filepath.Join(tempOutput, "fabtoken_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
 	_, _, err = token.NewServicesFromPublicParams(raw)
 	gt.Expect(err).NotTo(HaveOccurred())
 
 	testGenRun(gt, tokengen, []string{"gen", "dlog", "--idemix", "./testdata/idemix", "--output", tempOutput})
-	raw, err = ioutil.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
+	raw, err = os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
 	gt.Expect(err).NotTo(HaveOccurred())
 	_, _, err = token.NewServicesFromPublicParams(raw)
 	gt.Expect(err).NotTo(HaveOccurred())

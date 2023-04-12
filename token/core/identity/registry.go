@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -23,11 +25,13 @@ type KVS interface {
 	Exists(id string) bool
 	Put(id string, state interface{}) error
 	Get(id string, state interface{}) error
+	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
 }
 
 type WalletEntry struct {
+	ID     string
 	Prefix string
-	Wallet driver.Wallet
+	Wallet driver.Wallet `json:"-"`
 }
 
 type WalletsRegistry struct {
@@ -104,11 +108,17 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 }
 
 // RegisterWallet binds the passed wallet to the passed id
-func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) {
-	r.Wallets[id] = &WalletEntry{
+func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) error {
+	entry := &WalletEntry{
+		ID:     id,
 		Prefix: fmt.Sprintf("%s-%s-%s-%s", r.ID.Network, r.ID.Channel, r.ID.Namespace, id),
 		Wallet: w,
 	}
+	if err := r.KVS.Put(kvs.CreateCompositeKeyOrPanic("wallets", []string{r.ID.Network, r.ID.Channel, r.ID.Namespace, id}), entry); err != nil {
+		return errors.WithMessagef(err, "failed to store wallet entry [%s]", id)
+	}
+	r.Wallets[id] = entry
+	return nil
 }
 
 // RegisterIdentity binds the passed identity to the passed wallet identifier.
@@ -160,6 +170,37 @@ func (r *WalletsRegistry) GetWallet(identity view.Identity) (string, error) {
 // false otherwise
 func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
 	return r.KVS.Exists(r.Wallets[wID].Prefix + identity.Hash())
+}
+
+// WalletIDs returns the list of owner wallet identifiers
+func (r *WalletsRegistry) WalletIDs() ([]string, error) {
+	walletIDs, err := r.IdentityProvider.WalletIDs(r.IdentityRole)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet identifiers from identity provider")
+	}
+	it, err := r.KVS.GetByPartialCompositeID("wallets", []string{r.ID.Network, r.ID.Channel, r.ID.Namespace})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallets iterator")
+	}
+	duplicates := map[string]bool{}
+	for _, id := range walletIDs {
+		duplicates[id] = true
+	}
+
+	for it.HasNext() {
+		entry := &WalletEntry{}
+		_, err := it.Next(entry)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get next wallets from iterator")
+		}
+		_, found := duplicates[entry.ID]
+		if !found {
+			walletIDs = append(walletIDs, entry.ID)
+			duplicates[entry.ID] = true
+		}
+	}
+
+	return walletIDs, nil
 }
 
 func walletIDToString(w string) string {

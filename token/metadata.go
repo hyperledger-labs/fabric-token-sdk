@@ -17,6 +17,8 @@ import (
 type TMS interface {
 	// DeserializeToken returns the token and its issuer (if any).
 	DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token.Token, view.Identity, error)
+	// GetTokenInfo extracts from the given metadata the token info entry corresponding to the given target
+	GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error)
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
 	GetEnrollmentID(bytes []byte) (string, error)
 }
@@ -29,10 +31,9 @@ type Metadata struct {
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
 func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, error) {
-	tokenInfoRaw := m.TokenRequestMetadata.GetTokenInfo(raw)
-	if len(tokenInfoRaw) == 0 {
-		logger.Debugf("metadata for [%s] not found", hash.Hashable(raw).String())
-		return nil, nil, nil, errors.Errorf("metadata for [%s] not found", hash.Hashable(raw).String())
+	tokenInfoRaw, err := m.TMS.GetTokenInfo(m.TokenRequestMetadata, raw)
+	if err != nil {
+		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", hash.Hashable(raw).String())
 	}
 	tok, id, err := m.TMS.DeserializeToken(raw, tokenInfoRaw)
 	if err != nil {
@@ -68,7 +69,8 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	// filter issues
 	for _, issue := range m.TokenRequestMetadata.Issues {
 		issueRes := driver.IssueMetadata{
-			Issuer: issue.Issuer,
+			Issuer:       issue.Issuer,
+			ExtraSigners: issue.ExtraSigners,
 		}
 
 		for i, auditInfo := range issue.ReceiversAuditInfos {

@@ -127,10 +127,30 @@ func (t *TransactionRecord) String() string {
 	return s.String()
 }
 
+// ValidationRecord is a record that contains information about the validation of a given token request
+type ValidationRecord struct {
+	// TxID is the transaction ID
+	TxID string
+	// TokenRequest is the token request marshalled
+	TokenRequest []byte
+	// Metadata is the metadata produced by the validator when evaluating the token request
+	Metadata map[string][]byte
+	// Timestamp is the time the transaction was submitted to the db
+	Timestamp time.Time
+	// Status is the status of the transaction
+	Status TxStatus
+}
+
 // TransactionIterator is an iterator for transactions
 type TransactionIterator interface {
 	Close()
 	Next() (*TransactionRecord, error)
+}
+
+// ValidationRecordsIterator is an iterator for transactions
+type ValidationRecordsIterator interface {
+	Close()
+	Next() (*ValidationRecord, error)
 }
 
 // QueryMovementsParams defines the parameters for querying movements.
@@ -179,6 +199,23 @@ type QueryTransactionsParams struct {
 	Statuses []TxStatus
 }
 
+// QueryValidationRecordsParams defines the parameters for querying validation records.
+type QueryValidationRecordsParams struct {
+	// From is the start time of the query
+	// If nil, the query starts from the first transaction
+	From *time.Time
+	// To is the end time of the query
+	// If nil, the query ends at the last transaction
+	To *time.Time
+	// Statuses is the list of transaction status to accept
+	// If empty, any status is accepted
+	Statuses []TxStatus
+	// Filter defines a custom filter function.
+	// If specified, this filter will be applied.
+	// the filter returns true if the record must be selected, false otherwise.
+	Filter func(record *ValidationRecord) bool
+}
+
 // TokenTransactionDB defines the interface for a token transactions database
 type TokenTransactionDB interface {
 	// Close closes the database
@@ -212,6 +249,12 @@ type TokenTransactionDB interface {
 
 	// QueryMovements returns a list of movement records
 	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
+
+	// QueryValidations returns a list of validation  records
+	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
+
+	// AddValidationRecord adds a new validation records for the given params
+	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
 }
 
 // Driver is the interface for a database driver

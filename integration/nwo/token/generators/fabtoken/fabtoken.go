@@ -101,7 +101,7 @@ type FSCPlatform interface {
 type CryptoMaterialGenerator struct {
 	TokenPlatform     generators.TokenPlatform
 	EventuallyTimeout time.Duration
-	colorIndex        int
+	ColorIndex        int
 	Builder           *components.Builder
 }
 
@@ -118,22 +118,22 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 }
 
 func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []generators.Identity {
-	return d.generate(tms, n, "certifiers", certifiers...)
+	return d.Generate(tms, n, "certifiers", certifiers...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
-	return d.generate(tms, n, "owners", owners...)
+	return d.Generate(tms, n, "owners", owners...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
-	return d.generate(tms, n, "issuers", issuers...)
+	return d.Generate(tms, n, "issuers", issuers...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
-	return d.generate(tms, n, "auditors", auditors...)
+	return d.Generate(tms, n, "auditors", auditors...)
 }
 
-func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []generators.Identity {
 	logger.Infof("generate [%s] identities [%v]", wallet, names)
 
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), wallet)
@@ -255,11 +255,11 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 }
 
 func (d *CryptoMaterialGenerator) NextColor() string {
-	color := d.colorIndex%14 + 31
+	color := d.ColorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37
 	}
 
-	d.colorIndex++
+	d.ColorIndex++
 	return fmt.Sprintf("%dm", color)
 }

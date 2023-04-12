@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"strconv"
 
@@ -97,7 +97,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[0])
 	}
 	path := filepath.Join(idemixRootPath, msp.IdemixConfigDirMsp, msp.IdemixConfigFileIssuerPublicKey)
-	ipkBytes, err := ioutil.ReadFile(path)
+	ipkBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

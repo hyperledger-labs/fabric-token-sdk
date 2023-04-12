@@ -36,7 +36,7 @@ func (w *TMSAuthorization) IsMine(tms *token.ManagementService, tok *token2.Toke
 // AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
 // defined in the public parameters of the passed TMS.
 func (w *TMSAuthorization) AmIAnAuditor(tms *token.ManagementService) bool {
-	for _, identity := range tms.PublicParametersManager().Auditors() {
+	for _, identity := range tms.PublicParametersManager().PublicParameters().Auditors() {
 		if tms.WalletManager().AuditorWalletByIdentity(identity) != nil {
 			return true
 		}

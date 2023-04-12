@@ -52,6 +52,10 @@ type IssueMetadata struct {
 	Receivers []view.Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
 	ReceiversAuditInfos [][]byte
+
+	// ExtraSigners is the list of extra identities that are not part of the issue action per se
+	// but needs to sign the request
+	ExtraSigners []view.Identity
 }
 
 // TransferMetadata contains the metadata of a transfer action

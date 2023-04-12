@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -45,6 +45,7 @@ type LocalMembership struct {
 	resolvers               []*common.Resolver
 	resolversByName         map[string]*common.Resolver
 	resolversByEnrollmentID map[string]*common.Resolver
+	curveID                 math3.CurveID
 }
 
 func NewLocalMembership(
@@ -57,6 +58,7 @@ func NewLocalMembership(
 	kvs common.KVS,
 	mspID string,
 	cacheSize int,
+	curveID math3.CurveID,
 ) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
@@ -70,6 +72,7 @@ func NewLocalMembership(
 		cacheSize:               cacheSize,
 		resolversByEnrollmentID: map[string]*common.Resolver{},
 		resolversByName:         map[string]*common.Resolver{},
+		curveID:                 curveID,
 	}
 }
 
@@ -163,13 +166,21 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	return lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "")
 }
 
+func (lm *LocalMembership) IDs() ([]string, error) {
+	var ids []string
+	for _, resolver := range lm.resolvers {
+		ids = append(ids, resolver.Name)
+	}
+	return ids, nil
+}
+
 func (lm *LocalMembership) registerIdentity(id string, path string, setDefault bool) error {
 	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(path)
-	curveID := math3.BN254
-	if err := lm.registerMSPProvider(id, translatedPath, curveID, setDefault); err != nil {
+	if err := lm.registerMSPProvider(id, translatedPath, lm.curveID, setDefault); err != nil {
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s]", translatedPath, err)
 		// Does path correspond to a holder containing multiple MSP identities?
-		if err := lm.registerMSPProviders(translatedPath, curveID); err != nil {
+		if err := lm.registerMSPProviders(translatedPath, lm.curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
 		}
 	}
@@ -199,7 +210,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 }
 
 func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID math3.CurveID) error {
-	entries, err := ioutil.ReadDir(translatedPath)
+	entries, err := os.ReadDir(translatedPath)
 	if err != nil {
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 		return nil

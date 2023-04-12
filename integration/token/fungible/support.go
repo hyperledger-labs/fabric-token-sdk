@@ -613,3 +613,20 @@ func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletI
 	Expect(err).NotTo(HaveOccurred())
 	network.Ctx.SetViewClient(walletID, network.Client(id))
 }
+
+func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...string) {
+	idsBoxed, err := network.Client(id).CallView("ListOwnerWalletIDsView", nil)
+	Expect(err).NotTo(HaveOccurred())
+	var wIDs []string
+	common.JSONUnmarshal(idsBoxed.([]byte), &wIDs)
+	for _, wID := range ids {
+		found := false
+		for _, expectedWID := range wIDs {
+			if expectedWID == wID {
+				found = true
+				break
+			}
+		}
+		Expect(found).To(BeTrue(), "[%s] is not in [%v]", wID, wIDs)
+	}
+}

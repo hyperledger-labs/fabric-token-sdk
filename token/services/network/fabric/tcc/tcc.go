@@ -10,7 +10,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
 	"sync"
@@ -56,18 +55,18 @@ type Validator interface {
 
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
 
-type PublicParametersManager interface {
+type PublicParameters interface {
 	GraphHiding() bool
 }
 
 type TokenChaincode struct {
-	initOnce                sync.Once
-	LogLevel                string
-	Validator               Validator
-	PublicParametersManager PublicParametersManager
+	initOnce         sync.Once
+	LogLevel         string
+	Validator        Validator
+	PublicParameters PublicParameters
 
 	PPDigest             []byte
-	TokenServicesFactory func([]byte) (PublicParametersManager, Validator, error)
+	TokenServicesFactory func([]byte) (PublicParameters, Validator, error)
 
 	MetricsEnabled bool
 	MetricsServer  string
@@ -184,7 +183,7 @@ func (cc *TokenChaincode) Initialize(builtInParams string) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to instantiate public parameter manager and validator")
 	}
-	cc.PublicParametersManager = ppm
+	cc.PublicParameters = ppm
 	cc.Validator = validator
 
 	return nil
@@ -198,7 +197,7 @@ func (cc *TokenChaincode) ReadParamsFromFile() string {
 	}
 
 	fmt.Println("reading " + publicParamsPath + " ...")
-	paramsAsBytes, err := ioutil.ReadFile(publicParamsPath)
+	paramsAsBytes, err := os.ReadFile(publicParamsPath)
 	if err != nil {
 		fmt.Printf(
 			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),
@@ -242,11 +241,14 @@ func (cc *TokenChaincode) QueryPublicParams(stub shim.ChaincodeStubInterface) pb
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	raw, err := w.ReadSetupParameters()
 	if err != nil {
-		shim.Error("failed to retrieve public parameters: " + err.Error())
+		return shim.Error("failed to retrieve public parameters: " + err.Error())
 	}
 	if len(raw) == 0 {
 		return shim.Error("need to initialize public parameters")
 	}
+
+	logger.Infof("query public params, size[%d]", len(raw))
+
 	return shim.Success(raw)
 }
 
@@ -257,7 +259,7 @@ func (cc *TokenChaincode) QueryTokens(idsRaw []byte, stub shim.ChaincodeStubInte
 		return shim.Error(err.Error())
 	}
 
-	logger.Debugf("query tokens [%v]...", ids)
+	logger.Infof("query tokens [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
 	res, err := w.QueryTokens(ids)
@@ -288,7 +290,7 @@ func (cc *TokenChaincode) AreTokensSpent(idsRaw []byte, stub shim.ChaincodeStubI
 	logger.Debugf("check if tokens are spent [%v]...", ids)
 
 	w := translator.New(stub.GetTxID(), &rwsWrapper{stub: stub}, "")
-	res, err := w.AreTokensSpent(ids, cc.PublicParametersManager.GraphHiding())
+	res, err := w.AreTokensSpent(ids, cc.PublicParameters.GraphHiding())
 	if err != nil {
 		logger.Errorf("failed to check if tokens are spent [%v]: [%s]", ids, err)
 		return shim.Error(fmt.Sprintf("failed to check if tokens are spent [%v]: [%s]", ids, err))

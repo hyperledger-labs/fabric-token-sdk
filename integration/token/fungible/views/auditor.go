@@ -37,7 +37,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 	logger.Debugf("AuditView: get auditor done [%s]", tx.ID())
 
-	// Check Metadata
+	// Check ValidationRecords
 	logger.Debugf("AuditView: check metadata [%s]", tx.ID())
 	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
 	if len(opRaw) != 0 {

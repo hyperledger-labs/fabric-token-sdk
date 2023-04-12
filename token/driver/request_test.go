@@ -55,6 +55,10 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("audit_info1"),
 					[]byte("audit_info2"),
 				},
+				ExtraSigners: []view.Identity{
+					[]byte("issue_extra_signer1"),
+					[]byte("issue_extra_signer2"),
+				},
 			},
 		},
 		Transfers: []TransferMetadata{

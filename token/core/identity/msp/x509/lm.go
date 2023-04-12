@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"sync"
 
@@ -146,6 +146,14 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	}, lm.GetDefaultIdentifier() == "")
 }
 
+func (lm *LocalMembership) IDs() ([]string, error) {
+	var ids []string
+	for _, resolver := range lm.resolvers {
+		ids = append(ids, resolver.Name)
+	}
+	return ids, nil
+}
+
 func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(c.Path)
@@ -197,7 +205,7 @@ func (lm *LocalMembership) registerMSPProvider(c *config.Identity, translatedPat
 }
 
 func (lm *LocalMembership) registerMSPProviders(c *config.Identity, translatedPath string) error {
-	entries, err := ioutil.ReadDir(translatedPath)
+	entries, err := os.ReadDir(translatedPath)
 	if err != nil {
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 		return nil

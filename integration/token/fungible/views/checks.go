@@ -168,14 +168,13 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	}
 	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
 	if err != nil {
-		errorMessages = append(errorMessages, fmt.Sprintf("[ow:%s] failed to query tokens: [%s]", defaultOwnerWallet.ID(), err))
+		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
 	} else {
 		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
 		index := 0
 		assert.NoError(v.TokenVault().QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
-				errorMessages = append(errorMessages, fmt.Sprintf("[ow:%s] token content does not match at [%d], [%s]!=[%s]",
-					defaultOwnerWallet.ID(),
+				errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%d], [%s]!=[%s]",
 					index,
 					hash.Hashable(ledgerTokenContent[index]), hash.Hashable(tokenRaw)))
 			}

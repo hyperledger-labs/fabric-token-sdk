@@ -42,7 +42,7 @@ func (b *BalanceView) Call(context view.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	precision := tms.PublicParametersManager().Precision()
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	sum := token2.NewZeroQuantity(precision)
 	for _, tok := range unspentTokens.Tokens {
 		q, err := token2.ToQuantity(tok.Quantity, precision)
