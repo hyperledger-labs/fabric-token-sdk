@@ -304,7 +304,6 @@ github.com/docker/distribution v2.8.1+incompatible/go.mod h1:J2gT2udsDAN96Uj4Kfc
 github.com/docker/docker v0.7.3-0.20180412203414-a422774e593b/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker v0.7.3-0.20190309235953-33c3200e0d16/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker v17.12.0-ce-rc1.0.20190628135806-70f67c6240bb+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
-github.com/docker/docker v20.10.7+incompatible h1:Z6O9Nhsjv+ayUEeI1IojKbYcsGdgYSNqxe1s2MYzUhQ=
 github.com/docker/docker v20.10.7+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
 github.com/docker/docker v20.10.24+incompatible h1:Ugvxm7a8+Gz6vqQYQQ2W7GYq5EUPaAiuPgIfVyI3dYE=
 github.com/docker/docker v20.10.24+incompatible/go.mod h1:eEKB0N0r5NX/I1kEveEz05bcu8tLC/8azJZsviup8Sk=
@@ -661,8 +660,8 @@ github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7
 github.com/huin/goupnp v1.0.3 h1:N8No57ls+MnjlB+JPiCVSOyy/ot7MJTqlo7rn+NYSqQ=
 github.com/huin/goupnp v1.0.3/go.mod h1:ZxNlw5WqJj6wSsRK5+YfflQGXYfccj5VgQsMNixHM7Y=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230405075140-1a8530eed3a9 h1:vPtErBHyEt8XO+eDlAyY1k91406oGE53RQ6vNWPt/TU=
-github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230405075140-1a8530eed3a9/go.mod h1:ByALjprLtBE705hx7aSO0fOMzTDxfrrLu1fM4+yIMW0=
+github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230412082808-cbbfa4afbdc9 h1:SNuoueNZdLj/BVOiaO+kmaucdQ4Q0crIWRGnZTMBIOc=
+github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230412082808-cbbfa4afbdc9/go.mod h1:TKvaYR1NSNwJD2qHefBnpdXmiKVaSvxPV3k67pF/mYU=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5 h1:HFGRTuMZgzo9EtyJeFAhVSlbrj6x3jtY0aDcghdjzRE=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5/go.mod h1:At8hiFATfkDXQ4AFLVbaTiC9GDhVDo8aN/supb1KBb4=
 github.com/hyperledger-labs/orion-server v0.2.5 h1:aFudmB9SAnsT5v8jhazkuszEu0pdJNFqaYZF2GpvAuI=
