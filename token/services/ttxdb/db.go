@@ -522,7 +522,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 		outTT := ous.TokenTypes()
 		for _, outEID := range outEIDs {
 			for _, tokenType := range outTT {
-				received := outputs.ByEnrollmentID(outEID).ByType(tokenType).Sum()
+				received := ous.ByEnrollmentID(outEID).ByType(tokenType).Sum()
 				if received.Cmp(big.NewInt(0)) <= 0 {
 					continue
 				}
