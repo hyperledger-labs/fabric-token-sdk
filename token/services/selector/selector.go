@@ -191,7 +191,7 @@ func (s *selector) selectByID(ownerFilter token.OwnerFilter, q string, tokenType
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientButLockedFunds,
-					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked, tokenType,
+					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked.Decimal(), tokenType,
 				)
 			}
 
@@ -339,7 +339,7 @@ func (s *selector) selectByOwner(ownerFilter token.OwnerFilter, q string, tokenT
 				logger.Debugf("token selection: it is time to fail but how, sufficient funds but locked")
 				return nil, nil, errors.WithMessagef(
 					token.SelectorSufficientButLockedFunds,
-					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked, tokenType,
+					"token selection failed: sufficient but partially locked funds, potential [%s] tokens of type [%s] are available", potentialSumWithLocked.Decimal(), tokenType,
 				)
 			}
 
