@@ -24,6 +24,7 @@ type TokenManagerService interface {
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
 	NewRequest() TokenRequest
+	NewRequestMetadata() *TokenRequestMetadata
 }
 
 type TokenManagerServiceProvider interface {

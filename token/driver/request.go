@@ -30,6 +30,9 @@ type TokenRequest interface {
 	Import(actions TokenRequest)
 }
 
+type TookMetadata interface {
+}
+
 // IssueMetadata contains the metadata of an issue action.
 // In more details, there is an issuer and a list of outputs.
 // For each output, there is a token info and a list of receivers with their audit info to recover their enrollment ID.
@@ -187,6 +190,37 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 		return errors.Wrap(err, "failed to unmarshal token request metadata: cannot unmarshal application metadata")
 	}
 	return nil
+}
+
+func (m *TokenRequestMetadata) ApplicationMetadata(k string) []byte {
+	if len(m.Application) == 0 {
+		return nil
+	}
+	return m.Application[k]
+}
+
+func (m *TokenRequestMetadata) GetTransfer(index int) TransferMetadata {
+	return m.Transfers[index]
+}
+
+func (m *TokenRequestMetadata) GetIssue(index int) IssueMetadata {
+	return m.Issues[index]
+}
+
+func (m *TokenRequestMetadata) GetIssues() []IssueMetadata {
+	return m.Issues
+}
+
+func (m *TokenRequestMetadata) GetTransfers() []TransferMetadata {
+	return m.Transfers
+}
+
+func (m *TokenRequestMetadata) AppendTransfer(metadata *TransferMetadata) {
+	m.Transfers = append(m.Transfers, *metadata)
+}
+
+func (m *TokenRequestMetadata) AppendIssues(meta *IssueMetadata) {
+	m.Issues = append(m.Issues, *meta)
 }
 
 type TokenIDSer struct {

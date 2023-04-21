@@ -7,6 +7,7 @@ package nonanonym
 
 import (
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -34,7 +35,7 @@ func (i *Issuer) New(ttype string, signer common.SigningIdentity, pp *crypto.Pub
 	i.PublicParams = pp
 }
 
-func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.IssueAction, []*token.Metadata, error) {
+func (i *Issuer) GenerateZKIssue(values []uint64, owners []view.Identity) (*issue2.IssueAction, []*token.Metadata, error) {
 	if i.PublicParams == nil {
 		return nil, nil, errors.New("failed to generate ZK Issue: nil public parameters")
 	}

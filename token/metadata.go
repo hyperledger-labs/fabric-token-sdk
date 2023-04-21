@@ -99,7 +99,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			issueRes.ReceiversAuditInfos = append(issueRes.ReceiversAuditInfos, ReceiverAuditInfos)
 		}
 
-		res.TokenRequestMetadata.Issues = append(res.TokenRequestMetadata.Issues, issueRes)
+		res.TokenRequestMetadata.AppendIssues(&issueRes)
 	}
 
 	// filter transfers
@@ -153,7 +153,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		}
 
 		logger.Debugf("keeping transfer with [%d] out of [%d] outputs", len(transferRes.Outputs), len(transfer.Outputs))
-		res.TokenRequestMetadata.Transfers = append(res.TokenRequestMetadata.Transfers, transferRes)
+		res.TokenRequestMetadata.AppendTransfer(&transferRes)
 	}
 
 	// application

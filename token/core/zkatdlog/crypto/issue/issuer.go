@@ -6,13 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 package issue
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 )
 
 type Issuer interface {
-	GenerateZKIssue(values []uint64, owners [][]byte) (*IssueAction, []*token.Metadata, error)
+	GenerateZKIssue(values []uint64, owners []view.Identity) (*IssueAction, []*token.Metadata, error)
 
 	SignTokenActions(raw []byte, txID string) ([]byte, error)
 

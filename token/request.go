@@ -9,13 +9,12 @@ package token
 import (
 	"encoding/asn1"
 
-	"go.uber.org/zap/zapcore"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -160,7 +159,7 @@ func NewRequest(tokenService *ManagementService, anchor string) *Request {
 	return &Request{
 		Anchor:       anchor,
 		Request:      tokenService.tms.NewRequest(),
-		Metadata:     &driver.TokenRequestMetadata{},
+		Metadata:     tokenService.tms.NewRequestMetadata(),
 		TokenService: tokenService,
 	}
 }
@@ -172,7 +171,7 @@ func NewRequestFromBytes(tokenService *ManagementService, anchor string, actions
 	if err := tr.FromBytes(actions); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling token request [%d]", len(actions))
 	}
-	trm := &driver.TokenRequestMetadata{}
+	trm := tokenService.tms.NewRequestMetadata()
 	if len(trmRaw) != 0 {
 		if err := trm.FromBytes(trmRaw); err != nil {
 			return nil, errors.Wrapf(err, "failed unmarshalling token request metadata [%d]", len(trmRaw))
@@ -228,7 +227,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		id,
 		typ,
 		[]uint64{q},
-		[][]byte{receiver},
+		[]view.Identity{receiver},
 		&driver.IssueOptions{
 			Attributes: opt.Attributes,
 		},
@@ -243,29 +242,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		return nil, err
 	}
 	r.Request.AppendIssue(raw)
-	outputs, err := issue.GetSerializedOutputs()
-	if err != nil {
-		return nil, err
-	}
-
-	auditInfo, err := r.TokenService.tms.GetAuditInfo(receiver)
-	if err != nil {
-		return nil, err
-	}
-	if r.Metadata == nil {
-		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
-	}
-
-	r.Metadata.Issues = append(r.Metadata.Issues,
-		driver.IssueMetadata{
-			Issuer:              meta.Issuer,
-			Outputs:             outputs,
-			TokenInfo:           meta.TokenInfo,
-			Receivers:           []view.Identity{receiver},
-			ReceiversAuditInfos: [][]byte{auditInfo},
-			ExtraSigners:        meta.ExtraSigners,
-		},
-	)
+	r.Metadata.AppendIssues(meta)
 
 	return &IssueAction{a: issue}, nil
 }
@@ -319,7 +296,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 		return nil, errors.Wrap(err, "failed serializing transfer action")
 	}
 	r.Request.AppendTransfer(raw)
-	r.Metadata.Transfers = append(r.Metadata.Transfers, *transferMetadata)
+	r.Metadata.AppendTransfer(transferMetadata)
 
 	return &TransferAction{a: transfer}, nil
 }
@@ -369,7 +346,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	}
 
 	r.Request.AppendTransfer(raw)
-	r.Metadata.Transfers = append(r.Metadata.Transfers, *transferMetadata)
+	r.Metadata.AppendTransfer(transferMetadata)
 
 	return nil
 }
@@ -834,7 +811,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 
 	for i := range r.Request.GetTransfers() {
 		// senders
-		for _, eid := range r.Metadata.Transfers[i].Senders {
+		for _, eid := range r.Metadata.GetTransfer(i).Senders {
 			if w := r.TokenService.WalletManager().Wallet(eid); w != nil {
 				// this is me, skip
 				continue
@@ -846,7 +823,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 		}
 
 		// extra signers
-		for _, eid := range r.Metadata.Transfers[i].ExtraSigners {
+		for _, eid := range r.Metadata.GetTransfer(i).ExtraSigners {
 			if w := r.TokenService.WalletManager().Wallet(eid); w != nil {
 				// this is me, skip
 				continue
@@ -858,8 +835,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 		}
 
 		// receivers
-		receivers := r.Metadata.Transfers[i].Receivers
-		for j, b := range r.Metadata.Transfers[i].ReceiverIsSender {
+		receivers := r.Metadata.GetTransfer(i).Receivers
+		for j, b := range r.Metadata.GetTransfer(i).ReceiverIsSender {
 			if b {
 				if w := r.TokenService.WalletManager().Wallet(receivers[j]); w != nil {
 					// this is me, skip
@@ -879,7 +856,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 // Issues returns the list of issued tokens.
 func (r *Request) Issues() []*Issue {
 	var issues []*Issue
-	for _, issue := range r.Metadata.Issues {
+	for _, issue := range r.Metadata.GetIssues() {
 		issues = append(issues, &Issue{
 			Issuer:       issue.Issuer,
 			Receivers:    issue.Receivers,
@@ -892,7 +869,7 @@ func (r *Request) Issues() []*Issue {
 // Transfers returns the list of transfers.
 func (r *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
-	for _, transfer := range r.Metadata.Transfers {
+	for _, transfer := range r.Metadata.GetTransfers() {
 		transfers = append(transfers, &Transfer{
 			Senders:      transfer.Senders,
 			Receivers:    transfer.Receivers,
@@ -965,17 +942,14 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 
 // ApplicationMetadata returns the application metadata corresponding to the given key
 func (r *Request) ApplicationMetadata(k string) []byte {
-	if len(r.Metadata.Application) == 0 {
-		return nil
-	}
-	return r.Metadata.Application[k]
+	return r.Metadata.ApplicationMetadata(k)
 }
 
 // SetApplicationMetadata sets application metadata in terms of key-value pairs.
 // The Token-SDK does not control the format of the metadata.
 func (r *Request) SetApplicationMetadata(k string, v []byte) {
 	if r.Metadata == nil {
-		r.Metadata = &driver.TokenRequestMetadata{}
+		r.Metadata = r.TokenService.tms.NewRequestMetadata()
 	}
 	if len(r.Metadata.Application) == 0 {
 		r.Metadata.Application = map[string][]byte{}

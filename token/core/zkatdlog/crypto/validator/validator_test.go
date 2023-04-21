@@ -434,7 +434,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*common.TokenRequest, *driver.TokenRequestMetadata) {
 	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
 	ir := &common.TokenRequest{}
-	owners := make([][]byte, 1)
+	owners := make([]view.Identity, 1)
 	owners[0] = id
 	values := []uint64{40}
 

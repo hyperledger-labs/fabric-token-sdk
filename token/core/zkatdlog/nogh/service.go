@@ -180,6 +180,10 @@ func (s *Service) NewRequest() driver.TokenRequest {
 	return &common.TokenRequest{}
 }
 
+func (s *Service) NewRequestMetadata() *driver.TokenRequestMetadata {
+	return &driver.TokenRequestMetadata{}
+}
+
 func (s *Service) LoadPublicParams() error {
 	return s.PPM.Load()
 }

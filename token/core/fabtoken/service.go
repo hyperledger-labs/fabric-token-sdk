@@ -106,6 +106,10 @@ func (s *Service) NewRequest() driver.TokenRequest {
 	return &common.TokenRequest{}
 }
 
+func (s *Service) NewRequestMetadata() *driver.TokenRequestMetadata {
+	return &driver.TokenRequestMetadata{}
+}
+
 func (s *Service) MarshalTokenRequestToSign(request driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
 	req, ok := request.(*common.TokenRequest)
 	if !ok {

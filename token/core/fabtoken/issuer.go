@@ -16,7 +16,7 @@ import (
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization OutputMetadata associated with issued tokens
 // and the identity of the issuer
-func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners []view.Identity, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
@@ -52,12 +52,25 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 		metas = append(metas, metaRaw)
 	}
 
+	issue := &IssueAction{Issuer: issuerIdentity, Outputs: outs}
+
+	outputs, err := issue.GetSerializedOutputs()
+	if err != nil {
+		return nil, nil, err
+	}
+	auditInfo, err := s.GetAuditInfo(owners[0])
+	if err != nil {
+		return nil, nil, err
+	}
 	meta := &driver.IssueMetadata{
-		Issuer:    issuerIdentity,
-		TokenInfo: metas,
+		Issuer:              issuerIdentity,
+		TokenInfo:           metas,
+		Outputs:             outputs,
+		Receivers:           owners,
+		ReceiversAuditInfos: [][]byte{auditInfo},
 	}
 
-	return &IssueAction{Issuer: issuerIdentity, Outputs: outs}, meta, nil
+	return issue, meta, nil
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
