@@ -59,25 +59,6 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "issuer")
-		})
-
-		It("Update public params", func() {
-			tms := fungible.GetTMS(network, "default")
-			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
-		})
-
-	Describe("Fungible with Auditor = Issuer", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", true)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
-		It("succeeded", func() {
 			fungible.TestAll(network, "issuer", nil)
 		})
 
@@ -85,27 +66,7 @@ var _ = Describe("EndToEnd", func() {
 			tms := fungible.GetTMS(network, "default")
 			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
 		})
-
-	//Describe("Fungible with Auditor = Issuer", func() {
-	//	BeforeEach(func() {
-	//		var err error
-	//		network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", true)...)
-	//		Expect(err).NotTo(HaveOccurred())
-	//		network.RegisterPlatformFactory(token.NewPlatformFactory())
-	//		network.Generate()
-	//		network.Start()
-	//	})
-	//
-	//	It("succeeded", func() {
-	//		fungible.TestAll(network, "issuer")
-	//	})
-	//
-	//	It("Update public params", func() {
-	//		tms := fungible.GetTMS(network, "default")
-	//		fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
-	//	})
-	//
-	//})
+	})
 
 })
 

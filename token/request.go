@@ -410,7 +410,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		counter += uint64(len(outputs))
 	}
 
-	for i, transfer := range r.Actions.Transfers {
+	for i, transfer := range r.Request.GetTransfers() {
 		// deserialize action
 		transferAction, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
@@ -643,7 +643,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 	var outputs []*Output
 	counter := uint64(0)
 
-	for i, issue := range r.Actions.Issues {
+	for i, issue := range r.Request.GetIssues() {
 		// deserialize action
 		issueAction, err := tms.DeserializeIssueAction(issue)
 		if err != nil {
@@ -672,7 +672,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		counter += uint64(len(outputs))
 	}
 
-	for i, transfer := range r.Actions.Transfers {
+	for i, transfer := range r.Request.GetTransfers() {
 		// deserialize action
 		transferAction, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
