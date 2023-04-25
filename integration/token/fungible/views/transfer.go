@@ -21,6 +21,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TransferAction defines a transfer action
+type TransferAction struct {
+	// Amount to transfer
+	Amount uint64
+	// Recipient is the identity of the recipient's FSC node
+	Recipient view.Identity
+	// RecipientEID is the expected enrolment id of the recipient
+	RecipientEID string
+}
+
 // Transfer contains the input information for a transfer
 type Transfer struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
@@ -41,6 +51,8 @@ type Transfer struct {
 	Retry bool
 	// FailToRelease if true, it fails after transfer to trigger the Release function on the token transaction
 	FailToRelease bool
+	// For additional transfer actions
+	TransferAction []TransferAction
 }
 
 type TransferView struct {
@@ -55,8 +67,20 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient)
 	assert.NoError(err, "failed getting recipient")
 
+	wm := token2.GetManagementService(context).WalletManager()
+	// if there are more recipients, ask for their recipient identity
+	var additionalRecipients []view.Identity
+	for _, action := range t.TransferAction {
+		actionRecipient, err := ttx.RequestRecipientIdentity(context, action.Recipient)
+		assert.NoError(err, "failed getting recipient")
+		eID, err := wm.GetEnrollmentID(recipient)
+		assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
+		assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
+		additionalRecipients = append(additionalRecipients, actionRecipient)
+	}
+
 	// match recipient EID
-	eID, err := token2.GetManagementService(context).WalletManager().GetEnrollmentID(recipient)
+	eID, err := wm.GetEnrollmentID(recipient)
 	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 	assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
 
@@ -89,7 +113,18 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
 	)
-	assert.NoError(err, "failed adding new tokens")
+	assert.NoError(err, "failed adding transfer action [%d:%d]", t.Amount, t.Recipient)
+
+	// add additional transfers
+	for i, action := range t.TransferAction {
+		err = tx.Transfer(
+			senderWallet,
+			t.Type,
+			[]uint64{action.Amount},
+			[]view.Identity{additionalRecipients[i]},
+		)
+		assert.NoError(err, "failed adding transfer action [%d:%d]", action.Amount, action.Recipient)
+	}
 
 	if t.FailToRelease {
 		// return an error to trigger the Release function on the token transaction

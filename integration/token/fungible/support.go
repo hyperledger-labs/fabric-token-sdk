@@ -92,6 +92,9 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor strin
 		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] expected status [%v], got [%v]", i, txExpected.Status, tx.Status)
 		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d] expected transaction type [%v], got [%v]", i, txExpected.ActionType, tx.ActionType)
 		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d] expected amount [%v], got [%v]", i, txExpected.Amount, tx.Amount)
+		if len(txExpected.TxID) != 0 {
+			Expect(txExpected.TxID).To(Equal(tx.TxID), "tx [%d] expected id [%s], got [%s]", i, txExpected.TxID, tx.TxID)
+		}
 	}
 }
 
@@ -224,6 +227,57 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 		if !strings.HasPrefix(receiver, id) {
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
+		txInfo := GetTransactionInfo(network, id, txID)
+		for _, identity := range signers {
+			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
+			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
+			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		}
+		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
+}
+
+func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, expectedErrorMsgs ...string) string {
+	Expect(len(amounts) > 1).To(BeTrue())
+	Expect(len(receivers)).To(BeEquivalentTo(len(amounts)))
+	transfer := &views.Transfer{
+		Auditor:      auditor,
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amounts[0],
+		Recipient:    network.Identity(receivers[0]),
+		RecipientEID: receivers[0],
+	}
+	for i := 1; i < len(amounts); i++ {
+		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{
+			Amount:       amounts[i],
+			Recipient:    network.Identity(receivers[i]),
+			RecipientEID: receivers[i],
+		})
+	}
+
+	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(transfer))
+	if len(expectedErrorMsgs) == 0 {
+		txID := common.JSONUnmarshalString(txidBoxed)
+		Expect(err).NotTo(HaveOccurred())
+		signers := []string{auditor}
+
+		for _, receiver := range receivers {
+			Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+			if !strings.HasPrefix(receiver, id) {
+				signers = append(signers, strings.Split(receiver, ".")[0])
+			}
+		}
+		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+
 		txInfo := GetTransactionInfo(network, id, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]

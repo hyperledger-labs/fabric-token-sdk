@@ -114,6 +114,51 @@ var AuditedTransactions = []*ttxdb.TransactionRecord{
 		Amount:       big.NewInt(10),
 		Status:       ttxdb.Confirmed,
 	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Issue,
+		SenderEID:    "",
+		RecipientEID: "alice",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(3),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Issue,
+		SenderEID:    "",
+		RecipientEID: "alice",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(3),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Transfer,
+		SenderEID:    "alice",
+		RecipientEID: "bob",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(2),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Transfer,
+		SenderEID:    "alice",
+		RecipientEID: "alice",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(1),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Transfer,
+		SenderEID:    "alice",
+		RecipientEID: "charlie",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(3),
+		Status:       ttxdb.Confirmed,
+	},
 }
 
 var AliceAcceptedTransactions = []*ttxdb.TransactionRecord{
@@ -331,8 +376,24 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	IssueCash(network, "", "USD", 10, "bob", auditor, true, "issuer")
 	t12 := time.Now()
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[9:10], &t11, &t12)
-	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t12)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:10], &t0, &t12)
 	CheckSpending(network, "bob", "", "USD", auditor, 11)
+
+	// test multi action transfer...
+	t13 := time.Now()
+	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
+	t14 := time.Now()
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[10:12], &t13, &t14)
+	txLiraTransfer := TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor)
+	t16 := time.Now()
+	AuditedTransactions[12].TxID = txLiraTransfer
+	AuditedTransactions[13].TxID = txLiraTransfer
+	AuditedTransactions[14].TxID = txLiraTransfer
+	CheckBalanceAndHolding(network, "alice", "", "LIRA", 1, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "LIRA", 2, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "LIRA", 3, auditor)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t16)
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
