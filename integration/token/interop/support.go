@@ -255,7 +255,7 @@ func Restart(network *integration.Infrastructure, ids ...string) {
 	time.Sleep(10 * time.Second)
 }
 
-func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {
+func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id string, wallet string, typ string, amount uint64, receiver string, deadline time.Duration, hash []byte, hashFunc crypto.Hash, errorMsgs ...string) (string, []byte, []byte) {
 	result, err := network.Client(id).CallView("htlc.lock", common.JSONMarshall(&htlc.Lock{
 		TMSID:               tmsID,
 		ReclamationDeadline: deadline,
@@ -309,7 +309,7 @@ func htlcLock(network *integration.Infrastructure, tmsID token.TMSID, id string,
 	}
 }
 
-func htlcReclaimAll(network *integration.Infrastructure, id string, wallet string, errorMsgs ...string) {
+func HTLCReclaimAll(network *integration.Infrastructure, id string, wallet string, errorMsgs ...string) {
 	txID, err := network.Client(id).CallView("htlc.reclaimAll", common.JSONMarshall(&htlc.ReclaimAll{
 		Wallet: wallet,
 	}))
@@ -322,6 +322,39 @@ func htlcReclaimAll(network *integration.Infrastructure, id string, wallet strin
 			Expect(err.Error()).To(ContainSubstring(msg))
 		}
 		time.Sleep(5 * time.Second)
+	}
+}
+
+func HTLCReclaimByHash(network *integration.Infrastructure, id string, wallet string, hash []byte, errorMsgs ...string) {
+	txID, err := network.Client(id).CallView("htlc.reclaimByHash", common.JSONMarshall(&htlc.ReclaimByHash{
+		Wallet: wallet,
+		Hash:   hash,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(id).IsTxFinal(common.JSONUnmarshalString(txID))).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
+		time.Sleep(5 * time.Second)
+	}
+}
+
+func HTLCCheckExistenceReceivedExpiredByHash(network *integration.Infrastructure, id string, wallet string, hash []byte, exists bool, errorMsgs ...string) {
+	_, err := network.Client(id).CallView("htlc.CheckExistenceReceivedExpiredByHash", common.JSONMarshall(&htlc.CheckExistenceReceivedExpiredByHash{
+		Wallet: wallet,
+		Hash:   hash,
+		Exists: exists,
+	}))
+	if len(errorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		Expect(err).To(HaveOccurred())
+		for _, msg := range errorMsgs {
+			Expect(err.Error()).To(ContainSubstring(msg))
+		}
 	}
 }
 

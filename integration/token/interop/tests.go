@@ -69,7 +69,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	RegisterAuditor(network)
 
 	// htlc (lock, failing claim, reclaim)
-	_, preImage, _ := htlcLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
+	_, preImage, _ := HTLCLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
@@ -85,14 +85,14 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 10, -1)
 
-	htlcReclaimAll(network, "alice", "")
+	HTLCReclaimAll(network, "alice", "")
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 120, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 0, -1)
 
 	// htlc (lock, claim)
-	_, preImage, _ = htlcLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	_, preImage, _ = HTLCLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
@@ -105,7 +105,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
 
 	// payment limit reached
-	htlcLock(network, defaultTMSID, "alice", "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
+	HTLCLock(network, defaultTMSID, "alice", "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
@@ -126,15 +126,15 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	})
 
 	// lock two times with the same hash, the second lock should fail
-	_, _, hash := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
-	failedLockTXID, _, _ := htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
+	_, _, hash := HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	failedLockTXID, _, _ := HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
 		fmt.Sprintf(
 			"entry with transfer metadata key [%s] is already occupied by [%s]",
 			htlc.LockKey(hash),
 			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
 		),
 	)
-	htlcLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
@@ -182,8 +182,8 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 	IssueCashWithTMS(network, beta, "issuer", "", "USD", 30, "bob")
 	CheckBalanceAndHolding(network, "bob", "", "USD", 30, token.WithTMSID(beta))
 
-	_, preImage, hash := htlcLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
-	htlcLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
+	_, preImage, hash := HTLCLock(network, alpha, "alice", "", "EUR", 10, "bob", 1*time.Hour, nil, 0)
+	HTLCLock(network, beta, "bob", "", "USD", 10, "alice", 1*time.Hour, hash, 0)
 	htlcClaim(network, beta, "alice", "", preImage)
 	htlcClaim(network, alpha, "bob", "", preImage)
 
@@ -226,6 +226,12 @@ func TestHTLCTwoNetworks(network *integration.Infrastructure) {
 		bIDs := ListVaultUnspentTokens(network, beta, name)
 		CheckIfExistsInVault(network, beta, "auditor", bIDs)
 	}
+
+	// "alice" locks to "alice.id1", the deadline expires, "alice" reclaims, "alice.id1" checks the existence of an expired received locked token
+	_, _, h := HTLCLock(network, alpha, "alice", "", "EUR", 10, "alice.id1", 10*time.Second, nil, 0)
+	time.Sleep(10 * time.Second)
+	HTLCReclaimByHash(network, "alice", "", h)
+	HTLCCheckExistenceReceivedExpiredByHash(network, "alice", "alice.id1", h, false)
 }
 
 func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
@@ -244,8 +250,8 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	IssueCashWithTMS(network, beta, "issuer", "", "USD", 30, "bob.id1")
 	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 30, token.WithTMSID(beta))
 
-	aliceLockTxID, preImage, hash := htlcLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
-	bobLockTxID, _, _ := htlcLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
+	aliceLockTxID, preImage, hash := HTLCLock(network, alpha, "alice", "alice.id1", "EUR", 10, "alice.id2", 30*time.Second, nil, 0)
+	bobLockTxID, _, _ := HTLCLock(network, beta, "bob", "bob.id1", "USD", 10, "bob.id2", 30*time.Second, hash, 0)
 
 	go func() { htlcClaim(network, alpha, "alice", "alice.id2", preImage) }()
 	go func() { htlcClaim(network, beta, "bob", "bob.id2", preImage) }()

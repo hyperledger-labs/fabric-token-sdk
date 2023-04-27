@@ -244,6 +244,8 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
 	alice.RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{})
 	alice.RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{})
+	alice.RegisterViewFactory("htlc.reclaimByHash", &htlc.ReclaimByHashViewFactory{})
+	alice.RegisterViewFactory("htlc.CheckExistenceReceivedExpiredByHash", &htlc.CheckExistenceReceivedExpiredByHashViewFactory{})
 	alice.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
 	alice.RegisterViewFactory("htlc.fastExchange", &htlc.FastExchangeInitiatorViewFactory{})
 	alice.RegisterViewFactory("balance", &views2.BalanceViewFactory{})

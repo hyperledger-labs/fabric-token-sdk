@@ -44,6 +44,24 @@ func (w *OwnerWallet) ListTokensAsSender(opts ...token.ListTokensOption) (*Filte
 	return w.filterIterator(compiledOpts.TokenType, true, SelectNonExpired)
 }
 
+// GetExpiredByHash returns the expired htlc-token whose sender id is in this wallet and whose hash is equal to the one passed as argument.
+// It fails if no tokens are found or if more than one token is found.
+func (w *OwnerWallet) GetExpiredByHash(hash []byte, opts ...token.ListTokensOption) (*token2.UnspentToken, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	tokens, err := w.filter(compiledOpts.TokenType, true, (&ExpiredAndHashSelector{Hash: hash}).Select)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to filter")
+	}
+	if len(tokens.Tokens) != 1 {
+		return nil, errors.Errorf("expected to find only one token for the hash [%v], found [%d]", hash, len(tokens.Tokens))
+	}
+	return tokens.Tokens[0], nil
+}
+
 // ListExpired returns a list of expired htlc-tokens whose sender id is in this wallet
 func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.UnspentTokens, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
@@ -102,6 +120,24 @@ func (w *OwnerWallet) ListTokensIterator(opts ...token.ListTokensOption) (*Filte
 	}
 
 	return w.filterIterator(compiledOpts.TokenType, false, SelectNonExpired)
+}
+
+// GetExpiredReceivedTokenByHash returns the expired htlc-token that matches the passed options, whose recipient belongs to this wallet, is expired, and hash the same hash.
+// It fails if no tokens are found or if more than one token is found.
+func (w *OwnerWallet) GetExpiredReceivedTokenByHash(hash []byte, opts ...token.ListTokensOption) (*token2.UnspentToken, error) {
+	compiledOpts, err := token.CompileListTokensOption(opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
+	}
+
+	tokens, err := w.filter(compiledOpts.TokenType, false, (&ExpiredAndHashSelector{Hash: hash}).Select)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to filter")
+	}
+	if len(tokens.Tokens) != 1 {
+		return nil, errors.Errorf("expected to find only one token for the hash [%v], found [%d]", hash, len(tokens.Tokens))
+	}
+	return tokens.Tokens[0], nil
 }
 
 // ListExpiredReceivedTokens returns a list of tokens that matches the passed options, whose recipient belongs to this wallet, and are expired
