@@ -2,15 +2,13 @@ module github.com/hyperledger-labs/fabric-token-sdk
 
 go 1.20
 
-replace kilic/bls12-377 => github.com/kilic/bls12-377 v0.0.0-20201230075656-5449decbf102
-
 require (
-	github.com/IBM/idemix v0.0.2-0.20230324134044-ad53d9388bb5
-	github.com/IBM/mathlib v0.0.3-0.20230310094401-6036a5c12341
+	github.com/IBM/idemix v0.0.2-0.20230428124728-21406165ec11
+	github.com/IBM/mathlib v0.0.3-0.20230428120512-8afa4e643d4c
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230412105959-110f6327f420
+	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230428125049-7b8bc50a162e
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230401164317-bd8e24856939
@@ -31,8 +29,6 @@ require (
 	google.golang.org/protobuf v1.28.1
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-replace github.com/hyperledger-labs/fabric-smart-client => github.com/sapthasurendran/fabric-smart-client v0.0.0-20230102070055-7a4c0956013c
 
 require (
 	github.com/libp2p/go-libp2p-asn-util v0.2.0 // indirect
@@ -232,7 +228,6 @@ require (
 	gopkg.in/src-d/go-git.v4 v4.13.1 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	kilic/bls12-377 v0.0.0-00010101000000-000000000000 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 	nhooyr.io/websocket v1.8.7 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect

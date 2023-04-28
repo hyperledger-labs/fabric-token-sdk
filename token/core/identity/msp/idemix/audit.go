@@ -21,7 +21,7 @@ const (
 )
 
 type AuditInfo struct {
-	*csp.NymEIDAuditData
+	*csp.AttrNymAuditData
 	Attributes      [][]byte
 	Csp             csp.BCCSP `json:"-"`
 	IssuerPublicKey csp.Key   `json:"-"`
@@ -72,7 +72,7 @@ func (a *AuditInfo) Match(id []byte) error {
 		&csp.EidNymAuditOpts{
 			EidIndex:     EIDIndex,
 			EnrollmentID: string(a.Attributes[EIDIndex]),
-			RNymEid:      a.RNymEid,
+			RNymEid:      a.Rand,
 		},
 	)
 	if err != nil {

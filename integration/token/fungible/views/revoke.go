@@ -22,6 +22,7 @@ type UpdateRevocationList struct {
 type UpdateRevocationListView struct {
 	*UpdateRevocationList
 }
+
 type UpdateRevocationListViewFactory struct{}
 
 func (u UpdateRevocationListView) Call(context view.Context) (interface{}, error) {

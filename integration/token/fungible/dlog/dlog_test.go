@@ -46,8 +46,9 @@ var _ = Describe("EndToEnd", func() {
 			tms := fungible.GetTMS(network, "default")
 			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, "newAuditor", tms), tms, false)
 		})
+
 		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(network, "auditor")
+			fungible.RegisterAuditor(network, "auditor", nil)
 			rId := fungible.GetRevocationHandle(network, "bob")
 			fungible.TestRevokeIdentity(network, "auditor", rId, rId+" Identity is in revoked state")
 		})

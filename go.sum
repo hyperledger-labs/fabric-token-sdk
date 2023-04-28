@@ -71,10 +71,10 @@ github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3
 github.com/DataDog/zstd v1.4.0/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
 github.com/GeertJohan/go.incremental v1.0.0/go.mod h1:6fAjUhbVuX1KcMD3c8TEgVUqmo4seqhv0i0kdATSkM0=
 github.com/GeertJohan/go.rice v1.0.0/go.mod h1:eH6gbSOAUv07dQuZVnBmoDP8mgsM1rtixis4Tib9if0=
-github.com/IBM/idemix v0.0.2-0.20230324134044-ad53d9388bb5 h1:TBdNh+1FEQxXicuCwyaNK3gZJEo0pldd6o9OVfbWodc=
-github.com/IBM/idemix v0.0.2-0.20230324134044-ad53d9388bb5/go.mod h1:zEBDwsBWpg14W0yvyEUmhUOA7i7GqFoRhTQXi7ZvD6M=
-github.com/IBM/mathlib v0.0.3-0.20230310094401-6036a5c12341 h1:7w0DCL/yoBgLldwjQSRXUFR7zuoNb6IBWh1aSfSlrKM=
-github.com/IBM/mathlib v0.0.3-0.20230310094401-6036a5c12341/go.mod h1:OIwUU2IgGvxzepotpksvPQiMGENe/pIGlaKsViA0MV0=
+github.com/IBM/idemix v0.0.2-0.20230428124728-21406165ec11 h1:ot3M1p94hS6uCnWxUwypihBcfYiNjUEeOZEr5uzm5NM=
+github.com/IBM/idemix v0.0.2-0.20230428124728-21406165ec11/go.mod h1:LKHePSqL9g67JezDTU8Y/HCRyzBP3zYbY7q9Hllx6y0=
+github.com/IBM/mathlib v0.0.3-0.20230428120512-8afa4e643d4c h1:eLCIQV1wI6WBt1T+s2vUWFg7tBB0Xu/+YZSZ877+kyM=
+github.com/IBM/mathlib v0.0.3-0.20230428120512-8afa4e643d4c/go.mod h1:p0HGSuwoOwAlts8u8rMJrInDo9BEwWUfzTIzdA+QuDo=
 github.com/Knetic/govaluate v3.0.0+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible h1:1G1pk05UrOh0NlF1oeaaix1x8XzrfjIDK47TY0Zehcw=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
@@ -660,8 +660,8 @@ github.com/huin/goupnp v1.0.0/go.mod h1:n9v9KO1tAxYH82qOn+UTIFQDmx5n1Zxd/ClZDMX7
 github.com/huin/goupnp v1.0.3 h1:N8No57ls+MnjlB+JPiCVSOyy/ot7MJTqlo7rn+NYSqQ=
 github.com/huin/goupnp v1.0.3/go.mod h1:ZxNlw5WqJj6wSsRK5+YfflQGXYfccj5VgQsMNixHM7Y=
 github.com/huin/goutil v0.0.0-20170803182201-1ca381bf3150/go.mod h1:PpLOETDnJ0o3iZrZfqZzyLl6l7F3c6L1oWn7OICBi6o=
-github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230412105959-110f6327f420 h1:TVsh4bsV1aqJmGHzYT3jSED4n6J1zpqGrfgi7YWBE6Q=
-github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230412105959-110f6327f420/go.mod h1:TKvaYR1NSNwJD2qHefBnpdXmiKVaSvxPV3k67pF/mYU=
+github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230428125049-7b8bc50a162e h1:lzZfsfyhvYygqDH1AsIfjXudeSopcRoAmPO9BlpZwpE=
+github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230428125049-7b8bc50a162e/go.mod h1:E5tawQmBfRMtWCeauw1tATpSCUKX2qL3QFub39tS5Us=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5 h1:HFGRTuMZgzo9EtyJeFAhVSlbrj6x3jtY0aDcghdjzRE=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5/go.mod h1:At8hiFATfkDXQ4AFLVbaTiC9GDhVDo8aN/supb1KBb4=
 github.com/hyperledger-labs/orion-server v0.2.5 h1:aFudmB9SAnsT5v8jhazkuszEu0pdJNFqaYZF2GpvAuI=
@@ -765,8 +765,6 @@ github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8
 github.com/karrick/godirwalk v1.10.12/go.mod h1:RoGL9dQei4vP9ilrpETWE8CLOZ1kiN0LhBygSwrAsHA=
 github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd h1:Coekwdh0v2wtGp9Gmz1Ze3eVRAWJMLokvN3QjdzCHLY=
 github.com/kevinburke/ssh_config v0.0.0-20190725054713-01f96b0aa0cd/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
-github.com/kilic/bls12-377 v0.0.0-20201230075656-5449decbf102 h1:fOxpxwN8D/Qwk9vPFL6TaNSHGIEvosrqNH0oFHtRw+E=
-github.com/kilic/bls12-377 v0.0.0-20201230075656-5449decbf102/go.mod h1:Zv/7iMemgow1k6uWDN/HmHW5gIQCXP2U6kYIw9fHao4=
 github.com/kilic/bls12-381 v0.1.0 h1:encrdjqKMEvabVQ7qYOKu1OvhqpK4s47wDYtNiPtlp4=
 github.com/kilic/bls12-381 v0.1.0/go.mod h1:vDTTHJONJ6G+P2R74EhnyotQDTliQDnFEwhdmfzw1ig=
 github.com/kisielk/errcheck v1.1.0/go.mod h1:EZBBE59ingxPouuu3KfxchcWSUPOHkagtvWXihfKN4Q=
@@ -1155,8 +1153,6 @@ github.com/ryanuber/columnize v0.0.0-20160712163229-9b3edd62028f/go.mod h1:sm1tb
 github.com/sagikazarmark/crypt v0.3.0/go.mod h1:uD/D+6UF4SrIR1uGEv7bBNkNqLGqUr43MRiaGWX1Nig=
 github.com/sagikazarmark/crypt v0.4.0/go.mod h1:ALv2SRj7GxYV4HO9elxH9nS6M9gW+xDNxqmyJ6RfDFM=
 github.com/samuel/go-zookeeper v0.0.0-20190923202752-2cc03de413da/go.mod h1:gi+0XIa01GRL2eRQVjQkKGqKF3SF9vZR/HnPullcV2E=
-github.com/sapthasurendran/fabric-smart-client v0.0.0-20230102070055-7a4c0956013c h1:p0trLWZ/i5Kc1Ip+EsjsOP5VvmZW29QeJ/RB+M1h9tk=
-github.com/sapthasurendran/fabric-smart-client v0.0.0-20230102070055-7a4c0956013c/go.mod h1:WtNWdKVbF9R1/2hIBVQUlR9Zl3T0TdkzUcCQTc2Eqk4=
 github.com/satori/go.uuid v1.2.0/go.mod h1:dA0hQrYB0VpLJoorglMZABFdXlWrHn1NEOzdhQKdks0=
 github.com/sclevine/spec v1.4.0/go.mod h1:LvpgJaFyvQzRvc1kaDs0bulYwzC70PbiYjC4QnFHkOM=
 github.com/sean-/seed v0.0.0-20170313163322-e2103e2c3529/go.mod h1:DxrIzT+xaE7yg65j358z/aeFdxmN0P9QXhEzd20vsDc=
@@ -1675,7 +1671,6 @@ golang.org/x/sys v0.0.0-20200922070232-aee5d888a860/go.mod h1:h1NjWce9XRLGQEsW7w
 golang.org/x/sys v0.0.0-20200923182605-d9f96fdee20d/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20200930185726-fdedc70b468f/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201101102859-da207088b7d1/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
-golang.org/x/sys v0.0.0-20201118182958-a01c418693c7/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201119102817-f84b799fce68/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20201201145000-ef89a241ccb3/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
 golang.org/x/sys v0.0.0-20210104204734-6f8348627aad/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
