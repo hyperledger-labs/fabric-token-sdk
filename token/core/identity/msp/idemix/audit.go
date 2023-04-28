@@ -7,12 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"encoding/json"
-
-	csp "github.com/IBM/idemix/bccsp/schemes"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	m "github.com/hyperledger/fabric-protos-go/msp"
-	"github.com/pkg/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 )
 
 const (
@@ -20,12 +15,7 @@ const (
 	RHIndex  = 3
 )
 
-type AuditInfo struct {
-	*csp.AttrNymAuditData
-	Attributes      [][]byte
-	Csp             csp.BCCSP `json:"-"`
-	IssuerPublicKey csp.Key   `json:"-"`
-}
+type AuditInfo = idemix.AuditInfo
 
 func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	auditInfo := &AuditInfo{}
@@ -34,54 +24,4 @@ func DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 		return nil, err
 	}
 	return auditInfo, nil
-}
-
-func (a *AuditInfo) Bytes() ([]byte, error) {
-	return json.Marshal(a)
-}
-
-func (a *AuditInfo) FromBytes(raw []byte) error {
-	return json.Unmarshal(raw, a)
-}
-
-func (a *AuditInfo) EnrollmentID() string {
-	return string(a.Attributes[2])
-}
-
-func (a *AuditInfo) RevocationHandler() string {
-	return string(a.Attributes[3])
-}
-
-func (a *AuditInfo) Match(id []byte) error {
-	si := &m.SerializedIdentity{}
-	err := proto.Unmarshal(id, si)
-	if err != nil {
-		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
-	}
-
-	serialized := new(m.SerializedIdemixIdentity)
-	err = proto.Unmarshal(si.IdBytes, serialized)
-	if err != nil {
-		return errors.Wrap(err, "could not deserialize a SerializedIdemixIdentity")
-	}
-
-	valid, err := a.Csp.Verify(
-		a.IssuerPublicKey,
-		serialized.Proof,
-		nil,
-		&csp.EidNymAuditOpts{
-			EidIndex:     EIDIndex,
-			EnrollmentID: string(a.Attributes[EIDIndex]),
-			RNymEid:      a.Rand,
-		},
-	)
-	if err != nil {
-		return errors.Wrapf(err, "error while verifying the nym eid for [%s]", a.EnrollmentID())
-	}
-
-	if !valid {
-		return errors.New("invalid nym eid")
-	}
-
-	return nil
 }
