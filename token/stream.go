@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -31,9 +32,10 @@ type Output struct {
 	OwnerAuditInfo []byte
 	// EnrollmentID is the enrollment ID of the owner of this output
 	EnrollmentID string
+	// RevocationHandler is the revocation handler of the owner of this output
+	RevocationHandler []byte
 	// Type is the type of token
-	RevocationHandler string
-	Type              string
+	Type string
 	// Quantity is the quantity of tokens
 	Quantity token2.Quantity
 }
@@ -49,7 +51,7 @@ type Input struct {
 	Owner             view.Identity
 	OwnerAuditInfo    []byte
 	EnrollmentID      string
-	RevocationHandler string
+	RevocationHandler []byte
 	Type              string
 	Quantity          token2.Quantity
 }
@@ -145,9 +147,10 @@ func (o *OutputStream) RevocationHandlers() []string {
 		if len(output.RevocationHandler) == 0 {
 			continue
 		}
-		if _, ok := duplicates[output.RevocationHandler]; !ok {
-			rIDs = append(rIDs, output.RevocationHandler)
-			duplicates[output.RevocationHandler] = true
+		rh := hash.Hashable(output.RevocationHandler).String()
+		if _, ok := duplicates[rh]; !ok {
+			rIDs = append(rIDs, rh)
+			duplicates[rh] = true
 		}
 	}
 	return rIDs
@@ -168,18 +171,19 @@ func (o *OutputStream) TokenTypes() []string {
 
 // RevocationHandles returns the Revocation Handles of the owners of the outputs.
 // It might be empty, if not available.
-func (is *OutputStream) RevocationHandles() []string {
+func (is *OutputStream) RevocationHandles() [][]byte {
 	duplicates := map[string]interface{}{}
-	var rIDs []string
+	var rIDs [][]byte
 	for _, output := range is.outputs {
 		if len(output.RevocationHandler) == 0 {
 			continue
 		}
 
-		_, ok := duplicates[output.RevocationHandler]
+		rh := hash.Hashable(output.RevocationHandler).String()
+		_, ok := duplicates[rh]
 		if !ok {
 			rIDs = append(rIDs, output.RevocationHandler)
-			duplicates[output.RevocationHandler] = true
+			duplicates[rh] = true
 		}
 	}
 	return rIDs
@@ -283,18 +287,19 @@ func (is *InputStream) EnrollmentIDs() []string {
 
 // RevocationHandles returns the Revocation Handles of the owners of the inputs.
 // It might be empty, if not available.
-func (is *InputStream) RevocationHandles() []string {
+func (is *InputStream) RevocationHandles() [][]byte {
 	duplicates := map[string]interface{}{}
-	var rIDs []string
+	var rIDs [][]byte
 	for _, input := range is.inputs {
 		if len(input.RevocationHandler) == 0 {
 			continue
 		}
 
-		_, ok := duplicates[input.RevocationHandler]
+		rh := hash.Hashable(input.RevocationHandler).String()
+		_, ok := duplicates[rh]
 		if !ok {
 			rIDs = append(rIDs, input.RevocationHandler)
-			duplicates[input.RevocationHandler] = true
+			duplicates[rh] = true
 		}
 	}
 	return rIDs

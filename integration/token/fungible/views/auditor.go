@@ -10,9 +10,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -156,18 +156,22 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	kvsInstance := kvs.GetService(context)
 
 	for _, rID := range inputs.RevocationHandles() {
-		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{strconv.QuoteToASCII(rID)})
+		rh := hash.Hashable(rID).String()
+		logger.Infof("input RH [%s]", rh)
+		assert.NotNil(rID, "found an input with empty RH")
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 		if kvsInstance.Exists(k) {
-			return nil, errors.Errorf("%s Identity is in revoked state", rID)
-
+			return nil, errors.Errorf("%s Identity is in revoked state", rh)
 		}
 	}
 
 	for _, rID := range outputs.RevocationHandles() {
-		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{strconv.QuoteToASCII(rID)})
+		rh := hash.Hashable(rID).String()
+		logger.Infof("output RH [%s]", rh)
+		assert.NotNil(rID, "found an output with empty RH")
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
 		if kvsInstance.Exists(k) {
-			return nil, errors.Errorf("%s Identity is in revoked state", rID)
-
+			return nil, errors.Errorf("%s Identity is in revoked state", rh)
 		}
 	}
 
@@ -322,8 +326,6 @@ type GetAuditorWalletIdentityView struct {
 	*GetAuditorWalletIdentity
 }
 
-type GetAuditorWalletIdentityViewFactory struct{}
-
 func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, error) {
 	defaultAuditorWallet := token.GetManagementService(context).WalletManager().AuditorWallet(g.ID)
 	assert.NotNil(defaultAuditorWallet, "no default auditor wallet")
@@ -332,38 +334,11 @@ func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, erro
 	return id, err
 }
 
+type GetAuditorWalletIdentityViewFactory struct{}
+
 func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &GetAuditorWalletIdentity{}}
 	err := json.Unmarshal(in, f.GetAuditorWalletIdentity)
-	assert.NoError(err, "failed unmarshalling input")
-	return f, nil
-}
-
-type GetRevocationHandle struct {
-	TMSID  token.TMSID
-	Label  string
-	Wallet string
-}
-
-type GetRevocationHandleView struct {
-	*GetRevocationHandle
-}
-
-type GetRevocationHandleViewFactory struct{}
-
-func (r *GetRevocationHandle) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
-	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	w := tms.WalletManager().OwnerWallet(r.Wallet)
-	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
-	id, err := w.GetRecipientIdentity()
-	assert.NoError(err, "error getting recipient id")
-	return tms.WalletManager().GetRevocationHandle(id)
-}
-
-func (p *GetRevocationHandleViewFactory) NewView(in []byte) (view.View, error) {
-	f := &GetRevocationHandleView{GetRevocationHandle: &GetRevocationHandle{}}
-	err := json.Unmarshal(in, f.GetRevocationHandle)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

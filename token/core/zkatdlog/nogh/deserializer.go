@@ -116,47 +116,42 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 	return des, nil
 }
 
-// enrollmentService returns enrollment IDs behind the owners of token
-type enrollmentService struct {
+// EnrollmentService returns enrollment IDs behind the owners of token
+type EnrollmentService struct {
 }
 
 // NewEnrollmentIDDeserializer returns an enrollmentService
-func NewEnrollmentIDDeserializer() *enrollmentService {
-	return &enrollmentService{}
+func NewEnrollmentIDDeserializer() *EnrollmentService {
+	return &EnrollmentService{}
 }
 
 // GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
-func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
-	if len(auditInfo) == 0 {
-		return "", nil
+func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(auditInfo)
+	if err != nil {
+		return "", err
 	}
-
-	// Try to unmarshal it as ScriptInfo
-	si := &htlc.ScriptInfo{}
-	err := json.Unmarshal(auditInfo, si)
-	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
-		if len(si.Recipient) != 0 {
-			ai := &idemix2.AuditInfo{}
-			if err := ai.FromBytes(si.Recipient); err != nil {
-				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
-			}
-			return ai.EnrollmentID(), nil
-		}
-
+	if ai == nil {
 		return "", nil
-	}
-
-	ai := &idemix2.AuditInfo{}
-	if err := ai.FromBytes(auditInfo); err != nil {
-		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 	}
 	return ai.EnrollmentID(), nil
 }
 
 // GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
-func (e *enrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
+func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) ([]byte, error) {
+	ai, err := e.getAuditInfo(auditInfo)
+	if err != nil {
+		return nil, err
+	}
+	if ai == nil {
+		return nil, nil
+	}
+	return ai.RevocationHandle(), nil
+}
+
+func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix2.AuditInfo, error) {
 	if len(auditInfo) == 0 {
-		return "", nil
+		return nil, nil
 	}
 
 	// Try to unmarshal it as ScriptInfo
@@ -166,17 +161,17 @@ func (e *enrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 		if len(si.Recipient) != 0 {
 			ai := &idemix2.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
-				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
-			return ai.RevocationHandle(), nil
+			return ai, nil
 		}
 
-		return "", nil
+		return nil, nil
 	}
 
 	ai := &idemix2.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
-		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 	}
-	return ai.RevocationHandle(), nil
+	return ai, nil
 }

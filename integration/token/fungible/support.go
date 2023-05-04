@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
@@ -685,18 +687,18 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...
 	}
 }
 
-func RevokeIdentity(network *integration.Infrastructure, auditor string, id string) {
-	_, err := network.Client(auditor).CallView("UpdateRevocationListView", common.JSONMarshall(&views.UpdateRevocationList{
+func RevokeIdentity(network *integration.Infrastructure, auditor string, id []byte) {
+	_, err := network.Client(auditor).CallView("RevokeUser", common.JSONMarshall(&views.RevokeUser{
 		RH: id,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func GetRevocationHandle(network *integration.Infrastructure, id string) string {
-	revocationHandle, err := network.Client(id).CallView("GetRevocationHandleView", common.JSONMarshall(&views.GetRevocationHandle{}))
+func GetRevocationHandle(network *integration.Infrastructure, id string) []byte {
+	rhBoxed, err := network.Client(id).CallView("GetRevocationHandle", common.JSONMarshall(&views.GetRevocationHandle{}))
 	Expect(err).NotTo(HaveOccurred())
-	rH := revocationHandle.([]byte)
-	var rID string
-	common.JSONUnmarshal(rH, &rID)
-	return rID
+	rh := &views.RevocationHandle{}
+	common.JSONUnmarshal(rhBoxed.([]byte), rh)
+	fmt.Printf("GetRevocationHandle [%s][%s]", rh.RH, hash.Hashable(rh.RH).String())
+	return rh.RH
 }

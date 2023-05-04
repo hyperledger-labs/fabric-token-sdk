@@ -10,11 +10,11 @@ import (
 	"crypto/rand"
 	"math/big"
 	"strings"
-
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
@@ -778,8 +778,25 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
 }
 
-func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
-	IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer")
+func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle []byte, errorMessage string) {
+	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 0, auditor)
+
+	rId := GetRevocationHandle(network, "bob")
 	RevokeIdentity(network, auditor, revocationHandle)
-	IssueCash(network, "", "USD", 110, "bob", auditor, true, "issuer", errorMessage)
+	// try to issue to bob
+	IssueCash(network, "", "USD", 22, "bob", auditor, true, "issuer", hash.Hashable(rId).String()+" Identity is in revoked state")
+	// try to transfer to bob
+	TransferCash(network, "alice", "", "USD", 22, "bob", auditor, hash.Hashable(rId).String()+" Identity is in revoked state")
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 0, auditor)
+
+	// Issuer to bob.id1
+	IssueCash(network, "", "USD", 90, "bob.id1", auditor, true, "issuer")
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 90, auditor)
 }

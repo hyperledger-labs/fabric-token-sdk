@@ -472,12 +472,10 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
-
 		rID, err := tms.GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 		}
-
 		q, err := token.ToQuantity(tok.Quantity, precision)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
@@ -529,12 +527,17 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
 		var eID string
+		var rID []byte
 		var ownerAuditInfo []byte
 		if len(tok.Owner.Raw) != 0 {
 			ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]
 			eID, err = tms.GetEnrollmentID(ownerAuditInfo)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
+			}
+			rID, err = tms.GetRevocationHandler(ownerAuditInfo)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 			}
 		}
 
@@ -544,13 +547,14 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		}
 
 		outputs = append(outputs, &Output{
-			ActionIndex:    i,
-			Index:          counter,
-			Owner:          tok.Owner.Raw,
-			OwnerAuditInfo: ownerAuditInfo,
-			EnrollmentID:   eID,
-			Type:           tok.Type,
-			Quantity:       q,
+			ActionIndex:       i,
+			Index:             counter,
+			Owner:             tok.Owner.Raw,
+			OwnerAuditInfo:    ownerAuditInfo,
+			EnrollmentID:      eID,
+			RevocationHandler: rID,
+			Type:              tok.Type,
+			Quantity:          q,
 		})
 		counter++
 	}

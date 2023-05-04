@@ -24,16 +24,16 @@ type VerifierDES interface {
 	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
 }
 
-// deserializer deserializes verifiers associated with issuers, owners, and auditors
-type deserializer struct {
+// Deserializer deserializes verifiers associated with issuers, owners, and auditors
+type Deserializer struct {
 	auditorDeserializer VerifierDES
 	ownerDeserializer   VerifierDES
 	issuerDeserializer  VerifierDES
 }
 
 // NewDeserializer returns a deserializer
-func NewDeserializer() *deserializer {
-	return &deserializer{
+func NewDeserializer() *Deserializer {
+	return &Deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
 		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{})),
@@ -41,22 +41,22 @@ func NewDeserializer() *deserializer {
 }
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
-func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
-func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.issuerDeserializer.DeserializeVerifier(id)
 }
 
 // GetAuditorVerifier deserializes the verifier for the passed auditor identity
-func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.auditorDeserializer.DeserializeVerifier(id)
 }
 
 // GetOwnerMatcher is not needed in fabtoken, as identities are in the clear
-func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	ai := &x509.AuditInfo{}
 	err := ai.FromBytes(raw)
 	if err != nil {
@@ -65,16 +65,16 @@ func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return &x509.AuditInfoDeserializer{CommonName: string(ai.EnrollmentId)}, nil
 }
 
-// enrollmentService returns enrollment IDs behind the owners of token
-type enrollmentService struct {
+// EnrollmentService returns enrollment IDs behind the owners of token
+type EnrollmentService struct {
 }
 
 // NewEnrollmentIDDeserializer returns an enrollmentService
-func NewEnrollmentIDDeserializer() *enrollmentService {
-	return &enrollmentService{}
+func NewEnrollmentIDDeserializer() *EnrollmentService {
+	return &EnrollmentService{}
 }
 
-func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	if len(auditInfo) == 0 {
 		return "", nil
 	}
@@ -102,9 +102,9 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 }
 
 // GetRevocationHandler returns the revocation handler associated with the identity matched to the passed auditInfo
-func (e *enrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
+func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) ([]byte, error) {
 	if len(auditInfo) == 0 {
-		return "", nil
+		return nil, nil
 	}
 
 	// Try to unmarshal it as ScriptInfo
@@ -114,17 +114,17 @@ func (e *enrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 		if len(si.Recipient) != 0 {
 			ai := &x509.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
-				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
 			return ai.RevocationHandle, nil
 		}
 
-		return "", nil
+		return nil, nil
 	}
 
 	ai := &x509.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
-		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
+		return nil, errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
 	}
 	return ai.RevocationHandle, nil
 }

@@ -9,6 +9,8 @@ package dlog
 import (
 	"os"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -50,7 +52,7 @@ var _ = Describe("EndToEnd", func() {
 		It("Test Identity Revocation", func() {
 			fungible.RegisterAuditor(network, "auditor", nil)
 			rId := fungible.GetRevocationHandle(network, "bob")
-			fungible.TestRevokeIdentity(network, "auditor", rId, rId+" Identity is in revoked state")
+			fungible.TestRevokeIdentity(network, "auditor", rId, hash.Hashable(rId).String()+" Identity is in revoked state")
 		})
 
 	})
