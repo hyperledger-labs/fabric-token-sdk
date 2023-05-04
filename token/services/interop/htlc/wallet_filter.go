@@ -66,3 +66,15 @@ func SelectNonExpired(tok *token.UnspentToken, script *Script) (bool, error) {
 	logger.Debugf("[%v]>=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
 	return script.Deadline.After(now), nil
 }
+
+// ExpiredAndHashSelector selects expired htlc-tokens with a specific hash
+type ExpiredAndHashSelector struct {
+	Hash []byte
+}
+
+func (s *ExpiredAndHashSelector) Select(tok *token.UnspentToken, script *Script) (bool, error) {
+	logger.Debugf("token [%s,%s,%s,%s] contains a script? Yes", tok.Id, view.Identity(tok.Owner.Raw).UniqueID(), tok.Type, tok.Quantity)
+	now := time.Now()
+	logger.Debugf("[%v]<=[%v], sender [%s], recipient [%s]?", script.Deadline, now, script.Sender.UniqueID(), script.Recipient.UniqueID())
+	return script.Deadline.Before(now) && bytes.Equal(script.HashInfo.Hash, s.Hash), nil
+}
