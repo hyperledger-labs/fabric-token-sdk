@@ -26,7 +26,11 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 
 	var outs []*Output
 	var metas [][]byte
-	precision := s.PublicParamsManager().PublicParameters().Precision()
+	pp := s.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, nil, errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
 	for i, v := range values {
 		q, err := token2.UInt64ToQuantity(v, precision)
 		if err != nil {
