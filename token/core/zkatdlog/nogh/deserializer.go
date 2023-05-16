@@ -138,13 +138,13 @@ func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 }
 
 // GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
-func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) ([]byte, error) {
+func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
 	ai, err := e.getAuditInfo(auditInfo)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if ai == nil {
-		return nil, nil
+		return "", nil
 	}
 	return ai.RevocationHandle(), nil
 }

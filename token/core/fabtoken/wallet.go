@@ -77,7 +77,7 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.IP.GetEnrollmentID(auditInfo)
 }
 
-func (s *Service) GetRevocationHandler(auditInfo []byte) ([]byte, error) {
+func (s *Service) GetRevocationHandler(auditInfo []byte) (string, error) {
 	return s.IP.GetRevocationHandler(auditInfo)
 }
 

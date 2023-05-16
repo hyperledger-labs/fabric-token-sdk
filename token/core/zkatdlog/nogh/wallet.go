@@ -34,7 +34,7 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.identityProvider.GetEnrollmentID(auditInfo)
 }
 
-func (s *Service) GetRevocationHandler(auditInfo []byte) ([]byte, error) {
+func (s *Service) GetRevocationHandler(auditInfo []byte) (string, error) {
 	return s.identityProvider.GetRevocationHandler(auditInfo)
 }
 

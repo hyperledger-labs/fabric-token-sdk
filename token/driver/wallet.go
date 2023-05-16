@@ -98,7 +98,7 @@ type WalletService interface {
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	// GetRevocationHandler extracts the revocation handler from the passed audit information
-	GetRevocationHandler(auditInfo []byte) ([]byte, error)
+	GetRevocationHandler(auditInfo []byte) (string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(identity view.Identity) Wallet

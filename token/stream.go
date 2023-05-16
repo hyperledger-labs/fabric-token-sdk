@@ -33,7 +33,7 @@ type Output struct {
 	// EnrollmentID is the enrollment ID of the owner of this output
 	EnrollmentID string
 	// RevocationHandler is the revocation handler of the owner of this output
-	RevocationHandler []byte
+	RevocationHandler string
 	// Type is the type of token
 	Type string
 	// Quantity is the quantity of tokens
@@ -51,7 +51,7 @@ type Input struct {
 	Owner             view.Identity
 	OwnerAuditInfo    []byte
 	EnrollmentID      string
-	RevocationHandler []byte
+	RevocationHandler string
 	Type              string
 	Quantity          token2.Quantity
 }
@@ -171,9 +171,9 @@ func (o *OutputStream) TokenTypes() []string {
 
 // RevocationHandles returns the Revocation Handles of the owners of the outputs.
 // It might be empty, if not available.
-func (is *OutputStream) RevocationHandles() [][]byte {
+func (is *OutputStream) RevocationHandles() []string {
 	duplicates := map[string]interface{}{}
-	var rIDs [][]byte
+	var rIDs []string
 	for _, output := range is.outputs {
 		if len(output.RevocationHandler) == 0 {
 			continue
@@ -287,9 +287,9 @@ func (is *InputStream) EnrollmentIDs() []string {
 
 // RevocationHandles returns the Revocation Handles of the owners of the inputs.
 // It might be empty, if not available.
-func (is *InputStream) RevocationHandles() [][]byte {
+func (is *InputStream) RevocationHandles() []string {
 	duplicates := map[string]interface{}{}
-	var rIDs [][]byte
+	var rIDs []string
 	for _, input := range is.inputs {
 		if len(input.RevocationHandler) == 0 {
 			continue

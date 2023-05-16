@@ -58,7 +58,7 @@ type IdentityProvider interface {
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
 	// GetRevocationHandler extracts the revocation handler from the passed audit info
-	GetRevocationHandler(auditInfo []byte) ([]byte, error)
+	GetRevocationHandler(auditInfo []byte) (string, error)
 
 	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id.

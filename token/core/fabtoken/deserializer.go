@@ -102,9 +102,9 @@ func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 }
 
 // GetRevocationHandler returns the revocation handler associated with the identity matched to the passed auditInfo
-func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) ([]byte, error) {
+func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
 	if len(auditInfo) == 0 {
-		return nil, nil
+		return "", nil
 	}
 
 	// Try to unmarshal it as ScriptInfo
@@ -114,17 +114,17 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) ([]byte, erro
 		if len(si.Recipient) != 0 {
 			ai := &x509.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
-				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
 			return ai.RevocationHandle, nil
 		}
 
-		return nil, nil
+		return "", nil
 	}
 
 	ai := &x509.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
-		return nil, errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
+		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
 	}
 	return ai.RevocationHandle, nil
 }

@@ -778,7 +778,7 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
 }
 
-func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle []byte, errorMessage string) {
+func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)

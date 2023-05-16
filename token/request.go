@@ -527,7 +527,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
 		var eID string
-		var rID []byte
+		var rID string
 		var ownerAuditInfo []byte
 		if len(tok.Owner.Raw) != 0 {
 			ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]

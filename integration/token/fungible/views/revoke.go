@@ -9,23 +9,22 @@ package views
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 type RevokeUser struct {
-	RH []byte
+	RH string
 }
 
 type RevokeUserView struct {
 	*RevokeUser
 }
 
-func (u RevokeUserView) Call(context view.Context) (interface{}, error) {
+func (u *RevokeUserView) Call(context view.Context) (interface{}, error) {
 	rh := hash.Hashable(u.RH).String()
 	logger.Infof("revoke [%s][%s]", u.RH, rh)
 	kvsInstance := kvs.GetService(context)
@@ -45,7 +44,7 @@ func (u *RevokeUserViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type RevocationHandle struct {
-	RH []byte
+	RH string
 }
 
 type GetRevocationHandle struct {

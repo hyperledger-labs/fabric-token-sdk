@@ -177,10 +177,10 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
-func (wm *WalletManager) GetRevocationHandle(identity view.Identity) ([]byte, error) {
+func (wm *WalletManager) GetRevocationHandle(identity view.Identity) (string, error) {
 	auditInfo, err := wm.managementService.tms.IdentityProvider().GetAuditInfo(identity)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
+		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
 
 	return wm.managementService.tms.IdentityProvider().GetRevocationHandler(auditInfo)
