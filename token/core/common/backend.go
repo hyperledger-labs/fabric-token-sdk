@@ -7,19 +7,26 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/base64"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.zkatdlog.validator")
 
 type Backend struct {
 	// Ledger to access the ledger state
 	Ledger driver.GetStateFnc
 	// signed Message
 	Message []byte
-	// Cursor is used to iterate over the signatures
+	// Cursor is used to iterate over the Signatures
 	Cursor int
-	// signatures on Message
+	// Signatures on Message
 	Sigs [][]byte
 }
 
@@ -31,10 +38,14 @@ func NewBackend(ledger driver.GetStateFnc, message []byte, sigs [][]byte) *Backe
 // the passed verifier
 func (b *Backend) HasBeenSignedBy(id view.Identity, verifier driver.Verifier) ([]byte, error) {
 	if b.Cursor >= len(b.Sigs) {
-		return nil, errors.New("invalid state, insufficient number of signatures")
+		return nil, errors.New("invalid state, insufficient number of Signatures")
 	}
 	sigma := b.Sigs[b.Cursor]
 	b.Cursor++
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("verify signature [%s] on message [%s]", base64.StdEncoding.EncodeToString(sigma), hash.Hashable(b.Message))
+	}
 
 	return sigma, verifier.Verify(b.Message, sigma)
 }

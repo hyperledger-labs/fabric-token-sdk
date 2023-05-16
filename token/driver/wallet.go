@@ -88,6 +88,9 @@ type CertifierWallet interface {
 
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
+	// OwnerWalletID returns the wallet id associated to the passed identity, if any
+	OwnerWalletID(identity view.Identity) (string, error)
+
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
 	RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error
 
@@ -163,5 +166,8 @@ type Deserializer interface {
 // Serializer models the serialization needs of the Token Service
 type Serializer interface {
 	// MarshalTokenRequestToSign marshals the to token request to a byte array representation on which a signature must be produced
-	MarshalTokenRequestToSign(request *TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
+	MarshalTokenRequestToSign(request TokenRequest, meta *TokenRequestMetadata) ([]byte, error)
+
+	// MarshalToAudit marshals the request to a message suitable for audit signature.
+	MarshalToAudit(anchor string, actions TokenRequest, metadata *TokenRequestMetadata) ([]byte, error)
 }

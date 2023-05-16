@@ -177,7 +177,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Auditor signature verified [%s][%s]", auditor, base64.StdEncoding.EncodeToString(msg.Payload))
+				logger.Debugf("Auditor signature verified [%s][%s][%s]", auditor, base64.StdEncoding.EncodeToString(msg.Payload), hash.Hashable(signed))
 			}
 			validAuditing = true
 			break
@@ -186,7 +186,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if !validAuditing {
 		return nil, errors.Errorf("failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 	}
-	a.tx.TokenRequest.AddAuditorSignature(msg.Payload)
+	a.tx.TokenRequest.AppendAuditorSignature(msg.Payload)
 
 	logger.Debug("Auditor signature verified")
 	return session, nil

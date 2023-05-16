@@ -9,13 +9,12 @@ package token
 import (
 	"encoding/asn1"
 
-	"go.uber.org/zap/zapcore"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -144,10 +143,10 @@ type Transfer struct {
 // Request aggregates token operations that must be performed atomically.
 // Operations are represented in a backend agnostic way but driver specific.
 type Request struct {
-	// Anchor is used to bind the Actions to a given Transaction
+	// Anchor is used to bind the Request to a given Transaction
 	Anchor string
-	// Actions contains the token operations.
-	Actions *driver.TokenRequest
+	// Request contains the token operations.
+	Request driver.TokenRequest
 	// Metadata contains the actions' metadata used to unscramble the content of the actions, if the
 	// underlying token driver requires that
 	Metadata *driver.TokenRequestMetadata
@@ -159,8 +158,8 @@ type Request struct {
 func NewRequest(tokenService *ManagementService, anchor string) *Request {
 	return &Request{
 		Anchor:       anchor,
-		Actions:      &driver.TokenRequest{},
-		Metadata:     &driver.TokenRequestMetadata{},
+		Request:      tokenService.tms.NewRequest(),
+		Metadata:     tokenService.tms.NewRequestMetadata(),
 		TokenService: tokenService,
 	}
 }
@@ -168,11 +167,11 @@ func NewRequest(tokenService *ManagementService, anchor string) *Request {
 // NewRequestFromBytes creates a new request from the given anchor, and whose actions and metadata
 // are unmarshalled from the given bytes
 func NewRequestFromBytes(tokenService *ManagementService, anchor string, actions []byte, trmRaw []byte) (*Request, error) {
-	tr := &driver.TokenRequest{}
+	tr := tokenService.tms.NewRequest()
 	if err := tr.FromBytes(actions); err != nil {
 		return nil, errors.Wrapf(err, "failed unmarshalling token request [%d]", len(actions))
 	}
-	trm := &driver.TokenRequestMetadata{}
+	trm := tokenService.tms.NewRequestMetadata()
 	if len(trmRaw) != 0 {
 		if err := trm.FromBytes(trmRaw); err != nil {
 			return nil, errors.Wrapf(err, "failed unmarshalling token request metadata [%d]", len(trmRaw))
@@ -180,7 +179,7 @@ func NewRequestFromBytes(tokenService *ManagementService, anchor string, actions
 	}
 	return &Request{
 		Anchor:       anchor,
-		Actions:      tr,
+		Request:      tr,
 		Metadata:     trm,
 		TokenService: tokenService,
 	}, nil
@@ -228,7 +227,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		id,
 		typ,
 		[]uint64{q},
-		[][]byte{receiver},
+		[]view.Identity{receiver},
 		&driver.IssueOptions{
 			Attributes: opt.Attributes,
 		},
@@ -242,30 +241,8 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	if err != nil {
 		return nil, err
 	}
-	r.Actions.Issues = append(r.Actions.Issues, raw)
-	outputs, err := issue.GetSerializedOutputs()
-	if err != nil {
-		return nil, err
-	}
-
-	auditInfo, err := r.TokenService.tms.GetAuditInfo(receiver)
-	if err != nil {
-		return nil, err
-	}
-	if r.Metadata == nil {
-		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
-	}
-
-	r.Metadata.Issues = append(r.Metadata.Issues,
-		driver.IssueMetadata{
-			Issuer:              meta.Issuer,
-			Outputs:             outputs,
-			TokenInfo:           meta.TokenInfo,
-			Receivers:           []view.Identity{receiver},
-			ReceiversAuditInfos: [][]byte{auditInfo},
-			ExtraSigners:        meta.ExtraSigners,
-		},
-	)
+	r.Request.AppendIssue(raw)
+	r.Metadata.AppendIssues(meta)
 
 	return &IssueAction{a: issue}, nil
 }
@@ -318,8 +295,8 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	if err != nil {
 		return nil, errors.Wrap(err, "failed serializing transfer action")
 	}
-	r.Actions.Transfers = append(r.Actions.Transfers, raw)
-	r.Metadata.Transfers = append(r.Metadata.Transfers, *transferMetadata)
+	r.Request.AppendTransfer(raw)
+	r.Metadata.AppendTransfer(transferMetadata)
 
 	return &TransferAction{a: transfer}, nil
 }
@@ -368,8 +345,8 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 		return errors.Wrap(err, "failed serializing transfer action")
 	}
 
-	r.Actions.Transfers = append(r.Actions.Transfers, raw)
-	r.Metadata.Transfers = append(r.Metadata.Transfers, *transferMetadata)
+	r.Request.AppendTransfer(raw)
+	r.Metadata.AppendTransfer(transferMetadata)
 
 	return nil
 }
@@ -387,7 +364,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	}
 	var outputs []*Output
 	counter := uint64(0)
-	for i, issue := range r.Actions.Issues {
+	for i, issue := range r.Request.GetIssues() {
 		// deserialize action
 		issueAction, err := tms.DeserializeIssueAction(issue)
 		if err != nil {
@@ -410,7 +387,7 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		counter += uint64(len(outputs))
 	}
 
-	for i, transfer := range r.Actions.Transfers {
+	for i, transfer := range r.Request.GetTransfers() {
 		// deserialize action
 		transferAction, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
@@ -567,7 +544,7 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 		return nil, err
 	}
 	var inputs []*Input
-	for i, transfer := range r.Actions.Transfers {
+	for i, transfer := range r.Request.GetTransfers() {
 		// deserialize action
 		transferAction, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
@@ -643,7 +620,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 	var outputs []*Output
 	counter := uint64(0)
 
-	for i, issue := range r.Actions.Issues {
+	for i, issue := range r.Request.GetIssues() {
 		// deserialize action
 		issueAction, err := tms.DeserializeIssueAction(issue)
 		if err != nil {
@@ -672,7 +649,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		counter += uint64(len(outputs))
 	}
 
-	for i, transfer := range r.Actions.Transfers {
+	for i, transfer := range r.Request.GetTransfers() {
 		// deserialize action
 		transferAction, err := tms.DeserializeTransferAction(transfer)
 		if err != nil {
@@ -723,7 +700,7 @@ func (r *Request) IsValid() error {
 	if r.TokenService == nil {
 		return errors.New("invalid token service in request")
 	}
-	if r.Actions == nil {
+	if r.Request == nil {
 		return errors.New("invalid actions in request")
 	}
 	if r.Metadata == nil {
@@ -739,32 +716,27 @@ func (r *Request) IsValid() error {
 }
 
 // MarshalToAudit marshals the request to a message suitable for audit signature.
-// In particular, metadata is not included.
 func (r *Request) MarshalToAudit() ([]byte, error) {
-	if r.Actions == nil {
+	if r.Request == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for audit", r.Anchor)
 	}
-	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: r.Actions.Issues, Transfers: r.Actions.Transfers})
-	if err != nil {
-		return nil, errors.Wrapf(err, "audit of tx [%s] failed: error marshal token request for signature", r.Anchor)
-	}
-	return append(bytes, []byte(r.Anchor)...), nil
+	return r.TokenService.tms.MarshalToAudit(r.Anchor, r.Request, r.Metadata)
 }
 
 // MarshalToSign marshals the request to a message suitable for signing.
 func (r *Request) MarshalToSign() ([]byte, error) {
-	if r.Actions == nil {
+	if r.Request == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	return r.TokenService.tms.MarshalTokenRequestToSign(r.Actions, r.Metadata)
+	return r.TokenService.tms.MarshalTokenRequestToSign(r.Request, r.Metadata)
 }
 
 // RequestToBytes marshals the request's actions to bytes.
 func (r *Request) RequestToBytes() ([]byte, error) {
-	if r.Actions == nil {
+	if r.Request == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s]", r.Anchor)
 	}
-	return r.Actions.Bytes()
+	return r.Request.Bytes()
 }
 
 // MetadataToBytes marshals the request's metadata to bytes.
@@ -787,8 +759,8 @@ func (r *Request) Bytes() ([]byte, error) {
 		return nil, errors.Wrapf(err, "failed marshalling metadata to bytes")
 	}
 	return asn1.Marshal(requestSer{
-		TxID:     r.Anchor,
-		Actions:  req,
+		Anchor:   r.Anchor,
+		Request:  req,
 		Metadata: meta,
 	})
 }
@@ -800,9 +772,9 @@ func (r *Request) FromBytes(request []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed unmarshalling request")
 	}
-	r.Anchor = req.TxID
-	if len(req.Actions) > 0 {
-		if err := r.Actions.FromBytes(req.Actions); err != nil {
+	r.Anchor = req.Anchor
+	if len(req.Request) > 0 {
+		if err := r.Request.FromBytes(req.Request); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling actions")
 		}
 	}
@@ -814,14 +786,14 @@ func (r *Request) FromBytes(request []byte) error {
 	return nil
 }
 
-// AddAuditorSignature adds an auditor signature to the request.
-func (r *Request) AddAuditorSignature(sigma []byte) {
-	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
+// AppendAuditorSignature adds an auditor signature to the request.
+func (r *Request) AppendAuditorSignature(sigma []byte) {
+	r.Request.AppendAuditorSignature(sigma)
 }
 
 // AppendSignature appends a signature to the request.
 func (r *Request) AppendSignature(sigma []byte) {
-	r.Actions.Signatures = append(r.Actions.Signatures, sigma)
+	r.Request.AppendSignature(sigma)
 }
 
 // SetTokenService sets the token service.
@@ -837,9 +809,9 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 		return errors.Wrap(err, "cannot resolve identity")
 	}
 
-	for i := range r.Actions.Transfers {
+	for i := range r.Request.GetTransfers() {
 		// senders
-		for _, eid := range r.Metadata.Transfers[i].Senders {
+		for _, eid := range r.Metadata.GetTransfer(i).Senders {
 			if w := r.TokenService.WalletManager().Wallet(eid); w != nil {
 				// this is me, skip
 				continue
@@ -851,7 +823,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 		}
 
 		// extra signers
-		for _, eid := range r.Metadata.Transfers[i].ExtraSigners {
+		for _, eid := range r.Metadata.GetTransfer(i).ExtraSigners {
 			if w := r.TokenService.WalletManager().Wallet(eid); w != nil {
 				// this is me, skip
 				continue
@@ -863,8 +835,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 		}
 
 		// receivers
-		receivers := r.Metadata.Transfers[i].Receivers
-		for j, b := range r.Metadata.Transfers[i].ReceiverIsSender {
+		receivers := r.Metadata.GetTransfer(i).Receivers
+		for j, b := range r.Metadata.GetTransfer(i).ReceiverIsSender {
 			if b {
 				if w := r.TokenService.WalletManager().Wallet(receivers[j]); w != nil {
 					// this is me, skip
@@ -884,7 +856,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 // Issues returns the list of issued tokens.
 func (r *Request) Issues() []*Issue {
 	var issues []*Issue
-	for _, issue := range r.Metadata.Issues {
+	for _, issue := range r.Metadata.GetIssues() {
 		issues = append(issues, &Issue{
 			Issuer:       issue.Issuer,
 			Receivers:    issue.Receivers,
@@ -897,7 +869,7 @@ func (r *Request) Issues() []*Issue {
 // Transfers returns the list of transfers.
 func (r *Request) Transfers() []*Transfer {
 	var transfers []*Transfer
-	for _, transfer := range r.Metadata.Transfers {
+	for _, transfer := range r.Metadata.GetTransfers() {
 		transfers = append(transfers, &Transfer{
 			Senders:      transfer.Senders,
 			Receivers:    transfer.Receivers,
@@ -915,7 +887,7 @@ func (r *Request) AuditCheck() error {
 		return err
 	}
 	return r.TokenService.tms.AuditorCheck(
-		r.Actions,
+		r.Request,
 		r.Metadata,
 		r.Anchor,
 	)
@@ -970,17 +942,14 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 
 // ApplicationMetadata returns the application metadata corresponding to the given key
 func (r *Request) ApplicationMetadata(k string) []byte {
-	if len(r.Metadata.Application) == 0 {
-		return nil
-	}
-	return r.Metadata.Application[k]
+	return r.Metadata.ApplicationMetadata(k)
 }
 
 // SetApplicationMetadata sets application metadata in terms of key-value pairs.
 // The Token-SDK does not control the format of the metadata.
 func (r *Request) SetApplicationMetadata(k string, v []byte) {
 	if r.Metadata == nil {
-		r.Metadata = &driver.TokenRequestMetadata{}
+		r.Metadata = r.TokenService.tms.NewRequestMetadata()
 	}
 	if len(r.Metadata.Application) == 0 {
 		r.Metadata.Application = map[string][]byte{}
@@ -1000,7 +969,7 @@ func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 	}
 	return &Request{
 		Anchor:       r.Anchor,
-		Actions:      r.Actions,
+		Request:      r.Request,
 		Metadata:     filteredMeta.TokenRequestMetadata,
 		TokenService: r.TokenService,
 	}, nil
@@ -1158,7 +1127,7 @@ func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType 
 }
 
 type requestSer struct {
-	TxID     string
-	Actions  []byte
+	Anchor   string
+	Request  []byte
 	Metadata []byte
 }

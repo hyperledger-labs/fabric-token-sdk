@@ -18,23 +18,19 @@ import (
 // TokenRequest is a collection of Token Action:
 // Issues, to create new Tokens;
 // Transfers, to manipulate Tokens (e.g., transfer ownership or redeem)
-// The actions in the collection are independent. An action cannot spend tokens created by another action
-// in the same Token Request.
-// In addition, actions comes with a set of Witnesses to verify the right to spend or the right to issue a given token
-type TokenRequest struct {
-	Issues            [][]byte
-	Transfers         [][]byte
-	Signatures        [][]byte
-	AuditorSignatures [][]byte
+type TokenRequest interface {
+	Bytes() ([]byte, error)
+	FromBytes(raw []byte) error
+	GetTransfers() [][]byte
+	GetIssues() [][]byte
+	AppendIssue(raw []byte)
+	AppendTransfer(raw []byte)
+	AppendAuditorSignature(sigma []byte)
+	AppendSignature(sigma []byte)
+	Import(actions TokenRequest)
 }
 
-func (r *TokenRequest) Bytes() ([]byte, error) {
-	return asn1.Marshal(*r)
-}
-
-func (r *TokenRequest) FromBytes(raw []byte) error {
-	_, err := asn1.Unmarshal(raw, r)
-	return err
+type TookMetadata interface {
 }
 
 // IssueMetadata contains the metadata of an issue action.
@@ -194,6 +190,37 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 		return errors.Wrap(err, "failed to unmarshal token request metadata: cannot unmarshal application metadata")
 	}
 	return nil
+}
+
+func (m *TokenRequestMetadata) ApplicationMetadata(k string) []byte {
+	if len(m.Application) == 0 {
+		return nil
+	}
+	return m.Application[k]
+}
+
+func (m *TokenRequestMetadata) GetTransfer(index int) TransferMetadata {
+	return m.Transfers[index]
+}
+
+func (m *TokenRequestMetadata) GetIssue(index int) IssueMetadata {
+	return m.Issues[index]
+}
+
+func (m *TokenRequestMetadata) GetIssues() []IssueMetadata {
+	return m.Issues
+}
+
+func (m *TokenRequestMetadata) GetTransfers() []TransferMetadata {
+	return m.Transfers
+}
+
+func (m *TokenRequestMetadata) AppendTransfer(metadata *TransferMetadata) {
+	m.Transfers = append(m.Transfers, *metadata)
+}
+
+func (m *TokenRequestMetadata) AppendIssues(meta *IssueMetadata) {
+	m.Issues = append(m.Issues, *meta)
 }
 
 type TokenIDSer struct {

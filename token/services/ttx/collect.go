@@ -128,7 +128,7 @@ func (c *collectActionsView) collectRemote(context view.Context, actionTransfer 
 
 	txPayload := &Payload{
 		Transient:    map[string][]byte{},
-		TokenRequest: token.NewRequest(nil, ""),
+		TokenRequest: token.NewRequest(c.tx.TokenService(), ""),
 	}
 	err = unmarshal(context, txPayload, msg.Payload)
 	if err != nil {

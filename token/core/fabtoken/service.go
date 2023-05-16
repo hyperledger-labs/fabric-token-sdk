@@ -10,10 +10,12 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type QueryEngine interface {
@@ -100,10 +102,26 @@ func (s *Service) ConfigManager() config.Manager {
 	return s.CM
 }
 
-func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
+func (s *Service) NewRequest() driver.TokenRequest {
+	return &common.TokenRequest{}
+}
+
+func (s *Service) NewRequestMetadata() *driver.TokenRequestMetadata {
+	return &driver.TokenRequestMetadata{}
+}
+
+func (s *Service) MarshalTokenRequestToSign(request driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	req, ok := request.(*common.TokenRequest)
+	if !ok {
+		return nil, errors.Errorf("expect *common.TokenRequest, got [%T]", request)
 	}
-	return newReq.Bytes()
+	return req.MarshalTokenRequestToSign(meta)
+}
+
+func (s *Service) MarshalToAudit(anchor string, request driver.TokenRequest, metadata *driver.TokenRequestMetadata) ([]byte, error) {
+	req, ok := request.(*common.TokenRequest)
+	if !ok {
+		return nil, errors.Errorf("expect *common.TokenRequest, got [%T]", request)
+	}
+	return req.MarshalToAudit(anchor, metadata)
 }

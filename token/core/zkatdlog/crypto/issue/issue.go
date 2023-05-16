@@ -9,6 +9,8 @@ package issue
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
@@ -104,7 +106,7 @@ func (i *IssueAction) GetCommitments() ([]*math.G1, error) {
 }
 
 // NewIssue instantiates an IssueAction given the passed arguments
-func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
+func NewIssue(issuer []byte, coms []*math.G1, owners []view.Identity, proof []byte, anonymous bool) (*IssueAction, error) {
 	if len(owners) != len(coms) {
 		return nil, errors.New("number of owners does not match number of tokens")
 	}

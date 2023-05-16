@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -175,6 +176,14 @@ func (s *Service) PublicParams() *crypto.PublicParams {
 	return s.PPM.PublicParams()
 }
 
+func (s *Service) NewRequest() driver.TokenRequest {
+	return &common.TokenRequest{}
+}
+
+func (s *Service) NewRequestMetadata() *driver.TokenRequestMetadata {
+	return &driver.TokenRequestMetadata{}
+}
+
 func (s *Service) LoadPublicParams() error {
 	return s.PPM.Load()
 }
@@ -191,10 +200,18 @@ func (s *Service) Deserializer() (driver.Deserializer, error) {
 	return d, nil
 }
 
-func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
+func (s *Service) MarshalTokenRequestToSign(request driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
+	req, ok := request.(*common.TokenRequest)
+	if !ok {
+		return nil, errors.Errorf("expect *common.TokenRequest, got [%T]", request)
 	}
-	return newReq.Bytes()
+	return req.MarshalTokenRequestToSign(meta)
+}
+
+func (s *Service) MarshalToAudit(anchor string, request driver.TokenRequest, metadata *driver.TokenRequestMetadata) ([]byte, error) {
+	req, ok := request.(*common.TokenRequest)
+	if !ok {
+		return nil, errors.Errorf("expect *common.TokenRequest, got [%T]", request)
+	}
+	return req.MarshalToAudit(anchor, metadata)
 }

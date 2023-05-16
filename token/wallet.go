@@ -181,6 +181,23 @@ func (wm *WalletManager) SpentIDs(ids []*token.ID) ([]string, error) {
 	return wm.managementService.tms.SpentIDs(ids...)
 }
 
+// IsMine returns true if the passed token is owned by an owner wallet
+func (wm *WalletManager) IsMine(token *token.Token) (string, bool) {
+	id, err := wm.managementService.tms.OwnerWalletID(token.Owner.Raw)
+	if err != nil {
+		return "", false
+	}
+	return id, true
+}
+
+func (wm *WalletManager) OwnerWalletID(identity view.Identity) (string, bool) {
+	ids, err := wm.managementService.tms.OwnerWalletID(identity)
+	if err != nil {
+		return "", false
+	}
+	return ids, true
+}
+
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
 // These identities own tokens.
 type Wallet struct {

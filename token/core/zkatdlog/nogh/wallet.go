@@ -18,6 +18,11 @@ import (
 	"github.com/pkg/errors"
 )
 
+// OwnerWalletID returns the wallet id associated to the passed identity, if any
+func (s *Service) OwnerWalletID(identity view.Identity) (string, error) {
+	return s.OwnerWalletsRegistry.GetWallet(identity)
+}
+
 func (s *Service) RegisterOwnerWallet(id string, path string) error {
 	return s.identityProvider.RegisterOwnerWallet(id, path)
 }

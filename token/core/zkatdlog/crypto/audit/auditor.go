@@ -13,6 +13,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
@@ -116,12 +117,12 @@ func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer Signin
 }
 
 // Endorse is called to sign a valid token request
-func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byte, error) {
+func (a *Auditor) Endorse(tokenRequest *common2.TokenRequest, txID string) ([]byte, error) {
 	if tokenRequest == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: : token request is nil", txID)
 	}
 	// Marshal tokenRequest
-	bytes, err := asn1.Marshal(driver.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
+	bytes, err := asn1.Marshal(common2.TokenRequest{Issues: tokenRequest.Issues, Transfers: tokenRequest.Transfers})
 	if err != nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
 	}
@@ -135,7 +136,7 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 }
 
 // Check validates TokenRequest against TokenRequestMetadata
-func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
+func (a *Auditor) Check(tokenRequest *common2.TokenRequest, tokenRequestMetadata *driver.TokenRequestMetadata, inputTokens [][]*token.Token, txID string) error {
 	// De-obfuscate issue requests
 	outputsFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {

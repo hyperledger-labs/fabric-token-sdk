@@ -7,6 +7,7 @@ package nonanonym_test
 
 import (
 	math "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	nan "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
@@ -26,13 +27,13 @@ var _ = Describe("Issuer", func() {
 
 		values []uint64
 		bf     []*math.Zr
-		owners [][]byte
+		owners []view.Identity
 	)
 	BeforeEach(func() {
 		var err error
 		pp, err = crypto.Setup(100, 2, nil, math.BN254)
 		Expect(err).NotTo(HaveOccurred())
-		owners = make([][]byte, 3)
+		owners = make([]view.Identity, 3)
 		owners[0] = []byte("alice")
 		owners[1] = []byte("bob")
 		owners[2] = []byte("charlie")

@@ -100,8 +100,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) {
 	tx := &Transaction{
 		Payload: &Payload{
-			Transient:    map[string][]byte{},
-			TokenRequest: token.NewRequest(nil, ""),
+			Transient: map[string][]byte{},
 		},
 		SP: sp,
 	}
@@ -114,13 +113,6 @@ func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) 
 		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
 	}
 
-	tx.TokenRequest.SetTokenService(
-		token.GetManagementService(sp,
-			token.WithNetwork(tx.Network()),
-			token.WithChannel(tx.Channel()),
-			token.WithNamespace(tx.Namespace()),
-		),
-	)
 	if tx.ID() != tx.TokenRequest.ID() {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
@@ -315,20 +307,20 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	t.Payload.Transient = payload.Transient
 	return nil
 
-	// for _, bytes := range payload.Request.Issues {
-	//	t.Payload.Request.Issues = append(t.Payload.Request.Issues, bytes)
+	// for _, bytes := range payload.Request.GetIssues {
+	//	t.Payload.Request.GetIssues = append(t.Payload.Request.GetIssues, bytes)
 	// }
-	// for _, bytes := range payload.Request.Transfers {
-	//	t.Payload.Request.Transfers = append(t.Payload.Request.Transfers, bytes)
+	// for _, bytes := range payload.Request.GetTransfers {
+	//	t.Payload.Request.GetTransfers = append(t.Payload.Request.GetTransfers, bytes)
 	// }
 	// for _, info := range payload.TokenInfos {
 	//	t.Payload.TokenInfos = append(t.Payload.TokenInfos, info)
 	// }
-	// for _, issueMetadata := range payload.ValidationRecords.Issues {
-	//	t.Payload.ValidationRecords.Issues = append(t.Payload.ValidationRecords.Issues, issueMetadata)
+	// for _, issueMetadata := range payload.ValidationRecords.GetIssues {
+	//	t.Payload.ValidationRecords.GetIssues = append(t.Payload.ValidationRecords.GetIssues, issueMetadata)
 	// }
-	// for _, transferMetadata := range payload.ValidationRecords.Transfers {
-	//	t.Payload.ValidationRecords.Transfers = append(t.Payload.ValidationRecords.Transfers, transferMetadata)
+	// for _, transferMetadata := range payload.ValidationRecords.GetTransfers {
+	//	t.Payload.ValidationRecords.GetTransfers = append(t.Payload.ValidationRecords.GetTransfers, transferMetadata)
 	// }
 	//
 	// for key, value := range payload.Transient {
@@ -432,6 +424,22 @@ func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
 		p.Transient = meta
 	}
 	if len(ser.TokenRequest) != 0 {
+		if p.TokenRequest == nil {
+			tms := token.GetManagementService(sp,
+				token.WithNetwork(p.Network),
+				token.WithChannel(p.Channel),
+				token.WithNamespace(p.Namespace),
+			)
+			if tms == nil {
+				return errors.Errorf("failed to find TMS for [%s:%s:%s]", p.Network, p.Channel, p.Namespace)
+			}
+			var err error
+			p.TokenRequest, err = tms.NewRequest("")
+			if err != nil {
+				return errors.WithMessagef(err, "failed to create a new token request for [%s:%s:%s]", p.Network, p.Channel, p.Namespace)
+			}
+			p.TokenRequest.TokenService = tms
+		}
 		if err := p.TokenRequest.FromBytes(ser.TokenRequest); err != nil {
 			return errors.Wrap(err, "failed unmarshalling token request")
 		}
