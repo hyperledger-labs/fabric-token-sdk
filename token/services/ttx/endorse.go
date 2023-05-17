@@ -21,23 +21,62 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type signatureRequest struct {
+type SignatureRequest struct {
 	TX      []byte
 	Request []byte
 	TxID    []byte
 	Signer  view.Identity
 }
 
-func (sr *signatureRequest) MessageToSign() []byte {
+func (sr *SignatureRequest) MessageToSign() []byte {
 	return append(sr.Request, sr.TxID...)
 }
 
-type collectEndorsementsView struct {
+// EndorsementsOpts is used to configure the CollectEndorsementsView
+type EndorsementsOpts struct {
+	// SkipAuditing set it to true to skip the auditing phase
+	SkipAuditing bool
+	// SkipApproval set it to true to skip the approval phase
+	SkipApproval bool
+}
+
+// EndorsementsOpt is a function that configures a EndorsementsOpts
+type EndorsementsOpt func(*EndorsementsOpts) error
+
+// CompileCollectEndorsementsOpts compiles the given list of ServiceOption
+func CompileCollectEndorsementsOpts(opts ...EndorsementsOpt) (*EndorsementsOpts, error) {
+	txOptions := &EndorsementsOpts{}
+	for _, opt := range opts {
+		if err := opt(txOptions); err != nil {
+			return nil, err
+		}
+	}
+	return txOptions, nil
+}
+
+// WithSkipAuditing to skip auditing
+func WithSkipAuditing() EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.SkipAuditing = true
+		return nil
+	}
+}
+
+// WithSkipApproval to skip approval
+func WithSkipApproval() EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.SkipApproval = true
+		return nil
+	}
+}
+
+type CollectEndorsementsView struct {
 	tx       *Transaction
+	Opts     *EndorsementsOpts
 	sessions map[string]view.Session
 }
 
-// NewCollectEndorsementsView returns an instance of the collectEndorsementsView struct.
+// NewCollectEndorsementsView returns an instance of the CollectEndorsementsView struct.
 // This view does the following:
 // 1. It collects all the required signatures
 // to authorize any issue and transfer operation contained in the token transaction.
@@ -45,8 +84,12 @@ type collectEndorsementsView struct {
 // 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
-func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
-	return &collectEndorsementsView{tx: tx, sessions: map[string]view.Session{}}
+func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *CollectEndorsementsView {
+	options, err := CompileCollectEndorsementsOpts(opts...)
+	if err != nil {
+		panic(err)
+	}
+	return &CollectEndorsementsView{tx: tx, Opts: options, sessions: map[string]view.Session{}}
 }
 
 // Call executes the view.
@@ -57,7 +100,7 @@ func NewCollectEndorsementsView(tx *Transaction) *collectEndorsementsView {
 // 3. Before completing, all recipients receive the approved transaction.
 // Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 // the token transaction valid.
-func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error) {
+func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
 	metrics := GetMetrics(context)
 
 	// Store transient
@@ -82,15 +125,21 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	distributionList = append(distributionList, parties...)
 
 	// 2. Audit
-	auditors, err := c.requestAudit(context)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed requesting auditing")
+	var auditors []view.Identity
+	if !c.Opts.SkipAuditing {
+		auditors, err = c.requestAudit(context)
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed requesting auditing")
+		}
 	}
 
 	// 3. Endorse and return the transaction envelope
-	env, err := c.requestApproval(context)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed requesting approval")
+	var env *network.Envelope
+	if !c.Opts.SkipApproval {
+		env, err = c.requestApproval(context)
+		if err != nil {
+			return nil, errors.WithMessage(err, "failed requesting approval")
+		}
 	}
 
 	// Distribute Env to all parties
@@ -104,7 +153,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("collectEndorsementsView done.")
+		logger.Debugf("CollectEndorsementsView done.")
 	}
 
 	labels := []string{
@@ -116,7 +165,7 @@ func (c *collectEndorsementsView) Call(context view.Context) (interface{}, error
 	return nil, nil
 }
 
-func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context) ([]view.Identity, error) {
+func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context) ([]view.Identity, error) {
 	issues := c.tx.TokenRequest.Issues()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request issue", len(issues))
@@ -174,7 +223,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 			// Wait to receive a content back
 			ch := session.Receive()
 
-			signatureRequest := &signatureRequest{
+			signatureRequest := &SignatureRequest{
 				TX:      txRaw,
 				Request: requestRaw,
 				TxID:    []byte(c.tx.ID()),
@@ -224,7 +273,7 @@ func (c *collectEndorsementsView) requestSignaturesOnIssues(context view.Context
 	return distributionList, nil
 }
 
-func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Context) ([]view.Identity, error) {
+func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context) ([]view.Identity, error) {
 	transfers := c.tx.TokenRequest.Transfers()
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request transfer", len(transfers))
@@ -258,7 +307,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 		}
 
 		for _, party := range signers {
-			signatureRequest := &signatureRequest{
+			signatureRequest := &SignatureRequest{
 				TX:      txRaw,
 				Request: requestRaw,
 				TxID:    []byte(c.tx.ID()),
@@ -352,7 +401,7 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	return distributionList, nil
 }
 
-func (c *collectEndorsementsView) requestApproval(context view.Context) (*network.Envelope, error) {
+func (c *CollectEndorsementsView) requestApproval(context view.Context) (*network.Envelope, error) {
 	requestRaw, err := c.tx.TokenRequest.RequestToBytes()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling request")
@@ -381,7 +430,7 @@ func (c *collectEndorsementsView) requestApproval(context view.Context) (*networ
 	return env, nil
 }
 
-func (c *collectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
+func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
 	if !c.tx.Opts.Auditor.IsNone() {
 		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
@@ -394,7 +443,7 @@ func (c *collectEndorsementsView) requestAudit(context view.Context) ([]view.Ide
 	return nil, nil
 }
 
-func (c *collectEndorsementsView) cleanupAudit(context view.Context) error {
+func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	if !c.tx.Opts.Auditor.IsNone() {
 		session, err := c.getSession(context, c.tx.Opts.Auditor)
 		if err != nil {
@@ -405,13 +454,15 @@ func (c *collectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
-func (c *collectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
-	if env == nil {
-		return errors.New("transaction envelope is empty")
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("distribute env [%s]", env.String())
+func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+	if !c.Opts.SkipApproval {
+		// perform sanity checks
+		if env == nil {
+			return errors.New("transaction envelope is empty")
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("distribute env [%s]", env.String())
+		}
 	}
 
 	// double check that the transaction is valid
@@ -538,8 +589,10 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			}
 
 			// Store envelope
-			if err := StoreEnvelope(context, c.tx); err != nil {
-				return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
+			if !c.Opts.SkipApproval {
+				if err := StoreEnvelope(context, c.tx); err != nil {
+					return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
+				}
 			}
 
 			// Store transaction in the token transaction database
@@ -619,7 +672,7 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collectEndorsementsView: collected signature from %s", entry.ID)
+			logger.Debugf("CollectEndorsementsView: collected signature from %s", entry.ID)
 		}
 
 		if err := owner.appendTransactionEndorseAck(c.tx, entry.LongTerm, sigma); err != nil {
@@ -630,11 +683,11 @@ func (c *collectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	return nil
 }
 
-func (c *collectEndorsementsView) requestBytes() ([]byte, error) {
+func (c *CollectEndorsementsView) requestBytes() ([]byte, error) {
 	return c.tx.TokenRequest.MarshalToSign()
 }
 
-func (c *collectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
+func (c *CollectEndorsementsView) getSession(context view.Context, p view.Identity) (view.Session, error) {
 	s, ok := c.sessions[p.UniqueID()]
 	if ok {
 		logger.Debugf("getSession: found session for [%s]", p.UniqueID())
@@ -643,15 +696,15 @@ func (c *collectEndorsementsView) getSession(context view.Context, p view.Identi
 	return context.GetSession(context.Initiator(), p)
 }
 
-type receiveTransactionView struct {
+type ReceiveTransactionView struct {
 	network string
 }
 
-func NewReceiveTransactionView(network string) *receiveTransactionView {
-	return &receiveTransactionView{network: network}
+func NewReceiveTransactionView(network string) *ReceiveTransactionView {
+	return &ReceiveTransactionView{network: network}
 }
 
-func (f *receiveTransactionView) Call(context view.Context) (interface{}, error) {
+func (f *ReceiveTransactionView) Call(context view.Context) (interface{}, error) {
 	// Wait to receive a transaction back
 	ch := context.Session().Receive()
 
@@ -663,7 +716,7 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
-		logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
+		logger.Debugf("ReceiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
 		tx, err := NewTransactionFromBytes(context, msg.Payload)
 		if err != nil {
 			// try to unmarshal pay
@@ -678,8 +731,8 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 	}
 }
 
-func (f *receiveTransactionView) unmarshalAsSignatureRequest(context view.Context, raw []byte) (*Transaction, error) {
-	signatureRequest := &signatureRequest{}
+func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Context, raw []byte) (*Transaction, error) {
+	signatureRequest := &SignatureRequest{}
 	err := Unmarshal(raw, signatureRequest)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed unmarshalling signature request")
@@ -701,7 +754,7 @@ func (f *receiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	return tx, nil
 }
 
-type endorseView struct {
+type EndorseView struct {
 	tx *Transaction
 }
 
@@ -712,8 +765,8 @@ type endorseView struct {
 // 3. After, it waits to receive the Transaction. The Transaction is validated and stored locally
 // to be processed at time of committing.
 // 4. It sends back an ack.
-func NewEndorseView(tx *Transaction) *endorseView {
-	return &endorseView{tx: tx}
+func NewEndorseView(tx *Transaction) *EndorseView {
+	return &EndorseView{tx: tx}
 }
 
 // Call executes the view.
@@ -723,7 +776,7 @@ func NewEndorseView(tx *Transaction) *endorseView {
 // 3. After, it waits to receive the Transaction. The Transaction is validated and stored locally
 // to be processed at time of committing.
 // 4. It sends back an ack.
-func (s *endorseView) Call(context view.Context) (interface{}, error) {
+func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	// Process signature requests
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
@@ -753,7 +806,7 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 		}
 
 		// TODO: check what is signed...
-		signatureRequest := &signatureRequest{}
+		signatureRequest := &SignatureRequest{}
 		err := Unmarshal(msg.Payload, signatureRequest)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed unmarshalling signature request")
@@ -828,6 +881,31 @@ func (s *endorseView) Call(context view.Context) (interface{}, error) {
 	return s.tx, nil
 }
 
+func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, []byte, error) {
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Receive transaction with envelope...")
+	}
+	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
+	tx, err := ReceiveTransaction(context)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed receiving transaction")
+	}
+
+	// TODO: compare with the existing transaction
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
+	}
+
+	// Set the envelope
+	s.tx = tx
+
+	raw, err := tx.Bytes()
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed getting bytes for transaction %s", tx.ID())
+	}
+	return tx, raw, nil
+}
+
 func requestsToBeSigned(request *token.Request) ([]any, error) {
 	var res []any
 	transfers := request.Transfers()
@@ -853,29 +931,4 @@ func requestsToBeSigned(request *token.Request) ([]any, error) {
 		}
 	}
 	return res, nil
-}
-
-func (s *endorseView) receiveTransaction(context view.Context) (*Transaction, []byte, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Receive transaction with envelope...")
-	}
-	// TODO: this might also happen multiple times because of the pseudonym. Avoid this by identity resolution at the sender
-	tx, err := ReceiveTransaction(context)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed receiving transaction")
-	}
-
-	// TODO: compare with the existing transaction
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Processes Fabric Envelope with ID [%s]", tx.ID())
-	}
-
-	// Set the envelope
-	s.tx = tx
-
-	raw, err := tx.Bytes()
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting bytes for transaction %s", tx.ID())
-	}
-	return tx, raw, nil
 }

@@ -53,7 +53,11 @@ func NewFromParams(pp *crypto.PublicParams) (*PublicParamsManager, error) {
 }
 
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
-	return v.PublicParams()
+	pp := v.PublicParams()
+	if pp == nil {
+		return nil
+	}
+	return pp
 }
 
 // SerializePublicParameters returns the public params in a serialized form
@@ -106,6 +110,7 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 		return errors.WithMessage(err, "invalid public parameters")
 	}
 
+	logger.Debugf("set public parameters [%s]", hash.Hashable(raw).String())
 	v.PP = pp
 	return nil
 }
@@ -127,6 +132,7 @@ func (v *PublicParamsManager) Fetch() ([]byte, error) {
 func (v *PublicParamsManager) PublicParams() *crypto.PublicParams {
 	v.Mutex.RLock()
 	defer v.Mutex.RUnlock()
+	logger.Debugf("get public params, available [%v]", v.PP != nil)
 	return v.PP
 }
 

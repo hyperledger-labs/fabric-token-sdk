@@ -23,6 +23,21 @@ func MarshalValidationRecord(mr *ValidationRecord) ([]byte, error) {
 	return json.Marshal(mr)
 }
 
+// MarshalTokenRequest marshals a TokenRequest into a byte array
+func MarshalTokenRequest(mr *TokenRequest) ([]byte, error) {
+	return json.Marshal(mr)
+}
+
+// UnmarshalTokenRequest unmarshals a TokenRequest from a byte array
+func UnmarshalTokenRequest(data []byte) (*TokenRequest, error) {
+	var tokenRequest TokenRequest
+	err := json.Unmarshal(data, &tokenRequest)
+	if err != nil {
+		return nil, err
+	}
+	return &tokenRequest, nil
+}
+
 // UnmarshalTransactionRecord unmarshals a TransactionRecord from a byte array
 func UnmarshalTransactionRecord(data []byte) (*TransactionRecord, error) {
 	var txnRecord TransactionRecord

@@ -38,13 +38,18 @@ type Wallets struct {
 	Auditors         []*Identity `yaml:"auditors,omitempty"`
 }
 
+type PublicParameters struct {
+	Path string `yaml:"path"`
+}
+
 type TMS struct {
-	Network       string         `yaml:"network,omitempty"`
-	Channel       string         `yaml:"channel,omitempty"`
-	Namespace     string         `yaml:"namespace,omitempty"`
-	Driver        string         `yaml:"driver,omitempty"`
-	Certification *Certification `yaml:"certification,omitempty"`
-	Wallets       *Wallets       `yaml:"wallets,omitempty"`
+	Network          string            `yaml:"network,omitempty"`
+	Channel          string            `yaml:"channel,omitempty"`
+	Namespace        string            `yaml:"namespace,omitempty"`
+	Driver           string            `yaml:"driver,omitempty"`
+	PublicParameters *PublicParameters `yaml:"publicParameters,omitempty"`
+	Certification    *Certification    `yaml:"certification,omitempty"`
+	Wallets          *Wallets          `yaml:"wallets,omitempty"`
 }
 
 func (t *TMS) GetOwnerWallet(id string) *Identity {
