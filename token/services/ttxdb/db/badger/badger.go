@@ -56,6 +56,11 @@ type ValidationRecord struct {
 	Record *driver.ValidationRecord
 }
 
+type TokenRequest struct {
+	TxID string
+	TR   []byte
+}
+
 type Persistence struct {
 	db          *badger.DB
 	numGoStream int
@@ -226,6 +231,60 @@ func (db *Persistence) AddValidationRecord(txID string, tr []byte, meta map[stri
 	}
 
 	return nil
+}
+
+func (db *Persistence) AddTokenRequest(txID string, tr []byte) error {
+	key, err := db.tokenRequestKey(txID)
+	if err != nil {
+		return errors.Wrapf(err, "could not get key for token request %s", txID)
+	}
+	logger.Debugf("Adding token request [%s] with key", txID, key)
+
+	value := &TokenRequest{
+		TxID: txID,
+		TR:   tr,
+	}
+
+	bytes, err := MarshalTokenRequest(value)
+	if err != nil {
+		return errors.Wrapf(err, "could not marshal record for key %s", key)
+	}
+
+	err = db.txn.Set([]byte(key), bytes)
+	if err != nil {
+		return errors.Wrapf(err, "could not set value for key %s", key)
+	}
+
+	return nil
+}
+
+func (db *Persistence) GetTokenRequest(txID string) ([]byte, error) {
+	key, err := db.tokenRequestKey(txID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get key for token request %s", txID)
+	}
+
+	txn := db.db.NewTransaction(false)
+	defer txn.Discard()
+	item, err := txn.Get([]byte(key))
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "could not set value for key %s", key)
+	}
+	value := &TokenRequest{}
+	if err := item.Value(func(val []byte) error {
+		var err error
+		value, err = UnmarshalTokenRequest(val)
+		if err != nil {
+			return errors.Wrapf(err, "could not set value for key %s", key)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.Wrapf(err, "failed to load token request for %s", txID)
+	}
+	return value.TR, nil
 }
 
 func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
@@ -469,6 +528,10 @@ func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) 
 		return 0, "", errors.Wrapf(err, "failed getting next index")
 	}
 	return next, dbKey("mt", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
+}
+
+func (db *Persistence) tokenRequestKey(txID string) (string, error) {
+	return dbKey("tr", txID), nil
 }
 
 func dbKey(namespace, key string) string {

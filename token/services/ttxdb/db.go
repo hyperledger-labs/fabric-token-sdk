@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -268,6 +268,10 @@ func (db *DB) Append(req *token.Request) error {
 		db.rollback(err)
 		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
 	}
+	if err := db.appendTokenRequest(req); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
+	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
 		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
@@ -300,6 +304,10 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
+	}
+	if err := db.appendTokenRequest(req); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
@@ -375,6 +383,11 @@ func (db *DB) GetStatus(txID string) (TxStatus, error) {
 	}
 	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
 	return status, nil
+}
+
+// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+func (db *DB) GetTokenRequest(txID string) ([]byte, error) {
+	return db.db.GetTokenRequest(txID)
 }
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
@@ -561,6 +574,20 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 	return nil
 }
 
+func (db *DB) appendTokenRequest(request *token.Request) error {
+	raw, err := request.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
+	}
+	if err := db.db.AddTokenRequest(request.Anchor, raw); err != nil {
+		if err1 := db.db.Discard(); err1 != nil {
+			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
+		}
+		return err
+	}
+	return nil
+}
+
 func (db *DB) rollback(err error) {
 	if err1 := db.db.Discard(); err1 != nil {
 		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
@@ -569,7 +596,7 @@ func (db *DB) rollback(err error) {
 
 // Manager handles the databases
 type Manager struct {
-	sp     view2.ServiceProvider
+	sp     view.ServiceProvider
 	driver string
 	mutex  sync.Mutex
 	dbs    map[string]*DB
@@ -580,9 +607,9 @@ type Manager struct {
 // If the driver is not supported, an error is returned.
 // If the driver is not specified, the driver is taken from the configuration.
 // If the configuration is not specified, the default driver is used.
-func NewManager(sp view2.ServiceProvider, driver string) *Manager {
+func NewManager(sp view.ServiceProvider, driver string) *Manager {
 	if len(driver) == 0 {
-		driver = view2.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
+		driver = view.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
 		if len(driver) == 0 {
 			driver = "memory"
 		}
@@ -620,7 +647,7 @@ var (
 
 // Get returns the DB for the given wallet.
 // Nil might be returned if the wallet is not found or an error occurred.
-func Get(sp view2.ServiceProvider, w Wallet) *DB {
+func Get(sp view.ServiceProvider, w Wallet) *DB {
 	if w == nil {
 		logger.Debugf("no wallet provided")
 		return nil
