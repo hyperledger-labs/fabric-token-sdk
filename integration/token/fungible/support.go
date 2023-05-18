@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
@@ -683,4 +685,20 @@ func CheckOwnerWalletIDs(network *integration.Infrastructure, id string, ids ...
 		}
 		Expect(found).To(BeTrue(), "[%s] is not in [%v]", wID, wIDs)
 	}
+}
+
+func RevokeIdentity(network *integration.Infrastructure, auditor string, rh string) {
+	_, err := network.Client(auditor).CallView("RevokeUser", common.JSONMarshall(&views.RevokeUser{
+		RH: rh,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func GetRevocationHandle(network *integration.Infrastructure, id string) string {
+	rhBoxed, err := network.Client(id).CallView("GetRevocationHandle", common.JSONMarshall(&views.GetRevocationHandle{}))
+	Expect(err).NotTo(HaveOccurred())
+	rh := &views.RevocationHandle{}
+	common.JSONUnmarshal(rhBoxed.([]byte), rh)
+	fmt.Printf("GetRevocationHandle [%s][%s]", rh.RH, hash.Hashable(rh.RH).String())
+	return rh.RH
 }

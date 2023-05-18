@@ -35,8 +35,8 @@ type AuditDES interface {
 	DeserializeAuditInfo(raw []byte) (driver.Matcher, error)
 }
 
-// deserializer deserializes verifiers associated with issuers, owners, and auditors
-type deserializer struct {
+// Deserializer deserializes verifiers associated with issuers, owners, and auditors
+type Deserializer struct {
 	auditorDeserializer VerifierDES
 	ownerDeserializer   VerifierDES
 	issuerDeserializer  VerifierDES
@@ -44,16 +44,16 @@ type deserializer struct {
 }
 
 // NewDeserializer returns a deserializer
-func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
+func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if pp == nil {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
 	idemixDes, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixCurveID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params")
+		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixCurveID)
 	}
 
-	return &deserializer{
+	return &Deserializer{
 		auditorDeserializer: &x509.MSPIdentityDeserializer{},
 		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
 		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(idemixDes)),
@@ -62,29 +62,29 @@ func NewDeserializer(pp *crypto.PublicParams) (*deserializer, error) {
 }
 
 // GetOwnerVerifier deserializes the verifier for the passed owner identity
-func (d *deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
 // GetIssuerVerifier deserializes the verifier for the passed issuer identity
-func (d *deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.issuerDeserializer.DeserializeVerifier(id)
 }
 
 // GetAuditorVerifier deserializes the verifier for the passed auditor identity
-func (d *deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
+func (d *Deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.auditorDeserializer.DeserializeVerifier(id)
 }
 
 // GetOwnerMatcher returns a matcher that allows auditors to match an identity to an enrollment ID
-func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.auditDeserializer.DeserializeAuditInfo(raw)
 }
 
 // DeserializerProvider provides the deserializer matching zkatdlog public parameters
 type DeserializerProvider struct {
 	oldHash []byte
-	des     *deserializer
+	des     *Deserializer
 	mux     sync.Mutex
 }
 
@@ -116,19 +116,42 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 	return des, nil
 }
 
-// enrollmentService returns enrollment IDs behind the owners of token
-type enrollmentService struct {
+// EnrollmentService returns enrollment IDs behind the owners of token
+type EnrollmentService struct {
 }
 
 // NewEnrollmentIDDeserializer returns an enrollmentService
-func NewEnrollmentIDDeserializer() *enrollmentService {
-	return &enrollmentService{}
+func NewEnrollmentIDDeserializer() *EnrollmentService {
+	return &EnrollmentService{}
 }
 
 // GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
-func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
-	if len(auditInfo) == 0 {
+func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(auditInfo)
+	if err != nil {
+		return "", err
+	}
+	if ai == nil {
 		return "", nil
+	}
+	return ai.EnrollmentID(), nil
+}
+
+// GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
+func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(auditInfo)
+	if err != nil {
+		return "", err
+	}
+	if ai == nil {
+		return "", nil
+	}
+	return ai.RevocationHandle(), nil
+}
+
+func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix2.AuditInfo, error) {
+	if len(auditInfo) == 0 {
+		return nil, nil
 	}
 
 	// Try to unmarshal it as ScriptInfo
@@ -138,17 +161,17 @@ func (e *enrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 		if len(si.Recipient) != 0 {
 			ai := &idemix2.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
-				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
-			return ai.EnrollmentID(), nil
+			return ai, nil
 		}
 
-		return "", nil
+		return nil, nil
 	}
 
 	ai := &idemix2.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
-		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 	}
-	return ai.EnrollmentID(), nil
+	return ai, nil
 }

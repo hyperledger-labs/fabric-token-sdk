@@ -77,6 +77,10 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.IP.GetEnrollmentID(auditInfo)
 }
 
+func (s *Service) GetRevocationHandler(auditInfo []byte) (string, error) {
+	return s.IP.GetRevocationHandler(auditInfo)
+}
+
 func (s *Service) Wallet(identity view.Identity) driver.Wallet {
 	w, _ := s.OwnerWalletByIdentity(identity)
 	if w != nil {

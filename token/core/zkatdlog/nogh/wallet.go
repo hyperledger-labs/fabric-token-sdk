@@ -34,6 +34,10 @@ func (s *Service) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return s.identityProvider.GetEnrollmentID(auditInfo)
 }
 
+func (s *Service) GetRevocationHandler(auditInfo []byte) (string, error) {
+	return s.identityProvider.GetRevocationHandler(auditInfo)
+}
+
 func (s *Service) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
 

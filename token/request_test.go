@@ -9,9 +9,8 @@ package token
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestRequestSerialization(t *testing.T) {

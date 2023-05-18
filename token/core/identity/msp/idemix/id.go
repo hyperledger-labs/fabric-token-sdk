@@ -152,7 +152,7 @@ func (id *Identity) verifyProof() error {
 	var metadata *bccsp.IdemixSignerMetadata
 	if len(id.Common.NymEID) != 0 {
 		metadata = &bccsp.IdemixSignerMetadata{
-			NymEID: id.Common.NymEID,
+			EidNym: id.Common.NymEID,
 		}
 	}
 

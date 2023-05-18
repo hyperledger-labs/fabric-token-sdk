@@ -12,11 +12,14 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/pkg/errors"
 )
 
 type AuditView struct{}
@@ -149,6 +152,29 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			assert.True(total.Cmp(big.NewInt(3000)) < 0, "holding limit reached [%s][%s][%s]", eID, tokenType, total.Text(10))
 		}
 	}
+
+	kvsInstance := kvs.GetService(context)
+
+	for _, rID := range inputs.RevocationHandles() {
+		rh := hash.Hashable(rID).String()
+		logger.Infof("input RH [%s]", rh)
+		assert.NotNil(rID, "found an input with empty RH")
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
+		if kvsInstance.Exists(k) {
+			return nil, errors.Errorf("%s Identity is in revoked state", rh)
+		}
+	}
+
+	for _, rID := range outputs.RevocationHandles() {
+		rh := hash.Hashable(rID).String()
+		logger.Infof("output RH [%s]", rh)
+		assert.NotNil(rID, "found an output with empty RH")
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
+		if kvsInstance.Exists(k) {
+			return nil, errors.Errorf("%s Identity is in revoked state", rh)
+		}
+	}
+
 	aqe.Done()
 
 	logger.Debugf("AuditView: Approve... [%s]", tx.ID())
@@ -300,8 +326,6 @@ type GetAuditorWalletIdentityView struct {
 	*GetAuditorWalletIdentity
 }
 
-type GetAuditorWalletIdentityViewFactory struct{}
-
 func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, error) {
 	defaultAuditorWallet := token.GetManagementService(context).WalletManager().AuditorWallet(g.ID)
 	assert.NotNil(defaultAuditorWallet, "no default auditor wallet")
@@ -309,6 +333,8 @@ func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, erro
 	assert.NoError(err, "failed getting auditorIdentity ")
 	return id, err
 }
+
+type GetAuditorWalletIdentityViewFactory struct{}
 
 func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &GetAuditorWalletIdentity{}}

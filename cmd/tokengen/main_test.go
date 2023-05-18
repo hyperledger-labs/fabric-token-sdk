@@ -36,7 +36,7 @@ func TestGenFullSuccess(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer gexec.CleanupBuildArtifacts()
 
-	tempOutput, err := ioutil.TempDir("", "tokengen-test")
+	tempOutput, err := os.MkdirTemp("", "tokengen-test")
 	gt.Expect(err).NotTo(HaveOccurred())
 	defer os.RemoveAll(tempOutput)
 
@@ -177,5 +177,5 @@ func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg strin
 
 func testGenRun(gt *WithT, tokengen string, args []string) {
 	_, err := exec.Command(tokengen, args...).CombinedOutput()
-	gt.Expect(err).ToNot(HaveOccurred())
+	gt.Expect(err).ToNot(HaveOccurred(), "failed running tokengen [%s:%v]", tokengen, args)
 }

@@ -406,7 +406,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix2.NewEIDNymProvider(config, registry)
+	p, err := idemix2.NewProviderWithEidRhNymPolicy(config, registry)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 

@@ -193,7 +193,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
 	}
 	// TODO: remove the need for ServiceProvider
-	provider, err := idemix2.NewAnyProviderWithCurve(conf, lm.sp, curveID)
+	provider, err := idemix2.NewProviderWithAnyPolicyAndCurve(conf, lm.sp, curveID)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
 	}
