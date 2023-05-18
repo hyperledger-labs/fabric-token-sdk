@@ -381,6 +381,11 @@ func (r *Request) Outputs() (*OutputStream, error) {
 
 func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	tms := r.TokenService.tms
+	pp := tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public paramenters not set")
+	}
+
 	meta, err := r.GetMetadata()
 	if err != nil {
 		return nil, err
@@ -442,7 +447,11 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.IssueAction, issueMeta *IssueMetadata, failOnMissing bool) ([]*Output, error) {
 	// extract outputs for this action
 	tms := r.TokenService.tms
-	precision := tms.PublicParamsManager().PublicParameters().Precision()
+	pp := tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
 	var outputs []*Output
 	for j, output := range issueAction.GetOutputs() {
 		if output == nil {
@@ -958,7 +967,11 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 	}
 
 	// populate type and quantity
-	precision := r.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
+	pp := r.TokenService.tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
 	for i := 0; i < len(ids); i++ {
 		in := inputs.At(i)
 		if toks[i] == nil {
@@ -1042,7 +1055,11 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
 	}
 	var typ string
-	precision := r.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
+	pp := r.TokenService.tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, nil, "", errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
 	sum := token.NewZeroQuantity(precision)
 	for _, tok := range inputTokens {
 		if len(typ) == 0 {

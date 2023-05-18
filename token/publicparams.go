@@ -48,12 +48,12 @@ func (c *PublicParameters) Serialize() ([]byte, error) {
 
 // Identifier returns the identifier of the public parameters
 func (c *PublicParameters) Identifier() string {
-	return c.ppm.PublicParameters().Identifier()
+	return c.PublicParameters.Identifier()
 }
 
 // Auditors returns the list of auditors' identities
 func (c *PublicParameters) Auditors() []view.Identity {
-	return c.ppm.PublicParameters().Auditors()
+	return c.PublicParameters.Auditors()
 }
 
 // PublicParamsFetcher models the public parameters fetcher
