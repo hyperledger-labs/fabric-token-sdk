@@ -12,11 +12,10 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 var (
@@ -52,7 +51,7 @@ type locker struct {
 	validTxEvictionTimeout time.Duration
 }
 
-func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeout time.Duration) selector.Locker {
+func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeout time.Duration) simple.Locker {
 	r := &locker{
 		vault:                  vault,
 		sleepTimeout:           timeout,

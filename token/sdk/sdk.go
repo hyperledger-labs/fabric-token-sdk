@@ -31,7 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
+	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
