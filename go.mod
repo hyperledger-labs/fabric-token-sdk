@@ -8,6 +8,7 @@ require (
 	github.com/IBM/mathlib v0.0.3-0.20230831091907-c532c4d3b65c
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
+	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20231006095501-19e9fe1606e2
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5

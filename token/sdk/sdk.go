@@ -31,6 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -73,6 +74,20 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
+	// configure selector service
+	var selectorManagerProvider token.SelectorManagerProvider
+	switch configProvider.GetString("token.selector.driver") {
+	case "simple":
+		selectorManagerProvider = selector.NewProvider(
+			p.registry,
+			network2.NewLockerProvider(p.registry, 2*time.Second, 5*time.Minute),
+			2,
+			5*time.Second)
+	default:
+		// we use mailman as our default selector
+		selectorManagerProvider = mailman.NewService(p.registry)
+	}
+
 	// Register the token management service provider
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
 		p.registry,
@@ -80,15 +95,7 @@ func (p *SDK) Install() error {
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
 		vaultProvider,
 		network2.NewCertificationClientProvider(p.registry),
-		selector.NewProvider(
-			p.registry,
-			network2.NewLockerProvider(
-				p.registry,
-				2*time.Second,
-				5*time.Minute,
-			),
-			2,
-			5*time.Second),
+		selectorManagerProvider,
 	)))
 
 	// Network provider
