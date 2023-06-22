@@ -21,6 +21,7 @@ pullBinaries() {
     ARCH=$(echo "$(uname -s|tr '[:upper:]' '[:lower:]'|sed 's/mingw64_nt.*/windows/')-$(uname -m |sed 's/x86_64/amd64/g')" |sed 's/darwin-arm64/darwin-amd64/g')
     MARCH=$(uname -m)
     local VERSION=$1
+    local CA_VERSION=$2
 
     BINARY_FILE=hyperledger-fabric-${ARCH}-${VERSION}.tar.gz
     echo "===> Downloading ${VERSION} specific fabric binaries for ${ARCH} Platform"
@@ -31,17 +32,28 @@ pullBinaries() {
         echo
         exit
     fi
+
+    CA_BINARY_FILE=hyperledger-fabric-ca-${ARCH}-${CA_VERSION}.tar.gz
+    echo "===> Downloading version ${CA_VERSION} platform specific fabric-ca binaries"
+    download "${CA_BINARY_FILE}" "https://github.com/hyperledger/fabric-ca/releases/download/v${CA_VERSION}/${CA_BINARY_FILE}"
+    if [ $? -eq 22 ]; then
+        echo
+        echo "------> ${CA_VERSION} fabric-ca binaries file is not available to download  (Available from 1.1.0-rc1) <----"
+        echo
+        exit
+    fi
 }
 
 function checkFabricBinaryPresence() {
     local VERSION=$1
+    local CA_VERSION=$2
     ## Check if binaries already exist
     ${PWD}/bin/peer version > /dev/null 2>&1
 
     if [[ $? -ne 0  ]]; then
         echo "no fabric binaries detected, pulling down"
         # No binaries found, pull then down
-        pullBinaries $VERSION
+        pullBinaries $VERSION $CA_VERSION
         return
     fi
 
@@ -53,7 +65,7 @@ function checkFabricBinaryPresence() {
         echo "Local fabric binaries don't match requested, replacing with requested: $VERSION" 
         rm bin/*
         rm config/*
-        pullBinaries $VERSION
+        pullBinaries $VERSION $CA_VERSION
         return
     fi
 
@@ -63,4 +75,4 @@ function checkFabricBinaryPresence() {
 # download_fabric <directory> <version>
 mkdir -p $1 || true
 cd $1
-checkFabricBinaryPresence $2
+checkFabricBinaryPresence $2 $3
