@@ -158,7 +158,7 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	// Prepare CA, if needed
 	caFactory, found := p.CASupports[tms.Driver]
 	if found {
-		ca, err := caFactory(root)
+		ca, err := caFactory(p.TokenPlatform, tms, root)
 		Expect(err).ToNot(HaveOccurred(), "failed to instantiate CA for [%s]", tms.ID())
 		entry.CA = ca
 	}
@@ -189,6 +189,14 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 		entry := p.GetEntry(tms)
 		if entry.CA != nil {
 			Expect(entry.CA.Start()).ToNot(HaveOccurred(), "failed to start CA for [%s]", tms.ID())
+		}
+	}
+}
+
+func (p *NetworkHandler) Cleanup() {
+	for _, entry := range p.Entries {
+		if entry.CA != nil {
+			entry.CA.Stop()
 		}
 	}
 }
@@ -256,7 +264,21 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 	return ""
 }
 
-func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
+func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string {
+	if useCAIfAvailable {
+		// check if the ca is available
+		ca := p.GetEntry(tms).CA
+		if ca != nil {
+			// Use the ca
+			// return the path where the credential is stored
+			logger.Infof("generate owner crypto material using ca")
+			output, err := ca.Gen(walletID)
+			Expect(err).ToNot(HaveOccurred(), "failed to generate owner crypto material using ca [%s]", tms.ID())
+			return output
+		}
+		// continue without the ca
+	}
+
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 

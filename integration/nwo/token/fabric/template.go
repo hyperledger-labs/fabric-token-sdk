@@ -183,7 +183,7 @@ tls:
 #############################################################################
 ca:
   # Name of this CA
-  name:
+  name: {{ caname }}
   # Key file (is only used to import a private key into BCCSP)
   keyfile:
   # Certificate file (default: ca-cert.pem)

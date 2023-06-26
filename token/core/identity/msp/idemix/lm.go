@@ -262,6 +262,7 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID m
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 		return nil
 	}
+	found := 0
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -269,7 +270,12 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID m
 		id := entry.Name()
 		if err := lm.registerMSPProvider(id, filepath.Join(translatedPath, id), curveID, false); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
+			continue
 		}
+		found++
+	}
+	if found == 0 {
+		return errors.Errorf("no valid identities found in [%s]", translatedPath)
 	}
 	return nil
 }
