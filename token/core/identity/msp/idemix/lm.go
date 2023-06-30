@@ -24,7 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -231,7 +230,7 @@ func (lm *LocalMembership) registerIdentity(id string, path string, setDefault b
 }
 
 func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveID math3.CurveID, setDefault bool) error {
-	conf, err := msp.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID, MSP)
+	conf, err := idemix2.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
 	}
@@ -252,7 +251,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 
 	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, cacheSize).Identity)
-	logger.Debugf("added [%s] resolver for id [%s] with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), cacheSize)
+	logger.Debugf("added idemix resolver for id %s with cache of size %d", id+"@"+provider.EnrollmentID(), cacheSize)
 	return nil
 }
 

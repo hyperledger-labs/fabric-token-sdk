@@ -138,7 +138,7 @@ token:
 version: v1.5.6
 
 # Server's listening port (default: 7054)
-port: 7054
+port: {{ Port }}
 
 # Cross-Origin Resource Sharing (CORS)
 cors:
@@ -451,11 +451,6 @@ idemix:
   # It can be any of: {"amcl.Fp256bn", "gurvy.Bn254", "amcl.Fp256Miraclbn"}.
   # If unspecified, it defaults to 'amcl.Fp256bn'.
   curve: gurvy.Bn254
-
-  issuerpublickeyfile: {{ issuerpublickeyfile }}
-  issuersecretkeyfile: {{ issuersecretkeyfile }}
-  revocationpublickeyfile: {{ revocationpublickeyfile }}
-  revocationprivatekeyfile: {{ revocationprivatekeyfile }}
 
 #############################################################################
 # BCCSP (BlockChain Crypto Service Provider) section is used to select which

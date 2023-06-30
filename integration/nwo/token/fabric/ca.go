@@ -18,11 +18,10 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -51,6 +50,7 @@ func (c CAServer) SessionName() string {
 func (c CAServer) Args() []string {
 	return []string{
 		"start",
+		"-d",
 		"--config", c.ConfigPath,
 	}
 }
@@ -97,7 +97,7 @@ type CAClientEnroll struct {
 }
 
 func (c CAClientEnroll) SessionName() string {
-	return c.NetworkPrefix + "-fabric-ca-server"
+	return c.NetworkPrefix + "-fabric-ca-client-enroll"
 }
 
 func (c CAClientEnroll) Args() []string {
@@ -121,6 +121,7 @@ type IdemixCASupport struct {
 	process                  ifrit.Process
 	TokenPlatform            generators.TokenPlatform
 	TMS                      *topology.TMS
+	CAPort                   string
 }
 
 func NewIdemixCASupport(tokenPlatform generators.TokenPlatform, tms *topology.TMS, issuerCryptoMaterialPath string) (CA, error) {
@@ -130,6 +131,7 @@ func NewIdemixCASupport(tokenPlatform generators.TokenPlatform, tms *topology.TM
 		EventuallyTimeout:        1 * time.Minute,
 		TokenPlatform:            tokenPlatform,
 		TMS:                      tms,
+		CAPort:                   "7054",
 	}, nil
 }
 
@@ -164,7 +166,7 @@ func (i *IdemixCASupport) Start() error {
 	fabricCAClientExePath := findCmdAtEnv(fabricCaClientCMD)
 	enrollCommand := &CAClientEnroll{
 		Home:        "",
-		CAServerURL: fmt.Sprintf("http://%s:%s@localhost:7054", "admin", "adminpw"),
+		CAServerURL: fmt.Sprintf("http://%s:%s@localhost:%s", "admin", "adminpw", i.CAPort),
 		CAName:      caName,
 		Output:      filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "admin", "msp"),
 	}
@@ -201,7 +203,7 @@ func (i *IdemixCASupport) Gen(owner string) (string, error) {
 	// register
 	registerCommand := &CAClientRegister{
 		MSPDir:         filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server", "admin", "msp"),
-		CAServerURL:    fmt.Sprintf("http://localhost:%s", "7054"),
+		CAServerURL:    fmt.Sprintf("http://localhost:%s", i.CAPort),
 		CAName:         caName,
 		IDName:         owner,
 		IDSecret:       "password",
@@ -218,7 +220,7 @@ func (i *IdemixCASupport) Gen(owner string) (string, error) {
 
 	enrollCommand := &CAClientEnroll{
 		Home:           "",
-		CAServerURL:    fmt.Sprintf("http://%s:%s@localhost:7054", registerCommand.IDName, registerCommand.IDSecret),
+		CAServerURL:    fmt.Sprintf("http://%s:%s@localhost:%s", registerCommand.IDName, registerCommand.IDSecret, i.CAPort),
 		CAName:         caName,
 		Output:         userOutput,
 		EnrollmentType: "idemix",
@@ -235,21 +237,33 @@ func (i *IdemixCASupport) Gen(owner string) (string, error) {
 }
 
 func (i *IdemixCASupport) GenerateConfiguration() error {
+	fabricCARoot := filepath.Join(i.IssuerCryptoMaterialPath, "fabric-ca-server")
+	if err := os.MkdirAll(fabricCARoot, 0766); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Join(fabricCARoot, "msp", "keystore"), 0766); err != nil {
+		return err
+	}
+	if err := CopyFile(filepath.Join(i.IssuerCryptoMaterialPath, "ca", "IssuerPublicKey"), filepath.Join(fabricCARoot, "IssuerPublicKey")); err != nil {
+		return err
+	}
+	if err := CopyFile(filepath.Join(i.IssuerCryptoMaterialPath, "msp", "RevocationPublicKey"), filepath.Join(fabricCARoot, "IssuerRevocationPublicKey")); err != nil {
+		return err
+	}
+	if err := CopyFile(filepath.Join(i.IssuerCryptoMaterialPath, "ca", "IssuerSecretKey"), filepath.Join(fabricCARoot, "msp", "keystore", "IssuerSecretKey")); err != nil {
+		return err
+	}
+	if err := CopyFile(filepath.Join(i.IssuerCryptoMaterialPath, "ca", "RevocationKey"), filepath.Join(fabricCARoot, "msp", "keystore", "IssuerRevocationPrivateKey")); err != nil {
+		return err
+	}
+
 	t, err := template.New("fabric-ca-server").Funcs(template.FuncMap{
 		"caname": func() string {
 			return i.TMS.ID() + ".example.com"
 		},
-		"issuerpublickeyfile": func() string {
-			return filepath.Join(i.IssuerCryptoMaterialPath, "ca", "IssuerPublicKey")
-		},
-		"issuersecretkeyfile": func() string {
-			return filepath.Join(i.IssuerCryptoMaterialPath, "ca", "IssuerSecretKey")
-		},
-		"revocationpublickeyfile": func() string {
-			return filepath.Join(i.IssuerCryptoMaterialPath, "msp", "RevocationPublicKey")
-		},
-		"revocationprivatekeyfile": func() string {
-			return filepath.Join(i.IssuerCryptoMaterialPath, "ca", "RevocationKey")
+		"Port": func() string {
+			i.CAPort = fmt.Sprintf("%d", i.TokenPlatform.GetContext().ReservePort())
+			return i.CAPort
 		},
 	}).Parse(CACfgTemplate)
 	if err != nil {
@@ -299,4 +313,24 @@ func (i *IdemixCASupport) nextColor() string {
 
 	i.ColorIndex++
 	return fmt.Sprintf("%dm", color)
+}
+
+func CopyFile(src, dst string) error {
+	cleanSrc := filepath.Clean(src)
+	cleanDst := filepath.Clean(dst)
+	if cleanSrc == cleanDst {
+		return nil
+	}
+	sf, err := os.Open(cleanSrc)
+	if err != nil {
+		return err
+	}
+	defer sf.Close()
+	df, err := os.Create(cleanDst)
+	if err != nil {
+		return err
+	}
+	defer df.Close()
+	_, err = io.Copy(df, sf)
+	return err
 }
