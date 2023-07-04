@@ -28,6 +28,7 @@ var _ = Describe("EndToEnd", func() {
 			network, err = integration.New(StartPortDlog(), "/Users/lio/go/src/github.com/hyperledger-labs/fabric-token-sdk/tempdir", Topology("dlog")...)
 			Expect(err).NotTo(HaveOccurred())
 			network.DeleteOnStop = false
+			network.DeleteOnStart = true
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
 			network.Start()

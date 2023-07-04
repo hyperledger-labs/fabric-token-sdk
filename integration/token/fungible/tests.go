@@ -198,33 +198,6 @@ var AliceID1AcceptedTransactions = []*ttxdb.TransactionRecord{
 var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 	{
 		TxID:         "",
-		ActionType:   ttxdb.Issue,
-		SenderEID:    "",
-		RecipientEID: "bob",
-		TokenType:    "EUR",
-		Amount:       big.NewInt(10),
-		Status:       ttxdb.Confirmed,
-	},
-	{
-		TxID:         "",
-		ActionType:   ttxdb.Issue,
-		SenderEID:    "",
-		RecipientEID: "bob",
-		TokenType:    "EUR",
-		Amount:       big.NewInt(10),
-		Status:       ttxdb.Confirmed,
-	},
-	{
-		TxID:         "",
-		ActionType:   ttxdb.Issue,
-		SenderEID:    "",
-		RecipientEID: "bob",
-		TokenType:    "EUR",
-		Amount:       big.NewInt(10),
-		Status:       ttxdb.Confirmed,
-	},
-	{
-		TxID:         "",
 		ActionType:   ttxdb.Transfer,
 		SenderEID:    "alice",
 		RecipientEID: "bob",

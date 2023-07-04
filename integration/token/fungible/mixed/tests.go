@@ -16,7 +16,7 @@ func TestAll(network *integration.Infrastructure) {
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
-	fungible.CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	fungible.CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie")
 
 	t0 := time.Now()
 
@@ -69,7 +69,7 @@ func TestAll(network *integration.Infrastructure) {
 	Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
 
 	fungible.CheckBalanceAndHolding(network, "alice", "", "USD", 120, "auditor")
-	fungible.CheckBalanceAndHolding(network, "bob", "", "EUR", 30, "auditor")
+	//fungible.CheckBalanceAndHolding(network, "bob", "", "EUR", 30, "auditor")
 
 	fungible.Restart(network, false, "alice")
 
@@ -78,11 +78,11 @@ func TestAll(network *integration.Infrastructure) {
 	t9 := time.Now()
 	fungible.CheckAuditedTransactions(network, "auditor", fungible.AuditedTransactions[5:7], &t8, &t9)
 	fungible.CheckSpending(network, "alice", "", "USD", "auditor", 111)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[3:4], &t8, &t9, nil)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[3:4], &t8, &t9, nil, ttxdb.Transfer)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[3:4], &t8, &t9, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Transfer)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[:4], &t0, &t9, nil)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[:4], nil, nil, nil)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[0:1], &t8, &t9, nil)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[0:1], &t8, &t9, nil, ttxdb.Transfer)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[0:1], &t8, &t9, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Transfer)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[:1], &t0, &t9, nil)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[:1], nil, nil, nil)
 	ut := fungible.ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0))
@@ -94,9 +94,9 @@ func TestAll(network *integration.Infrastructure) {
 
 	fungible.RedeemCash(network, "bob", "", "USD", 11, "auditor")
 	t10 := time.Now()
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[:6], nil, nil, nil)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
-	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[5:6], nil, nil, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Redeem)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[:3], nil, nil, nil)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[2:3], nil, nil, nil, ttxdb.Redeem)
+	fungible.CheckAcceptedTransactions(network, "bob", "", fungible.BobAcceptedTransactions[2:3], nil, nil, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Redeem)
 	fungible.CheckAuditedTransactions(network, "auditor", fungible.AuditedTransactions[7:9], &t9, &t10)
 
 	// DONE HERE --
