@@ -9,6 +9,7 @@ package views
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -44,7 +45,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 		if output.Type == "MAX" {
 			continue
 		}
-		unspentTokens, err := ttx.MyWallet(context).ListUnspentTokens(ttx.WithType(output.Type))
+		unspentTokens, err := ttx.MyWallet(context, token.WithTMSID(tx.TMSID())).ListUnspentTokens(ttx.WithType(output.Type))
 		assert.NoError(err, "failed retrieving the unspent tokens for type [%s]", output.Type)
 		upperBound, err := token2.UInt64ToQuantity(3000, precision)
 		assert.NoError(err, "failed to convert to quantity")

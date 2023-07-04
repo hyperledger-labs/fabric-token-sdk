@@ -30,6 +30,8 @@ type Redeem struct {
 	Type string
 	// Amount to redeem
 	Amount uint64
+	// The TMS to pick in case of multiple TMSIDs
+	TMSID *token2.TMSID
 }
 
 type RedeemView struct {
@@ -42,12 +44,12 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
+		append(txOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))...,
 	)
 	assert.NoError(err, "failed creating transaction")
 
 	// The sender will select tokens owned by this wallet
-	senderWallet := ttx.GetWallet(context, t.Wallet)
+	senderWallet := ttx.GetWallet(context, t.Wallet, serviceOpts(t.TMSID)...)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
 	// The senders adds a new redeem operation to the transaction following the instruction received.

@@ -19,7 +19,7 @@ import (
 
 type GetEnrollmentID struct {
 	Wallet string
-	TMSID  token.TMSID
+	TMSID  *token.TMSID
 }
 
 // GetEnrollmentIDView is a view that returns the enrollment ID of a wallet.
@@ -28,7 +28,7 @@ type GetEnrollmentIDView struct {
 }
 
 func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	tms := token.GetManagementService(context, serviceOpts(r.TMSID)...)
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	w := tms.WalletManager().OwnerWallet(r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
@@ -46,7 +46,7 @@ func (p *GetEnrollmentIDViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CheckPublicParamsMatch struct {
-	TMSID token.TMSID
+	TMSID *token.TMSID
 }
 
 type CheckPublicParamsMatchView struct {
@@ -54,7 +54,7 @@ type CheckPublicParamsMatchView struct {
 }
 
 func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	tms := token.GetManagementService(context, serviceOpts(p.TMSID)...)
 	assert.NotNil(tms, "failed to get TMS")
 
 	assert.NoError(tms.PublicParametersManager().Validate(), "failed to validate local public parameters")

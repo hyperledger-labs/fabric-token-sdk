@@ -24,6 +24,11 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+const (
+	DLogNamespace     = "dlog-token-chaincode"
+	FabTokenNamespace = "fabtoken-token-chaincode"
+)
+
 var AuditedTransactions = []*ttxdb.TransactionRecord{
 	{
 		TxID:         "",
@@ -298,12 +303,12 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3, nil)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
-	h := ListIssuerHistory(network, "", "USD")
+	h := ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR", "issuer")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
 	// Register a new issuer wallet and issue with that wallet
@@ -332,12 +337,12 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:3], nil, nil, nil)
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:3], &t4, &t7, nil)
 
-	h = ListIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "newIssuerWallet", "EUR")
+	h = ListIssuerHistory(network, "newIssuerWallet", "EUR", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
@@ -424,12 +429,12 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	IssueCash(network, "newIssuerWallet", "EUR", 150, "issuer", auditor, true, "issuer")
 	IssueCash(network, "issuer.id1", "EUR", 10, "issuer.owner", auditor, true, "issuer")
 
-	h = ListIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "newIssuerWallet", "EUR")
+	h = ListIssuerHistory(network, "newIssuerWallet", "EUR", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
@@ -799,4 +804,58 @@ func TestRevokeIdentity(network *integration.Infrastructure, auditor string, rev
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
 	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 90, auditor)
+}
+
+func TestMixed(network *integration.Infrastructure) {
+	dlogId := getTmsId(network, DLogNamespace)
+	fabTokenId := getTmsId(network, FabTokenNamespace)
+	RegisterAuditorForTMSID(network, "auditor1", dlogId, nil)
+	RegisterAuditorForTMSID(network, "auditor2", fabTokenId, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	CheckPublicParamsForTMSID(network, dlogId, "issuer1", "auditor1", "alice", "bob")
+	CheckPublicParamsForTMSID(network, fabTokenId, "issuer2", "auditor2", "alice", "bob")
+
+	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "USD", 115, "alice", "auditor2", true, "issuer2", fabTokenId)
+
+	TransferCashForTMSID(network, "alice", "", "USD", 20, "bob", "auditor1", dlogId)
+	TransferCashForTMSID(network, "alice", "", "USD", 30, "bob", "auditor2", fabTokenId)
+
+	RedeemCashForTMSID(network, "bob", "", "USD", 11, "auditor1", dlogId)
+	CheckSpendingForTMSID(network, "bob", "", "USD", "auditor1", 11, dlogId)
+
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 90, "auditor1", dlogId)
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 85, "auditor2", fabTokenId)
+	CheckBalanceAndHoldingForTMSID(network, "bob", "", "USD", 9, "auditor1", dlogId)
+	CheckBalanceAndHoldingForTMSID(network, "bob", "", "USD", 30, "auditor2", fabTokenId)
+
+	h := ListIssuerHistoryForTMSID(network, "", "USD", "issuer1", dlogId)
+	Expect(h.Count() > 0).To(BeTrue())
+	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(BeEquivalentTo(0))
+	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+
+	// Error cases
+
+	// Try to approve dlog with auditor2
+	TransferCashForTMSID(network, "alice", "", "USD", 20, "bob", "auditor2", dlogId, "")
+	// Try to issue on dlog with issuer2
+	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer2", dlogId, "")
+	// Try to spend on dlog coins from fabtoken
+	TransferCashForTMSID(network, "alice", "", "USD", 120, "bob", "auditor2", fabTokenId, "")
+	// Try to issue more coins than the max
+	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [9998]")
+
+	// Shut down one auditor and try to issue cash for both chaincodes
+	Restart(network, true, "auditor2")
+	IssueCashForTMSID(network, "", "USD", 10, "alice", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "USD", 20, "alice", "auditor2", true, "issuer2", fabTokenId, "")
+	RegisterAuditor(network, "auditor2", nil)
+	IssueCashForTMSID(network, "", "USD", 30, "alice", "auditor2", true, "issuer2", fabTokenId)
+
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 100, "auditor1", dlogId)
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 115, "auditor2", fabTokenId)
 }

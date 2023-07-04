@@ -61,7 +61,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
 	alice.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
@@ -72,8 +72,8 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
 	bob.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})

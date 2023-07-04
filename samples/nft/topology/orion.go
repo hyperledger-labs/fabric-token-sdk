@@ -38,7 +38,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		orion.WithRole("alice"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithDefaultOwnerIdentity(),
 	)
 	alice.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
 	alice.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
@@ -47,7 +47,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithDefaultOwnerIdentity(),
 	)
 	bob.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
 	bob.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})

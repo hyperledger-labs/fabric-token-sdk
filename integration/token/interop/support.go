@@ -108,16 +108,17 @@ func CheckBalance(network *integration.Infrastructure, id string, wallet string,
 func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64, opts ...token.ServiceOption) {
 	opt, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred(), "failed to compile options [%v]", opts)
+	tmsId := opt.TMSID()
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
-		TMSID:  opt.TMSID(),
+		TMSID:  &tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
 	holdingBoxed, err := network.Client("auditor").CallView("holding", common.JSONMarshall(&views.CurrentHolding{
 		EnrollmentID: eID,
 		TokenType:    typ,
-		TMSID:        opt.TMSID(),
+		TMSID:        tmsId,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
@@ -166,7 +167,7 @@ func CheckBalanceWithLockedAndHolding(network *integration.Infrastructure, id st
 func CheckPublicParams(network *integration.Infrastructure, tmsID token.TMSID, ids ...string) {
 	for _, id := range ids {
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
-			TMSID: tmsID,
+			TMSID: &tmsID,
 		}))
 		Expect(err).NotTo(HaveOccurred())
 	}

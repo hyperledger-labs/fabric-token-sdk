@@ -22,6 +22,8 @@ type ListUnspentTokens struct {
 	Wallet string
 	// TokenType is the token type to select
 	TokenType string
+	// The TMS to pick in case of multiple TMSIDs
+	TMSID *token.TMSID
 }
 
 type ListUnspentTokensView struct {
@@ -30,7 +32,7 @@ type ListUnspentTokensView struct {
 
 func (p *ListUnspentTokensView) Call(context view.Context) (interface{}, error) {
 	// Tokens owner by identities in this wallet will be listed
-	wallet := ttx.GetWallet(context, p.Wallet)
+	wallet := ttx.GetWallet(context, p.Wallet, serviceOpts(p.TMSID)...)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
 
 	// Return the list of unspent tokens by type

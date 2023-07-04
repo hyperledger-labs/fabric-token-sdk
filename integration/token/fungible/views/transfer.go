@@ -53,6 +53,8 @@ type Transfer struct {
 	FailToRelease bool
 	// For additional transfer actions
 	TransferAction []TransferAction
+	// The TMS to pick in case of multiple TMSIDs
+	TMSID *token2.TMSID
 }
 
 type TransferView struct {
@@ -64,14 +66,14 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient)
+	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, serviceOpts(t.TMSID)...)
 	assert.NoError(err, "failed getting recipient")
 
-	wm := token2.GetManagementService(context).WalletManager()
+	wm := token2.GetManagementService(context, serviceOpts(t.TMSID)...).WalletManager()
 	// if there are more recipients, ask for their recipient identity
 	var additionalRecipients []view.Identity
 	for _, action := range t.TransferAction {
-		actionRecipient, err := ttx.RequestRecipientIdentity(context, action.Recipient)
+		actionRecipient, err := ttx.RequestRecipientIdentity(context, action.Recipient, serviceOpts(t.TMSID)...)
 		assert.NoError(err, "failed getting recipient")
 		eID, err := wm.GetEnrollmentID(recipient)
 		assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
@@ -89,12 +91,12 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// and specify the auditor that must be contacted to approve the operation.
 	tx, err := ttx.NewAnonymousTransaction(
 		context,
-		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
+		append(txOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))...,
 	)
 	assert.NoError(err, "failed creating transaction")
 
 	// The sender will select tokens owned by this wallet
-	senderWallet := ttx.GetWallet(context, t.Wallet)
+	senderWallet := ttx.GetWallet(context, t.Wallet, serviceOpts(t.TMSID)...)
 	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
 
 	// The sender adds a new transfer operation to the transaction following the instruction received.

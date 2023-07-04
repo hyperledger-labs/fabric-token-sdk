@@ -22,16 +22,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-type AuditView struct{}
+type AuditView struct {
+	*token.TMSID
+}
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
-	tx, err := ttx.ReceiveTransaction(context, ttx.WithNoTransactionVerification())
+	tx, err := ttx.ReceiveTransaction(context, append(txOpts(a.TMSID), ttx.WithNoTransactionVerification())...)
 
 	assert.NoError(err, "failed receiving transaction")
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
-	w := ttx.MyAuditorWallet(context)
+	w := ttx.MyAuditorWallet(context, serviceOpts(a.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Validate
@@ -183,18 +185,29 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	return res, err
 }
 
-type RegisterAuditorView struct{}
+type RegisterAuditor struct {
+	*token.TMSID
+}
+
+type RegisterAuditorView struct {
+	*RegisterAuditor
+}
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(ttx.NewRegisterAuditorView(
-		&AuditView{},
+		&AuditView{r.TMSID},
+		serviceOpts(r.TMSID)...,
 	))
 }
 
 type RegisterAuditorViewFactory struct{}
 
 func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RegisterAuditorView{}
+	f := &RegisterAuditorView{RegisterAuditor: &RegisterAuditor{}}
+	if in != nil {
+		err := json.Unmarshal(in, f.RegisterAuditor)
+		assert.NoError(err, "failed unmarshalling input")
+	}
 	return f, nil
 }
 
@@ -241,8 +254,9 @@ func (p *CurrentHoldingViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CurrentSpending struct {
-	EnrollmentID string `json:"enrollment_id"`
-	TokenType    string `json:"token_type"`
+	EnrollmentID string       `json:"enrollment_id"`
+	TokenType    string       `json:"token_type"`
+	TMSID        *token.TMSID `json:"tmsid"`
 }
 
 // CurrentSpendingView is used to retrieve the current spending of token type of the passed enrollment id
@@ -251,7 +265,7 @@ type CurrentSpendingView struct {
 }
 
 func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
-	w := ttx.MyAuditorWallet(context)
+	w := ttx.MyAuditorWallet(context, serviceOpts(r.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor := ttx.NewAuditor(context, w)
