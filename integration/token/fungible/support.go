@@ -9,6 +9,7 @@ package fungible
 import (
 	"encoding/json"
 	"fmt"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"strconv"
 	"strings"
 	"time"
@@ -18,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
+	topology2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	platform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -35,6 +37,29 @@ func RegisterAuditor(network *integration.Infrastructure, id string, onAuditorRe
 	if onAuditorRestart != nil {
 		onAuditorRestart(network, id)
 	}
+}
+
+func RegisterAuditorForNamespace(network *integration.Infrastructure, id, namespace string) {
+	_, err := network.Client(id).CallView("registerAuditor", common.JSONMarshall(&views.RegisterAuditor{
+		TMSID: getTmsId(network, namespace),
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+func getTmsId(network *integration.Infrastructure, namespace string) *token2.TMSID {
+	fabricTopology := getFabricTopology(network)
+	return &token2.TMSID{
+		Network:   fabricTopology.Name(),
+		Channel:   fabricTopology.Channels[0].Name,
+		Namespace: namespace,
+	}
+}
+func getFabricTopology(network *integration.Infrastructure) *topology2.Topology {
+	for _, t := range network.Topologies {
+		if t.Type() == "fabric" {
+			return t.(*topology2.Topology)
+		}
+	}
+	panic("no fabric topology found")
 }
 
 func RegisterCertifier(network *integration.Infrastructure, id string) {
@@ -55,6 +80,40 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 		Quantity:     amount,
 		Recipient:    network.Identity(receiver),
 		RecipientEID: receiver,
+	}))
+
+	if len(expectedErrorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		if len(auditor) == 0 {
+			Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		} else {
+			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		}
+		return common.JSONUnmarshalString(txid)
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	return ""
+}
+
+func IssueCashForNamespace(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, IssuerId string, namespace string, expectedErrorMsgs ...string) string {
+	if auditor == "issuer" || auditor == "newIssuer" {
+		// the issuer is the auditor, choose default identity
+		auditor = ""
+	}
+	txid, err := network.Client(IssuerId).CallView("issue", common.JSONMarshall(&views.IssueCash{
+		Anonymous:    anonymous,
+		Auditor:      auditor,
+		IssuerWallet: wallet,
+		TokenType:    typ,
+		Quantity:     amount,
+		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
+		TMSID:        *getTmsId(network, namespace),
 	}))
 
 	if len(expectedErrorMsgs) == 0 {
@@ -479,6 +538,15 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	for _, id := range ids {
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{}))
+		Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
+	}
+}
+
+func CheckPublicParamsForNamespace(network *integration.Infrastructure, namespace string, ids ...string) {
+	for _, id := range ids {
+		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+			TMSID: *getTmsId(network, namespace),
+		}))
 		Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
 	}
 }

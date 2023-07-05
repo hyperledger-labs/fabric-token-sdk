@@ -19,10 +19,15 @@ import (
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
-	. "github.com/onsi/gomega"
 )
 
-func Topology(tokenSDKDriver string) []api.Topology {
+const (
+	notApplicable     = ""
+	DLogNamespace     = "dlog-token-chaincode"
+	FabTokenNamespace = "fabtoken-token-chaincode"
+)
+
+func Topology() []api.Topology {
 	//var backendNetwork api.Topology
 	//backendChannel := ""
 	//switch backend {
@@ -44,7 +49,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -52,8 +57,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		orion.WithRole("issuer"),
 		token.WithDefaultIssuerIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithDefaultOwnerIdentity(notApplicable),
+		token.WithOwnerIdentity(notApplicable, "issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -154,7 +159,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity(notApplicable, "alice.id1"),
 	)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -182,8 +187,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithDefaultOwnerIdentity(notApplicable),
+		token.WithOwnerIdentity(notApplicable, "bob.id1"),
 	)
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -214,8 +219,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("charlie"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
+		token.WithDefaultOwnerIdentity(notApplicable),
+		token.WithOwnerIdentity(notApplicable, "charlie.id1"),
 	)
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -266,34 +271,40 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	//manager.RegisterViewFactory("ListOwnerWalletIDsView", &views.ListOwnerWalletIDsViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
-	tms.SetNamespace("token-chaincode")
-	switch tokenSDKDriver {
-	case "dlog":
-		// max token value is 100^2 - 1 = 9999
-		tms.SetTokenGenPublicParams("100", "2")
-	case "fabtoken":
-		tms.SetTokenGenPublicParams("9999")
-	default:
-		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
-	}
+	dlogTms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, "dlog")
+	dlogTms.SetNamespace(DLogNamespace)
+	// max token value is 100^2 - 1 = 9999
+	dlogTms.SetTokenGenPublicParams("100", "2")
+	fabric2.SetOrgs(dlogTms, "Org1")
 
-	fabric2.SetOrgs(tms, "Org1")
+	fabTokenTms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, "fabtoken")
+	fabTokenTms.SetNamespace(FabTokenNamespace)
+	fabTokenTms.SetTokenGenPublicParams("9999")
+	fabric2.SetOrgs(fabTokenTms, "Org1")
+	//switch tokenSDKDriver {
+	//case "dlog":
+	//
+	//case "fabtoken":
+	//default:
+	//	Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	//}
+
 	//if backend == "orion" {
 	//	// we need to define the custodian
 	//	custodian := fscTopology.AddNodeByName("custodian")
 	//	custodian.AddOptions(orion.WithRole("custodian"))
-	//	orion2.SetCustodian(tms, custodian)
-	//	tms.AddNode(custodian)
+	//	orion2.SetCustodian(dlogTms, custodian)
+	//	dlogTms.AddNode(custodian)
 	//
 	//	// Enable orion sdk on each FSC node
 	//	orionTopology := backendNetwork.(*orion.Topology)
-	//	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
+	//	orionTopology.AddDB(dlogTms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
 	//	orionTopology.SetDefaultSDK(fscTopology)
 	//	fscTopology.SetBootstrapNode(custodian)
 	//}
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
-	tms.AddAuditor(auditor)
+	dlogTms.AddAuditor(auditor)
+	fabTokenTms.AddAuditor(auditor)
 
 	//if backend != "orion" {
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))

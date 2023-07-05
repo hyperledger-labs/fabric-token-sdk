@@ -22,16 +22,26 @@ import (
 	"github.com/pkg/errors"
 )
 
-type AuditView struct{}
+type AuditView struct {
+	*token.TMSID
+}
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
-	tx, err := ttx.ReceiveTransaction(context, ttx.WithNoTransactionVerification())
+	var txOpts = []ttx.TxOption{ttx.WithNoTransactionVerification()}
+	if a.TMSID != nil {
+		txOpts = append(txOpts, ttx.WithTMSID(*a.TMSID))
+	}
+	tx, err := ttx.ReceiveTransaction(context, txOpts...)
 
 	assert.NoError(err, "failed receiving transaction")
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
-	w := ttx.MyAuditorWallet(context)
+	var serviceOpts []token.ServiceOption
+	if a.TMSID != nil {
+		serviceOpts = append(serviceOpts, token.WithTMSID(*a.TMSID))
+	}
+	w := ttx.MyAuditorWallet(context, serviceOpts...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Validate
@@ -183,18 +193,33 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	return res, err
 }
 
-type RegisterAuditorView struct{}
+type RegisterAuditor struct {
+	*token.TMSID
+}
+
+type RegisterAuditorView struct {
+	*RegisterAuditor
+}
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+	var opts []token.ServiceOption
+	if r.TMSID != nil {
+		opts = append(opts, token.WithTMSID(*r.TMSID))
+	}
 	return context.RunView(ttx.NewRegisterAuditorView(
-		&AuditView{},
+		&AuditView{r.TMSID},
+		opts...,
 	))
 }
 
 type RegisterAuditorViewFactory struct{}
 
 func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RegisterAuditorView{}
+	f := &RegisterAuditorView{RegisterAuditor: &RegisterAuditor{}}
+	if in != nil {
+		err := json.Unmarshal(in, f.RegisterAuditor)
+		assert.NoError(err, "failed unmarshalling input")
+	}
 	return f, nil
 }
 

@@ -22,6 +22,7 @@ import (
 
 // IssueCash contains the input information to issue a token
 type IssueCash struct {
+	TMSID token.TMSID
 	// Anonymous set to true if the transaction is anonymous, false otherwise
 	Anonymous bool
 	// Auditor is the name of the auditor identity
@@ -47,11 +48,11 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient)
+	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, token.WithTMSID(p.TMSID))
 	assert.NoError(err, "failed getting recipient identity")
 
 	// match recipient EID
-	eID, err := token.GetManagementService(context).WalletManager().GetEnrollmentID(recipient)
+	eID, err := token.GetManagementService(context, token.WithTMSID(p.TMSID)).WalletManager().GetEnrollmentID(recipient)
 	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
 	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
 
@@ -59,11 +60,11 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 	// have been issued already including the current request.
 	// No check is performed for other types.
-	wallet := ttx.GetIssuerWallet(context, p.IssuerWallet)
+	wallet := ttx.GetIssuerWallet(context, p.IssuerWallet, token.WithTMSID(p.TMSID))
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
-		precision := token.GetManagementService(context).PublicParametersManager().PublicParameters().Precision()
+		precision := token.GetManagementService(context, token.WithTMSID(p.TMSID)).PublicParametersManager().PublicParameters().Precision()
 
 		history, err := wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
@@ -89,10 +90,10 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	auditorOpt := ttx.WithAuditor(auditorID)
 	if p.Anonymous {
 		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
-		tx, err = ttx.NewAnonymousTransaction(context, auditorOpt)
+		tx, err = ttx.NewAnonymousTransaction(context, auditorOpt, ttx.WithTMSID(p.TMSID))
 	} else {
 		// The issuer creates a nominal transaction using the default identity
-		tx, err = ttx.NewTransaction(context, nil, auditorOpt)
+		tx, err = ttx.NewTransaction(context, nil, auditorOpt, ttx.WithTMSID(p.TMSID))
 	}
 	assert.NoError(err, "failed creating issue transaction")
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue", []byte("issue"))

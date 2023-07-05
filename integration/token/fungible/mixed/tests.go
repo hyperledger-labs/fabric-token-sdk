@@ -11,16 +11,19 @@ import (
 )
 
 func TestAll(network *integration.Infrastructure) {
-	fungible.RegisterAuditor(network, "auditor", nil)
+	fungible.RegisterAuditorForNamespace(network, "auditor", DLogNamespace)
+	fungible.RegisterAuditorForNamespace(network, "auditor", FabTokenNamespace)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
-	fungible.CheckPublicParams(network, "issuer", "auditor", "alice", "bob", "charlie")
+	fungible.CheckPublicParamsForNamespace(network, DLogNamespace, "issuer", "auditor", "alice", "bob", "charlie")
+	fungible.CheckPublicParamsForNamespace(network, FabTokenNamespace, "issuer", "auditor", "alice", "bob", "charlie")
 
 	t0 := time.Now()
 
-	fungible.IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
+	fungible.IssueCashForNamespace(network, "", "USD", 110, "alice", "auditor", true, "issuer", DLogNamespace)
+	fungible.IssueCashForNamespace(network, "", "USD", 110, "alice", "auditor", true, "issuer", FabTokenNamespace)
 	t1 := time.Now()
 	fungible.CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
 	fungible.CheckAuditedTransactions(network, "auditor", fungible.AuditedTransactions[:1], nil, nil)
