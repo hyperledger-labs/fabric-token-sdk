@@ -10,6 +10,10 @@ integration-tests-dlog-fabric-t1:
 integration-tests-dlog-fabric-t2:
 	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor = Issuer" .
 
+.PHONY: integration-tests-mixed
+integration-tests-mixed:
+	cd ./integration/token/fungible/mixed; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .
+
 .PHONY: integration-tests-dloghsm-fabric
 integration-tests-dloghsm-fabric: install-softhsm
 	@echo "Setup SoftHSM"

@@ -26,7 +26,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "/root/testdata", Topology()...)
+			network, err = integration.New(StartPortDlog(), "", Topology()...)
 			Expect(err).NotTo(HaveOccurred())
 			network.DeleteOnStop = false
 			network.DeleteOnStart = true

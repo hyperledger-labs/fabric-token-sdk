@@ -107,6 +107,7 @@ clean:
 	rm -rf ./integration/token/fungible/fabtoken/cmd/
 	rm -rf ./integration/token/fungible/odlog/cmd/
 	rm -rf ./integration/token/fungible/ofabtoken/cmd/
+	rm -rf ./integration/token/fungible/mixed/cmd/
 	rm -rf ./integration/token/nft/dlog/cmd/
 	rm -rf ./integration/token/nft/fabtoken/cmd/
 	rm -rf ./integration/token/nft/odlog/cmd/
