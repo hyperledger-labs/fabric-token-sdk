@@ -21,11 +21,16 @@ import (
 )
 
 type acceptView struct {
-	tx *Transaction
+	tx      *Transaction
+	options *EndorsementsOpts
 }
 
-func NewAcceptView(tx *Transaction) *acceptView {
-	return &acceptView{tx: tx}
+func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *acceptView {
+	options, err := CompileCollectEndorsementsOpts(opts...)
+	if err != nil {
+		panic(err)
+	}
+	return &acceptView{tx: tx, options: options}
 }
 
 func (s *acceptView) Call(context view.Context) (interface{}, error) {
@@ -50,8 +55,10 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// Store envelope
-	if err := StoreEnvelope(context, s.tx); err != nil {
-		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
+	if !s.options.SkipApproval {
+		if err := StoreEnvelope(context, s.tx); err != nil {
+			return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
+		}
 	}
 
 	// Store transaction in the token transaction database
@@ -100,7 +107,7 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 
 	session := context.Session()
 	for i := 0; i < len(requestsToBeSigned); i++ {
-		signatureRequest := &signatureRequest{}
+		signatureRequest := &SignatureRequest{}
 
 		if i == 0 {
 			k, err := keys.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})

@@ -66,6 +66,9 @@ token:
         - id: {{ .ID }}
           default: {{ .Default }}
           path: {{ .Path }}
+          {{ if .Type }}
+          type: {{ .Type }}
+          {{ end }}
         {{ end }}
       {{ end }}{{ if Wallets.Auditors }}
         # Auditors wallets are used to audit tokens

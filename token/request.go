@@ -9,18 +9,23 @@ package token
 import (
 	"encoding/asn1"
 
-	"go.uber.org/zap/zapcore"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
 	TransferMetadataPrefix = "TransferMetadataPrefix"
 )
+
+type RecipientData struct {
+	Identity  view.Identity
+	AuditInfo []byte
+	Metadata  []byte
+}
 
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
@@ -60,6 +65,8 @@ type TransferOptions struct {
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
 	TokenIDs []*token.ID
+	// RestRecipientIdentity TODO:
+	RestRecipientIdentity *RecipientData
 }
 
 func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
@@ -103,6 +110,14 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 			o.Attributes = make(map[interface{}]interface{})
 		}
 		o.Attributes[attr] = value
+		return nil
+	}
+}
+
+// WithRestRecipientIdentity sets the recipient data to be used to assign any rest left during a transfer operation
+func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
+	return func(o *TransferOptions) error {
+		o.RestRecipientIdentity = recipientData
 		return nil
 	}
 }
@@ -846,9 +861,35 @@ func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
 }
 
-// AppendSignature appends a signature to the request.
-func (r *Request) AppendSignature(sigma []byte) {
-	r.Actions.Signatures = append(r.Actions.Signatures, sigma)
+func (r *Request) PutSignatures(sigmas map[string][]byte) {
+	signers := append(r.IssueSigners(), r.TransferSigners()...)
+	signatures := make([][]byte, len(signers))
+	for i, signer := range signers {
+		if sigma, ok := sigmas[signer.UniqueID()]; ok {
+			signatures[i] = sigma
+		} else {
+			logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
+		}
+	}
+	r.Actions.Signatures = signatures
+}
+
+func (r *Request) TransferSigners() []view.Identity {
+	signers := make([]view.Identity, 0)
+	for _, transfer := range r.Transfers() {
+		signers = append(signers, transfer.Senders...)
+		signers = append(signers, transfer.ExtraSigners...)
+	}
+	return signers
+}
+
+func (r *Request) IssueSigners() []view.Identity {
+	signers := make([]view.Identity, 0)
+	for _, issue := range r.Issues() {
+		signers = append(signers, issue.Issuer)
+		signers = append(signers, issue.ExtraSigners...)
+	}
+	return signers
 }
 
 // SetTokenService sets the token service.
@@ -1137,9 +1178,18 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		diff := inputSum.Sub(outputSum)
 		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
-		pseudonym, err := wallet.GetRecipientIdentity()
-		if err != nil {
-			return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
+		var pseudonym []byte
+		if transferOpts.RestRecipientIdentity != nil {
+			// register it and us it
+			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity.Identity, transferOpts.RestRecipientIdentity.AuditInfo, transferOpts.RestRecipientIdentity.Metadata); err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed to register recipient identity [%s] for the rest, wallet [%s]", transferOpts.RestRecipientIdentity.Identity, wallet.ID())
+			}
+			pseudonym = transferOpts.RestRecipientIdentity.Identity
+		} else {
+			pseudonym, err = wallet.GetRecipientIdentity()
+			if err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
+			}
 		}
 
 		outputTokens = append(outputTokens, &token.Token{

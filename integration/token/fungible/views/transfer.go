@@ -13,6 +13,7 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	view4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -36,7 +37,8 @@ type Transfer struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
 	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
-	Wallet string
+	Wallet         string
+	ExternalWallet bool
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
 	TokenIDs []*token.ID
 	// Type of tokens to transfer
@@ -53,6 +55,8 @@ type Transfer struct {
 	FailToRelease bool
 	// For additional transfer actions
 	TransferAction []TransferAction
+
+	RecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
 }
@@ -114,8 +118,9 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		[]uint64{t.Amount},
 		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
+		token2.WithRestRecipientIdentity(t.RecipientData),
 	)
-	assert.NoError(err, "failed adding transfer action [%d:%d]", t.Amount, t.Recipient)
+	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 
 	// add additional transfers
 	for i, action := range t.TransferAction {
@@ -126,7 +131,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 			[]view.Identity{additionalRecipients[i]},
 			token2.WithTokenIDs(t.TokenIDs...),
 		)
-		assert.NoError(err, "failed adding transfer action [%d:%d]", action.Amount, action.Recipient)
+		assert.NoError(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
 	}
 
 	if t.FailToRelease {
@@ -142,7 +147,14 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
-	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
+	var endorserOpts []ttx.EndorsementsOpt
+	if t.ExternalWallet {
+		// if ExternalWallet is set to true, then the signatures that the wallet must generate are prepared externally to this FSC node.
+		// Here, we assume that the view has been called using GRPC stream
+		stream := view4.GetStream(context)
+		endorserOpts = append(endorserOpts, ttx.WithExternalWalletSigner(t.Wallet, ttx.NewStreamExternalWalletSignerServer(stream)))
+	}
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, endorserOpts...))
 	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
 
 	// Sanity checks:

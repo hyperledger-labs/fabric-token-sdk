@@ -44,6 +44,10 @@ func IsAries(tms *topology.TMS) bool {
 
 var logger = flogging.MustGetLogger("token-sdk.integration.token.generators.dlog")
 
+const (
+	RemoteOwnerWallet = "##remote##"
+)
+
 type CryptoMaterialGenerator struct {
 	FabTokenGenerator *fabtoken.CryptoMaterialGenerator
 
@@ -103,8 +107,17 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 	var res []generators.Identity
 	tmsID := tms.ID()
 	for i, owner := range owners {
+		pathPrefix := ""
+		idType := ""
+		if strings.HasPrefix(owner, RemoteOwnerWallet) {
+			// prepare a remote owner wallet
+			pathPrefix = "remote"
+			owner, _ = strings.CutPrefix(owner, RemoteOwnerWallet)
+			idType = "remote"
+		}
+
 		logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
-		userOutput := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix", owner)
+		userOutput := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix", pathPrefix, owner)
 		if err := os.MkdirAll(userOutput, 0766); err != nil {
 			return nil
 		}
@@ -126,6 +139,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 		res = append(res, generators.Identity{
 			ID:   owner,
 			Path: userOutput,
+			Type: idType,
 		})
 	}
 	d.RevocationHandlerIndex++

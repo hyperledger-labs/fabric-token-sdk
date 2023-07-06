@@ -60,6 +60,18 @@ func WithOwnerIdentity(label string) fsc.Option {
 	}
 }
 
+func WithRemoteOwnerIdentity(label string) fsc.Option {
+	return func(o *fsc.Options) error {
+		to := topology.ToOptions(o)
+		to.SetOwners(append(to.Owners(), "##remote##"+label))
+
+		if label != "_default_" {
+			o.AddAlias(label)
+		}
+		return nil
+	}
+}
+
 func WithCertifierIdentity() fsc.Option {
 	return func(o *fsc.Options) error {
 		topology.ToOptions(o).SetCertifier(true)

@@ -36,6 +36,7 @@ type LocalMembership struct {
 	resolversByName          map[string]*common.Resolver
 	resolversByEnrollmentID  map[string]*common.Resolver
 	bccspResolversByIdentity map[string]*common.Resolver
+	ignoreRemote             bool
 }
 
 func NewLocalMembership(
@@ -46,6 +47,7 @@ func NewLocalMembership(
 	deserializerManager common.DeserializerManager,
 	kvs common.KVS,
 	mspID string,
+	ignoreRemote bool,
 ) *LocalMembership {
 	return &LocalMembership{
 		configManager:            configManager,
@@ -58,6 +60,7 @@ func NewLocalMembership(
 		bccspResolversByIdentity: map[string]*common.Resolver{},
 		resolversByEnrollmentID:  map[string]*common.Resolver{},
 		resolversByName:          map[string]*common.Resolver{},
+		ignoreRemote:             ignoreRemote,
 	}
 }
 
@@ -160,16 +163,30 @@ func (lm *LocalMembership) IDs() ([]string, error) {
 func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(c.Path)
-	if err := lm.registerMSPProvider(c, translatedPath, setDefault); err != nil {
+	if err := lm.registerProvider(c, translatedPath, setDefault); err != nil {
 		// Does path correspond to a holder containing multiple MSP identities?
-		if err := lm.registerMSPProviders(c, translatedPath); err != nil {
+		if err := lm.registerProviders(c, translatedPath); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
 		}
 	}
 	return nil
 }
 
-func (lm *LocalMembership) registerMSPProvider(c *config.Identity, translatedPath string, setDefault bool) error {
+func (lm *LocalMembership) registerProvider(identity *config.Identity, translatedPath string, setDefault bool) error {
+	logger.Infof("register provider with type [%s]", identity.Type)
+	switch identity.Type {
+	case "remote":
+		// do nothing for now
+		if lm.ignoreRemote {
+			return lm.registerLocalProvider(identity, translatedPath, setDefault)
+		}
+		return lm.registerRemoteProvider(identity, translatedPath, setDefault)
+	default:
+		return lm.registerLocalProvider(identity, translatedPath, setDefault)
+	}
+}
+
+func (lm *LocalMembership) registerLocalProvider(c *config.Identity, translatedPath string, setDefault bool) error {
 	// Try without "msp"
 	opts, err := config2.ToBCCSPOpts(c.Opts)
 	if err != nil {
@@ -207,7 +224,45 @@ func (lm *LocalMembership) registerMSPProvider(c *config.Identity, translatedPat
 	return nil
 }
 
-func (lm *LocalMembership) registerMSPProviders(c *config.Identity, translatedPath string) error {
+func (lm *LocalMembership) registerRemoteProvider(c *config.Identity, translatedPath string, setDefault bool) error {
+	// Try without "msp"
+	opts, err := config2.ToBCCSPOpts(c.Opts)
+	if err != nil {
+		return errors.WithMessage(err, "failed to extract BCCSP options")
+	}
+	if opts == nil {
+		logger.Debugf("no BCCSP options set for [%s]: [%v]", c.ID, c.Opts)
+	} else {
+		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", c.ID, opts, opts.PKCS11, opts.SW)
+	}
+	provider, err := x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath), lm.mspID, nil, opts)
+	if err != nil {
+		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
+		// Try with "msp"
+		provider, err = x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), lm.mspID, nil, opts)
+		if err != nil {
+			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
+				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
+			)
+			return err
+		}
+	}
+
+	walletId, _, err := provider.Identity(nil)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", c.ID, translatedPath)
+	}
+
+	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", c.ID, provider.EnrollmentID(), walletId.String())
+	lm.deserializerManager.AddDeserializer(provider)
+	if err := lm.addResolver(c.ID, provider.EnrollmentID(), setDefault, provider.Identity); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (lm *LocalMembership) registerProviders(c *config.Identity, translatedPath string) error {
 	entries, err := os.ReadDir(translatedPath)
 	if err != nil {
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
@@ -218,7 +273,7 @@ func (lm *LocalMembership) registerMSPProviders(c *config.Identity, translatedPa
 			continue
 		}
 		id := entry.Name()
-		if err := lm.registerMSPProvider(c, filepath.Join(translatedPath, id), false); err != nil {
+		if err := lm.registerProvider(c, filepath.Join(translatedPath, id), false); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
 		}
 	}

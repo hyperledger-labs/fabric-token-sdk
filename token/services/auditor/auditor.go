@@ -132,6 +132,11 @@ func (a *Auditor) GetStatus(txID string) (TxStatus, error) {
 	return a.db.GetStatus(txID)
 }
 
+// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
+	return a.db.GetTokenRequest(txID)
+}
+
 type TxStatusChangesListener struct {
 	net *network.Network
 	db  *ttxdb.DB

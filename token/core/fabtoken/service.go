@@ -7,10 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -43,43 +40,25 @@ type KVS interface {
 }
 
 type Service struct {
-	SP          view2.ServiceProvider
-	TMSID       token.TMSID
+	*WalletService
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
 	QE          QueryEngine
 	CM          config.Manager
 
-	IP                     driver.IdentityProvider
-	Deserializer           driver.Deserializer
-	OwnerWalletsRegistry   *identity.WalletsRegistry
-	IssuerWalletsRegistry  *identity.WalletsRegistry
-	AuditorWalletsRegistry *identity.WalletsRegistry
+	IP           driver.IdentityProvider
+	Deserializer driver.Deserializer
 }
 
-func NewService(
-	sp view2.ServiceProvider,
-	tmsID token.TMSID,
-	ppm PublicParametersManager,
-	tokenLoader TokenLoader,
-	qe QueryEngine,
-	identityProvider driver.IdentityProvider,
-	deserializer driver.Deserializer,
-	cm config.Manager,
-	kvs KVS,
-) *Service {
+func NewService(ws *WalletService, ppm PublicParametersManager, tokenLoader TokenLoader, qe QueryEngine, identityProvider driver.IdentityProvider, deserializer driver.Deserializer, cm config.Manager) *Service {
 	s := &Service{
-		SP:                     sp,
-		TMSID:                  tmsID,
-		TokenLoader:            tokenLoader,
-		QE:                     qe,
-		PPM:                    ppm,
-		IP:                     identityProvider,
-		Deserializer:           deserializer,
-		CM:                     cm,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(tmsID, identityProvider, driver.OwnerRole, kvs),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(tmsID, identityProvider, driver.IssuerRole, kvs),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(tmsID, identityProvider, driver.AuditorRole, kvs),
+		WalletService: ws,
+		TokenLoader:   tokenLoader,
+		QE:            qe,
+		PPM:           ppm,
+		IP:            identityProvider,
+		Deserializer:  deserializer,
+		CM:            cm,
 	}
 	return s
 }

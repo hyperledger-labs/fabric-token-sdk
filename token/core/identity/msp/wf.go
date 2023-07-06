@@ -10,7 +10,6 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
@@ -51,6 +50,9 @@ type WalletFactory struct {
 	NetworkDefaultIdentity view2.Identity
 	SignerService          common.SignerService
 	BinderService          common.BinderService
+	KVS                    common.KVS
+	DeserializerManager    common.DeserializerManager
+	ignoreRemote           bool
 }
 
 // NewWalletFactory creates a new WalletFactory
@@ -62,6 +64,9 @@ func NewWalletFactory(
 	networkDefaultIdentity view2.Identity,
 	signerService common.SignerService,
 	binderService common.BinderService,
+	kvs common.KVS,
+	deserializerManager common.DeserializerManager,
+	ignoreRemote bool,
 ) *WalletFactory {
 	return &WalletFactory{
 		SP:                     sp,
@@ -71,6 +76,9 @@ func NewWalletFactory(
 		NetworkDefaultIdentity: networkDefaultIdentity,
 		SignerService:          signerService,
 		BinderService:          binderService,
+		KVS:                    kvs,
+		DeserializerManager:    deserializerManager,
+		ignoreRemote:           ignoreRemote,
 	}
 }
 
@@ -81,21 +89,17 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 
-	dm, err := common.GetDeserializerManager(f.SP)
-	if err != nil {
-		return nil, err
-	}
-	lm := idemix.NewLocalMembership(
+	lm := idemix.NewLocalMembershipWithIgnoreRemote(
 		f.SP,
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
-		f.BinderService,
-		dm,
-		kvs.GetService(f.SP),
+		f.DeserializerManager,
+		f.KVS,
 		RoleToMSPID[role],
 		cacheSize,
 		curveID,
+		f.ignoreRemote,
 		identities,
 	)
 	return idemix.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
@@ -107,18 +111,28 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity.Wallet
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	dm, err := common.GetDeserializerManager(f.SP)
+	lm := x509.NewLocalMembership(f.ConfigManager, f.NetworkDefaultIdentity, f.SignerService, f.BinderService, f.DeserializerManager, f.KVS, RoleToMSPID[role], false)
+	if err := lm.Load(identities); err != nil {
+		return nil, errors.WithMessage(err, "failed to load owners")
+	}
+	return x509.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
+}
+
+// NewX509WalletIgnoreRemote creates a new X509 wallet treating the remote wallets as local
+func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (identity.Wallet, error) {
+	identities, err := f.ConfigFor(role)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 	lm := x509.NewLocalMembership(
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.BinderService,
-		dm,
-		kvs.GetService(f.SP),
+		f.DeserializerManager,
+		f.KVS,
 		RoleToMSPID[role],
+		true,
 	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
