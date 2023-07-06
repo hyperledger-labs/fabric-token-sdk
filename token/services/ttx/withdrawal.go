@@ -43,8 +43,12 @@ func NewRequestWithdrawalView(issuer view.Identity, tokenType string, amount uin
 	return &RequestWithdrawalView{Issuer: issuer, TokenType: tokenType, Amount: amount}
 }
 
-func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64) (view.Identity, view.Session, error) {
-	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet))
+func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+	tmsID, err := compileServiceOptions(opts...)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to compile options")
+	}
+	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(*tmsID))
 	if err != nil {
 		return nil, nil, err
 	}

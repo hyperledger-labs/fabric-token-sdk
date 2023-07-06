@@ -19,6 +19,8 @@ import (
 )
 
 type Withdrawal struct {
+	// TMSID the token management service identifier
+	TMSID token.TMSID
 	// Wallet of the recipient of the cash to be issued
 	Wallet string
 	// Amount represent the number of units of a certain token type stored in the token
@@ -34,7 +36,7 @@ type WithdrawalInitiatorView struct {
 }
 
 func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
-	id, session, err := ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount)
+	id, session, err := ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, token.WithTMSID(i.TMSID))
 	assert.NoError(err, "failed to send withdrawal request")
 
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
@@ -90,7 +92,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 		// have been issued already including the current request.
 		// No check is performed for other types.
-		wallet := token.GetManagementService(context).WalletManager().IssuerWallet("")
+		wallet := token.GetManagementService(context, token.WithTMSID(issueRequest.TMSID)).WalletManager().IssuerWallet("")
 		assert.NotNil(wallet, "issuer wallet not found")
 
 		// At this point, the issuer is ready to prepare the token transaction.
@@ -100,9 +102,8 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		var auditorID string
 		assert.NoError(kvs.GetService(context).Get("auditor", &auditorID), "failed to retrieve auditor id")
 		auditor = view2.GetIdentityProvider(context).Identity(auditorID)
-		auditorOpt := ttx.WithAuditor(auditor)
 		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
-		tx, err = ttx.NewAnonymousTransaction(context, auditorOpt)
+		tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(issueRequest.TMSID))
 		assert.NoError(err, "failed creating issue transaction")
 
 		// The issuer adds a new issue operation to the transaction following the instruction received
