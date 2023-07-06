@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package views
 
 import (
+	"encoding/json"
 	"strings"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -35,7 +38,30 @@ func AssertTokensInVault(vault *network.Vault, tx *ttx.Transaction, outputs *tok
 			assert.True(strings.Contains(err.Error(), "token not found"))
 		}
 	}
+}
 
+type KVSEntry struct {
+	Key   string
+	Value string
+}
+
+type SetKVSEntryView struct {
+	*KVSEntry
+}
+
+func (s *SetKVSEntryView) Call(context view.Context) (interface{}, error) {
+	assert.NoError(kvs.GetService(context).Put(s.Key, s.Value), "failed to put in KVS [%s:%s]", s.Key, s.Value)
+	return nil, nil
+}
+
+type SetKVSEntryViewFactory struct{}
+
+func (p *SetKVSEntryViewFactory) NewView(in []byte) (view.View, error) {
+	f := &SetKVSEntryView{KVSEntry: &KVSEntry{}}
+	err := json.Unmarshal(in, f.KVSEntry)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
 }
 
 func ServiceOpts(tmsId *token.TMSID) []token.ServiceOption {

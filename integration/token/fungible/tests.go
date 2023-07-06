@@ -15,6 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -267,10 +268,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
+	SetKVSEntry(network, "issuer", "auditor", auditor)
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()
-
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 	t1 := time.Now()
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
@@ -282,7 +283,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
 	t2 := time.Now()
-	IssueCash(network, "", "USD", 10, "alice", auditor, false, "issuer")
+	Withdraw(network, nil, "alice", "", "USD", 10, auditor, "issuer")
 	t3 := time.Now()
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120, auditor)
@@ -901,4 +902,20 @@ func TestMixed(network *integration.Infrastructure) {
 
 	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 100, "auditor1", dlogId)
 	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 115, "auditor2", fabTokenId)
+}
+
+func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string, websSocket bool) {
+	RegisterAuditor(network, auditor, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	wmp := NewWalletManagerProvider(network)
+
+	SetKVSEntry(network, "issuer", "auditor", auditor)
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
+	Withdraw(network, wmp, "alice", "alice.remote", "USD", 10, auditor, "issuer")
+
+	TransferCashWithExternalWallet(network, wmp, websSocket, "alice", "alice.remote", "USD", 7, "bob", auditor)
 }

@@ -255,6 +255,13 @@ type TokenTransactionDB interface {
 
 	// AddValidationRecord adds a new validation records for the given params
 	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
+
+	// AddTokenRequest binds the passed transaction id to the passed token request
+	AddTokenRequest(txID string, tr []byte) error
+
+	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+	// It returns nil without error if the key is not found.
+	GetTokenRequest(txID string) ([]byte, error)
 }
 
 // Driver is the interface for a database driver

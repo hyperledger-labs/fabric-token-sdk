@@ -39,7 +39,6 @@ type LocalMembership struct {
 	configManager          config.Manager
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
-	binderService          common.BinderService
 	deserializerManager    common.DeserializerManager
 	kvs                    common.KVS
 	mspID                  string
@@ -51,6 +50,7 @@ type LocalMembership struct {
 	resolversByEnrollmentID map[string]*common.Resolver
 	curveID                 math3.CurveID
 	identities              []*config.Identity
+	ignoreRemote            bool
 }
 
 func NewLocalMembership(
@@ -71,7 +71,6 @@ func NewLocalMembership(
 		configManager:           configManager,
 		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,
-		binderService:           binderService,
 		deserializerManager:     deserializerManager,
 		kvs:                     kvs,
 		mspID:                   mspID,
@@ -80,6 +79,36 @@ func NewLocalMembership(
 		resolversByName:         map[string]*common.Resolver{},
 		curveID:                 curveID,
 		identities:              identities,
+	}
+}
+
+func NewLocalMembershipWithIgnoreRemote(
+	sp view2.ServiceProvider,
+	configManager config.Manager,
+	defaultNetworkIdentity view.Identity,
+	signerService common.SignerService,
+	deserializerManager common.DeserializerManager,
+	kvs common.KVS,
+	mspID string,
+	cacheSize int,
+	curveID math3.CurveID,
+	identities []*config.Identity,
+	ignoreRemote bool,
+) *LocalMembership {
+	return &LocalMembership{
+		sp:                      sp,
+		configManager:           configManager,
+		defaultNetworkIdentity:  defaultNetworkIdentity,
+		signerService:           signerService,
+		deserializerManager:     deserializerManager,
+		kvs:                     kvs,
+		mspID:                   mspID,
+		cacheSize:               cacheSize,
+		resolversByEnrollmentID: map[string]*common.Resolver{},
+		resolversByName:         map[string]*common.Resolver{},
+		curveID:                 curveID,
+		identities:              identities,
+		ignoreRemote:            ignoreRemote,
 	}
 }
 
@@ -149,7 +178,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	if err := lm.storeEntryInKVS(id, path); err != nil {
 		return err
 	}
-	return lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "", lm.curveID)
+	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
 }
 
 func (lm *LocalMembership) IDs() ([]string, error) {
@@ -182,7 +211,7 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 	// load identities from configuration
 	for _, identityConfig := range lm.identities {
 		logger.Debugf("load wallet for identity [%+v]", identityConfig)
-		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default, lm.curveID); err != nil {
+		if err := lm.registerIdentity(*identityConfig, lm.curveID); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 		logger.Debugf("load wallet for identity [%+v] done.", identityConfig)
@@ -212,27 +241,41 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 	return nil
 }
 
-func (lm *LocalMembership) registerIdentity(id string, path string, setDefault bool, curveID math3.CurveID) error {
+func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID math3.CurveID) error {
 	// Try to register the MSP provider
-	translatedPath := lm.configManager.TranslatePath(path)
-	if err := lm.registerMSPProvider(id, translatedPath, curveID, setDefault); err != nil {
-		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", translatedPath, err, debug.Stack())
+	identity.Path = lm.configManager.TranslatePath(identity.Path)
+	if err := lm.registerProvider(identity, curveID); err != nil {
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", identity.Path, err, debug.Stack())
 		// Does path correspond to a holder containing multiple MSP identities?
-		if err := lm.registerMSPProviders(translatedPath, curveID); err != nil {
+		if err := lm.registerProviders(identity, curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
 		}
 	}
 	return nil
 }
 
-func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveID math3.CurveID, setDefault bool) error {
-	conf, err := idemix2.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID)
+func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
+	logger.Infof("register provider with type [%s]", identity.Type)
+	switch identity.Type {
+	case "remote":
+		// do nothing for now
+		if lm.ignoreRemote {
+			return lm.registerLocalProvider(identity, curveID)
+		}
+		return lm.registerRemoteProvider(identity, curveID)
+	default:
+		return lm.registerLocalProvider(identity, curveID)
+	}
+}
+
+func (lm *LocalMembership) registerLocalProvider(identity config.Identity, curveID math3.CurveID) error {
+	conf, err := idemix2.GetLocalMspConfigWithType(identity.Path, nil, lm.mspID)
 	if err != nil {
 		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", translatedPath, err)
 		// Try with "msp"
 		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(translatedPath, "msp"), nil, lm.mspID)
 		if err != nil {
-			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", translatedPath)
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identity.Path)
 		}
 	}
 	// TODO: remove the need for ServiceProvider
@@ -242,24 +285,24 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 	}
 	provider, err := idemix2.NewProvider(conf, idemix2.GetSignerService(lm.sp), idemix2.Any, cryptoProvider)
 	if err != nil {
-		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
+		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identity.Path)
 	}
 
-	cacheSize, err := lm.cacheSizeForID(id)
+	cacheSize, err := lm.cacheSizeForID(identity.ID)
 	if err != nil {
 		return err
 	}
 
 	lm.deserializerManager.AddDeserializer(provider)
-	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, cacheSize).Identity)
+	lm.addResolver(identity.ID, provider.EnrollmentID(), identity.Default, NewIdentityCache(provider.Identity, cacheSize).Identity)
 	logger.Debugf("added idemix resolver for id %s with cache of size %d", id+"@"+provider.EnrollmentID(), cacheSize)
 	return nil
 }
 
-func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID math3.CurveID) error {
-	entries, err := os.ReadDir(translatedPath)
+func (lm *LocalMembership) registerProviders(identity config.Identity, curveID math3.CurveID) error {
+	entries, err := os.ReadDir(identity.Path)
 	if err != nil {
-		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
+		logger.Warnf("failed reading from [%s]: [%s]", identity.Path, err)
 		return nil
 	}
 	found := 0
@@ -268,7 +311,7 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID m
 			continue
 		}
 		id := entry.Name()
-		if err := lm.registerMSPProvider(id, filepath.Join(translatedPath, id), curveID, false); err != nil {
+		if err := lm.registerProvider(config.Identity{ID: id, Path: filepath.Join(identity.Path, id), Default: false}, curveID); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
 			continue
 		}
@@ -360,7 +403,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 			continue
 		}
 
-		if err := lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "", lm.curveID); err != nil {
+		if err := lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
 			return err
 		}
 	}

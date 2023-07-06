@@ -145,7 +145,7 @@ func WithTMSID(id TMSID) ServiceOption {
 
 // ManagementService (TMS, for short) is the entry point for the Token API. A TMS is uniquely
 // identified by a network, channel, namespace, and public parameters.
-// The TMS gives access, among other things, to the wallet manager, the public paramenters,
+// The TMS gives access, among other things, to the wallet manager, the public parameters,
 // the token selector, and so on.
 type ManagementService struct {
 	sp        view.ServiceProvider
@@ -220,7 +220,7 @@ func (t *ManagementService) Vault() *Vault {
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{managementService: t}
+	return &WalletManager{managementService: t, walletService: t.tms}
 }
 
 // CertificationManager returns the certification manager for this TMS
@@ -333,4 +333,20 @@ func NewPublicParametersManagerFromPublicParams(params []byte) (*PublicParameter
 	}
 
 	return &PublicParametersManager{ppm: ppm}, nil
+}
+
+func NewWalletManager(sp view.ServiceProvider, network string, channel string, namespace string, params []byte) (*WalletManager, error) {
+	logger.Debugf("unmarshall public parameters...")
+	pp, err := core.PublicParametersFromBytes(params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
+	}
+
+	logger.Debugf("instantiate public parameters manager...")
+	walletService, err := core.NewWalletService(sp, network, channel, namespace, pp)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed instantiating wallet service")
+	}
+
+	return &WalletManager{walletService: walletService}, nil
 }

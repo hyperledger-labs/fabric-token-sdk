@@ -41,7 +41,7 @@ type Sender struct {
 
 // NewSender returns a Sender
 func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.Metadata, pp *crypto.PublicParams) (*Sender, error) {
-	if len(signers) != len(tokens) || len(tokens) != len(inf) || len(ids) != len(inf) {
+	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil

@@ -3,13 +3,15 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/pkg/errors"
 )
 
 // WithType returns a list token option that filter by the passed token type.
@@ -116,4 +118,79 @@ func GetAuditorWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *to
 		return nil
 	}
 	return w
+}
+
+type StreamExternalWalletSignRequest struct {
+	Party   view.Identity
+	Message []byte
+}
+
+type StreamExternalWalletSignResponse struct {
+	Sigma []byte
+}
+
+type StreamExternalWalletSignerServer struct {
+	stream view3.Stream
+}
+
+func NewStreamExternalWalletSignerServer(stream view3.Stream) *StreamExternalWalletSignerServer {
+	return &StreamExternalWalletSignerServer{stream: stream}
+}
+
+func (s *StreamExternalWalletSignerServer) Sign(party view.Identity, message []byte) ([]byte, error) {
+	logger.Info("send sign request for party [%s]", party)
+	if err := s.stream.Send(&StreamExternalWalletSignRequest{
+		Party:   party,
+		Message: message,
+	}); err != nil {
+		return nil, err
+	}
+	logger.Info("receive response, party [%s]", party)
+	response := &StreamExternalWalletSignResponse{}
+	if err := s.stream.Recv(response); err != nil {
+		return nil, err
+	}
+	return response.Sigma, nil
+}
+
+type SignerProvider interface {
+	GetSigner(party view.Identity) (token.Signer, error)
+}
+
+type StreamExternalWalletSignerClient struct {
+	sp               SignerProvider
+	stream           view3.Stream
+	expectedRequests int
+}
+
+func NewStreamExternalWalletSignerClient(sp SignerProvider, stream view3.Stream, expectedRequests int) *StreamExternalWalletSignerClient {
+	return &StreamExternalWalletSignerClient{
+		sp:               sp,
+		stream:           stream,
+		expectedRequests: expectedRequests,
+	}
+}
+
+func (s *StreamExternalWalletSignerClient) Respond() error {
+	for i := 0; i < s.expectedRequests; i++ {
+		logger.Infof("process signature request [%d]", i)
+		req := &StreamExternalWalletSignRequest{}
+		if err := s.stream.Recv(req); err != nil {
+			return errors.Wrapf(err, "failed to receive signature request [%d]", i)
+		}
+		signer, err := s.sp.GetSigner(req.Party)
+		if err != nil {
+			return errors.Wrapf(err, "failed to get signer for party [%s]", req.Party)
+		}
+		sigma, err := signer.Sign(req.Message)
+		if err != nil {
+			return errors.Wrapf(err, "failed to sign, party [%s]", req.Party)
+		}
+		if err := s.stream.Send(&StreamExternalWalletSignResponse{Sigma: sigma}); err != nil {
+			return errors.Wrapf(err, "failed to send back signature, party [%s]", req.Party)
+		}
+		logger.Infof("process signature request done [%d]", i)
+
+	}
+	return nil
 }

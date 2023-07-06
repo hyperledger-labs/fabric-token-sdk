@@ -69,6 +69,9 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
+	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
 
 	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -157,6 +160,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
 		token.WithOwnerIdentity("alice.id1"),
+		token.WithRemoteOwnerIdentity("alice.remote"),
 	)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -179,6 +183,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),

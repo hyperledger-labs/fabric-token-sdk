@@ -25,6 +25,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+type TokenTransactionDB interface {
+	GetTokenRequest(txID string) ([]byte, error)
+}
+
 type CheckTTXDB struct {
 	Auditor         bool
 	AuditorWalletID string
@@ -48,18 +52,21 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 	l, err := net.Ledger(tms.Namespace())
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
-	tip := ttx.NewTransactionInfoProvider(context, tms)
 
+	var ttxDB TokenTransactionDB
 	var qe *ttxdb.QueryExecutor
 	if m.Auditor {
 		auditorWallet := tms.WalletManager().AuditorWallet(m.AuditorWalletID)
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db := auditor.New(context, auditorWallet)
 		qe = db.NewQueryExecutor().QueryExecutor
+		ttxDB = db
 	} else {
 		db := owner.New(context, tms)
 		qe = db.NewQueryExecutor().QueryExecutor
+		ttxDB = db
 	}
+	tip := ttx.NewTransactionInfoProviderFor(context, tms, ttxDB)
 	defer qe.Done()
 	it, err := qe.Transactions(owner.QueryTransactionsParams{})
 	assert.NoError(err, "failed to get transaction iterators")
@@ -105,9 +112,14 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			errorMessages = append(errorMessages, fmt.Sprintf("no metadata found for transaction record [%s]", transactionRecord.TxID))
 		}
 
-		if _, err := tip.TransactionInfo(transactionRecord.TxID); err != nil {
+		txInfo, err := tip.TransactionInfo(transactionRecord.TxID)
+		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction info for transaction record [%s]: [%s]", transactionRecord.TxID, err))
 		}
+		assert.NotEmpty(txInfo.TokenRequest, "token request not found in database")
+		tokenRequest, err := ttxDB.GetTokenRequest(transactionRecord.TxID)
+		assert.NoError(err, "failed to retrieve token request for [%s]", transactionRecord.TxID)
+		assert.Equal(txInfo.TokenRequest, tokenRequest, "token requests do not match")
 
 		// check the ledger
 		lVC, err := l.Status(transactionRecord.TxID)

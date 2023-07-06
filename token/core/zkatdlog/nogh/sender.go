@@ -23,7 +23,6 @@ import (
 // It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
-	var signers []driver.Signer
 	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
 	if err != nil {
@@ -33,17 +32,18 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	if pp == nil {
 		return nil, nil, errors.Errorf("public parameters not inizialized")
 	}
-	for _, id := range signerIds {
-		// get signers for each input token
-		si, err := s.identityProvider.GetSigner(id)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
-		}
-		signers = append(signers, si)
-	}
+	//var signers []driver.Signer
+	//for _, id := range signerIds {
+	//	// get signers for each input token
+	//	si, err := s.identityProvider.GetSigner(id)
+	//	if err != nil {
+	//		return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
+	//	}
+	//	signers = append(signers, si)
+	//}
 
 	// get sender
-	sender, err := transfer.NewSender(signers, tokens, inputIDs, inputInf, pp)
+	sender, err := transfer.NewSender(nil, tokens, inputIDs, inputInf, pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -81,13 +81,13 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
-	transfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
+	zkTransfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
 
 	// add transfer action's metadata
-	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
+	common.SetTransferActionMetadata(opts.Attributes, zkTransfer.Metadata)
 
 	// prepare metadata
 	var outputMetadataRaw [][]byte
@@ -121,7 +121,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		senderAuditInfos = append(senderAuditInfos, auditInfo)
 	}
 
-	outputs, err := transfer.GetSerializedOutputs()
+	outputs, err := zkTransfer.GetSerializedOutputs()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
@@ -145,7 +145,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		ReceiverIsSender:   receiverIsSender,
 	}
 
-	return transfer, metadata, nil
+	return zkTransfer, metadata, nil
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed metadata
@@ -191,10 +191,10 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	transfer := &transfer.TransferAction{}
-	err := transfer.Deserialize(raw)
+	transferAction := &transfer.TransferAction{}
+	err := transferAction.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
-	return transfer, nil
+	return transferAction, nil
 }
