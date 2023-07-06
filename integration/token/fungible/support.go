@@ -702,3 +702,41 @@ func GetRevocationHandle(network *integration.Infrastructure, id string) string 
 	fmt.Printf("GetRevocationHandle [%s][%s]", rh.RH, hash.Hashable(rh.RH).String())
 	return rh.RH
 }
+
+func SetKVSEntry(network *integration.Infrastructure, user string, key string, value string) {
+	_, err := network.Client(user).CallView("SetKVSEntry", common.JSONMarshall(&views.KVSEntry{
+		Key:   key,
+		Value: value,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func Withdraw(network *integration.Infrastructure, user string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
+	if auditor == "issuer" || auditor == "newIssuer" {
+		// the issuer is the auditor, choose default identity
+		auditor = ""
+	}
+	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
+		Wallet:    wallet,
+		TokenType: typ,
+		Amount:    amount,
+		Issuer:    IssuerId,
+	}))
+
+	if len(expectedErrorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(user).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		if len(auditor) == 0 {
+			Expect(network.Client("dw").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		} else {
+			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		}
+		return common.JSONUnmarshalString(txid)
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	return ""
+}

@@ -260,10 +260,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
+	SetKVSEntry(network, "issuer", "auditor", auditor)
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()
-
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 	t1 := time.Now()
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
@@ -275,7 +275,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
 	t2 := time.Now()
-	IssueCash(network, "", "USD", 10, "alice", auditor, false, "issuer")
+	Withdraw(network, "alice", "", "USD", 10, auditor, "issuer")
 	t3 := time.Now()
 	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
 	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120, auditor)
