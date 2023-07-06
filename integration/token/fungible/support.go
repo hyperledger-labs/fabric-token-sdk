@@ -30,6 +30,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type Stream interface {
+	Recv(m interface{}) error
+	Send(m interface{}) error
+	Result() ([]byte, error)
+}
+
 func RegisterAuditor(network *integration.Infrastructure, id string, onAuditorRestart OnAuditorRestartFunc) {
 	RegisterAuditorForTMSID(network, id, nil, onAuditorRestart)
 }
@@ -296,6 +302,63 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
 		txInfo := GetTransactionInfoForTMSID(network, id, txID, tmsId)
+		for _, identity := range signers {
+			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
+			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
+			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		}
+		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
+}
+
+func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
+	// obtain the recipient for the rest
+	restRecipient := wmp.RecipientData(id, wallet)
+	// start the call as a stream
+	var stream Stream
+	var err error
+	input := common.JSONMarshall(&views.Transfer{
+		Auditor:        auditor,
+		Wallet:         wallet,
+		ExternalWallet: true,
+		Type:           typ,
+		Amount:         amount,
+		Recipient:      network.Identity(receiver),
+		RecipientEID:   receiver,
+		RecipientData:  restRecipient,
+	})
+	if websSocket {
+		stream, err = network.WebClient(id).StreamCallView("transfer", input)
+	} else {
+		stream, err = network.Client(id).StreamCallView("transfer", input)
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	// Here we handle the sign requests
+	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(id, wallet), stream, 1)
+	Expect(client.Respond()).NotTo(HaveOccurred())
+
+	// wait for the completion of the view
+	txidBoxed, err := stream.Result()
+	if len(expectedErrorMsgs) == 0 {
+		txID := common.JSONUnmarshalString(txidBoxed)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+
+		signers := []string{auditor}
+		if !strings.HasPrefix(receiver, id) {
+			signers = append(signers, strings.Split(receiver, ".")[0])
+		}
+		txInfo := GetTransactionInfo(network, id, txID)
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
@@ -814,4 +877,48 @@ func GetRevocationHandle(network *integration.Infrastructure, id string) string 
 	common.JSONUnmarshal(rhBoxed.([]byte), rh)
 	fmt.Printf("GetRevocationHandle [%s][%s]", rh.RH, hash.Hashable(rh.RH).String())
 	return rh.RH
+}
+
+func SetKVSEntry(network *integration.Infrastructure, user string, key string, value string) {
+	_, err := network.Client(user).CallView("SetKVSEntry", common.JSONMarshall(&views.KVSEntry{
+		Key:   key,
+		Value: value,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+}
+
+func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
+	var recipientData *token2.RecipientData
+	if wpm != nil {
+		recipientData = wpm.RecipientData(user, wallet)
+	}
+
+	if auditor == "issuer" || auditor == "newIssuer" {
+		// the issuer is the auditor, choose default identity
+		auditor = ""
+	}
+	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
+		Wallet:        wallet,
+		TokenType:     typ,
+		Amount:        amount,
+		Issuer:        IssuerId,
+		RecipientData: recipientData,
+	}))
+
+	if len(expectedErrorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(user).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		if len(auditor) == 0 {
+			Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		} else {
+			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		}
+		return common.JSONUnmarshalString(txid)
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	return ""
 }

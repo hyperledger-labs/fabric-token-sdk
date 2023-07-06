@@ -19,6 +19,14 @@ type Persistence struct {
 	transactionRecords []*driver.TransactionRecord
 }
 
+func (p *Persistence) AddTokenRequest(txID string, tr []byte) error {
+	panic("implement me")
+}
+
+func (p *Persistence) GetTokenRequest(txID string) ([]byte, error) {
+	panic("implement me")
+}
+
 func (p *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*driver.MovementRecord, error) {
 	var res []*driver.MovementRecord
 
