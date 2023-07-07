@@ -242,114 +242,110 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	if err != nil {
 		return nil, err
 	}
+	txIdRaw := []byte(c.tx.ID())
 
 	var distributionList []view.Identity
+	var signers []view.Identity
 	for i, transfer := range transfers {
 		distributionList = append(distributionList, transfer.Senders...)
 		distributionList = append(distributionList, transfer.Receivers...)
 
 		// contact signer and ask for the signature unless it is me
-		var signers []view.Identity
 		signers = append(signers, transfer.Senders...)
 		signers = append(signers, transfer.ExtraSigners...)
-
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collecting signature on [%d]-th request transfer, signers [%d]", i, len(signers))
-		}
-
-		for _, party := range signers {
-			signatureRequest := &signatureRequest{
-				TX:      txRaw,
-				Request: requestRaw,
-				TxID:    []byte(c.tx.ID()),
-				Signer:  party,
-			}
-
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("collecting signature on request (transfer) from [%s]", party.UniqueID())
-			}
-
-			if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("collecting signature on request (transfer) from [%s], it is me!", party.UniqueID())
-					logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
-				}
-				sigma, err := signer.Sign(signatureRequest.MessageToSign())
-				if err != nil {
-					return nil, err
-				}
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("signature verified (me) [%s,%s,%s]",
-						hash.Hashable(signatureRequest.MessageToSign()).String(),
-						hash.Hashable(sigma).String(),
-						party.UniqueID(),
-					)
-				}
-
-				c.tx.TokenRequest.AppendSignature(sigma)
-				continue
-			}
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("collecting signature on request (transfer) from [%s], it is not me, connect to party!", party.UniqueID())
-			}
-
-			session, err := context.GetSession(context.Initiator(), party)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed getting session")
-			}
-			// Wait to receive a content back
-			ch := session.Receive()
-
-			signatureRequestRaw, err := Marshal(signatureRequest)
-			if err != nil {
-				return nil, err
-			}
-			err = session.Send(signatureRequestRaw)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed sending transaction content")
-			}
-
-			timeout := time.NewTimer(time.Minute)
-
-			var msg *view.Message
-			select {
-			case msg = <-ch:
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("collect signatures on transfer: reply received from [%s]", party)
-				}
-				timeout.Stop()
-			case <-timeout.C:
-				timeout.Stop()
-				return nil, errors.Errorf("Timeout from party %s", party)
-			}
-			if msg.Status == view.ERROR {
-				return nil, errors.New(string(msg.Payload))
-			}
-
-			sigma := msg.Payload
-
-			verifier, err := c.tx.TokenService().SigService().OwnerVerifier(party)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting verifier for [%s]", party)
-			}
-			err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed verifying signature from [%s]", party)
-			}
-
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("signature verified [%s,%s,%s]",
-					hash.Hashable(signatureRequest.MessageToSign()).String(),
-					hash.Hashable(sigma).String(),
-					party.UniqueID(),
-				)
-			}
-
-			c.tx.TokenRequest.AppendSignature(sigma)
+			logger.Debugf("collecting signature on [%d]-th request transfer, signers [%d]", i, len(transfer.Senders)+len(transfer.ExtraSigners))
 		}
 	}
 
+	sigmas := make([][]byte, len(signers))
+	for i, party := range signers {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("collecting signature on request (transfer) from [%s]", party.UniqueID())
+		}
+
+		signatureRequest := &signatureRequest{
+			TX:      txRaw,
+			Request: requestRaw,
+			TxID:    txIdRaw,
+			Signer:  party,
+		}
+		if sigmas[i], err = c.sign(context, signatureRequest); err != nil {
+			return nil, err
+		}
+
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("signature verified [%s,%s,%s]",
+				hash.Hashable(signatureRequest.MessageToSign()).String(),
+				hash.Hashable(sigmas[i]).String(),
+				signatureRequest.Signer.UniqueID(),
+			)
+		}
+	}
+
+	for _, sigma := range sigmas {
+		c.tx.TokenRequest.AppendSignature(sigma)
+	}
+
 	return distributionList, nil
+}
+
+func (c *collectEndorsementsView) sign(context view.Context, signatureRequest *signatureRequest) ([]byte, error) {
+	if signer, err := c.tx.TokenService().SigService().GetSigner(signatureRequest.Signer); err == nil {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("it is me!")
+			logger.Debugf("signing tx-id [%s,nonce=%s]", c.tx.ID(), base64.StdEncoding.EncodeToString(c.tx.TxID.Nonce))
+		}
+		return signer.Sign(signatureRequest.MessageToSign())
+	}
+
+	logger.Debugf("it is not me, connect to party!")
+
+	session, err := context.GetSession(context.Initiator(), signatureRequest.Signer)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting session")
+	}
+	// Wait to receive a content back
+	ch := session.Receive()
+
+	signatureRequestRaw, err := Marshal(signatureRequest)
+	if err != nil {
+		return nil, err
+	}
+	err = session.Send(signatureRequestRaw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed sending transaction content")
+	}
+
+	timeout := time.NewTimer(time.Minute)
+
+	var msg *view.Message
+	select {
+	case msg = <-ch:
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("collect signatures on transfer: reply received from [%s]", signatureRequest.Signer)
+		}
+		timeout.Stop()
+	case <-timeout.C:
+		timeout.Stop()
+		return nil, errors.Errorf("Timeout from party %s", signatureRequest.Signer)
+	}
+	if msg.Status == view.ERROR {
+		return nil, errors.New(string(msg.Payload))
+	}
+
+	sigma := msg.Payload
+
+	verifier, err := c.tx.TokenService().SigService().OwnerVerifier(signatureRequest.Signer)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting verifier for [%s]", signatureRequest.Signer)
+	}
+	err = verifier.Verify(signatureRequest.MessageToSign(), sigma)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed verifying signature from [%s]", signatureRequest.Signer)
+	}
+
+	return sigma, nil
 }
 
 func (c *collectEndorsementsView) requestApproval(context view.Context) (*network.Envelope, error) {
