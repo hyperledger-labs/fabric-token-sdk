@@ -13,15 +13,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	platform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -218,6 +218,44 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 		Amount:       amount,
 		Recipient:    network.Identity(receiver),
 		RecipientEID: receiver,
+	}))
+	if len(expectedErrorMsgs) == 0 {
+		txID := common.JSONUnmarshalString(txidBoxed)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+
+		signers := []string{auditor}
+		if !strings.HasPrefix(receiver, id) {
+			signers = append(signers, strings.Split(receiver, ".")[0])
+		}
+		txInfo := GetTransactionInfo(network, id, txID)
+		for _, identity := range signers {
+			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
+			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
+			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		}
+		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
+}
+
+func TransferCashWithRestRecipient(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, restRecipientData *token2.RecipientData, expectedErrorMsgs ...string) string {
+	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
+		Auditor:       auditor,
+		Wallet:        wallet,
+		Type:          typ,
+		Amount:        amount,
+		Recipient:     network.Identity(receiver),
+		RecipientEID:  receiver,
+		RecipientData: restRecipientData,
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
@@ -712,15 +750,31 @@ func SetKVSEntry(network *integration.Infrastructure, user string, key string, v
 }
 
 func Withdraw(network *integration.Infrastructure, user string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
+	wm := load(network, user)
+	ownerWallet := wm.OwnerWallet(wallet)
+	Expect(ownerWallet).ToNot(BeNil())
+	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
+	Expect(err).ToNot(HaveOccurred())
+	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
+	Expect(err).ToNot(HaveOccurred())
+	metadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
+	Expect(err).ToNot(HaveOccurred())
+	recipientData := &ttx.RecipientData{
+		Identity:  recipientIdentity,
+		AuditInfo: auditInfo,
+		Metadata:  metadata,
+	}
+
 	if auditor == "issuer" || auditor == "newIssuer" {
 		// the issuer is the auditor, choose default identity
 		auditor = ""
 	}
 	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
-		Wallet:    wallet,
-		TokenType: typ,
-		Amount:    amount,
-		Issuer:    IssuerId,
+		Wallet:        wallet,
+		TokenType:     typ,
+		Amount:        amount,
+		Issuer:        IssuerId,
+		RecipientData: recipientData,
 	}))
 
 	if len(expectedErrorMsgs) == 0 {
@@ -739,4 +793,21 @@ func Withdraw(network *integration.Infrastructure, user string, wallet string, t
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	return ""
+}
+
+func GetRecipientData(network *integration.Infrastructure, user string, wallet string) *token2.RecipientData {
+	wm := load(network, user)
+	ownerWallet := wm.OwnerWallet(wallet)
+	Expect(ownerWallet).ToNot(BeNil())
+	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
+	Expect(err).ToNot(HaveOccurred())
+	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
+	Expect(err).ToNot(HaveOccurred())
+	metadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
+	Expect(err).ToNot(HaveOccurred())
+	return &token2.RecipientData{
+		Identity:  recipientIdentity,
+		AuditInfo: auditInfo,
+		Metadata:  metadata,
+	}
 }

@@ -53,6 +53,8 @@ type Transfer struct {
 	FailToRelease bool
 	// For additional transfer actions
 	TransferAction []TransferAction
+
+	RecipientData *token2.RecipientData
 }
 
 type TransferView struct {
@@ -112,8 +114,9 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 		[]uint64{t.Amount},
 		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
+		token2.WithRestRecipientIdentity(t.RecipientData),
 	)
-	assert.NoError(err, "failed adding transfer action [%d:%d]", t.Amount, t.Recipient)
+	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 
 	// add additional transfers
 	for i, action := range t.TransferAction {
@@ -123,7 +126,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 			[]uint64{action.Amount},
 			[]view.Identity{additionalRecipients[i]},
 		)
-		assert.NoError(err, "failed adding transfer action [%d:%d]", action.Amount, action.Recipient)
+		assert.NoError(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
 	}
 
 	if t.FailToRelease {

@@ -34,9 +34,7 @@ type RequestWithdrawalView struct {
 	TMSID     token.TMSID
 	Wallet    string
 
-	RecipientIdentity  view.Identity
-	RecipientAuditInfo []byte
-	RecipientMetadata  []byte
+	RecipientData *RecipientData
 }
 
 func NewRequestWithdrawalView(issuer view.Identity, tokenType string, amount uint64) *RequestWithdrawalView {
@@ -49,6 +47,20 @@ func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
 	}
 	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(*tmsID))
+	if err != nil {
+		return nil, nil, err
+	}
+	result := resultBoxed.([]interface{})
+	ir := result[0].(*WithdrawalRequest)
+	return ir.Recipient, result[1].(view.Session), nil
+}
+
+func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
+	tmsID, err := compileServiceOptions(opts...)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to compile options")
+	}
+	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(*tmsID).WithRecipientIdentity(recipientData))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -99,17 +111,15 @@ func (r *RequestWithdrawalView) WithTMSID(id token.TMSID) *RequestWithdrawalView
 	return r
 }
 
-func (r *RequestWithdrawalView) WithRecipientIdentity(recipientIdentity view.Identity, auditInfo []byte, metadata []byte) *RequestWithdrawalView {
-	r.RecipientIdentity = recipientIdentity
-	r.RecipientAuditInfo = auditInfo
-	r.RecipientMetadata = metadata
+func (r *RequestWithdrawalView) WithRecipientIdentity(data *RecipientData) *RequestWithdrawalView {
+	r.RecipientData = data
 	return r
 }
 
 func (r *RequestWithdrawalView) GetRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
-	if !r.RecipientIdentity.IsNone() {
+	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
-		return &tmsID, r.RecipientIdentity, r.RecipientAuditInfo, r.RecipientMetadata, nil
+		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.Metadata, nil
 	}
 
 	w := GetWallet(

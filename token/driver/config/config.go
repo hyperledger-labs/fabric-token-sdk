@@ -23,6 +23,7 @@ type Identity struct {
 	Default   bool        `yaml:"default,omitempty"`
 	Path      string      `yaml:"path"`
 	CacheSize int         `yaml:"cacheSize"`
+	Type      string      `yaml:"type,omitempty"`
 	Opts      interface{} `yaml:"opts,omitempty"`
 }
 

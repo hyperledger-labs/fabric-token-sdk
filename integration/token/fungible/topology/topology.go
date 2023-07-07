@@ -42,7 +42,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -50,8 +50,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		orion.WithRole("issuer"),
 		token.WithDefaultIssuerIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -79,8 +79,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		orion.WithRole("issuer"),
 		token.WithDefaultIssuerIdentity(),
 		token.WithIssuerIdentity("newIssuer.id1"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "newIssuer.owner"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("newIssuer.owner"),
 	)
 	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
@@ -155,7 +155,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity("alice.id1"),
+		token.WithRemoteOwnerIdentity("alice.remote"),
 	)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -184,8 +185,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -216,8 +217,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("charlie"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -243,10 +244,10 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("manager"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "manager.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "manager.id2"),
-		token.WithOwnerIdentity(tokenSDKDriver, "manager.id3"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("manager.id1"),
+		token.WithOwnerIdentity("manager.id2"),
+		token.WithOwnerIdentity("manager.id3"),
 	)
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})

@@ -32,6 +32,7 @@ func WithType(tokenType string) ListTokensOption {
 
 // WalletManager defines the interface for managing wallets.
 type WalletManager struct {
+	walletService     driver.WalletService
 	managementService *ManagementService
 }
 
@@ -42,12 +43,12 @@ func (wm *WalletManager) IsMe(id view.Identity) bool {
 
 // RegisterOwnerWallet registers a new owner wallet with the passed id
 func (wm *WalletManager) RegisterOwnerWallet(id string, path string) error {
-	return wm.managementService.tms.RegisterOwnerWallet(id, path)
+	return wm.walletService.RegisterOwnerWallet(id, path)
 }
 
 // RegisterIssuerWallet registers a new issuer wallet with the passed id
 func (wm *WalletManager) RegisterIssuerWallet(id string, path string) error {
-	return wm.managementService.tms.RegisterIssuerWallet(id, path)
+	return wm.walletService.RegisterIssuerWallet(id, path)
 }
 
 // RegisterRecipientIdentity registers a new recipient identity
@@ -55,13 +56,13 @@ func (wm *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo [
 	if err := wm.managementService.tms.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
 		return err
 	}
-	return wm.managementService.tms.RegisterRecipientIdentity(id, auditInfo, metadata)
+	return wm.walletService.RegisterRecipientIdentity(id, auditInfo, metadata)
 }
 
 // Wallet returns the wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) Wallet(identity view.Identity) *Wallet {
-	w := wm.managementService.tms.Wallet(identity)
+	w := wm.walletService.Wallet(identity)
 	if w == nil {
 		return nil
 	}
@@ -70,7 +71,7 @@ func (wm *WalletManager) Wallet(identity view.Identity) *Wallet {
 
 // OwnerWalletIDs returns the list of owner wallet identifiers
 func (wm *WalletManager) OwnerWalletIDs() ([]string, error) {
-	ids, err := wm.managementService.tms.OwnerWalletIDs()
+	ids, err := wm.walletService.OwnerWalletIDs()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get the list of owner wallet identifiers")
 	}
@@ -81,7 +82,7 @@ func (wm *WalletManager) OwnerWalletIDs() ([]string, error) {
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) OwnerWallet(id string) *OwnerWallet {
-	w, err := wm.managementService.tms.OwnerWallet(id)
+	w, err := wm.walletService.OwnerWallet(id)
 	if err != nil {
 		logger.Debugf("failed to get owner wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -92,7 +93,7 @@ func (wm *WalletManager) OwnerWallet(id string) *OwnerWallet {
 // OwnerWalletByIdentity returns the owner wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWallet {
-	w, err := wm.managementService.tms.OwnerWalletByIdentity(identity)
+	w, err := wm.walletService.OwnerWalletByIdentity(identity)
 	if err != nil {
 		logger.Debugf("failed to get owner wallet for id [%s]: [%s]", identity, err)
 		return nil
@@ -104,7 +105,7 @@ func (wm *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWal
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) IssuerWallet(id string) *IssuerWallet {
-	w, err := wm.managementService.tms.IssuerWallet(id)
+	w, err := wm.walletService.IssuerWallet(id)
 	if err != nil {
 		logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -115,7 +116,7 @@ func (wm *WalletManager) IssuerWallet(id string) *IssuerWallet {
 // IssuerWalletByIdentity returns the issuer wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWallet {
-	w, err := wm.managementService.tms.IssuerWalletByIdentity(identity)
+	w, err := wm.walletService.IssuerWalletByIdentity(identity)
 	if err != nil {
 		logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", identity, err)
 		return nil
@@ -127,7 +128,7 @@ func (wm *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerW
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) AuditorWallet(id string) *AuditorWallet {
-	w, err := wm.managementService.tms.AuditorWallet(id)
+	w, err := wm.walletService.AuditorWallet(id)
 	if err != nil {
 		logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -136,7 +137,7 @@ func (wm *WalletManager) AuditorWallet(id string) *AuditorWallet {
 }
 
 func (wm *WalletManager) AuditorWalletByIdentity(id view.Identity) *AuditorWallet {
-	w, err := wm.managementService.tms.AuditorWalletByIdentity(id)
+	w, err := wm.walletService.AuditorWalletByIdentity(id)
 	if err != nil {
 		logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -148,7 +149,7 @@ func (wm *WalletManager) AuditorWalletByIdentity(id view.Identity) *AuditorWalle
 // The identifier can be a label, as defined in the configuration file, an identity or a wallet ID.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) CertifierWallet(id string) *CertifierWallet {
-	w, err := wm.managementService.tms.CertifierWallet(id)
+	w, err := wm.walletService.CertifierWallet(id)
 	if err != nil {
 		logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -159,7 +160,7 @@ func (wm *WalletManager) CertifierWallet(id string) *CertifierWallet {
 // CertifierWalletByIdentity returns the certifier wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) CertifierWalletByIdentity(identity view.Identity) *CertifierWallet {
-	w, err := wm.managementService.tms.CertifierWalletByIdentity(identity)
+	w, err := wm.walletService.CertifierWalletByIdentity(identity)
 	if err != nil {
 		logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", identity, err)
 		return nil
@@ -169,26 +170,26 @@ func (wm *WalletManager) CertifierWalletByIdentity(identity view.Identity) *Cert
 
 // GetEnrollmentID returns the enrollment ID of passed identity
 func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error) {
-	auditInfo, err := wm.managementService.tms.IdentityProvider().GetAuditInfo(identity)
+	auditInfo, err := wm.walletService.GetAuditInfo(identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
-	return wm.managementService.tms.IdentityProvider().GetEnrollmentID(auditInfo)
+	return wm.walletService.GetEnrollmentID(auditInfo)
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
 func (wm *WalletManager) GetRevocationHandle(identity view.Identity) (string, error) {
-	auditInfo, err := wm.managementService.tms.IdentityProvider().GetAuditInfo(identity)
+	auditInfo, err := wm.walletService.GetAuditInfo(identity)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
 
-	return wm.managementService.tms.IdentityProvider().GetRevocationHandler(auditInfo)
+	return wm.walletService.GetRevocationHandler(auditInfo)
 }
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs
 func (wm *WalletManager) SpentIDs(ids []*token.ID) ([]string, error) {
-	return wm.managementService.tms.SpentIDs(ids...)
+	return wm.walletService.SpentIDs(ids...)
 }
 
 // Wallet models a generic wallet that has an identifier and contains one or mode identities.
@@ -305,6 +306,10 @@ func (o *OwnerWallet) ListUnspentTokensIterator(opts ...ListTokensOption) (*Unsp
 
 func (o *OwnerWallet) EnrollmentID() string {
 	return o.w.EnrollmentID()
+}
+
+func (o *OwnerWallet) RegisterRecipient(identity view.Identity, auditInfo []byte, metadata []byte) error {
+	return o.w.RegisterRecipient(identity, auditInfo, metadata)
 }
 
 // IssuerWallet models the wallet of an issuer

@@ -7,12 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -24,17 +21,6 @@ import (
 
 type TokenCommitmentLoader interface {
 	GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error)
-}
-
-type QueryEngine interface {
-	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
-	IsPending(id *token3.ID) (bool, error)
-	IsMine(id *token3.ID) (bool, error)
-	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
-	// The token type can be empty. In that case, tokens of any type are returned.
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
-	ListAuditTokens(ids ...*token3.ID) ([]*token3.Token, error)
-	ListHistoryIssuedTokens() (*token3.IssuedTokens, error)
 }
 
 type TokenLoader interface {
@@ -56,51 +42,24 @@ type KVS interface {
 }
 
 type Service struct {
-	SP                    view2.ServiceProvider
-	TMSID                 token2.TMSID
-	PP                    *crypto.PublicParams
+	*WalletService
 	PPM                   PublicParametersManager
-	PPLabel               string
-	PublicParamsFetcher   driver.PublicParamsFetcher
 	TokenLoader           TokenLoader
 	TokenCommitmentLoader TokenCommitmentLoader
-	QE                    QueryEngine
 	DeserializerProvider  DeserializerProviderFunc
+	identityProvider      driver.IdentityProvider
 	configManager         config.Manager
-
-	identityProvider       driver.IdentityProvider
-	OwnerWalletsRegistry   *identity.WalletsRegistry
-	IssuerWalletsRegistry  *identity.WalletsRegistry
-	AuditorWalletsRegistry *identity.WalletsRegistry
 }
 
-func NewTokenService(
-	sp view2.ServiceProvider,
-	tmsID token2.TMSID,
-	PPM PublicParametersManager,
-	tokenLoader TokenLoader,
-	tokenCommitmentLoader TokenCommitmentLoader,
-	queryEngine QueryEngine,
-	identityProvider driver.IdentityProvider,
-	deserializerProvider DeserializerProviderFunc,
-	ppLabel string,
-	configManager config.Manager,
-	kvs KVS,
-) (*Service, error) {
+func NewTokenService(ws *WalletService, PPM PublicParametersManager, tokenLoader TokenLoader, tokenCommitmentLoader TokenCommitmentLoader, identityProvider driver.IdentityProvider, deserializerProvider DeserializerProviderFunc, configManager config.Manager) (*Service, error) {
 	s := &Service{
-		TMSID:                  tmsID,
-		SP:                     sp,
-		PPM:                    PPM,
-		TokenLoader:            tokenLoader,
-		TokenCommitmentLoader:  tokenCommitmentLoader,
-		QE:                     queryEngine,
-		identityProvider:       identityProvider,
-		DeserializerProvider:   deserializerProvider,
-		PPLabel:                ppLabel,
-		configManager:          configManager,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(tmsID, identityProvider, driver.OwnerRole, kvs),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(tmsID, identityProvider, driver.IssuerRole, kvs),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(tmsID, identityProvider, driver.AuditorRole, kvs),
+		WalletService:         ws,
+		PPM:                   PPM,
+		TokenLoader:           tokenLoader,
+		TokenCommitmentLoader: tokenCommitmentLoader,
+		identityProvider:      identityProvider,
+		DeserializerProvider:  deserializerProvider,
+		configManager:         configManager,
 	}
 	return s, nil
 }
@@ -170,15 +129,6 @@ func (s *Service) ConfigManager() config.Manager {
 	return s.configManager
 }
 
-// PublicParams returns the public parameters associated with the service
-func (s *Service) PublicParams() *crypto.PublicParams {
-	return s.PPM.PublicParams()
-}
-
-func (s *Service) LoadPublicParams() error {
-	return s.PPM.Load()
-}
-
 func (s *Service) Deserializer() (driver.Deserializer, error) {
 	pp := s.PublicParams()
 	if pp == nil {
@@ -197,4 +147,9 @@ func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *
 		Transfers: request.Transfers,
 	}
 	return newReq.Bytes()
+}
+
+// PublicParams returns the public parameters associated with the service
+func (s *Service) PublicParams() *crypto.PublicParams {
+	return s.PPM.PublicParams()
 }

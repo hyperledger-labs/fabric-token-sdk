@@ -17,7 +17,7 @@ type ListTokensOptions struct {
 	TokenType string
 }
 
-// Wallet models a generic walleet
+// Wallet models a generic wallet
 type Wallet interface {
 	// ID returns the ID of this wallet
 	ID() string
@@ -54,6 +54,9 @@ type OwnerWallet interface {
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
+
+	// RegisterRecipient TODO
+	RegisterRecipient(identity view.Identity, info []byte, metadata []byte) error
 }
 
 // IssuerWallet models the wallet of an issuer

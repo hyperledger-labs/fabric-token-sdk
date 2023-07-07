@@ -34,9 +34,24 @@ type EnrollmentIDUnmarshaler interface {
 	GetRevocationHandler(auditInfo []byte) (string, error)
 }
 
+type SigService interface {
+	GetAuditInfo(identity view.Identity) ([]byte, error)
+	RegisterSigner(identity view.Identity, signer view2.Signer, verifier view2.Verifier) error
+	IsMe(identity view.Identity) bool
+	GetSigner(identity view.Identity) (view2.Signer, error)
+	RegisterAuditInfo(identity view.Identity, info []byte) error
+	GetVerifier(identity view.Identity) (view2.Verifier, error)
+}
+
+type Binder interface {
+	Bind(longTerm view.Identity, ephemeral view.Identity) error
+}
+
 // Provider implements the driver.IdentityProvider interface
 type Provider struct {
-	sp view2.ServiceProvider
+	SigService         SigService
+	Binder             Binder
+	DefaultFSCIdentity view.Identity
 
 	wallets                 Wallets
 	deserializers           []Deserializer
@@ -46,9 +61,11 @@ type Provider struct {
 }
 
 // NewProvider creates a new identity provider
-func NewProvider(sp view2.ServiceProvider, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, wallets Wallets) *Provider {
+func NewProvider(sigService SigService, binder Binder, defaultFSCIdentity view.Identity, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, wallets Wallets) *Provider {
 	return &Provider{
-		sp:                      sp,
+		SigService:              sigService,
+		Binder:                  binder,
+		DefaultFSCIdentity:      defaultFSCIdentity,
 		wallets:                 wallets,
 		deserializers:           []Deserializer{},
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
@@ -84,7 +101,7 @@ func (p *Provider) LookupIdentifier(role driver.IdentityRole, v interface{}) (vi
 }
 
 func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
-	auditInfo, err := view2.GetSigService(p.sp).GetAuditInfo(identity)
+	auditInfo, err := p.SigService.GetAuditInfo(identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", identity.String())
 	}
@@ -92,11 +109,11 @@ func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
 }
 
 func (p *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
-	return view2.GetSigService(p.sp).RegisterSigner(identity, signer, verifier)
+	return p.SigService.RegisterSigner(identity, signer, verifier)
 }
 
 func (p *Provider) IsMe(identity view.Identity) bool {
-	isMe := view2.GetSigService(p.sp).IsMe(identity)
+	isMe := p.SigService.IsMe(identity)
 	if !isMe {
 		// check cache
 		p.isMeCacheLock.RLock()
@@ -133,7 +150,7 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 		p.isMeCache[identity.String()] = found
 		p.isMeCacheLock.Unlock()
 	}()
-	signer, err := view2.GetSigService(p.sp).GetSigner(identity)
+	signer, err := p.SigService.GetSigner(identity)
 	if err == nil {
 		found = true
 		return signer, nil
@@ -156,7 +173,7 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	}
 
 	// yes, check ro.Identity
-	signer, err = view2.GetSigService(p.sp).GetSigner(ro.Identity)
+	signer, err = p.SigService.GetSigner(ro.Identity)
 	if err == nil {
 		found = true
 		return signer, nil
@@ -174,7 +191,7 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 }
 
 func (p *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := view2.GetSigService(p.sp).RegisterAuditInfo(id, auditInfo); err != nil {
+	if err := p.SigService.RegisterAuditInfo(id, auditInfo); err != nil {
 		return err
 	}
 	return nil
@@ -199,7 +216,7 @@ func (p *Provider) RegisterIssuerWallet(id string, path string) error {
 }
 
 func (p *Provider) Bind(id view.Identity, to view.Identity) error {
-	sigService := view2.GetSigService(p.sp)
+	sigService := p.SigService
 
 	setSV := true
 	signer, err := p.GetSigner(to)
@@ -237,8 +254,10 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 		}
 	}
 
-	if err := view2.GetEndpointService(p.sp).Bind(to, id); err != nil {
-		return err
+	if p.Binder != nil {
+		if err := p.Binder.Bind(to, id); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -291,8 +310,10 @@ func (i *Info) Get() (view.Identity, []byte, error) {
 		return nil, nil, err
 	}
 	// bind the identity to the default FSC node identity
-	if err := view2.GetEndpointService(i.Provider.sp).Bind(view2.GetIdentityProvider(i.Provider.sp).DefaultIdentity(), id); err != nil {
-		return nil, nil, err
+	if i.Provider.Binder != nil {
+		if err := i.Provider.Binder.Bind(i.Provider.DefaultFSCIdentity, id); err != nil {
+			return nil, nil, err
+		}
 	}
 	return id, ai, nil
 }

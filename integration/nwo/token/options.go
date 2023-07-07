@@ -8,7 +8,6 @@ package token
 
 import (
 	fsc "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 )
 
@@ -45,14 +44,26 @@ func WithDefaultIssuerIdentityWithHSM() fsc.Option {
 	return WithIssuerIdentityWithHSM("_default_")
 }
 
-func WithDefaultOwnerIdentity(driver string) fsc.Option {
-	return WithOwnerIdentity(driver, "_default_")
+func WithDefaultOwnerIdentity() fsc.Option {
+	return WithOwnerIdentity("_default_")
 }
 
-func WithOwnerIdentity(driver string, label string) fsc.Option {
+func WithOwnerIdentity(label string) fsc.Option {
 	return func(o *fsc.Options) error {
 		to := topology.ToOptions(o)
 		to.SetOwners(append(to.Owners(), label))
+
+		if label != "_default_" {
+			o.AddAlias(label)
+		}
+		return nil
+	}
+}
+
+func WithRemoteOwnerIdentity(label string) fsc.Option {
+	return func(o *fsc.Options) error {
+		to := topology.ToOptions(o)
+		to.SetOwners(append(to.Owners(), "##remote##"+label))
 
 		if label != "_default_" {
 			o.AddAlias(label)
