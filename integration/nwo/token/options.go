@@ -8,7 +8,6 @@ package token
 
 import (
 	fsc "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 )
 

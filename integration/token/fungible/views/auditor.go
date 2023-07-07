@@ -28,12 +28,12 @@ type AuditView struct {
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
-	tx, err := ttx.ReceiveTransaction(context, append(txOpts(a.TMSID), ttx.WithNoTransactionVerification())...)
+	tx, err := ttx.ReceiveTransaction(context, append(TxOpts(a.TMSID), ttx.WithNoTransactionVerification())...)
 
 	assert.NoError(err, "failed receiving transaction")
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
-	w := ttx.MyAuditorWallet(context, serviceOpts(a.TMSID)...)
+	w := ttx.MyAuditorWallet(context, ServiceOpts(a.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Validate
@@ -196,7 +196,7 @@ type RegisterAuditorView struct {
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(ttx.NewRegisterAuditorView(
 		&AuditView{r.TMSID},
-		serviceOpts(r.TMSID)...,
+		ServiceOpts(r.TMSID)...,
 	))
 }
 
@@ -265,7 +265,7 @@ type CurrentSpendingView struct {
 }
 
 func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
-	w := ttx.MyAuditorWallet(context, serviceOpts(r.TMSID)...)
+	w := ttx.MyAuditorWallet(context, ServiceOpts(r.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor := ttx.NewAuditor(context, w)

@@ -28,7 +28,7 @@ type GetEnrollmentIDView struct {
 }
 
 func (r *GetEnrollmentIDView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, serviceOpts(r.TMSID)...)
+	tms := token.GetManagementService(context, ServiceOpts(r.TMSID)...)
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
 	w := tms.WalletManager().OwnerWallet(r.Wallet)
 	assert.NotNil(w, "wallet not found [%s]", r.Wallet)
@@ -54,7 +54,7 @@ type CheckPublicParamsMatchView struct {
 }
 
 func (p *CheckPublicParamsMatchView) Call(context view.Context) (interface{}, error) {
-	tms := token.GetManagementService(context, serviceOpts(p.TMSID)...)
+	tms := token.GetManagementService(context, ServiceOpts(p.TMSID)...)
 	assert.NotNil(tms, "failed to get TMS")
 
 	assert.NoError(tms.PublicParametersManager().Validate(), "failed to validate local public parameters")

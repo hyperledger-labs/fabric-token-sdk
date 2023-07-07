@@ -35,7 +35,7 @@ type ListIssuedTokensView struct {
 
 func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
 	// Tokens issued by identities in this wallet will be listed
-	wallet := ttx.GetIssuerWallet(context, p.Wallet, serviceOpts(p.TMSID)...)
+	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
 
 	// Return the list of issued tokens by type
@@ -158,7 +158,7 @@ type TransactionInfoView struct {
 }
 
 func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context, serviceOpts(t.TMSID)...))
+	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
 	info, err := owner.TransactionInfo(t.TransactionID)
 	assert.NoError(err, "failed getting transaction info")
 
