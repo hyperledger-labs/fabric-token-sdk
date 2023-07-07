@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"golang.org/x/sync/errgroup"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -256,46 +257,56 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 		signerList = append(signerList, transfer.ExtraSigners...)
 	}
 
-	signerIdxMap := make(map[string]*[]int, len(signerList))
+	signerIdxMap := make(map[string]*[]int)
 	totalSigners := 0
 	for _, signer := range signerList {
-		if signerIdx, ok := signerIdxMap[string(signer)]; ok {
-			*signerIdx = append(*signerIdx, totalSigners)
-		} else {
+		if signerIdx, ok := signerIdxMap[string(signer)]; !ok {
 			signerIdxMap[string(signer)] = &[]int{totalSigners}
+		} else {
+			*signerIdx = append(*signerIdx, totalSigners)
 		}
 		totalSigners++
 	}
 
 	sigmas := make([][]byte, totalSigners)
+	var eg errgroup.Group
 	for signer, signerIndices := range signerIdxMap {
-		party := view.Identity(signer)
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collecting signature on request (transfer) from [%s]", party.UniqueID())
-		}
+		signer := signer
+		eg.Go(func() error {
+			party := view.Identity(signer)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("collecting signature on request (transfer) from [%s]", party.UniqueID())
+			}
 
-		signatureRequest := &signatureRequest{
-			TX:      txRaw,
-			Request: requestRaw,
-			TxID:    txIdRaw,
-			Signer:  party,
-		}
+			signatureRequest := &signatureRequest{
+				TX:      txRaw,
+				Request: requestRaw,
+				TxID:    txIdRaw,
+				Signer:  party,
+			}
 
-		sigma, err := c.sign(context, signatureRequest)
-		if err != nil {
-			return nil, err
-		}
-		for _, i := range *signerIndices {
-			sigmas[i] = sigma
-		}
+			sigma, err := c.sign(context, signatureRequest)
+			if err != nil {
+				return err
+			}
+			for _, i := range *signerIndices {
+				// signerIndices never overlap
+				sigmas[i] = sigma
+			}
 
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("signature verified [%s,%s,%s]",
-				hash.Hashable(signatureRequest.MessageToSign()).String(),
-				hash.Hashable(sigma).String(),
-				party.UniqueID(),
-			)
-		}
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("signature verified [%s,%s,%s]",
+					hash.Hashable(signatureRequest.MessageToSign()).String(),
+					hash.Hashable(sigma).String(),
+					party.UniqueID(),
+				)
+			}
+			return nil
+		})
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	for _, sigma := range sigmas {
