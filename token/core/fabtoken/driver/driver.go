@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
@@ -50,15 +51,23 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	}
 
 	// Prepare wallets
+	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
 	wallets := identity.NewWallets()
+	dsManager, err := common.GetDeserializerManager(sp)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get deserializer manager")
+	}
 	mspWalletFactory := msp.NewWalletFactory(
-		sp,        // service provider
-		networkID, // network ID
-		tmsConfig, // config manager
-		view.GetIdentityProvider(sp).DefaultIdentity(), // FSC identity
-		networkLocalMembership.DefaultIdentity(),       // network default identity
-		msp.NewSigService(view.GetSigService(sp)),      // signer service
-		view.GetEndpointService(sp),                    // endpoint service
+		sp,                                       // service provider
+		networkID,                                // network ID
+		tmsConfig,                                // config manager
+		fscIdentity,                              // FSC identity
+		networkLocalMembership.DefaultIdentity(), // network default identity
+		msp.NewSigService(view.GetSigService(sp)), // signer service
+		view.GetEndpointService(sp),               // endpoint service
+		kvs.GetService(sp),
+		dsManager,
+		false,
 	)
 	wallet, err := mspWalletFactory.NewX509Wallet(driver.OwnerRole)
 	if err != nil {
@@ -100,7 +109,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		),
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
-		identity.NewProvider(sp, fabtoken.NewEnrollmentIDDeserializer(), wallets),
+		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		fabtoken.NewDeserializer(),
 		tmsConfig,
 		kvs.GetService(sp),

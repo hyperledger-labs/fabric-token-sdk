@@ -29,6 +29,8 @@ type Withdrawal struct {
 	TokenType string
 	// Issuer identifies the issuer
 	Issuer string
+	// Recipient information
+	RecipientData *ttx.RecipientData
 }
 
 type WithdrawalInitiatorView struct {
@@ -36,7 +38,21 @@ type WithdrawalInitiatorView struct {
 }
 
 func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
-	id, session, err := ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, token.WithTMSID(i.TMSID))
+	var id view.Identity
+	var session view.Session
+	var err error
+	if i.RecipientData != nil {
+		assert.NoError(
+			err,
+			token.GetManagementService(
+				context, token.WithTMSID(i.TMSID),
+			).WalletManager().OwnerWallet(i.Wallet).RegisterRecipient(i.RecipientData.Identity, i.RecipientData.AuditInfo, i.RecipientData.Metadata),
+			"failed to register remote recipient",
+		)
+		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.RecipientData, token.WithTMSID(i.TMSID))
+	} else {
+		id, session, err = ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, token.WithTMSID(i.TMSID))
+	}
 	assert.NoError(err, "failed to send withdrawal request")
 
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(

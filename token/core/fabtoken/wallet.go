@@ -129,7 +129,9 @@ func (s *Service) OwnerWalletByID(id interface{}) (driver.OwnerWallet, error) {
 	}
 
 	newWallet := newOwnerWallet(s, idInfoIdentity, wrappedID, wID, idInfo)
-	s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register rwallet [%s]", wID)
+	}
 	if err := s.OwnerWalletsRegistry.RegisterIdentity(wrappedID, wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wrappedID)
 	}
@@ -166,7 +168,9 @@ func (s *Service) issuerWallet(id interface{}) (driver.IssuerWallet, error) {
 		return nil, nil
 	}
 	newWallet := newIssuerWallet(s, wID, idInfoIdentity)
-	s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register issuer wallet [%s]", wID)
+	}
 	if err := s.IssuerWalletsRegistry.RegisterIdentity(idInfoIdentity, wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
@@ -201,7 +205,9 @@ func (s *Service) auditorWallet(id interface{}) (driver.AuditorWallet, error) {
 		return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s:%s]", wID, id)
 	}
 	newWallet := newAuditorWallet(s, wID, idInfoIdentity)
-	s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet)
+	if err := s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register auditor wallet [%s]", wID)
+	}
 	if err := s.AuditorWalletsRegistry.RegisterIdentity(idInfoIdentity, wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
@@ -334,6 +340,10 @@ func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver
 
 func (w *ownerWallet) EnrollmentID() string {
 	return w.identityInfo.EnrollmentID()
+}
+
+func (w *ownerWallet) RegisterRecipient(identity view.Identity, info []byte, metadata []byte) error {
+	panic("not implemented")
 }
 
 type issuerWallet struct {

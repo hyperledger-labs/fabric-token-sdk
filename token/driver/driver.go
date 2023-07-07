@@ -21,3 +21,7 @@ type Driver interface {
 	// NewValidator returns a new Validator instance from the passed public parameters
 	NewValidator(pp PublicParameters) (Validator, error)
 }
+
+type ExtendedDriver interface {
+	NewWalletService(sp view.ServiceProvider, network string, channel string, namespace string, params PublicParameters) (WalletService, error)
+}

@@ -10,15 +10,22 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
+	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
+	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -892,4 +899,43 @@ func TestMixed(network *integration.Infrastructure) {
 
 	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 100, "auditor1", dlogId)
 	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 115, "auditor2", fabTokenId)
+}
+
+func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string) {
+	RegisterAuditor(network, auditor, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, "issuer", "auditor", auditor)
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
+	Withdraw(network, "alice", "alice.remote", "USD", 10, auditor, "issuer")
+
+	restRecipient := GetRecipientData(network, "alice", "alice.remote")
+	TransferCashWithRestRecipient(network, "alice", "alice.remote", "USD", 7, "bob", auditor, restRecipient)
+}
+
+func load(network *integration.Infrastructure, user string) *token3.WalletManager {
+	tp := network.Ctx.PlatformByName("token").(*token.Platform)
+	tms := tp.Topology.TMSs[0]
+	ppRaw := tp.PublicParameters(tms)
+
+	// prepare a service provider with the required services
+	sp := registry.New()
+	configProvider, err := config.NewProvider(filepath.Join(network.Ctx.RootDir(), "fsc", "nodes", user))
+	Expect(err).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(configProvider)).ToNot(HaveOccurred())
+	dm, err := sig.NewMultiplexDeserializer(sp)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(dm)).ToNot(HaveOccurred())
+	kvss, err := kvs.NewWithConfig(sp, "memory", "", configProvider)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(kvss))
+	sigService := sig.NewSignService(sp, nil, kvss)
+	Expect(sp.RegisterService(sigService))
+
+	wm, err := token3.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
+	Expect(err).ToNot(HaveOccurred())
+	return wm
 }

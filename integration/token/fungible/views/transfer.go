@@ -53,6 +53,8 @@ type Transfer struct {
 	FailToRelease bool
 	// For additional transfer actions
 	TransferAction []TransferAction
+
+	RecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
 }
@@ -114,8 +116,9 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		[]uint64{t.Amount},
 		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
+		token2.WithRestRecipientIdentity(t.RecipientData),
 	)
-	assert.NoError(err, "failed adding transfer action [%d:%d]", t.Amount, t.Recipient)
+	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 
 	// add additional transfers
 	for i, action := range t.TransferAction {
@@ -126,7 +129,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 			[]view.Identity{additionalRecipients[i]},
 			token2.WithTokenIDs(t.TokenIDs...),
 		)
-		assert.NoError(err, "failed adding transfer action [%d:%d]", action.Amount, action.Recipient)
+		assert.NoError(err, "failed adding transfer action [%d:%s]", action.Amount, action.Recipient)
 	}
 
 	if t.FailToRelease {

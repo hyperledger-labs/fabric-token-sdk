@@ -22,6 +22,12 @@ const (
 	TransferMetadataPrefix = "TransferMetadataPrefix"
 )
 
+type RecipientData struct {
+	Identity  view.Identity
+	AuditInfo []byte
+	Metadata  []byte
+}
+
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
@@ -60,6 +66,8 @@ type TransferOptions struct {
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
 	TokenIDs []*token.ID
+	// RestRecipientIdentity TODO:
+	RestRecipientIdentity *RecipientData
 }
 
 func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
@@ -103,6 +111,13 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 			o.Attributes = make(map[interface{}]interface{})
 		}
 		o.Attributes[attr] = value
+		return nil
+	}
+}
+
+func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
+	return func(o *TransferOptions) error {
+		o.RestRecipientIdentity = recipientData
 		return nil
 	}
 }
@@ -1137,9 +1152,18 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		diff := inputSum.Sub(outputSum)
 		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
-		pseudonym, err := wallet.GetRecipientIdentity()
-		if err != nil {
-			return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
+		var pseudonym []byte
+		if transferOpts.RestRecipientIdentity != nil {
+			// register it and us it
+			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity.Identity, transferOpts.RestRecipientIdentity.AuditInfo, transferOpts.RestRecipientIdentity.Metadata); err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed to register recipient identity [%s] for the rest, wallet [%s]", transferOpts.RestRecipientIdentity.Identity, wallet.ID())
+			}
+			pseudonym = transferOpts.RestRecipientIdentity.Identity
+		} else {
+			pseudonym, err = wallet.GetRecipientIdentity()
+			if err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
+			}
 		}
 
 		outputTokens = append(outputTokens, &token.Token{
