@@ -244,22 +244,32 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 	}
 	txIdRaw := []byte(c.tx.ID())
 
-	var distributionList []view.Identity
-	var signers []view.Identity
+	var distributionList, signerList []view.Identity
 	for i, transfer := range transfers {
 		distributionList = append(distributionList, transfer.Senders...)
 		distributionList = append(distributionList, transfer.Receivers...)
 
-		// contact signer and ask for the signature unless it is me
-		signers = append(signers, transfer.Senders...)
-		signers = append(signers, transfer.ExtraSigners...)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("collecting signature on [%d]-th request transfer, signers [%d]", i, len(transfer.Senders)+len(transfer.ExtraSigners))
+			logger.Debugf("will collect signature on [%d]-th request transfer, signers [%d]", i, len(transfer.Senders)+len(transfer.ExtraSigners))
 		}
+		signerList = append(signerList, transfer.Senders...)
+		signerList = append(signerList, transfer.ExtraSigners...)
 	}
 
-	sigmas := make([][]byte, len(signers))
-	for i, party := range signers {
+	signerIdxMap := make(map[string]*[]int, len(signerList))
+	totalSigners := 0
+	for _, signer := range signerList {
+		if signerIdx, ok := signerIdxMap[string(signer)]; ok {
+			*signerIdx = append(*signerIdx, totalSigners)
+		} else {
+			signerIdxMap[string(signer)] = &[]int{totalSigners}
+		}
+		totalSigners++
+	}
+
+	sigmas := make([][]byte, totalSigners)
+	for signer, signerIndices := range signerIdxMap {
+		party := view.Identity(signer)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("collecting signature on request (transfer) from [%s]", party.UniqueID())
 		}
@@ -270,15 +280,20 @@ func (c *collectEndorsementsView) requestSignaturesOnTransfers(context view.Cont
 			TxID:    txIdRaw,
 			Signer:  party,
 		}
-		if sigmas[i], err = c.sign(context, signatureRequest); err != nil {
+
+		sigma, err := c.sign(context, signatureRequest)
+		if err != nil {
 			return nil, err
+		}
+		for _, i := range *signerIndices {
+			sigmas[i] = sigma
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("signature verified [%s,%s,%s]",
 				hash.Hashable(signatureRequest.MessageToSign()).String(),
-				hash.Hashable(sigmas[i]).String(),
-				signatureRequest.Signer.UniqueID(),
+				hash.Hashable(sigma).String(),
+				party.UniqueID(),
 			)
 		}
 	}
