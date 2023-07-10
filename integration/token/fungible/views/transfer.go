@@ -122,6 +122,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 			t.Type,
 			[]uint64{action.Amount},
 			[]view.Identity{additionalRecipients[i]},
+			token2.WithTokenIDs(t.TokenIDs...),
 		)
 		assert.NoError(err, "failed adding transfer action [%d:%d]", action.Amount, action.Recipient)
 	}

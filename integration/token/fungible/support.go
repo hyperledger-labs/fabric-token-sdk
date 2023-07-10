@@ -247,7 +247,7 @@ func TransferCash(network *integration.Infrastructure, id string, wallet string,
 	return ""
 }
 
-func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) string {
 	Expect(len(amounts) > 1).To(BeTrue())
 	Expect(len(receivers)).To(BeEquivalentTo(len(amounts)))
 	transfer := &views.Transfer{
@@ -257,6 +257,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 		Amount:       amounts[0],
 		Recipient:    network.Identity(receivers[0]),
 		RecipientEID: receivers[0],
+		TokenIDs:     []*token.ID{tokenID},
 	}
 	for i := 1; i < len(amounts); i++ {
 		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{

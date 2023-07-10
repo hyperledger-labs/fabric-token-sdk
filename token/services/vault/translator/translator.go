@@ -24,7 +24,7 @@ type Translator struct {
 	RWSet RWSet
 	TxID  string
 	// SpentIDs the spent IDs added so far
-	SpentIDs [][]byte
+	SpentIDs []string
 
 	counter   uint64
 	namespace string
@@ -385,7 +385,9 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to delete output %s", id)
 			}
-			w.SpentIDs = append(w.SpentIDs, []byte(id))
+			if err := w.appendSpentID(id); err != nil {
+				return errors.Wrapf(err, "failed to append spent id [%s]", id)
+			}
 		}
 	} else {
 		for _, id := range ids {
@@ -394,7 +396,9 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to add serial number %s", id)
 			}
-			w.SpentIDs = append(w.SpentIDs, []byte(id))
+			if err := w.appendSpentID(id); err != nil {
+				return errors.Wrapf(err, "failed to append spent id [%s]", id)
+			}
 		}
 	}
 
@@ -424,4 +428,15 @@ func (w *Translator) areTokensSpent(ids []string, graphHiding bool) ([]bool, err
 	}
 
 	return res, nil
+}
+
+func (w *Translator) appendSpentID(id string) error {
+	// check first it is already in the list
+	for _, d := range w.SpentIDs {
+		if d == id {
+			return errors.Errorf("[%s] already spent", id)
+		}
+	}
+	w.SpentIDs = append(w.SpentIDs, id)
+	return nil
 }

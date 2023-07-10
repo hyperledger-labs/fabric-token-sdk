@@ -382,11 +382,14 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	// test multi action transfer...
 	t13 := time.Now()
-	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
+	txIssuedLira1 := IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
 	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
 	t14 := time.Now()
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[10:12], &t13, &t14)
-	txLiraTransfer := TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor)
+	// use the same token for both actions, this must fail
+	TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedLira1}, "failed to append spent id", txIssuedLira1)
+	// perform the normal transaction
+	txLiraTransfer := TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, nil)
 	t16 := time.Now()
 	AuditedTransactions[12].TxID = txLiraTransfer
 	AuditedTransactions[13].TxID = txLiraTransfer
