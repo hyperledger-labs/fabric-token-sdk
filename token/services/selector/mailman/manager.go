@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"go.uber.org/zap/zapcore"
 )
 
 type WalletManager interface {
@@ -118,6 +119,10 @@ func (m *Manager) OnReceive(event events.Event) {
 		logger.Warnf("cannot cast to TokenMessage %v", event.Message())
 		// drop this event
 		return
+	}
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("received new token [%s:%s:%s:%d]", t.WalletID, t.TokenType, t.TxID, t.Index)
 	}
 
 	// sanity check that we really registered for this type of event
