@@ -37,3 +37,19 @@ func AssertTokensInVault(vault *network.Vault, tx *ttx.Transaction, outputs *tok
 	}
 
 }
+
+func ServiceOpts(tmsId *token.TMSID) []token.ServiceOption {
+	var serviceOpts []token.ServiceOption
+	if tmsId != nil {
+		serviceOpts = append(serviceOpts, token.WithTMSID(*tmsId))
+	}
+	return serviceOpts
+}
+
+func TxOpts(tmsId *token.TMSID) []ttx.TxOption {
+	var txOpts []ttx.TxOption
+	if tmsId != nil {
+		txOpts = append(txOpts, ttx.WithTMSID(*tmsId))
+	}
+	return txOpts
+}

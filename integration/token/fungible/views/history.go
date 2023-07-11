@@ -25,6 +25,8 @@ type ListIssuedTokens struct {
 	Wallet string
 	// TokenType is the token type to select
 	TokenType string
+	// The TMS to pick in case of multiple TMSIDs
+	TMSID *token.TMSID
 }
 
 type ListIssuedTokensView struct {
@@ -33,7 +35,7 @@ type ListIssuedTokensView struct {
 
 func (p *ListIssuedTokensView) Call(context view.Context) (interface{}, error) {
 	// Tokens issued by identities in this wallet will be listed
-	wallet := ttx.GetIssuerWallet(context, p.Wallet)
+	wallet := ttx.GetIssuerWallet(context, p.Wallet, ServiceOpts(p.TMSID)...)
 	assert.NotNil(wallet, "wallet [%s] not found", p.Wallet)
 
 	// Return the list of issued tokens by type
@@ -148,6 +150,7 @@ func (l *ListAcceptedTransactionsViewFactory) NewView(in []byte) (view.View, err
 // TransactionInfo contains the input information to search for transaction info
 type TransactionInfo struct {
 	TransactionID string
+	TMSID         *token.TMSID
 }
 
 type TransactionInfoView struct {
@@ -155,7 +158,7 @@ type TransactionInfoView struct {
 }
 
 func (t *TransactionInfoView) Call(context view.Context) (interface{}, error) {
-	owner := ttx.NewOwner(context, token.GetManagementService(context))
+	owner := ttx.NewOwner(context, token.GetManagementService(context, ServiceOpts(t.TMSID)...))
 	info, err := owner.TransactionInfo(t.TransactionID)
 	assert.NoError(err, "failed getting transaction info")
 

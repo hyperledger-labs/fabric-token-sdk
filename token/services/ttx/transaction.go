@@ -270,6 +270,10 @@ func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
 	t.TokenRequest.SetApplicationMetadata(k, v)
 }
 
+func (t *Transaction) TMSID() token.TMSID {
+	return t.TokenRequest.TokenService.ID()
+}
+
 func (t *Transaction) storeTransient() error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Storing transient for [%s]", t.ID())

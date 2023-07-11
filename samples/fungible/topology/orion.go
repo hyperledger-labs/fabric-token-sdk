@@ -45,8 +45,8 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// alice
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		orion.WithRole("alice"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -58,8 +58,8 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// bob
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -72,8 +72,8 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// charlie
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		orion.WithRole("charlie"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})

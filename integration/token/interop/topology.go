@@ -36,7 +36,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
@@ -60,7 +60,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
@@ -76,7 +76,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
@@ -117,7 +117,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
@@ -143,7 +143,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
@@ -160,7 +160,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("bob"),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
@@ -212,7 +212,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
@@ -238,7 +238,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org2"),
 		fabric.WithNetworkOrganization("beta", "Org4"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
@@ -259,7 +259,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org2"),
 		fabric.WithNetworkOrganization("beta", "Org4"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
@@ -314,7 +314,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
@@ -339,8 +339,8 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id2"),
+		token.WithOwnerIdentity("alice.id1"),
+		token.WithOwnerIdentity("alice.id2"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
@@ -359,8 +359,8 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("beta", "Org4"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id2"),
+		token.WithOwnerIdentity("bob.id1"),
+		token.WithOwnerIdentity("bob.id2"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
@@ -415,7 +415,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
 		token.WithIssuerIdentity("issuer.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "issuer.owner"),
+		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("history", &views.ListIssuedTokensViewFactory{})
@@ -441,8 +441,8 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id2"),
+		token.WithOwnerIdentity("alice.id1"),
+		token.WithOwnerIdentity("alice.id2"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
@@ -460,8 +460,8 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id2"),
+		token.WithOwnerIdentity("bob.id1"),
+		token.WithOwnerIdentity("bob.id2"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
