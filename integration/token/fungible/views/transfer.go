@@ -61,7 +61,7 @@ type TransferView struct {
 	*Transfer
 }
 
-func (t *TransferView) Call(context view.Context) (interface{}, error) {
+func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -124,6 +124,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 			t.Type,
 			[]uint64{action.Amount},
 			[]view.Identity{additionalRecipients[i]},
+			token2.WithTokenIDs(t.TokenIDs...),
 		)
 		assert.NoError(err, "failed adding transfer action [%d:%d]", action.Amount, action.Recipient)
 	}
@@ -142,7 +143,7 @@ func (t *TransferView) Call(context view.Context) (interface{}, error) {
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to sign transaction")
+	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
 
 	// Sanity checks:
 	// - the transaction is in busy state in the vault

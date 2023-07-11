@@ -1093,6 +1093,9 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	var tokenIDs []*token.ID
 	var inputSum token.Quantity
 	var err error
+
+	transferOpts.TokenIDs = r.cleanupInputIDs(transferOpts.TokenIDs)
+
 	// if inputs have been passed, parse and certify them, if needed
 	if len(transferOpts.TokenIDs) != 0 {
 		tokenIDs, inputSum, tokenType, err = r.parseInputIDs(transferOpts.TokenIDs)
@@ -1191,6 +1194,16 @@ func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType 
 		})
 	}
 	return outputTokens, outputSum, nil
+}
+
+func (r *Request) cleanupInputIDs(ds []*token.ID) []*token.ID {
+	newSlice := make([]*token.ID, 0, len(ds))
+	for _, item := range ds {
+		if item != nil {
+			newSlice = append(newSlice, item)
+		}
+	}
+	return newSlice
 }
 
 type requestSer struct {

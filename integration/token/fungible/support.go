@@ -313,7 +313,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 	return ""
 }
 
-func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) string {
 	Expect(len(amounts) > 1).To(BeTrue())
 	Expect(len(receivers)).To(BeEquivalentTo(len(amounts)))
 	transfer := &views.Transfer{
@@ -323,6 +323,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 		Amount:       amounts[0],
 		Recipient:    network.Identity(receivers[0]),
 		RecipientEID: receivers[0],
+		TokenIDs:     []*token.ID{tokenID},
 	}
 	for i := 1; i < len(amounts); i++ {
 		transfer.TransferAction = append(transfer.TransferAction, views.TransferAction{
@@ -361,7 +362,11 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
-	return ""
+	// extract txID from err
+	strErr := err.Error()
+	s := strings.LastIndex(strErr, "[<<<")
+	e := strings.LastIndex(strErr, ">>>]")
+	return strErr[s+4 : e]
 }
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
@@ -610,15 +615,21 @@ func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, 
 	}
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string) {
+func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string, errorCheck func([]string) error) {
 	errorMessagesBoxed, err := network.Client(auditorID).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor:         true,
 		AuditorWalletID: walletID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	var errorMessages []string
-	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-	Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+	if errorCheck != nil {
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
+	} else {
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+	}
 }
 
 func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...string) {
