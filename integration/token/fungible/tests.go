@@ -382,12 +382,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	// test multi action transfer...
 	t13 := time.Now()
-	txIssuedLira1 := IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
 	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
 	t14 := time.Now()
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[10:12], &t13, &t14)
-	// use the same token for both actions, this must fail
-	TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedLira1}, "failed to append spent id", txIssuedLira1)
 	// perform the normal transaction
 	txLiraTransfer := TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, nil)
 	t16 := time.Now()
@@ -399,6 +397,26 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "charlie", "", "LIRA", 3, auditor)
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t16)
 
+	// Check double spending by multiple action in the same transaction
+
+	// use the same token for both actions, this must fail
+	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
+	failedTransferTxID := TransferCashMultiActions(network, "alice", "", "Pineapples", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
+	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
+	CheckBalance(network, "alice", "", "Pineapples", 6)
+	CheckHolding(network, "alice", "", "Pineapples", 1, auditor)
+	CheckBalance(network, "bob", "", "Pineapples", 0)
+	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
+	CheckBalance(network, "charlie", "", "Pineapples", 0)
+	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
+	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
+	CheckBalance(network, "alice", "", "Pineapples", 6)
+	CheckHolding(network, "alice", "", "Pineapples", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
+
+	// continue with the rest of the test
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
 	testTwoGeneratedOwnerWalletsSameNode(network, auditor)

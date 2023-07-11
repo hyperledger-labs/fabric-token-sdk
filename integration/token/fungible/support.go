@@ -296,7 +296,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
-	return ""
+	return common.JSONUnmarshalString(txidBoxed)
 }
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
