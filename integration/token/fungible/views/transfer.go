@@ -60,12 +60,6 @@ type TransferView struct {
 }
 
 func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
-	var tx *ttx.Transaction
-	defer func() {
-		if txID == "" && tx != nil {
-			txID = tx.ID()
-		}
-	}()
 	// As a first step operation, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
@@ -93,7 +87,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
-	tx, err = ttx.NewAnonymousTransaction(
+	tx, err := ttx.NewAnonymousTransaction(
 		context,
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)),
 	)
@@ -147,7 +141,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx))
-	assert.NoError(err, "failed to sign transaction")
+	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
 
 	// Sanity checks:
 	// - the transaction is in busy state in the vault

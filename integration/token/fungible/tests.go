@@ -8,6 +8,7 @@ package fungible
 
 import (
 	"crypto/rand"
+	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 var AuditedTransactions = []*ttxdb.TransactionRecord{
@@ -397,26 +399,6 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "charlie", "", "LIRA", 3, auditor)
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t16)
 
-	// Check double spending by multiple action in the same transaction
-
-	// use the same token for both actions, this must fail
-	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
-	IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
-	failedTransferTxID := TransferCashMultiActions(network, "alice", "", "Pineapples", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
-	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
-	CheckBalance(network, "alice", "", "Pineapples", 6)
-	CheckHolding(network, "alice", "", "Pineapples", 1, auditor)
-	CheckBalance(network, "bob", "", "Pineapples", 0)
-	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
-	CheckBalance(network, "charlie", "", "Pineapples", 0)
-	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
-	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
-	CheckBalance(network, "alice", "", "Pineapples", 6)
-	CheckHolding(network, "alice", "", "Pineapples", 0, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
-	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
-
-	// continue with the rest of the test
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
 	testTwoGeneratedOwnerWalletsSameNode(network, auditor)
@@ -468,7 +450,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10, auditor)
 
 	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
-	CheckAuditorDB(network, auditor, "")
+	CheckAuditorDB(network, auditor, "", nil)
 
 	// Check double spending
 	txIDPine := IssueCash(network, "", "PINE", 55, "alice", auditor, true, "issuer")
@@ -509,7 +491,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55, auditor)
 	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
-	CheckAuditorDB(network, auditor, "")
+	CheckAuditorDB(network, auditor, "", nil)
 
 	// Test Auditor ability to override transaction state
 	txID3, tx3 := PrepareTransferCash(network, "bob", "", "PINE", 10, "alice", auditor, nil)
@@ -527,11 +509,11 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// Restart
 	CheckOwnerDB(network, nil, "bob", "alice")
 	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
-	CheckAuditorDB(network, auditor, "")
+	CheckAuditorDB(network, auditor, "", nil)
 	Restart(network, false, "alice", "bob", "charlie", "manager")
 	CheckOwnerDB(network, nil, "bob", "alice")
 	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
-	CheckAuditorDB(network, auditor, "")
+	CheckAuditorDB(network, auditor, "", nil)
 
 	// Addition transfers
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
@@ -699,16 +681,16 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 		}()
 	}
 	// collect the errors, and check that they are all nil, and one of them is the error we expect.
-	var errors []error
+	var errs []error
 	for _, transfer := range transferErrors {
-		errors = append(errors, <-transfer)
+		errs = append(errs, <-transfer)
 	}
-	Expect((errors[0] == nil && errors[1] != nil) || (errors[0] != nil && errors[1] == nil)).To(BeTrue())
+	Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(BeTrue())
 	var errStr string
-	if errors[0] == nil {
-		errStr = errors[1].Error()
+	if errs[0] == nil {
+		errStr = errs[1].Error()
 	} else {
-		errStr = errors[0].Error()
+		errStr = errs[0].Error()
 	}
 	v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
 	Expect(v).To(BeEquivalentTo(true))
@@ -740,7 +722,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// Check consistency
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
-	CheckAuditorDB(network, auditor, "")
+	CheckAuditorDB(network, auditor, "", nil)
 	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	for _, name := range []string{"alice", "bob", "charlie", "manager"} {
@@ -748,6 +730,37 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 		CheckIfExistsInVault(network, auditor, IDs)
 	}
 
+	// Check double spending by multiple action in the same transaction
+
+	// use the same token for both actions, this must fail
+	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
+	failedTransferTxID := TransferCashMultiActions(network, "alice", "", "Pineapples", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
+	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
+	CheckBalance(network, "alice", "", "Pineapples", 6)
+	CheckHolding(network, "alice", "", "Pineapples", 1, auditor)
+	CheckBalance(network, "bob", "", "Pineapples", 0)
+	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
+	CheckBalance(network, "charlie", "", "Pineapples", 0)
+	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
+	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
+	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
+	CheckBalanceAndHolding(network, "alice", "", "Pineapples", 6, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
+	CheckAuditorDB(network, auditor, "", func(errs []string) error {
+		// We should expect 6 errors, 3 records (Alice->Bob, Alice->Charlie, Alice-Alice (the rest) * 2 (envelope non found, no match in vault)
+		// each error should contain failedTransferTxID
+		if len(errs) != 6 {
+			return errors.Errorf("expected only 1 error, got [%d]", len(errs))
+		}
+		for _, err := range errs {
+			if !strings.Contains(err, failedTransferTxID) {
+				return errors.Errorf("expected error to contain [%s], got [%s]", failedTransferTxID, err)
+			}
+		}
+		return nil
+	})
 }
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {

@@ -296,7 +296,11 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	time.Sleep(5 * time.Second)
-	return common.JSONUnmarshalString(txidBoxed)
+	// extract txID from err
+	strErr := err.Error()
+	s := strings.LastIndex(strErr, "[<<<")
+	e := strings.LastIndex(strErr, ">>>]")
+	return strErr[s+4 : e]
 }
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
@@ -529,15 +533,21 @@ func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, 
 	}
 }
 
-func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string) {
+func CheckAuditorDB(network *integration.Infrastructure, auditorID string, walletID string, errorCheck func([]string) error) {
 	errorMessagesBoxed, err := network.Client(auditorID).CallView("CheckTTXDB", common.JSONMarshall(&views.CheckTTXDB{
 		Auditor:         true,
 		AuditorWalletID: walletID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	var errorMessages []string
-	common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
-	Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+	if errorCheck != nil {
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(errorCheck(errorMessages)).NotTo(HaveOccurred(), "failed to check errors")
+	} else {
+		var errorMessages []string
+		common.JSONUnmarshal(errorMessagesBoxed.([]byte), &errorMessages)
+		Expect(len(errorMessages)).To(Equal(0), "expected 0 error messages, got [% v]", errorMessages)
+	}
 }
 
 func PruneInvalidUnspentTokens(network *integration.Infrastructure, ids ...string) {
