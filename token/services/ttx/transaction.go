@@ -236,22 +236,25 @@ func (t *Transaction) MarshallToAudit() ([]byte, error) {
 
 // Selector returns the default token selector for this transaction
 func (t *Transaction) Selector() (token.Selector, error) {
-	return t.TokenService().SelectorManager().NewSelector(t.ID())
+	sm, err := t.TokenService().SelectorManager()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get selector manager")
+	}
+	return sm.NewSelector(t.ID())
 }
 
 func (t *Transaction) Release() {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("releasing resources for tx [%s]", t.ID())
 	}
-	if err := t.TokenService().SelectorManager().Unlock(t.ID()); err != nil {
-		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
-	}
-
-	pub, err := publisher(t.SP)
+	sm, err := t.TokenService().SelectorManager()
 	if err != nil {
-		return
+		logger.Warnf("failed to get token selector [%s]", err)
+	} else {
+		if err := sm.Unlock(t.ID()); err != nil {
+			logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
+		}
 	}
-	publishAbortTx(pub, t)
 }
 
 func (t *Transaction) TokenService() *token.ManagementService {

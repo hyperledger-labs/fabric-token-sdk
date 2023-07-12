@@ -1157,7 +1157,11 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		selector := transferOpts.Selector
 		if selector == nil {
 			// resort to default strategy
-			selector, err = r.TokenService.SelectorManager().NewSelector(r.Anchor)
+			sm, err := r.TokenService.SelectorManager()
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to get selector manager")
+			}
+			selector, err = sm.NewSelector(r.Anchor)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}

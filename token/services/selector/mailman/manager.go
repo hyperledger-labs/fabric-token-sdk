@@ -8,15 +8,28 @@ package mailman
 
 import (
 	"fmt"
+	"sync"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"go.uber.org/zap/zapcore"
 )
+
+const (
+	_       int = iota
+	Valid       = network.Valid   // Transaction is valid and committed
+	Invalid     = network.Invalid // Transaction is invalid and has been discarded
+)
+
+type Vault interface {
+	Status(id string) (network.ValidationCode, error)
+}
 
 type WalletManager interface {
 	OwnerWalletByIdentity(identity view.Identity) *token.OwnerWallet
@@ -36,11 +49,17 @@ type Manager struct {
 	tokenQuantityPrecision uint64
 	qs                     QueryService
 	walletIDByRawIdentity  WalletIDByRawIdentityFunc
+	vault                  Vault
+
+	selectorsLock sync.RWMutex
+	selectors     map[string]*SimpleSelector
+
+	sleepTimeout time.Duration
 }
 
 type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
 
-func NewManager(qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) *Manager {
+func NewManager(vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) *Manager {
 	// pre-populate mailman instances
 	iter, err := qs.UnspentTokensIterator()
 	if err != nil {
@@ -97,8 +116,11 @@ func NewManager(qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc
 		tracer:                 tracer,
 		mailmen:                mailmen,
 		tokenQuantityPrecision: tokenQuantityPrecision,
+		vault:                  vault,
 		qs:                     qs,
 		walletIDByRawIdentity:  walletIDByRawIdentity,
+		selectors:              map[string]*SimpleSelector{},
+		sleepTimeout:           2 * time.Second,
 	}
 
 	// TODO what should we do if no notifier passed?
@@ -184,16 +206,44 @@ func (m *Manager) Shutdown() {
 }
 
 func (m *Manager) NewSelector(txID string) (token.Selector, error) {
-	// TODO should we store txID context so we can unlock later
-	// it seems that his is not needed anymore as we use UnlockIDs
-	return &SimpleSelector{QuerySelector: m, Precision: m.tokenQuantityPrecision}, nil
+	m.selectorsLock.RLock()
+	selector, ok := m.selectors[txID]
+	if ok {
+		m.selectorsLock.RUnlock()
+		return selector, nil
+	}
+	m.selectorsLock.RUnlock()
+
+	m.selectorsLock.Lock()
+	defer m.selectorsLock.Unlock()
+
+	selector, ok = m.selectors[txID]
+	if ok {
+		return selector, nil
+	}
+
+	selector = &SimpleSelector{
+		TxID:          txID,
+		QuerySelector: m,
+		Precision:     m.tokenQuantityPrecision,
+	}
+	m.selectors[txID] = selector
+	return selector, nil
 }
 
 func (m *Manager) Unlock(txID string) error {
 	logger.Debugf("Call unlock with txID=%s", txID)
 
-	// TODO get locked tokens from context
-	// it seems that his is not needed anymore as we use UnlockIDs
+	m.selectorsLock.RLock()
+	defer m.selectorsLock.RUnlock()
+	selector, ok := m.selectors[txID]
+	if !ok {
+		logger.Warnf("nothing found bound to tx id [%s], no need to release", txID)
+		return nil
+	}
+	m.UnlockIDs(selector.TokenIDs...)
+	delete(m.selectors, txID)
+
 	return nil
 }
 
@@ -231,6 +281,57 @@ func (m *Manager) UnlockIDs(tokenIDs ...*token2.ID) []*token2.ID {
 	}
 
 	return tokenIDs
+}
+
+func (m *Manager) Start() {
+	go m.scan()
+}
+
+func (m *Manager) scan() {
+	for {
+		logger.Debugf("token collector: scan locked tokens")
+		var removeList []string
+		m.selectorsLock.RLock()
+		for txID := range m.selectors {
+			status, err := m.vault.Status(txID)
+			if err != nil {
+				logger.Warnf("failed getting status for tx [%s], remove", txID)
+				removeList = append(removeList, txID)
+				continue
+			}
+			switch status {
+			case Valid:
+				removeList = append(removeList, txID)
+				logger.Debugf("tx [%s] locked but valid, remove", txID)
+			case Invalid:
+				removeList = append(removeList, txID)
+				logger.Debugf("tx [%s] locked but invalid, remove", txID)
+			default:
+				logger.Debugf("tx [%s] locked but status is pending, skip", txID)
+			}
+		}
+		m.selectorsLock.RUnlock()
+
+		m.selectorsLock.Lock()
+		logger.Infof("token collector: freeing [%d] items", len(removeList))
+		for _, s := range removeList {
+			delete(m.selectors, s)
+		}
+		m.selectorsLock.Unlock()
+
+		for {
+			logger.Debugf("token collector: sleep for some time...")
+			time.Sleep(m.sleepTimeout)
+			m.selectorsLock.RLock()
+			l := len(m.selectors)
+			m.selectorsLock.RUnlock()
+			if l > 0 {
+				// time to do some token collection
+				logger.Infof("token collector: time to do some token collection, [%d] locked", l)
+				break
+			}
+		}
+	}
 }
 
 func spaceKey(walletID, tokenType string) string {

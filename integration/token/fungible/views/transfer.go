@@ -484,7 +484,9 @@ type TokenSelectorUnlockView struct {
 }
 
 func (t *TokenSelectorUnlockView) Call(context view.Context) (interface{}, error) {
-	assert.NoError(token2.GetManagementService(context).SelectorManager().Unlock(t.TxID), "failed to unlock tokens locked by transaction [%s]", t.TxID)
+	sm, err := token2.GetManagementService(context).SelectorManager()
+	assert.NoError(err, "failed to get selector manager")
+	assert.NoError(sm.Unlock(t.TxID), "failed to unlock tokens locked by transaction [%s]", t.TxID)
 
 	return nil, nil
 }

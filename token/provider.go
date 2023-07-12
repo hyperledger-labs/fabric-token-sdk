@@ -38,7 +38,7 @@ type SelectorManager interface {
 // SelectorManagerProvider provides instances of SelectorManager
 type SelectorManagerProvider interface {
 	// SelectorManager returns a SelectorManager instance for the passed inputs.
-	SelectorManager(network string, channel string, namespace string) SelectorManager
+	SelectorManager(network string, channel string, namespace string) (SelectorManager, error)
 }
 
 // CertificationClientProvider provides instances of CertificationClient

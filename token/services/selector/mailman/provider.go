@@ -15,42 +15,54 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/pkg/errors"
 )
 
-type selectorService struct {
+type SelectorService struct {
 	sp       view.ServiceProvider
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	managers map[string]token.SelectorManager
 	// TODO create a shared worker pool for all selectors
 	// workerPool []*worker
 }
 
-func NewService(sp view.ServiceProvider) *selectorService {
-	return &selectorService{
+func NewService(sp view.ServiceProvider) *SelectorService {
+	return &SelectorService{
 		sp:       sp,
-		lock:     sync.Mutex{},
 		managers: make(map[string]token.SelectorManager),
 	}
 }
 
-func (s *selectorService) SelectorManager(network string, channel string, namespace string) token.SelectorManager {
+func (s *SelectorService) SelectorManager(networkID string, channel string, namespace string) (token.SelectorManager, error) {
 	tms := token.GetManagementService(
 		s.sp,
-		token.WithNetwork(network),
+		token.WithNetwork(networkID),
 		token.WithChannel(channel),
 		token.WithNamespace(namespace),
 	)
-	// TODO do something if we cannot get tms
+	if tms == nil {
+		return nil, errors.Errorf("failed to get TMS for [%s:%s:%s]", networkID, channel, namespace)
+	}
 
 	key := tms.Network() + tms.Channel() + tms.Namespace()
+
+	// if Manager for this network/channel/namespace already exists, just return it
+	s.lock.RLock()
+	m, ok := s.managers[key]
+	if ok {
+		s.lock.RUnlock()
+		return m, nil
+	}
+	s.lock.RUnlock()
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	m, ok := s.managers[key]
+	// check again if Manager for this network/channel/namespace already exists, just return it
+	m, ok = s.managers[key]
 	if ok {
-		// if Manager for this network/channel/namespace already exists, just return it
-		return m
+		return m, nil
 	}
 
 	// otherwise, build a new Manager
@@ -59,7 +71,7 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 	sub, err := events.GetSubscriber(s.sp)
 	if err != nil {
 		// TODO is this the proper error handling for this situation?
-		return nil
+		return nil, nil
 	}
 
 	// create walletID extractor function using TMS wallet manager
@@ -72,8 +84,16 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		return w.ID()
 	}
 
-	m = NewManager(tms.Vault().NewQueryEngine(), walletIDByRawIdentity, tracing.Get(s.sp).GetTracer(), tms.PublicParametersManager().PublicParameters().Precision(), sub)
-
-	s.managers[key] = m
-	return m
+	pp := tms.PublicParametersManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
+	}
+	vault, err := network.GetInstance(s.sp, tms.Network(), tms.Channel()).Vault(tms.Namespace())
+	if err != nil {
+		return nil, errors.Errorf("cannot get ntwork vault for TMS [%s]", tms.ID())
+	}
+	newManager := NewManager(vault, tms.Vault().NewQueryEngine(), walletIDByRawIdentity, tracing.Get(s.sp).GetTracer(), pp.Precision(), sub)
+	newManager.Start()
+	s.managers[key] = newManager
+	return newManager, nil
 }

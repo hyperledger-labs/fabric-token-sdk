@@ -246,7 +246,7 @@ func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
 }
 
 // SelectorManager returns a manager that gives access to the token selectors
-func (t *ManagementService) SelectorManager() SelectorManager {
+func (t *ManagementService) SelectorManager() (SelectorManager, error) {
 	return t.selectorManagerProvider.SelectorManager(t.Network(), t.Channel(), t.Namespace())
 }
 

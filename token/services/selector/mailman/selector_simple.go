@@ -18,8 +18,10 @@ type TokenIterator interface {
 }
 
 type SimpleSelector struct {
+	TxID          string
 	QuerySelector TokenIterator
 	Precision     uint64
+	TokenIDs      []*token2.ID
 }
 
 func (n *SimpleSelector) Select(ownerFilter token.OwnerFilter, q, tokenType string) ([]*token2.ID, token2.Quantity, error) {
@@ -61,6 +63,7 @@ func (n *SimpleSelector) Select(ownerFilter token.OwnerFilter, q, tokenType stri
 	}
 
 	if target.Cmp(sum) <= 0 {
+		n.TokenIDs = append(n.TokenIDs, tokens...)
 		logger.Debugf("selector returns tokens=%v", tokens)
 		return tokens, sum, nil
 	}
