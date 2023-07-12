@@ -290,22 +290,23 @@ func (m *Manager) Start() {
 func (m *Manager) scan() {
 	for {
 		logger.Debugf("token collector: scan locked tokens")
-		var removeList []string
+		var deleteList []string
+		var unlockList []*SimpleSelector
 		m.selectorsLock.RLock()
-		for txID := range m.selectors {
+		for txID, selector := range m.selectors {
 			status, err := m.vault.Status(txID)
 			if err != nil {
-				logger.Warnf("failed getting status for tx [%s], remove", txID)
-				removeList = append(removeList, txID)
+				logger.Warnf("failed getting status for tx [%s], unlocking", txID)
+				unlockList = append(unlockList, selector)
 				continue
 			}
 			switch status {
 			case Valid:
-				removeList = append(removeList, txID)
+				deleteList = append(deleteList, txID)
 				logger.Debugf("tx [%s] locked but valid, remove", txID)
 			case Invalid:
-				removeList = append(removeList, txID)
-				logger.Debugf("tx [%s] locked but invalid, remove", txID)
+				unlockList = append(unlockList, selector)
+				logger.Debugf("tx [%s] locked but invalid, unlocking", txID)
 			default:
 				logger.Debugf("tx [%s] locked but status is pending, skip", txID)
 			}
@@ -313,9 +314,14 @@ func (m *Manager) scan() {
 		m.selectorsLock.RUnlock()
 
 		m.selectorsLock.Lock()
-		logger.Infof("token collector: freeing [%d] items", len(removeList))
-		for _, s := range removeList {
+		logger.Infof("token collector: deleting [%d] items", len(deleteList))
+		for _, s := range deleteList {
 			delete(m.selectors, s)
+		}
+		logger.Infof("token collector: unlocking [%d] items", len(deleteList))
+		for _, s := range unlockList {
+			m.UnlockIDs(s.TokenIDs...)
+			delete(m.selectors, s.TxID)
 		}
 		m.selectorsLock.Unlock()
 
