@@ -8,7 +8,6 @@ package token
 
 import (
 	"encoding/asn1"
-
 	"go.uber.org/zap/zapcore"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -861,9 +860,52 @@ func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
 }
 
-// AppendSignature appends a signature to the request.
-func (r *Request) AppendSignature(sigma []byte) {
-	r.Actions.Signatures = append(r.Actions.Signatures, sigma)
+func (r *Request) PutSignatures(sigmas map[string][]byte) {
+	signers := append(r.IssueSigners(), r.TransferSigners()...)
+	signatures := make([][]byte, len(signers))
+	for i, signer := range signers {
+		if sigma, ok := sigmas[signer.UniqueID()]; ok {
+			signatures[i] = sigma
+		} else {
+			logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
+		}
+	}
+	r.Actions.Signatures = signatures
+}
+
+func (r *Request) TransferSigners() []view.Identity {
+	signers := make([]view.Identity, 0)
+	for _, transfer := range r.Transfers() {
+		signers = append(signers, transfer.Senders...)
+		signers = append(signers, transfer.ExtraSigners...)
+	}
+	return signers
+}
+func (r *Request) TransferDistributionList() []view.Identity {
+	distributionList := make([]view.Identity, 0)
+	for _, transfer := range r.Transfers() {
+		distributionList = append(distributionList, transfer.Senders...)
+		distributionList = append(distributionList, transfer.Receivers...)
+	}
+	return distributionList
+}
+
+func (r *Request) IssueSigners() []view.Identity {
+	signers := make([]view.Identity, 0)
+	for _, issue := range r.Issues() {
+		signers = append(signers, issue.Issuer)
+		signers = append(signers, issue.ExtraSigners...)
+	}
+	return signers
+}
+
+func (r *Request) IssueDistributionList() []view.Identity {
+	distributionList := make([]view.Identity, 0)
+	for _, issue := range r.Issues() {
+		distributionList = append(distributionList, issue.Issuer)
+		distributionList = append(distributionList, issue.Receivers...)
+	}
+	return distributionList
 }
 
 // SetTokenService sets the token service.

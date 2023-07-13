@@ -100,7 +100,7 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 
 	session := context.Session()
 	for i := 0; i < len(requestsToBeSigned); i++ {
-		signatureRequest := &signatureRequest{}
+		signatureRequest := &SignatureRequest{}
 
 		if i == 0 {
 			k, err := keys.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
