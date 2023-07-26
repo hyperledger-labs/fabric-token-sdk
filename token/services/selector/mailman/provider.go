@@ -70,8 +70,7 @@ func (s *SelectorService) SelectorManager(networkID string, channel string, name
 	// get notification service
 	sub, err := events.GetSubscriber(s.sp)
 	if err != nil {
-		// TODO is this the proper error handling for this situation?
-		return nil, nil
+		return nil, errors.Wrap(err, "failed to get event subscriber")
 	}
 
 	// create walletID extractor function using TMS wallet manager
@@ -92,7 +91,7 @@ func (s *SelectorService) SelectorManager(networkID string, channel string, name
 	if err != nil {
 		return nil, errors.Errorf("cannot get ntwork vault for TMS [%s]", tms.ID())
 	}
-	newManager := NewManager(vault, tms.Vault().NewQueryEngine(), walletIDByRawIdentity, tracing.Get(s.sp).GetTracer(), pp.Precision(), sub)
+	newManager := NewManager(tms.ID(), vault, tms.Vault().NewQueryEngine(), walletIDByRawIdentity, tracing.Get(s.sp).GetTracer(), pp.Precision(), sub)
 	newManager.Start()
 	s.managers[key] = newManager
 	return newManager, nil

@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -41,15 +42,16 @@ type TokenStore interface {
 
 type CommonTokenStore struct {
 	notifier events.Publisher
+	tmsID    token.TMSID
 }
 
-func NewCommonTokenStore(sp view2.ServiceProvider) (*CommonTokenStore, error) {
+func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTokenStore, error) {
 	notifier, err := events.GetPublisher(sp)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get event publisher")
 	}
 
-	return &CommonTokenStore{notifier: notifier}, nil
+	return &CommonTokenStore{notifier: notifier, tmsID: tmsID}, nil
 }
 
 func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
@@ -87,7 +89,7 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 			}
 
 			logger.Debugf("post new delete-token event")
-			cts.Notify(DeleteToken, id, token.Type, txID, index)
+			cts.Notify(DeleteToken, cts.tmsID, id, token.Type, txID, index)
 
 			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
 			if err != nil {
@@ -177,7 +179,7 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 
 		// notify others
 		logger.Debugf("post new event!")
-		cts.Notify(AddToken, id, tok.Type, txID, index)
+		cts.Notify(AddToken, cts.tmsID, id, tok.Type, txID, index)
 	}
 
 	return nil

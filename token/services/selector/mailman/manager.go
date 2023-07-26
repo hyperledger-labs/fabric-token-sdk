@@ -55,11 +55,12 @@ type Manager struct {
 	selectors     map[string]*SimpleSelector
 
 	sleepTimeout time.Duration
+	tmsID        token.TMSID
 }
 
 type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
 
-func NewManager(vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) *Manager {
+func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) *Manager {
 	// pre-populate mailman instances
 	iter, err := qs.UnspentTokensIterator()
 	if err != nil {
@@ -111,6 +112,7 @@ func NewManager(vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRa
 	eventOperationMap[processor.DeleteToken] = Del
 
 	m := &Manager{
+		tmsID:                  tmsID,
 		notifier:               notifier,
 		eventOperationMap:      eventOperationMap,
 		tracer:                 tracer,
@@ -144,7 +146,13 @@ func (m *Manager) OnReceive(event events.Event) {
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("received new token [%s:%s:%s:%d]", t.WalletID, t.TokenType, t.TxID, t.Index)
+		logger.Debugf("received new token [{%s}:%s:%s:%s:%d]", t.TMSID, t.WalletID, t.TokenType, t.TxID, t.Index)
+	}
+
+	// check TMS ID
+	if !m.tmsID.Equal(t.TMSID) {
+		logger.Warnf("receive an event for a different TMS [%s]!=[%s]", m.tmsID, t.TMSID)
+		return
 	}
 
 	// sanity check that we really registered for this type of event

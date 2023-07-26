@@ -85,7 +85,11 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenStore, err := processor.NewCommonTokenStore(n.sp)
+	tokenStore, err := processor.NewCommonTokenStore(n.sp, token2.TMSID{
+		Network:   n.Name(),
+		Channel:   n.Channel(),
+		Namespace: namespace,
+	})
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store")
 	}

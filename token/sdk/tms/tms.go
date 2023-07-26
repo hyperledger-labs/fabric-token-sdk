@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
@@ -56,7 +57,11 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
 		// register processor
 		ons := orion.GetOrionNetworkService(p.sp, networkID)
-		tokenStore, err := processor.NewCommonTokenStore(p.sp)
+		tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
+			Network:   ons.Name(),
+			Channel:   channel,
+			Namespace: namespace,
+		})
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get token store")
 		}
@@ -86,7 +91,11 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	}
 
 	// register processor
-	tokenStore, err := processor.NewCommonTokenStore(p.sp)
+	tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
+		Network:   n.Name(),
+		Channel:   channel,
+		Namespace: namespace,
+	})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token store")
 	}
