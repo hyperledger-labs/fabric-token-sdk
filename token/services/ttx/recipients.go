@@ -28,19 +28,7 @@ func compileServiceOptions(opts ...token.ServiceOption) (*token.TMSID, error) {
 	return &id, nil
 }
 
-type RecipientData struct {
-	Identity  view.Identity
-	AuditInfo []byte
-	Metadata  []byte
-}
-
-func (r *RecipientData) Bytes() ([]byte, error) {
-	return Marshal(r)
-}
-
-func (r *RecipientData) FromBytes(raw []byte) error {
-	return Unmarshal(raw, r)
-}
+type RecipientData = token.RecipientData
 
 type ExchangeRecipientRequest struct {
 	TMSID         token.TMSID
@@ -142,8 +130,8 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 			return nil, errors.New("timeout reached")
 		}
 
-		recipientData := &RecipientData{}
-		if err := recipientData.FromBytes(payload); err != nil {
+		recipientData, err := RecipientDataFromBytes(payload)
+		if err != nil {
 			logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
 			return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 		}
@@ -239,7 +227,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		AuditInfo: auditInfo,
 		Metadata:  metadata,
 	}
-	recipientDataRaw, err := recipientData.Bytes()
+	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {
 		logger.Errorf("failed to marshal recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed marshalling recipient data")
@@ -330,8 +318,8 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		recipientData := &RecipientData{}
-		if err := recipientData.FromBytes(payload); err != nil {
+		recipientData, err := RecipientDataFromBytes(payload)
+		if err != nil {
 			return nil, err
 		}
 		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
@@ -438,7 +426,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 		AuditInfo: auditInfo,
 		Metadata:  metadata,
 	}
-	recipientDataRaw, err := recipientData.Bytes()
+	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {
 		return nil, err
 	}

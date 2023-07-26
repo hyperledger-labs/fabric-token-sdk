@@ -313,16 +313,28 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 	return ""
 }
 
-func TransferCashWithRestRecipient(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, restRecipientData *token2.RecipientData, expectedErrorMsgs ...string) string {
-	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:       auditor,
-		Wallet:        wallet,
-		Type:          typ,
-		Amount:        amount,
-		Recipient:     network.Identity(receiver),
-		RecipientEID:  receiver,
-		RecipientData: restRecipientData,
+func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
+	// obtain the recipient for the rest
+	restRecipient := wmp.RecipientData(id, wallet)
+	// start the call as a stream
+	stream, err := network.Client(id).StreamCallView("transfer", common.JSONMarshall(&views.Transfer{
+		Auditor:        auditor,
+		Wallet:         wallet,
+		ExternalWallet: true,
+		Type:           typ,
+		Amount:         amount,
+		Recipient:      network.Identity(receiver),
+		RecipientEID:   receiver,
+		RecipientData:  restRecipient,
 	}))
+	Expect(err).NotTo(HaveOccurred())
+
+	// Here we handle the sign requests
+	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(id, wallet), stream, 1)
+	Expect(client.Respond()).NotTo(HaveOccurred())
+
+	// wait for the completion of the view
+	txidBoxed, err := stream.Result()
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
@@ -842,20 +854,10 @@ func SetKVSEntry(network *integration.Infrastructure, user string, key string, v
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func Withdraw(network *integration.Infrastructure, user string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
-	wm := load(network, user)
-	ownerWallet := wm.OwnerWallet(wallet)
-	Expect(ownerWallet).ToNot(BeNil())
-	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
-	Expect(err).ToNot(HaveOccurred())
-	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
-	metadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
-	recipientData := &ttx.RecipientData{
-		Identity:  recipientIdentity,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
+func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, user string, wallet string, typ string, amount uint64, auditor string, IssuerId string, expectedErrorMsgs ...string) string {
+	var recipientData *token2.RecipientData
+	if wpm != nil {
+		recipientData = wpm.RecipientData(user, wallet)
 	}
 
 	if auditor == "issuer" || auditor == "newIssuer" {
@@ -886,21 +888,4 @@ func Withdraw(network *integration.Infrastructure, user string, wallet string, t
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	return ""
-}
-
-func GetRecipientData(network *integration.Infrastructure, user string, wallet string) *token2.RecipientData {
-	wm := load(network, user)
-	ownerWallet := wm.OwnerWallet(wallet)
-	Expect(ownerWallet).ToNot(BeNil())
-	recipientIdentity, err := ownerWallet.GetRecipientIdentity()
-	Expect(err).ToNot(HaveOccurred())
-	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
-	metadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
-	Expect(err).ToNot(HaveOccurred())
-	return &token2.RecipientData{
-		Identity:  recipientIdentity,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
-	}
 }

@@ -30,7 +30,7 @@ type Withdrawal struct {
 	// Issuer identifies the issuer
 	Issuer string
 	// Recipient information
-	RecipientData *ttx.RecipientData
+	RecipientData *token.RecipientData
 }
 
 type WithdrawalInitiatorView struct {
@@ -43,7 +43,6 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	var err error
 	if i.RecipientData != nil {
 		assert.NoError(
-			err,
 			token.GetManagementService(
 				context, token.WithTMSID(i.TMSID),
 			).WalletManager().OwnerWallet(i.Wallet).RegisterRecipient(i.RecipientData.Identity, i.RecipientData.AuditInfo, i.RecipientData.Metadata),

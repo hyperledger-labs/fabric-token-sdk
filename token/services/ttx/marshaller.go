@@ -10,6 +10,8 @@ import (
 	"encoding/asn1"
 	"sort"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	jsoniter "github.com/json-iterator/go"
 )
 
@@ -57,4 +59,16 @@ func UnmarshalMeta(raw []byte) (map[string][]byte, error) {
 type metaSer struct {
 	Keys []string
 	Vals [][]byte
+}
+
+func RecipientDataBytes(r *token.RecipientData) ([]byte, error) {
+	return Marshal(r)
+}
+
+func RecipientDataFromBytes(raw []byte) (*token.RecipientData, error) {
+	rd := &token.RecipientData{}
+	if err := Unmarshal(raw, rd); err != nil {
+		return nil, err
+	}
+	return rd, nil
 }

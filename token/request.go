@@ -8,13 +8,13 @@ package token
 
 import (
 	"encoding/asn1"
-	"go.uber.org/zap/zapcore"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -114,6 +114,7 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 	}
 }
 
+// WithRestRecipientIdentity sets the recipient data to be used to assign any rest left during a transfer operation
 func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
 	return func(o *TransferOptions) error {
 		o.RestRecipientIdentity = recipientData
@@ -881,14 +882,6 @@ func (r *Request) TransferSigners() []view.Identity {
 	}
 	return signers
 }
-func (r *Request) TransferDistributionList() []view.Identity {
-	distributionList := make([]view.Identity, 0)
-	for _, transfer := range r.Transfers() {
-		distributionList = append(distributionList, transfer.Senders...)
-		distributionList = append(distributionList, transfer.Receivers...)
-	}
-	return distributionList
-}
 
 func (r *Request) IssueSigners() []view.Identity {
 	signers := make([]view.Identity, 0)
@@ -897,15 +890,6 @@ func (r *Request) IssueSigners() []view.Identity {
 		signers = append(signers, issue.ExtraSigners...)
 	}
 	return signers
-}
-
-func (r *Request) IssueDistributionList() []view.Identity {
-	distributionList := make([]view.Identity, 0)
-	for _, issue := range r.Issues() {
-		distributionList = append(distributionList, issue.Issuer)
-		distributionList = append(distributionList, issue.Receivers...)
-	}
-	return distributionList
 }
 
 // SetTokenService sets the token service.
