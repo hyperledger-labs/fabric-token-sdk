@@ -107,8 +107,6 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 	// define events and mailman actions
 	eventOperationMap := make(map[string]Op)
 	eventOperationMap[processor.AddToken] = Add
-	// TODO double check if updateToken is actually needed
-	eventOperationMap[processor.UpdateToken] = Add
 	eventOperationMap[processor.DeleteToken] = Del
 
 	m := &Manager{
@@ -125,10 +123,9 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 		sleepTimeout:           2 * time.Second,
 	}
 
-	// TODO what should we do if no notifier passed?
-	// register manager as event listener
+	// register manager as event listener, if a notifier is passed
 	if notifier != nil {
-		// TODO What about network/namespace?
+		// Recall that TMS-ID is embedded in the message
 		for topic := range eventOperationMap {
 			notifier.Subscribe(topic, m)
 		}

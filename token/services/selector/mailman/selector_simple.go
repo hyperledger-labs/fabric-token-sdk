@@ -35,7 +35,10 @@ func (n *SimpleSelector) Select(ownerFilter token.OwnerFilter, q, tokenType stri
 
 	// TODO can we make the q already a quantity?
 	// that would require to change the selector API
-	target, _ := token2.ToQuantity(q, n.Precision)
+	target, err := token2.ToQuantity(q, n.Precision)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	var tokens []*token2.ID
 	for {

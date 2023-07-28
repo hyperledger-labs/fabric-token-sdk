@@ -11,7 +11,6 @@ import "github.com/hyperledger-labs/fabric-token-sdk/token"
 const (
 	AddToken    = "store-token"
 	DeleteToken = "delete-token"
-	UpdateToken = "update-token"
 )
 
 type TokenProcessorEvent struct {
