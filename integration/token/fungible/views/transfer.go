@@ -13,7 +13,7 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
-	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
+	view4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -151,7 +151,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	if t.ExternalWallet {
 		// if ExternalWallet is set to true, then the signatures that the wallet must generate are prepared externally to this FSC node.
 		// Here, we assume that the view has been called using GRPC stream
-		stream := view3.GetStream(context)
+		stream := view4.GetStream(context)
 		endorserOpts = append(endorserOpts, ttx.WithExternalWalletSigner(t.Wallet, ttx.NewStreamExternalWalletSignerServer(stream)))
 	}
 	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, endorserOpts...))

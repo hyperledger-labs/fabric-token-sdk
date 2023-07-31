@@ -8,8 +8,7 @@ package ttx
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	view4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/client/view"
-	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/server/view"
+	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
@@ -131,10 +130,10 @@ type StreamExternalWalletSignResponse struct {
 }
 
 type StreamExternalWalletSignerServer struct {
-	stream *view3.Stream
+	stream view3.Stream
 }
 
-func NewStreamExternalWalletSignerServer(stream *view3.Stream) *StreamExternalWalletSignerServer {
+func NewStreamExternalWalletSignerServer(stream view3.Stream) *StreamExternalWalletSignerServer {
 	return &StreamExternalWalletSignerServer{stream: stream}
 }
 
@@ -160,11 +159,11 @@ type SignerProvider interface {
 
 type StreamExternalWalletSignerClient struct {
 	sp               SignerProvider
-	stream           *view4.Stream
+	stream           view3.Stream
 	expectedRequests int
 }
 
-func NewStreamExternalWalletSignerClient(sp SignerProvider, stream *view4.Stream, expectedRequests int) *StreamExternalWalletSignerClient {
+func NewStreamExternalWalletSignerClient(sp SignerProvider, stream view3.Stream, expectedRequests int) *StreamExternalWalletSignerClient {
 	return &StreamExternalWalletSignerClient{
 		sp:               sp,
 		stream:           stream,

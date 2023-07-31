@@ -54,8 +54,12 @@ var _ = Describe("EndToEnd", func() {
 			fungible.TestRevokeIdentity(network, "auditor", rId, hash.Hashable(rId).String()+" Identity is in revoked state")
 		})
 
-		It("Test Remote Wallet", func() {
-			fungible.TestRemoteOwnerWallet(network, "auditor")
+		It("Test Remote Wallet (GRPC)", func() {
+			fungible.TestRemoteOwnerWallet(network, "auditor", false)
+		})
+
+		It("Test Remote Wallet (WebSocket)", func() {
+			fungible.TestRemoteOwnerWallet(network, "auditor", true)
 		})
 	})
 

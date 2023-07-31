@@ -30,6 +30,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type Stream interface {
+	Recv(m interface{}) error
+	Send(m interface{}) error
+	Result() ([]byte, error)
+}
+
 func RegisterAuditor(network *integration.Infrastructure, id string, onAuditorRestart OnAuditorRestartFunc) {
 	RegisterAuditorForTMSID(network, id, nil, onAuditorRestart)
 }
@@ -313,11 +319,13 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 	return ""
 }
 
-func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
 	// obtain the recipient for the rest
 	restRecipient := wmp.RecipientData(id, wallet)
 	// start the call as a stream
-	stream, err := network.Client(id).StreamCallView("transfer", common.JSONMarshall(&views.Transfer{
+	var stream Stream
+	var err error
+	input := common.JSONMarshall(&views.Transfer{
 		Auditor:        auditor,
 		Wallet:         wallet,
 		ExternalWallet: true,
@@ -326,7 +334,12 @@ func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *Wa
 		Recipient:      network.Identity(receiver),
 		RecipientEID:   receiver,
 		RecipientData:  restRecipient,
-	}))
+	})
+	if websSocket {
+		stream, err = network.WebClient(id).StreamCallView("transfer", input)
+	} else {
+		stream, err = network.Client(id).StreamCallView("transfer", input)
+	}
 	Expect(err).NotTo(HaveOccurred())
 
 	// Here we handle the sign requests
