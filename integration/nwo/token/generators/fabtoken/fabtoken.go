@@ -32,6 +32,10 @@ import (
 )
 
 const (
+	RemoteOwnerWallet = "##remote##"
+)
+
+const (
 	DefaultCryptoTemplate = `---
 {{ with $w := . -}}
 PeerOrgs:{{ range .PeerOrgs }}
@@ -143,6 +147,11 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 	var userSpecs []ftopology.UserSpec
 	for _, name := range names {
+		if strings.HasPrefix(name, RemoteOwnerWallet) {
+			// prepare a remote wallet
+			name, _ = strings.CutPrefix(name, RemoteOwnerWallet)
+		}
+
 		us := ftopology.UserSpec{
 			Name: name,
 			HSM:  false,
@@ -177,6 +186,13 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 	var identities []generators.Identity
 	for i, name := range names {
+		idType := ""
+		if strings.HasPrefix(name, RemoteOwnerWallet) {
+			// prepare a remote owner wallet
+			name, _ = strings.CutPrefix(name, RemoteOwnerWallet)
+			idType = "remote"
+		}
+
 		id := generators.Identity{
 			ID: name,
 			Path: filepath.Join(
@@ -186,6 +202,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 				"users",
 				fmt.Sprintf("%s@%s", name, domain),
 				"msp"),
+			Type: idType,
 		}
 
 		if wallet == "issuers" || wallet == "auditors" {

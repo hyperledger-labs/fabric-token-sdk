@@ -183,7 +183,9 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 
 		// Case 1:
 		if signer, err := c.tx.TokenService().SigService().GetSigner(party); err == nil {
-			logger.Info("found signer for party [%s], request local signature", party)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("found signer for party [%s], request local signature", party)
+			}
 			sigma, err := c.signLocal(party, signer, signatureRequest)
 			if err != nil {
 				return nil, err
@@ -194,7 +196,9 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 
 		// Case 2:
 		if w := c.tx.TokenService().WalletManager().OwnerWalletByIdentity(party); w != nil {
-			logger.Info("found wallet for party [%s], request external signature", party)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("found wallet for party [%s], request external signature", party)
+			}
 			ews := c.Opts.ExternalWalletSigner(w.ID())
 			if ews == nil {
 				return nil, errors.Errorf("no external wallet signer found for [%s]", w.ID())
@@ -208,7 +212,9 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 
 		// Case 3:
-		logger.Info("no signer or wallet found for party [%s], request remote signature", party)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("no signer or wallet found for party [%s], request remote signature", party)
+		}
 		sigma, err := c.signRemote(context, party, signatureRequest, verifierGetter)
 		if err != nil {
 			return nil, err

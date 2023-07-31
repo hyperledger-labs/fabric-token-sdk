@@ -113,6 +113,19 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity.Wallet
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
+	lm := x509.NewLocalMembership(f.ConfigManager, f.NetworkDefaultIdentity, f.SignerService, f.BinderService, f.DeserializerManager, f.KVS, RoleToMSPID[role], false)
+	if err := lm.Load(identities); err != nil {
+		return nil, errors.WithMessage(err, "failed to load owners")
+	}
+	return x509.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
+}
+
+// NewX509WalletIgnoreRemote creates a new X509 wallet treating the remote wallets as local
+func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (identity.Wallet, error) {
+	identities, err := f.ConfigFor(role)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
+	}
 	lm := x509.NewLocalMembership(
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
@@ -121,6 +134,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity.Wallet
 		f.DeserializerManager,
 		f.KVS,
 		RoleToMSPID[role],
+		true,
 	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")

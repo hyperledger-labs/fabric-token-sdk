@@ -168,7 +168,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		dsManager,
 		true,
 	)
-	wallet, err := mspWalletFactory.NewX509Wallet(driver.OwnerRole)
+	wallet, err := mspWalletFactory.NewX509WalletIgnoreRemote(driver.OwnerRole)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner wallet")
 	}

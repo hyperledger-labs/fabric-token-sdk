@@ -379,7 +379,8 @@ func (w *ownerWallet) EnrollmentID() string {
 }
 
 func (w *ownerWallet) RegisterRecipient(identity view.Identity, info []byte, metadata []byte) error {
-	panic("not implemented")
+	// TODO: if identity is equal to the one this wallet is bound to, then we are good. Otherwise return an error
+	return nil
 }
 
 type issuerWallet struct {
