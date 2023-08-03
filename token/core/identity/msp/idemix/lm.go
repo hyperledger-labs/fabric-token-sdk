@@ -232,7 +232,12 @@ func (lm *LocalMembership) registerIdentity(id string, path string, setDefault b
 func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveID math3.CurveID, setDefault bool) error {
 	conf, err := idemix2.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID)
 	if err != nil {
-		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
+		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", translatedPath, err)
+		// Try with "msp"
+		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(translatedPath, "msp"), nil, lm.mspID)
+		if err != nil {
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", translatedPath)
+		}
 	}
 	// TODO: remove the need for ServiceProvider
 	cryptoProvider, err := NewKVSBCCSP(kvs.GetService(lm.sp), curveID)
