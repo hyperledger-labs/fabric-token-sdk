@@ -10,6 +10,7 @@ type CAKeyGen struct {
 	NetworkPrefix string
 	Output        string
 	Curve         string
+	Aries         bool
 }
 
 func (c CAKeyGen) SessionName() string {
@@ -17,11 +18,15 @@ func (c CAKeyGen) SessionName() string {
 }
 
 func (c CAKeyGen) Args() []string {
-	return []string{
+	args := []string{
 		"ca-keygen",
 		"--output", c.Output,
 		"--curve", c.Curve,
 	}
+	if c.Aries {
+		args = append(args, "--aries")
+	}
+	return args
 }
 
 type SignerConfig struct {
@@ -33,6 +38,7 @@ type SignerConfig struct {
 	EnrollmentID     string
 	RevocationHandle string
 	Curve            string
+	Aries            bool
 }
 
 func (c SignerConfig) SessionName() string {
@@ -40,7 +46,7 @@ func (c SignerConfig) SessionName() string {
 }
 
 func (c SignerConfig) Args() []string {
-	return []string{
+	args := []string{
 		"signerconfig",
 		"--ca-input", c.CAInput,
 		"--output", c.Output,
@@ -50,4 +56,8 @@ func (c SignerConfig) Args() []string {
 		"-r", c.RevocationHandle,
 		"--curve", c.Curve,
 	}
+	if c.Aries {
+		args = append(args, "--aries")
+	}
+	return args
 }

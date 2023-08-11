@@ -35,3 +35,9 @@ func NewWallets() Wallets {
 func (m Wallets) Put(usage driver.IdentityRole, wallet Wallet) {
 	m[usage] = wallet
 }
+
+func (m Wallets) Load() {
+	for _, wallet := range m {
+		wallet.IDs()
+	}
+}

@@ -114,7 +114,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 
 	// Setup
 	// TODO: update the curve here
-	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BN254)
+	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

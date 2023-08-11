@@ -68,6 +68,7 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 		NetworkPrefix: tms.ID(),
 		Output:        output,
 		Curve:         d.Curve,
+		Aries:         true,
 	})
 	if err != nil {
 		return "", err
@@ -100,6 +101,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			EnrollmentID:     owner,
 			RevocationHandle: fmt.Sprintf("1%d%d", d.RevocationHandlerIndex, i),
 			Curve:            d.Curve,
+			Aries:            true,
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
@@ -169,6 +171,8 @@ func CurveIDToString(id math3.CurveID) string {
 		return "FP256BN_AMCL_MIRACL"
 	case math3.BLS12_377_GURVY:
 		return "BLS12_377_GURVY"
+	case math3.BLS12_381_BBS:
+		return "BLS12_381_BBS"
 	default:
 		panic("invalid curve id")
 	}

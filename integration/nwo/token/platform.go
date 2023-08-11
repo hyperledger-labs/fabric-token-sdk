@@ -63,7 +63,7 @@ type Platform struct {
 }
 
 func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
-	curveID := math3.BN254
+	curveID := math3.BLS12_381_BBS
 	p := &Platform{
 		Context:                ctx,
 		Topology:               t.(*Topology),

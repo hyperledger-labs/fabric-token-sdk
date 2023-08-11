@@ -36,6 +36,14 @@ func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 	return NewDeserializerWithProvider(ipk, bccsp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
 
+func NewDeserializerAries(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
+	cryptoProvider, err := idemix.NewBCCSP(curveID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
+	}
+	return NewDeserializerWithProvider(ipk, bccsp.ExpectEidNymRhNym, nil, cryptoProvider)
+}
+
 // NewDeserializerWithProvider returns a new serialized for the passed arguments
 func NewDeserializerWithProvider(
 	ipk []byte,
