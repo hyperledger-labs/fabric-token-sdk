@@ -32,6 +32,7 @@ require (
 )
 
 require (
+	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20230817163708-4b3de6d91874 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.5.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
@@ -106,7 +107,6 @@ require (
 	github.com/huin/goupnp v1.1.0 // indirect
 	github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 // indirect
 	github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c // indirect
-	github.com/hyperledger/aries-framework-go/component/kmscrypto v0.0.0 // indirect
 	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-config v0.1.0 // indirect
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
@@ -238,7 +238,3 @@ require (
 	nhooyr.io/websocket v1.8.7 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
-
-replace github.com/IBM/idemix => github.com/IBM/idemix v0.0.0-20230810173054-c991cc1e54ca
-
-replace github.com/hyperledger/aries-framework-go/component/kmscrypto => github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20230630075813-b7e4c6a2156c
