@@ -14,15 +14,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Deserialized struct {
-	id           *Identity
-	NymPublicKey bccsp.Key
-	si           *m.SerializedIdentity
-	ou           *m.OrganizationUnit
-	role         *m.MSPRole
+type Identity struct {
+	Identity           *MSPIdentity
+	NymPublicKey       bccsp.Key
+	SerializedIdentity *m.SerializedIdentity
+	OU                 *m.OrganizationUnit
+	Role               *m.MSPRole
 }
 
-type Common struct {
+type Idemix struct {
 	Name            string
 	IPK             []byte
 	CSP             bccsp.BCCSP
@@ -33,11 +33,11 @@ type Common struct {
 	NymEID          []byte
 }
 
-func (c *Common) Deserialize(raw []byte, checkValidity bool) (*Deserialized, error) {
-	return c.DeserializeWithNymEID(raw, checkValidity, nil)
+func (c *Idemix) Deserialize(raw []byte, checkValidity bool) (*Identity, error) {
+	return c.DeserializeAgainstNymEID(raw, checkValidity, nil)
 }
 
-func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, nymEID []byte) (*Deserialized, error) {
+func (c *Idemix) DeserializeAgainstNymEID(raw view.Identity, checkValidity bool, nymEID []byte) (*Identity, error) {
 	si := &m.SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
@@ -81,7 +81,7 @@ func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, ny
 
 	idCommon := c
 	if len(nymEID) != 0 {
-		idCommon = &Common{
+		idCommon = &Idemix{
 			Name:            c.Name,
 			IPK:             c.IPK,
 			CSP:             c.CSP,
@@ -93,7 +93,7 @@ func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, ny
 		}
 	}
 
-	id, err := NewIdentityWithVerType(
+	id, err := NewMSPIdentityWithVerType(
 		idCommon,
 		NymPublicKey,
 		role,
@@ -110,16 +110,16 @@ func (c *Common) DeserializeWithNymEID(raw view.Identity, checkValidity bool, ny
 		}
 	}
 
-	return &Deserialized{
-		id:           id,
-		NymPublicKey: NymPublicKey,
-		si:           si,
-		ou:           ou,
-		role:         role,
+	return &Identity{
+		Identity:           id,
+		NymPublicKey:       NymPublicKey,
+		SerializedIdentity: si,
+		OU:                 ou,
+		Role:               role,
 	}, nil
 }
 
-func (c *Common) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (c *Idemix) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	ai, err := DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, err
@@ -127,4 +127,22 @@ func (c *Common) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	ai.Csp = c.CSP
 	ai.IssuerPublicKey = c.IssuerPublicKey
 	return ai, nil
+}
+
+type NymSignatureVerifier struct {
+	CSP   bccsp.BCCSP
+	IPK   bccsp.Key
+	NymPK bccsp.Key
+}
+
+func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {
+	_, err := v.CSP.Verify(
+		v.NymPK,
+		sigma,
+		message,
+		&bccsp.IdemixNymSignerOpts{
+			IssuerPK: v.IPK,
+		},
+	)
+	return err
 }

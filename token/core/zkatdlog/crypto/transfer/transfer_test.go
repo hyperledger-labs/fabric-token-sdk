@@ -86,7 +86,7 @@ var _ = Describe("Transfer", func() {
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(100, 2, nil, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInputsForZKTransfer(pp)
@@ -114,7 +114,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(100, 2, nil, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInvalidInputsForZKTransfer(pp)
@@ -143,7 +143,7 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(10, 2, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(10, 2, nil, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInputsForZKTransfer(pp)
@@ -265,7 +265,7 @@ func prepareInputsForOwnershipTransfer(pp *crypto.PublicParams) (*transfer.WellF
 }
 
 func prepareOwnershipTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(100, 2, nil, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	wfw, in, out := prepareInputsForOwnershipTransfer(pp)

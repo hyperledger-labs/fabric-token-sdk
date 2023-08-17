@@ -32,7 +32,7 @@ type VerifierDES interface {
 
 // AuditDES deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
 type AuditDES interface {
-	DeserializeAuditInfo(raw []byte) (driver.Matcher, error)
+	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
 }
 
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
@@ -48,7 +48,7 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if pp == nil {
 		return nil, errors.New("failed to get deserializer: nil public parameters")
 	}
-	idemixDes, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixCurveID)
+	idemixDes, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixRevocationPK, pp.IdemixCurveID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixCurveID)
 	}
@@ -78,7 +78,7 @@ func (d *Deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 // GetOwnerMatcher returns a matcher that allows auditors to match an identity to an enrollment ID
 func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.auditDeserializer.DeserializeAuditInfo(raw)
+	return d.auditDeserializer.GetOwnerMatcher(raw)
 }
 
 // DeserializerProvider provides the deserializer matching zkatdlog public parameters

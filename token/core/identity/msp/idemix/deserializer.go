@@ -9,12 +9,8 @@ package idemix
 import (
 	"fmt"
 
-	msp "github.com/IBM/idemix"
-	idemix "github.com/IBM/idemix/bccsp"
-	"github.com/IBM/idemix/bccsp/keystore"
+	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/schemes"
-	idemix2 "github.com/IBM/idemix/bccsp/schemes/dlog/crypto"
-	"github.com/IBM/idemix/bccsp/schemes/dlog/crypto/translator/amcl"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
@@ -26,90 +22,94 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.core.identity.msp.idemix")
 
 type Deserializer struct {
-	*Common
+	*Idemix
 }
 
-// NewDeserializer returns a new deserializer for the best effort strategy
-func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
-	return newDeserializer(ipk, bccsp.BestEffort, nil, curveID)
-}
-
-func newDeserializer(ipk []byte, verType bccsp.VerificationType, nymEID []byte, curveID math.CurveID) (*Deserializer, error) {
-	logger.Debugf("Setting up Idemix-based MSP instance")
-
-	curve := math.Curves[curveID]
-	var tr idemix2.Translator
-	switch curveID {
-	case math.BN254:
-		tr = &amcl.Gurvy{C: curve}
-	case math.BLS12_377_GURVY:
-		tr = &amcl.Gurvy{C: curve}
-	case math.FP256BN_AMCL:
-		tr = &amcl.Fp256bn{C: curve}
-	case math.FP256BN_AMCL_MIRACL:
-		tr = &amcl.Fp256bnMiracl{C: curve}
-	default:
-		return nil, errors.Errorf("unsupported curve ID: %d", curveID)
-	}
-
-	cryptoProvider, err := idemix.New(&keystore.Dummy{}, curve, tr, true)
+// NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
+func NewDeserializer(ipk []byte, revocationPK []byte, curveID math.CurveID) (*Deserializer, error) {
+	cryptoProvider, err := NewBCCSP(curveID)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed getting crypto provider")
+		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
+	}
+	return NewDeserializerWithProvider(ipk, revocationPK, bccsp.ExpectEidNymRhNym, nil, cryptoProvider)
+}
+
+// NewDeserializerWithProvider returns a new serialized for the passed arguments
+func NewDeserializerWithProvider(
+	ipk []byte,
+	revocationPK []byte,
+	verType bccsp.VerificationType,
+	nymEID []byte,
+	cryptoProvider bccsp.BCCSP,
+) (*Deserializer, error) {
+	logger.Debugf("Setting up Idemix-based MSP instance")
+	if len(ipk) == 0 {
+		return nil, errors.Errorf("empty issuer public key")
+	}
+	if len(revocationPK) == 0 {
+		return nil, errors.Errorf("empty revocation public key")
 	}
 
 	// Import Issuer Public Key
-	var issuerPublicKey bccsp.Key
-	if len(ipk) != 0 {
-		issuerPublicKey, err = cryptoProvider.KeyImport(
-			ipk,
-			&bccsp.IdemixIssuerPublicKeyImportOpts{
-				Temporary: true,
-				AttributeNames: []string{
-					msp.AttributeNameOU,
-					msp.AttributeNameRole,
-					msp.AttributeNameEnrollmentId,
-					msp.AttributeNameRevocationHandle,
-				},
-			})
-		if err != nil {
-			return nil, err
-		}
+	issuerPublicKey, err := cryptoProvider.KeyImport(
+		ipk,
+		&bccsp.IdemixIssuerPublicKeyImportOpts{
+			Temporary: true,
+			AttributeNames: []string{
+				idemix.AttributeNameOU,
+				idemix.AttributeNameRole,
+				idemix.AttributeNameEnrollmentId,
+				idemix.AttributeNameRevocationHandle,
+			},
+		},
+	)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to input issuer public key")
+	}
+
+	revocationPublicKey, err := cryptoProvider.KeyImport(
+		revocationPK,
+		&bccsp.IdemixRevocationPublicKeyImportOpts{Temporary: true},
+	)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to import revocation public key")
 	}
 
 	return &Deserializer{
-		Common: &Common{
+		Idemix: &Idemix{
 			IPK:             ipk,
 			CSP:             cryptoProvider,
 			IssuerPublicKey: issuerPublicKey,
 			VerType:         verType,
 			NymEID:          nymEID,
+			RevocationPK:    revocationPublicKey,
 		},
 	}, nil
 }
 
 func (i *Deserializer) DeserializeVerifier(raw view.Identity) (driver.Verifier, error) {
-	r, err := i.Common.Deserialize(raw, false)
+	identity, err := i.Idemix.Deserialize(raw, true)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to deserialize identity")
 	}
 
-	return &Verifier{
+	return &NymSignatureVerifier{
 		CSP:   i.CSP,
 		IPK:   i.IssuerPublicKey,
-		NymPK: r.NymPublicKey,
+		NymPK: identity.NymPublicKey,
 	}, nil
 }
 
 func (i *Deserializer) DeserializerVerifierWithNymEID(raw view.Identity, nymEID []byte) (driver.Verifier, error) {
-	r, err := i.Common.DeserializeWithNymEID(raw, false, nymEID)
+	identity, err := i.Idemix.DeserializeAgainstNymEID(raw, true, nymEID)
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed to deserialize identity against nym eid")
 	}
 
-	return &Verifier{
+	return &NymSignatureVerifier{
 		CSP:   i.CSP,
 		IPK:   i.IssuerPublicKey,
-		NymPK: r.NymPublicKey,
+		NymPK: identity.NymPublicKey,
 	}, nil
 }
 
@@ -117,12 +117,12 @@ func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (i *Deserializer) DeserializeAuditInfo(raw []byte) (driver.Matcher, error) {
-	return i.Common.DeserializeAuditInfo(raw)
+func (i *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return i.Idemix.DeserializeAuditInfo(raw)
 }
 
 func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	r, err := i.Common.Deserialize(raw, false)
+	r, err := i.Idemix.Deserialize(raw, true)
 	if err != nil {
 		return "", err
 	}
@@ -133,33 +133,15 @@ func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 		if err := ai.FromBytes(auditInfo); err != nil {
 			return "", err
 		}
-		if err := ai.Match(view.Identity(raw)); err != nil {
+		if err := ai.Match(raw); err != nil {
 			return "", err
 		}
 		eid = ai.EnrollmentID()
 	}
 
-	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, view.Identity(raw).UniqueID(), r.si.Mspid, r.ou.OrganizationalUnitIdentifier, r.role.Role.String()), nil
+	return fmt.Sprintf("MSP.Idemix: [%s][%s][%s][%s][%s]", eid, view.Identity(raw).UniqueID(), r.SerializedIdentity.Mspid, r.OU.OrganizationalUnitIdentifier, r.Role.Role.String()), nil
 }
 
 func (i *Deserializer) String() string {
 	return fmt.Sprintf("Idemix with IPK [%s]", hash.Hashable(i.IPK).String())
-}
-
-type Verifier struct {
-	CSP   bccsp.BCCSP
-	IPK   bccsp.Key
-	NymPK bccsp.Key
-}
-
-func (v *Verifier) Verify(message, sigma []byte) error {
-	_, err := v.CSP.Verify(
-		v.NymPK,
-		sigma,
-		message,
-		&bccsp.IdemixNymSignerOpts{
-			IssuerPK: v.IPK,
-		},
-	)
-	return err
 }

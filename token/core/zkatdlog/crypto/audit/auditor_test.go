@@ -18,11 +18,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit/mock"
@@ -30,19 +27,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	msp2 "github.com/hyperledger/fabric/msp"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
-
-type idemix interface {
-	DeserializeAuditInfo(raw []byte) (*idemix2.AuditInfo, error)
-}
-
-type deserializer struct {
-	idemix idemix
-}
-
-func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.idemix.DeserializeAuditInfo(raw)
-}
 
 var _ = Describe("Auditor", func() {
 	var (
@@ -55,11 +43,13 @@ var _ = Describe("Auditor", func() {
 		fakeSigningIdentity = &mock.SigningIdentity{}
 		ipk, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
+		rpk, err := os.ReadFile("./testdata/idemix/msp/RevocationPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix2.NewDeserializer(pp.IdemixIssuerPK)
+		pp, err = crypto.Setup(100, 2, ipk, rpk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.PedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
+		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixRevocationPK, math.FP256BN_AMCL)
+		Expect(err).NotTo(HaveOccurred())
+		auditor = audit.NewAuditor(des, pp.PedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})

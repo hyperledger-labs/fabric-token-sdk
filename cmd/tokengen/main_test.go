@@ -78,6 +78,10 @@ func TestGenFullSuccess(t *testing.T) {
 	idemixPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	gt.Expect(err).NotTo(HaveOccurred())
 	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPK))
+
+	rPK, err := os.ReadFile("./testdata/idemix/msp/RevocationPublicKey")
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(rPK).To(BeEquivalentTo(pp.IdemixRevocationPK))
 }
 
 func TestGenFailure(t *testing.T) {

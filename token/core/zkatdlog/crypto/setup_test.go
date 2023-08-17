@@ -17,16 +17,18 @@ import (
 
 func TestSetup(t *testing.T) {
 	s := time.Now()
-	_, err := Setup(100, 2, nil, math3.FP256BN_AMCL)
+	_, err := Setup(100, 2, nil, nil, math3.FP256BN_AMCL)
 	e := time.Now()
 	fmt.Printf("elapsed %d", e.Sub(s).Milliseconds())
 	assert.NoError(t, err)
 }
 
 func TestSerialization(t *testing.T) {
-	raw, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+	issuerPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	assert.NoError(t, err)
-	pp, err := Setup(100, 2, raw, math3.BN254)
+	revocationPK, err := os.ReadFile("./testdata/idemix/msp/RevocationPublicKey")
+	assert.NoError(t, err)
+	pp, err := Setup(100, 2, issuerPK, revocationPK, math3.BN254)
 	assert.NoError(t, err)
 	ser, err := pp.Serialize()
 	assert.NoError(t, err)
@@ -37,6 +39,7 @@ func TestSerialization(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, pp.IdemixIssuerPK, pp2.IdemixIssuerPK)
+	assert.Equal(t, pp.IdemixRevocationPK, pp2.IdemixRevocationPK)
 	assert.Equal(t, pp.PedGen, pp2.PedGen)
 	assert.Equal(t, pp.PedParams, pp2.PedParams)
 	assert.Equal(t, pp.RangeProofParams, pp2.RangeProofParams)
