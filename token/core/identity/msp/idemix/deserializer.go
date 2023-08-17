@@ -87,6 +87,9 @@ func NewDeserializerWithProvider(
 	}, nil
 }
 
+// DeserializeVerifier expects raw to contain and Idemix MSP serialized identity.
+// The deserializer first checks that the identity is valid with the respect to the verification strategy set
+// for this deserializer. Then, it returns a verifier that checks signatures against the passed identity.
 func (i *Deserializer) DeserializeVerifier(raw view.Identity) (driver.Verifier, error) {
 	identity, err := i.Idemix.Deserialize(raw, true)
 	if err != nil {
@@ -100,6 +103,9 @@ func (i *Deserializer) DeserializeVerifier(raw view.Identity) (driver.Verifier, 
 	}, nil
 }
 
+// DeserializerVerifierWithNymEID expects raw to contain and Idemix MSP serialized identity.
+// The deserializer first checks that the identity is valid with the respect to the verification strategy set
+// for this deserializer and the passed NymEID. Then, it returns a verifier that checks signatures against the passed identity.
 func (i *Deserializer) DeserializerVerifierWithNymEID(raw view.Identity, nymEID []byte) (driver.Verifier, error) {
 	identity, err := i.Idemix.DeserializeAgainstNymEID(raw, true, nymEID)
 	if err != nil {
