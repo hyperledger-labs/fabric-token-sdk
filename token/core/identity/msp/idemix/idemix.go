@@ -79,9 +79,9 @@ func (c *Idemix) DeserializeAgainstNymEID(raw view.Identity, checkValidity bool,
 		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
 	}
 
-	idCommon := c
+	idemix := c
 	if len(nymEID) != 0 {
-		idCommon = &Idemix{
+		idemix = &Idemix{
 			Name:            c.Name,
 			IPK:             c.IPK,
 			CSP:             c.CSP,
@@ -94,7 +94,7 @@ func (c *Idemix) DeserializeAgainstNymEID(raw view.Identity, checkValidity bool,
 	}
 
 	id, err := NewMSPIdentityWithVerType(
-		idCommon,
+		idemix,
 		NymPublicKey,
 		role,
 		ou,

@@ -20,7 +20,7 @@ import (
 
 type MSPIdentity struct {
 	NymPublicKey bccsp.Key
-	Common       *Idemix
+	Idemix       *Idemix
 	ID           *msp.IdentityIdentifier
 	Role         *m.MSPRole
 	OU           *m.OrganizationUnit
@@ -37,7 +37,7 @@ func NewMSPIdentity(provider *Idemix, NymPublicKey bccsp.Key, role *m.MSPRole, o
 
 func NewMSPIdentityWithVerType(common *Idemix, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) (*MSPIdentity, error) {
 	id := &MSPIdentity{}
-	id.Common = common
+	id.Idemix = common
 	id.NymPublicKey = NymPublicKey
 	id.Role = role
 	id.OU = ou
@@ -70,12 +70,12 @@ func (id *MSPIdentity) GetIdentifier() *msp.IdentityIdentifier {
 }
 
 func (id *MSPIdentity) GetMSPIdentifier() string {
-	return id.Common.Name
+	return id.Idemix.Name
 }
 
 func (id *MSPIdentity) GetOrganizationalUnits() []*msp.OUIdentifier {
 	// we use the (serialized) public key of this MSP as the CertifiersIdentifier
-	certifiersIdentifier, err := id.Common.IssuerPublicKey.Bytes()
+	certifiersIdentifier, err := id.Idemix.IssuerPublicKey.Bytes()
 	if err != nil {
 		logger.Errorf("Failed to marshal ipk in GetOrganizationalUnits: %s", err)
 		return nil
@@ -86,19 +86,19 @@ func (id *MSPIdentity) GetOrganizationalUnits() []*msp.OUIdentifier {
 
 func (id *MSPIdentity) Validate() error {
 	// logger.Debugf("Validating identity %+v", id)
-	if id.GetMSPIdentifier() != id.Common.Name {
+	if id.GetMSPIdentifier() != id.Idemix.Name {
 		return errors.Errorf("the supplied identity does not belong to this msp")
 	}
 	return id.verifyProof()
 }
 
 func (id *MSPIdentity) Verify(msg []byte, sig []byte) error {
-	_, err := id.Common.CSP.Verify(
+	_, err := id.Idemix.CSP.Verify(
 		id.NymPublicKey,
 		sig,
 		msg,
 		&bccsp.IdemixNymSignerOpts{
-			IssuerPK: id.Common.IssuerPublicKey,
+			IssuerPK: id.Idemix.IssuerPublicKey,
 		},
 	)
 	return err
@@ -150,18 +150,18 @@ func (id *MSPIdentity) Serialize() ([]byte, error) {
 func (id *MSPIdentity) verifyProof() error {
 	// Verify signature
 	var metadata *bccsp.IdemixSignerMetadata
-	if len(id.Common.NymEID) != 0 {
+	if len(id.Idemix.NymEID) != 0 {
 		metadata = &bccsp.IdemixSignerMetadata{
-			EidNym: id.Common.NymEID,
+			EidNym: id.Idemix.NymEID,
 		}
 	}
 
-	valid, err := id.Common.CSP.Verify(
-		id.Common.IssuerPublicKey,
+	valid, err := id.Idemix.CSP.Verify(
+		id.Idemix.IssuerPublicKey,
 		id.AssociationProof,
 		nil,
 		&bccsp.IdemixSignerOpts{
-			RevocationPublicKey: id.Common.RevocationPK,
+			RevocationPublicKey: id.Idemix.RevocationPK,
 			Attributes: []bccsp.IdemixAttribute{
 				{Type: bccsp.IdemixBytesAttribute, Value: []byte(id.OU.OrganizationalUnitIdentifier)},
 				{Type: bccsp.IdemixIntAttribute, Value: getIdemixRoleFromMSPRole(id.Role)},
@@ -170,7 +170,7 @@ func (id *MSPIdentity) verifyProof() error {
 			},
 			RhIndex:          RHIndex,
 			EidIndex:         EIDIndex,
-			Epoch:            id.Common.Epoch,
+			Epoch:            id.Idemix.Epoch,
 			VerificationType: id.VerificationType,
 			Metadata:         metadata,
 		},
@@ -193,12 +193,12 @@ type MSPSigningIdentity struct {
 func (id *MSPSigningIdentity) Sign(msg []byte) ([]byte, error) {
 	// logger.Debugf("Idemix identity %s is signing", id.GetIdentifier())
 
-	sig, err := id.Common.CSP.Sign(
+	sig, err := id.Idemix.CSP.Sign(
 		id.UserKey,
 		msg,
 		&bccsp.IdemixNymSignerOpts{
 			Nym:      id.NymKey,
-			IssuerPK: id.Common.IssuerPublicKey,
+			IssuerPK: id.Idemix.IssuerPublicKey,
 		},
 	)
 	if err != nil {
