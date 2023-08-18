@@ -107,14 +107,14 @@ var cobraCommand = &cobra.Command{
 // Gen generates the public parameters for the ZKATDLog driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
-	_, ipkBytes, revocationPKBytes, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)
+	_, ipkBytes, _, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)
 	if err != nil {
 		return nil, err
 	}
 
 	// Setup
 	// TODO: update the curve here
-	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, revocationPKBytes, math3.BN254)
+	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BN254)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

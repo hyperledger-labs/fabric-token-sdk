@@ -50,7 +50,6 @@ var _ = Describe("validator", func() {
 		sender  *transfer.Sender
 		auditor *audit.Auditor
 		ipk     []byte
-		rpk     []byte
 
 		ir *driver.TokenRequest // regular issue request
 		rr *driver.TokenRequest // redeem request
@@ -63,15 +62,13 @@ var _ = Describe("validator", func() {
 		// prepare public parameters
 		ipk, err = os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		rpk, err = os.ReadFile("./testdata/idemix/msp/RevocationPublicKey")
-		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(100, 2, ipk, rpk, math.FP256BN_AMCL)
+		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixRevocationPK, math.FP256BN_AMCL)
+		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		auditor = audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()

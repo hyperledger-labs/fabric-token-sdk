@@ -102,12 +102,6 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		return nil, err
 	}
 
-	path = filepath.Join(idemixRootPath, msp.IdemixConfigDirMsp, msp.IdemixConfigFileRevocationPublicKey)
-	revocationPkBytes, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
 	baseArg, ok := args[1].(string)
 	if !ok {
 		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
@@ -124,7 +118,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if err != nil {
 		return nil, err
 	}
-	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, revocationPkBytes, d.CurveID)
+	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, d.CurveID)
 	if err != nil {
 		return nil, err
 	}

@@ -3,12 +3,13 @@ module github.com/hyperledger-labs/fabric-token-sdk
 go 1.20
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20230510082947-a0c3ee5ebe35
-	github.com/IBM/mathlib v0.0.3-0.20230428120512-8afa4e643d4c
+	github.com/IBM/idemix v0.0.2-0.20230818094413-71dd11112cb5
+	github.com/IBM/idemix/bccsp/types v0.0.0-20230818094413-71dd11112cb5
+	github.com/IBM/mathlib v0.0.3-0.20230605104224-932ab92f2ce0
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230517151006-d589a105ee4e
+	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230818145234-920c42bce104
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230401164317-bd8e24856939
@@ -20,7 +21,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113
 	github.com/test-go/testify v1.1.4
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
@@ -40,11 +41,14 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20230818094413-71dd11112cb5 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20230818094413-71dd11112cb5 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Microsoft/hcsshim v0.8.25 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/Shopify/sarama v1.26.3 // indirect
 	github.com/VictoriaMetrics/fastcache v1.9.0 // indirect
+	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20230817163708-4b3de6d91874 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
@@ -94,6 +98,7 @@ require (
 	github.com/google/pprof v0.0.0-20230405160723-4a4c7d95572b // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.7.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
@@ -104,7 +109,7 @@ require (
 	github.com/huin/goupnp v1.1.0 // indirect
 	github.com/hyperledger-labs/weaver-dlt-interoperability/common/protos-go v1.2.3-alpha.1 // indirect
 	github.com/hyperledger-labs/weaver-dlt-interoperability/sdks/fabric/go-sdk v1.2.3-alpha.1.0.20210812140206-37f430515b8c // indirect
-	github.com/hyperledger/fabric-amcl v0.0.0-20210603140002-2670f91851c8 // indirect
+	github.com/hyperledger/fabric-amcl v0.0.0-20230602173724-9e02669dceb2 // indirect
 	github.com/hyperledger/fabric-config v0.1.0 // indirect
 	github.com/hyperledger/fabric-lib-go v1.0.0 // indirect
 	github.com/hyperledger/fabric-private-chaincode v0.0.0-20210907122433-d56466264e4d // indirect

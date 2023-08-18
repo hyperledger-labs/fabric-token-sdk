@@ -43,11 +43,9 @@ var _ = Describe("Auditor", func() {
 		fakeSigningIdentity = &mock.SigningIdentity{}
 		ipk, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		rpk, err := os.ReadFile("./testdata/idemix/msp/RevocationPublicKey")
+		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(100, 2, ipk, rpk, math.FP256BN_AMCL)
-		Expect(err).NotTo(HaveOccurred())
-		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, pp.IdemixRevocationPK, math.FP256BN_AMCL)
+		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		auditor = audit.NewAuditor(des, pp.PedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)

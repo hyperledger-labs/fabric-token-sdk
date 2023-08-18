@@ -39,8 +39,6 @@ type PublicParams struct {
 	IdemixCurveID mathlib.CurveID
 	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
 	IdemixIssuerPK []byte
-	// IdemixRevocationPK is the public key used for revocation
-	IdemixRevocationPK []byte
 	// Auditor is the public key of the auditor.
 	Auditor []byte
 	// Issuers is a list of public keys of the entities that can issue tokens.
@@ -219,11 +217,11 @@ func (pp *PublicParams) String() string {
 	return string(res)
 }
 
-func Setup(base uint, exponent uint, idemixIssuerPK []byte, idemixRevocationPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(base, exponent, idemixIssuerPK, idemixRevocationPK, DLogPublicParameters, idemixCurveID)
+func Setup(base uint, exponent uint, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(base, exponent, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, idemixRevocationPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	signer := pssign.NewSigner(nil, nil, nil, mathlib.Curves[mathlib.BN254])
 	err := signer.KeyGen(1)
 	if err != nil {
@@ -238,7 +236,6 @@ func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, idemi
 		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
 	}
 	pp.IdemixIssuerPK = idemixIssuerPK
-	pp.IdemixRevocationPK = idemixRevocationPK
 	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision
@@ -276,9 +273,6 @@ func (pp *PublicParams) Validate() error {
 	}
 	if len(pp.IdemixIssuerPK) == 0 {
 		return errors.New("invalid public parameters: empty idemix issuer")
-	}
-	if len(pp.IdemixRevocationPK) == 0 {
-		return errors.New("invalid public parameters: empty idemix revocation public key")
 	}
 	maxToken := pp.ComputeMaxTokenValue()
 	if maxToken != pp.MaxToken {
