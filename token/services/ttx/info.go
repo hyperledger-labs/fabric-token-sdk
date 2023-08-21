@@ -31,7 +31,7 @@ type TransactionInfo struct {
 	EndorsementAcks map[string][]byte
 	// ApplicationMetadata contains the application metadata
 	ApplicationMetadata map[string][]byte
-
+	// TokenRequest contains the token request of this transaction
 	TokenRequest []byte
 }
 
