@@ -23,15 +23,15 @@ type localMembership interface {
 	IDs() ([]string, error)
 }
 
-// wallet maps an identifier to an identity
-type wallet struct {
+// Wallet maps an identifier to an idemix identity
+type Wallet struct {
 	networkID       string
 	nodeIdentity    view.Identity
 	localMembership localMembership
 }
 
-func NewWallet(networkID string, nodeIdentity view.Identity, localMembership localMembership) *wallet {
-	return &wallet{
+func NewWallet(networkID string, nodeIdentity view.Identity, localMembership localMembership) *Wallet {
+	return &Wallet{
 		networkID:       networkID,
 		nodeIdentity:    nodeIdentity,
 		localMembership: localMembership,
@@ -39,7 +39,7 @@ func NewWallet(networkID string, nodeIdentity view.Identity, localMembership loc
 }
 
 // GetIdentityInfo returns the identity information for the given identity identifier
-func (w *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
+func (w *Wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] getting info for [%s]", w.networkID, id)
 	}
@@ -55,7 +55,7 @@ func (w *wallet) GetIdentityInfo(id string) driver.IdentityInfo {
 }
 
 // MapToID returns the identity for the given argument
-func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
+func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultID := w.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
@@ -149,11 +149,11 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 }
 
 // RegisterIdentity registers the given identity
-func (w *wallet) RegisterIdentity(id string, path string) error {
+func (w *Wallet) RegisterIdentity(id string, path string) error {
 	logger.Debugf("register idemix identity [%s:%s]", id, path)
 	return w.localMembership.RegisterIdentity(id, path)
 }
 
-func (w *wallet) IDs() ([]string, error) {
+func (w *Wallet) IDs() ([]string, error) {
 	return w.localMembership.IDs()
 }

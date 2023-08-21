@@ -24,9 +24,9 @@ func TestSetup(t *testing.T) {
 }
 
 func TestSerialization(t *testing.T) {
-	raw, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+	issuerPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	assert.NoError(t, err)
-	pp, err := Setup(100, 2, raw, math3.BN254)
+	pp, err := Setup(100, 2, issuerPK, math3.BN254)
 	assert.NoError(t, err)
 	ser, err := pp.Serialize()
 	assert.NoError(t, err)

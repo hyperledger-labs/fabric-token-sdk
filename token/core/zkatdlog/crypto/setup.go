@@ -217,11 +217,11 @@ func (pp *PublicParams) String() string {
 	return string(res)
 }
 
-func Setup(base uint, exponent uint, nymPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(base, exponent, nymPK, DLogPublicParameters, idemixCurveID)
+func Setup(base uint, exponent uint, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(base, exponent, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(base uint, exponent uint, nymPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	signer := pssign.NewSigner(nil, nil, nil, mathlib.Curves[mathlib.BN254])
 	err := signer.KeyGen(1)
 	if err != nil {
@@ -235,7 +235,7 @@ func SetupWithCustomLabel(base uint, exponent uint, nymPK []byte, label string, 
 	if err := pp.GenerateRangeProofParameters(signer, base); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
 	}
-	pp.IdemixIssuerPK = nymPK
+	pp.IdemixIssuerPK = idemixIssuerPK
 	pp.IdemixCurveID = idemixCurveID
 	pp.RangeProofParams.Exponent = exponent
 	pp.QuantityPrecision = DefaultPrecision

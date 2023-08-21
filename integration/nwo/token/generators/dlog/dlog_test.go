@@ -24,7 +24,7 @@ func TestDLogFabricCryptoMaterialGenerator_Setup(t *testing.T) {
 	gomega.RegisterTestingT(t)
 	buildServer := common.NewBuildServer()
 	buildServer.Serve()
-	defer buildServer.Shutdown()
+	defer buildServer.Shutdown(true)
 
 	tp := &mock.TokenPlatform{}
 	tp.TokenDirReturns("./testdata/token")

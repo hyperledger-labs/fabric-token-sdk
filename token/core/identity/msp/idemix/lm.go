@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/IBM/idemix/common/flogging"
 	math3 "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -29,6 +30,8 @@ import (
 const (
 	MSP = "idemix"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.msp.idemix")
 
 type LocalMembership struct {
 	sp                     view2.ServiceProvider

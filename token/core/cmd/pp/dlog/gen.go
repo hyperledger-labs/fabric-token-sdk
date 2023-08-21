@@ -107,7 +107,7 @@ var cobraCommand = &cobra.Command{
 // Gen generates the public parameters for the ZKATDLog driver
 func Gen(args *GeneratorArgs) ([]byte, error) {
 	// Load Idemix Issuer Public Key
-	_, ipkBytes, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)
+	_, ipkBytes, _, err := idemix.LoadIssuerPublicKey(args.IdemixMSPDir)
 	if err != nil {
 		return nil, err
 	}
