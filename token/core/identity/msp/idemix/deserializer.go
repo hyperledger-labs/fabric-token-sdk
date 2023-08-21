@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	idemix2 "github.com/IBM/idemix/bccsp"
+	"github.com/IBM/idemix/bccsp/keystore"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
@@ -37,7 +39,7 @@ func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 }
 
 func NewDeserializerAries(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
-	cryptoProvider, err := idemix.NewBCCSP(curveID)
+	cryptoProvider, err := NewAriesBCCSP(curveID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
@@ -56,4 +58,17 @@ func NewDeserializerWithProvider(
 		return nil, err
 	}
 	return &Deserializer{Deserializer: d}, nil
+}
+
+// NewAriesBCCSP returns an instance of the idemix BCCSP for the given curve based on aries
+func NewAriesBCCSP(curveID math.CurveID) (bccsp.BCCSP, error) {
+	curve, tr, err := idemix.GetCurveAndTranslator(curveID)
+	if err != nil {
+		return nil, err
+	}
+	cryptoProvider, err := idemix2.NewAries(&keystore.Dummy{}, curve, tr, true)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting crypto provider")
+	}
+	return cryptoProvider, nil
 }

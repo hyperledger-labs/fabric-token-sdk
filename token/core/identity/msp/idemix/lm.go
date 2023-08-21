@@ -196,8 +196,11 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
 	}
 	// TODO: remove the need for ServiceProvider
-	provider, err := idemix2.NewProvider(conf, lm.sp, idemix2.Any, curveID, true)
-	//provider, err := idemix2.NewProviderWithAnyPolicyAndCurve(conf, lm.sp, curveID)
+	cryptoProvider, err := NewAriesBCCSP(curveID)
+	if err != nil {
+		return errors.WithMessage(err, "failed to instantiate crypto provider")
+	}
+	provider, err := idemix2.NewProvider(conf, idemix2.GetSignerService(lm.sp), idemix2.Any, cryptoProvider)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", translatedPath)
 	}
