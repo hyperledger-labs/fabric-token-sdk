@@ -23,6 +23,7 @@ import (
 
 type ExternalWalletSigner interface {
 	Sign(party view.Identity, message []byte) ([]byte, error)
+	Done() error
 }
 
 type verifierGetterFunc func(identity view.Identity) (token.Verifier, error)
@@ -77,15 +78,23 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		return nil, errors.WithMessagef(err, "failed storing transient")
 	}
 
+	externalWallets := make(map[string]ExternalWalletSigner)
 	// 1. First collect signatures on the token request
-	issueSigmas, err := c.requestSignaturesOnIssues(context)
+	issueSigmas, err := c.requestSignaturesOnIssues(context, externalWallets)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting signatures on issues")
 	}
 
-	transferSigmas, err := c.requestSignaturesOnTransfers(context)
+	transferSigmas, err := c.requestSignaturesOnTransfers(context, externalWallets)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed requesting signatures on transfers")
+	}
+
+	// signal the external wallets that the process is completed
+	for id, signer := range externalWallets {
+		if err := signer.Done(); err != nil {
+			logger.Errorf("failed to signal done external wallet [%s]", id)
+		}
 	}
 
 	skippedSigmas := c.Opts.SkippedIds() //TODO: SkippedSigmas need to be here because of the next steps. To parallelize, we need to split the operations into two different views
@@ -134,22 +143,22 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 	return nil, nil
 }
 
-func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context) (map[string][]byte, error) {
+func (c *CollectEndorsementsView) requestSignaturesOnIssues(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request issue", len(c.tx.TokenRequest.Metadata.Issues))
 	}
-	return c.requestSignatures(c.tx.TokenRequest.IssueSigners(), c.tx.TokenService().SigService().IssuerVerifier, context)
+	return c.requestSignatures(c.tx.TokenRequest.IssueSigners(), c.tx.TokenService().SigService().IssuerVerifier, context, externalWallets)
 }
 
-func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context) (map[string][]byte, error) {
+func (c *CollectEndorsementsView) requestSignaturesOnTransfers(context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("collecting signature on [%d] request transfer", len(c.tx.TokenRequest.Metadata.Transfers))
 	}
 
-	return c.requestSignatures(c.tx.TokenRequest.TransferSigners(), c.tx.TokenService().SigService().OwnerVerifier, context)
+	return c.requestSignatures(c.tx.TokenRequest.TransferSigners(), c.tx.TokenService().SigService().OwnerVerifier, context, externalWallets)
 }
 
-func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, verifierGetter verifierGetterFunc, context view.Context) (map[string][]byte, error) {
+func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, verifierGetter verifierGetterFunc, context view.Context, externalWallets map[string]ExternalWalletSigner) (map[string][]byte, error) {
 	requestRaw, err := c.requestBytes()
 	if err != nil {
 		return nil, err
@@ -203,6 +212,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 			if ews == nil {
 				return nil, errors.Errorf("no external wallet signer found for [%s]", w.ID())
 			}
+			externalWallets[w.ID()] = ews
 			sigma, err := c.signExternal(party, ews, signatureRequest)
 			if err != nil {
 				return nil, err

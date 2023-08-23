@@ -232,6 +232,10 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		kvs.GetService(sp),
 	)
 
+	if err := wallets.Reload(pp); err != nil {
+		return nil, errors.WithMessage(err, "failed to load wallets")
+	}
+
 	return ws, nil
 }
 
