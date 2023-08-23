@@ -60,7 +60,7 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
+		logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
 			w.networkID,
 			v,
 			string(defaultID),
@@ -173,4 +173,10 @@ func (w *wallet) RegisterIdentity(id string, path string) error {
 
 func (w *wallet) IDs() ([]string, error) {
 	return w.localMembership.IDs()
+}
+
+func (w *wallet) Reload(pp driver.PublicParameters) error {
+	logger.Debugf("reload x509 wallets...")
+	// nothing to do here
+	return nil
 }

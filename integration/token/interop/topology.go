@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
@@ -92,7 +93,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
@@ -180,7 +181,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 	orion2.SetCustodian(tms, custodian)
@@ -278,12 +279,12 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
@@ -379,12 +380,12 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
@@ -485,14 +486,14 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	// TMS for the Fabric Network
 	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	tmsFabric.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tmsFabric)
 	fabric2.SetOrgs(tmsFabric, "Org1")
 	tmsFabric.AddAuditor(auditor)
 
 	// TMS for the Orion Network
 	fscTopology.SetBootstrapNode(custodian)
 	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", tokenSDKDriver)
-	tmsOrion.SetTokenGenPublicParams("100", "2")
+	common.SetDefaultParams(tokenSDKDriver, tmsOrion)
 	tmsOrion.AddAuditor(auditor)
 	orion2.SetCustodian(tmsOrion, custodian)
 

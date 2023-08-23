@@ -63,7 +63,6 @@ type Platform struct {
 }
 
 func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
-	curveID := math3.BN254
 	p := &Platform{
 		Context:                ctx,
 		Topology:               t.(*Topology),
@@ -74,7 +73,7 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 		NetworkHandlers:        map[string]NetworkHandler{},
 	}
 	p.PublicParamsGenerators["fabtoken"] = common2.NewFabTokenPublicParamsGenerator()
-	p.PublicParamsGenerators["dlog"] = common2.NewDLogPublicParamsGenerator(curveID)
+	p.PublicParamsGenerators["dlog"] = common2.NewDLogPublicParamsGenerator(math3.BN254)
 
 	return p
 }

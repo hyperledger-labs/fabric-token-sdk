@@ -31,7 +31,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var logger = flogging.MustGetLogger("integration.token.orion")
+var logger = flogging.MustGetLogger("token-sdk.integration.token.orion")
 
 type tokenPlatform interface {
 	TokenGen(keygen common.Command) (*gexec.Session, error)

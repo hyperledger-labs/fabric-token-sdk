@@ -78,9 +78,6 @@ func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
 // Load sets the public parameters of the PublicParamsManager to the public parameters
 // associated with its PublicParamsLoader
 func (v *PublicParamsManager) Load() error {
-	v.Mutex.Lock()
-	defer v.Mutex.Unlock()
-
 	ppRaw, err := v.Vault.PublicParams()
 	if err != nil {
 		return errors.WithMessage(err, "failed to fetch public params from vault")
@@ -90,17 +87,7 @@ func (v *PublicParamsManager) Load() error {
 	}
 
 	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(ppRaw).String())
-	pp, err := fabtoken.NewPublicParamsFromBytes(ppRaw, v.PPLabel)
-	if err != nil {
-		return err
-	}
-	if err := pp.Validate(); err != nil {
-		return errors.Wrap(err, "failed to validate public parameters")
-	}
-	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(ppRaw).String())
-
-	v.PP = pp
-	return nil
+	return v.SetPublicParameters(ppRaw)
 }
 
 // SetPublicParameters updates the public parameters with the passed value

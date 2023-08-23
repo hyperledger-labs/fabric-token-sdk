@@ -663,7 +663,9 @@ func (f *receiveTransactionView) Call(context view.Context) (interface{}, error)
 		if msg.Status == view.ERROR {
 			return nil, errors.New(string(msg.Payload))
 		}
-		logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), string(msg.Payload))
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("receiveTransactionView: received transaction, len [%d][%s]", len(msg.Payload), hash.Hashable(msg.Payload))
+		}
 		tx, err := NewTransactionFromBytes(context, msg.Payload)
 		if err != nil {
 			// try to unmarshal pay

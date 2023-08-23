@@ -68,7 +68,7 @@ PeerOrgs:{{ range .PeerOrgs }}
 `
 )
 
-var logger = flogging.MustGetLogger("integration.token.generators.fabtoken")
+var logger = flogging.MustGetLogger("token-sdk.integration.token.generators.fabtoken")
 
 type Peer struct {
 	Name         string

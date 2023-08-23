@@ -35,6 +35,8 @@ type GeneratorArgs struct {
 	Base uint
 	// Exponent is a dlog driver related parameter
 	Exponent uint
+	// Aries is a flag to indicate that aries should be used as backend for idemix
+	Aries bool
 }
 
 var (
@@ -54,6 +56,8 @@ var (
 	// Exponent is a dlog driver related parameter
 	// It is used to define the maximum quantity a token can contain as Base^Exponent
 	Exponent uint
+	// Aries is a flag to indicate that aries should be used as backend for idemix
+	Aries bool
 )
 
 // Cmd returns the Cobra Command for Version
@@ -67,6 +71,7 @@ func Cmd() *cobra.Command {
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
 	flags.UintVarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
 	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
 
 	return cobraCommand
 }
@@ -89,6 +94,7 @@ var cobraCommand = &cobra.Command{
 			Auditors:          Auditors,
 			Base:              Base,
 			Exponent:          Exponent,
+			Aries:             Aries,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
@@ -114,7 +120,11 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 
 	// Setup
 	// TODO: update the curve here
-	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BN254)
+	curveID := math3.BN254
+	if args.Aries {
+		curveID = math3.BLS12_381_BBS
+	}
+	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, curveID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}

@@ -28,25 +28,39 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var logger = flogging.MustGetLogger("integration.token.generators.dlog")
+// WithAries notify the backend to use aries as crypto provider when possible
+func WithAries(tms *topology.TMS) {
+	tms.BackendParams["idemix.aries"] = true
+}
+
+// IsAries return true if this TMS requires to use aries as crypto provider when possible
+func IsAries(tms *topology.TMS) bool {
+	ariesBoxed, ok := tms.BackendParams["idemix.aries"]
+	if ok {
+		return ariesBoxed.(bool)
+	}
+	return false
+}
+
+var logger = flogging.MustGetLogger("token-sdk.integration.token.generators.dlog")
 
 type CryptoMaterialGenerator struct {
 	FabTokenGenerator *fabtoken.CryptoMaterialGenerator
 
 	TokenPlatform     generators.TokenPlatform
-	Curve             string
+	DefaultCurve      string
 	EventuallyTimeout time.Duration
 
 	ColorIndex             int
 	RevocationHandlerIndex int
 }
 
-func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, curveID math3.CurveID, builder api.Builder) *CryptoMaterialGenerator {
+func NewCryptoMaterialGenerator(tokenPlatform generators.TokenPlatform, defaultCurveID math3.CurveID, builder api.Builder) *CryptoMaterialGenerator {
 	return &CryptoMaterialGenerator{
 		FabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
-		Curve:             CurveIDToString(curveID),
+		DefaultCurve:      CurveIDToString(defaultCurveID),
 	}
 }
 
@@ -55,7 +69,7 @@ func NewCryptoMaterialGeneratorWithCurveIdentifier(tokenPlatform generators.Toke
 		FabTokenGenerator: fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
 		TokenPlatform:     tokenPlatform,
 		EventuallyTimeout: 10 * time.Minute,
-		Curve:             curveID,
+		DefaultCurve:      curveID,
 	}
 }
 
@@ -64,10 +78,13 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 	if err := os.MkdirAll(output, 0766); err != nil {
 		return "", err
 	}
+
+	// notice that if aries is enabled, curve is ignored
 	sess, err := d.Idemixgen(commands.CAKeyGen{
 		NetworkPrefix: tms.ID(),
 		Output:        output,
-		Curve:         d.Curve,
+		Curve:         d.DefaultCurve,
+		Aries:         IsAries(tms),
 	})
 	if err != nil {
 		return "", err
@@ -91,6 +108,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 		if err := os.MkdirAll(userOutput, 0766); err != nil {
 			return nil
 		}
+		// notice that if aries is enabled, curve is ignored
 		sess, err := d.Idemixgen(commands.SignerConfig{
 			NetworkPrefix: tmsID,
 			CAInput:       filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix"),
@@ -99,7 +117,8 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			OrgUnit:          tmsID + ".example.com",
 			EnrollmentID:     owner,
 			RevocationHandle: fmt.Sprintf("1%d%d", d.RevocationHandlerIndex, i),
-			Curve:            d.Curve,
+			Curve:            d.DefaultCurve,
+			Aries:            IsAries(tms),
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
@@ -169,6 +188,8 @@ func CurveIDToString(id math3.CurveID) string {
 		return "FP256BN_AMCL_MIRACL"
 	case math3.BLS12_377_GURVY:
 		return "BLS12_377_GURVY"
+	case math3.BLS12_381_BBS:
+		return "BLS12_381_BBS"
 	default:
 		panic("invalid curve id")
 	}

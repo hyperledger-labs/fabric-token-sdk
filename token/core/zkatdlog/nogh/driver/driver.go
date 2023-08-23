@@ -64,7 +64,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		msp.NewSigService(view.GetSigService(sp)),      // signer service
 		view.GetEndpointService(sp),                    // endpoint service
 	)
-	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BN254)
+	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner wallet")
 	}
@@ -92,13 +92,18 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		Namespace: namespace,
 	}
 	qe := v.TokenVault().QueryEngine()
+	ppm := ppm.NewPublicParamsManager(
+		crypto.DLogPublicParameters,
+		v.TokenVault().QueryEngine(),
+		zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters),
+	)
+	ppm.AddCallback(func(pp driver.PublicParameters) error {
+		return wallets.Reload(pp)
+	})
 	service, err := zkatdlog.NewTokenService(
 		sp,
 		tmsID,
-		ppm.NewPublicParamsManager(
-			crypto.DLogPublicParameters,
-			v.TokenVault().QueryEngine(),
-			zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters)),
+		ppm,
 		&zkatdlog.VaultTokenLoader{TokenVault: qe},
 		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
 		qe,
