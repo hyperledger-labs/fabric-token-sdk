@@ -82,7 +82,19 @@ func NewLocalMembership(
 	}
 }
 
-func NewLocalMembershipWithIgnoreRemote(sp view2.ServiceProvider, configManager config.Manager, defaultNetworkIdentity view.Identity, signerService common.SignerService, deserializerManager common.DeserializerManager, kvs common.KVS, mspID string, cacheSize int, curveID math3.CurveID, ignoreRemote bool) *LocalMembership {
+func NewLocalMembershipWithIgnoreRemote(
+	sp view2.ServiceProvider,
+	configManager config.Manager,
+	defaultNetworkIdentity view.Identity,
+	signerService common.SignerService,
+	deserializerManager common.DeserializerManager,
+	kvs common.KVS,
+	mspID string,
+	cacheSize int,
+	curveID math3.CurveID,
+	identities []*config.Identity,
+	ignoreRemote bool,
+) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
 		configManager:           configManager,
@@ -95,6 +107,7 @@ func NewLocalMembershipWithIgnoreRemote(sp view2.ServiceProvider, configManager 
 		resolversByEnrollmentID: map[string]*common.Resolver{},
 		resolversByName:         map[string]*common.Resolver{},
 		curveID:                 curveID,
+		identities:              identities,
 		ignoreRemote:            ignoreRemote,
 	}
 }
@@ -198,7 +211,7 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 	// load identities from configuration
 	for _, identityConfig := range lm.identities {
 		logger.Debugf("load wallet for identity [%+v]", identityConfig)
-		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default, lm.curveID); err != nil {
+		if err := lm.registerIdentity(*identityConfig, lm.curveID); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 		logger.Debugf("load wallet for identity [%+v] done.", identityConfig)
@@ -232,7 +245,7 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 	// Try to register the MSP provider
 	identity.Path = lm.configManager.TranslatePath(identity.Path)
 	if err := lm.registerProvider(identity, curveID); err != nil {
-		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", translatedPath, err, debug.Stack())
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", identity.Path, err, debug.Stack())
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerProviders(identity, curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
@@ -241,17 +254,17 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 	return nil
 }
 
-func (lm *LocalMembership) registerProvider(identity config.Identity) error {
+func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
 	logger.Infof("register provider with type [%s]", identity.Type)
 	switch identity.Type {
 	case "remote":
 		// do nothing for now
 		if lm.ignoreRemote {
-			return lm.registerLocalProvider(identity)
+			return lm.registerLocalProvider(identity, curveID)
 		}
-		return lm.registerRemoteProvider(identity)
+		return lm.registerRemoteProvider(identity, curveID)
 	default:
-		return lm.registerLocalProvider(identity)
+		return lm.registerLocalProvider(identity, curveID)
 	}
 }
 
@@ -286,7 +299,7 @@ func (lm *LocalMembership) registerLocalProvider(identity config.Identity, curve
 	return nil
 }
 
-func (lm *LocalMembership) registerProviders(identity config.Identity) error {
+func (lm *LocalMembership) registerProviders(identity config.Identity, curveID math3.CurveID) error {
 	entries, err := os.ReadDir(identity.Path)
 	if err != nil {
 		logger.Warnf("failed reading from [%s]: [%s]", identity.Path, err)
@@ -298,7 +311,7 @@ func (lm *LocalMembership) registerProviders(identity config.Identity) error {
 			continue
 		}
 		id := entry.Name()
-		if err := lm.registerProvider(config.Identity{ID: id, Path: filepath.Join(identity.Path, id), Default: false}); err != nil {
+		if err := lm.registerProvider(config.Identity{ID: id, Path: filepath.Join(identity.Path, id), Default: false}, curveID); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
 			continue
 		}

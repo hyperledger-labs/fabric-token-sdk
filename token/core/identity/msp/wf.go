@@ -99,8 +99,8 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		RoleToMSPID[role],
 		cacheSize,
 		curveID,
-		f.ignoreRemote,
 		identities,
+		f.ignoreRemote,
 	)
 	return idemix.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
 }

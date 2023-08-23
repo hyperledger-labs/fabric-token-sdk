@@ -115,14 +115,14 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		sp,
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		qe,
-		publicParamsManager,
+		ppm,
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		tmsConfig,
 		kvs.GetService(sp),
 	)
 	service, err := zkatdlog.NewTokenService(
 		ws,
-		publicParamsManager,
+		ppm,
 		&zkatdlog.VaultTokenLoader{TokenVault: qe},
 		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
@@ -132,7 +132,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	if err := publicParamsManager.Load(); err != nil {
+	if err := ppm.Load(); err != nil {
 		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 
