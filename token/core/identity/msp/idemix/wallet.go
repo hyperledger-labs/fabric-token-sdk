@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -21,6 +22,7 @@ type localMembership interface {
 	GetDefaultIdentifier() string
 	RegisterIdentity(id string, path string) error
 	IDs() ([]string, error)
+	Reload(pp driver.PublicParameters) error
 }
 
 // Wallet maps an identifier to an idemix identity
@@ -60,7 +62,7 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] mapping identifier for [%d,%s], default identities [%s:%s,%s]",
+		logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
 			w.networkID,
 			v,
 			string(defaultID),
@@ -72,7 +74,7 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	switch vv := v.(type) {
 	case view.Identity:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[AnonymousIdentity] looking up identifier for identity [%d,%s]", vv.String())
+			logger.Debugf("[AnonymousIdentity] looking up identifier for identity [%s]", vv.String())
 		}
 		id := vv
 		switch {
@@ -104,7 +106,7 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 		}
 		label := string(id)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[AnonymousIdentity] looking up identifier for identity as label [%d,%s]", label)
+			logger.Debugf("[AnonymousIdentity] looking up identifier for identity as label [%s]", hash.Hashable(label))
 		}
 
 		if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
@@ -156,4 +158,9 @@ func (w *Wallet) RegisterIdentity(id string, path string) error {
 
 func (w *Wallet) IDs() ([]string, error) {
 	return w.localMembership.IDs()
+}
+
+func (w *Wallet) Reload(pp driver.PublicParameters) error {
+	logger.Debugf("reload idemix wallets...")
+	return w.localMembership.Reload(pp)
 }

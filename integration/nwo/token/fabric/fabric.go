@@ -32,7 +32,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var logger = flogging.MustGetLogger("integration.token.fabric")
+var logger = flogging.MustGetLogger("token-sdk.integration.token.fabric")
 
 const (
 	DefaultTokenChaincode                    = "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/main"
@@ -79,7 +79,6 @@ type NetworkHandler struct {
 }
 
 func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *NetworkHandler {
-	curveID := math3.BN254
 	return &NetworkHandler{
 		TokenPlatform:                     tokenPlatform,
 		EventuallyTimeout:                 10 * time.Minute,
@@ -88,7 +87,7 @@ func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *Netwo
 		Entries:                           map[string]*Entry{},
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
 			"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
-			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, curveID, builder),
+			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
 		},
 	}
 }

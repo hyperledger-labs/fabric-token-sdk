@@ -14,11 +14,13 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
+	. "github.com/onsi/gomega"
 )
 
 func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
@@ -92,7 +94,16 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
+		tms.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tms.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
@@ -180,7 +191,16 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
+		tms.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tms.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 	orion2.SetCustodian(tms, custodian)
@@ -278,12 +298,30 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
+		tms.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tms.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
+		tms.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tms.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
@@ -379,12 +417,30 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
+		tms.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tms.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
+		tms.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tms.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
@@ -485,14 +541,32 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 
 	// TMS for the Fabric Network
 	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	tmsFabric.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tmsFabric)
+		tmsFabric.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tmsFabric.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	fabric2.SetOrgs(tmsFabric, "Org1")
 	tmsFabric.AddAuditor(auditor)
 
 	// TMS for the Orion Network
 	fscTopology.SetBootstrapNode(custodian)
 	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", tokenSDKDriver)
-	tmsOrion.SetTokenGenPublicParams("100", "2")
+	switch tokenSDKDriver {
+	case "dlog":
+		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tmsOrion)
+		tmsOrion.SetTokenGenPublicParams("100", "2")
+	case "fabtoken":
+		tmsOrion.SetTokenGenPublicParams("9999")
+	default:
+		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
+	}
 	tmsOrion.AddAuditor(auditor)
 	orion2.SetCustodian(tmsOrion, custodian)
 

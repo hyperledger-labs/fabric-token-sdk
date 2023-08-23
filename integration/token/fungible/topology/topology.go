@@ -15,6 +15,7 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
@@ -42,7 +43,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.SetLogging("token-sdk=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -269,6 +270,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	switch tokenSDKDriver {
 	case "dlog":
 		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
 		tms.SetTokenGenPublicParams("100", "2")
 	case "fabtoken":
 		tms.SetTokenGenPublicParams("9999")

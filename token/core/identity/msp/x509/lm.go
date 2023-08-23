@@ -78,7 +78,8 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	}
 
 	// if no default identity, use the first one
-	if len(lm.GetDefaultIdentifier()) == 0 {
+	defaultIdentifier := lm.GetDefaultIdentifier()
+	if len(defaultIdentifier) == 0 {
 		logger.Warnf("no default identity, use the first one available")
 		if len(lm.resolvers) > 0 {
 			logger.Warnf("set default identity to %s", lm.resolvers[0].Name)
@@ -86,6 +87,8 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 		} else {
 			logger.Warnf("cannot set default identity, no identity available")
 		}
+	} else {
+		logger.Debugf("default identifier is [%s]", defaultIdentifier)
 	}
 	return nil
 }
@@ -278,7 +281,7 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
-	k, err := kvs.CreateCompositeKey("fabric-sdk", []string{"msp", "idemix", "registeredIdentity", id})
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", "x509", "registeredIdentity", id})
 	if err != nil {
 		return errors.Wrapf(err, "failed to create identity key")
 	}
@@ -286,7 +289,7 @@ func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
 }
 
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.kvs.GetByPartialCompositeID("fabric-sdk", []string{"msp", "idemix", "registeredIdentity"})
+	it, err := lm.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", "x509", "registeredIdentity"})
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

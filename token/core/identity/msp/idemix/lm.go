@@ -9,9 +9,13 @@ package idemix
 import (
 	"os"
 	"path/filepath"
+	"runtime/debug"
 	"sync"
 
-	"github.com/IBM/idemix/common/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
 	math3 "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
@@ -33,6 +37,10 @@ const (
 
 var logger = flogging.MustGetLogger("token-sdk.msp.idemix")
 
+type PublicParametersWithIdemixSupport interface {
+	IdemixCurve() math3.CurveID
+}
+
 type LocalMembership struct {
 	sp                     view2.ServiceProvider
 	configManager          config.Manager
@@ -49,6 +57,7 @@ type LocalMembership struct {
 	resolversByName         map[string]*common.Resolver
 	resolversByEnrollmentID map[string]*common.Resolver
 	curveID                 math3.CurveID
+	identities              []*config.Identity
 }
 
 func NewLocalMembership(
@@ -80,32 +89,8 @@ func NewLocalMembership(
 }
 
 func (lm *LocalMembership) Load(identities []*config.Identity) error {
-	logger.Debugf("Load Idemix Wallets: [%+q]", identities)
-
-	// load identities from configuration
-	for _, identityConfig := range identities {
-		logger.Debugf("loadWallet: %+v", identityConfig)
-		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default); err != nil {
-			return errors.WithMessage(err, "failed to load identity")
-		}
-	}
-
-	// load identity from KVS
-	if err := lm.loadFromKVS(); err != nil {
-		return errors.Wrapf(err, "failed to load identity from KVS")
-	}
-
-	// if no default identity, use the first one
-	if len(lm.GetDefaultIdentifier()) == 0 {
-		logger.Warnf("no default identity, use the first one available")
-		if len(lm.resolvers) > 0 {
-			logger.Warnf("set default identity to %s", lm.resolvers[0].Name)
-			lm.resolvers[0].Default = true
-		} else {
-			logger.Warnf("cannot set default identity, no identity available")
-		}
-	}
-
+	logger.Debugf("Set Idemix Wallets with identities: [%+q]", identities)
+	lm.identities = identities
 	return nil
 }
 
@@ -118,14 +103,17 @@ func (lm *LocalMembership) IsMe(id view.Identity) bool {
 }
 
 func (lm *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
+	lm.resolversMutex.RLock()
+	defer lm.resolversMutex.RUnlock()
+
 	label := string(id)
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("get anonymous identity info by label [%s]", label)
+		logger.Debugf("get anonymous identity info by label [%s]", hash.Hashable(label))
 	}
 	r := lm.getResolver(label)
 	if r == nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
+			logger.Debugf("anonymous identity info not found for label [%s][%v]", hash.Hashable(label), lm.resolversByName)
 		}
 		return "", errors.New("not found")
 	}
@@ -142,12 +130,15 @@ func (lm *LocalMembership) GetDefaultIdentifier() string {
 }
 
 func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error) {
+	lm.resolversMutex.RLock()
+	defer lm.resolversMutex.RUnlock()
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("get anonymous identity info by label [%s]", label)
+		logger.Debugf("get anonymous identity info by label [%s]", hash.Hashable(label))
 	}
 	r := lm.getResolver(label)
 	if r == nil {
-		return nil, errors.Errorf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
+		return nil, errors.Errorf("anonymous identity info not found for label [%s][%v]", hash.Hashable(label), lm.resolversByName)
 	}
 
 	return common.NewIdentityInfo(
@@ -163,10 +154,13 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
+	lm.resolversMutex.Lock()
+	defer lm.resolversMutex.Unlock()
+
 	if err := lm.storeEntryInKVS(id, path); err != nil {
 		return err
 	}
-	return lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "")
+	return lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "", lm.curveID)
 }
 
 func (lm *LocalMembership) IDs() ([]string, error) {
@@ -177,13 +171,65 @@ func (lm *LocalMembership) IDs() ([]string, error) {
 	return ids, nil
 }
 
-func (lm *LocalMembership) registerIdentity(id string, path string, setDefault bool) error {
+func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
+	logger.Debugf("Reload Idemix Wallets for [%+q]", lm.identities)
+	idemixPP, ok := pp.(PublicParametersWithIdemixSupport)
+	if !ok {
+		return errors.Errorf("public params do not support idemix")
+	}
+	// set curve id from the public parameters
+	lm.curveID = idemixPP.IdemixCurve()
+
+	logger.Debugf("Load Idemix Wallets with the respect to curve [%d], [%+q]", lm.curveID, lm.identities)
+
+	lm.resolversMutex.Lock()
+	defer lm.resolversMutex.Unlock()
+
+	// cleanup all resolvers
+	lm.resolvers = make([]*common.Resolver, 0)
+	lm.resolversByName = make(map[string]*common.Resolver)
+	lm.resolversByEnrollmentID = make(map[string]*common.Resolver)
+
+	// load identities from configuration
+	for _, identityConfig := range lm.identities {
+		logger.Debugf("load wallet for identity [%+v]", identityConfig)
+		if err := lm.registerIdentity(identityConfig.ID, identityConfig.Path, identityConfig.Default, lm.curveID); err != nil {
+			return errors.WithMessage(err, "failed to load identity")
+		}
+		logger.Debugf("load wallet for identity [%+v] done.", identityConfig)
+	}
+
+	// load identity from KVS
+	logger.Debugf("load identity from KVS")
+	if err := lm.loadFromKVS(); err != nil {
+		return errors.Wrapf(err, "failed to load identity from KVS")
+	}
+	logger.Debugf("load identity from KVS done")
+
+	// if no default identity, use the first one
+	defaultIdentifier := lm.GetDefaultIdentifier()
+	if len(defaultIdentifier) == 0 {
+		logger.Warnf("no default identity, use the first one available")
+		if len(lm.resolvers) > 0 {
+			logger.Warnf("set default identity to %s", lm.resolvers[0].Name)
+			lm.resolvers[0].Default = true
+		} else {
+			logger.Warnf("cannot set default identity, no identity available")
+		}
+	} else {
+		logger.Debugf("default identifier is [%s]", defaultIdentifier)
+	}
+
+	return nil
+}
+
+func (lm *LocalMembership) registerIdentity(id string, path string, setDefault bool, curveID math3.CurveID) error {
 	// Try to register the MSP provider
 	translatedPath := lm.configManager.TranslatePath(path)
-	if err := lm.registerMSPProvider(id, translatedPath, lm.curveID, setDefault); err != nil {
-		logger.Warnf("failed to load idemix msp provider at [%s]:[%s]", translatedPath, err)
+	if err := lm.registerMSPProvider(id, translatedPath, curveID, setDefault); err != nil {
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", translatedPath, err, debug.Stack())
 		// Does path correspond to a holder containing multiple MSP identities?
-		if err := lm.registerMSPProviders(translatedPath, lm.curveID); err != nil {
+		if err := lm.registerMSPProviders(translatedPath, curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
 		}
 	}
@@ -196,7 +242,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
 	}
 	// TODO: remove the need for ServiceProvider
-	cryptoProvider, err := NewAriesBCCSP(curveID)
+	cryptoProvider, err := NewKVSBCCSP(kvs.GetService(lm.sp), curveID)
 	if err != nil {
 		return errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
@@ -212,7 +258,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 
 	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, cacheSize).Identity)
-	logger.Debugf("added %s resolver for id %s with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), cacheSize)
+	logger.Debugf("added [%s] resolver for id [%s] with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), cacheSize)
 	return nil
 }
 
@@ -235,9 +281,6 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID m
 }
 
 func (lm *LocalMembership) addResolver(Name string, EnrollmentID string, defaultID bool, IdentityGetter common.GetIdentityFunc) {
-	lm.resolversMutex.Lock()
-	defer lm.resolversMutex.Unlock()
-
 	resolver := &common.Resolver{
 		Name:         Name,
 		Default:      defaultID,
@@ -252,11 +295,8 @@ func (lm *LocalMembership) addResolver(Name string, EnrollmentID string, default
 }
 
 func (lm *LocalMembership) getResolver(label string) *common.Resolver {
-	lm.resolversMutex.RLock()
-	defer lm.resolversMutex.RUnlock()
-
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("get anonymous identity info by label [%s]", label)
+		logger.Debugf("get anonymous identity info by label [%s]", hash.Hashable(label))
 	}
 	r, ok := lm.resolversByName[label]
 	if ok {
@@ -264,7 +304,7 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("anonymous identity info not found for label [%s][%v]", label, lm.resolversByName)
+		logger.Debugf("anonymous identity info not found for label [%s][%v]", hash.Hashable(label), lm.resolversByName)
 	}
 	return nil
 }
@@ -290,7 +330,7 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 }
 
 func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
-	k, err := kvs.CreateCompositeKey("fabric-sdk", []string{"msp", "idemix", "registeredIdentity", id})
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", "idemix", "registeredIdentity", id})
 	if err != nil {
 		return errors.Wrapf(err, "failed to create identity key")
 	}
@@ -298,7 +338,7 @@ func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
 }
 
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.kvs.GetByPartialCompositeID("fabric-sdk", []string{"msp", "idemix", "registeredIdentity"})
+	it, err := lm.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", "idemix", "registeredIdentity"})
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
@@ -320,7 +360,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 			continue
 		}
 
-		if err := lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == ""); err != nil {
+		if err := lm.registerIdentity(id, path, lm.GetDefaultIdentifier() == "", lm.curveID); err != nil {
 			return err
 		}
 	}

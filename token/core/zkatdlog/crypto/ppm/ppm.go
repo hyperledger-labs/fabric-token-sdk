@@ -18,6 +18,8 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
 
+type SetPublicParametersCallbackFunc = func(pp driver.PublicParameters) error
+
 type PublicParamsLoader interface {
 	// Fetch fetches the public parameters from the backend
 	Fetch() ([]byte, error)
@@ -38,7 +40,8 @@ type PublicParamsManager struct {
 	// label of the public params
 	PPLabel string
 
-	Mutex sync.RWMutex
+	Mutex     sync.RWMutex
+	Callbacks []SetPublicParametersCallbackFunc
 }
 
 func NewPublicParamsManager(PPLabel string, vault Vault, publicParamsLoader PublicParamsLoader) *PublicParamsManager {
@@ -66,9 +69,6 @@ func (v *PublicParamsManager) NewCertifierKeyPair() ([]byte, []byte, error) {
 }
 
 func (v *PublicParamsManager) Load() error {
-	v.Mutex.Lock()
-	defer v.Mutex.Unlock()
-
 	ppRaw, err := v.Vault.PublicParams()
 	if err != nil {
 		return errors.WithMessage(err, "failed to fetch public params from vault")
@@ -77,19 +77,8 @@ func (v *PublicParamsManager) Load() error {
 		return nil
 	}
 
-	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(ppRaw).String())
-	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, v.PPLabel)
-	if err != nil {
-		return err
-	}
-	if err := pp.Validate(); err != nil {
-		return errors.Wrap(err, "failed to validate public parameters")
-	}
-	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(ppRaw).String())
-
-	v.PP = pp
-
-	return nil
+	logger.Debugf("fetched public parameters [%s], set them...", hash.Hashable(ppRaw).String())
+	return v.SetPublicParameters(ppRaw)
 }
 
 // SetPublicParameters updates the public parameters with the passed value
@@ -106,7 +95,14 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 		return errors.WithMessage(err, "invalid public parameters")
 	}
 
+	for _, callback := range v.Callbacks {
+		if err := callback(pp); err != nil {
+			return err
+		}
+	}
+
 	v.PP = pp
+
 	return nil
 }
 
@@ -137,4 +133,8 @@ func (v *PublicParamsManager) Validate() error {
 		return errors.New("public parameters not set")
 	}
 	return pp.Validate()
+}
+
+func (v *PublicParamsManager) AddCallback(callbackFunc SetPublicParametersCallbackFunc) {
+	v.Callbacks = append(v.Callbacks, callbackFunc)
 }

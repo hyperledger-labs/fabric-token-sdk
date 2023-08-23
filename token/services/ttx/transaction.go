@@ -9,6 +9,8 @@ package ttx
 import (
 	"encoding/asn1"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -392,7 +394,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction envelope [%s]", t.Envelope.String())
+			logger.Debugf("transaction envelope [%s]", hash.Hashable(t.Envelope.String()))
 		}
 	}
 

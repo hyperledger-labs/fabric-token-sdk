@@ -21,6 +21,8 @@ type Wallet interface {
 	RegisterIdentity(id string, path string) error
 	// IDs returns the identifiers contains in this wallet
 	IDs() ([]string, error)
+	// Reload the wallets with the respect to the passed public parameters
+	Reload(pp driver.PublicParameters) error
 }
 
 // Wallets is a map of Wallet, one for each identity role
@@ -36,8 +38,15 @@ func (m Wallets) Put(usage driver.IdentityRole, wallet Wallet) {
 	m[usage] = wallet
 }
 
-func (m Wallets) Load() {
-	for _, wallet := range m {
-		wallet.IDs()
+func (m Wallets) Reload(pp driver.PublicParameters) error {
+	logger.Debugf("reload wallets...")
+	for role, wallet := range m {
+		logger.Debugf("reload wallet for role [%d]...", role)
+		if err := wallet.Reload(pp); err != nil {
+			return err
+		}
+		logger.Debugf("reload wallet for role [%d]...done", role)
 	}
+	logger.Debugf("reload wallets...done")
+	return nil
 }

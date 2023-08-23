@@ -15,6 +15,7 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
@@ -225,6 +226,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	switch tokenSDKDriver {
 	case "dlog":
 		// max token value is 100^2 - 1 = 9999
+		dlog.WithAries(tms)
 		tms.SetTokenGenPublicParams("100", "2")
 	case "fabtoken":
 		tms.SetTokenGenPublicParams("9999")

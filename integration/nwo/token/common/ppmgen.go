@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
@@ -80,11 +82,11 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 }
 
 type DLogPublicParamsGenerator struct {
-	CurveID math3.CurveID
+	DefaultCurveID math3.CurveID
 }
 
-func NewDLogPublicParamsGenerator(curveID math3.CurveID) *DLogPublicParamsGenerator {
-	return &DLogPublicParamsGenerator{CurveID: curveID}
+func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID) *DLogPublicParamsGenerator {
+	return &DLogPublicParamsGenerator{DefaultCurveID: defaultCurveID}
 }
 
 func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
@@ -100,6 +102,11 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	ipkBytes, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
+	}
+
+	curveID := d.DefaultCurveID
+	if dlog.IsAries(tms) {
+		curveID = math3.BLS12_381_BBS
 	}
 
 	baseArg, ok := args[1].(string)
@@ -118,7 +125,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	if err != nil {
 		return nil, err
 	}
-	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, d.CurveID)
+	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, curveID)
 	if err != nil {
 		return nil, err
 	}

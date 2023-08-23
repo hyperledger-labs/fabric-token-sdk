@@ -31,6 +31,10 @@ func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
 func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
+	if curveID == math.BLS12_381_BBS {
+		return NewDeserializerAries(ipk)
+	}
+	logger.Infof("new deserialized for dlog idemix")
 	cryptoProvider, err := idemix.NewBCCSP(curveID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
@@ -38,10 +42,10 @@ func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 	return NewDeserializerWithProvider(ipk, bccsp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
 
-func NewDeserializerAries(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
-	cryptoProvider, err := NewAriesBCCSP(curveID)
+func NewDeserializerAries(ipk []byte) (*Deserializer, error) {
+	cryptoProvider, err := NewAriesBCCSP()
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
+		return nil, errors.WithMessagef(err, "failed to instantiate aries crypto provider")
 	}
 	return NewDeserializerWithProvider(ipk, bccsp.ExpectEidNymRhNym, nil, cryptoProvider)
 }
@@ -60,9 +64,21 @@ func NewDeserializerWithProvider(
 	return &Deserializer{Deserializer: d}, nil
 }
 
+// NewKVSBCCSP returns a new BCCSP for the passed curve, if the curve is BLS12_381_BBS, it returns the BCCSP implementation
+// based on aries.
+func NewKVSBCCSP(kvsStore keystore.KVS, curveID math.CurveID) (bccsp.BCCSP, error) {
+	if curveID == math.BLS12_381_BBS {
+		logger.Debugf("new aries KVS-based BCCSP")
+		return idemix.NewKSVBCCSP(kvsStore, curveID, true)
+	}
+	logger.Debugf("new dlog KVS-based BCCSP")
+	return idemix.NewKSVBCCSP(kvsStore, curveID, false)
+}
+
 // NewAriesBCCSP returns an instance of the idemix BCCSP for the given curve based on aries
-func NewAriesBCCSP(curveID math.CurveID) (bccsp.BCCSP, error) {
-	curve, tr, err := idemix.GetCurveAndTranslator(curveID)
+func NewAriesBCCSP() (bccsp.BCCSP, error) {
+	logger.Infof("new aries no-KeyStore BCCSP")
+	curve, tr, err := idemix.GetCurveAndTranslator(math.BLS12_381_BBS)
 	if err != nil {
 		return nil, err
 	}

@@ -8,4 +8,4 @@ package views
 
 import "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 
-var logger = flogging.MustGetLogger("fungible.views")
+var logger = flogging.MustGetLogger("token-sdk.fungible.views")

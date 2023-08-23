@@ -23,32 +23,6 @@ const (
 	DefaultPrecision     = uint64(64)
 )
 
-type PublicParams struct {
-	// Label is the label associated with the PublicParams.
-	// It can be used by the driver for versioning purpose.
-	Label string
-	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
-	Curve mathlib.CurveID
-	// PedGen is the generator of the Pedersen commitment group.
-	PedGen *mathlib.G1
-	// PedParams contains the public parameters for the Pedersen commitment scheme.
-	PedParams []*mathlib.G1
-	// RangeProofParams contains the public parameters for the range proof scheme.
-	RangeProofParams *RangeProofParams
-	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
-	IdemixCurveID mathlib.CurveID
-	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
-	IdemixIssuerPK []byte
-	// Auditor is the public key of the auditor.
-	Auditor []byte
-	// Issuers is a list of public keys of the entities that can issue tokens.
-	Issuers [][]byte
-	// MaxToken is the maximum quantity a token can hold
-	MaxToken uint64
-	// QuantityPrecision is the precision used to represent quantities
-	QuantityPrecision uint64
-}
-
 type RangeProofParams struct {
 	SignPK       []*mathlib.G2
 	SignedValues []*pssign.Signature
@@ -89,6 +63,62 @@ func NewPublicParamsFromBytes(raw []byte, label string) (*PublicParams, error) {
 		return nil, errors.Wrap(err, "failed parsing public parameters")
 	}
 	return pp, nil
+}
+
+type PublicParams struct {
+	// Label is the label associated with the PublicParams.
+	// It can be used by the driver for versioning purpose.
+	Label string
+	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
+	Curve mathlib.CurveID
+	// PedGen is the generator of the Pedersen commitment group.
+	PedGen *mathlib.G1
+	// PedParams contains the public parameters for the Pedersen commitment scheme.
+	PedParams []*mathlib.G1
+	// RangeProofParams contains the public parameters for the range proof scheme.
+	RangeProofParams *RangeProofParams
+	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
+	IdemixCurveID mathlib.CurveID
+	// IdemixIssuerPK is the public key of the issuer of the idemix scheme.
+	IdemixIssuerPK []byte
+	// Auditor is the public key of the auditor.
+	Auditor []byte
+	// Issuers is a list of public keys of the entities that can issue tokens.
+	Issuers [][]byte
+	// MaxToken is the maximum quantity a token can hold
+	MaxToken uint64
+	// QuantityPrecision is the precision used to represent quantities
+	QuantityPrecision uint64
+}
+
+func Setup(base uint, exponent uint, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(base, exponent, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
+}
+
+func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	signer := pssign.NewSigner(nil, nil, nil, mathlib.Curves[mathlib.BN254])
+	err := signer.KeyGen(1)
+	if err != nil {
+		return nil, err
+	}
+	pp := &PublicParams{Curve: mathlib.BN254}
+	pp.Label = label
+	if err := pp.GeneratePedersenParameters(); err != nil {
+		return nil, errors.Wrapf(err, "failed to generated pedersen parameters")
+	}
+	if err := pp.GenerateRangeProofParameters(signer, base); err != nil {
+		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
+	}
+	pp.IdemixIssuerPK = idemixIssuerPK
+	pp.IdemixCurveID = idemixCurveID
+	pp.RangeProofParams.Exponent = exponent
+	pp.QuantityPrecision = DefaultPrecision
+	pp.MaxToken = pp.ComputeMaxTokenValue()
+	return pp, nil
+}
+
+func (pp *PublicParams) IdemixCurve() mathlib.CurveID {
+	return pp.IdemixCurveID
 }
 
 func (pp *PublicParams) Identifier() string {
@@ -215,32 +245,6 @@ func (pp *PublicParams) String() string {
 		return err.Error()
 	}
 	return string(res)
-}
-
-func Setup(base uint, exponent uint, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(base, exponent, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
-}
-
-func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	signer := pssign.NewSigner(nil, nil, nil, mathlib.Curves[mathlib.BN254])
-	err := signer.KeyGen(1)
-	if err != nil {
-		return nil, err
-	}
-	pp := &PublicParams{Curve: mathlib.BN254}
-	pp.Label = label
-	if err := pp.GeneratePedersenParameters(); err != nil {
-		return nil, errors.Wrapf(err, "failed to generated pedersen parameters")
-	}
-	if err := pp.GenerateRangeProofParameters(signer, base); err != nil {
-		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
-	}
-	pp.IdemixIssuerPK = idemixIssuerPK
-	pp.IdemixCurveID = idemixCurveID
-	pp.RangeProofParams.Exponent = exponent
-	pp.QuantityPrecision = DefaultPrecision
-	pp.MaxToken = pp.ComputeMaxTokenValue()
-	return pp, nil
 }
 
 func (pp *PublicParams) Validate() error {
