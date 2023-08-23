@@ -14,11 +14,10 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
-	. "github.com/onsi/gomega"
 )
 
 func Topology(backend, tokenSDKDriver string) []api.Topology {
@@ -84,16 +83,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
-	switch tokenSDKDriver {
-	case "dlog":
-		// max token value is 100^2 - 1 = 9999
-		dlog.WithAries(tms)
-		tms.SetTokenGenPublicParams("100", "2")
-	case "fabtoken":
-		tms.SetTokenGenPublicParams("9999")
-	default:
-		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
-	}
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
 		// we need to define the custodian

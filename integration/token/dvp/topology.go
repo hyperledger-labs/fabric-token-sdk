@@ -13,12 +13,11 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
-	. "github.com/onsi/gomega"
 )
 
 func Topology(tokenSDKDriver string) []api.Topology {
@@ -92,16 +91,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	switch tokenSDKDriver {
-	case "dlog":
-		// max token value is 100^2 - 1 = 9999
-		dlog.WithAries(tms)
-		tms.SetTokenGenPublicParams("100", "2")
-	case "fabtoken":
-		tms.SetTokenGenPublicParams("9999")
-	default:
-		Expect(false).To(BeTrue(), "expected token driver in (dlog,fabtoken), got [%s]", tokenSDKDriver)
-	}
+	common.SetDefaultParams(tokenSDKDriver, tms)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
