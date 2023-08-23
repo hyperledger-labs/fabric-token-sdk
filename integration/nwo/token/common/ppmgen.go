@@ -11,12 +11,11 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
-
 	msp "github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"

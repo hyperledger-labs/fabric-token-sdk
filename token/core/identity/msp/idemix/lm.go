@@ -12,14 +12,12 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
 	math3 "github.com/IBM/mathlib"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
@@ -71,6 +69,7 @@ func NewLocalMembership(
 	mspID string,
 	cacheSize int,
 	curveID math3.CurveID,
+	identities []*config.Identity,
 ) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
@@ -85,13 +84,8 @@ func NewLocalMembership(
 		resolversByEnrollmentID: map[string]*common.Resolver{},
 		resolversByName:         map[string]*common.Resolver{},
 		curveID:                 curveID,
+		identities:              identities,
 	}
-}
-
-func (lm *LocalMembership) Load(identities []*config.Identity) error {
-	logger.Debugf("Set Idemix Wallets with identities: [%+q]", identities)
-	lm.identities = identities
-	return nil
 }
 
 func (lm *LocalMembership) DefaultNetworkIdentity() view.Identity {

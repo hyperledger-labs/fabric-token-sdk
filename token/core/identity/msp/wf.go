@@ -96,10 +96,8 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		RoleToMSPID[role],
 		cacheSize,
 		curveID,
+		identities,
 	)
-	if err := lm.Load(identities); err != nil {
-		return nil, errors.WithMessage(err, "failed to load owners")
-	}
 	return idemix.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
 }
 

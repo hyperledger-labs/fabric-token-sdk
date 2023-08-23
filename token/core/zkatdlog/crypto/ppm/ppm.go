@@ -39,8 +39,9 @@ type PublicParamsManager struct {
 	Vault Vault
 	// label of the public params
 	PPLabel string
-
-	Mutex     sync.RWMutex
+	// Mutex is used to control access to the public parameters
+	Mutex sync.RWMutex
+	// Callbacks are a set of functions to be called when the parameters are set
 	Callbacks []SetPublicParametersCallbackFunc
 }
 

@@ -33,6 +33,7 @@ func WithAries(tms *topology.TMS) {
 	tms.BackendParams["idemix.aries"] = true
 }
 
+// IsAries return true if this TMS requires to use aries as crypto provider when possible
 func IsAries(tms *topology.TMS) bool {
 	ariesBoxed, ok := tms.BackendParams["idemix.aries"]
 	if ok {
