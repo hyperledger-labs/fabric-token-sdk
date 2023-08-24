@@ -14,15 +14,18 @@ import (
 	"strings"
 	"time"
 
+	"github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/commands"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -108,12 +111,11 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 	tmsID := tms.ID()
 	for i, owner := range owners {
 		pathPrefix := ""
-		idType := ""
-		if strings.HasPrefix(owner, RemoteOwnerWallet) {
+		tokenOpts := topology.ToOptions(n.Options)
+		remote := tokenOpts.IsRemoteOwner(owner)
+		if remote {
 			// prepare a remote owner wallet
 			pathPrefix = "remote"
-			owner, _ = strings.CutPrefix(owner, RemoteOwnerWallet)
-			idType = "remote"
 		}
 
 		logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
@@ -136,10 +138,42 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 		Expect(err).NotTo(HaveOccurred())
 		Eventually(sess, d.EventuallyTimeout).Should(gexec.Exit(0))
 
+		if remote {
+			// Prepare a folder for the remote wallet
+			// This is done by stripping out Cred and Sk from the SignerConfig
+			signerBytes, err := os.ReadFile(filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner))
+			Expect(err).NotTo(HaveOccurred())
+
+			// nullify cred and sk
+			signerConfig := &msp.IdemixMSPSignerConfig{}
+			err = proto.Unmarshal(signerBytes, signerConfig)
+			Expect(err).NotTo(HaveOccurred())
+			signerConfig.Cred = nil
+			signerConfig.Sk = nil
+
+			// save the original signer config to a new file
+			err = os.WriteFile(
+				filepath.Join(userOutput, idemix.IdemixConfigDirUser, "SignerConfigFull"),
+				signerBytes,
+				0766,
+			)
+			Expect(err).NotTo(HaveOccurred())
+
+			// overwrite the signer config file
+			raw, err := proto.Marshal(signerConfig)
+			Expect(err).NotTo(HaveOccurred())
+
+			err = os.WriteFile(
+				filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner),
+				raw,
+				0766,
+			)
+			Expect(err).NotTo(HaveOccurred())
+		}
+
 		res = append(res, generators.Identity{
 			ID:   owner,
 			Path: userOutput,
-			Type: idType,
 		})
 	}
 	d.RevocationHandlerIndex++

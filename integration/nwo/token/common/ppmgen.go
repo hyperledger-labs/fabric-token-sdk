@@ -54,7 +54,7 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			provider, err := x509.NewProviderWithBCCSPConfig(auditor.Path, msp2.AuditorMSPID, nil, auditor.Opts)
+			provider, err := x509.NewProviderWithBCCSPConfig(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
@@ -138,7 +138,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		}
 		for _, auditor := range wallets.Auditors {
 			// Build an MSP Identity
-			provider, err := x509.NewProviderWithBCCSPConfig(auditor.Path, msp2.AuditorMSPID, nil, auditor.Opts)
+			provider, err := x509.NewProviderWithBCCSPConfig(auditor.Path, "", msp2.AuditorMSPID, nil, auditor.Opts)
 			if err != nil {
 				return nil, errors.WithMessage(err, "failed to create x509 provider")
 			}
