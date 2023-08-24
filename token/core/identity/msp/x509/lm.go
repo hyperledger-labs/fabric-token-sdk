@@ -173,35 +173,39 @@ func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool)
 }
 
 func (lm *LocalMembership) registerProvider(identity *config.Identity, translatedPath string, setDefault bool) error {
-	logger.Infof("register provider with type [%s]", identity.Type)
-	switch identity.Type {
-	case "remote":
-		// do nothing for now
-		if lm.ignoreRemote {
-			return lm.registerLocalProvider(identity, translatedPath, setDefault)
-		}
-		return lm.registerRemoteProvider(identity, translatedPath, setDefault)
-	default:
-		return lm.registerLocalProvider(identity, translatedPath, setDefault)
-	}
-}
-
-func (lm *LocalMembership) registerLocalProvider(c *config.Identity, translatedPath string, setDefault bool) error {
 	// Try without "msp"
-	opts, err := config2.ToBCCSPOpts(c.Opts)
+	opts, err := config2.ToBCCSPOpts(identity.Opts)
 	if err != nil {
 		return errors.WithMessage(err, "failed to extract BCCSP options")
 	}
 	if opts == nil {
-		logger.Debugf("no BCCSP options set for [%s]: [%v]", c.ID, c.Opts)
+		logger.Debugf("no BCCSP options set for [%s]: [%v]", identity.ID, identity.Opts)
 	} else {
-		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", c.ID, opts, opts.PKCS11, opts.SW)
+		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", identity.ID, opts, opts.PKCS11, opts.SW)
 	}
-	provider, err := x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath), lm.mspID, lm.signerService, opts)
+
+	keyStorePath := ""
+	if lm.ignoreRemote {
+		// check if there is the folder keystoreFull, if yes then use it
+		path := filepath.Join(translatedPath, "keystoreFull")
+		_, err := os.Stat(path)
+		if err == nil {
+			keyStorePath = path
+		} else {
+			path := filepath.Join(translatedPath, "msp", "keystoreFull")
+			_, err := os.Stat(path)
+			if err == nil {
+				keyStorePath = path
+			}
+		}
+	}
+
+	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
+	provider, err := x509.NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
 	if err != nil {
 		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
 		// Try with "msp"
-		provider, err = x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), lm.mspID, lm.signerService, opts)
+		provider, err = x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
 		if err != nil {
 			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
 				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
@@ -212,50 +216,13 @@ func (lm *LocalMembership) registerLocalProvider(c *config.Identity, translatedP
 
 	walletId, _, err := provider.Identity(nil)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", c.ID, translatedPath)
+		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", identity.ID, translatedPath)
 	}
 
-	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", c.ID, provider.EnrollmentID(), walletId.String())
+	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", identity.ID, provider.EnrollmentID(), walletId.String())
+
 	lm.deserializerManager.AddDeserializer(provider)
-	if err := lm.addResolver(c.ID, provider.EnrollmentID(), setDefault, provider.Identity); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (lm *LocalMembership) registerRemoteProvider(c *config.Identity, translatedPath string, setDefault bool) error {
-	// Try without "msp"
-	opts, err := config2.ToBCCSPOpts(c.Opts)
-	if err != nil {
-		return errors.WithMessage(err, "failed to extract BCCSP options")
-	}
-	if opts == nil {
-		logger.Debugf("no BCCSP options set for [%s]: [%v]", c.ID, c.Opts)
-	} else {
-		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", c.ID, opts, opts.PKCS11, opts.SW)
-	}
-	provider, err := x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath), lm.mspID, nil, opts)
-	if err != nil {
-		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
-		// Try with "msp"
-		provider, err = x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), lm.mspID, nil, opts)
-		if err != nil {
-			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
-				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
-			)
-			return err
-		}
-	}
-
-	walletId, _, err := provider.Identity(nil)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", c.ID, translatedPath)
-	}
-
-	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", c.ID, provider.EnrollmentID(), walletId.String())
-	lm.deserializerManager.AddDeserializer(provider)
-	if err := lm.addResolver(c.ID, provider.EnrollmentID(), setDefault, provider.Identity); err != nil {
+	if err := lm.addResolver(identity.ID, provider.EnrollmentID(), setDefault, provider.Identity); err != nil {
 		return err
 	}
 
@@ -312,6 +279,7 @@ func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, Id
 	}
 	lm.resolvers = append(lm.resolvers, resolver)
 
+	logger.Debugf("Adding resolver [%s:%s] done", id, eID)
 	return nil
 }
 
