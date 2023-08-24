@@ -9,10 +9,13 @@ package idemix
 import (
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger/fabric-protos-go/msp"
+
+	"github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -50,7 +53,7 @@ type LocalMembership struct {
 	resolversByEnrollmentID map[string]*common.Resolver
 	curveID                 math3.CurveID
 	identities              []*config.Identity
-	ignoreRemote            bool
+	ignoreVerifyOnlyWallet  bool
 }
 
 func NewLocalMembership(
@@ -58,13 +61,13 @@ func NewLocalMembership(
 	configManager config.Manager,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
-	binderService common.BinderService,
 	deserializerManager common.DeserializerManager,
 	kvs common.KVS,
 	mspID string,
 	cacheSize int,
 	curveID math3.CurveID,
 	identities []*config.Identity,
+	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
@@ -79,36 +82,7 @@ func NewLocalMembership(
 		resolversByName:         map[string]*common.Resolver{},
 		curveID:                 curveID,
 		identities:              identities,
-	}
-}
-
-func NewLocalMembershipWithIgnoreRemote(
-	sp view2.ServiceProvider,
-	configManager config.Manager,
-	defaultNetworkIdentity view.Identity,
-	signerService common.SignerService,
-	deserializerManager common.DeserializerManager,
-	kvs common.KVS,
-	mspID string,
-	cacheSize int,
-	curveID math3.CurveID,
-	identities []*config.Identity,
-	ignoreRemote bool,
-) *LocalMembership {
-	return &LocalMembership{
-		sp:                      sp,
-		configManager:           configManager,
-		defaultNetworkIdentity:  defaultNetworkIdentity,
-		signerService:           signerService,
-		deserializerManager:     deserializerManager,
-		kvs:                     kvs,
-		mspID:                   mspID,
-		cacheSize:               cacheSize,
-		resolversByEnrollmentID: map[string]*common.Resolver{},
-		resolversByName:         map[string]*common.Resolver{},
-		curveID:                 curveID,
-		identities:              identities,
-		ignoreRemote:            ignoreRemote,
+		ignoreVerifyOnlyWallet:  ignoreVerifyOnlyWallet,
 	}
 }
 
@@ -245,7 +219,7 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 	// Try to register the MSP provider
 	identity.Path = lm.configManager.TranslatePath(identity.Path)
 	if err := lm.registerProvider(identity, curveID); err != nil {
-		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", identity.Path, err, debug.Stack())
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s]", identity.Path, err)
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerProviders(identity, curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
@@ -255,25 +229,11 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 }
 
 func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
-	logger.Infof("register provider with type [%s]", identity.Type)
-	switch identity.Type {
-	case "remote":
-		// do nothing for now
-		if lm.ignoreRemote {
-			return lm.registerLocalProvider(identity, curveID)
-		}
-		return lm.registerRemoteProvider(identity, curveID)
-	default:
-		return lm.registerLocalProvider(identity, curveID)
-	}
-}
-
-func (lm *LocalMembership) registerLocalProvider(identity config.Identity, curveID math3.CurveID) error {
-	conf, err := idemix2.GetLocalMspConfigWithType(identity.Path, nil, lm.mspID)
+	conf, err := GetIdemixMspConfigWithType(identity.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
 	if err != nil {
-		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", translatedPath, err)
+		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", identity.Path, err)
 		// Try with "msp"
-		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(translatedPath, "msp"), nil, lm.mspID)
+		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(identity.Path, "msp"), nil, lm.mspID)
 		if err != nil {
 			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identity.Path)
 		}
@@ -293,9 +253,17 @@ func (lm *LocalMembership) registerLocalProvider(identity config.Identity, curve
 		return err
 	}
 
+	var getIdentityFunc func(opts *driver2.IdentityOptions) (view.Identity, []byte, error)
 	lm.deserializerManager.AddDeserializer(provider)
-	lm.addResolver(identity.ID, provider.EnrollmentID(), identity.Default, NewIdentityCache(provider.Identity, cacheSize).Identity)
-	logger.Debugf("added idemix resolver for id %s with cache of size %d", id+"@"+provider.EnrollmentID(), cacheSize)
+	if provider.IsRemote() {
+		getIdentityFunc = func(opts *driver2.IdentityOptions) (view.Identity, []byte, error) {
+			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
+		}
+	} else {
+		getIdentityFunc = NewIdentityCache(provider.Identity, cacheSize).Identity
+	}
+	lm.addResolver(identity.ID, provider.EnrollmentID(), identity.Default, getIdentityFunc)
+	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identity.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())
 	return nil
 }
 
@@ -318,7 +286,7 @@ func (lm *LocalMembership) registerProviders(identity config.Identity, curveID m
 		found++
 	}
 	if found == 0 {
-		return errors.Errorf("no valid identities found in [%s]", translatedPath)
+		return errors.Errorf("no valid identities found in [%s]", identity.Path)
 	}
 	return nil
 }
@@ -408,4 +376,51 @@ func (lm *LocalMembership) loadFromKVS() error {
 		}
 	}
 	return nil
+}
+
+// GetIdemixMspConfigWithType returns the configuration for the Idemix MSP of the specified type
+func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bool) (*msp.MSPConfig, error) {
+	ipkBytes, err := os.ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read issuer public key file")
+	}
+
+	revocationPkBytes, err := os.ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileRevocationPublicKey))
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to read revocation public key file")
+	}
+
+	idemixConfig := &msp.IdemixMSPConfig{
+		Name:         ID,
+		Ipk:          ipkBytes,
+		RevocationPk: revocationPkBytes,
+	}
+
+	signerConfigPath := filepath.Join(dir, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner)
+	if ignoreVerifyOnlyWallet {
+		logger.Debugf("check the existence of SignerConfigFull")
+		// check if `SignerConfigFull` exists, if yes, use that file
+		path := filepath.Join(dir, idemix.IdemixConfigDirUser, "SignerConfigFull")
+		_, err := os.Stat(path)
+		if err == nil {
+			logger.Debugf("SignerConfigFull found, use it")
+			signerConfigPath = path
+		}
+	}
+	signerBytes, err := os.ReadFile(signerConfigPath)
+	if err == nil {
+		signerConfig := &msp.IdemixMSPSignerConfig{}
+		err = proto.Unmarshal(signerBytes, signerConfig)
+		if err != nil {
+			return nil, err
+		}
+		idemixConfig.Signer = signerConfig
+	}
+
+	confBytes, err := proto.Marshal(idemixConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	return &msp.MSPConfig{Config: confBytes, Type: int32(idemix.IDEMIX)}, nil
 }

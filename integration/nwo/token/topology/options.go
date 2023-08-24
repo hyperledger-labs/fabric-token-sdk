@@ -64,6 +64,18 @@ func (o *Options) SetOwners(ids []string) {
 	o.Mapping["Owners"] = ids
 }
 
+func (o *Options) SetRemoteOwner(id string) {
+	o.Mapping["Owners.remote."+id] = true
+}
+
+func (o *Options) IsRemoteOwner(id string) bool {
+	v, ok := o.Mapping["Owners.remote."+id]
+	if !ok {
+		return false
+	}
+	return v.(bool)
+}
+
 func (o *Options) Auditor() bool {
 	res := o.Mapping["Auditor"]
 	if res == nil {

@@ -89,7 +89,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 
-	lm := idemix.NewLocalMembershipWithIgnoreRemote(
+	lm := idemix.NewLocalMembership(
 		f.SP,
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,

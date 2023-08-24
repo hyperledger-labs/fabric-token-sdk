@@ -32,10 +32,6 @@ import (
 )
 
 const (
-	RemoteOwnerWallet = "##remote##"
-)
-
-const (
 	DefaultCryptoTemplate = `---
 {{ with $w := . -}}
 PeerOrgs:{{ range .PeerOrgs }}
@@ -147,11 +143,6 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 	var userSpecs []ftopology.UserSpec
 	for _, name := range names {
-		if strings.HasPrefix(name, RemoteOwnerWallet) {
-			// prepare a remote wallet
-			name, _ = strings.CutPrefix(name, RemoteOwnerWallet)
-		}
-
 		us := ftopology.UserSpec{
 			Name: name,
 			HSM:  false,
@@ -186,23 +177,38 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 
 	var identities []generators.Identity
 	for i, name := range names {
-		idType := ""
-		if strings.HasPrefix(name, RemoteOwnerWallet) {
-			// prepare a remote owner wallet
-			name, _ = strings.CutPrefix(name, RemoteOwnerWallet)
-			idType = "remote"
+		idOutput := filepath.Join(
+			output,
+			"peerOrganizations",
+			domain,
+			"users",
+			fmt.Sprintf("%s@%s", name, domain),
+			"msp")
+
+		tokenOpts := topology.ToOptions(n.Options)
+		remote := tokenOpts.IsRemoteOwner(name)
+		if remote {
+			// copy the content of the keystore folder to keystoreFull
+			in, err := os.Open(filepath.Join(idOutput, "keystore", "priv_sk"))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.MkdirAll(filepath.Join(idOutput, "keystoreFull"), 0766)).NotTo(HaveOccurred())
+			out, err := os.Create(filepath.Join(idOutput, "keystoreFull", "priv_sk"))
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.Copy(out, in)
+			Expect(err).NotTo(HaveOccurred())
+			err = out.Sync()
+			Expect(err).NotTo(HaveOccurred())
+			in.Close()
+			out.Close()
+
+			// delete keystore/priv_sk
+			Expect(os.Remove(filepath.Join(idOutput, "keystore", "priv_sk"))).NotTo(HaveOccurred())
 		}
 
 		id := generators.Identity{
-			ID: name,
-			Path: filepath.Join(
-				output,
-				"peerOrganizations",
-				domain,
-				"users",
-				fmt.Sprintf("%s@%s", name, domain),
-				"msp"),
-			Type: idType,
+			ID:   name,
+			Path: idOutput,
 		}
 
 		if wallet == "issuers" || wallet == "auditors" {
