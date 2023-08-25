@@ -52,27 +52,10 @@ type LocalMembership struct {
 	resolversByEnrollmentID map[string]*common.Resolver
 	curveID                 math3.CurveID
 	identities              []*config.Identity
-	ignoreRemote            bool
+	ignoreVerifyOnlyWallet  bool
 }
 
-func NewLocalMembership(sp view2.ServiceProvider, configManager config.Manager, defaultNetworkIdentity view.Identity, signerService common.SignerService, deserializerManager common.DeserializerManager, kvs common.KVS, mspID string, cacheSize int, curveID math3.CurveID, identities []*config.Identity) *LocalMembership {
-	return &LocalMembership{
-		sp:                      sp,
-		configManager:           configManager,
-		defaultNetworkIdentity:  defaultNetworkIdentity,
-		signerService:           signerService,
-		deserializerManager:     deserializerManager,
-		kvs:                     kvs,
-		mspID:                   mspID,
-		cacheSize:               cacheSize,
-		resolversByEnrollmentID: map[string]*common.Resolver{},
-		resolversByName:         map[string]*common.Resolver{},
-		curveID:                 curveID,
-		identities:              identities,
-	}
-}
-
-func NewLocalMembershipWithIgnoreRemote(
+func NewLocalMembership(
 	sp view2.ServiceProvider,
 	configManager config.Manager,
 	defaultNetworkIdentity view.Identity,
@@ -83,7 +66,7 @@ func NewLocalMembershipWithIgnoreRemote(
 	cacheSize int,
 	curveID math3.CurveID,
 	identities []*config.Identity,
-	ignoreRemote bool,
+	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
 		sp:                      sp,
@@ -98,7 +81,7 @@ func NewLocalMembershipWithIgnoreRemote(
 		resolversByName:         map[string]*common.Resolver{},
 		curveID:                 curveID,
 		identities:              identities,
-		ignoreRemote:            ignoreRemote,
+		ignoreVerifyOnlyWallet:  ignoreVerifyOnlyWallet,
 	}
 }
 
@@ -245,7 +228,7 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 }
 
 func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
-	conf, err := GetIdemixMspConfigWithType(identity.Path, lm.mspID, lm.ignoreRemote)
+	conf, err := GetIdemixMspConfigWithType(identity.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
 	if err != nil {
 		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", translatedPath, err)
 		// Try with "msp"
@@ -395,7 +378,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 }
 
 // GetIdemixMspConfigWithType returns the configuration for the Idemix MSP of the specified type
-func GetIdemixMspConfigWithType(dir string, ID string, full bool) (*msp2.MSPConfig, error) {
+func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bool) (*msp2.MSPConfig, error) {
 	ipkBytes, err := os.ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file")
@@ -413,7 +396,7 @@ func GetIdemixMspConfigWithType(dir string, ID string, full bool) (*msp2.MSPConf
 	}
 
 	signerConfigPath := filepath.Join(dir, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner)
-	if full {
+	if ignoreVerifyOnlyWallet {
 		logger.Debugf("check the existence of SignerConfigFull")
 		// check if `SignerConfigFull` exists, if yes, use that file
 		path := filepath.Join(dir, idemix.IdemixConfigDirUser, "SignerConfigFull")

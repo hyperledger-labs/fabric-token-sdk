@@ -36,7 +36,7 @@ type LocalMembership struct {
 	resolversByName          map[string]*common.Resolver
 	resolversByEnrollmentID  map[string]*common.Resolver
 	bccspResolversByIdentity map[string]*common.Resolver
-	ignoreRemote             bool
+	ignoreVerifyOnlyWallet   bool
 }
 
 func NewLocalMembership(
@@ -47,7 +47,7 @@ func NewLocalMembership(
 	deserializerManager common.DeserializerManager,
 	kvs common.KVS,
 	mspID string,
-	ignoreRemote bool,
+	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
 		configManager:            configManager,
@@ -60,7 +60,7 @@ func NewLocalMembership(
 		bccspResolversByIdentity: map[string]*common.Resolver{},
 		resolversByEnrollmentID:  map[string]*common.Resolver{},
 		resolversByName:          map[string]*common.Resolver{},
-		ignoreRemote:             ignoreRemote,
+		ignoreVerifyOnlyWallet:   ignoreVerifyOnlyWallet,
 	}
 }
 
@@ -185,7 +185,7 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 	}
 
 	keyStorePath := ""
-	if lm.ignoreRemote {
+	if lm.ignoreVerifyOnlyWallet {
 		// check if there is the folder keystoreFull, if yes then use it
 		path := filepath.Join(translatedPath, "keystoreFull")
 		_, err := os.Stat(path)

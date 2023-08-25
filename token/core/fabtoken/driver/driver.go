@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
-	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
@@ -199,7 +198,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 	ws := fabtoken.NewWalletService(
 		tmsID,
 		sp,
-		identity.NewProvider(view.GetSigService(sp), nil, nil, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
+		identity.NewProvider(view.GetSigService(sp), nil, nil, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		nil,
 		fabtoken.NewDeserializer(),
 		kvs.GetService(sp),
