@@ -25,6 +25,10 @@ func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, e
 	return d.Deserializer.DeserializeVerifier(id)
 }
 
+func (d *Deserializer) DeserializeVerifierAgainstNymEID(id view.Identity, nymEID []byte) (driver.Verifier, error) {
+	return d.Deserializer.DeserializeVerifierAgainstNymEID(id, nymEID)
+}
+
 func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.Deserializer.DeserializeAuditInfo(raw)
 }
