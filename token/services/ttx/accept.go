@@ -104,6 +104,9 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
 	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("respond to signature requests [%s][%d]", s.tx.ID(), len(requestsToBeSigned))
+	}
 
 	session := context.Session()
 	for i := 0; i < len(requestsToBeSigned); i++ {
@@ -174,6 +177,9 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 	}
 
 	if len(requestsToBeSigned) > 0 {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("wait the transaction to be sent back [%s]", s.tx.ID())
+		}
 		// expect again to receive a transaction
 		tx, err := ReceiveTransaction(context)
 		if err != nil {
@@ -181,6 +187,13 @@ func (s *acceptView) respondToSignatureRequests(context view.Context) error {
 		}
 		// TODO: check that the token requests match
 		s.tx = tx
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("wait the transaction to be sent back [%s], received", s.tx.ID())
+		}
+	} else {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("no need to wait the transaction to be sent back [%s]", s.tx.ID())
+		}
 	}
 
 	return nil
