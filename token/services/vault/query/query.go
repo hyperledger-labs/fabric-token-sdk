@@ -287,6 +287,7 @@ func (e *Engine) PublicParams() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger.Debugf("got public parameters with key [%s], length [%d]", setupKey, len(raw))
 	return raw, nil
 }
 
