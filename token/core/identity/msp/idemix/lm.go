@@ -9,7 +9,6 @@ package idemix
 import (
 	"os"
 	"path/filepath"
-	"runtime/debug"
 	"sync"
 
 	"github.com/IBM/idemix"
@@ -218,7 +217,7 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 	// Try to register the MSP provider
 	identity.Path = lm.configManager.TranslatePath(identity.Path)
 	if err := lm.registerProvider(identity, curveID); err != nil {
-		logger.Warnf("failed to load idemix msp provider at [%s]:[%s] [%s]", identity.Path, err, debug.Stack())
+		logger.Warnf("failed to load idemix msp provider at [%s]:[%s]", identity.Path, err)
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerProviders(identity, curveID); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
