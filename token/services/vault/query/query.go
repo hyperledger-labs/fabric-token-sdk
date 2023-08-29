@@ -8,7 +8,6 @@ package query
 
 import (
 	"encoding/json"
-	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -288,7 +287,7 @@ func (e *Engine) PublicParams() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	logger.Debugf("got public parameters with key [%s], length [%d], [%s]", setupKey, len(raw), debug.Stack())
+	logger.Debugf("got public parameters with key [%s], length [%d]", setupKey, len(raw))
 	return raw, nil
 }
 
