@@ -31,8 +31,9 @@ var _ = Describe("EndToEnd", func() {
 
 	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
+			// notice that fabric-ca does not support yet aries
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, true)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -40,7 +41,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil)
+			fungible.TestAll(network, "auditor", nil, true)
 		})
 
 		It("Update public params", func() {
@@ -59,7 +60,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor = Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", true, true)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -67,7 +68,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "issuer", nil)
+			fungible.TestAll(network, "issuer", nil, true)
 		})
 
 		It("Update public params", func() {
@@ -75,6 +76,21 @@ var _ = Describe("EndToEnd", func() {
 			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
 		})
 
+	})
+
+	Describe("Fungible with Auditor ne Issuer + Fabric CA", func() {
+		BeforeEach(func() {
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, false)...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
+		It("succeeded", func() {
+			fungible.TestAll(network, "auditor", nil, false)
+		})
 	})
 
 })

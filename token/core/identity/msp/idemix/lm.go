@@ -28,10 +28,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-const (
-	MSP = "idemix"
-)
-
 var logger = flogging.MustGetLogger("token-sdk.msp.idemix")
 
 type PublicParametersWithIdemixSupport interface {

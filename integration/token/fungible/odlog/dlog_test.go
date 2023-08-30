@@ -27,7 +27,7 @@ var _ = Describe("Orion EndToEnd", func() {
 	Describe("Orion ZKAT-DLog", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology("orion", "dlog", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology.Topology("orion", "dlog", false, true)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -35,7 +35,7 @@ var _ = Describe("Orion EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil)
+			fungible.TestAll(network, "auditor", nil, true)
 		})
 	})
 

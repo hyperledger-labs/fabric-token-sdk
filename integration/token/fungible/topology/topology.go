@@ -21,7 +21,7 @@ import (
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api.Topology {
+func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries bool) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch backend {
@@ -266,7 +266,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
-	common.SetDefaultParams(tokenSDKDriver, tms)
+	common.SetDefaultParams(tokenSDKDriver, tms, aries)
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
 		// we need to define the custodian

@@ -30,7 +30,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology("fabric", "fabtoken", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology.Topology("fabric", "fabtoken", false, true)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -38,7 +38,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil)
+			fungible.TestAll(network, "auditor", nil, true)
 		})
 
 		It("Update public params", func() {

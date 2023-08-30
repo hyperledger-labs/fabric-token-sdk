@@ -261,7 +261,7 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 
 type OnAuditorRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc) {
+func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc, aries bool) {
 	RegisterAuditor(network, auditor, nil)
 
 	// give some time to the nodes to get the public parameters
@@ -406,7 +406,9 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
-	testTwoGeneratedOwnerWalletsSameNode(network, auditor)
+	if !aries {
+		testTwoGeneratedOwnerWalletsSameNode(network, auditor)
+	}
 
 	CheckBalanceAndHolding(network, "alice", "", "USD", 10, auditor)
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 0, auditor)
