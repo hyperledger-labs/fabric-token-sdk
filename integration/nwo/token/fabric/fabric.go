@@ -156,11 +156,13 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	}
 
 	// Prepare CA, if needed
-	caFactory, found := p.CASupports[tms.Driver]
-	if found {
-		ca, err := caFactory(p.TokenPlatform, tms, root)
-		Expect(err).ToNot(HaveOccurred(), "failed to instantiate CA for [%s]", tms.ID())
-		entry.CA = ca
+	if IsFabricCA(tms) {
+		caFactory, found := p.CASupports[tms.Driver]
+		if found {
+			ca, err := caFactory(p.TokenPlatform, tms, root)
+			Expect(err).ToNot(HaveOccurred(), "failed to instantiate CA for [%s]", tms.ID())
+			entry.CA = ca
+		}
 	}
 
 	entry.TCC = &TCC{Chaincode: chaincode}
