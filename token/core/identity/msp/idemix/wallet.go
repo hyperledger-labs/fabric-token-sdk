@@ -64,7 +64,7 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	switch vv := v.(type) {
 	case view.Identity:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
+			logger.Debugf("[AnonymousIdentity] [%s] mapping view.Identity identifier for [%s,%s], default identities [%s:%s]",
 				w.networkID,
 				v,
 				vv.String(),
@@ -73,9 +73,6 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 			)
 		}
 
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[AnonymousIdentity] looking up identifier for identity [%s]", vv.String())
-		}
 		id := vv
 		switch {
 		case id.IsNone():
@@ -113,12 +110,12 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 			return nil, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", vv)
+			logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", hash.Hashable(vv).String())
 		}
 		return nil, string(id), nil
 	case string:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
+			logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 				w.networkID,
 				v,
 				hash.Hashable(vv).String(),
@@ -128,31 +125,50 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 		}
 
 		label := vv
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[AnonymousIdentity] looking up identifier for label [%d,%s]", vv)
-		}
+		viewIdentity := view.Identity(label)
 		switch {
 		case len(label) == 0:
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed empty identity")
+			}
 			return nil, defaultIdentifier, nil
 		case label == defaultIdentifier:
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed default identifier")
+			}
 			return nil, defaultIdentifier, nil
 		case label == defaultID.UniqueID():
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed default identity")
+			}
 			return nil, defaultIdentifier, nil
 		case label == string(defaultID):
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed default identity as string")
+			}
 			return nil, defaultIdentifier, nil
-		case defaultID.Equal(view.Identity(label)):
+		case defaultID.Equal(viewIdentity):
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed default identity as view identity")
+			}
 			return nil, defaultIdentifier, nil
-		case w.nodeIdentity.Equal(view.Identity(label)):
+		case w.nodeIdentity.Equal(viewIdentity):
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed nide identity as view identity")
+			}
 			return nil, defaultIdentifier, nil
-		case w.localMembership.IsMe(view.Identity(label)):
+		case w.localMembership.IsMe(viewIdentity):
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("[AnonymousIdentity] passed a local member")
+			}
 			return nil, defaultIdentifier, nil
 		}
 
-		if idIdentifier, err := w.localMembership.GetIdentifier(view.Identity(label)); err == nil {
+		if idIdentifier, err := w.localMembership.GetIdentifier(viewIdentity); err == nil {
 			return nil, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[AnonymousIdentity] cannot find match for view.Identity string [%s]", vv)
+			logger.Debugf("[AnonymousIdentity] cannot find match for string [%s]", vv)
 		}
 		return nil, label, nil
 	default:

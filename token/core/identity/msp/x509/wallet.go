@@ -60,7 +60,7 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
+		logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s]",
 			w.networkID,
 			v,
 			string(defaultID),
@@ -120,7 +120,7 @@ func (w *wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	case string:
 		label := vv
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[LongTermIdentity] looking up identifier for label [%d,%s]", vv)
+			logger.Debugf("[LongTermIdentity] looking up identifier for label [%s]", vv)
 		}
 		switch {
 		case len(label) == 0:
