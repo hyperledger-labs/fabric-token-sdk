@@ -115,7 +115,7 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 		return nil, string(id), nil
 	case string:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
+			logger.Debugf("[AnonymousIdentity] [%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
 				w.networkID,
 				v,
 				hash.Hashable(vv).String(),
@@ -154,7 +154,7 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 			return nil, defaultIdentifier, nil
 		case w.nodeIdentity.Equal(viewIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[AnonymousIdentity] passed nide identity as view identity")
+				logger.Debugf("[AnonymousIdentity] passed node identity as view identity")
 			}
 			return nil, defaultIdentifier, nil
 		case w.localMembership.IsMe(viewIdentity):
