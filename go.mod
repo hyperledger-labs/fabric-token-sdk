@@ -3,13 +3,13 @@ module github.com/hyperledger-labs/fabric-token-sdk
 go 1.20
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20230818094413-71dd11112cb5
-	github.com/IBM/idemix/bccsp/types v0.0.0-20230818094413-71dd11112cb5
-	github.com/IBM/mathlib v0.0.3-0.20230605104224-932ab92f2ce0
+	github.com/IBM/idemix v0.0.2-0.20230831093709-b7a940638990
+	github.com/IBM/idemix/bccsp/types v0.0.0-20230831093709-b7a940638990
+	github.com/IBM/mathlib v0.0.3-0.20230831091907-c532c4d3b65c
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230820060044-996dcf2feabd
+	github.com/hyperledger-labs/fabric-smart-client v0.2.1-0.20230831153325-5304db39c5e0
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230401164317-bd8e24856939
@@ -41,8 +41,8 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20230818094413-71dd11112cb5 // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20230818094413-71dd11112cb5 // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20230831093709-b7a940638990 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20230831093709-b7a940638990 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Microsoft/hcsshim v0.8.25 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
