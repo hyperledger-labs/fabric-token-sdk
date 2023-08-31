@@ -61,18 +61,18 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 	defaultID := w.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
-			w.networkID,
-			v,
-			string(defaultID),
-			defaultID.String(),
-			w.nodeIdentity.String(),
-		)
-	}
-
 	switch vv := v.(type) {
 	case view.Identity:
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
+				w.networkID,
+				v,
+				vv.String(),
+				defaultID.String(),
+				w.nodeIdentity.String(),
+			)
+		}
+
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[AnonymousIdentity] looking up identifier for identity [%s]", vv.String())
 		}
@@ -117,6 +117,16 @@ func (w *Wallet) MapToID(v interface{}) (view.Identity, string, error) {
 		}
 		return nil, string(id), nil
 	case string:
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("[%s] mapping identifier for [%s,%s], default identities [%s:%s,%s]",
+				w.networkID,
+				v,
+				hash.Hashable(vv).String(),
+				defaultID.String(),
+				w.nodeIdentity.String(),
+			)
+		}
+
 		label := vv
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[AnonymousIdentity] looking up identifier for label [%d,%s]", vv)
