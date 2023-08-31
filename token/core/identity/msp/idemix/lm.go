@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger/fabric-protos-go/msp"
+
 	"github.com/IBM/idemix"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -229,9 +231,9 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
 	conf, err := GetIdemixMspConfigWithType(identity.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
 	if err != nil {
-		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", translatedPath, err)
+		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", identity.Path, err)
 		// Try with "msp"
-		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(translatedPath, "msp"), nil, lm.mspID)
+		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(identity.Path, "msp"), nil, lm.mspID)
 		if err != nil {
 			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identity.Path)
 		}
@@ -284,7 +286,7 @@ func (lm *LocalMembership) registerProviders(identity config.Identity, curveID m
 		found++
 	}
 	if found == 0 {
-		return errors.Errorf("no valid identities found in [%s]", translatedPath)
+		return errors.Errorf("no valid identities found in [%s]", identity.Path)
 	}
 	return nil
 }
@@ -377,7 +379,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 }
 
 // GetIdemixMspConfigWithType returns the configuration for the Idemix MSP of the specified type
-func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bool) (*msp2.MSPConfig, error) {
+func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bool) (*msp.MSPConfig, error) {
 	ipkBytes, err := os.ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file")
@@ -388,7 +390,7 @@ func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bo
 		return nil, errors.Wrapf(err, "failed to read revocation public key file")
 	}
 
-	idemixConfig := &msp2.IdemixMSPConfig{
+	idemixConfig := &msp.IdemixMSPConfig{
 		Name:         ID,
 		Ipk:          ipkBytes,
 		RevocationPk: revocationPkBytes,
@@ -407,7 +409,7 @@ func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bo
 	}
 	signerBytes, err := os.ReadFile(signerConfigPath)
 	if err == nil {
-		signerConfig := &msp2.IdemixMSPSignerConfig{}
+		signerConfig := &msp.IdemixMSPSignerConfig{}
 		err = proto.Unmarshal(signerBytes, signerConfig)
 		if err != nil {
 			return nil, err
@@ -420,5 +422,5 @@ func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bo
 		return nil, err
 	}
 
-	return &msp2.MSPConfig{Config: confBytes, Type: int32(idemix.IDEMIX)}, nil
+	return &msp.MSPConfig{Config: confBytes, Type: int32(idemix.IDEMIX)}, nil
 }
