@@ -12,10 +12,12 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS) {
+func SetDefaultParams(tokenSDKDriver string, tms *topology.TMS, aries bool) {
 	switch tokenSDKDriver {
 	case "dlog":
-		dlog.WithAries(tms)
+		if aries {
+			dlog.WithAries(tms)
+		}
 		// max token value is 100^2 - 1 = 9999
 		tms.SetTokenGenPublicParams("100", "2")
 	case "fabtoken":

@@ -21,7 +21,7 @@ import (
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api.Topology {
+func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries bool) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch backend {
@@ -42,7 +42,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
-	//fscTopology.SetLogging("token-sdk=debug:info", "")
+	fscTopology.SetLogging("token-sdk=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -266,7 +266,11 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
-	common.SetDefaultParams(tokenSDKDriver, tms)
+	common.SetDefaultParams(tokenSDKDriver, tms, aries)
+	if !aries {
+		// Enable Fabric-CA
+		fabric2.WithFabricCA(tms)
+	}
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
 		// we need to define the custodian

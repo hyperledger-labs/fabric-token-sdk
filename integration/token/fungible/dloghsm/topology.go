@@ -221,7 +221,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms)
+	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
 		// we need to define the custodian

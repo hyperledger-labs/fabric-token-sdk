@@ -91,7 +91,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms)
+	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 

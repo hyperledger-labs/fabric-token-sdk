@@ -38,7 +38,7 @@ const (
 type PF interface {
 	GetTopology() *Topology
 	GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
-	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
+	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string
 }
 
 type NetworkHandler interface {
@@ -46,8 +46,9 @@ type NetworkHandler interface {
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
-	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
+	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string
 	UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte)
+	Cleanup()
 }
 
 type Platform struct {
@@ -145,6 +146,13 @@ func (p *Platform) PostRun(load bool) {
 }
 
 func (p *Platform) Cleanup() {
+	// loop over TMS and generate artifacts
+	for _, tms := range p.Topology.TMSs {
+		// get the network handler for this TMS
+		targetNetwork := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+		// generate artifacts
+		targetNetwork.Cleanup()
+	}
 }
 
 func (p *Platform) GetContext() api2.Context {
@@ -209,7 +217,7 @@ func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, wa
 	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
 }
 
-func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string {
+func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string {
 	var targetTMS *topology2.TMS
 	for _, tms := range p.Topology.TMSs {
 		if tms.Network == tmsNetwork {
@@ -219,7 +227,7 @@ func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, wal
 	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
 
 	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
-	return nh.GenOwnerCryptoMaterial(targetTMS, fscNode, walletID)
+	return nh.GenOwnerCryptoMaterial(targetTMS, fscNode, walletID, useCAIfAvailable)
 }
 
 func (p *Platform) AddNetworkHandler(label string, nh NetworkHandler) {

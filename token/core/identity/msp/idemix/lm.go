@@ -24,13 +24,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-)
-
-const (
-	MSP = "idemix"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.msp.idemix")
@@ -231,9 +226,14 @@ func (lm *LocalMembership) registerIdentity(id string, path string, setDefault b
 }
 
 func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveID math3.CurveID, setDefault bool) error {
-	conf, err := msp.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID, MSP)
+	conf, err := idemix2.GetLocalMspConfigWithType(translatedPath, nil, lm.mspID)
 	if err != nil {
-		return errors.Wrapf(err, "failed reading idemix msp configuration from [%s]", translatedPath)
+		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", translatedPath, err)
+		// Try with "msp"
+		conf, err = idemix2.GetLocalMspConfigWithType(filepath.Join(translatedPath, "msp"), nil, lm.mspID)
+		if err != nil {
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", translatedPath)
+		}
 	}
 	// TODO: remove the need for ServiceProvider
 	cryptoProvider, err := NewKVSBCCSP(kvs.GetService(lm.sp), curveID)
@@ -252,7 +252,7 @@ func (lm *LocalMembership) registerMSPProvider(id, translatedPath string, curveI
 
 	lm.deserializerManager.AddDeserializer(provider)
 	lm.addResolver(id, provider.EnrollmentID(), setDefault, NewIdentityCache(provider.Identity, cacheSize).Identity)
-	logger.Debugf("added [%s] resolver for id [%s] with cache of size %d", MSP, id+"@"+provider.EnrollmentID(), cacheSize)
+	logger.Debugf("added idemix resolver for id %s with cache of size %d", id+"@"+provider.EnrollmentID(), cacheSize)
 	return nil
 }
 
@@ -262,6 +262,7 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID m
 		logger.Warnf("failed reading from [%s]: [%s]", translatedPath, err)
 		return nil
 	}
+	found := 0
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			continue
@@ -269,7 +270,12 @@ func (lm *LocalMembership) registerMSPProviders(translatedPath string, curveID m
 		id := entry.Name()
 		if err := lm.registerMSPProvider(id, filepath.Join(translatedPath, id), curveID, false); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
+			continue
 		}
+		found++
+	}
+	if found == 0 {
+		return errors.Errorf("no valid identities found in [%s]", translatedPath)
 	}
 	return nil
 }

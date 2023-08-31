@@ -261,7 +261,7 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 
 type OnAuditorRestartFunc = func(*integration.Infrastructure, string)
 
-func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc) {
+func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc, aries bool) {
 	RegisterAuditor(network, auditor, nil)
 
 	// give some time to the nodes to get the public parameters
@@ -406,7 +406,9 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
-	testTwoGeneratedOwnerWalletsSameNode(network, auditor)
+	if !aries {
+		testTwoGeneratedOwnerWalletsSameNode(network, auditor)
+	}
 
 	CheckBalanceAndHolding(network, "alice", "", "USD", 10, auditor)
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 0, auditor)
@@ -803,9 +805,9 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1")
+	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
-	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2")
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", true)
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
 
 	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")

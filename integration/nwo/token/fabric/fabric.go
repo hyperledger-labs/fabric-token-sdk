@@ -64,6 +64,7 @@ type tokenPlatform interface {
 type Entry struct {
 	TMS     *topology2.TMS
 	TCC     *TCC
+	CA      CA
 	Wallets map[string]*generators.Wallets
 }
 
@@ -73,6 +74,7 @@ type NetworkHandler struct {
 	TokenChaincodeParamsReplaceSuffix string
 	Entries                           map[string]*Entry
 	CryptoMaterialGenerators          map[string]generators.CryptoMaterialGenerator
+	CASupports                        map[string]CAFactory
 
 	EventuallyTimeout time.Duration
 	ColorIndex        int
@@ -88,6 +90,9 @@ func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *Netwo
 		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
 			"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
 			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+		},
+		CASupports: map[string]CAFactory{
+			"dlog": NewIdemixCASupport,
 		},
 	}
 }
@@ -150,6 +155,16 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 		p.Fabric(tms).Topology().AddChaincode(chaincode)
 	}
 
+	// Prepare CA, if needed
+	if IsFabricCA(tms) {
+		caFactory, found := p.CASupports[tms.Driver]
+		if found {
+			ca, err := caFactory(p.TokenPlatform, tms, root)
+			Expect(err).ToNot(HaveOccurred(), "failed to instantiate CA for [%s]", tms.ID())
+			entry.CA = ca
+		}
+	}
+
 	entry.TCC = &TCC{Chaincode: chaincode}
 }
 
@@ -171,6 +186,20 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	if !load {
 		p.setupTokenChaincodes(tms)
+
+		// Start the CA, if available
+		entry := p.GetEntry(tms)
+		if entry.CA != nil {
+			Expect(entry.CA.Start()).ToNot(HaveOccurred(), "failed to start CA for [%s]", tms.ID())
+		}
+	}
+}
+
+func (p *NetworkHandler) Cleanup() {
+	for _, entry := range p.Entries {
+		if entry.CA != nil {
+			entry.CA.Stop()
+		}
 	}
 }
 
@@ -221,6 +250,7 @@ func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw [
 		newChaincodeVersion,
 		cc.Chaincode.Path, cc.Chaincode.PackageFile)
 }
+
 func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
@@ -236,7 +266,21 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 	return ""
 }
 
-func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
+func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string {
+	if useCAIfAvailable {
+		// check if the ca is available
+		ca := p.GetEntry(tms).CA
+		if ca != nil {
+			// Use the ca
+			// return the path where the credential is stored
+			logger.Infof("generate owner crypto material using ca")
+			output, err := ca.Gen(walletID)
+			Expect(err).ToNot(HaveOccurred(), "failed to generate owner crypto material using ca [%s]", tms.ID())
+			return output
+		}
+		// continue without the ca
+	}
+
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 

@@ -1,5 +1,6 @@
 # pinned versions
 FABRIC_VERSION ?= 2.5.0
+FABRIC_CA_VERSION ?= 1.5.7
 FABRIC_TWO_DIGIT_VERSION = $(shell echo $(FABRIC_VERSION) | cut -d '.' -f 1,2)
 ORION_VERSION=v0.2.5
 
@@ -24,7 +25,7 @@ install-tools:
 
 .PHONY: download-fabric
 download-fabric:
-	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION)
+	./ci/scripts/download_fabric.sh $(FABRIC_BINARY_BASE) $(FABRIC_VERSION) $(FABRIC_CA_VERSION)
 
 # include the checks target
 include $(TOP)/checks.mk

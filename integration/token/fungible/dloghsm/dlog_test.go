@@ -35,7 +35,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil)
+			fungible.TestAll(network, "auditor", nil, true)
 		})
 	})
 
@@ -50,7 +50,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "issuer", nil)
+			fungible.TestAll(network, "issuer", nil, true)
 		})
 	})
 
