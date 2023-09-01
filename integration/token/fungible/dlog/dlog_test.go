@@ -44,6 +44,19 @@ var _ = Describe("EndToEnd", func() {
 			fungible.TestAll(network, "auditor", nil, true)
 		})
 
+	})
+
+	Describe("Extras", func() {
+		BeforeEach(func() {
+			// notice that fabric-ca does not support yet aries
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, true)...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
 		It("Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
 			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, "newAuditor", tms), tms, false)
