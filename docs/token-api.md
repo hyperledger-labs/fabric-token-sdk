@@ -35,7 +35,7 @@ parties, called `redeemers`, can invoke this operation.
 
 A `Token Request` aggregates token operations that must be performed atomically.
 
-Let us now focus on ome of the main building blocks the `Token API` consists of:
+Let us now focus on some of the main building blocks the `Token API` consists of:
 
 ![token_api.png](imgs/token_api.png)
 
