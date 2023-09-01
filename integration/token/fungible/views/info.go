@@ -17,6 +17,12 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+const (
+	OwnerWallet = iota
+	IssuerWallet
+	AuditorWallet
+)
+
 type GetEnrollmentID struct {
 	Wallet string
 	TMSID  *token.TMSID
@@ -172,6 +178,40 @@ func (g *GetIssuerWalletIdentity) Call(context view.Context) (interface{}, error
 func (p *GetIssuerWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
 	f := &GetIssuerWalletIdentityView{GetIssuerWalletIdentity: &GetIssuerWalletIdentity{}}
 	err := json.Unmarshal(in, f.GetIssuerWalletIdentity)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+type DoesWalletExist struct {
+	TMSID      token.TMSID
+	Wallet     string
+	WalletType int
+}
+
+type DoesWalletExistView struct {
+	*DoesWalletExist
+}
+
+func (p *DoesWalletExistView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(p.TMSID))
+	assert.NotNil(tms, "failed to get TMS")
+	switch p.WalletType {
+	case OwnerWallet:
+		return tms.WalletManager().OwnerWallet(p.Wallet) != nil, nil
+	case IssuerWallet:
+		return tms.WalletManager().IssuerWallet(p.Wallet) != nil, nil
+	case AuditorWallet:
+		return tms.WalletManager().AuditorWallet(p.Wallet) != nil, nil
+	default:
+		return tms.WalletManager().OwnerWallet(p.Wallet) != nil, nil
+	}
+}
+
+type DoesWalletExistViewFactory struct{}
+
+func (p *DoesWalletExistViewFactory) NewView(in []byte) (view.View, error) {
+	f := &DoesWalletExistView{DoesWalletExist: &DoesWalletExist{}}
+	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

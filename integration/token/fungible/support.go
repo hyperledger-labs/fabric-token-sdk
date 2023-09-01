@@ -589,9 +589,29 @@ func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte
 }
 
 func GetPublicParams(network *integration.Infrastructure, id string) []byte {
-	pp, err := network.Client(id).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParamsViewFactory{}))
+	pp, err := network.Client(id).CallView("GetPublicParams", common.JSONMarshall(&views.GetPublicParams{}))
 	Expect(err).NotTo(HaveOccurred())
 	return pp.([]byte)
+}
+
+func DoesWalletExist(network *integration.Infrastructure, id string, wallet string, walletType int) bool {
+	boxed, err := network.Client(id).CallView("DoesWalletExist", common.JSONMarshall(&views.DoesWalletExist{
+		Wallet:     wallet,
+		WalletType: walletType,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	var exists bool
+	switch v := boxed.(type) {
+	case []byte:
+		err := json.Unmarshal(v, &exists)
+		Expect(err).NotTo(HaveOccurred())
+	case string:
+		err := json.Unmarshal([]byte(v), &exists)
+		Expect(err).NotTo(HaveOccurred())
+	default:
+		panic(fmt.Sprintf("type not recognized [%T]", v))
+	}
+	return exists
 }
 
 func CheckOwnerDB(network *integration.Infrastructure, expectedErrors []string, ids ...string) {

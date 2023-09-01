@@ -83,6 +83,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
 	newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
+	newIssuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	var auditor *node.Node
 	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
@@ -94,6 +95,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newAuditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	newAuditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
+	newAuditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	if auditorAsIssuer {
 		issuer.AddOptions(
@@ -109,6 +111,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		issuer.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		issuer.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+		issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 		auditor = issuer
 
 		newIssuer.AddOptions(
@@ -146,6 +149,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 		auditor.RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{})
+		auditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
