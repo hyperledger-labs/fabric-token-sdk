@@ -407,9 +407,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 
-	if !aries {
-		testTwoGeneratedOwnerWalletsSameNode(network, auditor)
-	}
+	testTwoGeneratedOwnerWalletsSameNode(network, auditor, !aries)
 
 	CheckBalanceAndHolding(network, "alice", "", "USD", 10, auditor)
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 0, auditor)
@@ -811,11 +809,11 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	CheckOwnerWalletIDs(network, "manager", "manager.id1", "manager.id2", "manager.id3")
 }
 
-func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string) {
+func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool) {
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
 	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
-	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", true)
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
 	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
 
 	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
