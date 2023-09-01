@@ -85,6 +85,7 @@ jobs:
       matrix:
         tests: [
           dlog-fabric-t1,
+          dlog-fabric-t1-extras,
           dlog-fabric-t2,
           dlog-fabric-t3,
           fabtoken-dlog-fabric,

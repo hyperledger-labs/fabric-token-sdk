@@ -6,6 +6,10 @@ integration-tests-dlog-fabric:
 integration-tests-dlog-fabric-t1:
 	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor ne Issuer" .
 
+.PHONY: integration-tests-dlog-fabric-t1-extras
+integration-tests-dlog-fabric-t1-extras:
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Extras" .
+
 .PHONY: integration-tests-dlog-fabric-t2
 integration-tests-dlog-fabric-t2:
 	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor = Issuer" .
