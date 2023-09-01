@@ -793,6 +793,8 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	if !issuerAsAuditor {
 		Eventually(GetPublicParams).WithArguments(network, auditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
 	}
+	// give times to the nodes to update their public parameters and reload the wallets
+	time.Sleep(1 * time.Minute)
 
 	txId := IssueCash(network, "", "USD", 110, "alice", auditor, true, "newIssuer")
 	Expect(txId).NotTo(BeEmpty())
