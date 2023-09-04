@@ -96,8 +96,6 @@ func (p *WithdrawalInitiatorViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type WithdrawalResponderView struct {
-	Auditor      string
-	NotAnonymous bool
 }
 
 func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error) {
@@ -115,20 +113,12 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		// At this point, the issuer is ready to prepare the token transaction.
 		// The issuer creates a new token transaction and specifies the auditor that must be contacted to approve the operation.
 		var tx *ttx.Transaction
+		var auditor view.Identity
 		var auditorID string
-		if len(p.Auditor) == 0 {
-			assert.NoError(kvs.GetService(context).Get("auditor", &auditorID), "failed to retrieve auditor id")
-		} else {
-			auditorID = p.Auditor
-		}
-		auditor := view2.GetIdentityProvider(context).Identity(auditorID)
-		if !p.NotAnonymous {
-			// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
-			tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(issueRequest.TMSID))
-		} else {
-			// The issuer creates a nominal transaction using the default identity
-			tx, err = ttx.NewTransaction(context, nil, ttx.WithAuditor(auditor), ttx.WithTMSID(issueRequest.TMSID))
-		}
+		assert.NoError(kvs.GetService(context).Get("auditor", &auditorID), "failed to retrieve auditor id")
+		auditor = view2.GetIdentityProvider(context).Identity(auditorID)
+		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+		tx, err = ttx.NewAnonymousTransaction(context, ttx.WithAuditor(auditor), ttx.WithTMSID(issueRequest.TMSID))
 		assert.NoError(err, "failed creating issue transaction")
 
 		// The issuer adds a new issue operation to the transaction following the instruction received
