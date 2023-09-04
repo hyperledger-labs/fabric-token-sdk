@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/endpoint"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -85,6 +86,10 @@ func (p *WalletManagerProvider) load(user string) *token.WalletManager {
 	Expect(sp.RegisterService(kvss))
 	sigService := sig.NewSignService(sp, nil, kvss)
 	Expect(sp.RegisterService(sigService))
+
+	endpointService, err := endpoint.NewService(sp, nil, kvss)
+	Expect(err).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(endpointService)).ToNot(HaveOccurred())
 
 	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
 	Expect(err).ToNot(HaveOccurred())
