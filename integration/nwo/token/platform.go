@@ -63,6 +63,11 @@ type Platform struct {
 	ColorIndex   int
 }
 
+type TMSPlatform interface {
+	GetTopology() *Topology
+	PublicParameters(tms *topology2.TMS) []byte
+}
+
 func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
 	p := &Platform{
 		Context:                ctx,

@@ -68,8 +68,8 @@ func (p *WalletManagerProvider) load(user string) *token.WalletManager {
 		return m
 	}
 
-	tp := p.II.Ctx.PlatformByName("token").(*token2.Platform)
-	tms := tp.Topology.TMSs[0]
+	tp := p.II.Ctx.PlatformByName("token").(token2.TMSPlatform)
+	tms := tp.GetTopology().TMSs[0]
 	ppRaw := tp.PublicParameters(tms)
 
 	// prepare a service provider with the required services
