@@ -37,7 +37,8 @@ type Transfer struct {
 	// Auditor is the name of the auditor that must be contacted to approve the operation
 	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
-	Wallet         string
+	Wallet string
+	// ExternalWallet is Wallet needs to be handled as an external wallet
 	ExternalWallet bool
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
 	TokenIDs []*token.ID
@@ -55,8 +56,9 @@ type Transfer struct {
 	FailToRelease bool
 	// For additional transfer actions
 	TransferAction []TransferAction
-
-	RecipientData *token2.RecipientData
+	// RestRecipientData contains the recipient data that needs to be used to receive the rest of transfer operation.
+	// If this field is set to nil, then the token sdk generates this information as needed.
+	RestRecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
 }
@@ -118,7 +120,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		[]uint64{t.Amount},
 		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
-		token2.WithRestRecipientIdentity(t.RecipientData),
+		token2.WithRestRecipientIdentity(t.RestRecipientData),
 	)
 	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 

@@ -25,6 +25,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/commands"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -153,7 +154,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 
 			// save the original signer config to a new file
 			err = os.WriteFile(
-				filepath.Join(userOutput, idemix.IdemixConfigDirUser, "SignerConfigFull"),
+				filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix2.SignerConfigFull),
 				signerBytes,
 				0766,
 			)
