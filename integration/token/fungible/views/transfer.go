@@ -60,7 +60,10 @@ type Transfer struct {
 	// If this field is set to nil, then the token sdk generates this information as needed.
 	RestRecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
-	TMSID *token2.TMSID
+	TMSID        *token2.TMSID
+	NotAnonymous bool
+	Metadata     map[string][]byte
+	TxCallback   func(transaction *ttx.Transaction) error
 }
 
 type TransferView struct {
@@ -95,11 +98,20 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// At this point, the sender is ready to prepare the token transaction.
 	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 	// and specify the auditor that must be contacted to approve the operation.
-	tx, err := ttx.NewAnonymousTransaction(
-		context,
-		append(TxOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))...,
-	)
+	var tx *ttx.Transaction
+	txOpts := append(TxOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
+	if !t.NotAnonymous {
+		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)
+	} else {
+		// The issuer creates a nominal transaction using the default identity
+		tx, err = ttx.NewTransaction(context, nil, txOpts...)
+	}
 	assert.NoError(err, "failed creating transaction")
+
+	for k, v := range t.Metadata {
+		tx.SetApplicationMetadata(k, v)
+	}
 
 	// The sender will select tokens owned by this wallet
 	senderWallet := ttx.GetWallet(context, t.Wallet, ServiceOpts(t.TMSID)...)
@@ -123,6 +135,10 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		token2.WithRestRecipientIdentity(t.RestRecipientData),
 	)
 	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+
+	if t.TxCallback != nil && t.TxCallback(tx) != nil {
+		return nil, err
+	}
 
 	// add additional transfers
 	for i, action := range t.TransferAction {
