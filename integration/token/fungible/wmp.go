@@ -20,6 +20,8 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+// WalletManagerProvider is used to simulate external wallets.
+// It can generate recipient data and signatures for given users and wallets
 type WalletManagerProvider struct {
 	II       *integration.Infrastructure
 	Managers map[string]*token.WalletManager
@@ -29,6 +31,7 @@ func NewWalletManagerProvider(II *integration.Infrastructure) *WalletManagerProv
 	return &WalletManagerProvider{II: II, Managers: map[string]*token.WalletManager{}}
 }
 
+// RecipientData returns the RecipientData for the given user and wallet
 func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token.RecipientData {
 	wm := p.load(user)
 	ownerWallet := wm.OwnerWallet(wallet)
@@ -46,11 +49,17 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 	}
 }
 
+// GetSinger returns a signer for the given user, wallet and identity
 func (p *WalletManagerProvider) GetSinger(user string, wallet string, party view.Identity) (token.Signer, error) {
 	wm := p.load(user)
 	ownerWallet := wm.OwnerWallet(wallet)
 	Expect(ownerWallet).ToNot(BeNil())
 	return ownerWallet.GetSigner(party)
+}
+
+// SignerProvider returns the SignerProvider for the given user and wallet
+func (p *WalletManagerProvider) SignerProvider(user string, wallet string) *SignerProvider {
+	return NewSignerProvider(p, user, wallet)
 }
 
 func (p *WalletManagerProvider) load(user string) *token.WalletManager {
@@ -84,10 +93,7 @@ func (p *WalletManagerProvider) load(user string) *token.WalletManager {
 	return wm
 }
 
-func (p *WalletManagerProvider) SignerProvider(id string, wallet string) *SignerProvider {
-	return NewSignerProvider(p, id, wallet)
-}
-
+// SignerProvider provides instances of the token.Signer interface for the passed identity
 type SignerProvider struct {
 	*WalletManagerProvider
 	Id, Wallet string

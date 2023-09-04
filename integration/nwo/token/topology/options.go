@@ -64,10 +64,12 @@ func (o *Options) SetOwners(ids []string) {
 	o.Mapping["Owners"] = ids
 }
 
+// SetRemoteOwner marks the passed owner wallet identifier as remote
 func (o *Options) SetRemoteOwner(id string) {
 	o.Mapping["Owners.remote."+id] = true
 }
 
+// IsRemoteOwner returns true if the passed owner wallet identifier is marked as remote
 func (o *Options) IsRemoteOwner(id string) bool {
 	v, ok := o.Mapping["Owners.remote."+id]
 	if !ok {
