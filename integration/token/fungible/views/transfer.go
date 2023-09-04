@@ -63,11 +63,11 @@ type Transfer struct {
 	TMSID        *token2.TMSID
 	NotAnonymous bool
 	Metadata     map[string][]byte
-	TxCallback   func(transaction *ttx.Transaction) error
 }
 
 type TransferView struct {
 	*Transfer
+	TxCallback func(transaction *ttx.Transaction) error
 }
 
 func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
