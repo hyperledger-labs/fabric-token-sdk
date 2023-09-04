@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewWalletService returns a new instance of the wallet service for the passed public parameters
+// NewWalletService returns a new instance of the driver.WalletService interface for the passed public parameters
 func NewWalletService(sp view.ServiceProvider, network string, channel string, namespace string, pp driver.PublicParameters) (driver.WalletService, error) {
 	d, ok := drivers[pp.Identifier()]
 	if !ok {

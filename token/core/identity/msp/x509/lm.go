@@ -22,6 +22,12 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	KeystoreFullFolder = "keystoreFull"
+	PrivateKeyFileName = "priv_sk"
+	KeystoreFolder     = "keystore"
+)
+
 type LocalMembership struct {
 	configManager          config.Manager
 	defaultNetworkIdentity view.Identity
@@ -187,12 +193,12 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 	keyStorePath := ""
 	if lm.ignoreVerifyOnlyWallet {
 		// check if there is the folder keystoreFull, if yes then use it
-		path := filepath.Join(translatedPath, "keystoreFull")
+		path := filepath.Join(translatedPath, KeystoreFullFolder)
 		_, err := os.Stat(path)
 		if err == nil {
 			keyStorePath = path
 		} else {
-			path := filepath.Join(translatedPath, "msp", "keystoreFull")
+			path := filepath.Join(translatedPath, "msp", KeystoreFullFolder)
 			_, err := os.Stat(path)
 			if err == nil {
 				keyStorePath = path

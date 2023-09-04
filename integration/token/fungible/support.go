@@ -326,14 +326,14 @@ func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *Wa
 	var stream Stream
 	var err error
 	input := common.JSONMarshall(&views.Transfer{
-		Auditor:        auditor,
-		Wallet:         wallet,
-		ExternalWallet: true,
-		Type:           typ,
-		Amount:         amount,
-		Recipient:      network.Identity(receiver),
-		RecipientEID:   receiver,
-		RecipientData:  restRecipient,
+		Auditor:           auditor,
+		Wallet:            wallet,
+		ExternalWallet:    true,
+		Type:              typ,
+		Amount:            amount,
+		Recipient:         network.Identity(receiver),
+		RecipientEID:      receiver,
+		RestRecipientData: restRecipient,
 	})
 	if websSocket {
 		stream, err = network.WebClient(id).StreamCallView("transfer", input)
