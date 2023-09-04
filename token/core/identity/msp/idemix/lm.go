@@ -32,6 +32,10 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+const (
+	SignerConfigFull = "SignerConfigFull"
+)
+
 var logger = flogging.MustGetLogger("token-sdk.msp.idemix")
 
 type PublicParametersWithIdemixSupport interface {
@@ -414,7 +418,7 @@ func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bo
 	if ignoreVerifyOnlyWallet {
 		logger.Debugf("check the existence of SignerConfigFull")
 		// check if `SignerConfigFull` exists, if yes, use that file
-		path := filepath.Join(dir, idemix.IdemixConfigDirUser, "SignerConfigFull")
+		path := filepath.Join(dir, idemix.IdemixConfigDirUser, SignerConfigFull)
 		_, err := os.Stat(path)
 		if err == nil {
 			logger.Debugf("SignerConfigFull found, use it")

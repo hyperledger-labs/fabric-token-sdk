@@ -16,6 +16,8 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
@@ -189,11 +191,11 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 		remote := tokenOpts.IsRemoteOwner(name)
 		if remote {
 			// copy the content of the keystore folder to keystoreFull
-			in, err := os.Open(filepath.Join(idOutput, "keystore", "priv_sk"))
+			in, err := os.Open(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(os.MkdirAll(filepath.Join(idOutput, "keystoreFull"), 0766)).NotTo(HaveOccurred())
-			out, err := os.Create(filepath.Join(idOutput, "keystoreFull", "priv_sk"))
+			Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0766)).NotTo(HaveOccurred())
+			out, err := os.Create(filepath.Join(idOutput, x509.KeystoreFullFolder, x509.PrivateKeyFileName))
 			Expect(err).NotTo(HaveOccurred())
 			_, err = io.Copy(out, in)
 			Expect(err).NotTo(HaveOccurred())
@@ -203,7 +205,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 			out.Close()
 
 			// delete keystore/priv_sk
-			Expect(os.Remove(filepath.Join(idOutput, "keystore", "priv_sk"))).NotTo(HaveOccurred())
+			Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(HaveOccurred())
 		}
 
 		id := generators.Identity{

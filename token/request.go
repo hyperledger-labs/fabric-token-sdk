@@ -21,10 +21,14 @@ const (
 	TransferMetadataPrefix = "TransferMetadataPrefix"
 )
 
+// RecipientData contains information about the identity of a token owner
 type RecipientData struct {
-	Identity  view.Identity
+	// Identity is the identity of the token owner
+	Identity view.Identity
+	// AuditInfo contains private information about the identity
 	AuditInfo []byte
-	Metadata  []byte
+	// Metadata contains any additional information needed by a given token driver to process the recipient data
+	Metadata []byte
 }
 
 // IssueOptions models the options that can be passed to the issue command
