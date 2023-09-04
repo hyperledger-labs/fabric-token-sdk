@@ -7,12 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/endpoint"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/endpoint"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/id"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kms"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -90,6 +92,15 @@ func (p *WalletManagerProvider) load(user string) *token.WalletManager {
 	endpointService, err := endpoint.NewService(sp, nil, kvss)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(endpointService)).ToNot(HaveOccurred())
+	fscIdentityType := configProvider.GetString("fsc.identity.type")
+	if len(fscIdentityType) == 0 {
+		fscIdentityType = "file"
+	}
+	kmsDriver, err := kms.Get(fscIdentityType)
+	Expect(err).ToNot(HaveOccurred())
+	idProvider := id.NewProvider(configProvider, sigService, endpointService, kmsDriver)
+	Expect(idProvider.Load()).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(idProvider)).ToNot(HaveOccurred())
 
 	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
 	Expect(err).ToNot(HaveOccurred())
