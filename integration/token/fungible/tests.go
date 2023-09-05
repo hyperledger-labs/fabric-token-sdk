@@ -903,12 +903,14 @@ func TestMixed(network *integration.Infrastructure) {
 }
 
 func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string, websSocket bool) {
+	TestRemoteOwnerWalletWithWMP(network, NewWalletManagerProvider(&walletManagerLoader{II: network}), auditor, websSocket)
+}
+
+func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *WalletManagerProvider, auditor string, websSocket bool) {
 	RegisterAuditor(network, auditor, nil)
 
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
-
-	wmp := NewWalletManagerProvider(network)
 
 	SetKVSEntry(network, "issuer", "auditor", auditor)
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
