@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	. "github.com/onsi/gomega"
 )
@@ -23,12 +24,12 @@ import (
 // WalletManagerProvider is used to simulate external wallets.
 // It can generate recipient data and signatures for given users and wallets
 type WalletManagerProvider struct {
-	II       *integration.Infrastructure
-	Managers map[string]*token.WalletManager
+	Loader   WalletManagerLoader
+	managers map[string]*token.WalletManager
 }
 
-func NewWalletManagerProvider(II *integration.Infrastructure) *WalletManagerProvider {
-	return &WalletManagerProvider{II: II, Managers: map[string]*token.WalletManager{}}
+func NewWalletManagerProvider(loader WalletManagerLoader) *WalletManagerProvider {
+	return &WalletManagerProvider{Loader: loader, managers: map[string]*token.WalletManager{}}
 }
 
 // RecipientData returns the RecipientData for the given user and wallet
@@ -63,18 +64,39 @@ func (p *WalletManagerProvider) SignerProvider(user string, wallet string) *Sign
 }
 
 func (p *WalletManagerProvider) load(user string) *token.WalletManager {
-	m, ok := p.Managers[user]
+	m, ok := p.managers[user]
 	if ok {
 		return m
 	}
 
-	tp := p.II.Ctx.PlatformByName("token").(*token2.Platform)
-	tms := tp.Topology.TMSs[0]
+	wm := p.Loader.Load(user)
+
+	p.managers[user] = wm
+	return wm
+}
+
+type TMSTopology interface {
+	GetTopology() *token2.Topology
+	PublicParameters(tms *topology2.TMS) []byte
+}
+
+type WalletManagerLoader interface {
+	Load(user string) *token.WalletManager
+}
+
+type walletManagerLoader struct {
+	II *integration.Infrastructure
+}
+
+func (l *walletManagerLoader) Load(user string) *token.WalletManager {
+	ctx := l.II.Ctx
+	tp := ctx.PlatformByName("token").(TMSTopology)
+	tms := tp.GetTopology().TMSs[0]
 	ppRaw := tp.PublicParameters(tms)
 
 	// prepare a service provider with the required services
 	sp := registry.New()
-	configProvider, err := config.NewProvider(filepath.Join(p.II.Ctx.RootDir(), "fsc", "nodes", user))
+	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", user))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(configProvider)).ToNot(HaveOccurred())
 	dm, err := sig.NewMultiplexDeserializer(sp)
@@ -88,8 +110,6 @@ func (p *WalletManagerProvider) load(user string) *token.WalletManager {
 
 	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
 	Expect(err).ToNot(HaveOccurred())
-
-	p.Managers[user] = wm
 	return wm
 }
 
