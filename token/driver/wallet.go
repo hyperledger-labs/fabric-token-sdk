@@ -11,6 +11,16 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
+// RecipientData contains information about the identity of a token owner
+type RecipientData struct {
+	// Identity is the identity of the token owner
+	Identity view.Identity
+	// AuditInfo contains private information about the identity
+	AuditInfo []byte
+	// Metadata contains any additional information needed by a given token driver to process the recipient data
+	Metadata []byte
+}
+
 // ListTokensOptions contains options that can be used to list tokens from a wallet
 type ListTokensOptions struct {
 	// TokenType is the type of token to list
@@ -56,7 +66,7 @@ type OwnerWallet interface {
 	EnrollmentID() string
 
 	// RegisterRecipient TODO
-	RegisterRecipient(identity view.Identity, info []byte, metadata []byte) error
+	RegisterRecipient(data *RecipientData) error
 }
 
 // IssuerWallet models the wallet of an issuer
@@ -92,7 +102,7 @@ type CertifierWallet interface {
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
-	RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error
+	RegisterRecipientIdentity(data *RecipientData) error
 
 	// GetAuditInfo retrieves the audit information for the passed identity
 	GetAuditInfo(id view.Identity) ([]byte, error)

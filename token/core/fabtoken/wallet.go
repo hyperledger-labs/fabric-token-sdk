@@ -61,38 +61,38 @@ func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
 	return s.identityProvider.RegisterIssuerWallet(id, path)
 }
 
-func (s *WalletService) RegisterRecipientIdentity(id view.Identity, auditInfo []byte, metadata []byte) error {
-	logger.Debugf("register recipient identity [%s] with audit info [%s]", id.String(), hash.Hashable(auditInfo).String())
+func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
+	logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
 	// recognize identity and register it
-	v, err := s.Deserializer.GetOwnerVerifier(id)
+	v, err := s.Deserializer.GetOwnerVerifier(data.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", id)
+		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
 	}
-	matcher, err := s.Deserializer.GetOwnerMatcher(auditInfo)
+	matcher, err := s.Deserializer.GetOwnerMatcher(data.AuditInfo)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
+		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", data.Identity)
 	}
 
 	// match identity and audit info
-	recipient, err := identity.UnmarshallRawOwner(id)
+	recipient, err := identity.UnmarshallRawOwner(data.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
+		return errors.Wrapf(err, "failed to unmarshal identity [%s]", data.Identity)
 	}
 	if recipient.Type != identity.SerializedIdentityType {
 		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
 	}
 	err = matcher.Match(recipient.Identity)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", id, hash.Hashable(auditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info
 
-	if err := view2.GetSigService(s.SP).RegisterVerifier(id, v); err != nil {
-		return errors.Wrapf(err, "failed registering verifier for [%s]", id)
+	if err := view2.GetSigService(s.SP).RegisterVerifier(data.Identity, v); err != nil {
+		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := view2.GetSigService(s.SP).RegisterAuditInfo(id, auditInfo); err != nil {
-		return errors.Wrapf(err, "failed registering audit info for [%s]", id)
+	if err := view2.GetSigService(s.SP).RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 
 	return nil
@@ -378,7 +378,7 @@ func (w *ownerWallet) EnrollmentID() string {
 	return w.identityInfo.EnrollmentID()
 }
 
-func (w *ownerWallet) RegisterRecipient(identity view.Identity, info []byte, metadata []byte) error {
+func (w *ownerWallet) RegisterRecipient(data *driver.RecipientData) error {
 	// TODO: if identity is equal to the one this wallet is bound to, then we are good. Otherwise return an error
 	return nil
 }

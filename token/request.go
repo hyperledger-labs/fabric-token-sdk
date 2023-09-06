@@ -22,14 +22,7 @@ const (
 )
 
 // RecipientData contains information about the identity of a token owner
-type RecipientData struct {
-	// Identity is the identity of the token owner
-	Identity view.Identity
-	// AuditInfo contains private information about the identity
-	AuditInfo []byte
-	// Metadata contains any additional information needed by a given token driver to process the recipient data
-	Metadata []byte
-}
+type RecipientData = driver.RecipientData
 
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
@@ -1185,7 +1178,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		var pseudonym []byte
 		if transferOpts.RestRecipientIdentity != nil {
 			// register it and us it
-			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity.Identity, transferOpts.RestRecipientIdentity.AuditInfo, transferOpts.RestRecipientIdentity.Metadata); err != nil {
+			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed to register recipient identity [%s] for the rest, wallet [%s]", transferOpts.RestRecipientIdentity.Identity, wallet.ID())
 			}
 			pseudonym = transferOpts.RestRecipientIdentity.Identity
