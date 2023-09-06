@@ -56,7 +56,7 @@ func (wm *WalletManager) RegisterRecipientIdentity(id view.Identity, auditInfo [
 	if err := wm.managementService.tms.IdentityProvider().RegisterRecipientIdentity(id); err != nil {
 		return err
 	}
-	return wm.walletService.RegisterRecipientIdentity(id, auditInfo, metadata)
+	return wm.walletService.RegisterRecipientIdentity(nil)
 }
 
 // Wallet returns the wallet bound to the passed identity, if any is available.
@@ -308,8 +308,10 @@ func (o *OwnerWallet) EnrollmentID() string {
 	return o.w.EnrollmentID()
 }
 
-func (o *OwnerWallet) RegisterRecipient(identity view.Identity, auditInfo []byte, metadata []byte) error {
-	return o.w.RegisterRecipient(identity, auditInfo, metadata)
+// RegisterRecipient register the passed recipient data. The data is passed as pointer to allow the underlying token driver
+// to modify them if needed.
+func (o *OwnerWallet) RegisterRecipient(data *RecipientData) error {
+	return o.w.RegisterRecipient(data)
 }
 
 // IssuerWallet models the wallet of an issuer
