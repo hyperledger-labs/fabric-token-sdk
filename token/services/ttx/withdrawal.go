@@ -174,7 +174,11 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
 
-	if err := tms.WalletManager().RegisterRecipientIdentity(request.Recipient, request.AuditInfo, request.Metadata); err != nil {
+	if err := tms.WalletManager().RegisterRecipientIdentity(&RecipientData{
+		Identity:  request.Recipient,
+		AuditInfo: request.AuditInfo,
+		Metadata:  request.Metadata,
+	}); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}

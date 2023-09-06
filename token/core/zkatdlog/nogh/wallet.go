@@ -370,7 +370,7 @@ func (w *ownerWallet) EnrollmentID() string {
 
 func (w *ownerWallet) RegisterRecipient(data *driver.RecipientData) error {
 	logger.Debugf("register recipient identity on wallet [%s][%s]", data.Identity, w.id)
-	if err := w.WalletService.RegisterRecipientIdentity(nil); err != nil {
+	if err := w.WalletService.RegisterRecipientIdentity(data); err != nil {
 		return errors.WithMessagef(err, "failed to register recipient identity")
 	}
 

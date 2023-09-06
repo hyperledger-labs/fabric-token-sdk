@@ -135,7 +135,7 @@ func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, 
 			logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
 			return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 		}
-		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
+		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData); err != nil {
 			logger.Errorf("failed to register recipient identity: [%s]", err)
 			return nil, errors.Wrapf(err, "failed to register recipient identity")
 		}
@@ -322,7 +322,7 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		if err != nil {
 			return nil, err
 		}
-		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
+		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData); err != nil {
 			return nil, err
 		}
 
@@ -398,7 +398,9 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 
 	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	other := request.RecipientData.Identity
-	if err := ts.WalletManager().RegisterRecipientIdentity(other, request.RecipientData.AuditInfo, request.RecipientData.Metadata); err != nil {
+	if err := ts.WalletManager().RegisterRecipientIdentity(&RecipientData{
+		Identity: other, AuditInfo: request.RecipientData.AuditInfo, Metadata: request.RecipientData.Metadata,
+	}); err != nil {
 		return nil, err
 	}
 
