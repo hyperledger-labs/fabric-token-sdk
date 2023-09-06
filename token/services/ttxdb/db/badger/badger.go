@@ -370,6 +370,7 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 }
 
 func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
+	logger.Debugf("set status of [%s] to [%s]", txID, status)
 	// search for all matching keys
 	type Entry struct {
 		key   string
@@ -410,6 +411,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 		var bytes []byte
 		switch {
 		case strings.HasPrefix(entry.key, "mv"):
+			logger.Debugf("set status of movement [%s] to [%s]", txID, status)
 			record, err := UnmarshalMovementRecord(entry.value)
 			if err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
@@ -420,6 +422,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
 		case strings.HasPrefix(entry.key, "tx"):
+			logger.Debugf("set status of transaction [%s] to [%s]", txID, status)
 			record, err := UnmarshalTransactionRecord(entry.value)
 			if err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
@@ -430,6 +433,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
 		case strings.HasPrefix(entry.key, "mt"):
+			logger.Debugf("set status of validation record [%s] to [%s]", txID, status)
 			record, err := UnmarshalValidationRecord(entry.value)
 			if err != nil {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
