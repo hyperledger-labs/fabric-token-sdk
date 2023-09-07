@@ -236,7 +236,7 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 }
 
 func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
-	conf, err := GetIdemixMspConfigWithType(identity.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
+	conf, err := GetLocalMspConfigWithType(identity.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
 	if err != nil {
 		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", identity.Path, err)
 		// Try with "msp"
