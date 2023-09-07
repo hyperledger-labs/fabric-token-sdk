@@ -858,7 +858,7 @@ func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
 }
 
-func (r *Request) PutSignatures(sigmas map[string][]byte) {
+func (r *Request) SetSignatures(sigmas map[string][]byte) {
 	signers := append(r.IssueSigners(), r.TransferSigners()...)
 	signatures := make([][]byte, len(signers))
 	for i, signer := range signers {
@@ -1175,22 +1175,22 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 		diff := inputSum.Sub(outputSum)
 		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
-		var pseudonym []byte
+		var restIdentity []byte
 		if transferOpts.RestRecipientIdentity != nil {
 			// register it and us it
 			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed to register recipient identity [%s] for the rest, wallet [%s]", transferOpts.RestRecipientIdentity.Identity, wallet.ID())
 			}
-			pseudonym = transferOpts.RestRecipientIdentity.Identity
+			restIdentity = transferOpts.RestRecipientIdentity.Identity
 		} else {
-			pseudonym, err = wallet.GetRecipientIdentity()
+			restIdentity, err = wallet.GetRecipientIdentity()
 			if err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
 			}
 		}
 
 		outputTokens = append(outputTokens, &token.Token{
-			Owner:    &token.Owner{Raw: pseudonym},
+			Owner:    &token.Owner{Raw: restIdentity},
 			Type:     tokenType,
 			Quantity: diff.Hex(),
 		})

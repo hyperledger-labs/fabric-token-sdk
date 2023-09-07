@@ -11,7 +11,6 @@ import (
 	"sort"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-
 	jsoniter "github.com/json-iterator/go"
 )
 

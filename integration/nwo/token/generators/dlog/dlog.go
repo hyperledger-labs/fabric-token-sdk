@@ -48,10 +48,6 @@ func IsAries(tms *topology.TMS) bool {
 
 var logger = flogging.MustGetLogger("token-sdk.integration.token.generators.dlog")
 
-const (
-	RemoteOwnerWallet = "##remote##"
-)
-
 type CryptoMaterialGenerator struct {
 	FabTokenGenerator *fabtoken.CryptoMaterialGenerator
 

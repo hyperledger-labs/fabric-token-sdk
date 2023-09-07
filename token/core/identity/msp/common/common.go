@@ -9,6 +9,8 @@ package common
 import (
 	"reflect"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
@@ -59,8 +61,11 @@ func (i *IdentityInfo) Get() (view.Identity, []byte, error) {
 }
 
 type SignerService interface {
+	idemix.SignerService
 	IsMe(view.Identity) bool
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterVerifier(identity view.Identity, v driver.Verifier) error
+	RegisterAuditInfo(identity view.Identity, info []byte) error
+	GetAuditInfo(id view.Identity) ([]byte, error)
 }
 
 type BinderService interface {

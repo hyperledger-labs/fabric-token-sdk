@@ -112,7 +112,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	// wallet service
 	ws := zkatdlog.NewWalletService(
 		tmsID,
-		sp,
+		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		qe,
 		ppm,
@@ -223,7 +223,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 	// wallet service
 	ws := zkatdlog.NewWalletService(
 		tmsID,
-		sp,
+		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), nil, nil, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		nil,
 		publicParamsManager,

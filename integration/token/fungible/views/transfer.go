@@ -60,9 +60,11 @@ type Transfer struct {
 	// If this field is set to nil, then the token sdk generates this information as needed.
 	RestRecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
-	TMSID        *token2.TMSID
+	TMSID *token2.TMSID
+	// NotAnonymous true if the transaction must be anonymous, false otherwise
 	NotAnonymous bool
-	Metadata     map[string][]byte
+	// Metadata contains application metadata to append to the transaction
+	Metadata map[string][]byte
 }
 
 type TransferView struct {
@@ -101,14 +103,15 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	var tx *ttx.Transaction
 	txOpts := append(TxOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
 	if !t.NotAnonymous {
-		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
 		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)
 	} else {
-		// The issuer creates a nominal transaction using the default identity
+		// create a nominal transaction using the default identity
 		tx, err = ttx.NewTransaction(context, nil, txOpts...)
 	}
 	assert.NoError(err, "failed creating transaction")
 
+	// append metadata, if any
 	for k, v := range t.Metadata {
 		tx.SetApplicationMetadata(k, v)
 	}
@@ -165,6 +168,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// Before completing, all recipients receive the approved transaction.
 	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
 	// the token transaction valid.
+
 	var endorserOpts []ttx.EndorsementsOpt
 	if t.ExternalWallet {
 		// if ExternalWallet is set to true, then the signatures that the wallet must generate are prepared externally to this FSC node.
