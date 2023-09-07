@@ -184,6 +184,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
+	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
