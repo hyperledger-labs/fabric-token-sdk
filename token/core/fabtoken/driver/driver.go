@@ -98,7 +98,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	}
 	ws := fabtoken.NewWalletService(
 		tmsID,
-		sp,
+		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		qe,
 		fabtoken.NewDeserializer(),
@@ -197,7 +197,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 	// wallet service
 	ws := fabtoken.NewWalletService(
 		tmsID,
-		sp,
+		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), nil, nil, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		nil,
 		fabtoken.NewDeserializer(),

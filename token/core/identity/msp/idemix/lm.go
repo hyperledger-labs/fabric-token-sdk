@@ -244,11 +244,11 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 		}
 	}
 	// TODO: remove the need for ServiceProvider
-	cryptoProvider, err := NewKVSBCCSP(kvs.GetService(lm.sp), curveID)
+	cryptoProvider, err := NewKVSBCCSP(lm.kvs, curveID)
 	if err != nil {
 		return errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
-	provider, err := idemix2.NewProvider(conf, idemix2.GetSignerService(lm.sp), idemix2.Any, cryptoProvider)
+	provider, err := idemix2.NewProvider(conf, lm.signerService, idemix2.Any, cryptoProvider)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identity.Path)
 	}
@@ -326,7 +326,7 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
-	tmss, err := config2.NewTokenSDK(view2.GetConfigService(lm.sp)).GetTMSs()
+	tmss, err := config2.NewTokenSDK(lm.configManager).GetTMSs()
 	if err != nil {
 		return 0, errors.WithMessage(err, "failed to obtain token management system instances")
 	}

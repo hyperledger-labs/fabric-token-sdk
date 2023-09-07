@@ -99,7 +99,8 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 
 	skippedSigmas := c.Opts.SkippedIds() //TODO: SkippedSigmas need to be here because of the next steps. To parallelize, we need to split the operations into two different views
 
-	c.tx.TokenRequest.PutSignatures(mergeSigmas(issueSigmas, transferSigmas, skippedSigmas))
+	// Add the signatures to the token request
+	c.tx.TokenRequest.SetSignatures(mergeSigmas(issueSigmas, transferSigmas, skippedSigmas))
 
 	// 2. Audit
 	var auditors []view.Identity

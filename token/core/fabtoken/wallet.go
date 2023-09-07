@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -24,7 +24,7 @@ type WalletServiceBacked interface {
 }
 
 type WalletService struct {
-	SP                  view2.ServiceProvider
+	SignerService       common.SignerService
 	identityProvider    driver.IdentityProvider
 	WalletServiceBacked WalletServiceBacked
 	Deserializer        driver.Deserializer
@@ -36,14 +36,14 @@ type WalletService struct {
 
 func NewWalletService(
 	tmsID token2.TMSID,
-	SP view2.ServiceProvider,
+	SignerService common.SignerService,
 	identityProvider driver.IdentityProvider,
 	walletServiceBacked WalletServiceBacked,
 	Deserializer driver.Deserializer,
 	kvs KVS,
 ) *WalletService {
 	return &WalletService{
-		SP:                     SP,
+		SignerService:          SignerService,
 		identityProvider:       identityProvider,
 		WalletServiceBacked:    walletServiceBacked,
 		Deserializer:           Deserializer,
@@ -88,10 +88,10 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 
 	// register verifier and audit info
 
-	if err := view2.GetSigService(s.SP).RegisterVerifier(data.Identity, v); err != nil {
+	if err := s.SignerService.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := view2.GetSigService(s.SP).RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+	if err := s.SignerService.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 
@@ -99,14 +99,14 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 }
 
 func (s *WalletService) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := view2.GetSigService(s.SP).RegisterAuditInfo(id, auditInfo); err != nil {
+	if err := s.SignerService.RegisterAuditInfo(id, auditInfo); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
-	return view2.GetSigService(s.SP).GetAuditInfo(id)
+	return s.SignerService.GetAuditInfo(id)
 }
 
 func (s *WalletService) GetEnrollmentID(auditInfo []byte) (string, error) {
