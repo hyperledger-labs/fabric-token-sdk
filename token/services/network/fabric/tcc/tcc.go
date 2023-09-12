@@ -28,7 +28,6 @@ var logger = flogging.MustGetLogger("token-sdk.tcc")
 const (
 	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
-	AddCertifierFunction      = "addCertifier"
 	QueryTokensFunctions      = "queryTokens"
 	AreTokensSpent            = "areTokensSpent"
 
@@ -67,9 +66,6 @@ type TokenChaincode struct {
 
 	PPDigest             []byte
 	TokenServicesFactory func([]byte) (PublicParameters, Validator, error)
-
-	MetricsEnabled bool
-	MetricsServer  string
 }
 
 func (cc *TokenChaincode) Init(stub shim.ChaincodeStubInterface) pb.Response {
@@ -192,14 +188,14 @@ func (cc *TokenChaincode) Initialize(builtInParams string) error {
 func (cc *TokenChaincode) ReadParamsFromFile() string {
 	publicParamsPath := os.Getenv(PublicParamsPathVarEnv)
 	if publicParamsPath == "" {
-		fmt.Println("no PUBLIC_PARAMS_FILE_PATH provided")
+		logger.Errorf("no PUBLIC_PARAMS_FILE_PATH provided")
 		return ""
 	}
 
-	fmt.Println("reading " + publicParamsPath + " ...")
+	logger.Infof("reading " + publicParamsPath + " ...")
 	paramsAsBytes, err := os.ReadFile(publicParamsPath)
 	if err != nil {
-		fmt.Printf(
+		logger.Errorf(
 			"unable to read file %s (%s). continue looking pub params from init args or cc\n", publicParamsPath, err.Error(),
 		)
 		return ""
