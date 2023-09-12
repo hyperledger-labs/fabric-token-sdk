@@ -59,6 +59,8 @@ type Transfer struct {
 	// RestRecipientData contains the recipient data that needs to be used to receive the rest of transfer operation.
 	// If this field is set to nil, then the token sdk generates this information as needed.
 	RestRecipientData *token2.RecipientData
+	// RecipientData
+	RecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
 	// NotAnonymous true if the transaction must be anonymous, false otherwise
@@ -77,7 +79,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID)...)
+	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData))...)
 	assert.NoError(err, "failed getting recipient")
 
 	wm := token2.GetManagementService(context, ServiceOpts(t.TMSID)...).WalletManager()
