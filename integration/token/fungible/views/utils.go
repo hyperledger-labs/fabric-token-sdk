@@ -63,12 +63,12 @@ func (p *SetKVSEntryViewFactory) NewView(in []byte) (view.View, error) {
 	return f, nil
 }
 
-func ServiceOpts(tmsId *token.TMSID) []token.ServiceOption {
+func ServiceOpts(tmsId *token.TMSID, opts ...token.ServiceOption) []token.ServiceOption {
 	var serviceOpts []token.ServiceOption
 	if tmsId != nil {
 		serviceOpts = append(serviceOpts, token.WithTMSID(*tmsId))
 	}
-	return serviceOpts
+	return append(serviceOpts, opts...)
 }
 
 func TxOpts(tmsId *token.TMSID) []ttx.TxOption {

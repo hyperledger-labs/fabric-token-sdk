@@ -160,7 +160,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
 		token.WithOwnerIdentity("alice.id1"),
-		token.WithRemoteOwnerIdentity("alice.remote"),
+		token.WithRemoteOwnerIdentity("alice_remote"),
 	)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -185,6 +185,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
 	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	alice.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),

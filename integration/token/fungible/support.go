@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
@@ -319,7 +321,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 	return ""
 }
 
-func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
+func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) string {
 	// obtain the recipient for the rest
 	restRecipient := wmp.RecipientData(id, wallet)
 	// start the call as a stream
@@ -362,6 +364,52 @@ func TransferCashWithExternalWallet(network *integration.Infrastructure, wmp *Wa
 		for _, identity := range signers {
 			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
 			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
+			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		}
+		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
+}
+
+func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, id string, wallet string, typ string, amount uint64, receiver string, receiverWallet string, auditor string, expectedErrorMsgs ...string) string {
+	// obtain the recipient data for the recipient and register it
+	recipientData := wmp.RecipientData(receiver, receiverWallet)
+	RegisterRecipientData(network, receiver, receiverWallet, recipientData)
+
+	// transfer
+	var err error
+	input := common.JSONMarshall(&views.Transfer{
+		Auditor:       auditor,
+		Wallet:        wallet,
+		Type:          typ,
+		Amount:        amount,
+		RecipientEID:  receiver,
+		Recipient:     view.Identity(receiverWallet),
+		RecipientData: recipientData,
+	})
+
+	txidBoxed, err := network.Client(id).CallView("transfer", input)
+	if len(expectedErrorMsgs) == 0 {
+		txID := common.JSONUnmarshalString(txidBoxed)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+
+		signers := []string{auditor}
+		if !strings.HasPrefix(receiver, id) {
+			signers = append(signers, strings.Split(receiver, ".")[0])
+		}
+		txInfo := GetTransactionInfo(network, id, txID)
+		for _, identity := range signers {
+			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
+			Expect(ok).To(BeTrue(), "identity [%s] not found in txInfo.EndorsementAcks [%v]", identity, txInfo.EndorsementAcks)
 			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
 		}
 		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
@@ -841,6 +889,15 @@ func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletI
 	_, err := network.Client(id).CallView("RegisterOwnerWallet", common.JSONMarshall(&views.RegisterOwnerWallet{
 		ID:   walletID,
 		Path: walletPath,
+	}))
+	Expect(err).NotTo(HaveOccurred())
+	network.Ctx.SetViewClient(walletID, network.Client(id))
+}
+
+func RegisterRecipientData(network *integration.Infrastructure, id string, walletID string, rd *token2.RecipientData) {
+	_, err := network.Client(id).CallView("RegisterRecipientData", common.JSONMarshall(&views.RegisterRecipientData{
+		WalletID:      walletID,
+		RecipientData: *rd,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	network.Ctx.SetViewClient(walletID, network.Client(id))

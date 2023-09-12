@@ -71,3 +71,32 @@ func (p *RegisterOwnerWalletViewFactory) NewView(in []byte) (view.View, error) {
 
 	return f, nil
 }
+
+type RegisterRecipientData struct {
+	TMSID         token.TMSID
+	WalletID      string
+	RecipientData token.RecipientData
+}
+
+// RegisterRecipientDataView is a view that registers an owner wallet
+type RegisterRecipientDataView struct {
+	*RegisterRecipientData
+}
+
+func (r *RegisterRecipientDataView) Call(context view.Context) (interface{}, error) {
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+	err := tms.WalletManager().OwnerWallet(r.WalletID).RegisterRecipient(&r.RecipientData)
+	assert.NoError(err, "failed to register recipient data [%s:%s]", r.WalletID, r.TMSID)
+	return nil, nil
+}
+
+type RegisterRecipientDataViewFactory struct{}
+
+func (p *RegisterRecipientDataViewFactory) NewView(in []byte) (view.View, error) {
+	f := &RegisterRecipientDataView{RegisterRecipientData: &RegisterRecipientData{}}
+	err := json.Unmarshal(in, f.RegisterRecipientData)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}
