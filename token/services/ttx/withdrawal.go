@@ -42,11 +42,11 @@ func NewRequestWithdrawalView(issuer view.Identity, tokenType string, amount uin
 }
 
 func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
-	tmsID, err := compileServiceOptions(opts...)
+	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
 	}
-	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(*tmsID))
+	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(options.TMSID()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -56,11 +56,11 @@ func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string
 }
 
 func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, wallet string, tokenType string, amount uint64, recipientData *RecipientData, opts ...token.ServiceOption) (view.Identity, view.Session, error) {
-	tmsID, err := compileServiceOptions(opts...)
+	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to compile options")
 	}
-	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(*tmsID).WithRecipientIdentity(recipientData))
+	resultBoxed, err := context.RunView(NewRequestWithdrawalView(issuer, tokenType, amount).WithWallet(wallet).WithTMSID(options.TMSID()).WithRecipientIdentity(recipientData))
 	if err != nil {
 		return nil, nil, err
 	}

@@ -916,7 +916,17 @@ func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *Wall
 	SetKVSEntry(network, "issuer", "auditor", auditor)
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
-	Withdraw(network, wmp, "alice", "alice.remote", "USD", 10, auditor, "issuer")
+	Withdraw(network, wmp, "alice", "alice_remote", "USD", 10, auditor, "issuer")
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 10, auditor)
 
-	TransferCashWithExternalWallet(network, wmp, websSocket, "alice", "alice.remote", "USD", 7, "bob", auditor)
+	TransferCashFromExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 7, "bob", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 3, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 7, auditor)
+	TransferCashToExternalWallet(network, wmp, "bob", "", "USD", 3, "alice", "alice_remote", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 6, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
+	TransferCashFromExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 6, "charlie", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "USD", 6, auditor)
 }
