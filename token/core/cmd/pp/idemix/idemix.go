@@ -15,19 +15,13 @@ import (
 )
 
 // LoadIssuerPublicKey reads the issuer public key from the config file
-func LoadIssuerPublicKey(idemixMSPDir string) (string, []byte, []byte, error) {
+func LoadIssuerPublicKey(idemixMSPDir string) (string, []byte, error) {
 	// Load Idemix Issuer Public Key
 	path := filepath.Join(idemixMSPDir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey)
 	ipkBytes, err := os.ReadFile(path)
 	if err != nil {
-		return "", nil, nil, errors.Wrapf(err, "failed reading idemix issuer public key [%s]", path)
+		return "", nil, errors.Wrapf(err, "failed reading idemix issuer public key [%s]", path)
 	}
 
-	path = filepath.Join(idemixMSPDir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileRevocationPublicKey)
-	revocationPKBytes, err := os.ReadFile(path)
-	if err != nil {
-		return "", nil, nil, errors.Wrapf(err, "failed reading idemix revocation public key [%s]", path)
-	}
-
-	return path, ipkBytes, revocationPKBytes, nil
+	return path, ipkBytes, nil
 }
