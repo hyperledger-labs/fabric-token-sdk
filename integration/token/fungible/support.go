@@ -424,6 +424,69 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 	return ""
 }
 
+func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wmp *WalletManagerProvider, websSocket bool, id string, wallet string, typ string, amount uint64, receiver string, receiverWallet string, auditor string, expectedErrorMsgs ...string) string {
+	// obtain the recipient for the rest
+	restRecipient := wmp.RecipientData(id, wallet)
+
+	// obtain the recipient data for the recipient and register it
+	recipientData := wmp.RecipientData(receiver, receiverWallet)
+	RegisterRecipientData(network, receiver, receiverWallet, recipientData)
+
+	// start the call as a stream
+	var stream Stream
+	var err error
+	input := common.JSONMarshall(&views.Transfer{
+		Auditor:           auditor,
+		Wallet:            wallet,
+		ExternalWallet:    true,
+		Type:              typ,
+		Amount:            amount,
+		RecipientEID:      receiver,
+		RestRecipientData: restRecipient,
+		Recipient:         view.Identity(receiverWallet),
+		RecipientData:     recipientData,
+	})
+	if websSocket {
+		stream, err = network.WebClient(id).StreamCallView("transfer", input)
+	} else {
+		stream, err = network.Client(id).StreamCallView("transfer", input)
+	}
+	Expect(err).NotTo(HaveOccurred())
+
+	// Here we handle the sign requests
+	client := ttx.NewStreamExternalWalletSignerClient(wmp.SignerProvider(id, wallet), stream, 1)
+	Expect(client.Respond()).NotTo(HaveOccurred())
+
+	// wait for the completion of the view
+	txidBoxed, err := stream.Result()
+	if len(expectedErrorMsgs) == 0 {
+		txID := common.JSONUnmarshalString(txidBoxed)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+
+		signers := []string{auditor}
+		if !strings.HasPrefix(receiver, id) {
+			signers = append(signers, strings.Split(receiver, ".")[0])
+		}
+		txInfo := GetTransactionInfo(network, id, txID)
+		for _, identity := range signers {
+			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
+			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
+			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		}
+		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
+}
+
 func TransferCashMultiActions(network *integration.Infrastructure, id string, wallet string, typ string, amounts []uint64, receivers []string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) string {
 	Expect(len(amounts) > 1).To(BeTrue())
 	Expect(len(receivers)).To(BeEquivalentTo(len(amounts)))
