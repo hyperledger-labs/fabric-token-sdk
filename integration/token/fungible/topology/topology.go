@@ -193,6 +193,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		orion.WithRole("bob"),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("bob.id1"),
+		token.WithRemoteOwnerIdentity("bob_remote"),
 	)
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
@@ -218,6 +219,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
+	bob.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
