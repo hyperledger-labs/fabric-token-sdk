@@ -72,6 +72,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
 	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
+	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
 		fabric.WithOrganization("Org1"),
