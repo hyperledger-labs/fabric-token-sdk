@@ -800,6 +800,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 		Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	}
 	Eventually(DoesWalletExist).WithArguments(network, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "manager", "manager.id1", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
 	txId := IssueCash(network, "", "USD", 110, "alice", auditor, true, "newIssuer")
 	Expect(txId).NotTo(BeEmpty())
