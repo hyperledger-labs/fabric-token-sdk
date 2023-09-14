@@ -70,6 +70,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
 	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
+	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	var auditor *node.Node
 	if auditorAsIssuer {
@@ -105,6 +106,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+		auditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -135,6 +137,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
+	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -221,6 +224,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	manager.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	manager.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	manager.RegisterViewFactory("ListOwnerWalletIDsView", &views.ListOwnerWalletIDsViewFactory{})
+	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
