@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/json"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -103,62 +104,89 @@ type SignerProvider interface {
 }
 
 type StreamExternalWalletSignerClient struct {
-	sp               SignerProvider
-	stream           view2.Stream
-	expectedRequests int
+	sp      SignerProvider
+	stream  view2.Stream
+	timeout time.Duration
+	input   chan *StreamExternalWalletSignRequest
+	err     chan error
 }
 
-func NewStreamExternalWalletSignerClient(sp SignerProvider, stream view2.Stream, expectedRequests int) *StreamExternalWalletSignerClient {
-	return &StreamExternalWalletSignerClient{
-		sp:               sp,
-		stream:           stream,
-		expectedRequests: expectedRequests,
+func NewStreamExternalWalletSignerClient(sp SignerProvider, stream view2.Stream, _ int) *StreamExternalWalletSignerClient {
+	return NewStreamExternalWalletSignerClientWithTimeout(sp, stream, 1*time.Hour)
+}
+
+func NewStreamExternalWalletSignerClientWithTimeout(sp SignerProvider, stream view2.Stream, timeout time.Duration) *StreamExternalWalletSignerClient {
+	c := &StreamExternalWalletSignerClient{
+		sp:      sp,
+		stream:  stream,
+		timeout: timeout,
+		input:   make(chan *StreamExternalWalletSignRequest),
+		err:     make(chan error),
 	}
+	go c.init()
+	return c
 }
 
-func (s *StreamExternalWalletSignerClient) Respond() error {
+func (s *StreamExternalWalletSignerClient) init() {
 	i := 0
 	for {
 		logger.Infof("process signature request [%d]", i)
 
 		msg := &StreamExternalWalletMsg{}
 		if err := s.stream.Recv(msg); err != nil {
-			return errors.Wrapf(err, "failed to receive signature request [%d]", i)
+			s.err <- errors.Wrapf(err, "failed to receive signature request [%d]", i)
+			return
 		}
-		stop := false
 		switch msg.Type {
 		case SigRequest:
 			req := &StreamExternalWalletSignRequest{}
 			if err := json.Unmarshal(msg.Raw, req); err != nil {
-				return errors.Wrapf(err, "failed to get unmarshal msg type SigRequest")
+				s.err <- errors.Wrapf(err, "failed to get unmarshal msg type SigRequest")
+				return
+			} else {
+				s.input <- req
 			}
-			signer, err := s.sp.GetSigner(req.Party)
-			if err != nil {
-				return errors.Wrapf(err, "failed to get signer for party [%s]", req.Party)
-			}
-			sigma, err := signer.Sign(req.Message)
-			if err != nil {
-				return errors.Wrapf(err, "failed to sign, party [%s]", req.Party)
-			}
+		case Done:
+			logger.Infof("no more signatures required")
+			close(s.input)
+			return
+		}
+		i++
+	}
+}
 
-			msg, err := NewStreamExternalWalletMsg(SignResponse, &StreamExternalWalletSignResponse{
-				Sigma: sigma,
-			})
+func (s *StreamExternalWalletSignerClient) Respond() error {
+	for {
+		select {
+		case req, done := <-s.input:
+			if !done {
+				return nil
+			}
+			msg, err := s.sign(req)
 			if err != nil {
 				return errors.Wrapf(err, "failed to marshal sign request message")
 			}
 			if err := s.stream.Send(msg); err != nil {
 				return errors.Wrapf(err, "failed to send back signature, party [%s]", req.Party)
 			}
-			logger.Infof("process signature request done [%d]", i)
-		case Done:
-			logger.Infof("no more signatures required")
-			stop = true
+			logger.Infof("process signature request done")
+		case <-time.After(s.timeout):
+			return errors.Errorf("Timeout waiting for stream input exceeded: %v", s.timeout)
 		}
-		if stop {
-			break
-		}
-		i++
 	}
-	return nil
+}
+
+func (s *StreamExternalWalletSignerClient) sign(req *StreamExternalWalletSignRequest) (*StreamExternalWalletMsg, error) {
+	signer, err := s.sp.GetSigner(req.Party)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get signer for party [%s]", req.Party)
+	}
+	sigma, err := signer.Sign(req.Message)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to sign, party [%s]", req.Party)
+	}
+
+	return NewStreamExternalWalletMsg(SignResponse, &StreamExternalWalletSignResponse{
+		Sigma: sigma,
+	})
 }
