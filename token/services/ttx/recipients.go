@@ -101,19 +101,18 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 }
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	if f.OtherRecipientData != nil {
+	w := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager().OwnerWalletByIdentity(f.Other)
+
+	if isSameNode := w != nil; !isSameNode {
 		return f.callWithRecipientData(context)
 	}
-	return f.callWithRecipient(context)
+	if isRemoteRecipient := f.OtherRecipientData != nil; isRemoteRecipient {
+		return f.OtherRecipientData.Identity, nil
+	}
+	return w.GetRecipientIdentity()
 }
 
 func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context) (interface{}, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("announce recipient to [%s] for TMS [%s]", f.OtherRecipientData.Identity, f.TMSID)
-	}
-
-	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
-
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("request recipient [%s] is not registered", f.Other)
 	}
@@ -159,7 +158,8 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 		logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
 		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
 	}
-	if err := tms.WalletManager().RegisterRecipientIdentity(recipientData); err != nil {
+	wm := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager()
+	if err := wm.RegisterRecipientIdentity(recipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
@@ -176,84 +176,6 @@ func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Contex
 	}
 
 	return recipientData.Identity, nil
-}
-
-func (f *RequestRecipientIdentityView) callWithRecipient(context view.Context) (interface{}, error) {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
-	}
-
-	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
-
-	if w := tms.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("request recipient [%s] is already registered", f.Other)
-		}
-		recipient, err := w.GetRecipientIdentity()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get recipient identity from wallet [%s]", w.ID())
-		}
-		return recipient, nil
-	} else {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("request recipient [%s] is not registered", f.Other)
-		}
-		session, err := context.GetSession(context.Initiator(), f.Other)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get session with [%s]", f.Other)
-		}
-
-		// Ask for identity
-		rr := &RecipientRequest{
-			TMSID:    f.TMSID,
-			WalletID: f.Other,
-		}
-		rrRaw, err := rr.Bytes()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed marshalling recipient request")
-		}
-		err = session.Send(rrRaw)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to send recipient request")
-		}
-
-		// Wait to receive a view identity
-		ch := session.Receive()
-		var payload []byte
-
-		timeout := time.NewTimer(time.Minute)
-		defer timeout.Stop()
-
-		select {
-		case msg := <-ch:
-			payload = msg.Payload
-		case <-timeout.C:
-			return nil, errors.New("timeout reached")
-		}
-
-		recipientData, err := RecipientDataFromBytes(payload)
-		if err != nil {
-			logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
-			return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
-		}
-		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData); err != nil {
-			logger.Errorf("failed to register recipient identity: [%s]", err)
-			return nil, errors.Wrapf(err, "failed to register recipient identity")
-		}
-
-		// Update the Endpoint Resolver
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, f.Other)
-		}
-		if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
-			}
-			return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, f.Other)
-		}
-
-		return recipientData.Identity, nil
-	}
 }
 
 type RespondRequestRecipientIdentityView struct {
