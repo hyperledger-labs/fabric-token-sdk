@@ -10,7 +10,6 @@ import (
 	"reflect"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"

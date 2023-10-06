@@ -60,7 +60,7 @@ func WithOwnerIdentity(label string) fsc.Option {
 	}
 }
 
-// WithRemoteOwnerIdentity adds a new owner identity and mark it as remote
+// WithRemoteOwnerIdentity adds a new owner identity and mark it as remote.
 func WithRemoteOwnerIdentity(label string) fsc.Option {
 	return func(o *fsc.Options) error {
 		to := topology.ToOptions(o)

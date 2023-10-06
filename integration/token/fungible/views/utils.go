@@ -63,6 +63,7 @@ func (p *SetKVSEntryViewFactory) NewView(in []byte) (view.View, error) {
 	return f, nil
 }
 
+// ServiceOpts creates a new array of token.ServiceOption containing token.WithTMSID and any additional token.ServiceOption passed to this function
 func ServiceOpts(tmsId *token.TMSID, opts ...token.ServiceOption) []token.ServiceOption {
 	var serviceOpts []token.ServiceOption
 	if tmsId != nil {
