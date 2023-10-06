@@ -56,10 +56,12 @@ type Transfer struct {
 	FailToRelease bool
 	// For additional transfer actions
 	TransferAction []TransferAction
-	// RestRecipientData contains the recipient data that needs to be used to receive the rest of transfer operation.
+	// SenderRestRecipientData contains the recipient data that needs to be used by sender to receive the rest of transfer operation.
 	// If this field is set to nil, then the token sdk generates this information as needed.
-	RestRecipientData *token2.RecipientData
-	// RecipientData
+	SenderRestRecipientData *token2.RecipientData
+	// RecipientData contains the recipient data of the recipient of the transfer.
+	// If nil, the view will ask the remote part to generate it, otherwise the view will notify the recipient
+	// about the recipient data that will be used to the transfer.
 	RecipientData *token2.RecipientData
 	// The TMS to pick in case of multiple TMSIDs
 	TMSID *token2.TMSID
@@ -139,7 +141,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		[]uint64{t.Amount},
 		[]view.Identity{recipient},
 		token2.WithTokenIDs(t.TokenIDs...),
-		token2.WithRestRecipientIdentity(t.RestRecipientData),
+		token2.WithRestRecipientIdentity(t.SenderRestRecipientData),
 	)
 	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
 
