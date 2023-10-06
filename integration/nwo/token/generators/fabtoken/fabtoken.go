@@ -189,7 +189,7 @@ func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wall
 		tokenOpts := topology.ToOptions(n.Options)
 		remote := tokenOpts.IsRemoteOwner(name)
 		if remote {
-			// Prepare a copy of the keystore folder for the remote wallet
+			// Prepare a copy of the keystore folder for the remote wallet or verify only wallet
 
 			// copy the content of the keystore folder to x509.KeystoreFullFolder
 			in, err := os.Open(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))
