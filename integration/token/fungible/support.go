@@ -329,7 +329,6 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 	input := common.JSONMarshall(&views.Transfer{
 		Auditor:                   auditor,
 		Wallet:                    wallet,
-		ExternalWallet:            true,
 		Type:                      typ,
 		Amount:                    amount,
 		Recipient:                 network.Identity(receiver),
@@ -437,7 +436,6 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 	input := common.JSONMarshall(&views.Transfer{
 		Auditor:                   auditor,
 		Wallet:                    wallet,
-		ExternalWallet:            true,
 		Type:                      typ,
 		Amount:                    amount,
 		RecipientEID:              receiver,

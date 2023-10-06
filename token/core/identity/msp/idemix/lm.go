@@ -142,6 +142,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 	return common.NewIdentityInfo(
 		r.Name,
 		r.EnrollmentID,
+		r.Remote,
 		func() (view.Identity, []byte, error) {
 			return r.GetIdentity(&driver2.IdentityOptions{
 				EIDExtension: true,
@@ -268,7 +269,7 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 	} else {
 		getIdentityFunc = NewIdentityCache(provider.Identity, cacheSize).Identity
 	}
-	lm.addResolver(identity.ID, provider.EnrollmentID(), identity.Default, getIdentityFunc)
+	lm.addResolver(identity.ID, provider.EnrollmentID(), provider.IsRemote(), identity.Default, getIdentityFunc)
 	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identity.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())
 	return nil
 }
@@ -297,12 +298,13 @@ func (lm *LocalMembership) registerProviders(identity config.Identity, curveID m
 	return nil
 }
 
-func (lm *LocalMembership) addResolver(Name string, EnrollmentID string, defaultID bool, IdentityGetter common.GetIdentityFunc) {
+func (lm *LocalMembership) addResolver(Name string, EnrollmentID string, remote bool, defaultID bool, IdentityGetter common.GetIdentityFunc) {
 	resolver := &common.Resolver{
 		Name:         Name,
 		Default:      defaultID,
 		EnrollmentID: EnrollmentID,
 		GetIdentity:  IdentityGetter,
+		Remote:       remote,
 	}
 	lm.resolversByName[Name] = resolver
 	if len(EnrollmentID) != 0 {

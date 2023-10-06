@@ -145,9 +145,14 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 		return nil, errors.Errorf("identity info not found for label [%s][%v]", label, lm.resolversByName)
 	}
 
-	return common.NewIdentityInfo(r.Name, r.EnrollmentID, func() (view.Identity, []byte, error) {
-		return r.GetIdentity(nil)
-	}), nil
+	return common.NewIdentityInfo(
+		r.Name,
+		r.EnrollmentID,
+		r.Remote,
+		func() (view.Identity, []byte, error) {
+			return r.GetIdentity(nil)
+		},
+	), nil
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
@@ -230,7 +235,7 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", identity.ID, provider.EnrollmentID(), walletId.String())
 
 	lm.deserializerManager.AddDeserializer(provider)
-	if err := lm.addResolver(identity.ID, provider.EnrollmentID(), setDefault, provider.Identity); err != nil {
+	if err := lm.addResolver(identity.ID, provider.EnrollmentID(), setDefault, provider.IsRemote(), provider.Identity); err != nil {
 		return err
 	}
 
@@ -255,7 +260,7 @@ func (lm *LocalMembership) registerProviders(c *config.Identity, translatedPath 
 	return nil
 }
 
-func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, IdentityGetter common.GetIdentityFunc) error {
+func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, remote bool, IdentityGetter common.GetIdentityFunc) error {
 	logger.Debugf("Adding resolver [%s:%s]", id, eID)
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
@@ -275,6 +280,7 @@ func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, Id
 		Default:      defaultID,
 		EnrollmentID: eID,
 		GetIdentity:  IdentityGetter,
+		Remote:       remote,
 	}
 	identity, _, err := IdentityGetter(nil)
 	if err != nil {
