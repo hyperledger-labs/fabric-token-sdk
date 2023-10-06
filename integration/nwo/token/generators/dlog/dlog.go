@@ -156,7 +156,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			)
 			Expect(err).NotTo(HaveOccurred())
 
-			// overwrite the signer config file so that the token-sdk will interpreter this wallet as a remote one
+			// overwrite the signer config file so that the token-sdk will interpreter this wallet as a remote one or verify only wallet
 			raw, err := proto.Marshal(signerConfig)
 			Expect(err).NotTo(HaveOccurred())
 

@@ -58,7 +58,8 @@ type LocalMembership struct {
 	resolversByEnrollmentID map[string]*common.Resolver
 	curveID                 math3.CurveID
 	identities              []*config.Identity
-	ignoreVerifyOnlyWallet  bool
+	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
+	ignoreVerifyOnlyWallet bool
 }
 
 func NewLocalMembership(

@@ -43,7 +43,8 @@ type LocalMembership struct {
 	resolversByName          map[string]*common.Resolver
 	resolversByEnrollmentID  map[string]*common.Resolver
 	bccspResolversByIdentity map[string]*common.Resolver
-	ignoreVerifyOnlyWallet   bool
+	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
+	ignoreVerifyOnlyWallet bool
 }
 
 func NewLocalMembership(
