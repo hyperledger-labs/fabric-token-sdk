@@ -161,6 +161,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		orion.WithRole("alice"),
 		token.WithOwnerIdentity("alice.id1"),
 		token.WithRemoteOwnerIdentity("alice_remote"),
+		token.WithRemoteOwnerIdentity("alice_remote_2"),
 	)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
