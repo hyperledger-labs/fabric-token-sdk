@@ -25,11 +25,15 @@ const (
 	Done
 )
 
+// StreamExternalWalletMsg is the root message that the remote wallet and the ttx package exchange.
 type StreamExternalWalletMsg struct {
+	// Type is the type of this message
 	Type StreamExternalWalletMsgType
-	Raw  []byte
+	// Raw will be interpreted following Type
+	Raw []byte
 }
 
+// NewStreamExternalWalletMsg creates a new root message for the given type and value
 func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v interface{}) (*StreamExternalWalletMsg, error) {
 	var raw []byte
 	if v != nil {
@@ -42,15 +46,18 @@ func NewStreamExternalWalletMsg(Type StreamExternalWalletMsgType, v interface{})
 	return &StreamExternalWalletMsg{Type: Type, Raw: raw}, nil
 }
 
+// StreamExternalWalletSignRequest is a message to request a signature
 type StreamExternalWalletSignRequest struct {
 	Party   view.Identity
 	Message []byte
 }
 
+// StreamExternalWalletSignResponse is a message to respond to a request of signature
 type StreamExternalWalletSignResponse struct {
 	Sigma []byte
 }
 
+// StreamExternalWalletSignerServer is the signer server executed by the remote wallet
 type StreamExternalWalletSignerServer struct {
 	stream view2.Stream
 }
@@ -103,6 +110,7 @@ type SignerProvider interface {
 	GetSigner(party view.Identity) (token.Signer, error)
 }
 
+// StreamExternalWalletSignerClient is the signer client executed where the token-sdk is in execution
 type StreamExternalWalletSignerClient struct {
 	sp      SignerProvider
 	stream  view2.Stream

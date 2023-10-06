@@ -27,6 +27,7 @@ func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, 
 	return txOptions, nil
 }
 
+// WithRecipientData is used to add a RecipientData to the service options
 func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
 	return func(options *token.ServiceOptions) error {
 		if options.Params == nil {
@@ -233,6 +234,7 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 
 	var recipientData *RecipientData
 	var recipientIdentity view.Identity
+	// if the initiator send a recipient data, check that the identity has been already registered locally.
 	if recipientRequest.RecipientData != nil {
 		// check it exists and return it back
 		recipientData = recipientRequest.RecipientData
@@ -240,7 +242,9 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		if !w.Contains(recipientIdentity) {
 			return nil, errors.Errorf("cannot find identity [%s] in wallet [%s:%s]", recipientIdentity, wallet, recipientRequest.TMSID)
 		}
+		// TODO: check the other values too
 	} else {
+		// otherwise generate one fresh
 		recipientIdentity, err = w.GetRecipientIdentity()
 		if err != nil {
 			logger.Errorf("failed to get recipient identity: [%s]", err)

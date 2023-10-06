@@ -78,7 +78,7 @@ type RegisterRecipientData struct {
 	RecipientData token.RecipientData
 }
 
-// RegisterRecipientDataView is a view that registers an owner wallet
+// RegisterRecipientDataView is a view that registers recipient data
 type RegisterRecipientDataView struct {
 	*RegisterRecipientData
 }

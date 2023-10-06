@@ -79,6 +79,8 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knew already which
 	// identity the recipient wants to use.
+	// If t.RecipientData is different from nil, then this recipient data will be advertised to the recipient
+	// to make sure the recipient is aware of this identity the will be used to transfer tokens to
 	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData))...)
 	assert.NoError(err, "failed getting recipient")
 

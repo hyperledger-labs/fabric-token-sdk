@@ -11,9 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
-	api2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
+	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
@@ -353,6 +352,6 @@ type FabricSigner struct {
 	common.SignerService
 }
 
-func (f *FabricSigner) RegisterSigner(identity view.Identity, signer api2.Signer, verifier api2.Verifier) error {
+func (f *FabricSigner) RegisterSigner(identity view.Identity, signer fdriver.Signer, verifier fdriver.Verifier) error {
 	return f.SignerService.RegisterSigner(identity, signer, verifier)
 }

@@ -38,22 +38,31 @@ type WithdrawalInitiatorView struct {
 }
 
 func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error) {
+	// First the initiator send a withdrawal request to the issuer.
+	// If the initiator has already some recipient data, it uses that directly
 	var id view.Identity
 	var session view.Session
 	var err error
 	if i.RecipientData != nil {
+		// Use the passed RecipientData.
+		// First register it locally
 		assert.NoError(
 			token.GetManagementService(
 				context, token.WithTMSID(i.TMSID),
 			).WalletManager().OwnerWallet(i.Wallet).RegisterRecipient(i.RecipientData),
 			"failed to register remote recipient",
 		)
+		// Then request withdrawal
 		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.RecipientData, token.WithTMSID(i.TMSID))
 	} else {
 		id, session, err = ttx.RequestWithdrawal(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, token.WithTMSID(i.TMSID))
 	}
+	// Request withdrawal
 	assert.NoError(err, "failed to send withdrawal request")
 
+	// At this point we have an inversion of roles.
+	// The initiator becomes a responder.
+	// This is a trick to the reuse the same API independently of the role a party plays.
 	return context.RunView(nil, view.AsResponder(session), view.WithViewCall(
 		func(context view.Context) (interface{}, error) {
 			// At some point, the recipient receives the token transaction that in the meantime has been assembled
@@ -101,9 +110,12 @@ type WithdrawalResponderView struct {
 }
 
 func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error) {
+	// First the issuer receives the withdrawal request
 	issueRequest, err := ttx.ReceiveWithdrawalRequest(context)
 	assert.NoError(err, "failed to receive withdrawal request")
 
+	// Now we have an inversion of roles. The issuer becomes an initiator.
+	// This is a trick to reuse the code used in IssueCashView
 	return context.RunView(nil, view.AsInitiator(), view.WithViewCall(func(context view.Context) (interface{}, error) {
 		// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 		// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
