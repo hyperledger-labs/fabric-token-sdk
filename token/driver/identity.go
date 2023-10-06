@@ -33,6 +33,8 @@ type IdentityInfo interface {
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
 	Get() (view.Identity, []byte, error)
+	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
+	Remote() bool
 }
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.

@@ -38,8 +38,6 @@ type Transfer struct {
 	Auditor string
 	// Wallet is the identifier of the wallet that owns the tokens to transfer
 	Wallet string
-	// ExternalWallet is Wallet needs to be handled as an external wallet
-	ExternalWallet bool
 	// TokenIDs contains a list of token ids to transfer. If empty, tokens are selected on the spot.
 	TokenIDs []*token.ID
 	// Type of tokens to transfer
@@ -176,8 +174,8 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	// the token transaction valid.
 
 	var endorserOpts []ttx.EndorsementsOpt
-	if t.ExternalWallet {
-		// if ExternalWallet is set to true, then the signatures that the wallet must generate are prepared externally to this FSC node.
+	if senderWallet.Remote() {
+		// if the sender wallet is remote, then the signatures that the wallet must generate are prepared externally to this FSC node.
 		// Here, we assume that the view has been called using GRPC stream
 		stream := view4.GetStream(context)
 		endorserOpts = append(endorserOpts, ttx.WithExternalWalletSigner(t.Wallet, ttx.NewStreamExternalWalletSignerServer(stream)))

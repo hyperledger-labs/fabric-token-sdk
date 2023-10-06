@@ -314,6 +314,11 @@ func (o *OwnerWallet) RegisterRecipient(data *RecipientData) error {
 	return o.w.RegisterRecipient(data)
 }
 
+// Remote returns true if this wallet is verify only, meaning that the corresponding secret key is external to this wallet
+func (o *OwnerWallet) Remote() bool {
+	return o.w.Remote()
+}
+
 // IssuerWallet models the wallet of an issuer
 type IssuerWallet struct {
 	*Wallet

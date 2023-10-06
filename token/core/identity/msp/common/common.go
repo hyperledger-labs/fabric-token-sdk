@@ -34,6 +34,7 @@ type Resolver struct {
 	EnrollmentID string
 	Default      bool
 	GetIdentity  GetIdentityFunc
+	Remote       bool
 }
 
 // IdentityInfo implements the driver.IdentityInfo interface.
@@ -41,10 +42,11 @@ type IdentityInfo struct {
 	id          string
 	eid         string
 	getIdentity func() (view.Identity, []byte, error)
+	remote      bool
 }
 
-func NewIdentityInfo(id string, eid string, getIdentity func() (view.Identity, []byte, error)) *IdentityInfo {
-	return &IdentityInfo{id: id, eid: eid, getIdentity: getIdentity}
+func NewIdentityInfo(id string, eid string, remote bool, getIdentity func() (view.Identity, []byte, error)) *IdentityInfo {
+	return &IdentityInfo{id: id, eid: eid, remote: remote, getIdentity: getIdentity}
 }
 
 func (i *IdentityInfo) ID() string {
@@ -57,6 +59,10 @@ func (i *IdentityInfo) EnrollmentID() string {
 
 func (i *IdentityInfo) Get() (view.Identity, []byte, error) {
 	return i.getIdentity()
+}
+
+func (i *IdentityInfo) Remote() bool {
+	return i.remote
 }
 
 type SignerService interface {

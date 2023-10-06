@@ -383,6 +383,10 @@ func (w *ownerWallet) RegisterRecipient(data *driver.RecipientData) error {
 	return nil
 }
 
+func (w *ownerWallet) Remote() bool {
+	return w.identityInfo.Remote()
+}
+
 type issuerWallet struct {
 	tokenService *WalletService
 	id           string

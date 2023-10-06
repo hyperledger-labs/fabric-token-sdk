@@ -436,6 +436,10 @@ func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver
 	return it, nil
 }
 
+func (w *ownerWallet) Remote() bool {
+	return w.identityInfo.Remote()
+}
+
 type issuerWallet struct {
 	walletService *WalletService
 

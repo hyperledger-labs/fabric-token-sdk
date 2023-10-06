@@ -65,8 +65,11 @@ type OwnerWallet interface {
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
 
-	// RegisterRecipient TODO
+	// RegisterRecipient register the given recipient data
 	RegisterRecipient(data *RecipientData) error
+
+	// Remote returns true if this wallet is verify only, meaning that the corresponding secret key is external to this wallet
+	Remote() bool
 }
 
 // IssuerWallet models the wallet of an issuer
