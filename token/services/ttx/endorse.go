@@ -97,10 +97,8 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		}
 	}
 
-	skippedSigmas := c.Opts.SkippedIds() //TODO: SkippedSigmas need to be here because of the next steps. To parallelize, we need to split the operations into two different views
-
 	// Add the signatures to the token request
-	c.tx.TokenRequest.SetSignatures(mergeSigmas(issueSigmas, transferSigmas, skippedSigmas))
+	c.tx.TokenRequest.SetSignatures(mergeSigmas(issueSigmas, transferSigmas))
 
 	// 2. Audit
 	var auditors []view.Identity
@@ -169,13 +167,8 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		return nil, err
 	}
 
-	skippedIds := c.Opts.SkippedIds()
 	sigmas := make(map[string][]byte)
 	for _, party := range signers {
-		if _, ok := skippedIds[party.UniqueID()]; ok {
-			continue
-		}
-
 		signatureRequest := &SignatureRequest{
 			TX:      txRaw,
 			Request: requestRaw,
@@ -407,12 +400,8 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		EID      string
 		Auditor  bool
 	}
-	skippedIds := c.Opts.SkippedIds()
 	var distributionListCompressed []distributionListEntry
 	for _, party := range distributionList {
-		if _, ok := skippedIds[party.UniqueID()]; ok {
-			continue
-		}
 		// For each party in the distribution list:
 		// - check if it is me
 		// - check if it is an auditor
