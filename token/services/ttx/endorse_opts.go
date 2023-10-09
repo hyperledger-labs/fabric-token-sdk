@@ -6,22 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 
 package ttx
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 // EndorsementsOpts is used to configure the CollectEndorsementsView
 type EndorsementsOpts struct {
 	// SkipAuditing set it to true to skip the auditing phase
 	SkipAuditing bool
 	// SkipApproval set it to true to skip the approval phase
 	SkipApproval bool
-	// SkipIds add parties that do not have to endorse the transaction
-	SkipIds map[string][]byte
 	// External Signers
 	ExternalWalletSigners map[string]ExternalWalletSigner
-}
-
-func (o *EndorsementsOpts) SkippedIds() map[string][]byte {
-	return o.SkipIds
 }
 
 func (o *EndorsementsOpts) ExternalWalletSigner(id string) ExternalWalletSigner {
@@ -57,13 +49,6 @@ func WithSkipAuditing() EndorsementsOpt {
 func WithSkipApproval() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipApproval = true
-		return nil
-	}
-}
-
-func WithSkipId(party view.Identity, sigma []byte) EndorsementsOpt {
-	return func(o *EndorsementsOpts) error {
-		o.SkipIds[party.UniqueID()] = sigma
 		return nil
 	}
 }
