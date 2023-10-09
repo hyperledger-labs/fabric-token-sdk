@@ -19,24 +19,24 @@ import (
 )
 
 type serverConfig struct {
-	CCID       string
-	CCaddress  string
-	TLS        string
-	LogLevel   string
-	TLSKey     string
-	TLSCert    string
-	TLSCACerts string
+	CCID               string
+	CCaddress          string
+	TLS                string
+	LogLevel           string
+	TLSKey             string
+	TLSCert            string
+	TLSCACertsFilePath string
 }
 
 func main() {
 	config := serverConfig{
-		CCID:       os.Getenv("CHAINCODE_ID"),
-		CCaddress:  os.Getenv("CHAINCODE_SERVER_ADDRESS"),
-		LogLevel:   os.Getenv("CHAINCODE_LOG_LEVEL"),
-		TLS:        os.Getenv("CHAINCODE_TLS"),
-		TLSKey:     os.Getenv("CHAINCODE_TLS_KEY"),
-		TLSCert:    os.Getenv("CHAINCODE_TLS_CERT"),
-		TLSCACerts: os.Getenv("CHAINCODE_TLS_CA_CERTS"),
+		CCID:               os.Getenv("CHAINCODE_ID"),
+		CCaddress:          os.Getenv("CHAINCODE_SERVER_ADDRESS"),
+		LogLevel:           os.Getenv("CHAINCODE_LOG_LEVEL"),
+		TLS:                os.Getenv("CHAINCODE_TLS"),
+		TLSKey:             os.Getenv("CHAINCODE_TLS_KEY"),
+		TLSCert:            os.Getenv("CHAINCODE_TLS_CERT"),
+		TLSCACertsFilePath: os.Getenv("CHAINCODE_TLS_CA_CERTS"),
 	}
 
 	if len(config.LogLevel) == 0 {
@@ -85,8 +85,8 @@ func main() {
 			assertNoError(err, "cannot read tls key at [%s]", config.TLSKey)
 			tlsCertRaw, err := os.ReadFile(config.TLSCert)
 			assertNoError(err, "cannot read tls cert at [%s]", config.TLSKey)
-			tlsCACertsRaw, err := os.ReadFile(config.TLSCACerts)
-			assertNoError(err, "cannot read tls ca certs at [%s]", config.TLSCACerts)
+			tlsCACertsRaw, err := os.ReadFile(config.TLSCACertsFilePath)
+			assertNoError(err, "cannot read tls ca certs at [%s]", config.TLSCACertsFilePath)
 
 			tlsProps.Key = tlsKeyRaw
 			tlsProps.Cert = tlsCertRaw
