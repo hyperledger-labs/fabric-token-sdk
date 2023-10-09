@@ -272,6 +272,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()
+	Eventually(DoesWalletExist).WithArguments(network, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "issuer", "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	Eventually(DoesWalletExist).WithArguments(network, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "alice", "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 	t1 := time.Now()
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
@@ -800,6 +804,7 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 		Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	}
 	Eventually(DoesWalletExist).WithArguments(network, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "manager", "manager.id1", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
 	txId := IssueCash(network, "", "USD", 110, "alice", auditor, true, "newIssuer")
 	Expect(txId).NotTo(BeEmpty())

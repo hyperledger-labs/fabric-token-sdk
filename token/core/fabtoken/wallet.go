@@ -190,8 +190,7 @@ func (s *WalletService) issuerWallet(id interface{}) (driver.IssuerWallet, error
 	// check if there is already a wallet
 	w, idInfo, wID, err := s.IssuerWalletsRegistry.Lookup(id)
 	if err != nil {
-		logger.Errorf("failed to lookup identity for issuer wallet [%s]", err)
-		return nil, nil
+		return nil, errors.WithMessagef(err, "failed to lookup identity for issuer wallet")
 	}
 	if w != nil {
 		return w.(driver.IssuerWallet), nil

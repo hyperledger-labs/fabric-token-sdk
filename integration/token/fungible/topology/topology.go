@@ -72,6 +72,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
 	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
+	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -277,6 +278,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	manager.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	manager.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	manager.RegisterViewFactory("ListOwnerWalletIDsView", &views.ListOwnerWalletIDsViewFactory{})
+	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
