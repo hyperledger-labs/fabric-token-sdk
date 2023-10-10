@@ -71,7 +71,6 @@ type Transfer struct {
 
 type TransferView struct {
 	*Transfer
-	TxCallback func(transaction *ttx.Transaction) error
 }
 
 func (t *TransferView) Call(context view.Context) (txID interface{}, err error) {
@@ -142,10 +141,6 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
 	)
 	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
-
-	if t.TxCallback != nil && t.TxCallback(tx) != nil {
-		return nil, err
-	}
 
 	// add additional transfers
 	for i, action := range t.TransferAction {
