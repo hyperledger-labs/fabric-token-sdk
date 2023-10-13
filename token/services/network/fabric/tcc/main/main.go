@@ -19,42 +19,38 @@ import (
 )
 
 type serverConfig struct {
-	CCID           string
-	CCaddress      string
-	LogLevel       string
-	MetricsEnabled bool
-	MetricsServer  string
+	CCID               string
+	CCaddress          string
+	TLS                string
+	LogLevel           string
+	TLSKey             string
+	TLSCert            string
+	TLSCACertsFilePath string
 }
 
 func main() {
-	metricsEnabledEnv := os.Getenv("CHAINCODE_METRICS_ENABLED")
-	metricsEnabled := false
-	if len(metricsEnabledEnv) > 0 {
-		var err error
-		metricsEnabled, err = strconv.ParseBool(metricsEnabledEnv)
-		if err != nil {
-			fmt.Printf("Error parsing CHAINCODE_METRICS_ENABLED: %s\n", err)
-			os.Exit(1)
-		}
+	config := serverConfig{
+		CCID:               os.Getenv("CHAINCODE_ID"),
+		CCaddress:          os.Getenv("CHAINCODE_SERVER_ADDRESS"),
+		LogLevel:           os.Getenv("CHAINCODE_LOG_LEVEL"),
+		TLS:                os.Getenv("CHAINCODE_TLS"),
+		TLSKey:             os.Getenv("CHAINCODE_TLS_KEY"),
+		TLSCert:            os.Getenv("CHAINCODE_TLS_CERT"),
+		TLSCACertsFilePath: os.Getenv("CHAINCODE_TLS_CA_CERTS"),
 	}
 
-	config := serverConfig{
-		CCID:           os.Getenv("CHAINCODE_ID"),
-		CCaddress:      os.Getenv("CHAINCODE_SERVER_ADDRESS"),
-		LogLevel:       os.Getenv("CHAINCODE_LOG_LEVEL"),
-		MetricsEnabled: metricsEnabled,
-		MetricsServer:  os.Getenv("CHAINCODE_METRICS_SERVER"),
+	if len(config.LogLevel) == 0 {
+		config.LogLevel = "info"
 	}
-	if len(config.MetricsServer) == 0 {
-		config.MetricsServer = "localhost:8125"
+	if len(config.TLS) == 0 {
+		config.TLS = "true"
 	}
+
 	flogging.Init(flogging.Config{
 		Format:  "'%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}'",
-		LogSpec: "info",
+		LogSpec: config.LogLevel,
 		Writer:  os.Stderr,
 	})
-
-	fmt.Printf("metrics server at [%s], enabled [%v]", config.MetricsServer, config.MetricsEnabled)
 
 	if config.CCID == "" || config.CCaddress == "" {
 		fmt.Println("CC ID or CC address is empty... Running as usual...")
@@ -70,18 +66,35 @@ func main() {
 					}
 					return ppm.PublicParameters(), v, nil
 				},
-				MetricsEnabled: config.MetricsEnabled,
-				MetricsServer:  config.MetricsServer,
 			},
 		)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Exiting chaincode: %s", err)
-			os.Exit(2)
-		}
+		assertNoError(err, "cannot start chaincode")
 	} else {
 		fmt.Println("Token Chaincode CCID : " + config.CCID)
 		fmt.Println("Token Chaincode address : " + config.CCaddress)
 		fmt.Println("Running Token Chaincode as service ...")
+
+		// prepare TLS properties
+		tlsProps := shim.TLSProperties{
+			Disabled: false,
+		}
+		enabled, err := strconv.ParseBool(config.TLS)
+		assertNoError(err, "cannot parse [%s]", config.TLS)
+		if enabled {
+			tlsKeyRaw, err := os.ReadFile(config.TLSKey)
+			assertNoError(err, "cannot read tls key at [%s]", config.TLSKey)
+			tlsCertRaw, err := os.ReadFile(config.TLSCert)
+			assertNoError(err, "cannot read tls cert at [%s]", config.TLSKey)
+			tlsCACertsRaw, err := os.ReadFile(config.TLSCACertsFilePath)
+			assertNoError(err, "cannot read tls ca certs at [%s]", config.TLSCACertsFilePath)
+
+			tlsProps.Key = tlsKeyRaw
+			tlsProps.Cert = tlsCertRaw
+			tlsProps.ClientCACerts = tlsCACertsRaw
+		} else {
+			tlsProps.Disabled = true
+		}
+
 		server := &shim.ChaincodeServer{
 			CCID:    config.CCID,
 			Address: config.CCaddress,
@@ -93,18 +106,17 @@ func main() {
 					}
 					return ppm.PublicParameters(), v, nil
 				},
-				LogLevel:       config.LogLevel,
-				MetricsEnabled: config.MetricsEnabled,
-				MetricsServer:  config.MetricsServer,
+				LogLevel: config.LogLevel,
 			},
-			TLSProps: shim.TLSProperties{
-				// TODO : enable TLS
-				Disabled: true,
-			},
+			TLSProps: tlsProps,
 		}
-		err := server.Start()
-		if err != nil {
-			fmt.Printf("Error starting Token Chaincode: %s", err)
-		}
+		err = server.Start()
+		assertNoError(err, "Error starting Token Chaincode")
+	}
+}
+
+func assertNoError(err error, s string, args ...string) {
+	if err != nil {
+		panic(fmt.Sprintf(s+": [%s]", append(args, err.Error())))
 	}
 }
