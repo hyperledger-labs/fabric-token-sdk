@@ -73,7 +73,9 @@ func OpenDB(path string) (*Persistence, error) {
 	info, err := os.Stat(path)
 	logger.Debugf("Opening TTX DB at [%s][%s:%s]", path, info, err)
 
-	db, err := badger.Open(badger.DefaultOptions(path))
+	opts := badger.DefaultOptions(path)
+	opts.Logger = logger
+	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not open DB at '%s'", path)
 	}
