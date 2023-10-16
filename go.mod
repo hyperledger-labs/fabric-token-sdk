@@ -3,9 +3,9 @@ module github.com/hyperledger-labs/fabric-token-sdk
 go 1.20
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20230831093709-b7a940638990
-	github.com/IBM/idemix/bccsp/types v0.0.0-20230831093709-b7a940638990
-	github.com/IBM/mathlib v0.0.3-0.20230831091907-c532c4d3b65c
+	github.com/IBM/idemix v0.0.2-0.20231016085906-d8e84ea8799a
+	github.com/IBM/idemix/bccsp/types v0.0.0-20231011104934-31eab860c591
+	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/gammazero/deque v0.2.1
@@ -33,7 +33,7 @@ require (
 )
 
 require (
-	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20230817163708-4b3de6d91874 // indirect
+	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231011102509-6729c6e86d00 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.5.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
@@ -43,8 +43,8 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20230831093709-b7a940638990 // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20230831093709-b7a940638990 // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20231007073542-19fc3525a5e6 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20231007073542-19fc3525a5e6 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Microsoft/hcsshim v0.8.25 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
@@ -54,12 +54,13 @@ require (
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.2.1 // indirect
+	github.com/bits-and-blooms/bitset v1.7.0 // indirect
+	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cenkalti/backoff/v4 v4.2.0 // indirect
 	github.com/cespare/xxhash v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/consensys/bavard v0.1.13 // indirect
-	github.com/consensys/gnark-crypto v0.9.1 // indirect
+	github.com/consensys/gnark-crypto v0.12.1 // indirect
 	github.com/containerd/cgroups v1.1.0 // indirect
 	github.com/containerd/containerd v1.5.18 // indirect
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
