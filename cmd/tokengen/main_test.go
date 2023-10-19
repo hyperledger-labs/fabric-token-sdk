@@ -57,27 +57,86 @@ func TestGenFullSuccess(t *testing.T) {
 		},
 	)
 
-	// Check output
-	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
-	gt.Expect(err).NotTo(HaveOccurred())
+	validateOutputEquivalent(
+		gt,
+		tempOutput,
+		"./testdata/auditors/msp",
+		"./testdata/issuers/msp",
+		"./testdata/idemix/msp/IssuerPublicKey",
+	)
+}
 
-	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, crypto.DLogPublicParameters)
+func TestFullUpdate(t *testing.T) {
+	gt := NewWithT(t)
+	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
 	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
+	defer gexec.CleanupBuildArtifacts()
 
-	auditors := pp.Auditors()
-	auditor, err := common.GetMSPIdentity("./testdata/auditors/msp", msp.AuditorMSPID)
+	tempOutput, err := os.MkdirTemp("", "tokengen-update-test")
 	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(auditors[0]).To(Equal(auditor))
+	defer os.RemoveAll(tempOutput)
 
-	issuers := pp.Issuers
-	issuer, err := common.GetMSPIdentity("./testdata/issuers/msp", msp.IssuerMSPID)
-	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(issuers[0]).To(BeEquivalentTo(issuer))
+	// Switching the auditor and issuer certs to test the update function
+	testGenRun(
+		gt,
+		tokengen,
+		[]string{
+			"update",
+			"dlog",
+			"--issuers",
+			"./testdata/auditors/msp",
+			"--auditors",
+			"./testdata/issuers/msp",
+			"--input",
+			"./testdata/zkatdlog_pp.json",
+			"--output",
+			tempOutput,
+		},
+	)
 
-	idemixPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+	validateOutputEquivalent(
+		gt,
+		tempOutput,
+		"./testdata/issuers/msp",
+		"./testdata/auditors/msp",
+		"./testdata/idemix/msp/IssuerPublicKey",
+	)
+}
+
+func TestPartialUpdate(t *testing.T) {
+	gt := NewWithT(t)
+	tokengen, err := gexec.Build("github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen")
 	gt.Expect(err).NotTo(HaveOccurred())
-	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPK))
+	defer gexec.CleanupBuildArtifacts()
+
+	tempOutput, err := os.MkdirTemp("", "tokengen-update-test")
+	gt.Expect(err).NotTo(HaveOccurred())
+	defer os.RemoveAll(tempOutput)
+
+	// Only changing the issuer cert to also use the auditor cert.
+	// The other auditor cert should stay the same.
+	testGenRun(
+		gt,
+		tokengen,
+		[]string{
+			"update",
+			"dlog",
+			"--issuers",
+			"./testdata/auditors/msp",
+			"--input",
+			"./testdata/zkatdlog_pp.json",
+			"--output",
+			tempOutput,
+		},
+	)
+
+	validateOutputEquivalent(
+		gt,
+		tempOutput,
+		"./testdata/auditors/msp",
+		"./testdata/auditors/msp",
+		"./testdata/idemix/msp/IssuerPublicKey",
+	)
 }
 
 func TestGenFailure(t *testing.T) {
@@ -167,6 +226,29 @@ func TestGenFailure(t *testing.T) {
 	gt.Expect(err).NotTo(HaveOccurred())
 	_, _, err = token.NewServicesFromPublicParams(raw)
 	gt.Expect(err).NotTo(HaveOccurred())
+}
+
+func validateOutputEquivalent(gt *WithT, tempOutput, auditorsMSPdir, issuersMSPdir, idemixMSPdir string) {
+	ppRaw, err := os.ReadFile(filepath.Join(tempOutput, "zkatdlog_pp.json"))
+	gt.Expect(err).NotTo(HaveOccurred())
+
+	pp, err := crypto.NewPublicParamsFromBytes(ppRaw, crypto.DLogPublicParameters)
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(pp.Validate()).NotTo(HaveOccurred())
+
+	auditors := pp.Auditors()
+	auditor, err := common.GetMSPIdentity(auditorsMSPdir, msp.AuditorMSPID)
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(auditors[0]).To(Equal(auditor))
+
+	issuers := pp.Issuers
+	issuer, err := common.GetMSPIdentity(issuersMSPdir, msp.IssuerMSPID)
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(issuers[0]).To(BeEquivalentTo(issuer))
+
+	idemixPK, err := os.ReadFile(idemixMSPdir)
+	gt.Expect(err).NotTo(HaveOccurred())
+	gt.Expect(idemixPK).To(BeEquivalentTo(pp.IdemixIssuerPK))
 }
 
 func testGenRunWithError(gt *WithT, tokengen string, args []string, errMsg string) {

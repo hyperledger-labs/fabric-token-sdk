@@ -92,6 +92,22 @@ Flags:
 
 The public parameters are stored in the output folder with name `zkatdlog_pp.json`.
 
+### tokengen update dlog
+
+This command takes an existing `zkatdlog_pp.json` and allows you to update the issuer and/or auditor certificates, while keeping the public parameters intact.
+
+```
+Usage:
+  tokengen update dlog [flags]
+
+Flags:
+  -a, --auditors strings   list of auditor MSP directories containing the corresponding auditor certificate
+  -h, --help               help for dlog
+  -i, --input string       path of the public param file
+  -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
+  -o, --output string      output folder (default ".")
+```
+
 ## tokengen pp
 
 The `tokengen pp` command has the following subcommands:

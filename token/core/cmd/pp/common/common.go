@@ -8,6 +8,7 @@ package common
 
 import (
 	"encoding/pem"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -117,20 +118,28 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read directory %s", dir)
 	}
+	errs := []string{}
 	for _, f := range files {
 		fullName := filepath.Join(dir, f.Name())
 		f, err := os.Stat(fullName)
 		if err != nil {
+			errs = append(errs, fmt.Sprintf("error reading %s: %s", fullName, err.Error()))
 			continue
 		}
 		if f.IsDir() {
+			errs = append(errs, fmt.Sprintf("is a directory: %s", fullName))
 			continue
 		}
 		item, err := ReadSingleCertificateFromFile(fullName)
 		if err != nil {
+			errs = append(errs, err.Error())
 			continue
 		}
 		content = append(content, item)
 	}
+	if len(content) == 0 {
+		return content, errors.New(strings.Join(errs, ", "))
+	}
+
 	return content, nil
 }
