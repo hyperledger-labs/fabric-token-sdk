@@ -41,6 +41,7 @@ func main() {
 	mainFlags.MarkHidden("logging-level")
 
 	mainCmd.AddCommand(pp2.GenCmd())
+	mainCmd.AddCommand(pp2.UpdateCmd())
 	mainCmd.AddCommand(pp2.UtilsCmd())
 	mainCmd.AddCommand(certfier.KeyPairGenCmd())
 	mainCmd.AddCommand(gen.Cmd())
