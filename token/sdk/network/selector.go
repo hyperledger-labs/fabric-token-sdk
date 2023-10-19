@@ -13,8 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/inmemory"
+	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple/inmemory"
 )
 
 type FabricVault struct {

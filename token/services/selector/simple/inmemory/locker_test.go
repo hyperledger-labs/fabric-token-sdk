@@ -9,9 +9,8 @@ package inmemory
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestLockEntry(t *testing.T) {

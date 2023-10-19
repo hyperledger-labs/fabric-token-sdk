@@ -7,6 +7,12 @@ The following example provides descriptions for the various keys required for a 
 token:
   # Is the token-sdk enabled
   enabled: true
+
+  # token selector configuration allows to use different implementations of the token selector
+  # the "default" driver is the mailman implementation, other possible configurations are: "simple"
+  selector:
+    driver: mailman
+
   tms:
     mytms: # unique name of this token management system
       network: default # the name of the network this TMS refers to (Fabric, Orion, etc)

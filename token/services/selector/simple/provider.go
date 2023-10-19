@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package selector
+package simple
 
 import (
 	"sync"
@@ -13,9 +13,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.selector")
@@ -35,20 +35,20 @@ type LockerProvider interface {
 	New(network, channel, namespace string) Locker
 }
 
-type selectorService struct {
+type SelectorService struct {
 	sp                   view.ServiceProvider
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
 
-	lock           sync.Mutex
+	lock           sync.RWMutex
 	lockerProvider LockerProvider
 	lockers        map[string]Locker
 	managers       map[string]token.SelectorManager
 }
 
-func NewProvider(sp view.ServiceProvider, lockerProvider LockerProvider, numRetry int, timeout time.Duration) *selectorService {
-	return &selectorService{
+func NewProvider(sp view.ServiceProvider, lockerProvider LockerProvider, numRetry int, timeout time.Duration) *SelectorService {
+	return &SelectorService{
 		sp:                   sp,
 		lockerProvider:       lockerProvider,
 		lockers:              map[string]Locker{},
@@ -59,21 +59,33 @@ func NewProvider(sp view.ServiceProvider, lockerProvider LockerProvider, numRetr
 	}
 }
 
-func (s *selectorService) SelectorManager(network string, channel string, namespace string) token.SelectorManager {
+func (s *SelectorService) SelectorManager(network string, channel string, namespace string) (token.SelectorManager, error) {
 	tms := token.GetManagementService(
 		s.sp,
 		token.WithNetwork(network),
 		token.WithChannel(channel),
 		token.WithNamespace(namespace),
 	)
-
-	s.lock.Lock()
-	defer s.lock.Unlock()
+	if tms == nil {
+		return nil, errors.Errorf("failed to get TMS for [%s:%s:%s]", network, channel, namespace)
+	}
 
 	key := tms.Network() + tms.Channel() + tms.Namespace()
+
+	s.lock.RLock()
 	manager, ok := s.managers[key]
 	if ok {
-		return manager
+		s.lock.RUnlock()
+		return manager, nil
+	}
+	s.lock.RUnlock()
+
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	manager, ok = s.managers[key]
+	if ok {
+		return manager, nil
 	}
 
 	// instantiate a new manager
@@ -89,6 +101,10 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		tms.Vault().NewQueryEngine(),
 		locker,
 	)
+	pp := tms.PublicParametersManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
+	}
 	manager = NewManager(
 		locker,
 		func() QueryService {
@@ -97,22 +113,22 @@ func (s *selectorService) SelectorManager(network string, channel string, namesp
 		s.numRetry,
 		s.timeout,
 		s.requestCertification,
-		tms.PublicParametersManager().PublicParameters().Precision(),
+		pp.Precision(),
 		tracing.Get(s.sp).GetTracer(),
 	)
 	s.managers[key] = manager
-	return manager
+	return manager, nil
 }
 
-func (s *selectorService) SetNumRetries(n uint) {
+func (s *SelectorService) SetNumRetries(n uint) {
 	s.numRetry = int(n)
 }
 
-func (s *selectorService) SetRetryTimeout(t time.Duration) {
+func (s *SelectorService) SetRetryTimeout(t time.Duration) {
 	s.timeout = t
 }
 
-func (s *selectorService) SetRequestCertification(v bool) {
+func (s *SelectorService) SetRequestCertification(v bool) {
 	s.requestCertification = v
 }
 

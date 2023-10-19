@@ -35,7 +35,7 @@ func Topology() []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("debug", "")
+	//fscTopology.SetLogging("debug", "")
 
 	issuer := fscTopology.NewTemplate("issuer")
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})

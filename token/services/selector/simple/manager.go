@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package selector
+package simple
 
 import (
 	"time"
@@ -14,7 +14,7 @@ import (
 
 type NewQueryEngineFunc func() QueryService
 
-type manager struct {
+type Manager struct {
 	locker               Locker
 	newQueryEngine       NewQueryEngineFunc
 	numRetry             int
@@ -32,8 +32,8 @@ func NewManager(
 	requestCertification bool,
 	precision uint64,
 	tracer Tracer,
-) *manager {
-	return &manager{
+) *Manager {
+	return &Manager{
 		locker:               locker,
 		newQueryEngine:       newQueryEngine,
 		numRetry:             numRetry,
@@ -44,7 +44,7 @@ func NewManager(
 	}
 }
 
-func (m *manager) NewSelector(id string) (token.Selector, error) {
+func (m *Manager) NewSelector(id string) (token.Selector, error) {
 	return &selector{
 		txID:                 id,
 		locker:               m.locker,
@@ -57,7 +57,7 @@ func (m *manager) NewSelector(id string) (token.Selector, error) {
 	}, nil
 }
 
-func (m *manager) Unlock(txID string) error {
+func (m *Manager) Unlock(txID string) error {
 	m.locker.UnlockByTxID(txID)
 	return nil
 }

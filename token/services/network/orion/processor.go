@@ -127,6 +127,9 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		}
 	}
 
+	var keysToAppend []string
+	var valuesToAppend [][]byte
+
 	for i := 0; i < rws.NumWrites(ns); i++ {
 		key, val, err := rws.GetWriteAt(ns, i)
 		if err != nil {
@@ -173,10 +176,9 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			continue
 		}
 
-		if err := wrappedRWS.SetState(ns, key, val); err != nil {
-			logger.Errorf("failed to set state [%s]", err)
-			return errors.Wrapf(err, "failed to set state [%s]", key)
-		}
+		// the vault does not understand keys with `~`, therefore we store the equivalent key-value pairs without that symbol.
+		keysToAppend = append(keysToAppend, key)
+		valuesToAppend = append(valuesToAppend, val)
 
 		index, err := strconv.ParseUint(components[1], 10, 64)
 		if err != nil {
@@ -262,6 +264,14 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			logger.Debugf("Done parsing write key [%s]", key)
 		}
 	}
+
+	for i := 0; i < len(valuesToAppend); i++ {
+		if err := wrappedRWS.SetState(ns, keysToAppend[i], valuesToAppend[i]); err != nil {
+			logger.Errorf("failed to set state [%s]", err)
+			return errors.Wrapf(err, "failed to set state [%s]", keysToAppend[i])
+		}
+	}
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s] is known, extract tokens, done!", txID)
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
@@ -51,7 +52,11 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 		return res, nil
 	}
 
-	tokenStore, err := processor.NewCommonTokenStore(v.sp)
+	tokenStore, err := processor.NewCommonTokenStore(v.sp, token3.TMSID{
+		Network:   network,
+		Channel:   channel,
+		Namespace: namespace,
+	})
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store")
 	}
