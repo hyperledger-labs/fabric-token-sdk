@@ -10,35 +10,34 @@ import (
 	"context"
 	"sync"
 
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	"github.com/pkg/errors"
 )
 
 type Driver struct {
-	sync      sync.Mutex
-	cms       map[string]*CertificationClient
-	certifier *CertificationService
+	Sync                    sync.Mutex
+	CertificationClientsMap map[string]*CertificationClient
+	CertifierService        *CertificationService
 }
 
 func NewDriver() *Driver {
 	return &Driver{
-		sync: sync.Mutex{},
-		cms:  map[string]*CertificationClient{},
+		Sync:                    sync.Mutex{},
+		CertificationClientsMap: map[string]*CertificationClient{},
 	}
 }
 
 func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, channel, namespace string) (driver.CertificationClient, error) {
-	d.sync.Lock()
-	defer d.sync.Unlock()
+	d.Sync.Lock()
+	defer d.Sync.Unlock()
 
 	k := channel + ":" + namespace
-	cm, ok := d.cms[k]
+	cm, ok := d.CertificationClientsMap[k]
 	if !ok {
 		n := network.GetInstance(sp, networkID, channel)
 		if n == nil {
@@ -75,20 +74,37 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 		)
 		inst.Start()
 
-		d.cms[k] = inst
+		d.CertificationClientsMap[k] = inst
 		cm = inst
 	}
 	return cm, nil
 }
 
 func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, channel, namespace, wallet string) (driver.CertificationService, error) {
-	d.sync.Lock()
-	defer d.sync.Unlock()
+	d.Sync.Lock()
+	defer d.Sync.Unlock()
 
-	if d.certifier == nil {
-		d.certifier = NewCertificationService(sp)
+	if d.CertifierService == nil {
+		d.CertifierService = NewCertificationService(sp, &ChaincodeBackend{})
 	}
-	d.certifier.SetWallet(network, channel, namespace, wallet)
+	d.CertifierService.SetWallet(network, channel, namespace, wallet)
 
-	return d.certifier, nil
+	return d.CertifierService, nil
+}
+
+type ChaincodeBackend struct{}
+
+func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) ([][]byte, error) {
+	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
+	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
+	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
+	}
+
+	tokens, ok := tokensBoxed.([][]byte)
+	if !ok {
+		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
+	}
+	return tokens, nil
 }

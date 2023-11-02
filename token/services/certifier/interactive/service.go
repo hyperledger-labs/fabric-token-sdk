@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package interactive
 
 import (
@@ -10,33 +11,41 @@ import (
 	"sync"
 	"time"
 
-	"github.com/pkg/errors"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
+
+type Backend interface {
+	Load(context view.Context, cr *CertificationRequest) ([][]byte, error)
+}
 
 type CertificationService struct {
 	sp      view2.ServiceProvider
 	wallets map[string]string
+	backend Backend
+	metrics *Metrics
 }
 
-func NewCertificationService(sp view2.ServiceProvider) *CertificationService {
+func NewCertificationService(sp view2.ServiceProvider, backend Backend) *CertificationService {
 	return &CertificationService{
 		sp:      sp,
 		wallets: map[string]string{},
+		metrics: NewMetrics(metrics.GetProvider(sp)),
+		backend: backend,
 	}
 }
 
 func (c *CertificationService) Start() error {
+	logger.Debugf("starting certifier service...")
 	(&sync.Once{}).Do(func() {
 		view2.GetRegistry(c.sp).RegisterResponder(c, &CertificationRequestView{})
 	})
+	logger.Debugf("starting certifier service...done")
 	return nil
 }
 
@@ -56,17 +65,10 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 
 	// TODO: 2. validate request, if needed
 
-	// 3. invoke chaincode to get token outputs
-	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
-	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
-	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
+	// 3. load token outputs
+	tokens, err := c.backend.Load(context, cr)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
-	}
-
-	tokens, ok := tokensBoxed.([][]byte)
-	if !ok {
-		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
 	}
 
 	// 4. certify token output
@@ -100,6 +102,13 @@ func (c *CertificationService) Call(context view.Context) (interface{}, error) {
 	if err := s.Send(certifications); err != nil {
 		return nil, errors.WithMessagef(err, "failed sending certifications")
 	}
+
+	labels := []string{
+		"network", cr.Network,
+		"channel", cr.Channel,
+		"namespace", cr.Namespace,
+	}
+	c.metrics.CertifiedTokens.With(labels...).Add(float64(len(cr.IDs)))
 
 	return nil, nil
 }
