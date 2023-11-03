@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
@@ -20,24 +21,24 @@ import (
 )
 
 type Driver struct {
-	Sync                    sync.Mutex
-	CertificationClientsMap map[string]*CertificationClient
-	CertifierService        *CertificationService
+	sync      sync.Mutex
+	cms       map[string]*CertificationClient
+	certifier *CertificationService
 }
 
 func NewDriver() *Driver {
 	return &Driver{
-		Sync:                    sync.Mutex{},
-		CertificationClientsMap: map[string]*CertificationClient{},
+		sync: sync.Mutex{},
+		cms:  map[string]*CertificationClient{},
 	}
 }
 
 func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, channel, namespace string) (driver.CertificationClient, error) {
-	d.Sync.Lock()
-	defer d.Sync.Unlock()
+	d.sync.Lock()
+	defer d.sync.Unlock()
 
 	k := channel + ":" + namespace
-	cm, ok := d.CertificationClientsMap[k]
+	cm, ok := d.cms[k]
 	if !ok {
 		n := network.GetInstance(sp, networkID, channel)
 		if n == nil {
@@ -62,34 +63,33 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 			return nil, errors.Errorf("no certifier id configured")
 		}
 
-		inst := NewCertificationClient(
-			context.Background(),
-			channel,
-			namespace,
-			v,
-			v,
-			v,
-			view2.GetManager(sp),
-			certifiers,
-		)
-		inst.Start()
+		sub, err := events.GetSubscriber(sp)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get global subscriber")
+		}
 
-		d.CertificationClientsMap[k] = inst
-		cm = inst
+		certificationClient := NewCertificationClient(context.Background(), channel, namespace, v, v, view2.GetManager(sp), certifiers, sub)
+		if err := certificationClient.Scan(); err != nil {
+			logger.Warnf("failed to scan the vault for tokens to be certified [%s]", err)
+		}
+		certificationClient.Start()
+
+		d.cms[k] = certificationClient
+		cm = certificationClient
 	}
 	return cm, nil
 }
 
 func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, channel, namespace, wallet string) (driver.CertificationService, error) {
-	d.Sync.Lock()
-	defer d.Sync.Unlock()
+	d.sync.Lock()
+	defer d.sync.Unlock()
 
-	if d.CertifierService == nil {
-		d.CertifierService = NewCertificationService(sp, &ChaincodeBackend{})
+	if d.certifier == nil {
+		d.certifier = NewCertificationService(sp, &ChaincodeBackend{})
 	}
-	d.CertifierService.SetWallet(network, channel, namespace, wallet)
+	d.certifier.SetWallet(network, channel, namespace, wallet)
 
-	return d.CertifierService, nil
+	return d.certifier, nil
 }
 
 type ChaincodeBackend struct{}
