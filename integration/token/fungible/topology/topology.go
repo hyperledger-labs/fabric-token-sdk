@@ -30,7 +30,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		fabricTopology.EnableIdemix()
 		fabricTopology.AddOrganizationsByName("Org1", "Org2")
 		fabricTopology.SetNamespaceApproverOrgs("Org1")
-		fabricTopology.SetLogging("debug", "")
 		backendNetwork = fabricTopology
 		backendChannel = fabricTopology.Channels[0].Name
 	case "orion":

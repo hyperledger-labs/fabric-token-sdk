@@ -9,7 +9,6 @@ package dlog
 import (
 	"os"
 
-	"github.com/IBM/idemix/common/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -33,11 +32,6 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
 			// notice that fabric-ca does not support yet aries
-			flogging.Init(flogging.Config{
-				Format:  "%{color}%{time:2006-01-02 15:04:05.000 MST} [%{module}] %{shortfunc} -> %{level:.4s} %{id:03x}%{color:reset} %{message}",
-				LogSpec: "debug",
-				Writer:  os.Stderr,
-			})
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, true)...)
 			Expect(err).NotTo(HaveOccurred())
