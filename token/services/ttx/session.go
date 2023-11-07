@@ -9,7 +9,6 @@ package ttx
 import (
 	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/comm"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/pkg/errors"
 )
@@ -23,7 +22,7 @@ type LocalBidirectionalChannel struct {
 
 // NewLocalBidirectionalChannel creates a new bidirectional channel
 func NewLocalBidirectionalChannel(caller string, contextID string, endpoint string, pkid []byte) (*LocalBidirectionalChannel, error) {
-	ID, err := comm.GetRandomNonce()
+	ID, err := GetRandomNonce()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate session ID")
 	}
