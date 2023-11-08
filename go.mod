@@ -3,14 +3,14 @@ module github.com/hyperledger-labs/fabric-token-sdk
 go 1.20
 
 require (
-	github.com/IBM/idemix v0.0.2-0.20231011101252-a4feda90f3f7
-	github.com/IBM/idemix/bccsp/types v0.0.0-20231003090616-bdc7034e988b
+	github.com/IBM/idemix v0.0.2-0.20231107110441-534ea4193b8f
+	github.com/IBM/idemix/bccsp/types v0.0.0-20231107110234-4cf31dd43660
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/dgraph-io/ristretto v0.1.0
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20231006095501-19e9fe1606e2
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20231108073008-c74493bbb6ae
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230401164317-bd8e24856939
@@ -42,14 +42,14 @@ require (
 	code.cloudfoundry.org/clock v1.0.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
 	github.com/BurntSushi/toml v0.3.1 // indirect
-	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20231007073542-19fc3525a5e6 // indirect
-	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20231007073542-19fc3525a5e6 // indirect
+	github.com/IBM/idemix/bccsp/schemes/aries v0.0.0-20231107110234-4cf31dd43660 // indirect
+	github.com/IBM/idemix/bccsp/schemes/weak-bb v0.0.0-20231107110234-4cf31dd43660 // indirect
 	github.com/Microsoft/go-winio v0.5.2 // indirect
 	github.com/Microsoft/hcsshim v0.8.25 // indirect
 	github.com/ReneKroon/ttlcache/v2 v2.11.0 // indirect
 	github.com/Shopify/sarama v1.26.3 // indirect
 	github.com/VictoriaMetrics/fastcache v1.9.0 // indirect
-	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231011102509-6729c6e86d00 // indirect
+	github.com/ale-linux/aries-framework-go/component/kmscrypto v0.0.0-20231023164747-f3f972769504 // indirect
 	github.com/alecthomas/template v0.0.0-20190718012654-fb15b899a751 // indirect
 	github.com/alecthomas/units v0.0.0-20211218093645-b94a6e3cc137 // indirect
 	github.com/benbjohnson/clock v1.3.5 // indirect
