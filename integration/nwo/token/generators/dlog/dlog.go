@@ -83,11 +83,16 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 		return "", err
 	}
 
+	curveID := d.DefaultCurve
+	if IsAries(tms) {
+		curveID = CurveIDToString(math3.BLS12_381_BBS)
+	}
+
 	// notice that if aries is enabled, curve is ignored
 	sess, err := d.Idemixgen(commands.CAKeyGen{
 		NetworkPrefix: tms.ID(),
 		Output:        output,
-		Curve:         d.DefaultCurve,
+		Curve:         curveID,
 		Aries:         IsAries(tms),
 	})
 	if err != nil {
@@ -103,6 +108,11 @@ func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS,
 
 func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
 	logger.Infof("generate [owners] identities [%v]", owners)
+
+	curveID := d.DefaultCurve
+	if IsAries(tms) {
+		curveID = CurveIDToString(math3.BLS12_381_BBS)
+	}
 
 	var res []generators.Identity
 	tmsID := tms.ID()
@@ -129,7 +139,7 @@ func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *
 			OrgUnit:          tmsID + ".example.com",
 			EnrollmentID:     owner,
 			RevocationHandle: fmt.Sprintf("1%d%d", d.RevocationHandlerIndex, i),
-			Curve:            d.DefaultCurve,
+			Curve:            curveID,
 			Aries:            IsAries(tms),
 		})
 		Expect(err).NotTo(HaveOccurred())
