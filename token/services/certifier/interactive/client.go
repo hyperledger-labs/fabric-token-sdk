@@ -51,7 +51,8 @@ type CertificationClient struct {
 	certifiers           []view2.Identity
 	eventOperationMap    map[string]Op
 	// waitTime is used in case of a failure. It tells how much time to wait before retrying.
-	waitTime time.Duration
+	waitTime    time.Duration
+	maxAttempts int
 
 	tokens    chan *token.ID
 	batchSize int
@@ -66,6 +67,8 @@ func NewCertificationClient(
 	fm ViewManager,
 	certifiers []view2.Identity,
 	notifier events.Subscriber,
+	maxAttempts int,
+	waitTime time.Duration,
 ) *CertificationClient {
 	cc := &CertificationClient{
 		ctx:                  ctx,
@@ -75,9 +78,10 @@ func NewCertificationClient(
 		certificationStorage: cm,
 		viewManager:          fm,
 		certifiers:           certifiers,
-		waitTime:             10 * time.Second,
+		waitTime:             waitTime,
 		tokens:               make(chan *token.ID, 1000),
 		batchSize:            10,
+		maxAttempts:          maxAttempts,
 	}
 
 	eventOperationMap := make(map[string]Op)
@@ -109,10 +113,11 @@ func (cc *CertificationClient) RequestCertification(ids ...*token.ID) error {
 
 	var resultBoxed interface{}
 	var err error
-	for i := 0; i < 3; i++ {
+	for i := 0; i < cc.maxAttempts; i++ {
 		resultBoxed, err = cc.viewManager.InitiateView(NewCertificationRequestView(cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...))
 		if err != nil {
-			logger.Errorf("failed to request certification, try again [%d]...", i)
+			logger.Errorf("failed to request certification, try again [%d] after [%s]...", i, cc.waitTime)
+			time.Sleep(cc.waitTime)
 			continue
 		}
 		break
@@ -131,7 +136,7 @@ func (cc *CertificationClient) RequestCertification(ids ...*token.ID) error {
 }
 
 func (cc *CertificationClient) Scan() error {
-	logger.Debugf("check the certification of unspent tokens...")
+	logger.Debugf("check the certification of unspent tokens from the vault...")
 	// Check the unspent tokens
 	var err error
 	tokens, err := cc.queryEngine.UnspentTokensIterator()
@@ -222,6 +227,9 @@ func (cc *CertificationClient) accumulatorCutter() {
 			toCertify := accumulator
 			accumulator = nil
 			go cc.requestCertification(toCertify...)
+		case <-cc.ctx.Done():
+			// time to close
+			return
 		}
 	}
 }
@@ -229,8 +237,9 @@ func (cc *CertificationClient) accumulatorCutter() {
 func (cc *CertificationClient) requestCertification(tokens ...*token.ID) {
 	if len(tokens) == 0 {
 		// no tokens passed, check the vault
+		logger.Debugf("request certification of 0 tokens, check the vault...")
 		if err := cc.Scan(); err != nil {
-			logger.Errorf("failed to scan the vault for token to be certified")
+			logger.Errorf("failed to scan the vault for token to be certified [%s]", err)
 		}
 		return
 	}

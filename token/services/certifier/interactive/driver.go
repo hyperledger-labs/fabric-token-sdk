@@ -9,6 +9,7 @@ package interactive
 import (
 	"context"
 	"sync"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -68,7 +69,18 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 			return nil, errors.WithMessagef(err, "failed to get global subscriber")
 		}
 
-		certificationClient := NewCertificationClient(context.Background(), channel, namespace, v, v, view2.GetManager(sp), certifiers, sub)
+		certificationClient := NewCertificationClient(
+			context.Background(),
+			channel,
+			namespace,
+			v,
+			v,
+			view2.GetManager(sp),
+			certifiers,
+			sub,
+			3,
+			10*time.Second,
+		)
 		if err := certificationClient.Scan(); err != nil {
 			logger.Warnf("failed to scan the vault for tokens to be certified [%s]", err)
 		}
