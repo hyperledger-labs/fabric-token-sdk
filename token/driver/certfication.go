@@ -15,5 +15,8 @@ type CertificationClient interface {
 type CertificationService interface {
 	NewCertificationRequest(ids []*token2.ID) ([]byte, error)
 	Certify(wallet CertifierWallet, ids []*token2.ID, tokens [][]byte, request []byte) ([][]byte, error)
-	VerifyCertifications(ids []*token2.ID, certifications [][]byte) error
+	// VerifyCertifications verifies the validity of the certifications of each token indexed by its token-id.
+	// The function returns the result of any processing of these certifications.
+	// In the simplest case, VerifyCertifications returns the certifications got in input
+	VerifyCertifications(ids []*token2.ID, certifications [][]byte) ([][]byte, error)
 }

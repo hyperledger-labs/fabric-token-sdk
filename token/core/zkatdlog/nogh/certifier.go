@@ -28,6 +28,6 @@ func (s *Service) Certify(wallet driver.CertifierWallet, ids []*token.ID, tokens
 // with the passed identifiers
 // If not, VerifyCertifications returns an error
 // zkatdlog does not make use of the certification service
-func (s *Service) VerifyCertifications(ids []*token.ID, certifications [][]byte) error {
-	return nil
+func (s *Service) VerifyCertifications(ids []*token.ID, certifications [][]byte) ([][]byte, error) {
+	return nil, nil
 }
