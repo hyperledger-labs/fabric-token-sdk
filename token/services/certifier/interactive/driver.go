@@ -9,15 +9,16 @@ package interactive
 import (
 	"context"
 	"sync"
-
-	"github.com/pkg/errors"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	"github.com/pkg/errors"
 )
 
 type Driver struct {
@@ -63,20 +64,30 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 			return nil, errors.Errorf("no certifier id configured")
 		}
 
-		inst := NewCertificationClient(
+		sub, err := events.GetSubscriber(sp)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get global subscriber")
+		}
+
+		certificationClient := NewCertificationClient(
 			context.Background(),
 			channel,
 			namespace,
 			v,
 			v,
-			v,
 			view2.GetManager(sp),
 			certifiers,
+			sub,
+			3,
+			10*time.Second,
 		)
-		inst.Start()
+		if err := certificationClient.Scan(); err != nil {
+			logger.Warnf("failed to scan the vault for tokens to be certified [%s]", err)
+		}
+		certificationClient.Start()
 
-		d.cms[k] = inst
-		cm = inst
+		d.cms[k] = certificationClient
+		cm = certificationClient
 	}
 	return cm, nil
 }
@@ -86,9 +97,26 @@ func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, chan
 	defer d.sync.Unlock()
 
 	if d.certifier == nil {
-		d.certifier = NewCertificationService(sp)
+		d.certifier = NewCertificationService(sp, &ChaincodeBackend{})
 	}
 	d.certifier.SetWallet(network, channel, namespace, wallet)
 
 	return d.certifier, nil
+}
+
+type ChaincodeBackend struct{}
+
+func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) ([][]byte, error) {
+	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
+	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
+	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
+	}
+
+	tokens, ok := tokensBoxed.([][]byte)
+	if !ok {
+		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
+	}
+	return tokens, nil
 }
