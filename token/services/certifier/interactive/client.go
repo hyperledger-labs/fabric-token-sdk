@@ -116,7 +116,7 @@ func (cc *CertificationClient) RequestCertification(ids ...*token.ID) error {
 	for i := 0; i < cc.maxAttempts; i++ {
 		resultBoxed, err = cc.viewManager.InitiateView(NewCertificationRequestView(cc.channel, cc.namespace, cc.certifiers[0], toBeCertified...))
 		if err != nil {
-			logger.Errorf("failed to request certification, try again [%d] after [%s]...", i, cc.waitTime)
+			logger.Errorf("failed to request certification [%s], try again [%d] after [%s]...", err, i, cc.waitTime)
 			time.Sleep(cc.waitTime)
 			continue
 		}
