@@ -17,7 +17,7 @@ type CertificationManager struct {
 	c driver.CertificationService
 }
 
-// NewCertificationRequest creates a new certification request for the passed token ids
+// NewCertificationRequest creates a new certification request, in a serialized form, for the passed token ids.
 func (c *CertificationManager) NewCertificationRequest(ids []*token2.ID) ([]byte, error) {
 	return c.c.NewCertificationRequest(ids)
 }

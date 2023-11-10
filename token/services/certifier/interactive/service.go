@@ -149,7 +149,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	).CertificationManager()
 	cr, err := cm.NewCertificationRequest(i.ids)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed creating certification request fo [%v]", i.ids)
+		return nil, errors.WithMessagef(err, "failed creating certification request for [%v]", i.ids)
 	}
 
 	// 2. send request
