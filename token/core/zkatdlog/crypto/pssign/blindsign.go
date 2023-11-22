@@ -74,7 +74,7 @@ func NewRecipient(messages []*math.Zr, blindingfactor *math.Zr, com *math.G1, sk
 // of a committed vector
 type encVerifier struct {
 	// Pedersen commitment generators
-	PedersenParameters []*math.G1 //g_0, g_1, g_2, g_3, h (owner, type, value, sn, randomness)
+	PedersenParameters []*math.G1 // g_0, g_1, g_2, g_3, h (owner, type, value, sn, randomness)
 	// commitment to encrypted messages
 	Commitment *math.G1
 	// encryption of messages
@@ -166,12 +166,12 @@ func (s *BlindSigner) BlindSign(request *BlindSignRequest) (*BlindSignResponse, 
 
 	err := v.Verify(request.Proof)
 	if err != nil {
-		return nil, errors.New("cannot produce Pointcheval-Sanders signature: invalid request")
+		return nil, errors.Wrapf(err, "cannot produce Pointcheval-Sanders signature: invalid request")
 	}
 
 	raw, err := json.Marshal(request.Proof)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to marshal proof")
 	}
 	// hash proof in request
 	// this will be blindly signed along the messages
@@ -234,7 +234,7 @@ func (r *Recipient) Prove() (*EncProof, error) {
 	}
 	rand, err := r.Curve.Rand()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "failed to get rand")
 	}
 	hash := r.Curve.HashToG1(r.Commitment.Bytes())
 
