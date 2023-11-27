@@ -68,11 +68,15 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 		// give it a second change
 		passedIdentity, ok := id.(view.Identity)
 		if ok {
-			logger.Debugf("lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
+			}
 			// is this identity registered
 			wID, err := r.GetWallet(passedIdentity)
 			if err == nil && len(wID) != 0 {
-				logger.Debugf("lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
+				if logger.IsEnabledFor(zapcore.DebugLevel) {
+					logger.Debugf("lookup failed, there is a wallet for identity [%s]: [%s]", passedIdentity, wID)
+				}
 				// we got a hit
 				walletID = wID
 				identity = passedIdentity
@@ -83,7 +87,9 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 			return nil, nil, "", errors.WithMessagef(err, "failed to lookup wallet [%s]", id)
 		}
 	}
-	logger.Debugf("looked-up identifier [%s:%s]", identity, walletIDToString(walletID))
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("looked-up identifier [%s:%s]", identity, walletIDToString(walletID))
+	}
 	wID := walletID
 	walletEntry, ok := r.Wallets[wID]
 	if ok {
@@ -94,17 +100,23 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	// give it a second chance
 	passedIdentity, ok := id.(view.Identity)
 	if ok {
-		logger.Debugf("no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
+		}
 		// is this identity registered
 		passedWalletID, err := r.GetWallet(passedIdentity)
 		if err == nil && len(passedWalletID) != 0 {
-			logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s]", passedIdentity, passedWalletID)
+			}
 			// we got a hit
 			walletEntry, ok = r.Wallets[passedWalletID]
 			if ok {
 				return walletEntry.Wallet, nil, passedWalletID, nil
 			}
-			logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
+			}
 		}
 		walletIdentifiers = append(walletIdentifiers, passedWalletID)
 	}
@@ -137,10 +149,14 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 		var idInfo driver.IdentityInfo
 		idInfo, err = r.IdentityProvider.GetIdentityInfo(r.IdentityRole, id)
 		if err == nil {
-			logger.Debugf("identity info found at [%s]", walletIDToString(id))
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("identity info found at [%s]", walletIDToString(id))
+			}
 			return nil, idInfo, id, nil
 		} else {
-			logger.Debugf("identity info not found at [%s]", walletIDToString(id))
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("identity info not found at [%s]", walletIDToString(id))
+			}
 		}
 	}
 	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%v]", walletIDToString(walletID), walletIdentifiers)
