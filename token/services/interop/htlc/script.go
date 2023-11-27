@@ -106,6 +106,7 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 	}
 	if owner.Type != ScriptType {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptType)
+		return nil, false
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {

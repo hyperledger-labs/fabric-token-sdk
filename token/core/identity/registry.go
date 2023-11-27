@@ -60,6 +60,8 @@ func NewWalletsRegistry(id token.TMSID, identityProvider driver.IdentityProvider
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id.
 // The identity info can be nil meaning that nothing has been found bound to the passed identifier
 func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error) {
+	var walletIdentifiers []string
+
 	identity, walletID, err := r.IdentityProvider.LookupIdentifier(r.IdentityRole, id)
 	if err != nil {
 		fail := true
@@ -87,6 +89,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 	if ok {
 		return walletEntry.Wallet, nil, wID, nil
 	}
+	walletIdentifiers = append(walletIdentifiers, wID)
 
 	// give it a second chance
 	passedIdentity, ok := id.(view.Identity)
@@ -101,15 +104,16 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 			if ok {
 				return walletEntry.Wallet, nil, passedWalletID, nil
 			}
+			logger.Debugf("no wallet found, there is a wallet for identity [%s]: [%s] but it has not been recreated yet", passedIdentity, passedWalletID)
 		}
+		walletIdentifiers = append(walletIdentifiers, passedWalletID)
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("no wallet found for [%s] at [%s]", identity, walletIDToString(wID))
 	}
-	var identityWID string
 	if len(identity) != 0 {
-		identityWID, err = r.GetWallet(identity)
+		identityWID, err := r.GetWallet(identity)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("wallet for identity [%s] -> [%s:%s]", identity, identityWID, err)
 		}
@@ -122,9 +126,10 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 				return w.Wallet, nil, identityWID, nil
 			}
 		}
+		walletIdentifiers = append(walletIdentifiers, identityWID)
 	}
 
-	for _, id := range []string{wID, identityWID} {
+	for _, id := range walletIdentifiers {
 		if len(id) == 0 {
 			continue
 		}
@@ -138,7 +143,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 			logger.Debugf("identity info not found at [%s]", walletIDToString(id))
 		}
 	}
-	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%s]", walletIDToString(walletID), walletIDToString(identityWID))
+	return nil, nil, "", errors.Errorf("failed to get wallet info for [%s:%v]", walletIDToString(walletID), walletIdentifiers)
 }
 
 // RegisterWallet binds the passed wallet to the passed id
