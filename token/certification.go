@@ -17,7 +17,7 @@ type CertificationManager struct {
 	c driver.CertificationService
 }
 
-// NewCertificationRequest creates a new certification request for the passed token ids
+// NewCertificationRequest creates a new certification request, in a serialized form, for the passed token ids.
 func (c *CertificationManager) NewCertificationRequest(ids []*token2.ID) ([]byte, error) {
 	return c.c.NewCertificationRequest(ids)
 }
@@ -28,8 +28,10 @@ func (c *CertificationManager) Certify(wallet *CertifierWallet, ids []*token2.ID
 	return c.c.Certify(wallet.w, ids, tokens, request)
 }
 
-// VerifyCertifications verfiies the certification of the passed token ids.
-func (c *CertificationManager) VerifyCertifications(ids []*token2.ID, certifications [][]byte) error {
+// VerifyCertifications verifies the validity of the certifications of each token indexed by its token-id.
+// The function returns the result of any processing of these certifications.
+// In the simplest case, VerifyCertifications returns the certifications got in input
+func (c *CertificationManager) VerifyCertifications(ids []*token2.ID, certifications [][]byte) ([][]byte, error) {
 	return c.c.VerifyCertifications(ids, certifications)
 }
 

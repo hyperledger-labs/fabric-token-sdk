@@ -149,7 +149,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	).CertificationManager()
 	cr, err := cm.NewCertificationRequest(i.ids)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed creating certification request fo [%v]", i.ids)
+		return nil, errors.WithMessagef(err, "failed creating certification request for [%v]", i.ids)
 	}
 
 	// 2. send request
@@ -180,7 +180,8 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 
 	// 4. Validate response
 	logger.Debugf("validate certification request response for [%v]", i.ids)
-	if err := cm.VerifyCertifications(i.ids, certifications); err != nil {
+	processedCertifications, err := cm.VerifyCertifications(i.ids, certifications)
+	if err != nil {
 		logger.Errorf("failed verifying certifications of [%v] from [%s] with err [%s]", i.ids, i.certifier, err)
 		return nil, errors.WithMessagef(err, "failed verifying certifications of [%v] from [%s]", i.ids, i.certifier)
 	}
@@ -190,7 +191,7 @@ func (i *CertificationRequestView) Call(context view.Context) (interface{}, erro
 	// 5. return token certifications in the form of a map
 	result := map[*token.ID][]byte{}
 	for index, id := range i.ids {
-		result[id] = certifications[index]
+		result[id] = processedCertifications[index]
 	}
 	return result, nil
 }

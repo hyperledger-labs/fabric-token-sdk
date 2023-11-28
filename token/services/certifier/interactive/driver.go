@@ -21,25 +21,29 @@ import (
 	"github.com/pkg/errors"
 )
 
+type BackendFactory func(sp view2.ServiceProvider, network, channel, namespace, wallet string) (Backend, error)
+
 type Driver struct {
-	sync      sync.Mutex
-	cms       map[string]*CertificationClient
-	certifier *CertificationService
+	Sync                 sync.Mutex
+	CertificationClients map[string]*CertificationClient
+	CertificationService *CertificationService
+	BackendFactory       BackendFactory
 }
 
-func NewDriver() *Driver {
+func NewDriver(bf BackendFactory) *Driver {
 	return &Driver{
-		sync: sync.Mutex{},
-		cms:  map[string]*CertificationClient{},
+		Sync:                 sync.Mutex{},
+		CertificationClients: map[string]*CertificationClient{},
+		BackendFactory:       bf,
 	}
 }
 
 func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, channel, namespace string) (driver.CertificationClient, error) {
-	d.sync.Lock()
-	defer d.sync.Unlock()
+	d.Sync.Lock()
+	defer d.Sync.Unlock()
 
 	k := channel + ":" + namespace
-	cm, ok := d.cms[k]
+	cm, ok := d.CertificationClients[k]
 	if !ok {
 		n := network.GetInstance(sp, networkID, channel)
 		if n == nil {
@@ -86,22 +90,26 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 		}
 		certificationClient.Start()
 
-		d.cms[k] = certificationClient
+		d.CertificationClients[k] = certificationClient
 		cm = certificationClient
 	}
 	return cm, nil
 }
 
 func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, channel, namespace, wallet string) (driver.CertificationService, error) {
-	d.sync.Lock()
-	defer d.sync.Unlock()
+	d.Sync.Lock()
+	defer d.Sync.Unlock()
 
-	if d.certifier == nil {
-		d.certifier = NewCertificationService(sp, &ChaincodeBackend{})
+	if d.CertificationService == nil {
+		backend, err := d.BackendFactory(sp, network, channel, namespace, wallet)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create backend")
+		}
+		d.CertificationService = NewCertificationService(sp, backend)
 	}
-	d.certifier.SetWallet(network, channel, namespace, wallet)
+	d.CertificationService.SetWallet(network, channel, namespace, wallet)
 
-	return d.certifier, nil
+	return d.CertificationService, nil
 }
 
 type ChaincodeBackend struct{}
