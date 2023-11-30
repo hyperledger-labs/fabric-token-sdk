@@ -239,7 +239,7 @@ func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Si
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signature generated (me) [%s,%s,%s]",
+		logger.Debugf("signature generated (local, me) [%s,%s,%s]",
 			hash.Hashable(signatureRequest.MessageToSign()).String(),
 			hash.Hashable(sigma).String(),
 			party.UniqueID(),
@@ -258,7 +258,7 @@ func (c *CollectEndorsementsView) signExternal(party view.Identity, signer Exter
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signature generated (me) [%s,%s,%s]",
+		logger.Debugf("signature generated (external, me) [%s,%s,%s]",
 			hash.Hashable(signatureRequest.MessageToSign()).String(),
 			hash.Hashable(sigma).String(),
 			party.UniqueID(),
