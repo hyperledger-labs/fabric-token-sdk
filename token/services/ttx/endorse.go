@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"reflect"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -243,7 +244,7 @@ func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Si
 			hash.Hashable(signatureRequest.MessageToSign()).String(),
 			hash.Hashable(sigma).String(),
 			party.UniqueID(),
-			signer,
+			GetIdentifier(signer),
 		)
 	}
 	return sigma, nil
@@ -888,4 +889,15 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 		distributionList = append(distributionList, transfer.Receivers...)
 	}
 	return distributionList
+}
+
+func GetIdentifier(f any) string {
+	if f == nil {
+		return "<nil view>"
+	}
+	t := reflect.TypeOf(f)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.PkgPath() + "/" + t.Name()
 }
