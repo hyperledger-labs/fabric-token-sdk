@@ -280,6 +280,11 @@ func (o *OwnerWallet) GetTokenMetadata(token []byte) ([]byte, error) {
 	return o.w.GetTokenMetadata(token)
 }
 
+// GetTokenIdentityMetadata TODO
+func (o *OwnerWallet) GetTokenIdentityMetadata(token []byte) ([]byte, error) {
+	return o.w.GetTokenIdentityMetadata(token)
+}
+
 // ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.
 // Options: WithType
 func (o *OwnerWallet) ListUnspentTokens(opts ...ListTokensOption) (*token.UnspentTokens, error) {

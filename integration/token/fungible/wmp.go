@@ -41,12 +41,15 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 	Expect(err).ToNot(HaveOccurred())
 	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
 	Expect(err).ToNot(HaveOccurred())
-	metadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
+	tokenMetadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
+	Expect(err).ToNot(HaveOccurred())
+	tokenIdentityMetadata, err := ownerWallet.GetTokenIdentityMetadata(recipientIdentity)
 	Expect(err).ToNot(HaveOccurred())
 	return &token.RecipientData{
-		Identity:  recipientIdentity,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
+		Identity:              recipientIdentity,
+		AuditInfo:             auditInfo,
+		TokenMetadata:         tokenMetadata,
+		TokenIdentityMetadata: tokenIdentityMetadata,
 	}
 }
 

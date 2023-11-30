@@ -17,8 +17,11 @@ type RecipientData struct {
 	Identity view.Identity
 	// AuditInfo contains private information about the identity
 	AuditInfo []byte
-	// Metadata contains any additional information needed by a given token driver to process the recipient data
-	Metadata []byte
+	// TokenMetadata contains any additional information related to the token to be assigned to this Recipient that can be
+	// shared another party
+	TokenMetadata []byte
+	// TokenIdentityMetadata TODO
+	TokenIdentityMetadata []byte
 }
 
 // ListTokensOptions contains options that can be used to list tokens from a wallet
@@ -61,6 +64,8 @@ type OwnerWallet interface {
 
 	// GetTokenMetadata returns any information needed to implement the transfer
 	GetTokenMetadata(id view.Identity) ([]byte, error)
+
+	GetTokenIdentityMetadata(id view.Identity) ([]byte, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string
