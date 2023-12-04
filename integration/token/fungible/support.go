@@ -1014,7 +1014,6 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 		// the issuer is the auditor, choose default identity
 		auditor = ""
 	}
-	logger.Debugf("calling withdrawal with recipient data [%s:%s:%s:%s]", recipientData.Identity, recipientData.AuditInfo, recipientData.TokenMetadata, recipientData.TokenMetadataAuditInfo)
 	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
 		Wallet:        wallet,
 		TokenType:     typ,

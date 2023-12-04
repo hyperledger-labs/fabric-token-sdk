@@ -46,7 +46,6 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	if i.RecipientData != nil {
 		// Use the passed RecipientData.
 		// First register it locally
-		logger.Debugf("register recipient [%s:%s:%s:%s]", i.RecipientData.Identity, i.RecipientData.AuditInfo, i.RecipientData.TokenMetadata, i.RecipientData.TokenMetadataAuditInfo)
 		assert.NoError(
 			token.GetManagementService(
 				context, token.WithTMSID(i.TMSID),
