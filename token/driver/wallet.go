@@ -15,13 +15,12 @@ import (
 type RecipientData struct {
 	// Identity is the identity of the token owner
 	Identity view.Identity
-	// AuditInfo contains private information about the identity
+	// AuditInfo contains private information Identity
 	AuditInfo []byte
-	// TokenMetadata contains any additional information related to the token to be assigned to this Recipient that can be
-	// shared another party
+	// TokenMetadata contains public information related to the token to be assigned to this Recipient.
 	TokenMetadata []byte
-	// TokenIdentityMetadata TODO
-	TokenIdentityMetadata []byte
+	// TokenMetadataAuditInfo contains private information TokenMetadata
+	TokenMetadataAuditInfo []byte
 }
 
 // ListTokensOptions contains options that can be used to list tokens from a wallet
@@ -51,21 +50,26 @@ type OwnerWallet interface {
 
 	// GetRecipientIdentity returns a recipient identity.
 	// Depending on the underlying wallet implementation, this can be a long-term or ephemeral identity.
+	// Using the returned identity as an index, one can retrieve the following information:
+	// - Identity audit info via GetAuditInfo;
+	// - TokenMetadata via GetTokenMetadata;
+	// - TokenIdentityMetadata via GetTokenMetadataAuditInfo.
 	GetRecipientIdentity() (view.Identity, error)
 
 	// GetAuditInfo returns auditing information for the passed identity
 	GetAuditInfo(id view.Identity) ([]byte, error)
+
+	// GetTokenMetadata returns the public information related to the token to be assigned to passed recipient identity.
+	GetTokenMetadata(id view.Identity) ([]byte, error)
+
+	// GetTokenMetadataAuditInfo returns private information about the token metadata assigned to the passed recipient identity.
+	GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error)
 
 	// ListTokens returns the list of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokens(opts *ListTokensOptions) (*token.UnspentTokens, error)
 
 	// ListTokensIterator returns an iterator of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokensIterator(opts *ListTokensOptions) (UnspentTokensIterator, error)
-
-	// GetTokenMetadata returns any information needed to implement the transfer
-	GetTokenMetadata(id view.Identity) ([]byte, error)
-
-	GetTokenIdentityMetadata(id view.Identity) ([]byte, error)
 
 	// EnrollmentID returns the enrollment ID of the owner wallet
 	EnrollmentID() string

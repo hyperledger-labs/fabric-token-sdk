@@ -324,7 +324,7 @@ func (w *ownerWallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
 	return nil, nil
 }
 
-func (w *ownerWallet) GetTokenIdentityMetadata(id view.Identity) ([]byte, error) {
+func (w *ownerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error) {
 	return nil, nil
 }
 

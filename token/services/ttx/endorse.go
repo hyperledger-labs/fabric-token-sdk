@@ -244,7 +244,7 @@ func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Si
 			hash.Hashable(signatureRequest.MessageToSign()).String(),
 			hash.Hashable(sigma).String(),
 			party.UniqueID(),
-			GetIdentifier(signer),
+			getIdentifier(signer),
 		)
 	}
 	return sigma, nil
@@ -891,7 +891,7 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 	return distributionList
 }
 
-func GetIdentifier(f any) string {
+func getIdentifier(f any) string {
 	if f == nil {
 		return "<nil view>"
 	}
