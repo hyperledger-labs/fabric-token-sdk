@@ -22,7 +22,9 @@ The project will be subject to rapid changes to complete the open-sourcing proce
     [Discord](https://discord.gg/hyperledger) in #fabric-token-sdk.
   
 - [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client): The Token SDK leverages the 
-  `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out. 
+  `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out.
+- [Fabric Samples](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
+  quickest way to get a full network running with a REST API to issue, transfer and redeem tokens right away.
 
 # Getting started
 
@@ -75,6 +77,9 @@ If you want to provide your own versions of the fabric binaries then just set `F
   trade of tokens as a basis of new forms of commerce. In this Hyperledger Foundation member webinar, 
   the IBM Research team describes in this webinar what tokenization use cases are possible with Hyperledger Fabric today, 
   and what enhancements are in the works (aka Fabric Token SDK).
+- (October 12, 2023) [How to create a currency management app and deploy it to a Hyperledger Fabric network](https://www.youtube.com/watch?v=PX9SDva97vQ):
+  In this comprehensive guide, we'll walk you through two essential aspects of the Fabric Token-SDK. Firstly, you'll learn how to develop a straightforward token application to manage a currency. You'll grasp the fundamentals of creating tokens, and implementing transaction logic using the Fabric Token-SDK. Once you've mastered the application development, we'll then show you how to effortlessly deploy it in your existing Fabric network, ensuring a seamless integration with your blockchain infrastructure. By the end of this tutorial, you'll be equipped with the skills to expand your blockchain capabilities and unleash the true potential of decentralized currency management. (Refers to [Fabric Samples](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk))
+
 
 <!-- markdown-link-check-disable -->
 # Motivation
