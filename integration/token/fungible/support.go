@@ -31,6 +31,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	RestartEnabled bool = true
+)
+
 type Stream interface {
 	Recv(m interface{}) error
 	Send(m interface{}) error
@@ -906,6 +910,9 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 }
 
 func Restart(network *integration.Infrastructure, deleteVault bool, ids ...string) {
+	if !RestartEnabled {
+		return
+	}
 	for _, id := range ids {
 		network.StopFSCNode(id)
 	}
