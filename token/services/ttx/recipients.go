@@ -261,9 +261,9 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 			return nil, errors.Wrapf(err, "failed to get token metadata")
 		}
 		recipientData = &RecipientData{
-			Identity:  recipientIdentity,
-			AuditInfo: auditInfo,
-			Metadata:  metadata,
+			Identity:      recipientIdentity,
+			AuditInfo:     auditInfo,
+			TokenMetadata: metadata,
 		}
 	}
 	recipientDataRaw, err := RecipientDataBytes(recipientData)
@@ -338,9 +338,9 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			TMSID:    f.TMSID,
 			WalletID: f.Other,
 			RecipientData: &RecipientData{
-				Identity:  me,
-				AuditInfo: auditInfo,
-				Metadata:  metadata,
+				Identity:      me,
+				AuditInfo:     auditInfo,
+				TokenMetadata: metadata,
 			},
 		}
 		requestRaw, err := request.Bytes()
@@ -438,7 +438,7 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	other := request.RecipientData.Identity
 	if err := ts.WalletManager().RegisterRecipientIdentity(&RecipientData{
-		Identity: other, AuditInfo: request.RecipientData.AuditInfo, Metadata: request.RecipientData.Metadata,
+		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
 	}); err != nil {
 		return nil, err
 	}
@@ -463,9 +463,9 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 
 	recipientData := &RecipientData{
-		Identity:  me,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
+		Identity:      me,
+		AuditInfo:     auditInfo,
+		TokenMetadata: metadata,
 	}
 	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {

@@ -265,19 +265,24 @@ func (o *OwnerWallet) GetRecipientIdentity() (view.Identity, error) {
 	return o.w.GetRecipientIdentity()
 }
 
-// GetAuditInfo returns the audit info bound to the passed owner identity.
+// GetAuditInfo returns auditing information for the passed identity
 func (o *OwnerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
 	return o.w.GetAuditInfo(id)
+}
+
+// GetTokenMetadata returns the public information related to the token to be assigned to passed recipient identity.
+func (o *OwnerWallet) GetTokenMetadata(token []byte) ([]byte, error) {
+	return o.w.GetTokenMetadata(token)
+}
+
+// GetTokenMetadataAuditInfo returns private information about the token metadata assigned to the passed recipient identity.
+func (o *OwnerWallet) GetTokenMetadataAuditInfo(token []byte) ([]byte, error) {
+	return o.w.GetTokenMetadataAuditInfo(token)
 }
 
 // GetSigner returns the signer bound to the passed owner identity.
 func (o *OwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return o.w.GetSigner(identity)
-}
-
-// GetTokenMetadata returns the token metadata bound to the passed owner identity.
-func (o *OwnerWallet) GetTokenMetadata(token []byte) ([]byte, error) {
-	return o.w.GetTokenMetadata(token)
 }
 
 // ListUnspentTokens returns a list of unspent tokens owned by identities in this wallet and filtered by the passed options.

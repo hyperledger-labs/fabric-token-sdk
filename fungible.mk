@@ -4,7 +4,7 @@ integration-tests-dlog-fabric:
 
 .PHONY: integration-tests-dlog-fabric-t1
 integration-tests-dlog-fabric-t1:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor ne Issuer" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "ne" .
 
 .PHONY: integration-tests-dlog-fabric-t1-extras
 integration-tests-dlog-fabric-t1-extras:
@@ -12,11 +12,11 @@ integration-tests-dlog-fabric-t1-extras:
 
 .PHONY: integration-tests-dlog-fabric-t2
 integration-tests-dlog-fabric-t2:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor = Issuer" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "=" .
 
 .PHONY: integration-tests-dlog-fabric-t3
 integration-tests-dlog-fabric-t3:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "Fungible with Auditor ne Issuer + Fabric CA" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "CA" .
 
 .PHONY: integration-tests-fabtoken-dlog-fabric
 integration-tests-fabtoken-dlog-fabric:

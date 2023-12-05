@@ -19,12 +19,10 @@ import (
 )
 
 type WithdrawalRequest struct {
-	TMSID     token.TMSID
-	Recipient view.Identity
-	AuditInfo []byte
-	Metadata  []byte
-	TokenType string
-	Amount    uint64
+	TMSID         token.TMSID
+	RecipientData RecipientData
+	TokenType     string
+	Amount        uint64
 }
 
 // RequestWithdrawalView is the initiator view to request an issuer the issuance of tokens.
@@ -56,7 +54,7 @@ func RequestWithdrawal(context view.Context, issuer view.Identity, wallet string
 	}
 	result := resultBoxed.([]interface{})
 	ir := result[0].(*WithdrawalRequest)
-	return ir.Recipient, result[1].(view.Session), nil
+	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
 // RequestWithdrawalForRecipient runs RequestWithdrawalView with the passed arguments.
@@ -72,21 +70,23 @@ func RequestWithdrawalForRecipient(context view.Context, issuer view.Identity, w
 	}
 	result := resultBoxed.([]interface{})
 	ir := result[0].(*WithdrawalRequest)
-	return ir.Recipient, result[1].(view.Session), nil
+	return ir.RecipientData.Identity, result[1].(view.Session), nil
 }
 
 func (r *RequestWithdrawalView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("Respond request recipient identity using wallet [%s]", r.Wallet)
 
-	tmsID, recipientIdentity, auditInfo, metadata, err := r.getRecipientIdentity(context)
+	tmsID, recipientIdentity, auditInfo, tokenMetadata, err := r.getRecipientIdentity(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get recipient identity")
 	}
 	wr := &WithdrawalRequest{
-		TMSID:     *tmsID,
-		Recipient: recipientIdentity,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
+		TMSID: *tmsID,
+		RecipientData: RecipientData{
+			Identity:      recipientIdentity,
+			AuditInfo:     auditInfo,
+			TokenMetadata: tokenMetadata,
+		},
 		TokenType: r.TokenType,
 		Amount:    r.Amount,
 	}
@@ -127,7 +127,7 @@ func (r *RequestWithdrawalView) WithRecipientData(data *RecipientData) *RequestW
 func (r *RequestWithdrawalView) getRecipientIdentity(context view.Context) (*token.TMSID, view.Identity, []byte, []byte, error) {
 	if r.RecipientData != nil {
 		tmsID := token.GetManagementService(context, token.WithTMSID(r.TMSID)).ID()
-		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.Metadata, nil
+		return &tmsID, r.RecipientData.Identity, r.RecipientData.AuditInfo, r.RecipientData.TokenMetadata, nil
 	}
 
 	w := GetWallet(
@@ -183,11 +183,7 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	tms := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	assert.NotNil(tms, "tms not found for [%s]", request.TMSID)
 
-	if err := tms.WalletManager().RegisterRecipientIdentity(&RecipientData{
-		Identity:  request.Recipient,
-		AuditInfo: request.AuditInfo,
-		Metadata:  request.Metadata,
-	}); err != nil {
+	if err := tms.WalletManager().RegisterRecipientIdentity(&request.RecipientData); err != nil {
 		logger.Errorf("failed to register recipient identity: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to register recipient identity")
 	}
@@ -195,13 +191,13 @@ func (r *ReceiveWithdrawalRequestView) Call(context view.Context) (interface{}, 
 	// Update the Endpoint Resolver
 	caller := context.Session().Info().Caller
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.Recipient, caller)
+		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", request.RecipientData.Identity, caller)
 	}
-	if err := view2.GetEndpointService(context).Bind(caller, request.Recipient); err != nil {
+	if err := view2.GetEndpointService(context).Bind(caller, request.RecipientData.Identity); err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("failed binding [%s] to [%s]", request.Recipient, caller)
+			logger.Debugf("failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 		}
-		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.Recipient, caller)
+		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", request.RecipientData.Identity, caller)
 	}
 
 	return request, nil

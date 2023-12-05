@@ -146,7 +146,7 @@ func (p *WithdrawalResponderView) Call(context view.Context) (interface{}, error
 		// The issuer adds a new issue operation to the transaction following the instruction received
 		err = tx.Issue(
 			wallet,
-			issueRequest.Recipient,
+			issueRequest.RecipientData.Identity,
 			issueRequest.TokenType,
 			issueRequest.Amount,
 		)

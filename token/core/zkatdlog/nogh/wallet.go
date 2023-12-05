@@ -364,6 +364,10 @@ func (w *ownerWallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
 	return nil, nil
 }
 
+func (w *ownerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error) {
+	return nil, nil
+}
+
 func (w *ownerWallet) EnrollmentID() string {
 	return w.identityInfo.EnrollmentID()
 }

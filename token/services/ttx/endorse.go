@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"reflect"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -239,10 +240,11 @@ func (c *CollectEndorsementsView) signLocal(party view.Identity, signer token.Si
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signature generated (me) [%s,%s,%s]",
+		logger.Debugf("signature generated (local, me) [%s,%s,%s,%v]",
 			hash.Hashable(signatureRequest.MessageToSign()).String(),
 			hash.Hashable(sigma).String(),
 			party.UniqueID(),
+			getIdentifier(signer),
 		)
 	}
 	return sigma, nil
@@ -258,7 +260,7 @@ func (c *CollectEndorsementsView) signExternal(party view.Identity, signer Exter
 		return nil, err
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signature generated (me) [%s,%s,%s]",
+		logger.Debugf("signature generated (external, me) [%s,%s,%s]",
 			hash.Hashable(signatureRequest.MessageToSign()).String(),
 			hash.Hashable(sigma).String(),
 			party.UniqueID(),
@@ -887,4 +889,15 @@ func TransferDistributionList(r *token.Request) []view.Identity {
 		distributionList = append(distributionList, transfer.Receivers...)
 	}
 	return distributionList
+}
+
+func getIdentifier(f any) string {
+	if f == nil {
+		return "<nil view>"
+	}
+	t := reflect.TypeOf(f)
+	for t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	return t.PkgPath() + "/" + t.Name()
 }

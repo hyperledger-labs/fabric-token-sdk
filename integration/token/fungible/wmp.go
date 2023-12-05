@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -20,6 +21,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	. "github.com/onsi/gomega"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.fungible")
 
 // WalletManagerProvider is used to simulate external wallets.
 // It can generate recipient data and signatures for given users and wallets
@@ -41,12 +44,16 @@ func (p *WalletManagerProvider) RecipientData(user string, wallet string) *token
 	Expect(err).ToNot(HaveOccurred())
 	auditInfo, err := ownerWallet.GetAuditInfo(recipientIdentity)
 	Expect(err).ToNot(HaveOccurred())
-	metadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
+	tokenMetadata, err := ownerWallet.GetTokenMetadata(recipientIdentity)
 	Expect(err).ToNot(HaveOccurred())
+	tokenIdentityMetadata, err := ownerWallet.GetTokenMetadataAuditInfo(recipientIdentity)
+	Expect(err).ToNot(HaveOccurred())
+	logger.Debugf("new recipient data [%s:%s:%s:%s]", recipientIdentity, auditInfo, tokenMetadata, tokenIdentityMetadata)
 	return &token.RecipientData{
-		Identity:  recipientIdentity,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
+		Identity:               recipientIdentity,
+		AuditInfo:              auditInfo,
+		TokenMetadata:          tokenMetadata,
+		TokenMetadataAuditInfo: tokenIdentityMetadata,
 	}
 }
 

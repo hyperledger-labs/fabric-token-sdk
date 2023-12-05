@@ -324,6 +324,10 @@ func (w *ownerWallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
 	return nil, nil
 }
 
+func (w *ownerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error) {
+	return nil, nil
+}
+
 func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 	if !w.wrappedID.Equal(identity) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
