@@ -319,11 +319,11 @@ func (m *Manager) scan() {
 		m.selectorsLock.RUnlock()
 
 		m.selectorsLock.Lock()
-		logger.Infof("token collector: deleting [%d] items", len(deleteList))
+		logger.Debugf("token collector: deleting [%d] items", len(deleteList))
 		for _, s := range deleteList {
 			delete(m.selectors, s)
 		}
-		logger.Infof("token collector: unlocking [%d] items", len(deleteList))
+		logger.Debugf("token collector: unlocking [%d] items", len(deleteList))
 		for _, s := range unlockList {
 			m.UnlockIDs(s.TokenIDs...)
 			delete(m.selectors, s.TxID)
@@ -338,7 +338,7 @@ func (m *Manager) scan() {
 			m.selectorsLock.RUnlock()
 			if l > 0 {
 				// time to do some token collection
-				logger.Infof("token collector: time to do some token collection, [%d] locked", l)
+				logger.Debugf("token collector: time to do some token collection, [%d] locked", l)
 				break
 			}
 		}

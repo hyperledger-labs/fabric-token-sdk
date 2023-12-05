@@ -31,9 +31,7 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var (
-	RestartEnabled bool = true
-)
+var RestartEnabled bool = true
 
 type Stream interface {
 	Recv(m interface{}) error
@@ -910,6 +908,7 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 }
 
 func Restart(network *integration.Infrastructure, deleteVault bool, ids ...string) {
+	logger.Infof("restart [%s], [%v]", ids, RestartEnabled)
 	if !RestartEnabled {
 		return
 	}
