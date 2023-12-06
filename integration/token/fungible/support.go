@@ -1047,3 +1047,7 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 	}
 	return ""
 }
+
+func DisableRestart() {
+	RestartEnabled = false
+}

@@ -26,7 +26,6 @@ var _ = Describe("EndToEnd", func() {
 	)
 
 	AfterEach(func() {
-		fungible.RestartEnabled = true
 		network.Stop()
 	})
 
