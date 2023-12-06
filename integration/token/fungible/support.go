@@ -31,7 +31,9 @@ import (
 	. "github.com/onsi/gomega"
 )
 
-var RestartEnabled bool = true
+var (
+	RestartEnabled = true
+)
 
 type Stream interface {
 	Recv(m interface{}) error
