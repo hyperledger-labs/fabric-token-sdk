@@ -31,6 +31,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	RestartEnabled = true
+)
+
 type Stream interface {
 	Recv(m interface{}) error
 	Send(m interface{}) error
@@ -906,6 +910,10 @@ func JSONUnmarshalFloat64(v interface{}) float64 {
 }
 
 func Restart(network *integration.Infrastructure, deleteVault bool, ids ...string) {
+	logger.Infof("restart [%s], [%v]", ids, RestartEnabled)
+	if !RestartEnabled {
+		return
+	}
 	for _, id := range ids {
 		network.StopFSCNode(id)
 	}
@@ -1038,4 +1046,8 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
 	}
 	return ""
+}
+
+func DisableRestart() {
+	RestartEnabled = false
 }
