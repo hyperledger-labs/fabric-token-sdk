@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 )
 
-func transactionsConditionsSql(params driver.QueryTransactionsParams) (string, []interface{}) {
+func TransactionsConditionsSql(params driver.QueryTransactionsParams) (string, []interface{}) {
 	args := make([]interface{}, 0)
 	and := make([]string, 0)
 
@@ -37,7 +37,7 @@ func transactionsConditionsSql(params driver.QueryTransactionsParams) (string, [
 		for i, s := range params.ActionTypes {
 			t[i] = int(s)
 		}
-		add(&and, in(&args, "action_type", t))
+		add(&and, In(&args, "action_type", t))
 	}
 
 	// Specific transaction status if requested, defaults to all but Deleted
@@ -46,7 +46,7 @@ func transactionsConditionsSql(params driver.QueryTransactionsParams) (string, [
 		for i, s := range params.Statuses {
 			t[i] = string(s)
 		}
-		add(&and, in(&args, "status", t))
+		add(&and, In(&args, "status", t))
 	}
 
 	// See QueryTransactionsParams for expected behavior. If only one of sender or
@@ -89,7 +89,7 @@ func validationConditionsSql(params driver.QueryValidationRecordsParams) (string
 		for i, s := range params.Statuses {
 			t[i] = string(s)
 		}
-		add(&and, in(&args, "status", t))
+		add(&and, In(&args, "status", t))
 	}
 
 	if len(and) == 0 {
@@ -100,7 +100,7 @@ func validationConditionsSql(params driver.QueryValidationRecordsParams) (string
 	return where, args
 }
 
-func movementConditionsSql(params driver.QueryMovementsParams) (string, []interface{}) {
+func MovementConditionsSql(params driver.QueryMovementsParams) (string, []interface{}) {
 	args := make([]interface{}, 0)
 	and := make([]string, 0)
 
@@ -109,14 +109,14 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 	for i, s := range params.EnrollmentIDs {
 		t[i] = string(s)
 	}
-	add(&and, in(&args, "enrollment_id", t))
+	add(&and, In(&args, "enrollment_id", t))
 
 	// Filter by token type (any)
 	t = make([]interface{}, len(params.TokenTypes))
 	for i, s := range params.TokenTypes {
 		t[i] = string(s)
 	}
-	add(&and, in(&args, "token_type", t))
+	add(&and, In(&args, "token_type", t))
 
 	// Specific transaction status if requested, defaults to all but Deleted
 	if len(params.TxStatuses) > 0 {
@@ -124,7 +124,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 		for i, s := range params.TxStatuses {
 			statuses[i] = string(s)
 		}
-		add(&and, in(&args, "status", statuses))
+		add(&and, In(&args, "status", statuses))
 	} else {
 		and = append(and, "status != 'Deleted'")
 	}
@@ -156,7 +156,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 	return where, args
 }
 
-func in(args *[]interface{}, field string, searchFor []interface{}) (where string) {
+func In(args *[]interface{}, field string, searchFor []interface{}) (where string) {
 	if len(searchFor) == 0 {
 		return ""
 	}

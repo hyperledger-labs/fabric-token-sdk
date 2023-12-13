@@ -130,7 +130,7 @@ func (db *Persistence) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
-	conditions, args := movementConditionsSql(params)
+	conditions, args := MovementConditionsSql(params)
 	query := fmt.Sprintf("SELECT tx_id, enrollment_id, token_type, amount, status FROM %s ", db.table.Movements) + conditions
 
 	logger.Debug(query, args)
@@ -188,7 +188,7 @@ func (db *Persistence) AddMovement(r *driver.MovementRecord) error {
 }
 
 func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
-	conditions, args := transactionsConditionsSql(params)
+	conditions, args := TransactionsConditionsSql(params)
 	query := fmt.Sprintf("SELECT tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at FROM %s ", db.table.Transactions) + conditions
 
 	logger.Debug(query, args)
@@ -494,7 +494,7 @@ type TableNames struct {
 	Validations  string
 }
 
-func getTableNames(prefix, name string) (TableNames, error) {
+func GetTableNames(prefix, name string) (TableNames, error) {
 	r := regexp.MustCompile("^[a-zA-Z_]+$")
 	if !r.MatchString(prefix) {
 		return TableNames{}, errors.New("Illegal character in table prefix, only letters and underscores allowed")

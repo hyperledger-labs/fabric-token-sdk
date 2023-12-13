@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
-	_ "modernc.org/sqlite"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.ttxdb.sql")
@@ -65,7 +64,7 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
 	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
 
-	tableNames, err := getTableNames(tablePrefix, name)
+	tableNames, err := GetTableNames(tablePrefix, name)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}

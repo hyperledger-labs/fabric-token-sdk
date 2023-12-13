@@ -4,12 +4,14 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package sql_test
 
 import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/test-go/testify/assert"
@@ -87,7 +89,7 @@ func TestTransactionSql(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := transactionsConditionsSql(tc.params)
+			actualSql, actualArgs := sql.TransactionsConditionsSql(tc.params)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -203,7 +205,7 @@ func TestMovementConditions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := movementConditionsSql(tc.params)
+			actualSql, actualArgs := sql.MovementConditionsSql(tc.params)
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -213,19 +215,19 @@ func TestMovementConditions(t *testing.T) {
 func TestIn(t *testing.T) {
 	// 0
 	args := make([]interface{}, 0)
-	w := in(&args, "enrollment_id", []interface{}{})
+	w := sql.In(&args, "enrollment_id", []interface{}{})
 	assert.Equal(t, "", w)
 	assert.Equal(t, []interface{}{}, args)
 
 	// 1
 	args = make([]interface{}, 0)
-	w = in(&args, "enrollment_id", []interface{}{"eid1"})
+	w = sql.In(&args, "enrollment_id", []interface{}{"eid1"})
 	assert.Equal(t, "enrollment_id = $1", w)
 	assert.Equal(t, []interface{}{"eid1"}, args)
 
 	// 3
 	args = make([]interface{}, 0)
-	w = in(&args, "enrollment_id", []interface{}{"eid1", "eid2", "eid3"})
+	w = sql.In(&args, "enrollment_id", []interface{}{"eid1", "eid2", "eid3"})
 	assert.Equal(t, "(enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3)", w)
 	assert.Equal(t, []interface{}{"eid1", "eid2", "eid3"}, args)
 }

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql
+package sql_test
 
 import (
 	"context"
@@ -13,6 +13,8 @@ import (
 	"path"
 	"testing"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -31,11 +33,11 @@ func getDatabase(t *testing.T, typ string, key string) (db driver.TokenTransacti
 	var err error
 	switch typ {
 	case "sqlite":
-		db, err = OpenDB("sqlite", path.Join(tempDir, "db.sqlite"), "test", key, true)
+		db, err = sql.OpenDB("sqlite", path.Join(tempDir, "db.sqlite"), "test", key, true)
 	case "sqlite_memory":
-		db, err = OpenDB("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", key), "test", key, true)
+		db, err = sql.OpenDB("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", key), "test", key, true)
 	case "postgres":
-		db, err = OpenDB("postgres", pgConnStr, "tsdk", key, true)
+		db, err = sql.OpenDB("postgres", pgConnStr, "tsdk", key, true)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -111,26 +113,26 @@ func TestPostgres(t *testing.T) {
 func TestGetTableNames(t *testing.T) {
 	cases := []struct {
 		prefix         string
-		expectedResult TableNames
+		expectedResult sql.TableNames
 		expectErr      bool
 	}{
-		{"valid_prefix", TableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5"}, false},
-		{"Valid_prefix", TableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5"}, false},
-		{"valid", TableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5"}, false},
-		{"invalid;", TableNames{}, true},
-		{"invalid ", TableNames{}, true},
-		{"in<valid", TableNames{}, true},
-		{"in\\valid", TableNames{}, true},
-		{"in\bvalid", TableNames{}, true},
-		{"invalid\x00", TableNames{}, true},
-		{"\"invalid\"", TableNames{}, true},
-		{"in_valid1", TableNames{}, true},
-		{"Invalid-Prefix", TableNames{}, true},
+		{"valid_prefix", sql.TableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5"}, false},
+		{"Valid_prefix", sql.TableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5"}, false},
+		{"valid", sql.TableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5"}, false},
+		{"invalid;", sql.TableNames{}, true},
+		{"invalid ", sql.TableNames{}, true},
+		{"in<valid", sql.TableNames{}, true},
+		{"in\\valid", sql.TableNames{}, true},
+		{"in\bvalid", sql.TableNames{}, true},
+		{"invalid\x00", sql.TableNames{}, true},
+		{"\"invalid\"", sql.TableNames{}, true},
+		{"in_valid1", sql.TableNames{}, true},
+		{"Invalid-Prefix", sql.TableNames{}, true},
 	}
 	const name = "default,mychannel,tokenchaincode"
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("Prefix: %s", c.prefix), func(t *testing.T) {
-			names, err := getTableNames(c.prefix, name)
+			names, err := sql.GetTableNames(c.prefix, name)
 			if c.expectErr {
 				assert.NotNil(t, err)
 			} else {

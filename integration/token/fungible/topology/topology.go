@@ -17,6 +17,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology/sqlsdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -289,9 +290,6 @@ func Topology(opts Opts) []api.Topology {
 	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	if opts.SqlTTXDB {
-		tokenTopology.EnableSqlTTXDB()
-	}
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
 	common.SetDefaultParams(opts.TokenSDKDriver, tms, opts.Aries)
@@ -313,7 +311,12 @@ func Topology(opts Opts) []api.Topology {
 		orionTopology.SetDefaultSDK(fscTopology)
 		fscTopology.SetBootstrapNode(custodian)
 	}
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	if opts.SqlTTXDB {
+		tokenTopology.EnableSqlTTXDB()
+		tokenTopology.SetSDK(fscTopology, &sqlsdk.SDK{})
+	} else {
+		tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	}
 	tms.AddAuditor(auditor)
 
 	if opts.Backend != "orion" {
