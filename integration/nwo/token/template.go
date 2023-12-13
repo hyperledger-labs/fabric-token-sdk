@@ -11,7 +11,16 @@ token:
   enabled: true
   ttxdb:
     persistence:
+    {{ if SQL }}
+      type: sql
+      opts:
+        createSchema: true 
+        tablePrefix: tsdk  
+        driver: sqlite     
+        dataSource: {{ SQLDataSource }}
+    {{ else }}
       type: badger
       opts:
         path: {{ NodeKVSPath }}
+    {{ end }}
 `

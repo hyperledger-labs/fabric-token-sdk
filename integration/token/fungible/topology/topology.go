@@ -21,10 +21,18 @@ import (
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries bool) []api.Topology {
+type Opts struct {
+	Backend         string
+	TokenSDKDriver  string
+	AuditorAsIssuer bool
+	Aries           bool
+	SqlTTXDB        bool
+}
+
+func Topology(opts Opts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
-	switch backend {
+	switch opts.Backend {
 	case "fabric":
 		fabricTopology := fabric.NewDefaultTopology()
 		fabricTopology.EnableIdemix()
@@ -36,7 +44,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 		orionTopology := orion.NewTopology()
 		backendNetwork = orionTopology
 	default:
-		panic("unknown backend: " + backend)
+		panic("unknown backend: " + opts.Backend)
 	}
 
 	// FSC
@@ -101,7 +109,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	newAuditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	newAuditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
-	if auditorAsIssuer {
+	if opts.AuditorAsIssuer {
 		issuer.AddOptions(
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(),
@@ -281,15 +289,18 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
+	if opts.SqlTTXDB {
+		tokenTopology.EnableSqlTTXDB()
+	}
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
 	tms.SetNamespace("token-chaincode")
-	common.SetDefaultParams(tokenSDKDriver, tms, aries)
-	if !aries {
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, opts.Aries)
+	if !opts.Aries {
 		// Enable Fabric-CA
 		fabric2.WithFabricCA(tms)
 	}
 	fabric2.SetOrgs(tms, "Org1")
-	if backend == "orion" {
+	if opts.Backend == "orion" {
 		// we need to define the custodian
 		custodian := fscTopology.AddNodeByName("custodian")
 		custodian.AddOptions(orion.WithRole("custodian"))
@@ -305,7 +316,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool, aries
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms.AddAuditor(auditor)
 
-	if backend != "orion" {
+	if opts.Backend != "orion" {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 		// Add Fabric SDK to FSC Nodes
 		fscTopology.AddSDK(&fabric3.SDK{})
