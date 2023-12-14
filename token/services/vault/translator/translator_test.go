@@ -46,13 +46,10 @@ var _ = Describe("Translator", func() {
 		// fakeTransfer
 		faketransfer = &mock.TransferAction{}
 		// serial numbers
-		var err error
 		sn = make([]string, 3)
 		for i := 0; i < 3; i++ {
-			sn[i], err = keys.CreateSNKey("sn" + strconv.Itoa(i))
-			Expect(err).NotTo(HaveOccurred())
+			sn[i] = "sn" + strconv.Itoa(i)
 		}
-
 	})
 
 	Describe("Issue", func() {
