@@ -392,8 +392,11 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 	} else {
 		for _, id := range ids {
 			logger.Debugf("add serial number %s\n", id)
-			err := w.RWSet.SetState(w.namespace, id, []byte(strconv.FormatBool(true)))
+			k, err := keys.CreateSNKey(id)
 			if err != nil {
+				return errors.Wrapf(err, "failed to generate key for id [%s]", id)
+			}
+			if err := w.RWSet.SetState(w.namespace, k, []byte(strconv.FormatBool(true))); err != nil {
 				return errors.Wrapf(err, "failed to add serial number %s", id)
 			}
 			if err := w.appendSpentID(id); err != nil {
@@ -410,7 +413,11 @@ func (w *Translator) areTokensSpent(ids []string, graphHiding bool) ([]bool, err
 	if graphHiding {
 		for i, id := range ids {
 			logger.Debugf("check serial number %s\n", id)
-			v, err := w.RWSet.GetState(w.namespace, id)
+			k, err := keys.CreateSNKey(id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to generate key for id [%s]", id)
+			}
+			v, err := w.RWSet.GetState(w.namespace, k)
 			if err != nil {
 				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
 			}

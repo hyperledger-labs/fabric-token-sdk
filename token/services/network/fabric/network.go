@@ -313,8 +313,17 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	return tokens, nil
 }
 
-func (n *Network) AreTokensSpent(c view.Context, namespace string, IDs []string) ([]bool, error) {
-	idsRaw, err := json.Marshal(IDs)
+func (n *Network) AreTokensSpent(c view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	sIDs := make([]string, len(tokenIDs))
+	var err error
+	for i, id := range tokenIDs {
+		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
+		}
+	}
+
+	idsRaw, err := json.Marshal(sIDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling ids")
 	}

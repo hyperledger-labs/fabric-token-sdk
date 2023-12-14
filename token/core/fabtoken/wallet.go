@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -260,15 +259,7 @@ func (s *WalletService) CertifierWalletByIdentity(identity view.Identity) (drive
 
 // SpentIDs returns the spend ids for the passed token ids
 func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
-	sIDs := make([]string, len(ids))
-	var err error
-	for i, id := range ids {
-		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
-		if err != nil {
-			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
-		}
-	}
-	return sIDs, nil
+	return nil, nil
 }
 
 func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {

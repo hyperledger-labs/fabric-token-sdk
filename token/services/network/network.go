@@ -247,11 +247,11 @@ func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService,
 	for i, tok := range tokens {
 		ids[i] = tok.Id
 	}
-	spentIDs, err := tms.WalletManager().SpentIDs(ids)
+	meta, err := tms.WalletManager().SpentIDs(ids)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
 	}
-	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), spentIDs)
+	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), ids, meta)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
 	}
@@ -425,8 +425,8 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 }
 
 // AreTokensSpent retrieves the spent flag for the passed ids
-func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
-	return n.n.AreTokensSpent(context, namespace, IDs)
+func (n *Network) AreTokensSpent(context view.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
+	return n.n.AreTokensSpent(context, namespace, tokenIDs, meta)
 }
 
 // LocalMembership returns the local membership for this network
