@@ -124,7 +124,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor strin
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
+	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]. Params: start [%v], end [%v]", expected, txs, start, end)
 	for i, tx := range txs {
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])
@@ -132,12 +132,12 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor strin
 		Expect(tx.TokenType).To(Equal(txExpected.TokenType), "tx [%d] expected token type [%v], got [%v]", i, txExpected.TokenType, tx.TokenType)
 		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue(), "tx [%d] expected sender [%v], got [%v]", i, txExpected.SenderEID, tx.SenderEID)
 		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
-		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] expected status [%v], got [%v]", i, txExpected.Status, tx.Status)
 		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d] expected transaction type [%v], got [%v]", i, txExpected.ActionType, tx.ActionType)
 		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d] expected amount [%v], got [%v]", i, txExpected.Amount, tx.Amount)
 		if len(txExpected.TxID) != 0 {
 			Expect(txExpected.TxID).To(Equal(tx.TxID), "tx [%d] expected id [%s], got [%s]", i, txExpected.TxID, tx.TxID)
 		}
+		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] expected status [%v], got [%v]", i, txExpected.Status, tx.Status)
 	}
 }
 
@@ -148,18 +148,19 @@ func CheckAcceptedTransactions(network *integration.Infrastructure, id string, w
 	Expect(err).NotTo(HaveOccurred())
 	eID := common.JSONUnmarshalString(eIDBoxed)
 
-	txsBoxed, err := network.Client(id).CallView("acceptedTransactionHistory", common.JSONMarshall(&views.ListAcceptedTransactions{
+	params := views.ListAcceptedTransactions{
 		SenderWallet:    eID,
 		RecipientWallet: eID,
 		From:            start,
 		To:              end,
 		ActionTypes:     actionTypes,
 		Statuses:        statuses,
-	}))
+	}
+	txsBoxed, err := network.Client(id).CallView("acceptedTransactionHistory", common.JSONMarshall(&params))
 	Expect(err).NotTo(HaveOccurred())
 	var txs []*ttxdb.TransactionRecord
 	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
+	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]. Params [%v]", expected, txs, params)
 	for i, tx := range txs {
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])

@@ -631,7 +631,11 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.dbs[id]
 	if !ok {
-		driver, err := drivers[cm.driver].Open(cm.sp, id)
+		d := drivers[cm.driver]
+		if d == nil {
+			return nil, errors.Errorf("no driver found for [%s]", cm.driver)
+		}
+		driver, err := d.Open(cm.sp, id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}

@@ -244,8 +244,13 @@ func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
 }
 
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
+		"SQL":         func() bool { return p.Topology.SqlTTXDB },
+		"SQLDataSource": func() string {
+			return p.TTXDBSQLDataSourceDir(node) + "db.sqlite"
+		},
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -281,6 +286,10 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, err
 
 func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
 	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "kvs")
+}
+
+func (p *Platform) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
+	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "ttxdb")
 }
 
 func (p *Platform) GetTopology() *Topology {

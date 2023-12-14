@@ -30,7 +30,13 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology("fabric", "fabtoken", false, true)...)
+			network, err = integration.New(StartPortDlog(), "", topology.Topology(
+				topology.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "fabtoken",
+					Aries:          true,
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

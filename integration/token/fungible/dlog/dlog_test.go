@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	_ "modernc.org/sqlite"
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -26,6 +27,7 @@ var _ = Describe("EndToEnd", func() {
 	)
 
 	AfterEach(func() {
+		network.DeleteOnStop = false
 		network.Stop()
 	})
 
@@ -33,7 +35,13 @@ var _ = Describe("EndToEnd", func() {
 		BeforeEach(func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					Aries:          true,
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -50,7 +58,12 @@ var _ = Describe("EndToEnd", func() {
 		BeforeEach(func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					Aries:          true,
+				})...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -80,9 +93,17 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor = Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", true, true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:         "fabric",
+					TokenSDKDriver:  "dlog",
+					AuditorAsIssuer: true,
+					Aries:           true,
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.DeleteOnStart = true
 			network.Generate()
 			network.Start()
 		})
@@ -101,7 +122,32 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor ne Issuer + Fabric CA", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology("fabric", "dlog", false, false)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+				},
+			)...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
+		It("succeeded", func() {
+			fungible.TestAll(network, "auditor", nil, false)
+		})
+	})
+
+	Describe("Fungible with Auditor ne Issuer + SQL", func() {
+		BeforeEach(func() {
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					SqlTTXDB:       true,
+				})...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
