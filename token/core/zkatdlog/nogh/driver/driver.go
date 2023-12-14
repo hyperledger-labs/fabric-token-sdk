@@ -100,10 +100,10 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	qe := v.TokenVault().QueryEngine()
+	qe := v.QueryEngine()
 	ppm := ppm.NewPublicParamsManager(
 		crypto.DLogPublicParameters,
-		v.TokenVault().QueryEngine(),
+		v.QueryEngine(),
 		zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters),
 	)
 	ppm.AddCallback(func(pp driver.PublicParameters) error {

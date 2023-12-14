@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package certification
 
 import (
@@ -10,9 +11,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
-	"github.com/pkg/errors"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type Storage struct {
@@ -21,7 +21,7 @@ type Storage struct {
 	namespace string
 }
 
-func NewStorage(sp view.ServiceProvider, channel string, namespace string) *Storage {
+func NewStorage(sp view.ServiceProvider, channel, namespace string) *Storage {
 	return &Storage{sp: sp, channel: channel, namespace: namespace}
 }
 
@@ -32,7 +32,7 @@ func (v *Storage) Exists(id *token.ID) bool {
 			v.channel,
 			v.namespace,
 			id.TxId,
-			strconv.FormatUint(uint64(id.Index), 10),
+			strconv.FormatUint(id.Index, 10),
 		},
 	)
 	return kvs.GetService(v.sp).Exists(k)
@@ -46,7 +46,7 @@ func (v *Storage) Store(certifications map[*token.ID][]byte) error {
 				v.channel,
 				v.namespace,
 				id.TxId,
-				strconv.FormatUint(uint64(id.Index), 10),
+				strconv.FormatUint(id.Index, 10),
 			},
 		)
 		if err := kvs.GetService(v.sp).Put(k, certification); err != nil {
@@ -64,7 +64,7 @@ func (v *Storage) Get(ids []*token.ID, callback func(*token.ID, []byte) error) e
 				v.channel,
 				v.namespace,
 				id.TxId,
-				strconv.FormatUint(uint64(id.Index), 10),
+				strconv.FormatUint(id.Index, 10),
 			},
 		)
 		var certification []byte

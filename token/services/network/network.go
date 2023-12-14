@@ -17,8 +17,8 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -183,8 +183,12 @@ func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
 	return v.v.Store(certifications)
 }
 
-func (v *Vault) TokenVault() *vault.Vault {
-	return v.v.TokenVault()
+func (v *Vault) QueryEngine() driver2.QueryEngine {
+	return v.v.QueryEngine()
+}
+
+func (v *Vault) DeleteTokens(ns string, ids ...*token2.ID) error {
+	return v.v.DeleteTokens(ns, ids...)
 }
 
 func (v *Vault) Status(id string) (ValidationCode, error) {
@@ -266,7 +270,7 @@ func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService,
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
-	if err := v.v.TokenVault().DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+	if err := v.v.DeleteTokens(tms.Namespace(), toDelete...); err != nil {
 		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 

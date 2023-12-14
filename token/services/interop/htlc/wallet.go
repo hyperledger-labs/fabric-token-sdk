@@ -16,10 +16,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
+
+type Vault interface {
+	DeleteTokens(namespace string, toDelete ...*token2.ID) error
+}
 
 type QueryEngine interface {
 	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id. Type can be empty
@@ -30,7 +33,7 @@ type QueryEngine interface {
 type OwnerWallet struct {
 	wallet       *token.OwnerWallet
 	queryService QueryEngine
-	vault        *vault.Vault
+	vault        Vault
 	bufferSize   int
 }
 
@@ -72,7 +75,7 @@ func (w *OwnerWallet) ListExpired(opts ...token.ListTokensOption) (*token2.Unspe
 	return w.filter(compiledOpts.TokenType, true, SelectExpired)
 }
 
-// ListExpiredIterator returns a iterator of expired htlc-tokens whose sender id is in this wallet
+// ListExpiredIterator returns an iterator of expired htlc-tokens whose sender id is in this wallet
 func (w *OwnerWallet) ListExpiredIterator(opts ...token.ListTokensOption) (*FilteredIterator, error) {
 	compiledOpts, err := token.CompileListTokensOption(opts...)
 	if err != nil {
@@ -325,8 +328,8 @@ func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 
 	return &OwnerWallet{
 		wallet:       wallet,
-		vault:        vault.TokenVault(),
-		queryService: vault.TokenVault().QueryEngine(),
+		vault:        vault,
+		queryService: vault.QueryEngine(),
 		bufferSize:   100,
 	}
 }

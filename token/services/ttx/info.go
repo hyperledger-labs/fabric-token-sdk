@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 )
 

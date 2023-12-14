@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )

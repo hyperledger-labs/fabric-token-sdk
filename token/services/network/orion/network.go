@@ -16,38 +16,42 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
+
+type NewVaultFunc = func(network, channel, namespace string) (vault.TokenVault, error)
 
 type IdentityProvider interface {
 	DefaultIdentity() view.Identity
 }
 
 type Network struct {
-	sp view2.ServiceProvider
-	n  *orion.NetworkService
+	sp     view2.ServiceProvider
+	n      *orion.NetworkService
+	ip     IdentityProvider
+	ledger *ledger
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
-	ip             IdentityProvider
-	ledger         *ledger
+	newVault       NewVaultFunc
 }
 
-func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService) *Network {
-	network := &Network{
+func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
+	net := &Network{
 		sp:         sp,
 		ip:         ip,
 		n:          n,
 		vaultCache: map[string]driver.Vault{},
+		newVault:   newVault,
 	}
-	network.ledger = &ledger{n: network}
-	return network
+	net.ledger = &ledger{n: net}
+	return net
 }
 
 func (n *Network) Name() string {
@@ -85,15 +89,10 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenStore, err := processor.NewCommonTokenStore(n.sp, token2.TMSID{
-		Network:   n.Name(),
-		Channel:   n.Channel(),
-		Namespace: namespace,
-	})
+	tokenVault, err := n.newVault(n.Name(), n.Channel(), namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token store")
+		return nil, errors.WithMessagef(err, "failed to get token vault")
 	}
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.n, tokenStore))
 	nv := &nv{
 		v:          n.n.Vault(),
 		tokenVault: tokenVault,
@@ -120,7 +119,7 @@ func (n *Network) EnvelopeExists(id string) bool {
 	return n.n.EnvelopeService().Exists(id)
 }
 
-func (n *Network) Broadcast(context context.Context, blob interface{}) error {
+func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
 	case driver.Envelope:
@@ -269,7 +268,7 @@ func (n *Network) ProcessNamespace(namespace string) error {
 
 type nv struct {
 	v          *orion.Vault
-	tokenVault *vault.Vault
+	tokenVault vault.TokenVault
 }
 
 func (v *nv) GetLastTxID() (string, error) {
@@ -298,10 +297,6 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
-func (v *nv) TokenVault() *vault.Vault {
-	return v.tokenVault
-}
-
 func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 	vc, err := v.v.Status(txID)
 	return driver.ValidationCode(vc), err
@@ -309,6 +304,14 @@ func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 
 func (v *nv) DiscardTx(txID string) error {
 	return v.v.DiscardTx(txID)
+}
+
+func (v *nv) QueryEngine() driver2.QueryEngine {
+	return v.tokenVault.QueryEngine()
+}
+
+func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
+	return v.tokenVault.DeleteTokens(ns, ids...)
 }
 
 type ledger struct {

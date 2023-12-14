@@ -9,12 +9,13 @@ package ttx
 import (
 	"encoding/asn1"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )

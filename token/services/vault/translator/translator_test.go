@@ -9,13 +9,12 @@ package translator_test
 import (
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator/mock"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	writer2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator/mock"
 )
 
 const (
@@ -26,7 +25,7 @@ var _ = Describe("Translator", func() {
 	var (
 		fakeRWSet *mock.RWSet
 
-		writer *writer2.Translator
+		writer *translator.Translator
 
 		fakeissue    *mock.IssueAction
 		sn           []string
@@ -36,7 +35,7 @@ var _ = Describe("Translator", func() {
 	BeforeEach(func() {
 		fakeRWSet = &mock.RWSet{}
 
-		writer = writer2.New("0", fakeRWSet, tokenNameSpace)
+		writer = translator.New("0", fakeRWSet, tokenNameSpace)
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)

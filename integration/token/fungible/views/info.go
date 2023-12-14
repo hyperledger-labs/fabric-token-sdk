@@ -109,7 +109,7 @@ func (w *WhoDeletedTokenView) Call(context view.Context) (interface{}, error) {
 	vault, err := net.Vault(w.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", w.TMSID.Network, w.TMSID.Channel, w.TMSID.Namespace)
 
-	who, deleted, err := vault.TokenVault().QueryEngine().WhoDeletedTokens(w.TokenIDs...)
+	who, deleted, err := vault.QueryEngine().WhoDeletedTokens(w.TokenIDs...)
 	assert.NoError(err, "failed to lookup who deleted tokens")
 
 	return &WhoDeletedTokenResult{
