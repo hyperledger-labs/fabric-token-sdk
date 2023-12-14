@@ -24,7 +24,7 @@ import (
 
 type Persistence struct {
 	db    *sql.DB
-	table TableNames
+	table tableNames
 
 	txn     *sql.Tx
 	txnLock sync.Mutex
@@ -130,7 +130,7 @@ func (db *Persistence) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
-	conditions, args := MovementConditionsSql(params)
+	conditions, args := movementConditionsSql(params)
 	query := fmt.Sprintf("SELECT tx_id, enrollment_id, token_type, amount, status FROM %s ", db.table.Movements) + conditions
 
 	logger.Debug(query, args)
@@ -188,7 +188,7 @@ func (db *Persistence) AddMovement(r *driver.MovementRecord) error {
 }
 
 func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
-	conditions, args := TransactionsConditionsSql(params)
+	conditions, args := transactionsConditionsSql(params)
 	query := fmt.Sprintf("SELECT tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at FROM %s ", db.table.Transactions) + conditions
 
 	logger.Debug(query, args)
@@ -487,17 +487,17 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	return t.Next()
 }
 
-type TableNames struct {
+type tableNames struct {
 	Movements    string
 	Transactions string
 	Requests     string
 	Validations  string
 }
 
-func GetTableNames(prefix, name string) (TableNames, error) {
+func getTableNames(prefix, name string) (tableNames, error) {
 	r := regexp.MustCompile("^[a-zA-Z_]+$")
 	if !r.MatchString(prefix) {
-		return TableNames{}, errors.New("Illegal character in table prefix, only letters and underscores allowed")
+		return tableNames{}, errors.New("Illegal character in table prefix, only letters and underscores allowed")
 	}
 	if prefix != "" {
 		prefix = prefix + "_"
@@ -507,11 +507,11 @@ func GetTableNames(prefix, name string) (TableNames, error) {
 	// so we shorten it to the first 6 hex characters of the hash.
 	h := sha256.New()
 	if _, err := h.Write([]byte(name)); err != nil {
-		return TableNames{}, errors.Wrapf(err, "error hashing name [%s]", name)
+		return tableNames{}, errors.Wrapf(err, "error hashing name [%s]", name)
 	}
 	suffix := "_" + hex.EncodeToString(h.Sum(nil)[:3])
 
-	return TableNames{
+	return tableNames{
 		Transactions: fmt.Sprintf("%stransactions%s", prefix, suffix),
 		Movements:    fmt.Sprintf("%smovements%s", prefix, suffix),
 		Requests:     fmt.Sprintf("%srequests%s", prefix, suffix),

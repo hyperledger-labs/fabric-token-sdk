@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package sql_test
+package sql
 
 import (
 	"context"
@@ -13,8 +13,6 @@ import (
 	"path"
 	"testing"
 	"time"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/dbtest"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -33,11 +31,11 @@ func getDatabase(t *testing.T, typ string, key string) (db driver.TokenTransacti
 	var err error
 	switch typ {
 	case "sqlite":
-		db, err = sql.OpenDB("sqlite", path.Join(tempDir, "db.sqlite"), "test", key, true)
+		db, err = OpenDB("sqlite", path.Join(tempDir, "db.sqlite"), "test", key, true)
 	case "sqlite_memory":
-		db, err = sql.OpenDB("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", key), "test", key, true)
+		db, err = OpenDB("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", key), "test", key, true)
 	case "postgres":
-		db, err = sql.OpenDB("postgres", pgConnStr, "tsdk", key, true)
+		db, err = OpenDB("postgres", pgConnStr, "tsdk", key, true)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -55,16 +53,6 @@ func TestSqlite(t *testing.T) {
 
 	for _, c := range dbtest.Cases {
 		db := getDatabase(t, "sqlite", c.Name)
-		t.Run(c.Name, func(xt *testing.T) {
-			defer db.Close()
-			c.Fn(xt, db)
-		})
-	}
-}
-
-func TestMemory(t *testing.T) {
-	for _, c := range dbtest.Cases {
-		db := getDatabase(t, "sqlite_memory", c.Name)
 		t.Run(c.Name, func(xt *testing.T) {
 			defer db.Close()
 			c.Fn(xt, db)
@@ -113,26 +101,26 @@ func TestPostgres(t *testing.T) {
 func TestGetTableNames(t *testing.T) {
 	cases := []struct {
 		prefix         string
-		expectedResult sql.TableNames
+		expectedResult tableNames
 		expectErr      bool
 	}{
-		{"valid_prefix", sql.TableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5"}, false},
-		{"Valid_prefix", sql.TableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5"}, false},
-		{"valid", sql.TableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5"}, false},
-		{"invalid;", sql.TableNames{}, true},
-		{"invalid ", sql.TableNames{}, true},
-		{"in<valid", sql.TableNames{}, true},
-		{"in\\valid", sql.TableNames{}, true},
-		{"in\bvalid", sql.TableNames{}, true},
-		{"invalid\x00", sql.TableNames{}, true},
-		{"\"invalid\"", sql.TableNames{}, true},
-		{"in_valid1", sql.TableNames{}, true},
-		{"Invalid-Prefix", sql.TableNames{}, true},
+		{"valid_prefix", tableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5"}, false},
+		{"Valid_prefix", tableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5"}, false},
+		{"valid", tableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5"}, false},
+		{"invalid;", tableNames{}, true},
+		{"invalid ", tableNames{}, true},
+		{"in<valid", tableNames{}, true},
+		{"in\\valid", tableNames{}, true},
+		{"in\bvalid", tableNames{}, true},
+		{"invalid\x00", tableNames{}, true},
+		{"\"invalid\"", tableNames{}, true},
+		{"in_valid1", tableNames{}, true},
+		{"Invalid-Prefix", tableNames{}, true},
 	}
 	const name = "default,mychannel,tokenchaincode"
 	for _, c := range cases {
 		t.Run(fmt.Sprintf("Prefix: %s", c.prefix), func(t *testing.T) {
-			names, err := sql.GetTableNames(c.prefix, name)
+			names, err := getTableNames(c.prefix, name)
 			if c.expectErr {
 				assert.NotNil(t, err)
 			} else {

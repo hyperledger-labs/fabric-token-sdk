@@ -14,21 +14,14 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/dbtest"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-
 	"github.com/stretchr/testify/assert"
 )
 
-func getDatabase(t *testing.T, key string) driver.TokenTransactionDB {
-	db, err := OpenDB(filepath.Join(tempDir, key))
-	assert.NoError(t, err)
-	assert.NotNil(t, db)
-	return db
-}
-
 func TestDb(t *testing.T) {
 	for _, c := range dbtest.Cases {
-		db := getDatabase(t, c.Name)
+		db, err := OpenDB(filepath.Join(tempDir, c.Name))
+		assert.NoError(t, err)
+		assert.NotNil(t, db)
 		t.Run(c.Name, func(xt *testing.T) { c.Fn(xt, db) })
 		db.Close()
 	}

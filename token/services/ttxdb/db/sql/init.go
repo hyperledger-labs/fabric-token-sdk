@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"crypto/sha256"
 	"database/sql"
 	"fmt"
 	"os"
@@ -64,7 +63,7 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
 	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
 
-	tableNames, err := GetTableNames(tablePrefix, name)
+	tableNames, err := getTableNames(tablePrefix, name)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -88,19 +87,6 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 	return p, nil
 }
 
-type MemoryDriver struct{}
-
-// MemoryDriver runs a pure go sqlite implementation in memory for testing purposes.
-func (d MemoryDriver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
-	h := sha256.New()
-	if _, err := h.Write([]byte(name)); err != nil {
-		return nil, err
-	}
-
-	return OpenDB("sqlite", fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil)), "test", name, true)
-}
-
 func init() {
 	ttxdb.Register("sql", &Driver{})
-	ttxdb.Register("memory", &MemoryDriver{})
 }
