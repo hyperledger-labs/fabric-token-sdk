@@ -33,7 +33,7 @@ var (
 	managerType = reflect.TypeOf((*Provider)(nil))
 )
 
-// GetProvider
+// GetProvider returns the registered instance of Provider from the passed service provider
 func GetProvider(sp view.ServiceProvider) (Provider, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {

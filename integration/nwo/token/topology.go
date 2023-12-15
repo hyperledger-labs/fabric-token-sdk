@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	. "github.com/onsi/gomega"
 )
 
@@ -73,7 +73,7 @@ func (t *Topology) AddTMS(fscNodes []*node.Node, backend BackedTopology, channel
 		BackendTopology: backend,
 		Network:         backend.Name(),
 		Channel:         channel,
-		Namespace:       keys.TokenNamespace,
+		Namespace:       ttx.TokenNamespace,
 		Driver:          driver,
 		Certifiers:      []string{},
 		BackendParams:   map[string]interface{}{},

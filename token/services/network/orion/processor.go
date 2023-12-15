@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -88,7 +90,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		}
 		return err
 	}
-	if !transientMap.Exists(keys.TokenRequestMetadata) {
+	if !transientMap.Exists(ttx.TokenRequestMetadata) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], no transient map found", txID)
 		}
@@ -103,7 +105,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	metadata, err := tms.NewMetadataFromBytes(transientMap.Get(keys.TokenRequestMetadata))
+	metadata, err := tms.NewMetadataFromBytes(transientMap.Get(ttx.TokenRequestMetadata))
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)

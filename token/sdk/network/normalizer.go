@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 )
 
@@ -73,8 +73,8 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions
 			logger.Debugf("No namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
 			opt.Namespace = ns
 		} else {
-			logger.Errorf("No namespace specified, and no default namespace found [%s], use default [%s]", err, keys.TokenNamespace)
-			opt.Namespace = keys.TokenNamespace
+			logger.Errorf("No namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
+			opt.Namespace = ttx.TokenNamespace
 		}
 	}
 	if opt.PublicParamsFetcher == nil {

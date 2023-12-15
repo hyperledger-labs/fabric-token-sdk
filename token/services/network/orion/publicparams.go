@@ -9,12 +9,13 @@ package orion
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
 	"github.com/pkg/errors"
 )
 

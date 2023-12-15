@@ -9,8 +9,6 @@ package ttx
 import (
 	"encoding/asn1"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -18,6 +16,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
+)
+
+const (
+	TokenNamespace       = "tns"
+	TokenRequestMetadata = "trmd"
 )
 
 type Payload struct {
@@ -288,7 +291,7 @@ func (t *Transaction) storeTransient() error {
 		return err
 	}
 
-	if err := t.Payload.Transient.Set(keys.TokenRequestMetadata, raw); err != nil {
+	if err := t.Payload.Transient.Set(TokenRequestMetadata, raw); err != nil {
 		return err
 	}
 

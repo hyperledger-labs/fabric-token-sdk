@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 )
 
@@ -113,10 +112,10 @@ func (a *TransactionInfoProvider) loadTransient(txID string) (map[string][]byte,
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load transient for [%s]", txID)
 	}
-	if !tm.Exists(keys.TokenRequestMetadata) {
+	if !tm.Exists(TokenRequestMetadata) {
 		return nil, nil
 	}
-	raw := tm.Get(keys.TokenRequestMetadata)
+	raw := tm.Get(TokenRequestMetadata)
 
 	metadata, err := a.tms.NewMetadataFromBytes(raw)
 	if err != nil {
