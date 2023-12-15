@@ -11,7 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/pkg/errors"
 )
 
@@ -41,11 +40,7 @@ type TransactionInfoProvider struct {
 	ttxDB TokenTransactionDB
 }
 
-func NewTransactionInfoProvider(sp view.ServiceProvider, tms *token.ManagementService) *TransactionInfoProvider {
-	return &TransactionInfoProvider{sp: sp, tms: tms, ttxDB: owner.Get(sp, tms)}
-}
-
-func NewTransactionInfoProviderFor(sp view.ServiceProvider, tms *token.ManagementService, ttxDB TokenTransactionDB) *TransactionInfoProvider {
+func newTransactionInfoProvider(sp view.ServiceProvider, tms *token.ManagementService, ttxDB TokenTransactionDB) *TransactionInfoProvider {
 	return &TransactionInfoProvider{sp: sp, tms: tms, ttxDB: ttxDB}
 }
 
