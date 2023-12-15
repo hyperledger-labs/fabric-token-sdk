@@ -8,11 +8,9 @@ package ttx
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
-	"github.com/pkg/errors"
 )
 
 type TxOwner struct {
@@ -66,13 +64,5 @@ func (a *TxOwner) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 func (a *TxOwner) appendTransactionEndorseAck(tx *Transaction, id view.Identity, sigma []byte) error {
-	k := kvs.GetService(a.sp)
-	ackKey, err := kvs.CreateCompositeKey(EndorsementAckPrefix, []string{tx.ID(), id.UniqueID()})
-	if err != nil {
-		return errors.Wrap(err, "failed creating composite key")
-	}
-	if err := k.Put(ackKey, sigma); err != nil {
-		return errors.WithMessagef(err, "failed storing ack for [%s:%s]", tx.ID(), id.UniqueID())
-	}
-	return nil
+	return a.owner.AppendTransactionEndorseAck(tx.ID(), id, sigma)
 }

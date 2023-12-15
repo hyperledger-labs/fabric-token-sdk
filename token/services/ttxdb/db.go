@@ -15,6 +15,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
@@ -24,6 +26,8 @@ import (
 const (
 	// PersistenceTypeConfigKey is the key for the persistence type in the config.
 	PersistenceTypeConfigKey = "token.ttxdb.persistence.type"
+	// EndorsementAckPrefix is the prefix for the endorsement ACKs.
+	EndorsementAckPrefix = "ttx.endorse.ack"
 )
 
 var (
@@ -234,13 +238,17 @@ type DB struct {
 
 	// status related fields
 	pendingTXs []string
+
+	// KVS
+	kvs *kvs.KVS
 }
 
-func newDB(p driver.TokenTransactionDB) *DB {
+func newDB(sp view.ServiceProvider, p driver.TokenTransactionDB) *DB {
 	return &DB{
 		db:         p,
 		eIDsLocks:  sync.Map{},
 		pendingTXs: make([]string, 0, 10000),
+		kvs:        kvs.GetService(sp),
 	}
 }
 
@@ -425,6 +433,50 @@ func (db *DB) ReleaseLocks(anchor string) {
 	}
 	logger.Debugf("Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
 
+}
+
+func (db *DB) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
+	ackKey, err := kvs.CreateCompositeKey(EndorsementAckPrefix, []string{txID, id.UniqueID()})
+	if err != nil {
+		return errors.Wrap(err, "failed creating composite key")
+	}
+	if err := db.kvs.Put(ackKey, sigma); err != nil {
+		return errors.WithMessagef(err, "failed storing ack for [%s:%s]", txID, id.UniqueID())
+	}
+	return nil
+}
+
+func (db *DB) GetEndorsementAcks(txID string) (map[string][]byte, error) {
+	// Load transaction endorsement ACKs
+	acks := make(map[string][]byte)
+	it, err := db.kvs.GetByPartialCompositeID(EndorsementAckPrefix, []string{txID})
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed loading ack for [%s]", txID)
+	}
+	defer it.Close()
+	for {
+		if !it.HasNext() {
+			break
+		}
+		var ack []byte
+		key, err := it.Next(&ack)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed loading ack for [%s]", txID)
+		}
+
+		objectType, attrs, err := kvs.SplitCompositeKey(key)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed splitting composite key for [%s]", txID)
+		}
+		if objectType != EndorsementAckPrefix {
+			return nil, errors.Errorf("unexpected object type [%s]", objectType)
+		}
+		if len(attrs) != 2 {
+			return nil, errors.Errorf("unexpected number of attributes [%d]", len(attrs))
+		}
+		acks[attrs[1]] = ack
+	}
+	return acks, nil
 }
 
 func (db *DB) appendSendMovements(record *token.AuditRecord) error {
@@ -635,11 +687,11 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 		if d == nil {
 			return nil, errors.Errorf("no driver found for [%s]", cm.driver)
 		}
-		driver, err := d.Open(cm.sp, id)
+		driverInstance, err := d.Open(cm.sp, id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}
-		c = newDB(driver)
+		c = newDB(cm.sp, driverInstance)
 		cm.dbs[id] = c
 	}
 	return c, nil
