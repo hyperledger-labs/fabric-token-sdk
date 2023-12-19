@@ -495,11 +495,11 @@ type tableNames struct {
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
-	r := regexp.MustCompile("^[a-zA-Z_]+$")
-	if !r.MatchString(prefix) {
-		return tableNames{}, errors.New("Illegal character in table prefix, only letters and underscores allowed")
-	}
 	if prefix != "" {
+		r := regexp.MustCompile("^[a-zA-Z_]+$")
+		if !r.MatchString(prefix) {
+			return tableNames{}, errors.New("Illegal character in table prefix, only letters and underscores allowed")
+		}
 		prefix = prefix + "_"
 	}
 

@@ -54,9 +54,6 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			OptsKey, EnvVarKey, opts.Driver)
 	}
-	if opts.TablePrefix == "" {
-		opts.TablePrefix = ""
-	}
 	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema)
 }
 
@@ -72,8 +69,7 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
 	}
-	err = db.Ping()
-	if err != nil {
+	if err = db.Ping(); err != nil {
 		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
 	}
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
