@@ -52,9 +52,6 @@ type DBEntriesStorageIterator struct {
 }
 
 func (i *DBEntriesStorageIterator) Next() (*storage.DBEntry, error) {
-	if !i.Iterator.HasNext() {
-		return nil, nil
-	}
 	e := &storage.DBEntry{}
 	if _, err := i.Iterator.Next(e); err != nil {
 		return nil, errors.Wrapf(err, "failed to get entry")
