@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/backend"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -106,9 +108,9 @@ func (p *SDK) Install() error {
 
 	// Token Transaction DB and derivatives
 	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
-	p.auditorManager = auditor.NewManager(p.registry, kvs.GetService(p.registry))
+	p.auditorManager = auditor.NewManager(p.registry, backend.NewStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(p.auditorManager))
-	p.ownerManager = owner.NewManager(p.registry, kvs.GetService(p.registry))
+	p.ownerManager = owner.NewManager(p.registry, backend.NewStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
 	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))

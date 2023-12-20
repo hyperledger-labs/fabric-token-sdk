@@ -12,37 +12,27 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
-type KVS interface {
-	Exists(id string) bool
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
-}
-
-type Entry struct {
-	TMSID token.TMSID
-}
-
 // Manager handles the databases
 type Manager struct {
-	sp     view.ServiceProvider
-	kvs    KVS
-	mutex  sync.Mutex
-	owners map[string]*Owner
+	sp      view.ServiceProvider
+	storage storage.DBEntriesStorage
+	mutex   sync.Mutex
+	owners  map[string]*Owner
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(sp view.ServiceProvider, kvs KVS) *Manager {
+func NewManager(sp view.ServiceProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
-		sp:     sp,
-		kvs:    kvs,
-		owners: map[string]*Owner{},
+		sp:      sp,
+		storage: storage,
+		owners:  map[string]*Owner{},
 	}
 }
 
@@ -56,9 +46,7 @@ func (cm *Manager) Owner(tms *token.ManagementService) (*Owner, error) {
 	c, ok := cm.owners[id]
 	if !ok {
 		// add an entry
-		if err := cm.kvs.Put(kvs.CreateCompositeKeyOrPanic("owner", []string{id}), &Entry{
-			TMSID: tms.ID(),
-		}); err != nil {
+		if err := cm.storage.Put(tms.ID(), ""); err != nil {
 			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tms.ID())
 		}
 		var err error
@@ -73,11 +61,25 @@ func (cm *Manager) Owner(tms *token.ManagementService) (*Owner, error) {
 
 func (cm *Manager) Restore() error {
 	logger.Infof("restore owner dbs...")
-	entries, err := cm.list()
+	it, err := cm.storage.Iterator()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to list existing owners")
 	}
-	for _, entry := range entries {
+	defer func(it storage.Iterator[*storage.DBEntry]) {
+		err := it.Close()
+		if err != nil {
+			logger.Warnf("failed to close iterator [%s]", err)
+		}
+	}(it)
+	for {
+		if !it.HasNext() {
+			logger.Infof("restore owner dbs...done")
+			return nil
+		}
+		entry, err := it.Next()
+		if err != nil {
+			return errors.Wrapf(err, "failed to get next entry")
+		}
 		logger.Infof("restore owner dbs for entry [%s]...", entry.TMSID.String())
 		tms := token.GetManagementService(cm.sp, token.WithTMSID(entry.TMSID))
 		if tms == nil {
@@ -88,8 +90,6 @@ func (cm *Manager) Restore() error {
 		}
 		logger.Infof("restore owner dbs for entry [%s]...done", entry.TMSID.String())
 	}
-	logger.Infof("restore owner dbs...done")
-	return nil
 }
 
 func (cm *Manager) newOwner(tms *token.ManagementService) (*Owner, error) {
@@ -99,25 +99,6 @@ func (cm *Manager) newOwner(tms *token.ManagementService) (*Owner, error) {
 		return nil, errors.Errorf("failed to get network instance for [%s:%s]", tms.ID().Network, tms.ID().Channel)
 	}
 	return owner, nil
-}
-
-func (cm *Manager) list() ([]Entry, error) {
-	it, err := kvs.GetService(cm.sp).GetByPartialCompositeID("owner", nil)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get db list iterator")
-	}
-	var res []Entry
-	for {
-		if !it.HasNext() {
-			break
-		}
-		e := Entry{}
-		if _, err := it.Next(&e); err != nil {
-			return nil, errors.Wrapf(err, "failed to get db entry")
-		}
-		res = append(res, e)
-	}
-	return res, nil
 }
 
 func (cm *Manager) restore(tms *token.ManagementService) error {
@@ -197,7 +178,7 @@ func (cm *Manager) restore(tms *token.ManagementService) error {
 		if err := owner.db.SetStatus(updated.TxID, updated.Status); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
-		logger.Infof("found transaction [%s] in vault with status [%d], corresponding pending transaction updated", updated.TxID, updated.Status)
+		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
 	}
 
 	logger.Infof("ownerdb [%s:%s], found [%d] pending transactions", tms.ID().Network, tms.ID().Channel, len(pendingTXs))

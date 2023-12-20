@@ -8,37 +8,27 @@ package auditor
 
 import (
 	"reflect"
+	"runtime/debug"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
-type KVS interface {
-	Exists(id string) bool
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
-}
-
-type Entry struct {
-	TMSID    token.TMSID
-	WalletID string
-}
-
 // Manager handles the databases
 type Manager struct {
 	sp       view.ServiceProvider
-	kvs      KVS
+	kvs      storage.DBEntriesStorage
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(sp view.ServiceProvider, kvs KVS) *Manager {
+func NewManager(sp view.ServiceProvider, kvs storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		sp:       sp,
 		kvs:      kvs,
@@ -56,11 +46,8 @@ func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
 	c, ok := cm.auditors[id]
 	if !ok {
 		// add an entry
-		if err := cm.kvs.Put(kvs.CreateCompositeKeyOrPanic("auditor", []string{id}), &Entry{
-			TMSID:    w.TMS().ID(),
-			WalletID: w.ID(),
-		}); err != nil {
-			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s:%s]", w.TMS().ID(), w.ID())
+		if err := cm.kvs.Put(w.TMS().ID(), w.ID()); err != nil {
+			return nil, errors.Wrapf(err, "failed to store auditor entry [%s:%s]", w.TMS().ID(), w.ID())
 		}
 		var err error
 		c, err = cm.newAuditor(w)
@@ -74,11 +61,25 @@ func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
 
 func (cm *Manager) Restore() error {
 	logger.Infof("restore audit dbs...")
-	entries, err := cm.list()
+	it, err := cm.kvs.Iterator()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to list existing auditors")
 	}
-	for _, entry := range entries {
+	defer func(it storage.Iterator[*storage.DBEntry]) {
+		err := it.Close()
+		if err != nil {
+			logger.Warnf("failed to close iterator [%s][%s]", err, debug.Stack())
+		}
+	}(it)
+	for {
+		if !it.HasNext() {
+			logger.Infof("restore audit dbs...done")
+			return nil
+		}
+		entry, err := it.Next()
+		if err != nil {
+			return errors.Wrapf(err, "failed to get next entry for [%s:%s]...", entry.TMSID.String(), entry.WalletID)
+		}
 		logger.Infof("restore audit dbs for entry [%s:%s]...", entry.TMSID.String(), entry.WalletID)
 		tms := token.GetManagementService(cm.sp, token.WithTMSID(entry.TMSID))
 		if tms == nil {
@@ -89,12 +90,10 @@ func (cm *Manager) Restore() error {
 			return errors.Errorf("cannot find auditor wallet for [%s:%s]", entry.TMSID, entry.WalletID)
 		}
 		if err := cm.restore(w); err != nil {
-			return errors.Errorf("cannot bootstrap auditdb for [%s:%s]", entry.TMSID, entry.WalletID)
+			return errors.Wrapf(err, "cannot bootstrap auditdb for [%s:%s]", entry.TMSID, entry.WalletID)
 		}
 		logger.Infof("restore audit dbs for entry [%s:%s]...done", entry.TMSID.String(), entry.WalletID)
 	}
-	logger.Infof("restore audit dbs...done")
-	return nil
 }
 
 func (cm *Manager) newAuditor(w *token.AuditorWallet) (*Auditor, error) {
@@ -105,25 +104,6 @@ func (cm *Manager) newAuditor(w *token.AuditorWallet) (*Auditor, error) {
 	}
 	logger.Debugf("auditdb: register tx status listener for all tx at network [%s:%s]", w.TMS().Network(), w.TMS().Channel())
 	return auditor, nil
-}
-
-func (cm *Manager) list() ([]Entry, error) {
-	it, err := kvs.GetService(cm.sp).GetByPartialCompositeID("auditor", nil)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get db list iterator")
-	}
-	var res []Entry
-	for {
-		if !it.HasNext() {
-			break
-		}
-		e := Entry{}
-		if _, err := it.Next(&e); err != nil {
-			return nil, errors.Wrapf(err, "failed to get db entry")
-		}
-		res = append(res, e)
-	}
-	return res, nil
 }
 
 func (cm *Manager) restore(w *token.AuditorWallet) error {
@@ -202,7 +182,7 @@ func (cm *Manager) restore(w *token.AuditorWallet) error {
 		if err := auditor.db.SetStatus(updated.TxID, updated.Status); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
-		logger.Infof("found transaction [%s] in vault with status [%d], corresponding pending transaction updated", updated.TxID, updated.Status)
+		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
 	}
 
 	logger.Infof("auditdb [%s:%s], found [%d] pending transactions", w.TMS().Network(), w.TMS().Channel(), len(pendingTXs))
