@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package backend
+package storage
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -18,16 +18,16 @@ type KVS interface {
 	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
 }
 
-type Storage struct {
+type DBEntriesStorage struct {
 	prefix string
 	kvs    KVS
 }
 
-func NewStorage(prefix string, kvs KVS) *Storage {
-	return &Storage{prefix: prefix, kvs: kvs}
+func NewDBEntriesStorage(prefix string, kvs KVS) *DBEntriesStorage {
+	return &DBEntriesStorage{prefix: prefix, kvs: kvs}
 }
 
-func (s *Storage) Put(tmsID token.TMSID, walletID string) error {
+func (s *DBEntriesStorage) Put(tmsID token.TMSID, walletID string) error {
 	id := tmsID.String() + walletID
 	if err := s.kvs.Put(kvs.CreateCompositeKeyOrPanic(s.prefix, []string{id}), &storage.DBEntry{
 		TMSID:    tmsID,
@@ -38,20 +38,20 @@ func (s *Storage) Put(tmsID token.TMSID, walletID string) error {
 	return nil
 }
 
-func (s *Storage) Iterator() (storage.Iterator[*storage.DBEntry], error) {
+func (s *DBEntriesStorage) Iterator() (storage.Iterator[*storage.DBEntry], error) {
 	it, err := s.kvs.GetByPartialCompositeID(s.prefix, nil)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db list iterator")
 	}
 
-	return &iterator{Iterator: it}, nil
+	return &DBEntriesStorageIterator{Iterator: it}, nil
 }
 
-type iterator struct {
+type DBEntriesStorageIterator struct {
 	kvs.Iterator
 }
 
-func (i *iterator) Next() (*storage.DBEntry, error) {
+func (i *DBEntriesStorageIterator) Next() (*storage.DBEntry, error) {
 	if !i.Iterator.HasNext() {
 		return nil, nil
 	}
@@ -62,6 +62,6 @@ func (i *iterator) Next() (*storage.DBEntry, error) {
 	return e, nil
 }
 
-func (i *iterator) Close() error {
+func (i *DBEntriesStorageIterator) Close() error {
 	return i.Iterator.Close()
 }

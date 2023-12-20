@@ -22,16 +22,16 @@ import (
 // Manager handles the databases
 type Manager struct {
 	sp       view.ServiceProvider
-	kvs      storage.DBEntriesStorage
+	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(sp view.ServiceProvider, kvs storage.DBEntriesStorage) *Manager {
+func NewManager(sp view.ServiceProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		sp:       sp,
-		kvs:      kvs,
+		storage:  storage,
 		auditors: map[string]*Auditor{},
 	}
 }
@@ -46,7 +46,7 @@ func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
 	c, ok := cm.auditors[id]
 	if !ok {
 		// add an entry
-		if err := cm.kvs.Put(w.TMS().ID(), w.ID()); err != nil {
+		if err := cm.storage.Put(w.TMS().ID(), w.ID()); err != nil {
 			return nil, errors.Wrapf(err, "failed to store auditor entry [%s:%s]", w.TMS().ID(), w.ID())
 		}
 		var err error
@@ -61,7 +61,7 @@ func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
 
 func (cm *Manager) Restore() error {
 	logger.Infof("restore audit dbs...")
-	it, err := cm.kvs.Iterator()
+	it, err := cm.storage.Iterator()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to list existing auditors")
 	}
