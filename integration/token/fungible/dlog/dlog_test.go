@@ -7,12 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
+	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	_ "modernc.org/sqlite"
 )
 
 var _ = Describe("EndToEnd", func() {
@@ -21,13 +27,21 @@ var _ = Describe("EndToEnd", func() {
 	)
 
 	AfterEach(func() {
+		network.DeleteOnStop = false
 		network.Stop()
 	})
 
-	Describe("Fungible", func() {
+	Describe("Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
+			// notice that fabric-ca does not support yet aries
 			var err error
-			network, err = integration.New(StartPortDlog(), "", fungible.Topology("fabric", "dlog", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					Aries:          true,
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -35,14 +49,85 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor")
+			fungible.TestAll(network, "auditor", nil, true)
+		})
+
+	})
+
+	Describe("Extras", func() {
+		BeforeEach(func() {
+			// notice that fabric-ca does not support yet aries
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					Aries:          true,
+				})...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
+		It("Update public params", func() {
+			tms := fungible.GetTMS(network, "default")
+			fungible.TestPublicParamsUpdate(network, "newAuditor", PrepareUpdatedPublicParams(network, "newAuditor", tms), tms, false)
+		})
+
+		It("Test Identity Revocation", func() {
+			fungible.RegisterAuditor(network, "auditor", nil)
+			rId := fungible.GetRevocationHandle(network, "bob")
+			fungible.TestRevokeIdentity(network, "auditor", rId, hash.Hashable(rId).String()+" Identity is in revoked state")
+		})
+
+		It("Test Remote Wallet (GRPC)", func() {
+			fungible.TestRemoteOwnerWallet(network, "auditor", false)
+		})
+
+		It("Test Remote Wallet (WebSocket)", func() {
+			fungible.TestRemoteOwnerWallet(network, "auditor", true)
 		})
 	})
 
 	Describe("Fungible with Auditor = Issuer", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", fungible.Topology("fabric", "dlog", true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:         "fabric",
+					TokenSDKDriver:  "dlog",
+					AuditorAsIssuer: true,
+					Aries:           true,
+				},
+			)...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.DeleteOnStart = true
+			network.Generate()
+			network.Start()
+		})
+
+		It("succeeded", func() {
+			fungible.TestAll(network, "issuer", nil, true)
+		})
+
+		It("Update public params", func() {
+			tms := fungible.GetTMS(network, "default")
+			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
+		})
+
+	})
+
+	Describe("Fungible with Auditor ne Issuer + Fabric CA", func() {
+		BeforeEach(func() {
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -50,8 +135,52 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "issuer")
+			fungible.TestAll(network, "auditor", nil, false)
+		})
+	})
+
+	Describe("Fungible with Auditor ne Issuer + SQL", func() {
+		BeforeEach(func() {
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					SqlTTXDB:       true,
+				})...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
+		It("succeeded", func() {
+			fungible.TestAll(network, "auditor", nil, false)
 		})
 	})
 
 })
+
+func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, tms *topology.TMS) []byte {
+	auditorId := fungible.GetAuditorIdentity(network, auditor)
+	issuerId := fungible.GetIssuerIdentity(network, "newIssuer.id1")
+	tokenPlatform, ok := network.Ctx.PlatformsByName["token"].(*token.Platform)
+	Expect(ok).To(BeTrue(), "failed to get token platform from context")
+
+	// Deserialize current params
+	ppBytes, err := os.ReadFile(tokenPlatform.PublicParametersFile(tms))
+	Expect(err).NotTo(HaveOccurred())
+	pp, err := crypto.NewPublicParamsFromBytes(ppBytes, crypto.DLogPublicParameters)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(pp.Validate()).NotTo(HaveOccurred())
+
+	// Update PP
+	pp.Auditor = auditorId
+	pp.Issuers = [][]byte{issuerId}
+
+	// Serialize
+	ppBytes, err = pp.Serialize()
+	Expect(err).NotTo(HaveOccurred())
+
+	return ppBytes
+}

@@ -7,13 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package network
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"sync"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -30,6 +33,8 @@ const (
 	Unknown                        // Transaction is unknown
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
+
+type UnspentTokensIterator = driver.UnspentTokensIterator
 
 // TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
 type TxStatusChangeListener interface {
@@ -136,6 +141,10 @@ func (e *Envelope) UnmarshalJSON(raw []byte) error {
 	return e.e.FromBytes(r)
 }
 
+func (e *Envelope) String() string {
+	return e.e.String()
+}
+
 type RWSet struct {
 	rws driver.RWSet
 }
@@ -145,11 +154,21 @@ func (s *RWSet) Done() {
 }
 
 type Vault struct {
-	v driver.Vault
+	n  *Network
+	v  driver.Vault
+	ns string
 }
 
 func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
+}
+
+func (v *Vault) UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error) {
+	return v.v.UnspentTokensIteratorBy(id, typ)
+}
+
+func (v *Vault) UnspentTokensIterator() (UnspentTokensIterator, error) {
+	return v.v.UnspentTokensIterator()
 }
 
 func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {
@@ -173,6 +192,87 @@ func (v *Vault) Status(id string) (ValidationCode, error) {
 	return ValidationCode(vc), err
 }
 
+func (v *Vault) DiscardTx(id string) error {
+	return v.v.DiscardTx(id)
+}
+
+// PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
+// Those that are not available are deleted.
+// The function returns the list of deleted token ids
+func (v *Vault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
+	it, err := v.UnspentTokensIterator()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
+	}
+
+	var deleted []*token2.ID
+	tms := token.GetManagementService(context, token.WithTMS(v.n.Name(), v.n.Channel(), v.ns))
+	var buffer []*token2.UnspentToken
+	bufferSize := 50
+	for {
+		tok, err := it.Next()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get next unspent token")
+		}
+		if tok == nil {
+			break
+		}
+		buffer = append(buffer, tok)
+		if len(buffer) > bufferSize {
+			newDeleted, err := v.deleteTokens(context, tms, buffer)
+			if err != nil {
+				return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+			}
+			deleted = append(deleted, newDeleted...)
+			buffer = nil
+		}
+	}
+	newDeleted, err := v.deleteTokens(context, tms, buffer)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to process tokens [%v]", buffer)
+	}
+	deleted = append(deleted, newDeleted...)
+
+	return deleted, nil
+}
+
+func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService, tokens []*token2.UnspentToken) ([]*token2.ID, error) {
+	logger.Debugf("delete tokens from vault [%d][%v]", len(tokens), tokens)
+	if len(tokens) == 0 {
+		return nil, nil
+	}
+
+	// get spent flags
+	ids := make([]*token2.ID, len(tokens))
+	for i, tok := range tokens {
+		ids[i] = tok.Id
+	}
+	spentIDs, err := tms.WalletManager().SpentIDs(ids)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
+	}
+	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), spentIDs)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
+	}
+
+	// remove the tokens flagged as spent
+	var toDelete []*token2.ID
+	for i, tok := range tokens {
+		if spent[i] {
+			logger.Debugf("token [%s] is spent", tok.Id)
+			toDelete = append(toDelete, tok.Id)
+		} else {
+			logger.Debugf("token [%s] is not spent", tok.Id)
+		}
+	}
+	if err := v.v.TokenVault().DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
+	}
+
+	return toDelete, nil
+}
+
 type LocalMembership struct {
 	lm driver.LocalMembership
 }
@@ -185,8 +285,16 @@ func (l *LocalMembership) AnonymousIdentity() view.Identity {
 	return l.lm.AnonymousIdentity()
 }
 
-func (l *LocalMembership) IsMe(id view.Identity) bool {
-	return l.lm.IsMe(id)
+type Ledger struct {
+	l driver.Ledger
+}
+
+func (l *Ledger) Status(id string) (ValidationCode, error) {
+	vc, err := l.l.Status(id)
+	if err != nil {
+		return 0, err
+	}
+	return ValidationCode(vc), nil
 }
 
 // Network provides access to the remote network
@@ -210,7 +318,7 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Vault{v: v}, nil
+	return &Vault{n: n, v: v, ns: namespace}, nil
 }
 
 // GetRWSet returns the read-write set unmarshalled from the given bytes and bound to the given id
@@ -227,13 +335,21 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.n.StoreEnvelope(id, env)
 }
 
+func (n *Network) ExistEnvelope(id string) bool {
+	return n.n.EnvelopeExists(id)
+}
+
+func (n *Network) ExistTransient(id string) bool {
+	return n.n.TransientExists(id)
+}
+
 // Broadcast sends the given blob to the network
-func (n *Network) Broadcast(blob interface{}) error {
+func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 	switch b := blob.(type) {
 	case *Envelope:
-		return n.n.Broadcast(b.e)
+		return n.n.Broadcast(context, b.e)
 	default:
-		return n.n.Broadcast(b)
+		return n.n.Broadcast(context, b)
 	}
 }
 
@@ -243,8 +359,11 @@ func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error
 }
 
 // IsFinal returns true if the given transaction is final
-func (n *Network) IsFinal(id string) error {
-	return n.n.IsFinal(id)
+func (n *Network) IsFinal(ctx context.Context, id string) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return n.n.IsFinal(ctx, id)
 }
 
 // AnonymousIdentity returns a fresh anonymous identity
@@ -262,9 +381,18 @@ func (n *Network) StoreTransient(id string, transient TransientMap) error {
 	return n.n.StoreTransient(id, driver.TransientMap(transient))
 }
 
+// GetTransient retrieves the transient map bound to the passed id
+func (n *Network) GetTransient(id string) (TransientMap, error) {
+	tm, err := n.n.GetTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return TransientMap(tm), nil
+}
+
 // RequestApproval requests approval for the given token request
-func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
-	env, err := n.n.RequestApproval(context, namespace, requestRaw, signer, driver.TxID{
+func (n *Network) RequestApproval(context view.Context, tms *token.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (*Envelope, error) {
+	env, err := n.n.RequestApproval(context, tms, requestRaw, signer, driver.TxID{
 		Nonce:   txID.Nonce,
 		Creator: txID.Creator,
 	})
@@ -296,6 +424,11 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	return n.n.QueryTokens(context, namespace, IDs)
 }
 
+// AreTokensSpent retrieves the spent flag for the passed ids
+func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
+	return n.n.AreTokensSpent(context, namespace, IDs)
+}
+
 // LocalMembership returns the local membership for this network
 func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
@@ -314,6 +447,24 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeL
 // UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
 func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error {
 	return n.n.UnsubscribeTxStatusChanges(id, listener)
+}
+
+// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
+// The operation gets canceled if the passed timeout gets reached.
+func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
+}
+
+func (n *Network) Ledger(namespace string) (*Ledger, error) {
+	l, err := n.n.Ledger()
+	if err != nil {
+		return nil, err
+	}
+	return &Ledger{l: l}, nil
+}
+
+func (n *Network) ProcessNamespace(namespace string) error {
+	return n.n.ProcessNamespace(namespace)
 }
 
 // Provider returns an instance of network provider

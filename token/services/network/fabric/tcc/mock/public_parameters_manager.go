@@ -8,262 +8,78 @@ import (
 )
 
 type PublicParametersManager struct {
-	AddIssuerStub        func([]byte) ([]byte, error)
-	addIssuerMutex       sync.RWMutex
-	addIssuerArgsForCall []struct {
-		arg1 []byte
+	GraphHidingStub        func() bool
+	graphHidingMutex       sync.RWMutex
+	graphHidingArgsForCall []struct {
 	}
-	addIssuerReturns struct {
-		result1 []byte
-		result2 error
+	graphHidingReturns struct {
+		result1 bool
 	}
-	addIssuerReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	SetAuditorStub        func([]byte) ([]byte, error)
-	setAuditorMutex       sync.RWMutex
-	setAuditorArgsForCall []struct {
-		arg1 []byte
-	}
-	setAuditorReturns struct {
-		result1 []byte
-		result2 error
-	}
-	setAuditorReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
-	}
-	SetCertifierStub        func([]byte) ([]byte, error)
-	setCertifierMutex       sync.RWMutex
-	setCertifierArgsForCall []struct {
-		arg1 []byte
-	}
-	setCertifierReturns struct {
-		result1 []byte
-		result2 error
-	}
-	setCertifierReturnsOnCall map[int]struct {
-		result1 []byte
-		result2 error
+	graphHidingReturnsOnCall map[int]struct {
+		result1 bool
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *PublicParametersManager) AddIssuer(arg1 []byte) ([]byte, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	fake.addIssuerMutex.Lock()
-	ret, specificReturn := fake.addIssuerReturnsOnCall[len(fake.addIssuerArgsForCall)]
-	fake.addIssuerArgsForCall = append(fake.addIssuerArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
-	fake.recordInvocation("AddIssuer", []interface{}{arg1Copy})
-	fake.addIssuerMutex.Unlock()
-	if fake.AddIssuerStub != nil {
-		return fake.AddIssuerStub(arg1)
+func (fake *PublicParametersManager) GraphHiding() bool {
+	fake.graphHidingMutex.Lock()
+	ret, specificReturn := fake.graphHidingReturnsOnCall[len(fake.graphHidingArgsForCall)]
+	fake.graphHidingArgsForCall = append(fake.graphHidingArgsForCall, struct {
+	}{})
+	stub := fake.GraphHidingStub
+	fakeReturns := fake.graphHidingReturns
+	fake.recordInvocation("GraphHiding", []interface{}{})
+	fake.graphHidingMutex.Unlock()
+	if stub != nil {
+		return stub()
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1
 	}
-	fakeReturns := fake.addIssuerReturns
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1
 }
 
-func (fake *PublicParametersManager) AddIssuerCallCount() int {
-	fake.addIssuerMutex.RLock()
-	defer fake.addIssuerMutex.RUnlock()
-	return len(fake.addIssuerArgsForCall)
+func (fake *PublicParametersManager) GraphHidingCallCount() int {
+	fake.graphHidingMutex.RLock()
+	defer fake.graphHidingMutex.RUnlock()
+	return len(fake.graphHidingArgsForCall)
 }
 
-func (fake *PublicParametersManager) AddIssuerCalls(stub func([]byte) ([]byte, error)) {
-	fake.addIssuerMutex.Lock()
-	defer fake.addIssuerMutex.Unlock()
-	fake.AddIssuerStub = stub
+func (fake *PublicParametersManager) GraphHidingCalls(stub func() bool) {
+	fake.graphHidingMutex.Lock()
+	defer fake.graphHidingMutex.Unlock()
+	fake.GraphHidingStub = stub
 }
 
-func (fake *PublicParametersManager) AddIssuerArgsForCall(i int) []byte {
-	fake.addIssuerMutex.RLock()
-	defer fake.addIssuerMutex.RUnlock()
-	argsForCall := fake.addIssuerArgsForCall[i]
-	return argsForCall.arg1
+func (fake *PublicParametersManager) GraphHidingReturns(result1 bool) {
+	fake.graphHidingMutex.Lock()
+	defer fake.graphHidingMutex.Unlock()
+	fake.GraphHidingStub = nil
+	fake.graphHidingReturns = struct {
+		result1 bool
+	}{result1}
 }
 
-func (fake *PublicParametersManager) AddIssuerReturns(result1 []byte, result2 error) {
-	fake.addIssuerMutex.Lock()
-	defer fake.addIssuerMutex.Unlock()
-	fake.AddIssuerStub = nil
-	fake.addIssuerReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PublicParametersManager) AddIssuerReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.addIssuerMutex.Lock()
-	defer fake.addIssuerMutex.Unlock()
-	fake.AddIssuerStub = nil
-	if fake.addIssuerReturnsOnCall == nil {
-		fake.addIssuerReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
+func (fake *PublicParametersManager) GraphHidingReturnsOnCall(i int, result1 bool) {
+	fake.graphHidingMutex.Lock()
+	defer fake.graphHidingMutex.Unlock()
+	fake.GraphHidingStub = nil
+	if fake.graphHidingReturnsOnCall == nil {
+		fake.graphHidingReturnsOnCall = make(map[int]struct {
+			result1 bool
 		})
 	}
-	fake.addIssuerReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PublicParametersManager) SetAuditor(arg1 []byte) ([]byte, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	fake.setAuditorMutex.Lock()
-	ret, specificReturn := fake.setAuditorReturnsOnCall[len(fake.setAuditorArgsForCall)]
-	fake.setAuditorArgsForCall = append(fake.setAuditorArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
-	fake.recordInvocation("SetAuditor", []interface{}{arg1Copy})
-	fake.setAuditorMutex.Unlock()
-	if fake.SetAuditorStub != nil {
-		return fake.SetAuditorStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.setAuditorReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *PublicParametersManager) SetAuditorCallCount() int {
-	fake.setAuditorMutex.RLock()
-	defer fake.setAuditorMutex.RUnlock()
-	return len(fake.setAuditorArgsForCall)
-}
-
-func (fake *PublicParametersManager) SetAuditorCalls(stub func([]byte) ([]byte, error)) {
-	fake.setAuditorMutex.Lock()
-	defer fake.setAuditorMutex.Unlock()
-	fake.SetAuditorStub = stub
-}
-
-func (fake *PublicParametersManager) SetAuditorArgsForCall(i int) []byte {
-	fake.setAuditorMutex.RLock()
-	defer fake.setAuditorMutex.RUnlock()
-	argsForCall := fake.setAuditorArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *PublicParametersManager) SetAuditorReturns(result1 []byte, result2 error) {
-	fake.setAuditorMutex.Lock()
-	defer fake.setAuditorMutex.Unlock()
-	fake.SetAuditorStub = nil
-	fake.setAuditorReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PublicParametersManager) SetAuditorReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.setAuditorMutex.Lock()
-	defer fake.setAuditorMutex.Unlock()
-	fake.SetAuditorStub = nil
-	if fake.setAuditorReturnsOnCall == nil {
-		fake.setAuditorReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.setAuditorReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PublicParametersManager) SetCertifier(arg1 []byte) ([]byte, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	fake.setCertifierMutex.Lock()
-	ret, specificReturn := fake.setCertifierReturnsOnCall[len(fake.setCertifierArgsForCall)]
-	fake.setCertifierArgsForCall = append(fake.setCertifierArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
-	fake.recordInvocation("SetCertifier", []interface{}{arg1Copy})
-	fake.setCertifierMutex.Unlock()
-	if fake.SetCertifierStub != nil {
-		return fake.SetCertifierStub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	fakeReturns := fake.setCertifierReturns
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *PublicParametersManager) SetCertifierCallCount() int {
-	fake.setCertifierMutex.RLock()
-	defer fake.setCertifierMutex.RUnlock()
-	return len(fake.setCertifierArgsForCall)
-}
-
-func (fake *PublicParametersManager) SetCertifierCalls(stub func([]byte) ([]byte, error)) {
-	fake.setCertifierMutex.Lock()
-	defer fake.setCertifierMutex.Unlock()
-	fake.SetCertifierStub = stub
-}
-
-func (fake *PublicParametersManager) SetCertifierArgsForCall(i int) []byte {
-	fake.setCertifierMutex.RLock()
-	defer fake.setCertifierMutex.RUnlock()
-	argsForCall := fake.setCertifierArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *PublicParametersManager) SetCertifierReturns(result1 []byte, result2 error) {
-	fake.setCertifierMutex.Lock()
-	defer fake.setCertifierMutex.Unlock()
-	fake.SetCertifierStub = nil
-	fake.setCertifierReturns = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *PublicParametersManager) SetCertifierReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.setCertifierMutex.Lock()
-	defer fake.setCertifierMutex.Unlock()
-	fake.SetCertifierStub = nil
-	if fake.setCertifierReturnsOnCall == nil {
-		fake.setCertifierReturnsOnCall = make(map[int]struct {
-			result1 []byte
-			result2 error
-		})
-	}
-	fake.setCertifierReturnsOnCall[i] = struct {
-		result1 []byte
-		result2 error
-	}{result1, result2}
+	fake.graphHidingReturnsOnCall[i] = struct {
+		result1 bool
+	}{result1}
 }
 
 func (fake *PublicParametersManager) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.addIssuerMutex.RLock()
-	defer fake.addIssuerMutex.RUnlock()
-	fake.setAuditorMutex.RLock()
-	defer fake.setAuditorMutex.RUnlock()
-	fake.setCertifierMutex.RLock()
-	defer fake.setCertifierMutex.RUnlock()
+	fake.graphHidingMutex.RLock()
+	defer fake.graphHidingMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
@@ -283,4 +99,4 @@ func (fake *PublicParametersManager) recordInvocation(key string, args []interfa
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ tcc.PublicParametersManager = new(PublicParametersManager)
+var _ tcc.PublicParameters = new(PublicParametersManager)

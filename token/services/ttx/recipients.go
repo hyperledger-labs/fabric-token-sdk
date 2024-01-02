@@ -9,41 +9,44 @@ package ttx
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
-func compileServiceOptions(opts ...token.ServiceOption) (*token.TMSID, error) {
+func CompileServiceOptions(opts ...token.ServiceOption) (*token.ServiceOptions, error) {
 	txOptions := &token.ServiceOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {
 			return nil, err
 		}
 	}
-	id := txOptions.TMSID()
-	return &id, nil
+	return txOptions, nil
 }
 
-type RecipientData struct {
-	Identity  view.Identity
-	AuditInfo []byte
-	Metadata  []byte
+// WithRecipientData is used to add a RecipientData to the service options
+func WithRecipientData(recipientData *RecipientData) token.ServiceOption {
+	return func(options *token.ServiceOptions) error {
+		if options.Params == nil {
+			options.Params = map[string]interface{}{}
+		}
+		options.Params["RecipientData"] = recipientData
+		return nil
+	}
 }
 
-func (r *RecipientData) Bytes() ([]byte, error) {
-	return Marshal(r)
+func getRecipientData(opts *token.ServiceOptions) *RecipientData {
+	rdBoxed, ok := opts.Params["RecipientData"]
+	if !ok {
+		return nil
+	}
+	return rdBoxed.(*RecipientData)
 }
 
-func (r *RecipientData) FromBytes(raw []byte) error {
-	return Unmarshal(raw, r)
-}
+type RecipientData = token.RecipientData
 
 type ExchangeRecipientRequest struct {
 	TMSID         token.TMSID
@@ -60,8 +63,9 @@ func (r *ExchangeRecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RecipientRequest struct {
-	TMSID    token.TMSID
-	WalletID []byte
+	TMSID         token.TMSID
+	WalletID      []byte
+	RecipientData *RecipientData
 }
 
 func (r *RecipientRequest) Bytes() ([]byte, error) {
@@ -73,19 +77,24 @@ func (r *RecipientRequest) FromBytes(raw []byte) error {
 }
 
 type RequestRecipientIdentityView struct {
-	TMSID token.TMSID
-	Other view.Identity
+	TMSID              token.TMSID
+	Other              view.Identity
+	OtherRecipientData *RecipientData
 }
 
 // RequestRecipientIdentity executes the RequestRecipientIdentityView.
 // The sender contacts the recipient's FSC node identified via the passed view identity.
 // The sender gets back the identity the recipient wants to use to assign ownership of tokens.
 func RequestRecipientIdentity(context view.Context, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, error) {
-	tmsID, err := compileServiceOptions(opts...)
+	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, err
 	}
-	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{TMSID: *tmsID, Other: recipient})
+	pseudonymBoxed, err := context.RunView(&RequestRecipientIdentityView{
+		TMSID:              options.TMSID(),
+		Other:              recipient,
+		OtherRecipientData: getRecipientData(options),
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -93,87 +102,81 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 }
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "RequestRecipientIdentityView", context.ID())
-	defer agent.EmitKey(0, "ttx", "end", "RequestRecipientIdentityView", context.ID())
+	w := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager().OwnerWalletByIdentity(f.Other)
 
+	if isSameNode := w != nil; !isSameNode {
+		return f.callWithRecipientData(context)
+	}
+	if isRemoteRecipient := f.OtherRecipientData != nil; isRemoteRecipient {
+		return f.OtherRecipientData.Identity, nil
+	}
+	return w.GetRecipientIdentity()
+}
+
+func (f *RequestRecipientIdentityView) callWithRecipientData(context view.Context) (interface{}, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("request recipient to [%s] for TMS [%s]", f.Other, f.TMSID)
+		logger.Debugf("request recipient [%s] is not registered", f.Other)
+	}
+	session, err := context.GetSession(context.Initiator(), f.Other)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get session with [%s]", f.Other)
 	}
 
-	tms := token.GetManagementService(context, token.WithTMSID(f.TMSID))
-
-	if w := tms.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("request recipient [%s] is already registered", f.Other)
-		}
-		recipient, err := w.GetRecipientIdentity()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get recipient identity from wallet [%s]", w.ID())
-		}
-		return recipient, nil
-	} else {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("request recipient [%s] is not registered", f.Other)
-		}
-		session, err := context.GetSession(context.Initiator(), f.Other)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get session with [%s]", f.Other)
-		}
-
-		// Ask for identity
-		rr := &RecipientRequest{
-			TMSID:    f.TMSID,
-			WalletID: f.Other,
-		}
-		rrRaw, err := rr.Bytes()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed marshalling recipient request")
-		}
-		err = session.Send(rrRaw)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to send recipient request")
-		}
-		agent.EmitKey(0, "ttx", "sent", "requestRecipientIdentity", session.Info().ID)
-
-		// Wait to receive a view identity
-		ch := session.Receive()
-		var payload []byte
-
-		timeout := time.NewTimer(time.Minute)
-		defer timeout.Stop()
-
-		select {
-		case msg := <-ch:
-			payload = msg.Payload
-			agent.EmitKey(0, "ttx", "received", "responseRecipientIdentity", session.Info().ID)
-		case <-timeout.C:
-			return nil, errors.New("timeout reached")
-		}
-
-		recipientData := &RecipientData{}
-		if err := recipientData.FromBytes(payload); err != nil {
-			logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
-			return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
-		}
-		if err := tms.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
-			logger.Errorf("failed to register recipient identity: [%s]", err)
-			return nil, errors.Wrapf(err, "failed to register recipient identity")
-		}
-
-		// Update the Endpoint Resolver
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, f.Other)
-		}
-		if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
-			}
-			return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, f.Other)
-		}
-
-		return recipientData.Identity, nil
+	// Ask for identity
+	rr := &RecipientRequest{
+		TMSID:         f.TMSID,
+		WalletID:      f.Other,
+		RecipientData: f.OtherRecipientData,
 	}
+	rrRaw, err := rr.Bytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling recipient request")
+	}
+	err = session.Send(rrRaw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to send recipient request")
+	}
+
+	// Wait to receive a view identity
+	ch := session.Receive()
+	var payload []byte
+
+	timeout := time.NewTimer(time.Minute)
+	defer timeout.Stop()
+
+	select {
+	case msg := <-ch:
+		if msg.Status == view.ERROR {
+			return nil, errors.New(string(msg.Payload))
+		}
+		payload = msg.Payload
+	case <-timeout.C:
+		return nil, errors.New("timeout reached")
+	}
+
+	recipientData, err := RecipientDataFromBytes(payload)
+	if err != nil {
+		logger.Errorf("failed to unmarshal recipient data: [%s][%s]", payload, err)
+		return nil, errors.Wrapf(err, "failed to unmarshal recipient data")
+	}
+	wm := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager()
+	if err := wm.RegisterRecipientIdentity(recipientData); err != nil {
+		logger.Errorf("failed to register recipient identity: [%s]", err)
+		return nil, errors.Wrapf(err, "failed to register recipient identity")
+	}
+
+	// Update the Endpoint Resolver
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("update endpoint resolver for [%s], bind to [%s]", recipientData.Identity, f.Other)
+	}
+	if err := view2.GetEndpointService(context).Bind(f.Other, recipientData.Identity); err != nil {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed binding [%s] to [%s]", recipientData.Identity, f.Other)
+		}
+		return nil, errors.Wrapf(err, "failed binding [%s] to [%s]", recipientData.Identity, f.Other)
+	}
+
+	return recipientData.Identity, nil
 }
 
 type RespondRequestRecipientIdentityView struct {
@@ -202,16 +205,11 @@ func RespondRequestRecipientIdentityUsingWallet(context view.Context, wallet str
 }
 
 func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "start", "RespondRequestRecipientIdentityView", context.ID())
-	defer agent.EmitKey(0, "ttx", "end", "RespondRequestRecipientIdentityView", context.ID())
-
 	session, payload, err := session2.ReadFirstMessage(context)
 	if err != nil {
 		logger.Errorf("failed to read first message: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to read first message")
 	}
-	agent.EmitKey(0, "ttx", "received", "requestRecipientIdentity", session.Info().ID)
 
 	recipientRequest := &RecipientRequest{}
 	if err := recipientRequest.FromBytes(payload); err != nil {
@@ -233,27 +231,42 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		logger.Errorf("failed to get wallet [%s]", wallet)
 		return nil, errors.Errorf("wallet [%s:%s] not found", wallet, recipientRequest.TMSID)
 	}
-	recipientIdentity, err := w.GetRecipientIdentity()
-	if err != nil {
-		logger.Errorf("failed to get recipient identity: [%s]", err)
-		return nil, errors.Wrapf(err, "failed to get recipient identity")
+
+	var recipientData *RecipientData
+	var recipientIdentity view.Identity
+	// if the initiator send a recipient data, check that the identity has been already registered locally.
+	if recipientRequest.RecipientData != nil {
+		// check it exists and return it back
+		recipientData = recipientRequest.RecipientData
+		recipientIdentity = recipientData.Identity
+		if !w.Contains(recipientIdentity) {
+			return nil, errors.Errorf("cannot find identity [%s] in wallet [%s:%s]", recipientIdentity, wallet, recipientRequest.TMSID)
+		}
+		// TODO: check the other values too
+	} else {
+		// otherwise generate one fresh
+		recipientIdentity, err = w.GetRecipientIdentity()
+		if err != nil {
+			logger.Errorf("failed to get recipient identity: [%s]", err)
+			return nil, errors.Wrapf(err, "failed to get recipient identity")
+		}
+		auditInfo, err := w.GetAuditInfo(recipientIdentity)
+		if err != nil {
+			logger.Errorf("failed to get audit info: [%s]", err)
+			return nil, errors.Wrapf(err, "failed to get audit info")
+		}
+		metadata, err := w.GetTokenMetadata(recipientIdentity)
+		if err != nil {
+			logger.Errorf("failed to get token metadata: [%s]", err)
+			return nil, errors.Wrapf(err, "failed to get token metadata")
+		}
+		recipientData = &RecipientData{
+			Identity:      recipientIdentity,
+			AuditInfo:     auditInfo,
+			TokenMetadata: metadata,
+		}
 	}
-	auditInfo, err := w.GetAuditInfo(recipientIdentity)
-	if err != nil {
-		logger.Errorf("failed to get audit info: [%s]", err)
-		return nil, errors.Wrapf(err, "failed to get audit info")
-	}
-	metadata, err := w.GetTokenMetadata(recipientIdentity)
-	if err != nil {
-		logger.Errorf("failed to get token metadata: [%s]", err)
-		return nil, errors.Wrapf(err, "failed to get token metadata")
-	}
-	recipientData := &RecipientData{
-		Identity:  recipientIdentity,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
-	}
-	recipientDataRaw, err := recipientData.Bytes()
+	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {
 		logger.Errorf("failed to marshal recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed marshalling recipient data")
@@ -265,7 +278,6 @@ func (s *RespondRequestRecipientIdentityView) Call(context view.Context) (interf
 		logger.Errorf("failed to send recipient data: [%s]", err)
 		return nil, errors.Wrapf(err, "failed to send recipient data")
 	}
-	agent.EmitKey(0, "ttx", "sent", "responseRecipientIdentity", session.Info().ID)
 
 	// Update the Endpoint Resolver
 	resolver := view2.GetEndpointService(context)
@@ -326,9 +338,9 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			TMSID:    f.TMSID,
 			WalletID: f.Other,
 			RecipientData: &RecipientData{
-				Identity:  me,
-				AuditInfo: auditInfo,
-				Metadata:  metadata,
+				Identity:      me,
+				AuditInfo:     auditInfo,
+				TokenMetadata: metadata,
 			},
 		}
 		requestRaw, err := request.Bytes()
@@ -345,11 +357,11 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 			return nil, err
 		}
 
-		recipientData := &RecipientData{}
-		if err := recipientData.FromBytes(payload); err != nil {
+		recipientData, err := RecipientDataFromBytes(payload)
+		if err != nil {
 			return nil, err
 		}
-		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData.Identity, recipientData.AuditInfo, recipientData.Metadata); err != nil {
+		if err := ts.WalletManager().RegisterRecipientIdentity(recipientData); err != nil {
 			return nil, err
 		}
 
@@ -379,12 +391,12 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 // derive the recipient identity to send to the passed recipient.
 // The function returns, the recipient identity of the sender, the recipient identity of the recipient
 func ExchangeRecipientIdentities(context view.Context, walletID string, recipient view.Identity, opts ...token.ServiceOption) (view.Identity, view.Identity, error) {
-	tmsID, err := compileServiceOptions(opts...)
+	options, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, nil, err
 	}
 	ids, err := context.RunView(&ExchangeRecipientIdentitiesView{
-		TMSID:  *tmsID,
+		TMSID:  options.TMSID(),
 		Wallet: walletID,
 		Other:  recipient,
 	})
@@ -425,7 +437,9 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 
 	ts := token.GetManagementService(context, token.WithTMSID(request.TMSID))
 	other := request.RecipientData.Identity
-	if err := ts.WalletManager().RegisterRecipientIdentity(other, request.RecipientData.AuditInfo, request.RecipientData.Metadata); err != nil {
+	if err := ts.WalletManager().RegisterRecipientIdentity(&RecipientData{
+		Identity: other, AuditInfo: request.RecipientData.AuditInfo, TokenMetadata: request.RecipientData.TokenMetadata,
+	}); err != nil {
 		return nil, err
 	}
 
@@ -449,11 +463,11 @@ func (s *RespondExchangeRecipientIdentitiesView) Call(context view.Context) (int
 	}
 
 	recipientData := &RecipientData{
-		Identity:  me,
-		AuditInfo: auditInfo,
-		Metadata:  metadata,
+		Identity:      me,
+		AuditInfo:     auditInfo,
+		TokenMetadata: metadata,
 	}
-	recipientDataRaw, err := recipientData.Bytes()
+	recipientDataRaw, err := RecipientDataBytes(recipientData)
 	if err != nil {
 		return nil, err
 	}

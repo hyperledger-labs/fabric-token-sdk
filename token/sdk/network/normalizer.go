@@ -12,8 +12,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	tcc "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/fetcher"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -43,7 +43,7 @@ func NewNormalizer(cp TokenSDKConfig, sp view.ServiceProvider) *Normalizer {
 
 // Normalize normalizes the passed options.
 // If no network is specified, it will try to find a default network. And so on.
-func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions {
+func (n *Normalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	if len(opt.Network) == 0 {
 		if fns := fabric.GetDefaultFNS(n.sp); fns != nil {
 			logger.Debugf("No network specified, using default FNS: %s", fns.Name())
@@ -52,8 +52,7 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions 
 			logger.Debugf("No network specified, using default ONS: %s", ons.Name())
 			opt.Network = ons.Name()
 		} else {
-			logger.Errorf("No network specified, and no default FNS or ONS found")
-			panic("no network found")
+			return nil, errors.Errorf("No network specified, and no default FNS or ONS found")
 		}
 	}
 
@@ -65,8 +64,7 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions 
 			logger.Debugf("No need to specify channel for orion")
 			// Nothing to do here
 		} else {
-			logger.Errorf("No channel specified, and no default channel found")
-			panic("no network found for " + opt.Network)
+			return nil, errors.Errorf("No channel specified, and no default channel found")
 		}
 	}
 
@@ -75,12 +73,12 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) *token.ServiceOptions 
 			logger.Debugf("No namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
 			opt.Namespace = ns
 		} else {
-			logger.Errorf("No namespace specified, and no default namespace found [%s], use default [%s]", err, keys.TokenNameSpace)
-			opt.Namespace = keys.TokenNameSpace
+			logger.Errorf("No namespace specified, and no default namespace found [%s], use default [%s]", err, keys.TokenNamespace)
+			opt.Namespace = keys.TokenNamespace
 		}
 	}
 	if opt.PublicParamsFetcher == nil {
-		opt.PublicParamsFetcher = tcc.NewPublicParamsFetcher(n.sp, opt.Network, opt.Channel, opt.Namespace)
+		opt.PublicParamsFetcher = NewPublicParamsFetcher(n.sp, opt.Network, opt.Channel, opt.Namespace)
 	}
-	return opt
+	return opt, nil
 }

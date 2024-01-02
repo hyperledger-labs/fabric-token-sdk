@@ -10,9 +10,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Fabric(tokenSDKDriver string) []api.Topology {
@@ -48,14 +50,14 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
 	// alice
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -68,8 +70,8 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -83,8 +85,8 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -95,11 +97,14 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	charlie.RegisterViewFactory("unspent", &views2.ListUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
-	tms := tokenTopology.AddTMS(fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.SetTokenGenPublicParams("100", "2")
 	tms.AddAuditor(auditor)
+
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
 
 	// Monitoring
 	//monitoringTopology := monitoring.NewTopology()

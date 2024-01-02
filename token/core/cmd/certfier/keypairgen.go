@@ -8,16 +8,14 @@ package certfier
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 var driver string
@@ -54,7 +52,7 @@ func keyPairGen(args []string) error {
 	// TODO:
 	// 1. load public parameters from ppPath
 	fmt.Printf("Read public parameters from file [%s]...\n", ppPath)
-	ppRaw, err := ioutil.ReadFile(ppPath)
+	ppRaw, err := os.ReadFile(ppPath)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading public parameters from [%s]", ppPath)
 	}
@@ -65,6 +63,9 @@ func keyPairGen(args []string) error {
 	ppm, err := core.NewPublicParametersManager(pp)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating public parameters manager")
+	}
+	if err := ppm.Validate(); err != nil {
+		return errors.Wrapf(err, "failed to validate public parameters")
 	}
 	// ppm.PublicParameters().GraphHiding()
 
@@ -82,10 +83,10 @@ func keyPairGen(args []string) error {
 	skPath := filepath.Join(output, "certifier.sk")
 	pkPath := filepath.Join(output, "certifier.pk")
 	fmt.Printf("Store key-pair to [%s,%s]...\n", skPath, pkPath)
-	if err := ioutil.WriteFile(skPath, skRaw, 0600); err != nil {
+	if err := os.WriteFile(skPath, skRaw, 0600); err != nil {
 		return errors.Wrap(err, "failed writing certifier secret key to file")
 	}
-	if err := ioutil.WriteFile(pkPath, pkRaw, 0600); err != nil {
+	if err := os.WriteFile(pkPath, pkRaw, 0600); err != nil {
 		return errors.Wrap(err, "failed writing certifier public key to file")
 	}
 

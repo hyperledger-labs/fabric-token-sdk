@@ -36,14 +36,14 @@ type RWSetProcessor struct {
 	tokenStore processor.TokenStore
 }
 
-func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued, tokenStore processor.TokenStore) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:    network,
 		nss:        []string{ns},
 		sp:         sp,
 		ownership:  ownership,
 		issued:     issued,
-		tokenStore: processor.NewCommonTokenStore(sp),
+		tokenStore: tokenStore,
 	}
 }
 
@@ -69,27 +69,48 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	fn, _ := tx.FunctionAndParameters()
 	logger.Debugf("process namespace and function [%s:%s]", ns, fn)
 	switch fn {
-	case "setup":
-		return r.setup(req, tx, rws, ns)
+	case "init":
+		return r.init(tx, rws, ns)
 	default:
 		return r.tokenRequest(req, tx, rws, ns)
 	}
 }
 
-func (r *RWSetProcessor) setup(req fabric.Request, tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
-	logger.Debugf("[setup] store setup bundle")
-	key, err := keys.CreateSetupBundleKey()
-	if err != nil {
-		return err
+// init when invoked extracts the public params from rwset and updates the local version
+func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
+	tms := token.GetManagementService(
+		r.sp,
+		token.WithNetwork(tx.Network()),
+		token.WithChannel(tx.Channel()),
+		token.WithNamespace(ns),
+	)
+	if tms == nil {
+		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
 	}
-	logger.Debugf("[setup] store setup bundle [%s,%s]", key, req.ID())
-	err = rws.SetState(ns, key, []byte(req.ID()))
-	if err != nil {
-		logger.Errorf("failed setting setup bundle state [%s,%s]", key, req.ID())
-		return errors.Wrapf(err, "failed setting setup bundle state [%s,%s]", key, req.ID())
-	}
-	logger.Debugf("[setup] store setup bundle done")
 
+	setUpKey, err := keys.CreateSetupKey()
+	if err != nil {
+		return errors.Errorf("failed creating setup key")
+	}
+	for i := 0; i < rws.NumWrites(ns); i++ {
+		key, val, err := rws.GetWriteAt(ns, i)
+		if err != nil {
+			return err
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("Parsing write key [%s]", key)
+		}
+		if key == setUpKey {
+			logger.Debugf("setting new public parameters...")
+			err = tms.PublicParametersManager().SetPublicParameters(val)
+			if err != nil {
+				return errors.Wrapf(err, "failed updating public params ")
+			}
+			logger.Debugf("setting new public parameters...done.")
+			break
+		}
+	}
+	logger.Debugf("Successfully updated public parameters")
 	return nil
 }
 
@@ -118,7 +139,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		}
 		return err
 	}
-	if !transientMap.Exists("zkat") {
+	if !transientMap.Exists(keys.TokenRequestMetadata) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], no transient map found", txID)
 		}
@@ -137,7 +158,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	metadata, err := tms.NewMetadataFromBytes(transientMap.Get("zkat"))
+	metadata, err := tms.NewMetadataFromBytes(transientMap.Get(keys.TokenRequestMetadata))
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
@@ -147,13 +168,13 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 
 	wrappedRWS := &rwsWrapper{RWSet: rws}
 
-	if tms.PublicParametersManager().GraphHiding() {
+	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
 		ids := metadata.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		for _, id := range ids {
-			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 		}
@@ -169,7 +190,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		}
 		prefix, components, err := keys.SplitCompositeKey(key)
 		if err != nil {
-			panic(err)
+			return errors.WithMessagef(err, "failed to split key [%s]", key)
 		}
 		if prefix != keys.TokenKeyPrefix {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -216,7 +237,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
 			}
-			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 			continue
@@ -260,6 +281,10 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
+			}
 		}
 
 		// if I'm an auditor, store the audit entry
@@ -276,7 +301,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().PublicParameters().Precision()); err != nil {
 				return err
 			}
 		}

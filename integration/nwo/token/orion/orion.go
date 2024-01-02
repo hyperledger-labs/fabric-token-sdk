@@ -9,7 +9,6 @@ package orion
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"os"
 	"text/template"
 	"time"
@@ -32,7 +31,7 @@ import (
 	"github.com/onsi/gomega/gexec"
 )
 
-var logger = flogging.MustGetLogger("integration.token.orion")
+var logger = flogging.MustGetLogger("token-sdk.integration.token.orion")
 
 type tokenPlatform interface {
 	TokenGen(keygen common.Command) (*gexec.Session, error)
@@ -112,11 +111,12 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 
 	// - Store pp
 	Expect(os.MkdirAll(p.TokenPlatform.PublicParametersDir(), 0766)).ToNot(HaveOccurred())
-	Expect(ioutil.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
+	Expect(os.WriteFile(p.TokenPlatform.PublicParametersFile(tms), ppRaw, 0766)).ToNot(HaveOccurred())
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
 	t, err := template.New("peer").Funcs(template.FuncMap{
+		"TMSID":   func() string { return tms.ID() },
 		"TMS":     func() *topology2.TMS { return tms },
 		"Wallets": func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
 		"IsCustodian": func() bool {
@@ -169,6 +169,43 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 	Expect(err).ToNot(HaveOccurred(), "Failed to commit transaction")
 }
 
+func (p *NetworkHandler) Cleanup() {
+}
+
+func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte) {
+	panic("Should not be invoked")
+}
+
+func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string {
+	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
+	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+
+	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
+	for _, node := range fscTopology.Nodes {
+		if node.ID() == nodeID {
+			ids := cmGenerator.GenerateIssuerIdentities(tms, node, walletID)
+			return ids[0].Path
+		}
+	}
+	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	return ""
+}
+
+func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string {
+	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
+	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
+
+	fscTopology := p.TokenPlatform.GetContext().TopologyByName(fsc.TopologyName).(*fsc.Topology)
+	for _, node := range fscTopology.Nodes {
+		if node.ID() == nodeID {
+			ids := cmGenerator.GenerateOwnerIdentities(tms, node, walletID)
+			return ids[0].Path
+		}
+	}
+	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
+	return ""
+}
+
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
 	p.CryptoMaterialGenerators[driver] = generator
 }
@@ -191,8 +228,8 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	if len(issuers) != 0 {
 		var index int
 		found := false
-		for i, owner := range issuers {
-			if owner == node.ID() || owner == "_default_" {
+		for i, issuer := range issuers {
+			if issuer == node.ID() || issuer == "_default_" {
 				index = i
 				found = true
 				issuers[i] = node.ID()

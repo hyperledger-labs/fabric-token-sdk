@@ -53,6 +53,8 @@ type IssueAction struct {
 	Issuer view.Identity
 	// new tokens to be issued
 	Outputs []*Output
+	// metadata of the issue action
+	Metadata map[string][]byte
 }
 
 // Serialize marshals IssueAction
@@ -106,9 +108,9 @@ func (i *IssueAction) GetIssuer() []byte {
 	return i.Issuer
 }
 
-// GetMetadata returns nil, indicating that IssueAction in fabtoken carries no metadata
-func (i *IssueAction) GetMetadata() []byte {
-	return nil
+// GetMetadata returns the IssueAction metadata
+func (i *IssueAction) GetMetadata() map[string][]byte {
+	return i.Metadata
 }
 
 // TransferAction encodes a fabtoken transfer
@@ -194,14 +196,14 @@ func (t *TransferAction) GetMetadata() map[string][]byte {
 }
 
 // UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in the passed TokenRequest
-func UnmarshalIssueTransferActions(tr *driver.TokenRequest, binding string) ([]*IssueAction, []*TransferAction, error) {
+func UnmarshalIssueTransferActions(tr *driver.TokenRequest) ([]*IssueAction, []*TransferAction, error) {
 	ia, err := UnmarshalIssueActions(tr.Issues)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve issue actions [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to unmarshal issue actions")
 	}
 	ta, err := UnmarshalTransferActions(tr.Transfers)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to retrieve transfer actions [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to unmarshal transfer actions")
 	}
 	return ia, ta, nil
 }

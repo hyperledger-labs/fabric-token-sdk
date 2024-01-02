@@ -26,7 +26,6 @@ import (
 const (
 	ScriptType            = "htlc" // htlc script
 	defaultDeadlineOffset = time.Hour
-	ClaimPreImage         = "cpi"
 )
 
 // WithHash sets a hash attribute to be used to customize the transfer command
@@ -88,9 +87,20 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	}, nil
 }
 
+// NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
+func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transaction, error) {
+	tx, err := ttx.NewAnonymousTransaction(sp, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{
+		Transaction: tx,
+	}, nil
+}
+
 // NewTransactionFromBytes returns a new transaction from the passed bytes
 func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []byte) (*Transaction, error) {
-	tx, err := ttx.NewTransactionFromBytes(ctx, network, channel, raw)
+	tx, err := ttx.NewTransactionFromBytes(ctx, raw)
 	if err != nil {
 		return nil, err
 	}
@@ -157,11 +167,17 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 			}
 		}
 	}
-	script, preImage, err := t.recipientAsScript(sender, recipient, deadline, hash, hashFunc, hashEncoding)
+	scriptID, preImage, script, err := t.recipientAsScript(sender, recipient, deadline, hash, hashFunc, hashEncoding)
 	if err != nil {
 		return nil, err
 	}
-	_, err = t.TokenRequest.Transfer(wallet, typ, []uint64{value}, []view.Identity{script}, opts...)
+	_, err = t.TokenRequest.Transfer(
+		wallet,
+		typ,
+		[]uint64{value},
+		[]view.Identity{scriptID},
+		append(opts, token.WithTransferMetadata(LockKey(script.HashInfo.Hash), LockValue(script.HashInfo.Hash)))...,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -171,8 +187,7 @@ func (t *Transaction) Lock(wallet *token.OwnerWallet, sender view.Identity, typ 
 
 // Reclaim appends a reclaim (transfer) action to the token request of the transaction
 func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToken) error {
-	// TODO: handle this properly
-	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
+	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().PublicParameters().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
@@ -217,8 +232,11 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 
 // Claim appends a claim (transfer) action to the token request of the transaction
 func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken, preImage []byte) error {
-	// TODO: handle this properly
-	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().Precision())
+	if len(preImage) == 0 {
+		return errors.New("preImage is nil")
+	}
+
+	q, err := token2.ToQuantity(tok.Quantity, t.TokenRequest.TokenService.PublicParametersManager().PublicParameters().Precision())
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
@@ -235,11 +253,14 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}
 
-	if preImage == nil {
-		return errors.New("preImage is nil")
+	image, err := script.HashInfo.Image(preImage)
+	if err != nil {
+		return errors.Wrapf(err, "failed to compute image of [%x]", preImage)
 	}
 
-	// TODO: does the pre-image match?
+	if err := script.HashInfo.Compare(image); err != nil {
+		return errors.Wrap(err, "passed preImage does not match the hash in the passed script")
+	}
 
 	// Register the signer for the claim
 	logger.Debugf("registering signer for claim...")
@@ -280,29 +301,29 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		[]uint64{q.ToBigInt().Uint64()},
 		[]view.Identity{script.Recipient},
 		token.WithTokenIDs(tok.Id),
-		token.WithTransferMetadata(ClaimPreImage, preImage),
+		token.WithTransferMetadata(ClaimKey(image), preImage),
 	)
 }
 
-func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, error) {
+func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadline time.Duration, h []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding) (view.Identity, []byte, *Script, error) {
 	// sample pre-image and its hash
 	var preImage []byte
 	var err error
 	if len(h) == 0 {
 		preImage, err = CreateNonce()
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		hash := hashFunc.New()
 		if _, err := hash.Write(preImage); err != nil {
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		h = hash.Sum(nil)
 		// no need to encode if encoding is none (=0)
 		if hashEncoding != 0 {
 			he := hashEncoding.New()
 			if he == nil {
-				return nil, nil, errors.New("hashEncoding.New() returned nil")
+				return nil, nil, nil, errors.New("hashEncoding.New() returned nil")
 			}
 			h = []byte(he.EncodeToString(h))
 		}
@@ -310,7 +331,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 
 	logger.Debugf("pair (pre-image, hash) = (%s,%s)", base64.StdEncoding.EncodeToString(preImage), base64.StdEncoding.EncodeToString(h))
 
-	script := Script{
+	script := &Script{
 		HashInfo: HashInfo{
 			Hash:         h,
 			HashFunc:     hashFunc,
@@ -322,7 +343,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	}
 	rawScript, err := json.Marshal(script)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 	ro := &identity.RawOwner{
 		Type:     ScriptType,
@@ -330,9 +351,9 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	}
 	raw, err := identity.MarshallRawOwner(ro)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return raw, preImage, nil
+	return raw, preImage, script, nil
 }
 
 // CreateNonce generates a nonce using the common/crypto package

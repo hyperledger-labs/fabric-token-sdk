@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -17,32 +19,72 @@ import (
 )
 
 type TokenVault interface {
-	PublicParams() ([]byte, error)
-	GetTokenInfoAndCommitments(ids []*token3.ID, callback driver.QueryCallback2Func) error
-	GetTokenCommitments(ids []*token3.ID, callback driver.QueryCallbackFunc) error
+	IsPending(id *token3.ID) (bool, error)
+	GetTokenInfoAndOutputs(ids []*token3.ID, callback driver.QueryCallback2Func) error
+	GetTokenOutputs(ids []*token3.ID, callback driver.QueryCallbackFunc) error
 }
 
 type VaultTokenCommitmentLoader struct {
 	TokenVault TokenVault
+	// Variables used to control retry condition
+	NumRetries int
+	RetryDelay time.Duration
 }
 
-// GetTokenCommitments takes an array of token identifiers (txID, index) and returns the corresponding tokens
-func (s *VaultTokenCommitmentLoader) GetTokenCommitments(ids []*token3.ID) ([]*token.Token, error) {
+func NewVaultTokenCommitmentLoader(tokenVault TokenVault, numRetries int, retryDelay time.Duration) *VaultTokenCommitmentLoader {
+	return &VaultTokenCommitmentLoader{TokenVault: tokenVault, NumRetries: numRetries, RetryDelay: retryDelay}
+}
+
+// GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
+func (s *VaultTokenCommitmentLoader) GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error) {
 	var tokens []*token.Token
-	if err := s.TokenVault.GetTokenCommitments(ids, func(id *token3.ID, bytes []byte) error {
-		if len(bytes) == 0 {
-			return errors.Errorf("failed getting state for id [%v], nil value", id)
+
+	var err error
+	for i := 0; i < s.NumRetries; i++ {
+		err = s.TokenVault.GetTokenOutputs(ids, func(id *token3.ID, bytes []byte) error {
+			if len(bytes) == 0 {
+				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
+			}
+			ti := &token.Token{}
+			if err := ti.Deserialize(bytes); err != nil {
+				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
+			}
+			tokens = append(tokens, ti)
+			return nil
+		})
+		if err == nil {
+			return tokens, nil
 		}
-		ti := &token.Token{}
-		if err := ti.Deserialize(bytes); err != nil {
-			return errors.Wrapf(err, "failed deserializeing token for id [%v][%s]", id, string(bytes))
+
+		// check if there is any token id whose corresponding transaction is pending
+		// if there is, then wait a bit and retry to load the outputs
+		retry := false
+		for _, id := range ids {
+			pending, err := s.TokenVault.IsPending(id)
+			if err != nil {
+				break
+			}
+			if pending {
+				logger.Warnf("failed getting serialized token output for id [%v] because the relative transaction is pending, retry at [%d]", id, i)
+				if i >= s.NumRetries-1 {
+					// too late, we tried already too many times
+					return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
+				}
+				time.Sleep(s.RetryDelay)
+				retry = true
+				break
+			}
 		}
-		tokens = append(tokens, ti)
-		return nil
-	}); err != nil {
-		return nil, err
+
+		if retry {
+			tokens = nil
+			continue
+		}
+
+		return nil, errors.Wrapf(err, "failed to get token outputs")
 	}
-	return tokens, nil
+
+	return nil, errors.Wrapf(err, "failed to get token outputs")
 }
 
 type VaultTokenLoader struct {
@@ -59,8 +101,8 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	var inputInf []*token.Metadata
 	var signerIds []view.Identity
 
-	// return token commitments and the corresponding opening
-	if err := s.TokenVault.GetTokenInfoAndCommitments(ids, func(id *token3.ID, key string, comm, info []byte) error {
+	// return token outputs and the corresponding opening
+	if err := s.TokenVault.GetTokenInfoAndOutputs(ids, func(id *token3.ID, key string, comm, info []byte) error {
 		if len(comm) == 0 {
 			return errors.Errorf("failed getting state for id [%v], nil comm value", id)
 		}
@@ -93,17 +135,17 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	return inputIDs, tokens, inputInf, signerIds, nil
 }
 
-type VaultPublicParamsLoader struct {
+type PublicParamsLoader struct {
 	PublicParamsFetcher driver.PublicParamsFetcher
 	PPLabel             string
 }
 
-func NewVaultPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, PPLabel string) *VaultPublicParamsLoader {
-	return &VaultPublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
+func NewPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, PPLabel string) *PublicParamsLoader {
+	return &PublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
 }
 
 // Fetch fetches the public parameters from the backend
-func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
+func (s *PublicParamsLoader) Fetch() ([]byte, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
@@ -115,7 +157,7 @@ func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 }
 
 // FetchParams fetches the public parameters from the backend and unmarshal them
-func (s *VaultPublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
+func (s *PublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
@@ -126,10 +168,12 @@ func (s *VaultPublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
 	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(raw).String())
 	pp := &crypto.PublicParams{}
 	pp.Label = s.PPLabel
-	err = pp.Deserialize(raw)
-	if err != nil {
+	if err := pp.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
 	}
 	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(raw).String())
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate public parameters")
+	}
 	return pp, nil
 }

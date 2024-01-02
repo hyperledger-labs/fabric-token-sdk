@@ -12,19 +12,28 @@ import (
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/pkg/errors"
 )
 
-type AuditView struct{}
+type AuditView struct {
+	*token.TMSID
+}
 
 func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	logger.Debugf("AuditView: [%s]", context.ID())
-	tx, err := ttx.ReceiveTransaction(context)
+	tx, err := ttx.ReceiveTransaction(context, append(TxOpts(a.TMSID), ttx.WithNoTransactionVerification())...)
+
 	assert.NoError(err, "failed receiving transaction")
 	logger.Debugf("AuditView: [%s]", tx.ID())
 
-	w := ttx.MyAuditorWallet(context)
+	w := ttx.MyAuditorWallet(context, ServiceOpts(a.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Validate
@@ -33,7 +42,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 	logger.Debugf("AuditView: get auditor done [%s]", tx.ID())
 
-	// Check Metadata
+	// Check ValidationRecords
 	logger.Debugf("AuditView: check metadata [%s]", tx.ID())
 	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
 	if len(opRaw) != 0 {
@@ -50,12 +59,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
 	logger.Debugf("AuditView: audit done [%s]", tx.ID())
-
-	// acquire locks on inputs and outputs' enrollment IDs
-	logger.Debugf("AuditView: acquire locks [%s]", tx.ID())
-	assert.NoError(auditor.AcquireLocks(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...)...), "failed acquiring locks")
-	defer auditor.Unlock(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...))
-	logger.Debugf("AuditView: acquire locks done [%s]", tx.ID())
+	defer auditor.Release(tx)
 
 	logger.Debugf("AuditView: [%s] get query executor... ", tx.ID())
 	aqe := auditor.NewQueryExecutor()
@@ -69,6 +73,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	for _, eID := range eIDs {
 		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
+			if tokenType == "MAX" {
+				continue
+			}
 			// compute the payment done in the transaction
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
@@ -89,6 +96,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	for _, eID := range eIDs {
 		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
+			if tokenType == "MAX" {
+				continue
+			}
 			// compute the payment done in the transaction
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
@@ -118,6 +128,9 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	for _, eID := range eIDs {
 		assert.NotEmpty(eID, "enrollment id should not be empty")
 		for _, tokenType := range tokenTypes {
+			if tokenType == "MAX" {
+				continue
+			}
 			// compute the amount received
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
@@ -141,6 +154,29 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			assert.True(total.Cmp(big.NewInt(3000)) < 0, "holding limit reached [%s][%s][%s]", eID, tokenType, total.Text(10))
 		}
 	}
+
+	kvsInstance := kvs.GetService(context)
+
+	for _, rID := range inputs.RevocationHandles() {
+		rh := hash.Hashable(rID).String()
+		logger.Infof("input RH [%s]", rh)
+		assert.NotNil(rID, "found an input with empty RH")
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
+		if kvsInstance.Exists(k) {
+			return nil, errors.Errorf("%s Identity is in revoked state", rh)
+		}
+	}
+
+	for _, rID := range outputs.RevocationHandles() {
+		rh := hash.Hashable(rID).String()
+		logger.Infof("output RH [%s]", rh)
+		assert.NotNil(rID, "found an output with empty RH")
+		k := kvs.CreateCompositeKeyOrPanic("revocationList", []string{rh})
+		if kvsInstance.Exists(k) {
+			return nil, errors.Errorf("%s Identity is in revoked state", rh)
+		}
+	}
+
 	aqe.Done()
 
 	logger.Debugf("AuditView: Approve... [%s]", tx.ID())
@@ -149,24 +185,36 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	return res, err
 }
 
-type RegisterAuditorView struct{}
+type RegisterAuditor struct {
+	*token.TMSID
+}
+
+type RegisterAuditorView struct {
+	*RegisterAuditor
+}
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
 	return context.RunView(ttx.NewRegisterAuditorView(
-		&AuditView{},
+		&AuditView{r.TMSID},
+		ServiceOpts(r.TMSID)...,
 	))
 }
 
 type RegisterAuditorViewFactory struct{}
 
 func (p *RegisterAuditorViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RegisterAuditorView{}
+	f := &RegisterAuditorView{RegisterAuditor: &RegisterAuditor{}}
+	if in != nil {
+		err := json.Unmarshal(in, f.RegisterAuditor)
+		assert.NoError(err, "failed unmarshalling input")
+	}
 	return f, nil
 }
 
 type CurrentHolding struct {
-	EnrollmentID string `json:"enrollment_id"`
-	TokenType    string `json:"token_type"`
+	EnrollmentID string
+	TokenType    string
+	TMSID        token.TMSID
 }
 
 // CurrentHoldingView is used to retrieve the current holding of token type of the passed enrollment id
@@ -175,7 +223,10 @@ type CurrentHoldingView struct {
 }
 
 func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
-	w := ttx.MyAuditorWallet(context)
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
+
+	w := tms.WalletManager().AuditorWallet("")
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor := ttx.NewAuditor(context, w)
@@ -203,8 +254,9 @@ func (p *CurrentHoldingViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type CurrentSpending struct {
-	EnrollmentID string `json:"enrollment_id"`
-	TokenType    string `json:"token_type"`
+	EnrollmentID string       `json:"enrollment_id"`
+	TokenType    string       `json:"token_type"`
+	TMSID        *token.TMSID `json:"tmsid"`
 }
 
 // CurrentSpendingView is used to retrieve the current spending of token type of the passed enrollment id
@@ -213,7 +265,7 @@ type CurrentSpendingView struct {
 }
 
 func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
-	w := ttx.MyAuditorWallet(context)
+	w := ttx.MyAuditorWallet(context, ServiceOpts(r.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	auditor := ttx.NewAuditor(context, w)
@@ -237,5 +289,70 @@ func (p *CurrentSpendingViewFactory) NewView(in []byte) (view.View, error) {
 	err := json.Unmarshal(in, f.CurrentSpending)
 	assert.NoError(err, "failed unmarshalling input")
 
+	return f, nil
+}
+
+type SetTransactionAuditStatus struct {
+	TxID   string
+	Status ttx.TxStatus
+}
+
+// SetTransactionAuditStatusView is used to set the status of a given transaction in the audit db
+type SetTransactionAuditStatusView struct {
+	*SetTransactionAuditStatus
+}
+
+func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{}, error) {
+	w := ttx.MyAuditorWallet(context)
+	assert.NotNil(w, "failed getting default auditor wallet")
+
+	auditor := ttx.NewAuditor(context, w)
+	assert.NoError(auditor.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+
+	if r.Status == ttxdb.Deleted {
+		tms := token.GetManagementService(context)
+		assert.NotNil(tms, "failed to get default tms")
+		net := network.GetInstance(context, tms.Network(), tms.Channel())
+		assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
+		v, err := net.Vault(tms.Namespace())
+		assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
+		assert.NoError(v.DiscardTx(r.TxID), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
+	}
+
+	return nil, nil
+}
+
+type SetTransactionAuditStatusViewFactory struct{}
+
+func (p *SetTransactionAuditStatusViewFactory) NewView(in []byte) (view.View, error) {
+	f := &SetTransactionAuditStatusView{SetTransactionAuditStatus: &SetTransactionAuditStatus{}}
+	err := json.Unmarshal(in, f.SetTransactionAuditStatus)
+	assert.NoError(err, "failed unmarshalling input")
+
+	return f, nil
+}
+
+type GetAuditorWalletIdentity struct {
+	ID string
+}
+
+type GetAuditorWalletIdentityView struct {
+	*GetAuditorWalletIdentity
+}
+
+func (g *GetAuditorWalletIdentity) Call(context view.Context) (interface{}, error) {
+	defaultAuditorWallet := token.GetManagementService(context).WalletManager().AuditorWallet(g.ID)
+	assert.NotNil(defaultAuditorWallet, "no default auditor wallet")
+	id, err := defaultAuditorWallet.GetAuditorIdentity()
+	assert.NoError(err, "failed getting auditorIdentity ")
+	return id, err
+}
+
+type GetAuditorWalletIdentityViewFactory struct{}
+
+func (p *GetAuditorWalletIdentityViewFactory) NewView(in []byte) (view.View, error) {
+	f := &GetAuditorWalletIdentityView{GetAuditorWalletIdentity: &GetAuditorWalletIdentity{}}
+	err := json.Unmarshal(in, f.GetAuditorWalletIdentity)
+	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

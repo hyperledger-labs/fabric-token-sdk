@@ -9,14 +9,18 @@ package views
 import (
 	"encoding/json"
 	"math/big"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 )
 
-var Limit = 50
+const (
+	Limit int64 = 50
+)
 
 type AuditView struct{}
 
@@ -36,10 +40,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	// extract inputs and outputs
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
-
-	// acquire locks on inputs and outputs' enrollment IDs
-	assert.NoError(auditor.AcquireLocks(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...)...), "failed acquiring locks")
-	defer auditor.Unlock(append(inputs.EnrollmentIDs(), outputs.EnrollmentIDs()...))
+	defer auditor.Release(tx)
 
 	// For example, all payments of an amount less than or equal to payment limit is valid
 	eIDs := inputs.EnrollmentIDs()
@@ -59,8 +60,33 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			}
 			logger.Debugf("Payment Limit: [%s] Diff [%d], type [%s]", eID, diff.Int64(), tokenType)
 
-			assert.True(diff.Cmp(big.NewInt(int64(Limit))) <= 0, "payment limit reached [%s][%s][%s]", eID, tokenType, diff.Text(10))
+			assert.True(diff.Cmp(big.NewInt(Limit)) <= 0, "payment limit reached [%s][%s][%s]", eID, tokenType, diff.Text(10))
 		}
+	}
+
+	for i := 0; i < inputs.Count(); i++ {
+		input, err := htlc.ToInput(inputs.At(i))
+		assert.NoError(err, "cannot get htlc input wrapper")
+		if !input.IsHTLC() {
+			continue
+		}
+		// check script details, for example make sure the hash is set
+		script, err := input.Script()
+		assert.NoError(err, "cannot get htlc script from input")
+		assert.True(len(script.HashInfo.Hash) > 0, "hash is not set")
+	}
+
+	now := time.Now()
+	for i := 0; i < outputs.Count(); i++ {
+		output, err := htlc.ToOutput(outputs.At(i))
+		assert.NoError(err, "cannot get htlc output wrapper")
+		if !output.IsHTLC() {
+			continue
+		}
+		// check script details
+		script, err := output.Script()
+		assert.NoError(err, "cannot get htlc script from output")
+		assert.NoError(script.Validate(now), "script is not valid")
 	}
 
 	return context.RunView(ttx.NewAuditApproveView(w, tx))

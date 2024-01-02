@@ -7,28 +7,35 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
+	"context"
+	"encoding/base64"
 	"encoding/json"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
-	IdemixMSP = "idemix"
-	BccspMSP  = "bccsp"
-
 	InvokeFunction            = "invoke"
 	QueryPublicParamsFunction = "queryPublicParams"
 	QueryTokensFunctions      = "queryTokens"
+	AreTokensSpent            = "areTokensSpent"
 )
 
 type GetFunc func() (view.Identity, []byte, error)
@@ -45,59 +52,6 @@ func (n *lm) AnonymousIdentity() view.Identity {
 	return n.lm.AnonymousIdentity()
 }
 
-func (n *lm) IsMe(id view.Identity) bool {
-	return n.lm.IsMe(id)
-}
-
-func (n *lm) GetAnonymousIdentity(label string, auditInfo []byte) (string, string, driver.GetFunc, error) {
-	if idInfo := n.lm.GetIdentityInfoByLabel(IdemixMSP, label); idInfo != nil {
-		ai := auditInfo
-		return idInfo.ID, idInfo.EnrollmentID, func() (view.Identity, []byte, error) {
-			opts := []fabric.IdentityOption{fabric.WithIdemixEIDExtension()}
-			if len(auditInfo) != 0 {
-				opts = append(opts, fabric.WithAuditInfo(ai))
-			}
-			return idInfo.GetIdentity(opts...)
-		}, nil
-	}
-	return "", "", nil, errors.New("not found")
-}
-
-func (n *lm) GetLongTermIdentity(label string) (string, string, view.Identity, error) {
-	if idInfo := n.lm.GetIdentityInfoByLabel(BccspMSP, label); idInfo != nil {
-		id, _, err := idInfo.GetIdentity()
-		if err != nil {
-			return "", "", nil, errors.New("failed to get identity")
-		}
-		return idInfo.ID, idInfo.EnrollmentID, id, err
-	}
-	return "", "", nil, errors.New("not found")
-}
-
-func (n *lm) GetLongTermIdentifier(id view.Identity) (string, error) {
-	if idInfo := n.lm.GetIdentityInfoByIdentity(BccspMSP, id); idInfo != nil {
-		return idInfo.ID, nil
-	}
-	return "", errors.New("not found")
-}
-
-func (n *lm) RegisterIdentity(id string, typ string, path string) error {
-	// split type in type and msp id
-	typeAndMspID := strings.Split(typ, ":")
-	if len(typeAndMspID) < 2 {
-		return errors.Errorf("invalid identity type '%s'", typ)
-	}
-
-	switch typeAndMspID[0] {
-	case IdemixMSP:
-		return n.lm.RegisterIdemixMSP(id, path, typeAndMspID[1])
-	case BccspMSP:
-		return n.lm.RegisterX509MSP(id, path, typeAndMspID[1])
-	default:
-		return errors.Errorf("invalid identity type '%s'", typ)
-	}
-}
-
 type nv struct {
 	v          *fabric.Vault
 	tokenVault *vault.Vault
@@ -112,15 +66,25 @@ func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *nv) ListUnspentTokens() (*token2.UnspentTokens, error) {
+// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+func (v *nv) UnspentTokensIteratorBy(id, typ string) (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIteratorBy(id, typ)
+}
+
+// UnspentTokensIterator returns an iterator over all unspent tokens
+func (v *nv) UnspentTokensIterator() (network.UnspentTokensIterator, error) {
+	return v.tokenVault.QueryEngine().UnspentTokensIterator()
+}
+
+func (v *nv) ListUnspentTokens() (*token.UnspentTokens, error) {
 	return v.tokenVault.QueryEngine().ListUnspentTokens()
 }
 
-func (v *nv) Exists(id *token2.ID) bool {
+func (v *nv) Exists(id *token.ID) bool {
 	return v.tokenVault.CertificationStorage().Exists(id)
 }
 
-func (v *nv) Store(certifications map[*token2.ID][]byte) error {
+func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
@@ -128,17 +92,46 @@ func (v *nv) TokenVault() *vault.Vault {
 	return v.tokenVault
 }
 
+func (v *nv) DiscardTx(txID string) error {
+	return v.v.DiscardTx(txID)
+}
+
+type ledger struct {
+	l *fabric.Ledger
+}
+
+func (l *ledger) Status(id string) (driver.ValidationCode, error) {
+	tx, err := l.l.GetTransactionByID(id)
+	if err != nil {
+		return driver.Unknown, errors.Wrapf(err, "failed to get transaction [%s]", id)
+	}
+	logger.Debugf("ledger status of [%s] is [%d]", id, tx.ValidationCode())
+	switch peer.TxValidationCode(tx.ValidationCode()) {
+	case peer.TxValidationCode_VALID:
+		return driver.Valid, nil
+	default:
+		return driver.Invalid, nil
+	}
+}
+
 type Network struct {
-	n  *fabric.NetworkService
-	ch *fabric.Channel
-	sp view2.ServiceProvider
+	n      *fabric.NetworkService
+	ch     *fabric.Channel
+	sp     view2.ServiceProvider
+	ledger *ledger
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 }
 
 func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel) *Network {
-	return &Network{n: n, ch: ch, sp: sp, vaultCache: map[string]driver.Vault{}}
+	return &Network{
+		n:          n,
+		ch:         ch,
+		sp:         sp,
+		ledger:     &ledger{ch.Ledger()},
+		vaultCache: map[string]driver.Vault{},
+	}
 }
 
 func (n *Network) Name() string {
@@ -150,6 +143,14 @@ func (n *Network) Channel() string {
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
+	if len(namespace) == 0 {
+		tms := token2.GetManagementService(n.sp, token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
+		if tms == nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]", n.n.Name(), n.ch.Name())
+		}
+		namespace = tms.Namespace()
+	}
+
 	// check cache
 	n.vaultCacheLock.RLock()
 	v, ok := n.vaultCache[namespace]
@@ -168,7 +169,15 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch))
+	tokenStore, err := processor.NewCommonTokenStore(n.sp, token2.TMSID{
+		Network:   n.Name(),
+		Channel:   n.Channel(),
+		Namespace: namespace,
+	})
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token store")
+	}
+	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch, tokenStore))
 	nv := &nv{
 		v:          n.ch.Vault(),
 		tokenVault: tokenVault,
@@ -191,16 +200,20 @@ func (n *Network) StoreEnvelope(id string, env []byte) error {
 	return n.ch.Vault().StoreEnvelope(id, env)
 }
 
-func (n *Network) Broadcast(blob interface{}) error {
-	return n.n.Ordering().Broadcast(blob)
+func (n *Network) EnvelopeExists(id string) bool {
+	return n.ch.EnvelopeService().Exists(id)
+}
+
+func (n *Network) Broadcast(context context.Context, blob interface{}) error {
+	return n.n.Ordering().Broadcast(context, blob)
 }
 
 func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
 	return n.ch.Finality().IsFinalForParties(id, endpoints...)
 }
 
-func (n *Network) IsFinal(id string) error {
-	return n.ch.Finality().IsFinal(id)
+func (n *Network) IsFinal(ctx context.Context, id string) error {
+	return n.ch.Finality().IsFinal(ctx, id)
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {
@@ -211,9 +224,21 @@ func (n *Network) StoreTransient(id string, transient driver.TransientMap) error
 	return n.ch.Vault().StoreTransient(id, fabric.TransientMap(transient))
 }
 
-func (n *Network) RequestApproval(context view.Context, namespace string, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
+func (n *Network) TransientExists(id string) bool {
+	return n.ch.MetadataService().Exists(id)
+}
+
+func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
+	tm, err := n.ch.MetadataService().LoadTransient(id)
+	if err != nil {
+		return nil, err
+	}
+	return driver.TransientMap(tm), nil
+}
+
+func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	env, err := chaincode.NewEndorseView(
-		namespace,
+		tms.Namespace(),
 		InvokeFunction,
 	).WithNetwork(
 		n.n.Name(),
@@ -260,7 +285,7 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 	return ppBoxed.([]byte), nil
 }
 
-func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token2.ID) ([][]byte, error) {
+func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
 	idsRaw, err := json.Marshal(IDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling ids")
@@ -272,7 +297,7 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 		idsRaw,
 	).WithNetwork(n.Name()).WithChannel(n.Channel()))
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed quering tokens")
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens")
 	}
 
 	// Unbox
@@ -282,10 +307,38 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	}
 	var tokens [][]byte
 	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, errors.Wrapf(err, "failed marshalling response")
+		return nil, errors.Wrapf(err, "failed to unmarshal response")
 	}
 
 	return tokens, nil
+}
+
+func (n *Network) AreTokensSpent(c view.Context, namespace string, IDs []string) ([]bool, error) {
+	idsRaw, err := json.Marshal(IDs)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed marshalling ids")
+	}
+
+	payloadBoxed, err := c.RunView(chaincode.NewQueryView(
+		namespace,
+		AreTokensSpent,
+		idsRaw,
+	).WithNetwork(n.Name()).WithChannel(n.Channel()))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to query the token chaincode for tokens spent")
+	}
+
+	// Unbox
+	raw, ok := payloadBoxed.([]byte)
+	if !ok {
+		return nil, errors.Errorf("expected []byte from TCC, got [%T]", payloadBoxed)
+	}
+	var spent []bool
+	if err := json.Unmarshal(raw, &spent); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal esponse")
+	}
+
+	return spent, nil
 }
 
 func (n *Network) LocalMembership() driver.LocalMembership {
@@ -295,7 +348,7 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 }
 
 func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	ai := &idemix2.AuditInfo{}
+	ai := &idemix.AuditInfo{}
 	if err := ai.FromBytes(raw); err != nil {
 		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
 	}
@@ -308,4 +361,74 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatus
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
 	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
+}
+
+func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+	transferMetadataKey, err := keys.CreateTransferActionMetadataKey(key)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
+	}
+	var keyValue []byte
+	c, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	v := n.ch.Vault()
+	if err := n.ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
+		logger.Debugf("scanning [%s]...", tx.TxID())
+
+		rws, err := v.GetEphemeralRWSet(tx.Results())
+		if err != nil {
+			return false, err
+		}
+
+		found := false
+		for _, ns := range rws.Namespaces() {
+			if ns == namespace {
+				found = true
+				break
+			}
+		}
+		if !found {
+			logger.Debugf("scanning [%s] does not contain namespace [%s]", tx.TxID(), namespace)
+			return false, nil
+		}
+
+		ns := namespace
+		for i := 0; i < rws.NumWrites(ns); i++ {
+			k, v, err := rws.GetWriteAt(ns, i)
+			if err != nil {
+				return false, err
+			}
+			if k == transferMetadataKey {
+				keyValue = v
+				return true, nil
+			}
+		}
+		logger.Debugf("scanning for key [%s] on [%s] not found", transferMetadataKey, tx.TxID())
+		return false, nil
+	}); err != nil {
+		if strings.Contains(err.Error(), "context done") {
+			return nil, errors.WithMessage(err, "timeout reached")
+		}
+		return nil, err
+	}
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("scanning for key [%s] with timeout [%s] found, [%s]",
+			transferMetadataKey,
+			timeout,
+			base64.StdEncoding.EncodeToString(keyValue),
+		)
+	}
+	return keyValue, nil
+}
+
+func (n *Network) Ledger() (driver.Ledger, error) {
+	return n.ledger, nil
+}
+
+func (n *Network) ProcessNamespace(namespace string) error {
+	if err := n.ch.Committer().ProcessNamespace(namespace); err != nil {
+		return errors.WithMessagef(err, "failed to register processing of namespace [%s]", namespace)
+	}
+	return nil
 }

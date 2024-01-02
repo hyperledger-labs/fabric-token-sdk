@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -28,12 +30,19 @@ type PublicParamsResponse struct {
 }
 
 type PublicParamsRequestView struct {
-	Network   string
-	Namespace string
+	Network    string
+	Namespace  string
+	retries    int
+	retrySleep time.Duration
 }
 
 func NewPublicParamsRequestView(network string, namespace string) *PublicParamsRequestView {
-	return &PublicParamsRequestView{Network: network, Namespace: namespace}
+	return &PublicParamsRequestView{
+		Network:    network,
+		Namespace:  namespace,
+		retries:    3,
+		retrySleep: 5 + time.Second,
+	}
 }
 
 func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error) {
@@ -59,12 +68,21 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get session to custodian [%s]", custodian)
 	}
-	request := &PublicParamsRequest{
-		Network:   v.Network,
-		Namespace: v.Namespace,
-	}
-	if err := session.Send(request); err != nil {
-		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
+	for i := 0; i < v.retries; i++ {
+		request := &PublicParamsRequest{
+			Network:   v.Network,
+			Namespace: v.Namespace,
+		}
+		if err := session.Send(request); err != nil {
+			if i == v.retries-1 {
+				return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
+			}
+			logger.Errorf("failed to send request to custodian [%s], sleep a bit and retry: [%s]", custodian, err)
+			time.Sleep(v.retrySleep)
+		} else {
+			// message sent
+			break
+		}
 	}
 	response := &PublicParamsResponse{}
 	if err := session.Receive(response); err != nil {
@@ -73,9 +91,9 @@ func (v *PublicParamsRequestView) Call(context view.Context) (interface{}, error
 	return response.Raw, nil
 }
 
-type RespondPublicParamsRequestView struct{}
+type PublicParamsRequestResponderView struct{}
 
-func (v *RespondPublicParamsRequestView) Call(context view.Context) (interface{}, error) {
+func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface{}, error) {
 	// receive request
 	session := session2.JSON(context)
 	request := &PublicParamsRequest{}
@@ -94,12 +112,6 @@ func (v *RespondPublicParamsRequestView) Call(context view.Context) (interface{}
 		return nil, errors.Wrapf(err, "failed to send response")
 	}
 	return nil, nil
-}
-
-type AllIssuersValid struct{}
-
-func (i *AllIssuersValid) Validate(creator view.Identity, tokenType string) error {
-	return nil
 }
 
 func ReadPublicParameters(context view2.ServiceProvider, network, namespace string) ([]byte, error) {

@@ -25,7 +25,12 @@ type Quantity interface {
 	// If an overflow occurs, it returns an error.
 	Sub(b Quantity) Quantity
 
-	// Cmp compare this with b
+	// Cmp compares this and b and returns:
+	//
+	//   -1 if this <  b
+	//    0 if this == b
+	//   +1 if this >  b
+	//
 	Cmp(b Quantity) int
 
 	// Hex returns the hexadecimal representation of this quantity
@@ -38,12 +43,12 @@ type Quantity interface {
 	ToBigInt() *big.Int
 }
 
-// ToQuantity converts a string q to a BigQuantity of a given precision.
+// ToQuantity converts a string q to a Quantity of a given precision.
 // Argument q is supposed to be formatted following big.Int#scan specification.
 // The precision is expressed in bits.
 func ToQuantity(q string, precision uint64) (Quantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
@@ -54,6 +59,29 @@ func ToQuantity(q string, precision uint64) (Quantity, error) {
 	}
 	if v.BitLen() > int(precision) {
 		return nil, errors.Errorf("%s has precision %d > %d", q, v.BitLen(), precision)
+	}
+
+	switch precision {
+	case 64:
+		return &UInt64Quantity{Value: v.Uint64()}, nil
+	default:
+		return &BigQuantity{Int: v, Precision: precision}, nil
+	}
+}
+
+// UInt64ToQuantity converts a uint64 q to a Quantity of a given precision.
+// Argument q is supposed to be formatted following big.Int#scan specification.
+// The precision is expressed in bits.
+func UInt64ToQuantity(u uint64, precision uint64) (Quantity, error) {
+	if precision == 0 {
+		return nil, errors.New("precision must be larger than 0")
+	}
+	v := big.NewInt(0).SetUint64(u)
+	if v.Cmp(big.NewInt(0)) < 0 {
+		return nil, errors.New("quantity must be larger than 0")
+	}
+	if v.BitLen() > int(precision) {
+		return nil, errors.Errorf("%d has precision %d > %d", u, v.BitLen(), precision)
 	}
 
 	switch precision {
@@ -91,7 +119,7 @@ type BigQuantity struct {
 
 func NewUBigQuantity(q string, precision uint64) (*BigQuantity, error) {
 	if precision == 0 {
-		return nil, errors.New("precision be larger than 0")
+		return nil, errors.New("precision must be larger than 0")
 	}
 	v, success := big.NewInt(0).SetString(q, 0)
 	if !success {
@@ -142,6 +170,11 @@ func (q *BigQuantity) Sub(b Quantity) Quantity {
 	return q
 }
 
+// Cmp compares x and y and returns:
+//
+//	-1 if x <  y
+//	 0 if x == y
+//	+1 if x >  y
 func (q *BigQuantity) Cmp(b Quantity) int {
 	bq, ok := b.(*BigQuantity)
 	if !ok {

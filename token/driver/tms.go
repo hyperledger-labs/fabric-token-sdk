@@ -17,9 +17,10 @@ type TokenManagerService interface {
 	WalletService
 	CertificationService
 	Deserializer
+	Serializer
 
 	IdentityProvider() IdentityProvider
-	Validator() Validator
+	Validator() (Validator, error)
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
 }

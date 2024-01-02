@@ -34,14 +34,14 @@ type RWSetProcessor struct {
 	tokenStore processor.TokenStore
 }
 
-func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued) *RWSetProcessor {
+func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued, tokenStore processor.TokenStore) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:    network,
 		nss:        []string{ns},
 		sp:         sp,
 		ownership:  ownership,
 		issued:     issued,
-		tokenStore: processor.NewCommonTokenStore(sp),
+		tokenStore: tokenStore,
 	}
 }
 
@@ -88,7 +88,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		}
 		return err
 	}
-	if !transientMap.Exists("zkat") {
+	if !transientMap.Exists(keys.TokenRequestMetadata) {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], no transient map found", txID)
 		}
@@ -103,7 +103,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	metadata, err := tms.NewMetadataFromBytes(transientMap.Get("zkat"))
+	metadata, err := tms.NewMetadataFromBytes(transientMap.Get(keys.TokenRequestMetadata))
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
@@ -113,18 +113,22 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 	wrappedRWS := &rwsWrapper{RWSet: rws}
 
-	if tms.PublicParametersManager().GraphHiding() {
+	pp := tms.PublicParametersManager().PublicParameters()
+	if pp.GraphHiding() {
 		// Delete inputs
 		ids := metadata.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		for _, id := range ids {
-			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 		}
 	}
+
+	var keysToAppend []string
+	var valuesToAppend [][]byte
 
 	for i := 0; i < rws.NumWrites(ns); i++ {
 		key, val, err := rws.GetWriteAt(ns, i)
@@ -136,7 +140,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		}
 		prefix, components, err := keys.SplitCompositeKey(strings.ReplaceAll(key, "~", string(rune(0))))
 		if err != nil {
-			panic(err)
+			return errors.WithMessagef(err, "failed to split key [%s]", key)
 		}
 		if prefix != keys.TokenKeyPrefix {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -172,10 +176,9 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			continue
 		}
 
-		if err := wrappedRWS.SetState(ns, key, val); err != nil {
-			logger.Errorf("failed to set state [%s]", err)
-			return errors.Wrapf(err, "failed to set state [%s]", key)
-		}
+		// the vault does not understand keys with `~`, therefore we store the equivalent key-value pairs without that symbol.
+		keysToAppend = append(keysToAppend, key)
+		valuesToAppend = append(valuesToAppend, val)
 
 		index, err := strconv.ParseUint(components[1], 10, 64)
 		if err != nil {
@@ -188,7 +191,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
 			}
-			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS); err != nil {
+			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 			continue
@@ -232,6 +235,10 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err
 			}
+		} else {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
+			}
 		}
 
 		// if I'm an auditor, store the audit entry
@@ -248,7 +255,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, tms.PublicParametersManager().Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, pp.Precision()); err != nil {
 				return err
 			}
 		}
@@ -257,6 +264,14 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			logger.Debugf("Done parsing write key [%s]", key)
 		}
 	}
+
+	for i := 0; i < len(valuesToAppend); i++ {
+		if err := wrappedRWS.SetState(ns, keysToAppend[i], valuesToAppend[i]); err != nil {
+			logger.Errorf("failed to set state [%s]", err)
+			return errors.Wrapf(err, "failed to set state [%s]", keysToAppend[i])
+		}
+	}
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s] is known, extract tokens, done!", txID)
 	}

@@ -21,12 +21,13 @@ const (
 	CompositeKeyNamespace       = "\x00"
 	TokenKeyPrefix              = "ztoken"
 	FabTokenKeyPrefix           = "token"
+	DeletedTokenKeyPrefix       = "deltoken"
 	FabTokenExtendedKeyPrefix   = "etoken"
 	AuditTokenKeyPrefix         = "audittoken"
 	TokenMineKeyPrefix          = "mine"
 	TokenSetupKeyPrefix         = "setup"
 	IssuedHistoryTokenKeyPrefix = "issued"
-	TokenNameSpace              = "zkat"
+	TokenNamespace              = "tns"
 	numComponentsInKey          = 2 // 2 components: txid, index, excluding TokenKeyPrefix
 	numComponentsInExtendedKey  = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
 	Info                        = "info"
@@ -35,6 +36,7 @@ const (
 	SerialNumber                = "sn"
 	IssueActionMetadata         = "iam"
 	TransferActionMetadata      = "tam"
+	TokenRequestMetadata        = "trmd"
 )
 
 func GetTokenIdFromKey(key string) (*token.ID, error) {
@@ -95,7 +97,6 @@ func SplitCompositeKey(compositeKey string) (string, []string, error) {
 
 // CreateTokenKey Creates a rwset key for an individual output in a token transaction, as a function of
 // the token owner, transaction ID, and index of the output
-// TODO: move index to uint32 of uint64
 func CreateTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }
@@ -106,6 +107,10 @@ func CreateSNKey(sn string) (string, error) {
 
 func CreateFabTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(FabTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
+}
+
+func CreateDeletedTokenKey(txID string, index uint64) (string, error) {
+	return CreateCompositeKey(DeletedTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }
 
 func CreateExtendedFabTokenKey(id string, typ string, txID string, index uint64) (string, error) {
@@ -139,25 +144,25 @@ func CreateIssueActionMetadataKey(hash string) (string, error) {
 // CreateTransferActionMetadataKey returns the transfer action metadata key built from the passed
 // transaction id, subkey, and index. Index is used to make sure the key is unique with the respect to the
 // token request this key appears.
-func CreateTransferActionMetadataKey(txID string, subKey string, index uint64) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, txID, subKey, strconv.FormatUint(index, 10)})
+func CreateTransferActionMetadataKey(subKey string) (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TransferActionMetadata, subKey})
 }
 
-func IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
+func GetTransferMetadataSubKey(k string) (string, error) {
 	prefix, components, err := SplitCompositeKey(k)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to split composite key [%s]", k)
+		return "", errors.Wrapf(err, "failed to split composite key [%s]", k)
+	}
+	if len(components) != 2 {
+		return "", errors.Wrapf(err, "key [%s] should contain 2 components, got [%d]", k, len(components))
 	}
 	if prefix != TokenKeyPrefix {
-		return false, nil
+		return "", errors.Errorf("key [%s] doesn not contain the token key prefix", k)
 	}
 	if components[0] != TransferActionMetadata {
-		return false, nil
+		return "", errors.Errorf("key [%s] doesn not contain the token transfer action medatata prefix", k)
 	}
-	if len(components) != 4 {
-		return false, nil
-	}
-	return components[2] == subKey, nil
+	return components[1], nil
 }
 
 // CreateCompositeKey and its related functions and consts copied from core/chaincode/shim/chaincode.go

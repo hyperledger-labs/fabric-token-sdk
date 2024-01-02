@@ -13,8 +13,7 @@ on:
         description: 'FSC dependency'
 
 env:
-  GOPATH: ${{ github.workspace }}
-  FTS_PATH: "${{ github.workspace }}/src/github.com/hyperledger-labs/fabric-token-sdk"
+  FTS_PATH: "${{ github.workspace }}/fabric-token-sdk"
   GOFLAGS: -mod=mod
 
 jobs:
@@ -85,18 +84,34 @@ jobs:
       fail-fast: false
       matrix:
         tests: [
-          dlog-fabric,
+          dlog-fabric-t1,
+          dlog-fabric-t1-extras,
+          dlog-fabric-t2,
+          dlog-fabric-t3,
+          fabtoken-dlog-fabric,
+          dloghsm-fabric-t1,
+          dloghsm-fabric-t2,
           fabtoken-fabric,
           dlog-orion,
-          fabtoken-orion ,
+          fabtoken-orion,
           nft-dlog,
           nft-fabtoken,
           nft-dlog-orion,
           nft-fabtoken-orion,
           dvp-fabtoken,
           dvp-dlog,
-          interop-fabtoken,
-          interop-dlog
+          interop-fabtoken-t1,
+          interop-fabtoken-t2,
+          interop-fabtoken-t3,
+          interop-fabtoken-t4,
+          interop-fabtoken-t5,
+          interop-fabtoken-t6,
+          interop-dlog-t1,
+          interop-dlog-t2,
+          interop-dlog-t3,
+          interop-dlog-t4,
+          interop-dlog-t5,
+          interop-dlog-t6,
         ]
 
     steps:
@@ -113,6 +128,10 @@ jobs:
       - name: Set up tools
         working-directory: ${{ env.FTS_PATH }}
         run: make install-tools
+
+      - name: Download fabric binaries
+        working-directory: ${{ env.FTS_PATH }}
+        run: make download-fabric
 
       - name: Docker
         working-directory: ${{ env.FTS_PATH }}

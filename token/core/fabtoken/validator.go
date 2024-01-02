@@ -36,54 +36,55 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 	if deserializer == nil {
 		return nil, errors.New("please provide a non-nil deserializer")
 	}
-	validators := []ValidateTransferFunc{
+
+	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferBalanceValidate,
 		TransferHTLCValidate,
 	}
-	validators = append(validators, extraValidators...)
+	transferValidators = append(transferValidators, extraValidators...)
 	v := &Validator{
 		pp:                 pp,
 		deserializer:       deserializer,
-		transferValidators: validators,
+		transferValidators: transferValidators,
 	}
 	return v, nil
 }
 
-// VerifyTokenRequest validates the passed token request against data in the ledger, the signature provided and the binding
-func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, binding string, tr *driver.TokenRequest) ([]interface{}, error) {
+// VerifyTokenRequest validates the passed token request against data in the ledger, the signature provided and the anchor
+func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest) ([]interface{}, map[string][]byte, error) {
 	// validate arguments
 	if ledger == nil {
-		return nil, errors.New("please provide a non-nil ledger")
+		return nil, nil, errors.New("please provide a non-nil ledger")
 	}
 	if signatureProvider == nil {
-		return nil, errors.New("please provide a non-nil signature provider")
+		return nil, nil, errors.New("please provide a non-nil signature provider")
 	}
-	if len(binding) == 0 {
-		return nil, errors.New("please provide a non-empty binding")
+	if len(anchor) == 0 {
+		return nil, nil, errors.New("please provide a non-empty anchor")
 	}
 	if tr == nil {
-		return nil, errors.New("please provide a non-nil token request")
+		return nil, nil, errors.New("please provide a non-nil token request")
 	}
 
 	// check if the token request is signed by the authorized auditor
 	if err := v.VerifyAuditorSignature(signatureProvider); err != nil {
-		return nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", anchor)
 	}
 	// get issue and transfer actions from the token request
-	ia, ta, err := UnmarshalIssueTransferActions(tr, binding)
+	ia, ta, err := UnmarshalIssueTransferActions(tr)
 	if err != nil {
-		return nil, err
+		return nil, nil, errors.Wrapf(err, "failed to unmarshal actions [%s]", anchor)
 	}
 	// verify issue actions
 	err = v.VerifyIssues(ia, signatureProvider)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", anchor)
 	}
 	// verify transfer actions
 	err = v.VerifyTransfers(ledger, ta, signatureProvider)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", binding)
+		return nil, nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", anchor)
 	}
 
 	var actions []interface{}
@@ -95,25 +96,25 @@ func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider d
 	}
 
 	// actions are returned and will be used later to update the ledger
-	return actions, nil
+	return actions, nil, nil
 }
 
 // VerifyTokenRequestFromRaw validates the raw token request
-func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, binding string, raw []byte) ([]interface{}, error) {
+func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, map[string][]byte, error) {
 	if getState == nil {
-		return nil, errors.New("please provide a non-nil get state function")
+		return nil, nil, errors.New("please provide a non-nil get state function")
 	}
-	if len(binding) == 0 {
-		return nil, errors.New("please provide a non-empty binding")
+	if len(anchor) == 0 {
+		return nil, nil, errors.New("please provide a non-empty anchor")
 	}
 	if len(raw) == 0 {
-		return nil, errors.New("empty token request")
+		return nil, nil, errors.New("empty token request")
 	}
 	// un-marshal token request
 	tr := &driver.TokenRequest{}
 	err := tr.FromBytes(raw)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal token request")
+		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
 	}
 
 	// Prepare Message expected to be signed
@@ -123,13 +124,13 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	req.Issues = tr.Issues
 	bytes, err := req.Bytes()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal signed token request"+err.Error())
+		return nil, nil, errors.Wrap(err, "failed to marshal signed token request"+err.Error())
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(bytes).String(), binding)
+		logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(bytes).String(), anchor)
 	}
-	signed := append(bytes, []byte(binding)...)
+	signed := append(bytes, []byte(anchor)...)
 	var signatures [][]byte
 	// audit is enabled
 	if len(v.pp.AuditorIdentity()) != 0 {
@@ -140,10 +141,33 @@ func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, bindi
 	}
 
 	backend := common.NewBackend(getState, signed, signatures)
-	return v.VerifyTokenRequest(backend, backend, binding, tr)
+	return v.VerifyTokenRequest(backend, backend, anchor, tr)
 }
 
-// VerifyAuditorSignature checks if the content of the token request concatenated with the binding
+// UnmarshalActions returns the actions contained in the serialized token request
+func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
+	tr := &driver.TokenRequest{}
+	err := tr.FromBytes(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal token request")
+	}
+
+	ia, ta, err := UnmarshalIssueTransferActions(tr)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal actions")
+	}
+
+	var res []interface{}
+	for _, action := range ia {
+		res = append(res, action)
+	}
+	for _, action := range ta {
+		res = append(res, action)
+	}
+	return res, nil
+}
+
+// VerifyAuditorSignature checks if the content of the token request concatenated with the anchor
 // was signed by the authorized auditor
 func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
 	if v.pp.AuditorIdentity() != nil {
@@ -159,7 +183,7 @@ func (v *Validator) VerifyAuditorSignature(signatureProvider driver.SignaturePro
 }
 
 // VerifyIssues checks if the issued tokens are valid and if the content of the token request concatenated
-// with the binding was signed by one of the authorized issuers
+// with the anchor was signed by one of the authorized issuers
 func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver.SignatureProvider) error {
 	for _, issue := range issues {
 		// verify that issue is valid
@@ -187,7 +211,7 @@ func (v *Validator) VerifyIssues(issues []*IssueAction, signatureProvider driver
 		if err != nil {
 			return errors.Wrapf(err, "failed getting verifier for [%s]", issue.Issuer.String())
 		}
-		// verify if the token request concatenated with the binding was signed by the issuer
+		// verify if the token request concatenated with the anchor was signed by the issuer
 		if _, err := signatureProvider.HasBeenSignedBy(issue.Issuer, verifier); err != nil {
 			return errors.Wrapf(err, "failed verifying signature")
 		}
@@ -215,7 +239,7 @@ func (v *Validator) VerifyIssue(issue driver.IssueAction) error {
 }
 
 // VerifyTransfers checks if the created output tokens are valid and if the content of the token request concatenated
-// with the binding was signed by the owners of the input tokens
+// with the anchor was signed by the owners of the input tokens
 func (v *Validator) VerifyTransfers(ledger driver.Ledger, transferActions []*TransferAction, signatureProvider driver.SignatureProvider) error {
 	logger.Debugf("check sender start...")
 	defer logger.Debugf("check sender finished.")
@@ -245,11 +269,24 @@ func (v *Validator) VerifyTransfer(ledger driver.Ledger, inputTokens []*token2.T
 		InputTokens:       inputTokens,
 		Action:            tr.(*TransferAction),
 		Ledger:            ledger,
+		MetadataCounter:   map[string]int{},
 	}
 	for _, validator := range v.transferValidators {
 		if err := validator(ctx); err != nil {
 			return err
 		}
+	}
+
+	// Check that all metadata have been validated
+	counter := 0
+	for k, c := range ctx.MetadataCounter {
+		if c > 1 {
+			return errors.Errorf("metadata key [%s] appeared more than once", k)
+		}
+		counter += c
+	}
+	if len(tr.GetMetadata()) != counter {
+		return errors.Errorf("more metadata than those validated [%d]!=[%d]", len(tr.GetMetadata()), counter)
 	}
 	return nil
 }

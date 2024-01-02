@@ -19,11 +19,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/commands"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/network"
+	ftopology "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric/topology"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/components"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -47,9 +50,10 @@ PeerOrgs:{{ range .PeerOrgs }}
   {{- end }}
   Users:
     Count: {{ .Users }}
-    {{- if len .UserNames }}
-    Names: {{ range .UserNames }}
-    - {{ . }}
+    {{- if len .UserSpecs }}
+    Specs: {{ range .UserSpecs }}
+    - Name: {{ .Name }}
+      HSM: {{ .HSM }}
     {{- end }}
     {{- end }}
 
@@ -65,23 +69,7 @@ PeerOrgs:{{ range .PeerOrgs }}
 `
 )
 
-var logger = flogging.MustGetLogger("integration.token.generators.fabtoken")
-
-type Organization struct {
-	ID            string
-	MSPID         string
-	MSPType       string
-	Name          string
-	Domain        string
-	EnableNodeOUs bool
-	Users         int
-	UserNames     []string
-	CA            *CA
-}
-
-type CA struct {
-	Hostname string `yaml:"hostname,omitempty"`
-}
+var logger = flogging.MustGetLogger("token-sdk.integration.token.generators.fabtoken")
 
 type Peer struct {
 	Name         string
@@ -89,11 +77,11 @@ type Peer struct {
 }
 
 type Layout struct {
-	Orgs  []Organization
+	Orgs  []ftopology.Organization
 	Peers []Peer
 }
 
-func (l *Layout) PeerOrgs() []Organization {
+func (l *Layout) PeerOrgs() []ftopology.Organization {
 	return l.Orgs
 }
 
@@ -114,7 +102,7 @@ type FSCPlatform interface {
 type CryptoMaterialGenerator struct {
 	TokenPlatform     generators.TokenPlatform
 	EventuallyTimeout time.Duration
-	colorIndex        int
+	ColorIndex        int
 	Builder           *components.Builder
 }
 
@@ -131,30 +119,45 @@ func (d *CryptoMaterialGenerator) Setup(tms *topology.TMS) (string, error) {
 }
 
 func (d *CryptoMaterialGenerator) GenerateCertifierIdentities(tms *topology.TMS, n *node.Node, certifiers ...string) []generators.Identity {
-	return d.generate(tms, n, "certifiers", certifiers...)
+	return d.Generate(tms, n, "certifiers", certifiers...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateOwnerIdentities(tms *topology.TMS, n *node.Node, owners ...string) []generators.Identity {
-	return d.generate(tms, n, "owners", owners...)
+	return d.Generate(tms, n, "owners", owners...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateIssuerIdentities(tms *topology.TMS, n *node.Node, issuers ...string) []generators.Identity {
-	return d.generate(tms, n, "issuers", issuers...)
+	return d.Generate(tms, n, "issuers", issuers...)
 }
 
 func (d *CryptoMaterialGenerator) GenerateAuditorIdentities(tms *topology.TMS, n *node.Node, auditors ...string) []generators.Identity {
-	return d.generate(tms, n, "auditors", auditors...)
+	return d.Generate(tms, n, "auditors", auditors...)
 }
 
-func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []generators.Identity {
+func (d *CryptoMaterialGenerator) Generate(tms *topology.TMS, n *node.Node, wallet string, names ...string) []generators.Identity {
 	logger.Infof("generate [%s] identities [%v]", wallet, names)
 
 	output := filepath.Join(d.TokenPlatform.TokenDir(), "crypto", tms.ID(), n.ID(), wallet)
 	orgName := fmt.Sprintf("Org%s", n.ID())
 	mspID := fmt.Sprintf("%sMSP", orgName)
 	domain := fmt.Sprintf("%s.example.com", orgName)
+
+	var userSpecs []ftopology.UserSpec
+	for _, name := range names {
+		us := ftopology.UserSpec{
+			Name: name,
+			HSM:  false,
+		}
+		switch wallet {
+		case "issuers":
+			us.HSM = topology.ToOptions(n.Options).IsUseHSMForIssuer(name)
+		case "auditors":
+			us.HSM = topology.ToOptions(n.Options).IsUseHSMForAuditor()
+		}
+		userSpecs = append(userSpecs, us)
+	}
 	l := &Layout{
-		Orgs: []Organization{
+		Orgs: []ftopology.Organization{
 			{
 				ID:            orgName,
 				MSPID:         mspID,
@@ -163,30 +166,65 @@ func (d *CryptoMaterialGenerator) generate(tms *topology.TMS, n *node.Node, wall
 				Domain:        domain,
 				EnableNodeOUs: false,
 				Users:         1,
+				UserSpecs:     userSpecs,
 			},
 		},
-	}
-	for _, name := range names {
-		l.Peers = append(l.Peers, Peer{
-			Name:         name,
-			Organization: orgName,
-		})
+		Peers: []Peer{
+			{Name: orgName, Organization: orgName},
+		},
 	}
 	d.GenerateCryptoConfig(output, l)
 	d.GenerateArtifacts(output)
 
 	var identities []generators.Identity
-	for _, name := range names {
-		identities = append(identities, generators.Identity{
-			ID: name,
-			Path: filepath.Join(
-				output,
-				"peerOrganizations",
-				domain,
-				"peers",
-				fmt.Sprintf("%s.%s", name, domain),
-				"msp"),
-		})
+	for i, name := range names {
+		idOutput := filepath.Join(
+			output,
+			"peerOrganizations",
+			domain,
+			"users",
+			fmt.Sprintf("%s@%s", name, domain),
+			"msp")
+
+		tokenOpts := topology.ToOptions(n.Options)
+		remote := tokenOpts.IsRemoteOwner(name)
+		if remote {
+			// Prepare a copy of the keystore folder for the remote wallet or verify only wallet
+
+			// copy the content of the keystore folder to x509.KeystoreFullFolder
+			in, err := os.Open(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(os.MkdirAll(filepath.Join(idOutput, x509.KeystoreFullFolder), 0766)).NotTo(HaveOccurred())
+			out, err := os.Create(filepath.Join(idOutput, x509.KeystoreFullFolder, x509.PrivateKeyFileName))
+			Expect(err).NotTo(HaveOccurred())
+			_, err = io.Copy(out, in)
+			Expect(err).NotTo(HaveOccurred())
+			err = out.Sync()
+			Expect(err).NotTo(HaveOccurred())
+			in.Close()
+			out.Close()
+
+			// delete keystore/priv_sk so that the token-sdk will interpreter this wallet as a remote one
+			Expect(os.Remove(filepath.Join(idOutput, x509.KeystoreFolder, x509.PrivateKeyFileName))).NotTo(HaveOccurred())
+		}
+
+		id := generators.Identity{
+			ID:   name,
+			Path: idOutput,
+		}
+
+		if wallet == "issuers" || wallet == "auditors" {
+			if userSpecs[i].HSM {
+				// PKCS11
+				id.Opts = network.BCCSPOpts("PKCS11")
+			} else {
+				// SW
+				id.Opts = network.BCCSPOpts("SW")
+			}
+		}
+
+		identities = append(identities, id)
 	}
 	return identities
 
@@ -243,11 +281,11 @@ func (d *CryptoMaterialGenerator) StartSession(cmd *exec.Cmd, name string) (*gex
 }
 
 func (d *CryptoMaterialGenerator) NextColor() string {
-	color := d.colorIndex%14 + 31
+	color := d.ColorIndex%14 + 31
 	if color > 37 {
 		color = color + 90 - 37
 	}
 
-	d.colorIndex++
+	d.ColorIndex++
 	return fmt.Sprintf("%dm", color)
 }

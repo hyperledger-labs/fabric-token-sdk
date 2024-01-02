@@ -28,7 +28,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	auditor := ttx.NewAuditor(context, w)
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
-	// Check Metadata
+	// Check ValidationRecords
 	opRaw := tx.ApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue")
 	if len(opRaw) != 0 {
 		assert.Equal([]byte("issue"), opRaw, "expected 'issue' application metadata")
@@ -40,6 +40,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	inputs, outputs, err := auditor.Audit(tx)
 	assert.NoError(err, "failed retrieving inputs and outputs")
+	defer auditor.Release(tx)
 
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()

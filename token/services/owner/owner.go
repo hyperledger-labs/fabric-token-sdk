@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package owner
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -16,6 +16,21 @@ import (
 )
 
 var logger = flogging.MustGetLogger("token-sdk.owner")
+
+type QueryTransactionsParams = ttxdb.QueryTransactionsParams
+
+// TxStatus is the status of a transaction
+type TxStatus = ttxdb.TxStatus
+
+const (
+	Unknown = ttxdb.Unknown
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending = ttxdb.Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed = ttxdb.Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted = ttxdb.Deleted
+)
 
 // Transaction models a token transaction
 type Transaction interface {
@@ -30,30 +45,10 @@ type QueryExecutor struct {
 	*ttxdb.QueryExecutor
 }
 
-// NewPaymentsFilter returns a new filter for payments
-func (a *QueryExecutor) NewPaymentsFilter() *ttxdb.PaymentsFilter {
-	return a.QueryExecutor.NewPaymentsFilter()
-}
-
-// NewHoldingsFilter returns a new filter for holdings
-func (a *QueryExecutor) NewHoldingsFilter() *ttxdb.HoldingsFilter {
-	return a.QueryExecutor.NewHoldingsFilter()
-}
-
-// Done closes the query executor. It must be called when the query executor is no longer needed.
-func (a *QueryExecutor) Done() {
-	a.QueryExecutor.Done()
-}
-
 // Owner is the interface for the owner service
 type Owner struct {
-	sp view2.ServiceProvider
+	sp view.ServiceProvider
 	db *ttxdb.DB
-}
-
-// New returns a new Owner instance for the passed wallet
-func New(sp view2.ServiceProvider, tms *token.ManagementService) *Owner {
-	return &Owner{sp: sp, db: ttxdb.Get(sp, &tmsWallet{tms: tms})}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -81,6 +76,22 @@ func (a *Owner) Append(tx Transaction) error {
 	return nil
 }
 
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+func (a *Owner) SetStatus(txID string, status TxStatus) error {
+	return a.db.SetStatus(txID, status)
+}
+
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (a *Owner) GetStatus(txID string) (TxStatus, error) {
+	return a.db.GetStatus(txID)
+}
+
+// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+func (a *Owner) GetTokenRequest(txID string) ([]byte, error) {
+	return a.db.GetTokenRequest(txID)
+}
+
 type TxStatusChangesListener struct {
 	net *network.Network
 	db  *ttxdb.DB
@@ -99,17 +110,12 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
+	go func() {
+		logger.Debugf("unsubscribe for tx %s...", txID)
+		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {
+			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+		}
+		logger.Debugf("unsubscribe for tx %s...done", txID)
+	}()
 	return nil
-}
-
-type tmsWallet struct {
-	tms *token.ManagementService
-}
-
-func (t *tmsWallet) ID() string {
-	return ""
-}
-
-func (t *tmsWallet) TMS() *token.ManagementService {
-	return t.tms
 }

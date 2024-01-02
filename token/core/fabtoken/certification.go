@@ -28,6 +28,6 @@ func (s *Service) Certify(wallet driver.CertifierWallet, ids []*token2.ID, token
 // with the passed identifiers
 // If not, VerifyCertifications returns an error
 // fabtoken does not make use of the certification service
-func (s *Service) VerifyCertifications(ids []*token2.ID, certifications [][]byte) error {
-	return nil
+func (s *Service) VerifyCertifications(ids []*token2.ID, certifications [][]byte) ([][]byte, error) {
+	return nil, nil
 }

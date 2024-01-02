@@ -8,20 +8,17 @@ package gen
 
 import (
 	"fmt"
-	"io/ioutil"
-
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/weaver"
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
+	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-
-	"gopkg.in/yaml.v2"
-
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/weaver"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v2"
 )
 
 type Topology struct {
@@ -70,7 +67,7 @@ func gen(args []string) error {
 	if len(topologyFile) == 0 {
 		return errors.Errorf("expecting topology file path")
 	}
-	raw, err := ioutil.ReadFile(topologyFile)
+	raw, err := os.ReadFile(topologyFile)
 	if err != nil {
 		return errors.Wrapf(err, "failed reading topology file [%s]", topologyFile)
 	}

@@ -10,11 +10,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Topology(tokenSDKDriver string) []api.Topology {
@@ -49,7 +52,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 		fabric.WithAnonymousIdentity(),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
 	// issuers
 	fscTopology.AddNodeByName("cash_issuer").AddOptions(
@@ -68,27 +71,32 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	seller := fscTopology.AddNodeByName("seller").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithDefaultOwnerIdentity(),
 	)
 	seller.RegisterResponder(&house.AcceptHouseView{}, &house.IssueHouseView{})
 	seller.RegisterViewFactory("sell", &views2.SellHouseViewFactory{})
 	seller.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
+	seller.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	buyer := fscTopology.AddNodeByName("buyer").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithDefaultOwnerIdentity(),
 	)
 	buyer.RegisterResponder(&cash.AcceptCashView{}, &cash.IssueCashView{})
 	buyer.RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{})
 	buyer.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
+	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
-	tms := tokenTopology.AddTMS(fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
+	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
+
+	// Add Fabric SDK to FSC Nodes
+	fscTopology.AddSDK(&fabric3.SDK{})
 
 	return []api.Topology{
 		fabricTopology,

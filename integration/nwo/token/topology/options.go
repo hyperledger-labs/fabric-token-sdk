@@ -64,6 +64,20 @@ func (o *Options) SetOwners(ids []string) {
 	o.Mapping["Owners"] = ids
 }
 
+// SetRemoteOwner marks the passed owner wallet identifier as remote
+func (o *Options) SetRemoteOwner(id string) {
+	o.Mapping["Owners.remote."+id] = true
+}
+
+// IsRemoteOwner returns true if the passed owner wallet identifier is marked as remote
+func (o *Options) IsRemoteOwner(id string) bool {
+	v, ok := o.Mapping["Owners.remote."+id]
+	if !ok {
+		return false
+	}
+	return v.(bool)
+}
+
 func (o *Options) Auditor() bool {
 	res := o.Mapping["Auditor"]
 	if res == nil {
@@ -74,6 +88,30 @@ func (o *Options) Auditor() bool {
 
 func (o *Options) SetAuditor(v bool) {
 	o.Mapping["Auditor"] = v
+}
+
+func (o *Options) UseHSMForIssuer(label string) {
+	o.Mapping["Issuers.HSM."+label] = true
+}
+
+func (o *Options) IsUseHSMForIssuer(label string) bool {
+	v, ok := o.Mapping["Issuers.HSM."+label]
+	if !ok {
+		return false
+	}
+	return v.(bool)
+}
+
+func (o *Options) UseHSMForAuditor() {
+	o.Mapping["Auditor.HSM"] = true
+}
+
+func (o *Options) IsUseHSMForAuditor() bool {
+	v, ok := o.Mapping["Auditor.HSM"]
+	if !ok {
+		return false
+	}
+	return v.(bool)
 }
 
 func ToOptions(o *node.Options) *Options {

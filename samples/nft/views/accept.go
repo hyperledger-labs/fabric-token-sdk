@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx"
 )
 
-var logger = flogging.MustGetLogger("sample.nft")
+var logger = flogging.MustGetLogger("token-sdk.sample.nft")
 
 type AcceptIssuedHouseView struct{}
 

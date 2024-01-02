@@ -10,10 +10,11 @@ import (
 	"encoding/asn1"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -97,18 +98,16 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 	return tx, nil
 }
 
-func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []byte) (*Transaction, error) {
-	// TODO: remove the need of network by introducing custom Pyaload unmarshalling
+func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) {
 	tx := &Transaction{
 		Payload: &Payload{
-			Envelope:     network.GetInstance(sp, nw, channel).NewEnvelope(),
 			Transient:    map[string][]byte{},
 			TokenRequest: token.NewRequest(nil, ""),
 		},
 		SP: sp,
 	}
 
-	if err := unmarshal(tx, tx.Payload, raw); err != nil {
+	if err := unmarshal(sp, tx.Payload, raw); err != nil {
 		return nil, err
 	}
 
@@ -136,7 +135,11 @@ func NewTransactionFromBytes(sp view.Context, nw string, channel string, raw []b
 	return tx, nil
 }
 
-func ReceiveTransaction(context view.Context) (*Transaction, error) {
+func ReceiveTransaction(context view.Context, opts ...TxOption) (*Transaction, error) {
+	opt, err := compile(opts...)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to parse options")
+	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("receive a new transaction...")
 	}
@@ -153,9 +156,12 @@ func ReceiveTransaction(context view.Context) (*Transaction, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("received transaction with id [%s]", cctx.ID())
 	}
-
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "received", "tx", cctx.ID())
+	if !opt.NoTransactionVerification {
+		// Check that the transaction is valid
+		if err := cctx.IsValid(); err != nil {
+			return nil, errors.WithMessagef(err, "invalid transaction %s", cctx.ID())
+		}
+	}
 
 	return cctx, nil
 }
@@ -214,6 +220,10 @@ func (t *Transaction) Inputs() (*token.InputStream, error) {
 	return t.TokenRequest.Inputs()
 }
 
+func (t *Transaction) InputsAndOutputs() (*token.InputStream, *token.OutputStream, error) {
+	return t.TokenRequest.InputsAndOutputs()
+}
+
 // IsValid checks that the transaction is well-formed.
 // This means checking that the embedded TokenRequest is valid.
 func (t *Transaction) IsValid() error {
@@ -226,22 +236,25 @@ func (t *Transaction) MarshallToAudit() ([]byte, error) {
 
 // Selector returns the default token selector for this transaction
 func (t *Transaction) Selector() (token.Selector, error) {
-	return t.TokenService().SelectorManager().NewSelector(t.ID())
+	sm, err := t.TokenService().SelectorManager()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get selector manager")
+	}
+	return sm.NewSelector(t.ID())
 }
 
 func (t *Transaction) Release() {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("releasing resources for tx [%s]", t.ID())
 	}
-	if err := t.TokenService().SelectorManager().Unlock(t.ID()); err != nil {
-		logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
-	}
-
-	pub, err := publisher(t.SP)
+	sm, err := t.TokenService().SelectorManager()
 	if err != nil {
-		return
+		logger.Warnf("failed to get token selector [%s]", err)
+	} else {
+		if err := sm.Unlock(t.ID()); err != nil {
+			logger.Warnf("failed releasing tokens locked by [%s], [%s]", t.ID(), err)
+		}
 	}
-	publishAbortTx(pub, t)
 }
 
 func (t *Transaction) TokenService() *token.ManagementService {
@@ -261,6 +274,10 @@ func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
 	t.TokenRequest.SetApplicationMetadata(k, v)
 }
 
+func (t *Transaction) TMSID() token.TMSID {
+	return t.TokenRequest.TokenService.ID()
+}
+
 func (t *Transaction) storeTransient() error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Storing transient for [%s]", t.ID())
@@ -270,7 +287,7 @@ func (t *Transaction) storeTransient() error {
 		return err
 	}
 
-	if err := t.Payload.Transient.Set("zkat", raw); err != nil {
+	if err := t.Payload.Transient.Set(keys.TokenRequestMetadata, raw); err != nil {
 		return err
 	}
 
@@ -294,6 +311,9 @@ func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
 	}
 	t.Envelope = envelope
 
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("setting envelope [%s]", envelope.String())
+	}
 	return nil
 }
 
@@ -312,11 +332,11 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	// for _, info := range payload.TokenInfos {
 	//	t.Payload.TokenInfos = append(t.Payload.TokenInfos, info)
 	// }
-	// for _, issueMetadata := range payload.Metadata.Issues {
-	//	t.Payload.Metadata.Issues = append(t.Payload.Metadata.Issues, issueMetadata)
+	// for _, issueMetadata := range payload.ValidationRecords.Issues {
+	//	t.Payload.ValidationRecords.Issues = append(t.Payload.ValidationRecords.Issues, issueMetadata)
 	// }
-	// for _, transferMetadata := range payload.Metadata.Transfers {
-	//	t.Payload.Metadata.Transfers = append(t.Payload.Metadata.Transfers, transferMetadata)
+	// for _, transferMetadata := range payload.ValidationRecords.Transfers {
+	//	t.Payload.ValidationRecords.Transfers = append(t.Payload.ValidationRecords.Transfers, transferMetadata)
 	// }
 	//
 	// for key, value := range payload.Transient {
@@ -375,6 +395,9 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to marshal envelope")
 		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction envelope [%s]", hash.Hashable(t.Envelope.String()))
+		}
 	}
 
 	res, err := asn1.Marshal(TransactionSer{
@@ -395,7 +418,7 @@ func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
 	return res, nil
 }
 
-func unmarshal(t *Transaction, p *Payload, raw []byte) error {
+func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
 	var ser TransactionSer
 	if _, err := asn1.Unmarshal(raw, &ser); err != nil {
 		return errors.Wrapf(err, "failed unmarshalling transaction [%s]", string(raw))
@@ -421,9 +444,12 @@ func unmarshal(t *Transaction, p *Payload, raw []byte) error {
 			return errors.Wrap(err, "failed unmarshalling token request")
 		}
 	}
+	if p.Envelope == nil {
+		p.Envelope = network.GetInstance(sp, p.Network, p.Channel).NewEnvelope()
+	}
 	if len(ser.Envelope) != 0 {
 		if err := p.Envelope.FromBytes(ser.Envelope); err != nil {
-			return errors.Wrap(err, "failed unmarshalling envelope")
+			return errors.Wrapf(err, "failed unmarshalling envelope [%d]", len(ser.Envelope))
 		}
 		// if err := t.setEnvelope(t.Envelope); err != nil {
 		// 	return errors.Wrap(err, "failed setting envelope")

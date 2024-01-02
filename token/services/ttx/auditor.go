@@ -12,7 +12,6 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracker/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
@@ -22,17 +21,35 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+// TxStatus is the status of a transaction
+type TxStatus = ttxdb.TxStatus
+
+const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown = ttxdb.Unknown
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending TxStatus = ttxdb.Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed TxStatus = ttxdb.Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted TxStatus = ttxdb.Deleted
+)
+
 type txAuditor struct {
-	sp      view2.ServiceProvider
-	w       *token.AuditorWallet
-	auditor *auditor.Auditor
+	sp                      view2.ServiceProvider
+	w                       *token.AuditorWallet
+	auditor                 *auditor.Auditor
+	db                      *ttxdb.DB
+	transactionInfoProvider *TransactionInfoProvider
 }
 
 func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *txAuditor {
 	return &txAuditor{
-		sp:      sp,
-		w:       w,
-		auditor: auditor.New(sp, w),
+		sp:                      sp,
+		w:                       w,
+		auditor:                 auditor.New(sp, w),
+		db:                      ttxdb.Get(sp, w),
+		transactionInfoProvider: NewTransactionInfoProvider(sp, w.TMS()),
 	}
 }
 
@@ -41,7 +58,12 @@ func (a *txAuditor) Validate(tx *Transaction) error {
 }
 
 func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
-	return a.auditor.Audit(tx.TokenRequest)
+	return a.auditor.Audit(tx)
+}
+
+// Release unlocks the passed enrollment IDs.
+func (a *txAuditor) Release(tx *Transaction) {
+	a.auditor.Release(tx)
 }
 
 // NewQueryExecutor returns a new query executor. The query executor is used to
@@ -51,12 +73,14 @@ func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
 
-func (a *txAuditor) AcquireLocks(eIDs ...string) error {
-	return ttxdb.Get(a.sp, a.w).AcquireLocks(eIDs...)
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+func (a *txAuditor) SetStatus(txID string, status TxStatus) error {
+	return a.db.SetStatus(txID, status)
 }
 
-func (a *txAuditor) Unlock(eIDs []string) {
-	ttxdb.Get(a.sp, a.w).Unlock(eIDs...)
+// TransactionInfo returns the transaction info for the given transaction ID.
+func (a *txAuditor) TransactionInfo(txID string) (*TransactionInfo, error) {
+	return a.transactionInfoProvider.TransactionInfo(txID)
 }
 
 type RegisterAuditorView struct {
@@ -76,10 +100,22 @@ func NewRegisterAuditorView(auditView view.View, opts ...token.ServiceOption) *R
 }
 
 func (r *RegisterAuditorView) Call(context view.Context) (interface{}, error) {
+	// register responder
 	if err := view2.GetRegistry(context).RegisterResponder(r.AuditView, &AuditingViewInitiator{}); err != nil {
 		return nil, errors.Wrapf(err, "failed to register auditor view")
 	}
-
+	// enable processing of all token transactions for the given network and namespace
+	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
+	if tms == nil {
+		return nil, errors.Errorf("cannot find tms for [%s]", r.TMSID)
+	}
+	net := network.GetInstance(context, tms.Network(), tms.Channel())
+	if tms == nil {
+		return nil, errors.Errorf("cannot find network for [%s]", tms.ID())
+	}
+	if err := net.ProcessNamespace(tms.Namespace()); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register namespace for processing [%s]", tms.Network())
+	}
 	return nil, nil
 }
 
@@ -109,12 +145,10 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 
 	// Receive signature
 	logger.Debugf("Receiving signature for [%s]", a.tx.ID())
-	agent := metrics.Get(context)
 	ch := session.Receive()
 	var msg *view.Message
 	select {
 	case msg = <-ch:
-		agent.EmitKey(0, "ttx", "received", "auditingAck", a.tx.ID())
 		logger.Debugf("reply received from %s", a.tx.Opts.Auditor)
 	case <-timeout.C:
 		return nil, errors.Errorf("Timeout from party %s", a.tx.Opts.Auditor)
@@ -122,8 +156,6 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	if msg.Status == view.ERROR {
 		return nil, errors.New(string(msg.Payload))
 	}
-
-	// TODO: IsValid it?
 
 	// Check signature
 	signed, err := a.tx.MarshallToAudit()
@@ -135,7 +167,7 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 
 	validAuditing := false
-	for _, auditor := range a.tx.TokenService().PublicParametersManager().Auditors() {
+	for _, auditor := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
 		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
 		if err != nil {
 			logger.Debugf("Failed to get auditor verifier for %s", auditor.UniqueID())
@@ -176,8 +208,6 @@ func (a *AuditingViewInitiator) startRemote(context view.Context) (view.Session,
 	if err != nil {
 		return nil, errors.Wrap(err, "failed sending transaction")
 	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "sent", "auditing", a.tx.ID())
 
 	return session, nil
 }
@@ -246,6 +276,12 @@ func (a *AuditApproveView) Call(context view.Context) (interface{}, error) {
 		return nil, err
 	}
 
+	labels := []string{
+		"network", a.tx.Network(),
+		"channel", a.tx.Channel(),
+		"namespace", a.tx.Namespace(),
+	}
+	GetMetrics(context).AuditApprovedTransactions.With(labels...).Add(1)
 	return nil, nil
 }
 
@@ -259,6 +295,11 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	signer, err := a.w.GetSigner(aid)
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", context.Me())
+	}
+
+	err = a.tx.storeTransient()
+	if err != nil {
+		return errors.Wrapf(err, "failed storing transient for [%s]", a.tx.ID())
 	}
 
 	logger.Debug("signer at auditor", signer, aid)
@@ -279,43 +320,39 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 	if err := session.Send(sigma); err != nil {
 		return errors.WithMessagef(err, "failed sending back auditor signature")
 	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "sent", "auditingAck", a.tx.ID())
 
 	logger.Debugf("Signing and sending back transaction...done [%s]", a.tx.ID())
 
-	if err := a.waitFabricEnvelope(context); err != nil {
+	if err := a.waitEnvelope(context); err != nil {
 		return errors.WithMessagef(err, "failed obtaining auditor signature")
 	}
 	return nil
 }
 
-func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
-	logger.Debugf("Waiting for fabric envelope... [%s]", a.tx.ID())
-	tx, err := ReceiveTransaction(context)
+func (a *AuditApproveView) waitEnvelope(context view.Context) error {
+	logger.Debugf("Waiting for envelope... [%s]", a.tx.ID())
+	tx, err := ReceiveTransaction(context, WithNoTransactionVerification())
 	if err != nil {
-		return errors.Wrapf(err, "failed receiving transaction")
+		return errors.Wrapf(err, "failed to receive transaction with network envelope")
 	}
-	logger.Debugf("Waiting for fabric envelope...transaction received[%s]", a.tx.ID())
+	logger.Debugf("Waiting for envelope...transaction received[%s]", a.tx.ID())
 
 	// Processes
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Processes Fabric Envelope...")
+		logger.Debugf("Processes envelope...")
+	}
+	if tx.Payload == nil {
+		return errors.Errorf("expected transaction payload not found")
 	}
 	env := tx.Payload.Envelope
 	if env == nil {
-		return errors.Errorf("expected fabric envelope")
+		return errors.Errorf("expected envelope not found")
 	}
 	// Ack for distribution
 	// Send the signature back
 	rawRequest, err := tx.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
-	}
-
-	err = tx.storeTransient()
-	if err != nil {
-		return errors.Wrapf(err, "failed storing transient")
 	}
 
 	backend := network.GetInstance(context, tx.Network(), tx.Channel())
@@ -350,10 +387,8 @@ func (a *AuditApproveView) waitFabricEnvelope(context view.Context) error {
 	if err := session.Send(sigma); err != nil {
 		return errors.WithMessage(err, "failed sending ack")
 	}
-	agent := metrics.Get(context)
-	agent.EmitKey(0, "ttx", "sent", "txAck", tx.ID())
 
-	logger.Debugf("Waiting for fabric envelope...done [%s]", a.tx.ID())
+	logger.Debugf("Waiting for envelope...done [%s]", a.tx.ID())
 
 	return nil
 }

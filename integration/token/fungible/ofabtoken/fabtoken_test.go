@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -27,7 +28,13 @@ var _ = Describe("Orion EndToEnd", func() {
 	Describe("Orion FabToken", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", fungible.Topology("orion", "fabtoken", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology.Topology(
+				topology.Opts{
+					Backend:        "orion",
+					TokenSDKDriver: "fabtoken",
+					Aries:          true,
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -35,7 +42,7 @@ var _ = Describe("Orion EndToEnd", func() {
 		})
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor")
+			fungible.TestAll(network, "auditor", nil, true)
 		})
 	})
 

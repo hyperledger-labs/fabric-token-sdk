@@ -30,6 +30,10 @@ func (t TMSID) String() string {
 	return fmt.Sprintf("%s,%s,%s", t.Network, t.Channel, t.Namespace)
 }
 
+func (t TMSID) Equal(tmsid TMSID) bool {
+	return t.Network == tmsid.Network && t.Channel == tmsid.Channel && t.Namespace == tmsid.Namespace
+}
+
 // ServiceProvider is used to return instances of a given type
 type ServiceProvider interface {
 	// GetService returns an instance of the given type
@@ -46,6 +50,8 @@ type ServiceOptions struct {
 	Namespace string
 	// PublicParamsFetcher is used to fetch the public parameters
 	PublicParamsFetcher PublicParamsFetcher
+	// Params is used to store any application specific parameter
+	Params map[string]interface{}
 }
 
 // TMSID returns the TMSID for the given ServiceOptions
@@ -55,6 +61,24 @@ func (o ServiceOptions) TMSID() TMSID {
 		Channel:   o.Channel,
 		Namespace: o.Namespace,
 	}
+}
+
+// ParamAsString returns the value bound to the passed key.
+// If the key is not found, it returns the empty string.
+// if the value bound to the passed key is not a string, it returns an error.
+func (o ServiceOptions) ParamAsString(key string) (string, error) {
+	if o.Params == nil {
+		return "", nil
+	}
+	v, ok := o.Params[key]
+	if !ok {
+		return "", nil
+	}
+	s, ok := v.(string)
+	if !ok {
+		return "", errors.Errorf("expecting string, found [%T]", o)
+	}
+	return s, nil
 }
 
 // CompileServiceOptions compiles the given list of ServiceOption
@@ -125,7 +149,7 @@ func WithTMSID(id TMSID) ServiceOption {
 
 // ManagementService (TMS, for short) is the entry point for the Token API. A TMS is uniquely
 // identified by a network, channel, namespace, and public parameters.
-// The TMS gives access, among other things, to the wallet manager, the public paramenters,
+// The TMS gives access, among other things, to the wallet manager, the public parameters,
 // the token selector, and so on.
 type ManagementService struct {
 	sp        view.ServiceProvider
@@ -138,6 +162,7 @@ type ManagementService struct {
 	certificationClientProvider CertificationClientProvider
 	selectorManagerProvider     SelectorManagerProvider
 	signatureService            *SignatureService
+	vault                       *Vault
 }
 
 // String returns a string representation of the TMS
@@ -184,18 +209,22 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 }
 
 // Validator returns a new token validator for this TMS
-func (t *ManagementService) Validator() *Validator {
-	return &Validator{backend: t.tms.Validator()}
+func (t *ManagementService) Validator() (*Validator, error) {
+	v, err := t.tms.Validator()
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get validator")
+	}
+	return &Validator{backend: v}, nil
 }
 
 // Vault returns the Token Vault for this TMS
 func (t *ManagementService) Vault() *Vault {
-	return &Vault{v: t.vaultProvider.Vault(t.network, t.channel, t.namespace)}
+	return t.vault
 }
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{managementService: t}
+	return &WalletManager{managementService: t, walletService: t.tms}
 }
 
 // CertificationManager returns the certification manager for this TMS
@@ -204,14 +233,14 @@ func (t *ManagementService) CertificationManager() *CertificationManager {
 }
 
 // CertificationClient returns the certification client for this TMS
-func (t *ManagementService) CertificationClient() *CertificationClient {
+func (t *ManagementService) CertificationClient() (*CertificationClient, error) {
 	certificationClient, err := t.certificationClientProvider.New(
-		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().CertificationDriver(),
+		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().PublicParameters().CertificationDriver(),
 	)
 	if err != nil {
-		panic(err)
+		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")
 	}
-	return &CertificationClient{cc: certificationClient}
+	return &CertificationClient{cc: certificationClient}, nil
 }
 
 // PublicParametersManager returns a manager that gives access to the public parameters
@@ -221,7 +250,7 @@ func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
 }
 
 // SelectorManager returns a manager that gives access to the token selectors
-func (t *ManagementService) SelectorManager() SelectorManager {
+func (t *ManagementService) SelectorManager() (SelectorManager, error) {
 	return t.selectorManagerProvider.SelectorManager(t.Network(), t.Channel(), t.Namespace())
 }
 
@@ -244,11 +273,26 @@ func (t *ManagementService) ConfigManager() *ConfigManager {
 	return &ConfigManager{cm: t.tms.ConfigManager()}
 }
 
+func (t *ManagementService) init() error {
+	v, err := t.vaultProvider.Vault(t.network, t.channel, t.namespace)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", t.namespace, t.channel, t.namespace)
+	}
+	t.vault = &Vault{v: v}
+	return nil
+}
+
 // GetManagementService returns the management service for the passed options. If no options are passed,
 // the default management service is returned.
 // Options: WithNetwork, WithChannel, WithNamespace, WithPublicParameterFetcher, WithTMS, WithTMSID
+// The function panics if an error occurs. Use GetManagementServiceProvider(sp).GetManagementService(opts...) to handle any error directly
 func GetManagementService(sp ServiceProvider, opts ...ServiceOption) *ManagementService {
-	return GetManagementServiceProvider(sp).GetManagementService(opts...)
+	ms, err := GetManagementServiceProvider(sp).GetManagementService(opts...)
+	if err != nil {
+		logger.Warnf("failed to get token manager service [%s]", err)
+		return nil
+	}
+	return ms
 }
 
 // NewServicesFromPublicParams uses the passed marshalled public parameters to create an instance
@@ -266,6 +310,10 @@ func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Vali
 		return nil, nil, errors.Wrap(err, "failed instantiating public parameters manager")
 	}
 
+	if err := ppm.Validate(); err != nil {
+		return nil, nil, errors.Wrap(err, "failed to validate public parameters")
+	}
+
 	logger.Debugf("instantiate validator...")
 	validator, err := core.NewValidator(pp)
 	if err != nil {
@@ -273,4 +321,36 @@ func NewServicesFromPublicParams(params []byte) (*PublicParametersManager, *Vali
 	}
 
 	return &PublicParametersManager{ppm: ppm}, &Validator{backend: validator}, nil
+}
+
+func NewPublicParametersManagerFromPublicParams(params []byte) (*PublicParametersManager, error) {
+	logger.Debugf("unmarshall public parameters...")
+	pp, err := core.PublicParametersFromBytes(params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
+	}
+
+	logger.Debugf("instantiate public parameters manager...")
+	ppm, err := core.NewPublicParametersManager(pp)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed instantiating public parameters manager")
+	}
+
+	return &PublicParametersManager{ppm: ppm}, nil
+}
+
+func NewWalletManager(sp view.ServiceProvider, network string, channel string, namespace string, params []byte) (*WalletManager, error) {
+	logger.Debugf("unmarshall public parameters...")
+	pp, err := core.PublicParametersFromBytes(params)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed unmarshalling public parameters")
+	}
+
+	logger.Debugf("instantiate public parameters manager...")
+	walletService, err := core.NewWalletService(sp, network, channel, namespace, pp)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed instantiating wallet service")
+	}
+
+	return &WalletManager{walletService: walletService}, nil
 }

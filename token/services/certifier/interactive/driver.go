@@ -9,36 +9,41 @@ package interactive
 import (
 	"context"
 	"sync"
-
-	"github.com/pkg/errors"
+	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
+	"github.com/pkg/errors"
 )
 
+type BackendFactory func(sp view2.ServiceProvider, network, channel, namespace, wallet string) (Backend, error)
+
 type Driver struct {
-	sync      sync.Mutex
-	cms       map[string]*CertificationClient
-	certifier *CertificationService
+	Sync                 sync.Mutex
+	CertificationClients map[string]*CertificationClient
+	CertificationService *CertificationService
+	BackendFactory       BackendFactory
 }
 
-func NewDriver() *Driver {
+func NewDriver(bf BackendFactory) *Driver {
 	return &Driver{
-		sync: sync.Mutex{},
-		cms:  map[string]*CertificationClient{},
+		Sync:                 sync.Mutex{},
+		CertificationClients: map[string]*CertificationClient{},
+		BackendFactory:       bf,
 	}
 }
 
 func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, channel, namespace string) (driver.CertificationClient, error) {
-	d.sync.Lock()
-	defer d.sync.Unlock()
+	d.Sync.Lock()
+	defer d.Sync.Unlock()
 
 	k := channel + ":" + namespace
-	cm, ok := d.cms[k]
+	cm, ok := d.CertificationClients[k]
 	if !ok {
 		n := network.GetInstance(sp, networkID, channel)
 		if n == nil {
@@ -63,32 +68,63 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 			return nil, errors.Errorf("no certifier id configured")
 		}
 
-		inst := NewCertificationClient(
+		sub, err := events.GetSubscriber(sp)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get global subscriber")
+		}
+
+		certificationClient := NewCertificationClient(
 			context.Background(),
 			channel,
 			namespace,
 			v,
 			v,
-			v,
 			view2.GetManager(sp),
 			certifiers,
+			sub,
+			3,
+			10*time.Second,
 		)
-		inst.Start()
+		if err := certificationClient.Scan(); err != nil {
+			logger.Warnf("failed to scan the vault for tokens to be certified [%s]", err)
+		}
+		certificationClient.Start()
 
-		d.cms[k] = inst
-		cm = inst
+		d.CertificationClients[k] = certificationClient
+		cm = certificationClient
 	}
 	return cm, nil
 }
 
 func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, channel, namespace, wallet string) (driver.CertificationService, error) {
-	d.sync.Lock()
-	defer d.sync.Unlock()
+	d.Sync.Lock()
+	defer d.Sync.Unlock()
 
-	if d.certifier == nil {
-		d.certifier = NewCertificationService(sp)
+	if d.CertificationService == nil {
+		backend, err := d.BackendFactory(sp, network, channel, namespace, wallet)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create backend")
+		}
+		d.CertificationService = NewCertificationService(sp, backend)
 	}
-	d.certifier.SetWallet(network, channel, namespace, wallet)
+	d.CertificationService.SetWallet(network, channel, namespace, wallet)
 
-	return d.certifier, nil
+	return d.CertificationService, nil
+}
+
+type ChaincodeBackend struct{}
+
+func (c *ChaincodeBackend) Load(context view.Context, cr *CertificationRequest) ([][]byte, error) {
+	logger.Debugf("invoke chaincode to get commitments for [%v]", cr.IDs)
+	// TODO: if the certifier fetches all token transactions, it might have the tokens in its on vault.
+	tokensBoxed, err := context.RunView(tcc.NewGetTokensView(cr.Channel, cr.Namespace, cr.IDs...))
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed getting tokens [%s:%s][%v]", cr.Channel, cr.Namespace, cr.IDs)
+	}
+
+	tokens, ok := tokensBoxed.([][]byte)
+	if !ok {
+		return nil, errors.Errorf("expected [][]byte, got [%T]", tokens)
+	}
+	return tokens, nil
 }

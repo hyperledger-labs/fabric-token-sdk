@@ -10,7 +10,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -20,7 +20,7 @@ import (
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/context"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -35,10 +35,20 @@ const (
 	DefaultTokenGenPath = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 
+type PF interface {
+	GetTopology() *Topology
+	GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
+	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string
+}
+
 type NetworkHandler interface {
 	GenerateArtifacts(tms *topology2.TMS)
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
 	PostRun(load bool, tms *topology2.TMS)
+	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
+	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string
+	UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte)
+	Cleanup()
 }
 
 type Platform struct {
@@ -54,7 +64,6 @@ type Platform struct {
 }
 
 func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platform {
-	curveID := math3.BN254
 	p := &Platform{
 		Context:                ctx,
 		Topology:               t.(*Topology),
@@ -65,9 +74,23 @@ func NewPlatform(ctx api2.Context, t api2.Topology, builder api2.Builder) *Platf
 		NetworkHandlers:        map[string]NetworkHandler{},
 	}
 	p.PublicParamsGenerators["fabtoken"] = common2.NewFabTokenPublicParamsGenerator()
-	p.PublicParamsGenerators["dlog"] = common2.NewDLogPublicParamsGenerator(curveID)
+	p.PublicParamsGenerators["dlog"] = common2.NewDLogPublicParamsGenerator(math3.BN254)
 
 	return p
+}
+
+// GetPlatform returns the token platform from the passed context bound to the passed id.
+// It returns nil, if nothing is found
+func GetPlatform(ctx *context.Context, id string) PF {
+	p := ctx.PlatformByName(id)
+	if p == nil {
+		return nil
+	}
+	fp, ok := p.(PF)
+	if ok {
+		return fp
+	}
+	return nil
 }
 
 func (p *Platform) Name() string {
@@ -90,12 +113,12 @@ func (p *Platform) GenerateArtifacts() {
 		nh.GenerateArtifacts(tms)
 	}
 
-	// Generate fsc configuration extension
-	fscTopology := p.Context.TopologyByName(fsc.TopologyName).(*fsc.Topology)
-	for _, node := range fscTopology.Nodes {
-		p.GenerateExtension(node)
-
-		for _, tms := range p.Topology.TMSs {
+	// Generate fsc configuration extension.
+	// For each TMS
+	for _, tms := range p.Topology.TMSs {
+		// For each node in the TMS, generate its config extension
+		for _, node := range tms.FSCNodes {
+			p.GenerateExtension(node)
 			// get the network handler for this TMS
 			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
 			// generate artifacts
@@ -123,6 +146,13 @@ func (p *Platform) PostRun(load bool) {
 }
 
 func (p *Platform) Cleanup() {
+	// loop over TMS and generate artifacts
+	for _, tms := range p.Topology.TMSs {
+		// get the network handler for this TMS
+		targetNetwork := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+		// generate artifacts
+		targetNetwork.Cleanup()
+	}
 }
 
 func (p *Platform) GetContext() api2.Context {
@@ -169,9 +199,35 @@ func (p *Platform) PublicParametersFile(tms *topology2.TMS) string {
 }
 
 func (p *Platform) PublicParameters(tms *topology2.TMS) []byte {
-	raw, err := ioutil.ReadFile(p.PublicParametersFile(tms))
+	raw, err := os.ReadFile(p.PublicParametersFile(tms))
 	Expect(err).ToNot(HaveOccurred())
 	return raw
+}
+
+func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string {
+	var targetTMS *topology2.TMS
+	for _, tms := range p.Topology.TMSs {
+		if tms.Network == tmsNetwork {
+			targetTMS = tms
+		}
+	}
+	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
+
+	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
+	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
+}
+
+func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string {
+	var targetTMS *topology2.TMS
+	for _, tms := range p.Topology.TMSs {
+		if tms.Network == tmsNetwork {
+			targetTMS = tms
+		}
+	}
+	Expect(targetTMS).ToNot(BeNil(), "failed to find TMS for network [%s]", tmsNetwork)
+
+	nh := p.NetworkHandlers[p.Context.TopologyByName(targetTMS.Network).Type()]
+	return nh.GenOwnerCryptoMaterial(targetTMS, fscNode, walletID, useCAIfAvailable)
 }
 
 func (p *Platform) AddNetworkHandler(label string, nh NetworkHandler) {
@@ -182,9 +238,19 @@ func (p *Platform) SetPublicParamsGenerator(name string, gen generators.PublicPa
 	p.PublicParamsGenerators[name] = gen
 }
 
+func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
+	nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+	nh.UpdateChaincodePublicParams(tms, publicParams)
+}
+
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
+		"SQL":         func() bool { return p.Topology.SqlTTXDB },
+		"SQLDataSource": func() string {
+			return p.TTXDBSQLDataSourceDir(node) + "db.sqlite"
+		},
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -220,6 +286,14 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, err
 
 func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
 	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "kvs")
+}
+
+func (p *Platform) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
+	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "ttxdb")
+}
+
+func (p *Platform) GetTopology() *Topology {
+	return p.Topology
 }
 
 func (p *Platform) nextColor() string {

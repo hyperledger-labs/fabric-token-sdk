@@ -6,10 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package processor
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token"
+
 const (
 	AddToken    = "store-token"
 	DeleteToken = "delete-token"
-	UpdateToken = "update-token"
 )
 
 type TokenProcessorEvent struct {
@@ -25,6 +26,7 @@ func NewTokenProcessorEvent(topic string, message *TokenMessage) *TokenProcessor
 }
 
 type TokenMessage struct {
+	TMSID     token.TMSID
 	WalletID  string
 	TokenType string
 	TxID      string
@@ -39,13 +41,14 @@ func (t *TokenProcessorEvent) Message() interface{} {
 	return t.message
 }
 
-func (cts *CommonTokenStore) Notify(topic string, walletID, tokenType, txID string, index uint64) {
+func (cts *CommonTokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
 	if cts.notifier == nil {
 		logger.Warnf("cannot notify others!")
 		return
 	}
 
 	e := NewTokenProcessorEvent(topic, &TokenMessage{
+		TMSID:     tmsID,
 		WalletID:  walletID,
 		TokenType: tokenType,
 		TxID:      txID,

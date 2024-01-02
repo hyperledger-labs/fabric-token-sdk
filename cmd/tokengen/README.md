@@ -16,6 +16,11 @@ The `tokengen` command has five subcommands, as follows:
 
 ## tokengen artifacts
 
+This command is used to centrally generate key material and configuration files.
+It takes in input a `topology` file, in `yaml` format, that describes the topologies of the networks involved.
+An example can be found [`here`](./samples/topology/fungible.yaml). 
+Topology files can be edited directly or they can be generated programmatically as shown [`here`](./samples/topology/fungible.go). 
+
 ```
 Read topology from file and generates artifacts.
 
@@ -86,6 +91,39 @@ Flags:
 ``` 
 
 The public parameters are stored in the output folder with name `zkatdlog_pp.json`.
+
+### tokengen update dlog
+
+This command takes an existing `zkatdlog_pp.json` and allows you to update the issuer and/or auditor certificates, while keeping the public parameters intact.
+
+```
+Usage:
+  tokengen update dlog [flags]
+
+Flags:
+  -a, --auditors strings   list of auditor MSP directories containing the corresponding auditor certificate
+  -h, --help               help for dlog
+  -i, --input string       path of the public param file
+  -s, --issuers strings    list of issuer MSP directories containing the corresponding issuer certificate
+  -o, --output string      output folder (default ".")
+```
+
+## tokengen pp
+
+The `tokengen pp` command has the following subcommands:
+
+- print: Inspect public parameters
+
+### tokengen pp print
+
+```
+Usage:
+  tokengen pp print [flags]
+
+Flags:
+  -h, --help           help for print
+  -i, --input string   path of the public param file
+```
 
 ## tokengen help
 

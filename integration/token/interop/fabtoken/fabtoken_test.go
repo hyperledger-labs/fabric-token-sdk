@@ -43,7 +43,26 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed htlc-related basic operations", func() {
-			interop.TestHTLCSingleFabricNetwork(ii)
+			interop.TestHTLCSingleNetwork(ii)
+		})
+	})
+
+	Describe("HTLC Single Orion Network", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropHTLCOrion.StartPortForNode(),
+				"",
+				interop.HTLCSingleOrionNetworkTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed htlc-related basic operations", func() {
+			interop.TestHTLCSingleNetwork(ii)
 		})
 	})
 
@@ -62,7 +81,7 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCTwoFabricNetworks(ii)
+			interop.TestHTLCTwoNetworks(ii)
 		})
 	})
 
@@ -100,7 +119,26 @@ var _ = Describe("FabToken end to end", func() {
 		})
 
 		It("Performed an htlc based atomic swap", func() {
-			interop.TestHTLCNoCrossClaimTwoFabricNetworks(ii)
+			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
+		})
+	})
+
+	Describe("HTLC No Cross Claim with Orion and Fabric Networks", func() {
+		BeforeEach(func() {
+			var err error
+			ii, err = integration.New(
+				integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
+				"",
+				interop.HTLCNoCrossClaimWithOrionTopology("fabtoken")...,
+			)
+			Expect(err).NotTo(HaveOccurred())
+			ii.RegisterPlatformFactory(token.NewPlatformFactory())
+			ii.Generate()
+			ii.Start()
+		})
+
+		It("Performed an htlc based atomic swap", func() {
+			interop.TestHTLCNoCrossClaimTwoNetworks(ii)
 		})
 	})
 

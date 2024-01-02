@@ -8,6 +8,7 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -17,13 +18,13 @@ var (
 // Normalizer is used to set default values of ServiceOptions struct, if needed.
 type Normalizer interface {
 	// Normalize normalizes the given ServiceOptions struct.
-	Normalize(opt *ServiceOptions) *ServiceOptions
+	Normalize(opt *ServiceOptions) (*ServiceOptions, error)
 }
 
 // VaultProvider provides token vault instances
 type VaultProvider interface {
 	// Vault returns a token vault instance for the passed inputs
-	Vault(network string, channel string, namespace string) driver.Vault
+	Vault(network string, channel string, namespace string) (driver.Vault, error)
 }
 
 // SelectorManager handles token selection operations
@@ -37,7 +38,7 @@ type SelectorManager interface {
 // SelectorManagerProvider provides instances of SelectorManager
 type SelectorManagerProvider interface {
 	// SelectorManager returns a SelectorManager instance for the passed inputs.
-	SelectorManager(network string, channel string, namespace string) SelectorManager
+	SelectorManager(network string, channel string, namespace string) (SelectorManager, error)
 }
 
 // CertificationClientProvider provides instances of CertificationClient
@@ -77,12 +78,15 @@ func NewManagementServiceProvider(
 
 // GetManagementService returns an instance of the management service for the passed options.
 // If the management service has not been created yet, it will be created.
-func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) *ManagementService {
+func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) (*ManagementService, error) {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "failed to compile options")
 	}
-	opt = p.normalizer.Normalize(opt)
+	opt, err = p.normalizer.Normalize(opt)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to normalize options")
+	}
 
 	logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 	tokenService, err := p.tmsProvider.GetTokenManagerService(
@@ -92,13 +96,12 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 		opt.PublicParamsFetcher,
 	)
 	if err != nil {
-		logger.Errorf("failed getting TMS for [%s]: [%s]", opt.TMSID(), err)
-		return nil
+		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt.TMSID())
 	}
 
 	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
-	return &ManagementService{
+	ms := &ManagementService{
 		sp:                          p.sp,
 		network:                     opt.Network,
 		channel:                     opt.Channel,
@@ -112,9 +115,15 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 			ip:           tokenService.IdentityProvider(),
 		},
 	}
+	if err := ms.init(); err != nil {
+		return nil, errors.WithMessagef(err, "failed to initialize token management service")
+	}
+	return ms, nil
 }
 
-// GetManagementServiceProvider returns the management service provider from the passed service provider
+// GetManagementServiceProvider returns the management service provider from the passed service provider.
+// The function panics if an error occurs.
+// An alternative way is to use `s, err := sp.GetService(&ManagementServiceProvider{}) and catch the error manually.`
 func GetManagementServiceProvider(sp ServiceProvider) *ManagementServiceProvider {
 	s, err := sp.GetService(managementServiceProviderIndex)
 	if err != nil {

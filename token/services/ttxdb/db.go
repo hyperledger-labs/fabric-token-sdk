@@ -13,7 +13,7 @@ import (
 	"sync"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -63,12 +63,14 @@ func Drivers() []string {
 type TxStatus = driver.TxStatus
 
 const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown = driver.Unknown
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = "Pending"
+	Pending = driver.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = "Confirmed"
+	Confirmed = driver.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = "Deleted"
+	Deleted = driver.Deleted
 )
 
 // ActionType is the type of action performed by a transaction.
@@ -97,6 +99,13 @@ type MovementRecord = driver.MovementRecord
 // in that action.
 type TransactionRecord = driver.TransactionRecord
 
+// ValidationRecord is a more finer-grained version of a movement record.
+// Given a Token Transaction, for each token action in the Token Request,
+// a transaction record is created for each unique enrollment ID found in the outputs.
+// The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
+// in that action.
+type ValidationRecord = driver.ValidationRecord
+
 // TransactionIterator is an iterator over transaction records
 type TransactionIterator struct {
 	it driver.TransactionIterator
@@ -120,8 +129,34 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 	return next, nil
 }
 
+// ValidationRecordsIterator is an iterator over validation records
+type ValidationRecordsIterator struct {
+	it driver.ValidationRecordsIterator
+}
+
+// Close closes the iterator. It must be called when done with the iterator.
+func (t *ValidationRecordsIterator) Close() {
+	t.it.Close()
+}
+
+// Next returns the next validation record, if any.
+// It returns nil, nil if there are no more records.
+func (t *ValidationRecordsIterator) Next() (*ValidationRecord, error) {
+	next, err := t.it.Next()
+	if err != nil {
+		return nil, err
+	}
+	if next == nil {
+		return nil, nil
+	}
+	return next, nil
+}
+
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
+
+// QueryValidationRecordsParams defines the parameters for querying movements
+type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 
 // QueryExecutor executors queries against the DB
 type QueryExecutor struct {
@@ -143,13 +178,22 @@ func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
 	}
 }
 
-// Transactions returns an iterators of transaction records in the given time internal.
+// Transactions returns an iterators of transaction records filtered by the given params.
 func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
 	it, err := qe.db.db.QueryTransactions(params)
 	if err != nil {
 		return nil, errors.Errorf("failed to query transactions: %s", err)
 	}
 	return &TransactionIterator{it: it}, nil
+}
+
+// ValidationRecords returns an iterators of validation records filtered by the given params.
+func (qe *QueryExecutor) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
+	it, err := qe.db.db.QueryValidations(params)
+	if err != nil {
+		return nil, errors.Errorf("failed to query validation records: %s", err)
+	}
+	return &ValidationRecordsIterator{it: it}, nil
 }
 
 // Done closes the query executor. It must be called when the query executor is no longer needed.s
@@ -214,23 +258,27 @@ func (db *DB) Append(req *token.Request) error {
 
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendSendMovements(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append send movements for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append send movements for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendReceivedMovements(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append received movements for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
+	}
+	if err := db.appendTokenRequest(req); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
 	if err := db.db.Commit(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
 	logger.Debugf("Appending new completed without errors")
@@ -244,15 +292,10 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	ins, err := req.Inputs()
+	ins, outs, err := req.InputsAndOutputs()
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting inputs for request [%s]", req.Anchor)
+		return errors.WithMessagef(err, "failed getting inputs and outputs for request [%s]", req.Anchor)
 	}
-	outs, err := req.Outputs()
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting outputs for request [%s]", req.Anchor)
-	}
-
 	record := &token.AuditRecord{
 		Anchor:  req.Anchor,
 		Inputs:  ins,
@@ -260,18 +303,46 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	}
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
+	}
+	if err := db.appendTokenRequest(req); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendTransactions(record); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
 	if err := db.db.Commit(); err != nil {
 		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid '%s' failed", record.Anchor)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
-	logger.Debugf("Appending new completed without errors")
+	logger.Debugf("Appending transaction record new completed without errors")
+	return nil
+}
+
+// AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
+func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+	logger.Debugf("Appending new validation record... [%d]", db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
+
+	if err := db.db.BeginUpdate(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
+	}
+	if err := db.db.AddValidationRecord(txID, tr, meta); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
+	}
+	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
+	}
+
+	logger.Debugf("Appending validation record completed without errors")
 	return nil
 }
 
@@ -298,28 +369,62 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 	return nil
 }
 
-// AcquireLocks acquires locks for the passed enrollment ids.
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (db *DB) GetStatus(txID string) (TxStatus, error) {
+	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
+
+	status, err := db.db.GetStatus(txID)
+	if err != nil {
+		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
+	}
+	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
+	return status, nil
+}
+
+// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+func (db *DB) GetTokenRequest(txID string) ([]byte, error) {
+	return db.db.GetTokenRequest(txID)
+}
+
+// AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (db *DB) AcquireLocks(eIDs ...string) error {
-	logger.Debugf("Acquire locks for [% x] enrollment ids", eIDs)
-	for _, id := range deduplicate(eIDs) {
+func (db *DB) AcquireLocks(anchor string, eIDs ...string) error {
+	dedup := deduplicate(eIDs)
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
+	db.eIDsLocks.LoadOrStore(anchor, dedup)
+	for _, id := range dedup {
 		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
+		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
 	return nil
 }
 
-// Unlock unlocks the locks for the passed enrollment ids.
-func (db *DB) Unlock(eIDs ...string) {
-	logger.Debugf("Unlock locks for [% x] enrollment ids", eIDs)
-	for _, id := range deduplicate(eIDs) {
+// ReleaseLocks releases the locks associated to the passed anchor
+func (db *DB) ReleaseLocks(anchor string) {
+	dedupBoxed, ok := db.eIDsLocks.LoadAndDelete(anchor)
+	if !ok {
+		logger.Debugf("nothing to release for [%s] ", anchor)
+		return
+	}
+	dedup := dedupBoxed.([]string)
+	logger.Debugf("Release locks for [%s:%v] enrollment ids", anchor, dedup)
+	for _, id := range dedup {
 		lock, ok := db.eIDsLocks.Load(id)
 		if !ok {
-			logger.Warnf("unlock for enrollment id [%s] not possible, lock never acquired", id)
+			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
 			continue
 		}
+		logger.Debugf("unlock lock for [%s:%v] enrollment id done", anchor, id)
 		lock.(*sync.RWMutex).Unlock()
 	}
+	logger.Debugf("Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
+
 }
 
 func (db *DB) appendSendMovements(record *token.AuditRecord) error {
@@ -418,7 +523,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 		// All ins should be for same EID, check this
 		inEIDs := ins.EnrollmentIDs()
 		if len(inEIDs) > 1 {
-			return errors.Errorf("expected at most 1 input enrollment id, got %d", len(inEIDs))
+			return errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
 		}
 		inEID := ""
 		if len(inEIDs) == 1 {
@@ -430,7 +535,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 		outTT := ous.TokenTypes()
 		for _, outEID := range outEIDs {
 			for _, tokenType := range outTT {
-				received := outputs.ByEnrollmentID(outEID).ByType(tokenType).Sum()
+				received := ous.ByEnrollmentID(outEID).ByType(tokenType).Sum()
 				if received.Cmp(big.NewInt(0)) <= 0 {
 					continue
 				}
@@ -455,7 +560,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					Timestamp:    timestamp,
 				}); err != nil {
 					if err1 := db.db.Discard(); err1 != nil {
-						logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
 					}
 					return err
 				}
@@ -469,6 +574,20 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 	return nil
 }
 
+func (db *DB) appendTokenRequest(request *token.Request) error {
+	raw, err := request.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
+	}
+	if err := db.db.AddTokenRequest(request.Anchor, raw); err != nil {
+		if err1 := db.db.Discard(); err1 != nil {
+			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
+		}
+		return err
+	}
+	return nil
+}
+
 func (db *DB) rollback(err error) {
 	if err1 := db.db.Discard(); err1 != nil {
 		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
@@ -477,7 +596,7 @@ func (db *DB) rollback(err error) {
 
 // Manager handles the databases
 type Manager struct {
-	sp     view2.ServiceProvider
+	sp     view.ServiceProvider
 	driver string
 	mutex  sync.Mutex
 	dbs    map[string]*DB
@@ -488,9 +607,9 @@ type Manager struct {
 // If the driver is not supported, an error is returned.
 // If the driver is not specified, the driver is taken from the configuration.
 // If the configuration is not specified, the default driver is used.
-func NewManager(sp view2.ServiceProvider, driver string) *Manager {
+func NewManager(sp view.ServiceProvider, driver string) *Manager {
 	if len(driver) == 0 {
-		driver = view2.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
+		driver = view.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
 		if len(driver) == 0 {
 			driver = "memory"
 		}
@@ -509,9 +628,14 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 	defer cm.mutex.Unlock()
 
 	id := w.TMS().ID().String() + w.ID()
+	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.dbs[id]
 	if !ok {
-		driver, err := drivers[cm.driver].Open(cm.sp, id)
+		d := drivers[cm.driver]
+		if d == nil {
+			return nil, errors.Errorf("no driver found for [%s]", cm.driver)
+		}
+		driver, err := d.Open(cm.sp, id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
 		}
@@ -527,7 +651,7 @@ var (
 
 // Get returns the DB for the given wallet.
 // Nil might be returned if the wallet is not found or an error occurred.
-func Get(sp view2.ServiceProvider, w Wallet) *DB {
+func Get(sp view.ServiceProvider, w Wallet) *DB {
 	if w == nil {
 		logger.Debugf("no wallet provided")
 		return nil

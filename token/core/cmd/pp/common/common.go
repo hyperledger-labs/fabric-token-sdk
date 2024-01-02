@@ -8,7 +8,7 @@ package common
 
 import (
 	"encoding/pem"
-	"io/ioutil"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,7 +88,7 @@ func SetupIssuersAndAuditors(pp PP, Auditors, Issuers []string) error {
 // certificate in the PEM format.
 // It returns an error if the file contains more than one certificate.
 func ReadSingleCertificateFromFile(file string) ([]byte, error) {
-	bytes, err := ioutil.ReadFile(file)
+	bytes, err := os.ReadFile(file)
 	if err != nil {
 		return nil, errors.Wrapf(err, "reading from file %s failed", file)
 	}
@@ -114,24 +114,32 @@ func GetCertificatesFromDir(dir string) ([][]byte, error) {
 		return nil, err
 	}
 	var content [][]byte
-	files, err := ioutil.ReadDir(dir)
+	files, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not read directory %s", dir)
 	}
+	errs := []string{}
 	for _, f := range files {
 		fullName := filepath.Join(dir, f.Name())
 		f, err := os.Stat(fullName)
 		if err != nil {
+			errs = append(errs, fmt.Sprintf("error reading %s: %s", fullName, err.Error()))
 			continue
 		}
 		if f.IsDir() {
+			errs = append(errs, fmt.Sprintf("is a directory: %s", fullName))
 			continue
 		}
 		item, err := ReadSingleCertificateFromFile(fullName)
 		if err != nil {
+			errs = append(errs, err.Error())
 			continue
 		}
 		content = append(content, item)
 	}
+	if len(content) == 0 {
+		return content, errors.New(strings.Join(errs, ", "))
+	}
+
 	return content, nil
 }

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package htlc
 
 import (
+	"bytes"
 	"crypto"
 	"encoding/json"
 	"time"
@@ -16,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 // HashInfo contains the information regarding the hashing
@@ -25,12 +27,66 @@ type HashInfo struct {
 	HashEncoding encoding.Encoding
 }
 
+// Validate checks that the hash and encoding functions are available
+func (i *HashInfo) Validate() error {
+	if !i.HashFunc.Available() {
+		return errors.New("hash function not available")
+	}
+	if !i.HashEncoding.Available() {
+		return errors.New("encoding function not available")
+	}
+	return nil
+}
+
+// Image computes the image of the passed pre-image using the hash and encoding function of this struct
+func (i *HashInfo) Image(preImage []byte) ([]byte, error) {
+	if err := i.Validate(); err != nil {
+		return nil, errors.WithMessagef(err, "hash info not valid")
+	}
+	hash := i.HashFunc.New()
+	if _, err := hash.Write(preImage); err != nil {
+		return nil, errors.Wrapf(err, "failed to compute hash image")
+	}
+	image := hash.Sum(nil)
+	image = []byte(i.HashEncoding.New().EncodeToString(image))
+	return image, nil
+}
+
+// Compare compares the passed image with the hash contained in this struct
+func (i *HashInfo) Compare(image []byte) error {
+	if bytes.Equal(image, i.Hash) {
+		return nil
+	}
+	return errors.Errorf("passed image [%v] does not match the hash [%v]", image, i.Hash)
+}
+
 // Script contains the details of an htlc
 type Script struct {
 	Sender    view.Identity
 	Recipient view.Identity
 	Deadline  time.Time
 	HashInfo  HashInfo
+}
+
+// Validate performs the following checks:
+// - The sender must be set
+// - The recipient must be set
+// - The deadline must be after the passed time reference
+// - HashInfo must be Available
+func (s *Script) Validate(timeReference time.Time) error {
+	if s.Sender.IsNone() {
+		return errors.New("sender not set")
+	}
+	if s.Recipient.IsNone() {
+		return errors.New("recipient not set")
+	}
+	if s.Deadline.Before(timeReference) {
+		return errors.New("expiration date has already passed")
+	}
+	if err := s.HashInfo.Validate(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ScriptOwnership implements the Ownership interface for scripts
@@ -50,6 +106,7 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 	}
 	if owner.Type != ScriptType {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, owner type is [%s] instead of [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, owner.Type, ScriptType)
+		return nil, false
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
@@ -61,21 +118,29 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 		return nil, false
 	}
 
+	var ids []string
 	// I'm either the sender
 	logger.Debugf("Is Mine [%s,%s,%s] as a sender?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if tms.WalletManager().OwnerWalletByIdentity(script.Sender) != nil {
+	if wallet := tms.WalletManager().OwnerWalletByIdentity(script.Sender); wallet != nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a sender? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-		return nil, true
+		ids = append(ids, senderWallet(wallet))
 	}
 
 	// or the recipient
 	logger.Debugf("Is Mine [%s,%s,%s] as a recipient?", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-	if tms.WalletManager().OwnerWalletByIdentity(script.Recipient) != nil {
+	if wallet := tms.WalletManager().OwnerWalletByIdentity(script.Recipient); wallet != nil {
 		logger.Debugf("Is Mine [%s,%s,%s] as a recipient? Yes", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
-		return nil, true
+		ids = append(ids, recipientWallet(wallet))
 	}
 
-	logger.Debugf("Is Mine [%s,%s,%s]? No", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
+	logger.Debugf("Is Mine [%s,%s,%s]? %b", len(ids) != 0, view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity)
+	return ids, len(ids) != 0
+}
 
-	return nil, false
+func senderWallet(w *token.OwnerWallet) string {
+	return "htlc.sender" + w.ID()
+}
+
+func recipientWallet(w *token.OwnerWallet) string {
+	return "htlc.recipient" + w.ID()
 }

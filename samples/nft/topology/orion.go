@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/samples/nft/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Orion(tokenSDKDriver string) []api.Topology {
@@ -33,11 +34,11 @@ func Orion(tokenSDKDriver string) []api.Topology {
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		orion.WithRole("alice"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithDefaultOwnerIdentity(),
 	)
 	alice.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
 	alice.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
@@ -46,7 +47,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
+		token.WithDefaultOwnerIdentity(),
 	)
 	bob.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
 	bob.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
@@ -56,10 +57,11 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// we need to define the custodian
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
+	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
-	tms := tokenTopology.AddTMS(orionTopology, "", tokenSDKDriver)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	orion2.SetCustodian(tms, custodian)
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")

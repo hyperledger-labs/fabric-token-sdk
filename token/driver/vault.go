@@ -29,11 +29,14 @@ type CertificationStorage interface {
 }
 
 type QueryEngine interface {
+	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
+	IsPending(id *token.ID) (bool, error)
 	// IsMine returns true if the passed id is owned by any known wallet
 	IsMine(id *token.ID) (bool, error)
 	// UnspentTokensIterator returns an iterator over all unspent tokens
 	UnspentTokensIterator() (UnspentTokensIterator, error)
-	// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
+	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+	// The token type can be empty. In that case, tokens of any type are returned.
 	UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error)
 	// ListUnspentTokens returns the list of unspent tokens
 	ListUnspentTokens() (*token.UnspentTokens, error)
@@ -46,11 +49,14 @@ type QueryEngine interface {
 	// GetTokenInfos retrieves the token information for the passed ids.
 	// For each id, the callback is invoked to unmarshal the token information
 	GetTokenInfos(ids []*token.ID, callback QueryCallbackFunc) error
-	// GetTokenCommitments retrieves the token commitments for the passed ids.
-	// For each id, the callback is invoked to unmarshal the token commitment
-	GetTokenCommitments(ids []*token.ID, callback QueryCallbackFunc) error
-
-	GetTokenInfoAndCommitments(ids []*token.ID, callback QueryCallback2Func) error
+	// GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
+	// For each id, the callback is invoked to unmarshal the output
+	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
+	// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
+	GetTokenInfoAndOutputs(ids []*token.ID, callback QueryCallback2Func) error
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
+	// WhoDeletedTokens returns info about who deleted the passed tokens.
+	// The bool array is an indicator used to tell if the token at a given position has been deleted or not
+	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 }

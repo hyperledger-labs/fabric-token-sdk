@@ -33,6 +33,8 @@ type IdentityInfo interface {
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
 	Get() (view.Identity, []byte, error)
+	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
+	Remote() bool
 }
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.
@@ -57,6 +59,9 @@ type IdentityProvider interface {
 	// GetEnrollmentID extracts the enrollment ID from the passed audit info
 	GetEnrollmentID(auditInfo []byte) (string, error)
 
+	// GetRevocationHandler extracts the revocation handler from the passed audit info
+	GetRevocationHandler(auditInfo []byte) (string, error)
+
 	// Bind binds id to the passed identity long term identity. The same signer, verifier, and audit of the long term
 	// identity is associated to id.
 	Bind(id view.Identity, longTerm view.Identity) error
@@ -69,4 +74,6 @@ type IdentityProvider interface {
 
 	// RegisterIssuerWallet registers the passed wallet ad the issuer wallet of the passed identity.
 	RegisterIssuerWallet(id string, path string) error
+
+	WalletIDs(role IdentityRole) ([]string, error)
 }

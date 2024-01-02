@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -19,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/pkg/errors"
 )
 
 // Lock contains the input information to lock a token
@@ -51,7 +51,21 @@ type LockView struct {
 	*Lock
 }
 
-func (hv *LockView) Call(context view.Context) (interface{}, error) {
+func (hv *LockView) Call(context view.Context) (res interface{}, err error) {
+	var tx *htlc.Transaction
+	defer func() {
+		if e := recover(); e != nil {
+			txID := "none"
+			if tx != nil {
+				txID = tx.ID()
+			}
+			if err == nil {
+				err = errors.Errorf("<<<[%s]>>>: %s", txID, e)
+			} else {
+				err = errors.Errorf("<<<[%s]>>>: %s", txID, err)
+			}
+		}
+	}()
 	// As a first step, the sender contacts the recipient's FSC node
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the sender knows already which
@@ -61,9 +75,8 @@ func (hv *LockView) Call(context view.Context) (interface{}, error) {
 
 	// At this point, the sender is ready to prepare the htlc transaction
 	// and specify the auditor that must be contacted to approve the operation.
-	tx, err := htlc.NewTransaction(
+	tx, err = htlc.NewAnonymousTransaction(
 		context,
-		fabric.GetIdentityProvider(context, hv.TMSID.Network).DefaultIdentity(),
 		ttx.WithAuditor(view2.GetIdentityProvider(context).Identity("auditor")),
 		ttx.WithTMSID(hv.TMSID),
 	)
@@ -144,7 +157,9 @@ func (h *LockAcceptView) Call(context view.Context) (interface{}, error) {
 	assert.True(outputs.Count() >= 1, "expected at least one output, got [%d]", outputs.Count())
 	outputs = outputs.ByScript()
 	assert.True(outputs.Count() == 1, "expected only one htlc output, got [%d]", outputs.Count())
+
 	script := outputs.ScriptAt(0)
+	assert.NoError(script.Validate(time.Now()), "script is not valid")
 	assert.NotNil(script, "expected an htlc script")
 	assert.True(me.Equal(script.Recipient), "expected me as recipient of the script")
 	assert.True(sender.Equal(script.Sender), "expected sender as sender of the script")

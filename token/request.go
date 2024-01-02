@@ -14,11 +14,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
 	TransferMetadataPrefix = "TransferMetadataPrefix"
 )
+
+// RecipientData contains information about the identity of a token owner
+type RecipientData = driver.RecipientData
 
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
@@ -58,6 +62,8 @@ type TransferOptions struct {
 	Selector Selector
 	// TokenIDs to transfer. If empty, the tokens will be selected.
 	TokenIDs []*token.ID
+	// RestRecipientIdentity TODO:
+	RestRecipientIdentity *RecipientData
 }
 
 func compileTransferOptions(opts ...TransferOption) (*TransferOptions, error) {
@@ -105,6 +111,14 @@ func WithTransferAttribute(attr, value interface{}) TransferOption {
 	}
 }
 
+// WithRestRecipientIdentity sets the recipient data to be used to assign any rest left during a transfer operation
+func WithRestRecipientIdentity(recipientData *RecipientData) TransferOption {
+	return func(o *TransferOptions) error {
+		o.RestRecipientIdentity = recipientData
+		return nil
+	}
+}
+
 // AuditRecord models the audit record returned by the audit command
 // It contains the token request's anchor, inputs (with Type and Quantity), and outputs
 type AuditRecord struct {
@@ -116,8 +130,14 @@ type AuditRecord struct {
 // Issue contains information about an issue operation.
 // In particular, it carries the identities of the issuer and the receivers
 type Issue struct {
-	Issuer    view.Identity
+	// Issuer is the issuer of the tokens
+	Issuer view.Identity
+	// Receivers is the list of identities of the receivers
 	Receivers []view.Identity
+	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
+	// This field is to be used by the token drivers to list any additional identities that must
+	// sign the token request.
+	ExtraSigners []view.Identity
 }
 
 // Transfer contains information about a transfer operation.
@@ -196,6 +216,11 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	if q == 0 {
 		return nil, errors.Errorf("q is zero")
 	}
+	maxTokenValue := r.TokenService.PublicParametersManager().PublicParameters().MaxTokenValue()
+	if q > maxTokenValue {
+		return nil, errors.Errorf("q is larger than max token value [%d]", maxTokenValue)
+	}
+
 	if receiver.IsNone() {
 		return nil, errors.Errorf("all recipients should be defined")
 	}
@@ -211,7 +236,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	// Compute Issue
-	issue, tokenInfos, issuer, err := r.TokenService.tms.Issue(
+	issue, meta, err := r.TokenService.tms.Issue(
 		id,
 		typ,
 		[]uint64{q},
@@ -240,15 +265,17 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		return nil, err
 	}
 	if r.Metadata == nil {
-		return nil, errors.New("failed to complete issue: nil Metadata in token request")
+		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
 	}
+
 	r.Metadata.Issues = append(r.Metadata.Issues,
 		driver.IssueMetadata{
-			Issuer:              issuer,
+			Issuer:              meta.Issuer,
 			Outputs:             outputs,
-			TokenInfo:           tokenInfos,
+			TokenInfo:           meta.TokenInfo,
 			Receivers:           []view.Identity{receiver},
 			ReceiversAuditInfos: [][]byte{auditInfo},
+			ExtraSigners:        meta.ExtraSigners,
 		},
 	)
 
@@ -291,12 +318,12 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 	if err != nil {
 		return nil, errors.Wrap(err, "failed creating transfer action")
 	}
-	//if logger.IsEnabledFor(zapcore.DebugLevel) {
-	// double check
-	if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
-		return nil, errors.Wrap(err, "failed checking generated proof")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		// double check
+		if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
+			return nil, errors.Wrap(err, "failed checking generated proof")
+		}
 	}
-	//}
 
 	// Append
 	raw, err := transfer.Serialize()
@@ -340,9 +367,11 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 		return errors.Wrap(err, "failed creating transfer action")
 	}
 
-	// double check
-	if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
-		return errors.Wrap(err, "failed checking generated proof")
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		// double check
+		if err := ts.VerifyTransfer(transfer, transferMetadata.OutputsMetadata); err != nil {
+			return errors.Wrap(err, "failed checking generated proof")
+		}
 	}
 
 	// Append
@@ -364,7 +393,11 @@ func (r *Request) Outputs() (*OutputStream, error) {
 
 func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	tms := r.TokenService.tms
-	precision := tms.PublicParamsManager().PublicParameters().Precision()
+	pp := tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public paramenters not set")
+	}
+
 	meta, err := r.GetMetadata()
 	if err != nil {
 		return nil, err
@@ -386,50 +419,12 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 			return nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
 		}
 
-		// extract outputs for this action
-		for j, output := range issueAction.GetOutputs() {
-			if output == nil {
-				return nil, errors.Errorf("%d^th output in issue action [%d] is nil", j, i)
-			}
-			raw, err := output.Serialize()
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed deserializing issue action output [%d,%d]", i, j)
-			}
-
-			// is the j-th meta present? It might have been filtered out
-			if issueMeta.IsOutputAbsent(j) {
-				logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
-				if failOnMissing {
-					return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
-				}
-				continue
-			}
-			if len(issueAction.GetOutputs()) != len(issueMeta.TokenInfo) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
-				return nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
-			}
-			tok, _, err := tms.DeserializeToken(raw, issueMeta.TokenInfo[j])
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
-			}
-			eID, err := tms.GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
-			}
-			q, err := token.ToQuantity(tok.Quantity, precision)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
-			}
-
-			outputs = append(outputs, &Output{
-				ActionIndex:  i,
-				Index:        counter,
-				Owner:        tok.Owner.Raw,
-				EnrollmentID: eID,
-				Type:         tok.Type,
-				Quantity:     q,
-			})
-			counter++
+		extractedOutputs, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing)
+		if err != nil {
+			return nil, err
 		}
+		outputs = append(outputs, extractedOutputs...)
+		counter += uint64(len(outputs))
 	}
 
 	for i, transfer := range r.Actions.Transfers {
@@ -446,58 +441,146 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
-
 		if len(transferAction.GetOutputs()) != len(transferMeta.OutputsMetadata) || len(transferMeta.ReceiverAuditInfos) != len(transferAction.GetOutputs()) {
 			return nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]: invalid metadata", i)
 		}
-		for j, output := range transferAction.GetOutputs() {
-			if output == nil {
-				return nil, errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
-			}
-			raw, err := output.Serialize()
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed deserializing transfer action output [%d,%d]", i, j)
-			}
 
-			// is the j-th meta present? It might have been filtered out
-			if transferMeta.IsOutputAbsent(j) {
-				logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
-				if failOnMissing {
-					return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
-				}
-				continue
-			}
-
-			tok, _, err := tms.DeserializeToken(raw, transferMeta.OutputsMetadata[j])
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
-			}
-			var eID string
-			if len(tok.Owner.Raw) != 0 {
-				eID, err = tms.GetEnrollmentID(transferMeta.ReceiverAuditInfos[j])
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
-				}
-			}
-
-			q, err := token.ToQuantity(tok.Quantity, precision)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
-			}
-
-			outputs = append(outputs, &Output{
-				ActionIndex:  i,
-				Index:        counter,
-				Owner:        tok.Owner.Raw,
-				EnrollmentID: eID,
-				Type:         tok.Type,
-				Quantity:     q,
-			})
-			counter++
+		extractedOutputs, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing)
+		if err != nil {
+			return nil, err
 		}
+		outputs = append(outputs, extractedOutputs...)
+		counter += uint64(len(extractedOutputs))
 	}
 
 	return NewOutputStream(outputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
+}
+
+func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.IssueAction, issueMeta *IssueMetadata, failOnMissing bool) ([]*Output, error) {
+	// extract outputs for this action
+	tms := r.TokenService.tms
+	pp := tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
+	var outputs []*Output
+	for j, output := range issueAction.GetOutputs() {
+		if output == nil {
+			return nil, errors.Errorf("%d^th output in issue action [%d] is nil", j, i)
+		}
+		raw, err := output.Serialize()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed deserializing issue action output [%d,%d]", i, j)
+		}
+
+		// is the j-th meta present? It might have been filtered out
+		if issueMeta.IsOutputAbsent(j) {
+			logger.Debugf("Issue Action Output [%d,%d] is absent", i, j)
+			if failOnMissing {
+				return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
+			}
+			continue
+		}
+		if len(issueAction.GetOutputs()) != len(issueMeta.TokenInfo) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
+			return nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
+		}
+		tok, _, err := tms.DeserializeToken(raw, issueMeta.TokenInfo[j])
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
+		}
+		eID, err := tms.GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
+		}
+		rID, err := tms.GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+		}
+		q, err := token.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+		}
+
+		outputs = append(outputs, &Output{
+			ActionIndex:       i,
+			Index:             counter,
+			Owner:             tok.Owner.Raw,
+			OwnerAuditInfo:    issueMeta.ReceiversAuditInfos[j],
+			EnrollmentID:      eID,
+			RevocationHandler: rID,
+			Type:              tok.Type,
+			Quantity:          q,
+		})
+		counter++
+
+	}
+	return outputs, nil
+}
+
+func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction driver.TransferAction, transferMeta *TransferMetadata, failOnMissing bool) ([]*Output, error) {
+	tms := r.TokenService.tms
+	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
+		return nil, errors.New("can't get inputs: invalid token service in request")
+	}
+	precision := tms.PublicParamsManager().PublicParameters().Precision()
+	var outputs []*Output
+	for j, output := range transferAction.GetOutputs() {
+		if output == nil {
+			return nil, errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
+		}
+		raw, err := output.Serialize()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed deserializing transfer action output [%d,%d]", i, j)
+		}
+
+		// is the j-th meta present? It might have been filtered out
+		if transferMeta.IsOutputAbsent(j) {
+			logger.Debugf("Transfer Action Output [%d,%d] is absent", i, j)
+			if failOnMissing {
+				return nil, errors.Errorf("missing token info for output [%d,%d]", i, j)
+			}
+			continue
+		}
+
+		tok, _, err := tms.DeserializeToken(raw, transferMeta.OutputsMetadata[j])
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
+		}
+		var eID string
+		var rID string
+		var ownerAuditInfo []byte
+		if len(tok.Owner.Raw) != 0 {
+			ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]
+			eID, err = tms.GetEnrollmentID(ownerAuditInfo)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
+			}
+			rID, err = tms.GetRevocationHandler(ownerAuditInfo)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+			}
+		}
+
+		q, err := token.ToQuantity(tok.Quantity, precision)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
+		}
+
+		outputs = append(outputs, &Output{
+			ActionIndex:       i,
+			Index:             counter,
+			Owner:             tok.Owner.Raw,
+			OwnerAuditInfo:    ownerAuditInfo,
+			EnrollmentID:      eID,
+			RevocationHandler: rID,
+			Type:              tok.Type,
+			Quantity:          q,
+		})
+		counter++
+	}
+
+	return outputs, nil
 }
 
 // Inputs returns the sequence of inputs of the request supporting sequential and parallel aggregate operations.
@@ -537,31 +620,140 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 			return nil, errors.Errorf("missing token ids for transfer [%d]", i)
 		}
 
-		// Iterate over the transferMeta.SenderAuditInfos because we know that there will be at least one
-		// sender, but it might be that there are not token IDs due to filtering.
-		for j, senderAuditInfo := range transferMeta.SenderAuditInfos {
-			// The recipient might be missing because it has been filtered out. Skip in this case
-			if transferMeta.IsInputAbsent(j) {
-				if failOnMissing {
-					return nil, errors.Errorf("missing receiver for transfer [%d,%d]", i, j)
-				}
-				continue
-			}
-
-			eID, err := tms.GetEnrollmentID(senderAuditInfo)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
-			}
-
-			inputs = append(inputs, &Input{
-				ActionIndex:  i,
-				Id:           transferMeta.TokenIDAt(j),
-				Owner:        transferMeta.Senders[j],
-				EnrollmentID: eID,
-			})
+		extractedInputs, err := r.extractInputs(i, transferMeta, failOnMissing)
+		if err != nil {
+			return nil, err
 		}
+		inputs = append(inputs, extractedInputs...)
 	}
 	return NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, tms.PublicParamsManager().PublicParameters().Precision()), nil
+}
+
+func (r *Request) extractInputs(i int, transferMeta *TransferMetadata, failOnMissing bool) ([]*Input, error) {
+	// Iterate over the transferMeta.SenderAuditInfos because we know that there will be at least one
+	// sender, but it might be that there are not token IDs due to filtering.
+	tms := r.TokenService.tms
+	var inputs []*Input
+	for j, senderAuditInfo := range transferMeta.SenderAuditInfos {
+		// The recipient might be missing because it has been filtered out. Skip in this case
+		if transferMeta.IsInputAbsent(j) {
+			if failOnMissing {
+				return nil, errors.Errorf("missing receiver for transfer [%d,%d]", i, j)
+			}
+			continue
+		}
+
+		eID, err := tms.GetEnrollmentID(senderAuditInfo)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
+		}
+
+		rID, err := tms.GetRevocationHandler(senderAuditInfo)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
+		}
+
+		inputs = append(inputs, &Input{
+			ActionIndex:       i,
+			Id:                transferMeta.TokenIDAt(j),
+			Owner:             transferMeta.Senders[j],
+			OwnerAuditInfo:    senderAuditInfo,
+			EnrollmentID:      eID,
+			RevocationHandler: rID,
+		})
+	}
+	return inputs, nil
+}
+
+func (r *Request) InputsAndOutputs() (*InputStream, *OutputStream, error) {
+	return r.inputsAndOutputs(false, false)
+}
+
+func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStream, *OutputStream, error) {
+	tms := r.TokenService.tms
+	if tms.PublicParamsManager() == nil || tms.PublicParamsManager().PublicParameters() == nil {
+		return nil, nil, errors.New("can't get inputs: invalid token service in request")
+	}
+	meta, err := r.GetMetadata()
+	if err != nil {
+		return nil, nil, err
+	}
+	var inputs []*Input
+	var outputs []*Output
+	counter := uint64(0)
+
+	for i, issue := range r.Actions.Issues {
+		// deserialize action
+		issueAction, err := tms.DeserializeIssueAction(issue)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
+		}
+		// get metadata for action
+		issueMeta, err := meta.Issue(i)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting issue metadata [%d]", i)
+		}
+		if err := issueMeta.Match(&IssueAction{a: issueAction}); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed matching issue action with its metadata [%d]", i)
+		}
+
+		if verifyActions {
+			if err := tms.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed verifying issue action")
+			}
+		}
+
+		extractedOutputs, err := r.extractIssueOutputs(i, counter, issueAction, issueMeta, failOnMissing)
+		if err != nil {
+			return nil, nil, err
+		}
+		outputs = append(outputs, extractedOutputs...)
+		counter += uint64(len(outputs))
+	}
+
+	for i, transfer := range r.Actions.Transfers {
+		// deserialize action
+		transferAction, err := tms.DeserializeTransferAction(transfer)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
+		}
+		// get metadata for action
+		transferMeta, err := meta.Transfer(i)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting transfer metadata [%d]", i)
+		}
+		if err := transferMeta.Match(&TransferAction{a: transferAction}); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
+		}
+		if verifyActions {
+			if err := tms.VerifyTransfer(transferAction, transferMeta.OutputsMetadata); err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed verifying transfer action")
+			}
+		}
+
+		// we might not have TokenIDs if they have been filtered
+		if len(transferMeta.TokenIDs) == 0 && failOnMissing {
+			return nil, nil, errors.Errorf("missing token ids for transfer [%d]", i)
+		}
+
+		extractedInputs, err := r.extractInputs(i, transferMeta, failOnMissing)
+		if err != nil {
+			return nil, nil, err
+		}
+		inputs = append(inputs, extractedInputs...)
+
+		extractedOutputs, err := r.extractTransferOutputs(i, counter, transferAction, transferMeta, failOnMissing)
+		if err != nil {
+			return nil, nil, err
+		}
+		outputs = append(outputs, extractedOutputs...)
+		counter += uint64(len(extractedOutputs))
+	}
+
+	precision := tms.PublicParamsManager().PublicParameters().Precision()
+	is := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
+	os := NewOutputStream(outputs, precision)
+	return is, os, nil
 }
 
 // IsValid checks that the request is valid.
@@ -577,57 +769,9 @@ func (r *Request) IsValid() error {
 		return errors.New("invalid metadata in request")
 	}
 
-	// can we get the inputs?
-	if _, err := r.Inputs(); err != nil {
-		return errors.WithMessagef(err, "failed verifying inputs")
-	}
-
-	// can we get the outputs?
-	if _, err := r.Outputs(); err != nil {
-		return errors.WithMessagef(err, "failed verifying outputs")
-	}
-
-	// verify issue actions
-	ts := r.TokenService.tms
-	for i, issue := range r.Actions.Issues {
-		action, err := ts.DeserializeIssueAction(issue)
-		if err != nil {
-			return errors.WithMessagef(err, "failed deserializing issue action")
-		}
-		meta := r.Metadata.Issues[i]
-		outputs := action.GetOutputs()
-		if len(outputs) != len(meta.TokenInfo) || len(meta.ReceiversAuditInfos) != len(outputs) {
-			return errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
-		}
-		for j, output := range outputs {
-			if output == nil {
-				return errors.Errorf("%d^th output in issue action [%d] is nil", j, i)
-			}
-		}
-		if err := ts.VerifyIssue(action, meta.TokenInfo); err != nil {
-			return errors.WithMessagef(err, "failed verifying issue action")
-		}
-	}
-
-	// verify transfer actions
-	for i, transfer := range r.Actions.Transfers {
-		action, err := ts.DeserializeTransferAction(transfer)
-		if err != nil {
-			return errors.WithMessagef(err, "failed deserializing transfer action")
-		}
-		meta := r.Metadata.Transfers[i]
-		outputs := action.GetOutputs()
-		if len(outputs) != len(meta.OutputsMetadata) || len(meta.ReceiverAuditInfos) != len(outputs) {
-			return errors.Errorf("failed matching transfer action with its metadata [%d]: invalid metadata", i)
-		}
-		for j, output := range outputs {
-			if output == nil {
-				return errors.Errorf("%d^th output in transfer action [%d] is nil", j, i)
-			}
-		}
-		if err := ts.VerifyTransfer(action, r.Metadata.Transfers[i].OutputsMetadata); err != nil {
-			return errors.WithMessagef(err, "failed verifying transfer action")
-		}
+	// check inputs, outputs, and verify actions
+	if _, _, err := r.inputsAndOutputs(false, true); err != nil {
+		return errors.WithMessagef(err, "failed verifying inputs and outputs")
 	}
 
 	return nil
@@ -651,11 +795,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	req := &driver.TokenRequest{
-		Issues:    r.Actions.Issues,
-		Transfers: r.Actions.Transfers,
-	}
-	return req.Bytes()
+	return r.TokenService.tms.MarshalTokenRequestToSign(r.Actions, r.Metadata)
 }
 
 // RequestToBytes marshals the request's actions to bytes.
@@ -718,9 +858,35 @@ func (r *Request) AddAuditorSignature(sigma []byte) {
 	r.Actions.AuditorSignatures = append(r.Actions.AuditorSignatures, sigma)
 }
 
-// AppendSignature appends a signature to the request.
-func (r *Request) AppendSignature(sigma []byte) {
-	r.Actions.Signatures = append(r.Actions.Signatures, sigma)
+func (r *Request) SetSignatures(sigmas map[string][]byte) {
+	signers := append(r.IssueSigners(), r.TransferSigners()...)
+	signatures := make([][]byte, len(signers))
+	for i, signer := range signers {
+		if sigma, ok := sigmas[signer.UniqueID()]; ok {
+			signatures[i] = sigma
+		} else {
+			logger.Warnf("Signature %d for signer %s not found.", i, signer.UniqueID())
+		}
+	}
+	r.Actions.Signatures = signatures
+}
+
+func (r *Request) TransferSigners() []view.Identity {
+	signers := make([]view.Identity, 0)
+	for _, transfer := range r.Transfers() {
+		signers = append(signers, transfer.Senders...)
+		signers = append(signers, transfer.ExtraSigners...)
+	}
+	return signers
+}
+
+func (r *Request) IssueSigners() []view.Identity {
+	signers := make([]view.Identity, 0)
+	for _, issue := range r.Issues() {
+		signers = append(signers, issue.Issuer)
+		signers = append(signers, issue.ExtraSigners...)
+	}
+	return signers
 }
 
 // SetTokenService sets the token service.
@@ -755,7 +921,7 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind extra sginer [%s] to [%s]", eid, party)
+			logger.Debugf("bind extra signer [%s] to [%s]", eid, party)
 			if err := resolver.Bind(longTermIdentity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
@@ -785,8 +951,9 @@ func (r *Request) Issues() []*Issue {
 	var issues []*Issue
 	for _, issue := range r.Metadata.Issues {
 		issues = append(issues, &Issue{
-			Issuer:    issue.Issuer,
-			Receivers: issue.Receivers,
+			Issuer:       issue.Issuer,
+			Receivers:    issue.Receivers,
+			ExtraSigners: issue.ExtraSigners,
 		})
 	}
 	return issues
@@ -805,29 +972,10 @@ func (r *Request) Transfers() []*Transfer {
 	return transfers
 }
 
-// Import imports the actions and metadata from the passed request.
-// TODO: check that the anchor is the same.
-func (r *Request) Import(request *Request) error {
-	if request.Actions == nil || request.Metadata == nil {
-		return errors.New("cannot import request: invalid request")
-	}
-	if r.Actions == nil {
-		r.Actions = &driver.TokenRequest{}
-	}
-	if r.Metadata == nil {
-		r.Metadata = &driver.TokenRequestMetadata{}
-	}
-
-	r.Actions.Issues = append(r.Actions.Issues, request.Actions.Issues...)
-	r.Actions.Transfers = append(r.Actions.Transfers, request.Actions.Transfers...)
-	r.Metadata.Issues = append(r.Metadata.Issues, request.Metadata.Issues...)
-	r.Metadata.Transfers = append(r.Metadata.Transfers, request.Metadata.Transfers...)
-	return nil
-}
-
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck() error {
+	logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID().String())
 	if err := r.IsValid(); err != nil {
 		return err
 	}
@@ -841,27 +989,9 @@ func (r *Request) AuditCheck() error {
 // AuditRecord return the audit record of the request.
 // The audit record contains: The anchor, the audit inputs and outputs
 func (r *Request) AuditRecord() (*AuditRecord, error) {
-	inputs, err := r.AuditInputs()
+	inputs, outputs, err := r.inputsAndOutputs(true, false)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting audit inputs")
-	}
-	outputs, err := r.AuditOutputs()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting audit outputs")
-	}
-	return &AuditRecord{
-		Anchor:  r.Anchor,
-		Inputs:  inputs,
-		Outputs: outputs,
-	}, nil
-}
-
-// AuditInputs is like Inputs but in addition Type and Quantity are included.
-func (r *Request) AuditInputs() (*InputStream, error) {
-	// get the input stream
-	inputs, err := r.inputs(true)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting inputs")
+		return nil, err
 	}
 
 	// load the tokens corresponding to the input token ids
@@ -875,7 +1005,11 @@ func (r *Request) AuditInputs() (*InputStream, error) {
 	}
 
 	// populate type and quantity
-	precision := r.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
+	pp := r.TokenService.tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
 	for i := 0; i < len(ids); i++ {
 		in := inputs.At(i)
 		if toks[i] == nil {
@@ -887,13 +1021,21 @@ func (r *Request) AuditInputs() (*InputStream, error) {
 			return nil, errors.Wrapf(err, "failed converting quantity [%s]", toks[i].Quantity)
 		}
 		in.Quantity = q
-	}
-	return inputs, nil
-}
 
-// AuditOutputs returns a stream over all the outputs in the token request
-func (r *Request) AuditOutputs() (*OutputStream, error) {
-	return r.outputs(true)
+		// retrieve the owner's audit info
+		ownerAuditInfo, err := r.TokenService.tms.GetAuditInfo(toks[i].Owner.Raw)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
+		}
+		in.OwnerAuditInfo = ownerAuditInfo
+
+	}
+
+	return &AuditRecord{
+		Anchor:  r.Anchor,
+		Inputs:  inputs,
+		Outputs: outputs,
+	}, nil
 }
 
 // ApplicationMetadata returns the application metadata corresponding to the given key
@@ -951,7 +1093,11 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 		return nil, nil, "", errors.WithMessagef(err, "failed querying tokens ids")
 	}
 	var typ string
-	precision := r.TokenService.tms.PublicParamsManager().PublicParameters().Precision()
+	pp := r.TokenService.tms.PublicParamsManager().PublicParameters()
+	if pp == nil {
+		return nil, nil, "", errors.Errorf("public paramenters not set")
+	}
+	precision := pp.Precision()
 	sum := token.NewZeroQuantity(precision)
 	for _, tok := range inputTokens {
 		if len(typ) == 0 {
@@ -970,7 +1116,7 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
+func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 	for _, owner := range owners {
 		if redeem {
 			if !owner.IsNone() {
@@ -985,74 +1131,130 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, typ string, 
 	var tokenIDs []*token.ID
 	var inputSum token.Quantity
 	var err error
+
+	transferOpts.TokenIDs = r.cleanupInputIDs(transferOpts.TokenIDs)
+
 	// if inputs have been passed, parse and certify them, if needed
 	if len(transferOpts.TokenIDs) != 0 {
-		tokenIDs, inputSum, typ, err = r.parseInputIDs(transferOpts.TokenIDs)
+		tokenIDs, inputSum, tokenType, err = r.parseInputIDs(transferOpts.TokenIDs)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed parsing passed input tokens")
 		}
 	}
 
-	if typ == "" {
+	if tokenType == "" {
 		return nil, nil, errors.Errorf("type is empty")
 	}
 
 	// Compute output tokens
-	outputSum := uint64(0)
-	var outputTokens []*token.Token
-	for i, value := range values {
-		outputSum += value
-		outputTokens = append(outputTokens, &token.Token{
-			Owner:    &token.Owner{Raw: owners[i]},
-			Type:     typ,
-			Quantity: token.NewQuantityFromUInt64(value).Hex(),
-		})
+	outputTokens, outputSum, err := r.genOutputs(values, owners, tokenType)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to generate outputs")
 	}
-	qOutputSum := token.NewQuantityFromUInt64(outputSum)
 
 	// Select input tokens, if not passed as opt
 	if len(transferOpts.TokenIDs) == 0 {
 		selector := transferOpts.Selector
 		if selector == nil {
 			// resort to default strategy
-			selector, err = r.TokenService.SelectorManager().NewSelector(r.Anchor)
+			sm, err := r.TokenService.SelectorManager()
+			if err != nil {
+				return nil, nil, errors.Wrapf(err, "failed to get selector manager")
+			}
+			selector, err = sm.NewSelector(r.Anchor)
 			if err != nil {
 				return nil, nil, errors.Wrapf(err, "failed getting default selector")
 			}
 		}
-		tokenIDs, inputSum, err = selector.Select(wallet, token.NewQuantityFromUInt64(outputSum).Decimal(), typ)
+		tokenIDs, inputSum, err = selector.Select(wallet, outputSum.Decimal(), tokenType)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed selecting tokens")
 		}
 	}
 
 	// Is there a rest?
-	if inputSum.Cmp(qOutputSum) == 1 {
-		diff := inputSum.Sub(qOutputSum)
+	cmp := inputSum.Cmp(outputSum)
+	switch cmp {
+	case 1:
+		diff := inputSum.Sub(outputSum)
 		logger.Debugf("reassign rest [%s] to sender", diff.Decimal())
 
-		pseudonym, err := wallet.GetRecipientIdentity()
-		if err != nil {
-			return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
+		var restIdentity []byte
+		if transferOpts.RestRecipientIdentity != nil {
+			// register it and us it
+			if err := wallet.RegisterRecipient(transferOpts.RestRecipientIdentity); err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed to register recipient identity [%s] for the rest, wallet [%s]", transferOpts.RestRecipientIdentity.Identity, wallet.ID())
+			}
+			restIdentity = transferOpts.RestRecipientIdentity.Identity
+		} else {
+			restIdentity, err = wallet.GetRecipientIdentity()
+			if err != nil {
+				return nil, nil, errors.WithMessagef(err, "failed getting recipient identity for the rest, wallet [%s]", wallet.ID())
+			}
 		}
 
 		outputTokens = append(outputTokens, &token.Token{
-			Owner:    &token.Owner{Raw: pseudonym},
-			Type:     typ,
+			Owner:    &token.Owner{Raw: restIdentity},
+			Type:     tokenType,
 			Quantity: diff.Hex(),
 		})
+	case -1:
+		return nil, nil, errors.Errorf("the sum of the outputs is larger then the sum of the inputs [%s][%s]", inputSum.Decimal(), outputSum.Decimal())
 	}
 
-	if r.TokenService.PublicParametersManager().GraphHiding() {
+	if r.TokenService.PublicParametersManager().PublicParameters().GraphHiding() {
 		logger.Debugf("graph hiding enabled, request certification")
 		// Check token certification
-		cc := r.TokenService.CertificationClient()
+		cc, err := r.TokenService.CertificationClient()
+		if err != nil {
+			return nil, nil, errors.WithMessagef(err, "cannot get certification client")
+		}
 		if err := cc.RequestCertification(tokenIDs...); err != nil {
 			return nil, nil, errors.WithMessagef(err, "failed certifiying inputs")
 		}
 	}
 
 	return tokenIDs, outputTokens, nil
+}
+
+func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
+	pp := r.TokenService.PublicParametersManager().PublicParameters()
+	precision := pp.Precision()
+	maxTokenValue := pp.MaxTokenValue()
+	maxTokenValueQ, err := token.UInt64ToQuantity(maxTokenValue, precision)
+	if err != nil {
+		return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", maxTokenValue, precision)
+	}
+	outputSum := token.NewZeroQuantity(precision)
+	var outputTokens []*token.Token
+	for i, value := range values {
+		q, err := token.UInt64ToQuantity(value, precision)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed to convert [%d] to quantity of precision [%d]", value, precision)
+		}
+		if q.Cmp(maxTokenValueQ) == 1 {
+			return nil, nil, errors.Errorf("cannot create output with value [%s], max [%s]", q.Decimal(), maxTokenValueQ.Decimal())
+		}
+		outputSum = outputSum.Add(q)
+
+		// single output is fine
+		outputTokens = append(outputTokens, &token.Token{
+			Owner:    &token.Owner{Raw: owners[i]},
+			Type:     tokenType,
+			Quantity: q.Hex(),
+		})
+	}
+	return outputTokens, outputSum, nil
+}
+
+func (r *Request) cleanupInputIDs(ds []*token.ID) []*token.ID {
+	newSlice := make([]*token.ID, 0, len(ds))
+	for _, item := range ds {
+		if item != nil {
+			newSlice = append(newSlice, item)
+		}
+	}
+	return newSlice
 }
 
 type requestSer struct {

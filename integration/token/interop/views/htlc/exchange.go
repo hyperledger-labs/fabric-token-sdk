@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view3 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
@@ -72,9 +71,8 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 	// Initiator's Leg
 	var preImage []byte
 	_, err = view2.RunCall(context, func(context view.Context) (interface{}, error) {
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, v.TMSID1.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID1),
 		)
@@ -138,18 +136,17 @@ func (v *FastExchangeInitiatorView) Call(context view.Context) (interface{}, err
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(v.TMSID2))
 		assert.NotNil(wallet, "wallet not found")
 
-		matched, err := htlc.Wallet(context, wallet, token.WithTMSID(v.TMSID2)).ListByPreImage(preImage)
+		matched, err := htlc.Wallet(context, wallet).ListByPreImage(preImage)
 		assert.NoError(err, "cannot retrieve list of expired tokens")
-		assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
+		assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, v.TMSID2.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(v.TMSID2),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
-		assert.NoError(tx.Claim(wallet, matched[0], preImage), "failed adding a claim for [%s]", matched[0].Id)
+		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 		assert.NoError(err, "failed to collect endorsements for htlc transaction")
@@ -189,7 +186,7 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	terms, err := htlc.ReceiveTerms(context)
 	assert.NoError(err, "failed to receive the terms")
 
-	// TODO: validate the terms and tell the initiator if they are accepted
+	assert.NoError(terms.Validate(), "failed to validate the terms")
 
 	// Initiator's Leg
 	var script *htlc.Script
@@ -219,9 +216,8 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 
 	// Responder's Leg
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, terms.TMSID2.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID2),
 		)
@@ -254,8 +250,14 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 	// Claim initiator's script
 	_, err = view2.AsInitiatorCall(context, v, func(context view.Context) (interface{}, error) {
 		// Scan for the pre-image, this will be the signal that the initiator has claimed responder's script
-		// TODO: fix timeout
-		preImage, err := htlc.ScanForPreImage(context, script.HashInfo.Hash, script.HashInfo.HashFunc, script.HashInfo.HashEncoding, 5*time.Minute, token.WithTMSID(terms.TMSID2))
+		preImage, err := htlc.ScanForPreImage(
+			context,
+			script.HashInfo.Hash,
+			script.HashInfo.HashFunc,
+			script.HashInfo.HashEncoding,
+			5*time.Minute,
+			token.WithTMSID(terms.TMSID2),
+		)
 		// if an error occurred, reclaim
 		if err != nil {
 			// reclaim
@@ -265,18 +267,17 @@ func (v *FastExchangeResponderView) Call(context view.Context) (interface{}, err
 		// claim initiator's script
 		wallet := htlc.GetWallet(context, "", token.WithTMSID(terms.TMSID1))
 		assert.NotNil(wallet, "wallet not found")
-		matched, err := htlc.Wallet(context, wallet, token.WithTMSID(terms.TMSID1)).ListByPreImage(preImage)
+		matched, err := htlc.Wallet(context, wallet).ListByPreImage(preImage)
 		assert.NoError(err, "cannot retrieve list of expired tokens")
-		assert.True(len(matched) == 1, "expected only one htlc script to match, got [%d]", len(matched))
+		assert.True(matched.Count() == 1, "expected only one htlc script to match, got [%d]", matched.Count())
 
-		tx, err := htlc.NewTransaction(
+		tx, err := htlc.NewAnonymousTransaction(
 			context,
-			fabric.GetIdentityProvider(context, terms.TMSID1.Network).DefaultIdentity(),
 			ttx.WithAuditor(view3.GetIdentityProvider(context).Identity("auditor")),
 			ttx.WithTMSID(terms.TMSID1),
 		)
 		assert.NoError(err, "failed to create an htlc transaction")
-		assert.NoError(tx.Claim(wallet, matched[0], preImage), "failed adding a claim for [%s]", matched[0].Id)
+		assert.NoError(tx.Claim(wallet, matched.At(0), preImage), "failed adding a claim for [%s]", matched.At(0).Id)
 
 		_, err = context.RunView(htlc.NewCollectEndorsementsView(tx))
 		assert.NoError(err, "failed to collect endorsements for htlc transaction")

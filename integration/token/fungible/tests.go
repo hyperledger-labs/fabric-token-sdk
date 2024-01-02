@@ -10,18 +10,26 @@ import (
 	"crypto/rand"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
+	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
+)
+
+const (
+	DLogNamespace     = "dlog-token-chaincode"
+	FabTokenNamespace = "fabtoken-token-chaincode"
 )
 
 var AuditedTransactions = []*ttxdb.TransactionRecord{
@@ -113,6 +121,51 @@ var AuditedTransactions = []*ttxdb.TransactionRecord{
 		RecipientEID: "bob",
 		TokenType:    "USD",
 		Amount:       big.NewInt(10),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Issue,
+		SenderEID:    "",
+		RecipientEID: "alice",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(3),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Issue,
+		SenderEID:    "",
+		RecipientEID: "alice",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(3),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Transfer,
+		SenderEID:    "alice",
+		RecipientEID: "bob",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(2),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Transfer,
+		SenderEID:    "alice",
+		RecipientEID: "alice",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(1),
+		Status:       ttxdb.Confirmed,
+	},
+	{
+		TxID:         "",
+		ActionType:   ttxdb.Transfer,
+		SenderEID:    "alice",
+		RecipientEID: "charlie",
+		TokenType:    "LIRA",
+		Amount:       big.NewInt(3),
 		Status:       ttxdb.Confirmed,
 	},
 }
@@ -207,83 +260,115 @@ var BobAcceptedTransactions = []*ttxdb.TransactionRecord{
 	},
 }
 
-func TestAll(network *integration.Infrastructure, auditor string) {
-	RegisterAuditor(network, auditor)
+type OnAuditorRestartFunc = func(*integration.Infrastructure, string)
 
-	CheckPublicParamsViewFactory(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
+func TestAll(network *integration.Infrastructure, auditor string, onAuditorRestart OnAuditorRestartFunc, aries bool) {
+	RegisterAuditor(network, auditor, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	SetKVSEntry(network, "issuer", "auditor", auditor)
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	t0 := time.Now()
-	// Rest of the test
-	IssueCash(network, "", "USD", 110, "alice", auditor, true)
+	Eventually(DoesWalletExist).WithArguments(network, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "issuer", "pineapple", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	Eventually(DoesWalletExist).WithArguments(network, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "alice", "mango", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(false))
+	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 	t1 := time.Now()
-	CheckBalanceAndHolding(network, "alice", "", "USD", 110)
-	CheckAuditedTransactions(network, AuditedTransactions[:1], nil, nil)
-	CheckAuditedTransactions(network, AuditedTransactions[:1], &t0, &t1)
-	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil)
-	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1)
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:1], nil, nil)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:1], &t0, &t1)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil, nil, ttxdb.Issue)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Issue)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], nil, nil, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:1], &t0, &t1, nil)
 
 	t2 := time.Now()
-	IssueCash(network, "", "USD", 10, "alice", auditor, false)
+	Withdraw(network, nil, "alice", "", "USD", 10, auditor, "issuer")
 	t3 := time.Now()
-	CheckBalanceAndHolding(network, "alice", "", "USD", 120)
-	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120)
-	CheckAuditedTransactions(network, AuditedTransactions[:2], nil, nil)
-	CheckAuditedTransactions(network, AuditedTransactions[:2], &t0, &t3)
-	CheckAuditedTransactions(network, AuditedTransactions[1:2], &t2, &t3)
-	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], nil, nil)
-	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3)
-	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3)
+	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120, auditor)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:2], nil, nil)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:2], &t0, &t3)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[1:2], &t2, &t3)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], nil, nil, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
-	h := ListIssuerHistory(network, "", "USD")
+	Restart(network, true, auditor)
+	RegisterAuditor(network, auditor, onAuditorRestart)
+
+	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice", "USD", 120, auditor)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:2], nil, nil)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:2], &t0, &t3)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[1:2], &t2, &t3)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], nil, nil, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3, nil)
+	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
+
+	h := ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "", "EUR", "issuer")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
+	// Register a new issuer wallet and issue with that wallet
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
+	Expect(tokenPlatform.GetTopology()).ToNot(BeNil(), "invalid token topology, it is nil")
+	Expect(len(tokenPlatform.GetTopology().TMSs)).ToNot(BeEquivalentTo(0), "no tms defined in token topology")
+	// Gen crypto material for the new issuer wallet
+	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
+	// Register it
+	RegisterIssuerWallet(network, "issuer", "newIssuerWallet", newIssuerWalletPath)
+	// Issuer tokens with this new wallet
 	t4 := time.Now()
-	IssueCash(network, "", "EUR", 10, "bob", auditor, false)
+	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, false, "issuer")
 	//t5 := time.Now()
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 10)
-	IssueCash(network, "", "EUR", 10, "bob", auditor, true)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 10, auditor)
+	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, true, "issuer")
 	//t6 := time.Now()
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
-	IssueCash(network, "", "EUR", 10, "bob", auditor, false)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, false, "issuer")
 	t7 := time.Now()
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
-	CheckAuditedTransactions(network, AuditedTransactions[:5], nil, nil)
-	CheckAuditedTransactions(network, AuditedTransactions[:5], &t0, &t7)
-	CheckAuditedTransactions(network, AuditedTransactions[2:5], &t4, &t7)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:3], nil, nil)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:3], &t4, &t7)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 30, auditor)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:5], nil, nil)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:5], &t0, &t7)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[2:5], &t4, &t7)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:3], nil, nil, nil)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:3], &t4, &t7, nil)
 
-	h = ListIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "newIssuerWallet", "EUR", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
 
-	CheckBalanceAndHolding(network, "alice", "", "USD", 120)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
+	CheckBalanceAndHolding(network, "alice", "", "USD", 120, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 30, auditor)
 
-	network.StopFSCNode("alice")
-	time.Sleep(3 * time.Second)
-	network.StartFSCNode("alice")
-	time.Sleep(5 * time.Second)
+	Restart(network, false, "alice")
 
 	t8 := time.Now()
 	TransferCash(network, "alice", "", "USD", 111, "bob", auditor)
 	t9 := time.Now()
-	CheckAuditedTransactions(network, AuditedTransactions[5:7], &t8, &t9)
-	CheckSpending(network, "alice", "", "USD", 111)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[3:4], &t8, &t9)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], &t0, &t9)
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], nil, nil)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[5:7], &t8, &t9)
+	CheckSpending(network, "alice", "", "USD", auditor, 111)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[3:4], &t8, &t9, nil)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[3:4], &t8, &t9, nil, ttxdb.Transfer)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[3:4], &t8, &t9, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Transfer)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], &t0, &t9, nil)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], nil, nil, nil)
 	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
 	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0))
@@ -295,155 +380,213 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 
 	RedeemCash(network, "bob", "", "USD", 11, auditor)
 	t10 := time.Now()
-	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil)
-	CheckAuditedTransactions(network, AuditedTransactions[7:9], &t9, &t10)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:6], nil, nil, nil)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[5:6], nil, nil, nil, ttxdb.Redeem)
+	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[5:6], nil, nil, []ttxdb.TxStatus{ttxdb.Confirmed}, ttxdb.Redeem)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[7:9], &t9, &t10)
 
 	t11 := time.Now()
-	IssueCash(network, "", "USD", 10, "bob", auditor, true)
+	IssueCash(network, "", "USD", 10, "bob", auditor, true, "issuer")
 	t12 := time.Now()
-	CheckAuditedTransactions(network, AuditedTransactions[9:10], &t11, &t12)
-	CheckAuditedTransactions(network, AuditedTransactions[:], &t0, &t12)
-	CheckSpending(network, "bob", "", "USD", 11)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[9:10], &t11, &t12)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:10], &t0, &t12)
+	CheckSpending(network, "bob", "", "USD", auditor, 11)
 
-	IssueCash(network, "", "USD", 1, "alice", auditor, true)
+	// test multi action transfer...
+	t13 := time.Now()
+	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "LIRA", 3, "alice", auditor, true, "issuer")
+	t14 := time.Now()
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[10:12], &t13, &t14)
+	// perform the normal transaction
+	txLiraTransfer := TransferCashMultiActions(network, "alice", "", "LIRA", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, nil)
+	t16 := time.Now()
+	AuditedTransactions[12].TxID = txLiraTransfer
+	AuditedTransactions[13].TxID = txLiraTransfer
+	AuditedTransactions[14].TxID = txLiraTransfer
+	CheckBalanceAndHolding(network, "alice", "", "LIRA", 1, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "LIRA", 2, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "LIRA", 3, auditor)
+	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t16)
 
-	CheckBalanceAndHolding(network, "alice", "", "USD", 10)
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 0)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 30)
-	CheckBalanceAndHolding(network, "bob", "bob", "EUR", 30)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 110)
+	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
+
+	testTwoGeneratedOwnerWalletsSameNode(network, auditor, !aries)
+
+	CheckBalanceAndHolding(network, "alice", "", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 30, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob", "EUR", 30, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 
 	SwapCash(network, "alice", "", "USD", 10, "EUR", 10, "bob", auditor)
 
-	CheckBalanceAndHolding(network, "alice", "", "USD", 0)
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 10)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 120)
-	CheckSpending(network, "alice", "", "USD", 121)
-	CheckSpending(network, "bob", "", "EUR", 10)
+	CheckBalanceAndHolding(network, "alice", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 120, auditor)
+	CheckSpending(network, "alice", "", "USD", auditor, 121)
+	CheckSpending(network, "bob", "", "EUR", auditor, 10)
 
 	RedeemCash(network, "bob", "", "USD", 10, auditor)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 110)
-	CheckSpending(network, "bob", "", "USD", 21)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
+	CheckSpending(network, "bob", "", "USD", auditor, 21)
 
 	// Check self endpoints
-	IssueCash(network, "", "USD", 110, "issuer", auditor, true)
-	IssueCash(network, "", "EUR", 150, "issuer", auditor, true)
-	IssueCash(network, "issuer.id1", "EUR", 10, "issuer.owner", auditor, true)
+	IssueCash(network, "", "USD", 110, "issuer", auditor, true, "issuer")
+	IssueCash(network, "newIssuerWallet", "EUR", 150, "issuer", auditor, true, "issuer")
+	IssueCash(network, "issuer.id1", "EUR", 10, "issuer.owner", auditor, true, "issuer")
 
-	h = ListIssuerHistory(network, "", "USD")
+	h = ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(241))).To(BeEquivalentTo(0))
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
-	h = ListIssuerHistory(network, "", "EUR")
+	h = ListIssuerHistory(network, "newIssuerWallet", "EUR", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(180))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
 
-	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
-	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150)
-	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
+	CheckBalanceAndHolding(network, "issuer", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150, auditor)
+	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10, auditor)
 
 	// Restart the auditor
-	network.StopFSCNode("auditor")
-	time.Sleep(3 * time.Second)
-	network.StartFSCNode("auditor")
-	time.Sleep(5 * time.Second)
-	RegisterAuditor(network, auditor)
+	Restart(network, true, auditor)
+	RegisterAuditor(network, auditor, onAuditorRestart)
 
-	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
-	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150)
-	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10)
+	CheckBalanceAndHolding(network, "issuer", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150, auditor)
+	CheckBalanceAndHolding(network, "issuer", "issuer.owner", "EUR", 10, auditor)
+
+	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "", nil)
 
 	// Check double spending
-	txIDPine := IssueCash(network, "", "PINE", 55, "alice", auditor, true)
+	txIDPine := IssueCash(network, "", "PINE", 55, "alice", auditor, true, "issuer")
 	tokenIDPine := &token2.ID{
 		TxId:  txIDPine,
 		Index: 0,
 	}
 	txID1, tx1 := PrepareTransferCash(network, "alice", "", "PINE", 55, "bob", auditor, tokenIDPine)
 	CheckBalance(network, "alice", "", "PINE", 55)
-	CheckHolding(network, "alice", "", "PINE", 0)
+	CheckHolding(network, "alice", "", "PINE", 0, auditor)
 	CheckBalance(network, "bob", "", "PINE", 0)
-	CheckHolding(network, "bob", "", "PINE", 55)
+	CheckHolding(network, "bob", "", "PINE", 55, auditor)
 	txID2, tx2 := PrepareTransferCash(network, "alice", "", "PINE", 55, "bob", auditor, tokenIDPine)
 	CheckBalance(network, "alice", "", "PINE", 55)
-	CheckHolding(network, "alice", "", "PINE", -55)
+	CheckHolding(network, "alice", "", "PINE", -55, auditor)
 	CheckBalance(network, "bob", "", "PINE", 0)
-	CheckHolding(network, "bob", "", "PINE", 110)
-	BroadcastPreparedTransferCash(network, "alice", tx1, true)
+	CheckHolding(network, "bob", "", "PINE", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
+	Restart(network, true, "bob")
+	Restart(network, false, auditor)
+	RegisterAuditor(network, auditor, onAuditorRestart)
+	CheckBalance(network, "bob", "", "PINE", 0)
+	CheckHolding(network, "bob", "", "PINE", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
+	CheckOwnerDB(network, nil, "bob")
+	BroadcastPreparedTransferCash(network, "alice", txID1, tx1, true)
 	Expect(network.Client("bob").IsTxFinal(txID1)).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(txID1)).NotTo(HaveOccurred())
+	Expect(network.Client(auditor).IsTxFinal(txID1)).NotTo(HaveOccurred())
 	CheckBalance(network, "alice", "", "PINE", 0)
-	CheckHolding(network, "alice", "", "PINE", -55)
+	CheckHolding(network, "alice", "", "PINE", -55, auditor)
 	CheckBalance(network, "bob", "", "PINE", 55)
-	CheckHolding(network, "bob", "", "PINE", 110)
-	BroadcastPreparedTransferCash(network, "alice", tx2, true, "is not valid")
+	CheckHolding(network, "bob", "", "PINE", 110, auditor)
+	BroadcastPreparedTransferCash(network, "alice", txID2, tx2, true, "is not valid")
 	Expect(network.Client("bob").IsTxFinal(txID2)).To(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(txID2)).To(HaveOccurred())
-	CheckBalanceAndHolding(network, "alice", "", "PINE", 0)
-	CheckBalanceAndHolding(network, "bob", "", "PINE", 55)
+	Expect(network.Client(auditor).IsTxFinal(txID2)).To(HaveOccurred())
+	CheckBalanceAndHolding(network, "alice", "", "PINE", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "PINE", 55, auditor)
+	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "", nil)
 
+	// Test Auditor ability to override transaction state
+	txID3, tx3 := PrepareTransferCash(network, "bob", "", "PINE", 10, "alice", auditor, nil)
+	CheckBalance(network, "alice", "", "PINE", 0)
+	CheckHolding(network, "alice", "", "PINE", 10, auditor)
+	CheckBalance(network, "bob", "", "PINE", 55)
+	CheckHolding(network, "bob", "", "PINE", 45, auditor)
+	SetTransactionAuditStatus(network, auditor, txID3, ttx.Deleted)
+	CheckBalanceAndHolding(network, "alice", "", "PINE", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "PINE", 55, auditor)
+	TokenSelectorUnlock(network, "bob", txID3)
+	FinalityWithTimeout(network, "bob", tx3, 20*time.Second)
+	SetTransactionOwnersStatus(network, txID3, ttx.Deleted, "alice", "bob")
+
+	// Restart
+	CheckOwnerDB(network, nil, "bob", "alice")
+	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "", nil)
+	Restart(network, false, "alice", "bob", "charlie", "manager")
+	CheckOwnerDB(network, nil, "bob", "alice")
+	CheckOwnerDB(network, nil, "issuer", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "", nil)
+
+	// Addition transfers
 	TransferCash(network, "issuer", "", "USD", 50, "issuer", auditor)
-	CheckBalanceAndHolding(network, "issuer", "", "USD", 110)
-	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150)
+	CheckBalanceAndHolding(network, "issuer", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "issuer", "", "EUR", 150, auditor)
 
 	TransferCash(network, "issuer", "", "USD", 50, "manager", auditor)
 	TransferCash(network, "issuer", "", "EUR", 20, "manager", auditor)
-	CheckBalanceAndHolding(network, "issuer", "", "USD", 60)
-	CheckBalanceAndHolding(network, "issuer", "", "EUR", 130)
-	CheckBalanceAndHolding(network, "manager", "", "USD", 50)
-	CheckBalanceAndHolding(network, "manager", "", "EUR", 20)
+	CheckBalanceAndHolding(network, "issuer", "", "USD", 60, auditor)
+	CheckBalanceAndHolding(network, "issuer", "", "EUR", 130, auditor)
+	CheckBalanceAndHolding(network, "manager", "", "USD", 50, auditor)
+	CheckBalanceAndHolding(network, "manager", "", "EUR", 20, auditor)
 
 	// Play with wallets
 	TransferCash(network, "manager", "", "USD", 10, "manager.id1", auditor)
 	TransferCash(network, "manager", "", "USD", 10, "manager.id2", auditor)
 	TransferCash(network, "manager", "", "USD", 10, "manager.id3", auditor)
-	CheckBalanceAndHolding(network, "manager", "", "USD", 20)
-	CheckBalanceAndHolding(network, "manager", "manager.id1", "USD", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id2", "USD", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10)
+	CheckBalanceAndHolding(network, "manager", "", "USD", 20, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id1", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id2", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10, auditor)
 
 	TransferCash(network, "manager", "manager.id1", "USD", 10, "manager.id2", auditor)
-	CheckSpending(network, "manager", "manager.id1", "USD", 10)
-	CheckBalanceAndHolding(network, "manager", "", "USD", 20)
-	CheckBalanceAndHolding(network, "manager", "manager.id1", "USD", 0)
-	CheckBalanceAndHolding(network, "manager", "manager.id2", "USD", 20)
-	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10)
+	CheckSpending(network, "manager", "manager.id1", "USD", auditor, 10)
+	CheckBalanceAndHolding(network, "manager", "", "USD", 20, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id1", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id2", "USD", 20, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10, auditor)
 
 	// Swap among wallets
 	TransferCash(network, "manager", "", "EUR", 10, "manager.id1", auditor)
-	CheckBalanceAndHolding(network, "manager", "", "EUR", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id1", "EUR", 10)
+	CheckBalanceAndHolding(network, "manager", "", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id1", "EUR", 10, auditor)
 
 	SwapCash(network, "manager", "manager.id1", "EUR", 10, "USD", 10, "manager.id2", auditor)
-	CheckBalanceAndHolding(network, "manager", "", "USD", 20)
-	CheckBalanceAndHolding(network, "manager", "", "EUR", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id1", "USD", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id1", "EUR", 0)
-	CheckBalanceAndHolding(network, "manager", "manager.id2", "USD", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id2", "EUR", 10)
-	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10)
+	CheckBalanceAndHolding(network, "manager", "", "USD", 20, auditor)
+	CheckBalanceAndHolding(network, "manager", "", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id1", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id1", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id2", "USD", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id2", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, "manager", "manager.id3", "USD", 10, auditor)
 
 	// no more USD can be issued, reached quota of 220
-	IssueCashFail(network, "USD", 10, "alice")
+	IssueCash(network, "", "USD", 10, "alice", auditor, true, "issuer", "no more USD can be issued, reached quota of 241")
 
-	CheckBalanceAndHolding(network, "alice", "", "USD", 0)
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 10)
+	CheckBalanceAndHolding(network, "alice", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 10, auditor)
 
 	// limits
-	CheckBalanceAndHolding(network, "alice", "", "USD", 0)
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 10)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
-	CheckBalanceAndHolding(network, "bob", "", "USD", 110)
-	IssueCash(network, "", "EUR", 2200, "alice", auditor, true)
-	IssueCash(network, "", "EUR", 2000, "charlie", auditor, true)
-	CheckBalanceAndHolding(network, "alice", "", "EUR", 2210)
-	CheckBalanceAndHolding(network, "charlie", "", "EUR", 2000)
+	CheckBalanceAndHolding(network, "alice", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 10, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
+	IssueCash(network, "", "EUR", 2200, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "EUR", 2000, "charlie", auditor, true, "issuer")
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 2210, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "EUR", 2000, auditor)
 	TransferCash(network, "alice", "", "EUR", 210, "bob", auditor, "payment limit reached", "alice", "[EUR][210]")
-	CheckBalanceAndHolding(network, "bob", "", "USD", 110)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 20)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
+
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
@@ -454,24 +597,29 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 1820)
-	CheckSpending(network, "alice", "", "EUR", 1800)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 1820, auditor)
+	CheckSpending(network, "alice", "", "EUR", auditor, 1800)
 	TransferCash(network, "alice", "", "EUR", 200, "bob", auditor, "cumulative payment limit reached", "alice", "[EUR][2000]")
+
+	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor)
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820)
+	CheckBalanceAndHolding(network, "charlie", "", "EUR", 1000, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
 	TransferCash(network, "charlie", "", "EUR", 200, "bob", auditor, "holding limit reached", "bob", "[EUR][3020]")
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820, auditor)
+
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	// Routing
-	IssueCash(network, "", "EUR", 10, "alice.id1", auditor, true)
-	CheckAcceptedTransactions(network, "alice", "alice.id1", AliceID1AcceptedTransactions[:], nil, nil)
+	IssueCash(network, "", "EUR", 10, "alice.id1", auditor, true, "issuer")
+	CheckAcceptedTransactions(network, "alice", "alice.id1", AliceID1AcceptedTransactions[:], nil, nil, nil)
 	TransferCash(network, "alice", "alice.id1", "EUR", 10, "bob.id1", auditor)
-	CheckBalanceAndHolding(network, "alice", "alice.id1", "EUR", 0)
-	CheckBalanceAndHolding(network, "bob", "bob.id1", "EUR", 10)
+	CheckBalanceAndHolding(network, "alice", "alice.id1", "EUR", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "EUR", 10, auditor)
 
 	// Concurrent transfers
 	transferErrors := make([]chan error, 5)
@@ -486,12 +634,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		sum += v
 		go func() {
 			_, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:   auditor,
-				Wallet:    "",
-				Type:      "EUR",
-				Amount:    v,
-				Recipient: network.Identity("alice"),
-				Retry:     true,
+				Auditor:      auditor,
+				Wallet:       "",
+				Type:         "EUR",
+				Amount:       v,
+				Recipient:    network.Identity("alice"),
+				RecipientEID: "alice",
+				Retry:        true,
 			}))
 			if err != nil {
 				transfer <- err
@@ -504,13 +653,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		err := <-transfer
 		Expect(err).ToNot(HaveOccurred())
 	}
-	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820-sum)
+	CheckBalanceAndHolding(network, "bob", "", "EUR", 2820-sum, auditor)
 
 	// Transfer With Selector
-	IssueCash(network, "", "YUAN", 17, "alice", auditor, true)
+	IssueCash(network, "", "YUAN", 17, "alice", auditor, true, "issuer")
 	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", auditor)
-	CheckBalanceAndHolding(network, "alice", "", "YUAN", 7)
-	CheckBalanceAndHolding(network, "bob", "", "YUAN", 10)
+	CheckBalanceAndHolding(network, "alice", "", "YUAN", 7, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "YUAN", 10, auditor)
 	TransferCashWithSelector(network, "alice", "", "YUAN", 10, "bob", auditor, "pineapple", "insufficient funds")
 
 	// Now, the tests asks Bob to transfer to Charlie 14 YUAN split in two parallel transactions each one transferring 7 YUAN.
@@ -523,12 +672,13 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		transferError := transferErrors[i]
 		go func() {
 			txid, err := network.Client("bob").CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-				Auditor:   auditor,
-				Wallet:    "",
-				Type:      "YUAN",
-				Amount:    7,
-				Recipient: network.Identity("charlie"),
-				Retry:     false,
+				Auditor:      auditor,
+				Wallet:       "",
+				Type:         "YUAN",
+				Amount:       7,
+				Recipient:    network.Identity("charlie"),
+				RecipientEID: "charlie",
+				Retry:        false,
 			}))
 			if err != nil {
 				// The transaction failed, we return the error to the caller.
@@ -541,371 +691,263 @@ func TestAll(network *integration.Infrastructure, auditor string) {
 		}()
 	}
 	// collect the errors, and check that they are all nil, and one of them is the error we expect.
-	var errors []error
+	var errs []error
 	for _, transfer := range transferErrors {
-		errors = append(errors, <-transfer)
+		errs = append(errs, <-transfer)
 	}
-	Expect((errors[0] == nil && errors[1] != nil) || (errors[0] != nil && errors[1] == nil)).To(BeTrue())
+	Expect((errs[0] == nil && errs[1] != nil) || (errs[0] != nil && errs[1] == nil)).To(BeTrue())
 	var errStr string
-	if errors[0] == nil {
-		errStr = errors[1].Error()
+	if errs[0] == nil {
+		errStr = errs[1].Error()
 	} else {
-		errStr = errors[0].Error()
+		errStr = errs[0].Error()
 	}
 	v := strings.Contains(errStr, "pineapple") || strings.Contains(errStr, "lemonade")
 	Expect(v).To(BeEquivalentTo(true))
 
-	CheckBalanceAndHolding(network, "bob", "", "YUAN", 3)
-	CheckBalanceAndHolding(network, "alice", "", "YUAN", 7)
-	CheckBalanceAndHolding(network, "charlie", "", "YUAN", 7)
+	CheckBalanceAndHolding(network, "bob", "", "YUAN", 3, auditor)
+	CheckBalanceAndHolding(network, "alice", "", "YUAN", 7, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "YUAN", 7, auditor)
 
 	// Transfer by IDs
-	txID := IssueCash(network, "", "CHF", 17, "alice", auditor, true)
-	TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, true, "test release")
-	// the previous call should not keep the token locked if release is successful
-	txID = TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, "bob", auditor, false)
-	RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID, Index: 0}}, 17, auditor)
-
-	CheckPublicParamsViewFactory(network, "issuer", "auditor", "alice", "bob", "charlie", "manager")
-}
-
-func RegisterAuditor(network *integration.Infrastructure, id string) {
-	_, err := network.Client(id).CallView("register", nil)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-func RegisterCertifier(network *integration.Infrastructure) {
-	_, err := network.Client("certifier").CallView("register", nil)
-	Expect(err).NotTo(HaveOccurred())
-}
-
-func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool) string {
-	if auditor == "issuer" {
-		// the issuer is the auditor, choose default identity
-		auditor = ""
+	{
+		txID1 := IssueCash(network, "", "CHF", 17, "alice", auditor, true, "issuer")
+		TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, true, "test release")
+		// the previous call should not keep the token locked if release is successful
+		txID2 := TransferCashByIDs(network, "alice", "", []*token2.ID{{TxId: txID1, Index: 0}}, 17, "bob", auditor, false)
+		WhoDeletedToken(network, "alice", []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+		WhoDeletedToken(network, auditor, []*token2.ID{{TxId: txID1, Index: 0}}, txID2)
+		// redeem newly created token
+		RedeemCashByIDs(network, "bob", "", []*token2.ID{{TxId: txID2, Index: 0}}, 17, auditor)
 	}
-	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
-		Anonymous:    anonymous,
-		Auditor:      auditor,
-		IssuerWallet: wallet,
-		TokenType:    typ,
-		Quantity:     amount,
-		Recipient:    network.Identity(receiver),
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 
-	return common.JSONUnmarshalString(txid)
-}
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
-func IssueCashFail(network *integration.Infrastructure, typ string, amount uint64, receiver string) {
-	_, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
-		TokenType: typ,
-		Quantity:  amount,
-		Recipient: network.Identity(receiver),
-	}))
-	Expect(err).To(HaveOccurred())
-}
+	// Test Max Token Value
+	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
+	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
+	TransferCash(network, "charlie", "", "MAX", 10000, "alice", auditor, "cannot create output with value [10000], max [9999]")
+	IssueCash(network, "", "MAX", 10000, "charlie", auditor, true, "issuer", "q is larger than max token value [9999]")
 
-func CheckAuditedTransactions(network *integration.Infrastructure, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
-	txsBoxed, err := network.Client("auditor").CallView("historyAuditing", common.JSONMarshall(&views.ListAuditedTransactions{
-		From: start,
-		To:   end,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	var txs []*ttxdb.TransactionRecord
-	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
-	for i, tx := range txs {
-		fmt.Printf("tx %d: %+v\n", i, tx)
-		fmt.Printf("expected %d: %+v\n", i, expected[i])
-		txExpected := expected[i]
-		Expect(tx.TokenType).To(Equal(txExpected.TokenType), "tx [%d] expected token type [%v], got [%v]", i, txExpected.TokenType, tx.TokenType)
-		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue(), "tx [%d] expected sender [%v], got [%v]", i, txExpected.SenderEID, tx.SenderEID)
-		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
-		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] expected status [%v], got [%v]", i, txExpected.Status, tx.Status)
-		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d] expected transaction type [%v], got [%v]", i, txExpected.ActionType, tx.ActionType)
-		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d] expected amount [%v], got [%v]", i, txExpected.Amount, tx.Amount)
+	// Check consistency
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+	CheckOwnerDB(network, nil, "bob", "alice", "issuer", "charlie", "manager")
+	CheckAuditorDB(network, auditor, "", nil)
+	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
+
+	for _, name := range []string{"alice", "bob", "charlie", "manager"} {
+		IDs := ListVaultUnspentTokens(network, name)
+		CheckIfExistsInVault(network, auditor, IDs)
 	}
-}
 
-func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time) {
-	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
-		Wallet: wallet,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	eID := common.JSONUnmarshalString(eIDBoxed)
+	// Check double spending by multiple action in the same transaction
 
-	txsBoxed, err := network.Client(id).CallView("acceptedTransactionHistory", common.JSONMarshall(&views.ListAcceptedTransactions{
-		SenderWallet:    eID,
-		RecipientWallet: eID,
-		From:            start,
-		To:              end,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	var txs []*ttxdb.TransactionRecord
-	common.JSONUnmarshal(txsBoxed.([]byte), &txs)
-	Expect(len(txs)).To(Equal(len(expected)), "expected [%v] transactions, got [%v]", expected, txs)
-	for i, tx := range txs {
-		fmt.Printf("tx %d: %+v\n", i, tx)
-		fmt.Printf("expected %d: %+v\n", i, expected[i])
-		txExpected := expected[i]
-		Expect(tx.TokenType).To(Equal(txExpected.TokenType), "tx [%d] tx.TokenType: %s, txExpected.TokenType: %s", i, tx.TokenType, txExpected.TokenType)
-		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue(), "tx [%d] tx.SenderEID: %s, txExpected.SenderEID: %s", i, tx.SenderEID, txExpected.SenderEID)
-		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
-		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] tx.Status: %s, txExpected.Status: %s", i, tx.Status, txExpected.Status)
-		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d] tx.ActionType: %s, txExpected.ActionType: %s", i, tx.ActionType, txExpected.ActionType)
-		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d] tx.Amount: %d, txExpected.Amount: %d", i, tx.Amount, txExpected.Amount)
-	}
-}
-
-func CheckBalanceAndHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
-	CheckBalance(network, id, wallet, typ, expected)
-	CheckHolding(network, id, wallet, typ, int64(expected))
-}
-
-func CheckBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
-	// check balance
-	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(len(b)).To(BeEquivalentTo(1))
-	Expect(b[0].Type).To(BeEquivalentTo(typ))
-	q, err := token2.ToQuantity(b[0].Quantity, 64)
-	Expect(err).NotTo(HaveOccurred())
-	expectedQ := token2.NewQuantityFromUInt64(expected)
-	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)
-}
-
-func CheckHolding(network *integration.Infrastructure, id string, wallet string, typ string, expected int64) {
-	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
-		Wallet: wallet,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	eID := common.JSONUnmarshalString(eIDBoxed)
-	holdingBoxed, err := network.Client("auditor").CallView("holding", common.JSONMarshall(&views.CurrentHolding{
-		EnrollmentID: eID,
-		TokenType:    typ,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	holding, err := strconv.Atoi(common.JSONUnmarshalString(holdingBoxed))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(holding).To(Equal(int(expected)))
-}
-
-func CheckSpending(network *integration.Infrastructure, id string, wallet string, tokenType string, expected uint64) {
-	// check spending
-	// first get the enrollment id
-	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
-		Wallet: wallet,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	eID := common.JSONUnmarshalString(eIDBoxed)
-	spendingBoxed, err := network.Client("auditor").CallView("spending", common.JSONMarshall(&views.CurrentSpending{
-		EnrollmentID: eID,
-		TokenType:    tokenType,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	spending, err := strconv.ParseUint(common.JSONUnmarshalString(spendingBoxed), 10, 64)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(spending).To(Equal(expected))
-}
-
-func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
-	res, err := network.Client("issuer").CallView("historyIssuedToken", common.JSONMarshall(&views.ListIssuedTokens{
-		Wallet:    wallet,
-		TokenType: typ,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-
-	issuedTokens := &token2.IssuedTokens{}
-	common.JSONUnmarshal(res.([]byte), issuedTokens)
-	return issuedTokens
-}
-
-func ListUnspentTokens(network *integration.Infrastructure, id string, wallet string, typ string) *token2.UnspentTokens {
-	res, err := network.Client(id).CallView("history", common.JSONMarshall(&views.ListUnspentTokens{
-		Wallet:    wallet,
-		TokenType: typ,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-
-	unspentTokens := &token2.UnspentTokens{}
-	common.JSONUnmarshal(res.([]byte), unspentTokens)
-	return unspentTokens
-}
-
-func TransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) {
-	txidBoxed, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
-	}))
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txidBoxed))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txidBoxed))).NotTo(HaveOccurred())
-
-		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
-			signers = append(signers, strings.Split(receiver, ".")[0])
+	// use the same token for both actions, this must fail
+	txIssuedPineapples1 := IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
+	IssueCash(network, "", "Pineapples", 3, "alice", auditor, true, "issuer")
+	failedTransferTxID := TransferCashMultiActions(network, "alice", "", "Pineapples", []uint64{2, 3}, []string{"bob", "charlie"}, auditor, &token2.ID{TxId: txIssuedPineapples1}, "failed to append spent id", txIssuedPineapples1)
+	// the above transfer must fail at execution phase, therefore the auditor should be explicitly informed about this transaction
+	CheckBalance(network, "alice", "", "Pineapples", 6)
+	CheckHolding(network, "alice", "", "Pineapples", 1, auditor)
+	CheckBalance(network, "bob", "", "Pineapples", 0)
+	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
+	CheckBalance(network, "charlie", "", "Pineapples", 0)
+	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
+	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
+	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
+	CheckBalanceAndHolding(network, "alice", "", "Pineapples", 6, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
+	CheckAuditorDB(network, auditor, "", func(errs []string) error {
+		// We should expect 6 errors, 3 records (Alice->Bob, Alice->Charlie, Alice-Alice (the rest) * 2 (envelope non found, no match in vault)
+		// each error should contain failedTransferTxID
+		if len(errs) != 6 {
+			return errors.Errorf("expected only 1 error, got [%d]", len(errs))
 		}
-		txInfo := GetTransactionInfo(network, id, common.JSONUnmarshalString(txidBoxed))
-		for _, identity := range signers {
-			sigma, ok := txInfo.EndorsementAcks[network.Identity(identity).UniqueID()]
-			Expect(ok).To(BeTrue(), "identity %s not found in txInfo.EndorsementAcks", identity)
-			Expect(sigma).ToNot(BeNil(), "endorsement ack sigma is nil for identity %s", identity)
+		for _, err := range errs {
+			if !strings.Contains(err, failedTransferTxID) {
+				return errors.Errorf("expected error to contain [%s], got [%s]", failedTransferTxID, err)
+			}
 		}
-		Expect(len(txInfo.EndorsementAcks)).To(BeEquivalentTo(len(signers)))
+		return nil
+	})
+}
+
+func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {
+	var errorMessage string
+	if issuerAsAuditor {
+		errorMessage = "failed verifying auditor signature"
+		RegisterAuditor(network, "issuer", nil)
+		txId := IssueCash(network, "", "USD", 110, "alice", "issuer", true, "issuer")
+		Expect(txId).NotTo(BeEmpty())
+		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "issuer")
 	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
-		}
-		time.Sleep(5 * time.Second)
+		errorMessage = "failed to verify issuers' signatures"
+		RegisterAuditor(network, "auditor", nil)
+		txId := IssueCash(network, "", "USD", 110, "alice", "auditor", true, "issuer")
+		Expect(txId).NotTo(BeEmpty())
+		CheckBalanceAndHolding(network, "alice", "", "USD", 110, "auditor")
 	}
-}
 
-func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token2.ID, expectedErrorMsgs ...string) (string, []byte) {
-	txBoxed, err := network.Client(id).CallView("prepareTransfer", common.JSONMarshall(&views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		TokenIDs:  []*token2.ID{tokenID},
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
-	}))
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
+	RegisterAuditor(network, auditor, nil)
+	UpdatePublicParams(network, ppBytes, tms)
+
+	Eventually(GetPublicParams).WithArguments(network, "newIssuer").WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	if !issuerAsAuditor {
+		Eventually(GetPublicParams).WithArguments(network, auditor).WithTimeout(30 * time.Second).WithPolling(15 * time.Second).Should(Equal(ppBytes))
+	}
+	// give time to the issuer and the auditor to update their public parameters and reload their wallets
+	Eventually(DoesWalletExist).WithArguments(network, "newIssuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	if issuerAsAuditor {
+		Eventually(DoesWalletExist).WithArguments(network, "newIssuer", "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
-		}
-		time.Sleep(5 * time.Second)
+		Eventually(DoesWalletExist).WithArguments(network, auditor, "", views.AuditorWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 	}
-	res := &views.PrepareTransferResult{}
-	common.JSONUnmarshal(txBoxed.([]byte), res)
-	return res.TxID, res.TXRaw
+	Eventually(DoesWalletExist).WithArguments(network, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(network, "manager", "manager.id1", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+
+	txId := IssueCash(network, "", "USD", 110, "alice", auditor, true, "newIssuer")
+	Expect(txId).NotTo(BeEmpty())
+	CheckBalance(network, "alice", "", "USD", 220)
+	CheckHolding(network, "alice", "", "USD", 110, auditor)
+	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer", errorMessage)
+
+	CheckOwnerWalletIDs(network, "manager", "manager.id1", "manager.id2", "manager.id3")
 }
 
-func BroadcastPreparedTransferCash(network *integration.Infrastructure, id string, tx []byte, finality bool, expectedErrorMsgs ...string) {
-	_, err := network.Client(id).CallView("broadcastPreparedTransfer", common.JSONMarshall(&views.BroadcastPreparedTransfer{
-		Tx:       tx,
-		Finality: finality,
-	}))
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		return
-	}
+func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool) {
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
+	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
+	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
 
-	Expect(err).To(HaveOccurred())
-	fmt.Println("Failed to broadcast ", err)
-	for _, msg := range expectedErrorMsgs {
-		Expect(err.Error()).To(ContainSubstring(msg))
-	}
-	time.Sleep(5 * time.Second)
+	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
+	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
+	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
+
+	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10, auditor)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
 }
 
-func GetTransactionInfo(network *integration.Infrastructure, id string, txnId string) *ttx.TransactionInfo {
-	boxed, err := network.Client(id).CallView("transactionInfo", common.JSONMarshall(&views.TransactionInfo{
-		TransactionID: txnId,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	info := &ttx.TransactionInfo{}
-	common.JSONUnmarshal(boxed.([]byte), info)
-	return info
+func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
+	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 0, auditor)
+
+	rId := GetRevocationHandle(network, "bob")
+	RevokeIdentity(network, auditor, revocationHandle)
+	// try to issue to bob
+	IssueCash(network, "", "USD", 22, "bob", auditor, true, "issuer", hash.Hashable(rId).String()+" Identity is in revoked state")
+	// try to transfer to bob
+	TransferCash(network, "alice", "", "USD", 22, "bob", auditor, hash.Hashable(rId).String()+" Identity is in revoked state")
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 0, auditor)
+
+	// Issuer to bob.id1
+	IssueCash(network, "", "USD", 90, "bob.id1", auditor, true, "issuer")
+	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob.id1", "USD", 90, auditor)
 }
 
-func TransferCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, receiver string, auditor string, failToRelease bool, expectedErrorMsgs ...string) string {
-	txid, err := network.Client(id).CallView("transfer", common.JSONMarshall(&views.Transfer{
-		Auditor:       auditor,
-		Wallet:        wallet,
-		Type:          "",
-		TokenIDs:      ids,
-		Amount:        amount,
-		Recipient:     network.Identity(receiver),
-		FailToRelease: failToRelease,
-	}))
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		return common.JSONUnmarshalString(txid)
-	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
-		}
-		time.Sleep(5 * time.Second)
-		return ""
-	}
+func TestMixed(network *integration.Infrastructure) {
+	dlogId := getTmsId(network, DLogNamespace)
+	fabTokenId := getTmsId(network, FabTokenNamespace)
+	RegisterAuditorForTMSID(network, "auditor1", dlogId, nil)
+	RegisterAuditorForTMSID(network, "auditor2", fabTokenId, nil)
+
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
+
+	CheckPublicParamsForTMSID(network, dlogId, "issuer1", "auditor1", "alice", "bob")
+	CheckPublicParamsForTMSID(network, fabTokenId, "issuer2", "auditor2", "alice", "bob")
+
+	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "USD", 115, "alice", "auditor2", true, "issuer2", fabTokenId)
+
+	TransferCashForTMSID(network, "alice", "", "USD", 20, "bob", "auditor1", dlogId)
+	TransferCashForTMSID(network, "alice", "", "USD", 30, "bob", "auditor2", fabTokenId)
+
+	RedeemCashForTMSID(network, "bob", "", "USD", 11, "auditor1", dlogId)
+	CheckSpendingForTMSID(network, "bob", "", "USD", "auditor1", 11, dlogId)
+
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 90, "auditor1", dlogId)
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 85, "auditor2", fabTokenId)
+	CheckBalanceAndHoldingForTMSID(network, "bob", "", "USD", 9, "auditor1", dlogId)
+	CheckBalanceAndHoldingForTMSID(network, "bob", "", "USD", 30, "auditor2", fabTokenId)
+
+	h := ListIssuerHistoryForTMSID(network, "", "USD", "issuer1", dlogId)
+	Expect(h.Count() > 0).To(BeTrue())
+	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(110))).To(BeEquivalentTo(0))
+	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+
+	// Error cases
+
+	// Try to approve dlog with auditor2
+	TransferCashForTMSID(network, "alice", "", "USD", 20, "bob", "auditor2", dlogId, "")
+	// Try to issue on dlog with issuer2
+	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer2", dlogId, "")
+	// Try to spend on dlog coins from fabtoken
+	TransferCashForTMSID(network, "alice", "", "USD", 120, "bob", "auditor2", fabTokenId, "")
+	// Try to issue more coins than the max
+	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [9998]")
+
+	// Shut down one auditor and try to issue cash for both chaincodes
+	Restart(network, true, "auditor2")
+	IssueCashForTMSID(network, "", "USD", 10, "alice", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "USD", 20, "alice", "auditor2", true, "issuer2", fabTokenId, "")
+	RegisterAuditor(network, "auditor2", nil)
+	IssueCashForTMSID(network, "", "USD", 30, "alice", "auditor2", true, "issuer2", fabTokenId)
+
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 100, "auditor1", dlogId)
+	CheckBalanceAndHoldingForTMSID(network, "alice", "", "USD", 115, "auditor2", fabTokenId)
 }
 
-func TransferCashWithSelector(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) {
-	txid, err := network.Client(id).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
-		Auditor:   auditor,
-		Wallet:    wallet,
-		Type:      typ,
-		Amount:    amount,
-		Recipient: network.Identity(receiver),
-	}))
-	if len(expectedErrorMsgs) == 0 {
-		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	} else {
-		Expect(err).To(HaveOccurred())
-		for _, msg := range expectedErrorMsgs {
-			Expect(err.Error()).To(ContainSubstring(msg))
-		}
-		time.Sleep(5 * time.Second)
-	}
+func TestRemoteOwnerWallet(network *integration.Infrastructure, auditor string, websSocket bool) {
+	TestRemoteOwnerWalletWithWMP(network, NewWalletManagerProvider(&walletManagerLoader{II: network}), auditor, websSocket)
 }
 
-func RedeemCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, auditor string) {
-	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor: auditor,
-		Wallet:  wallet,
-		Type:    typ,
-		Amount:  amount,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-}
+func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *WalletManagerProvider, auditor string, websSocket bool) {
+	RegisterAuditor(network, auditor, nil)
 
-func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token2.ID, amount uint64, auditor string) {
-	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
-		Auditor:  auditor,
-		Wallet:   wallet,
-		Type:     "",
-		TokenIDs: ids,
-		Amount:   amount,
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-}
+	// give some time to the nodes to get the public parameters
+	time.Sleep(10 * time.Second)
 
-func SwapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string, auditor string) {
-	txid, err := network.Client(id).CallView("swap", common.JSONMarshall(&views.Swap{
-		Auditor:         auditor,
-		AliceWallet:     wallet,
-		FromAliceType:   typeLeft,
-		FromAliceAmount: amountLeft,
-		FromBobType:     typRight,
-		FromBobAmount:   amountRight,
-		Bob:             network.Identity(receiver),
-	}))
-	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-}
+	SetKVSEntry(network, "issuer", "auditor", auditor)
+	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
-func CheckPublicParamsViewFactory(network *integration.Infrastructure, ids ...string) {
-	for _, id := range ids {
-		_, err := network.Client(id).CallView("CheckPublicParamsMatch", nil)
-		Expect(err).NotTo(HaveOccurred())
-	}
+	Withdraw(network, wmp, "alice", "alice_remote", "USD", 10, auditor, "issuer")
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 10, auditor)
+
+	TransferCashFromExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 7, "bob", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 3, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 7, auditor)
+	TransferCashToExternalWallet(network, wmp, "bob", "", "USD", 3, "alice", "alice_remote", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 6, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
+	TransferCashFromExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 4, "charlie", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 2, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+	TransferCashFromAndToExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 1, "bob", "bob_remote", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 1, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+	TransferCashFromAndToExternalWallet(network, wmp, websSocket, "alice", "alice_remote", "USD", 1, "alice", "alice_remote_2", auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote", "USD", 0, auditor)
+	CheckBalanceAndHolding(network, "alice", "alice_remote_2", "USD", 1, auditor)
+	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
+	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
 }

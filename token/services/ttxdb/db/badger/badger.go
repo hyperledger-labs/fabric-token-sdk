@@ -13,6 +13,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto/z"
@@ -32,6 +33,14 @@ const (
 	streamLogPrefixStatus = "ttxdb.SetStatus"
 )
 
+type TransactionRecordSelector interface {
+	Select(record *TransactionRecord) (bool, bool)
+}
+
+type ValidationRecordSelector interface {
+	Select(record *ValidationRecord) (bool, bool)
+}
+
 type MovementRecord struct {
 	Id     uint64
 	Record *driver.MovementRecord
@@ -40,6 +49,16 @@ type MovementRecord struct {
 type TransactionRecord struct {
 	Id     uint64
 	Record *driver.TransactionRecord
+}
+
+type ValidationRecord struct {
+	Id     uint64
+	Record *driver.ValidationRecord
+}
+
+type TokenRequest struct {
+	TxID string
+	TR   []byte
 }
 
 type Persistence struct {
@@ -54,7 +73,9 @@ func OpenDB(path string) (*Persistence, error) {
 	info, err := os.Stat(path)
 	logger.Debugf("Opening TTX DB at [%s][%s:%s]", path, info, err)
 
-	db, err := badger.Open(badger.DefaultOptions(path))
+	opts := badger.DefaultOptions(path)
+	opts.Logger = logger
+	db, err := badger.Open(opts)
 	if err != nil {
 		return nil, errors.Wrapf(err, "could not open DB at '%s'", path)
 	}
@@ -67,8 +88,14 @@ func OpenDB(path string) (*Persistence, error) {
 }
 
 func (db *Persistence) Close() error {
+	db.txnLock.Lock()
+	defer db.txnLock.Unlock()
 
-	// TODO: what to do with db.txn if it's not nil?
+	// discard current transaction, if any
+	if db.txn != nil {
+		db.txn.Discard()
+		db.txn = nil
+	}
 
 	if err := db.seq.Release(); err != nil {
 		logger.Errorf("failed closing seq [%s]", err)
@@ -178,88 +205,99 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 	return nil
 }
 
+func (db *Persistence) AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+	next, key, err := db.validationRecordKey(txID)
+	if err != nil {
+		return errors.Wrapf(err, "could not get key for validation record %s", txID)
+	}
+	logger.Debugf("Adding validation record [%s] with key", txID, key)
+
+	value := &ValidationRecord{
+		Id: next,
+		Record: &driver.ValidationRecord{
+			TxID:         txID,
+			Timestamp:    time.Now(),
+			TokenRequest: tr,
+			Metadata:     meta,
+		},
+	}
+
+	bytes, err := MarshalValidationRecord(value)
+	if err != nil {
+		return errors.Wrapf(err, "could not marshal record for key %s", key)
+	}
+
+	err = db.txn.Set([]byte(key), bytes)
+	if err != nil {
+		return errors.Wrapf(err, "could not set value for key %s", key)
+	}
+
+	return nil
+}
+
+func (db *Persistence) AddTokenRequest(txID string, tr []byte) error {
+	key, err := db.tokenRequestKey(txID)
+	if err != nil {
+		return errors.Wrapf(err, "could not get key for token request %s", txID)
+	}
+	logger.Debugf("Adding token request [%s] with key", txID, key)
+
+	value := &TokenRequest{
+		TxID: txID,
+		TR:   tr,
+	}
+
+	bytes, err := MarshalTokenRequest(value)
+	if err != nil {
+		return errors.Wrapf(err, "could not marshal record for key %s", key)
+	}
+
+	err = db.txn.Set([]byte(key), bytes)
+	if err != nil {
+		return errors.Wrapf(err, "could not set value for key %s", key)
+	}
+
+	return nil
+}
+
+func (db *Persistence) GetTokenRequest(txID string) ([]byte, error) {
+	key, err := db.tokenRequestKey(txID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "could not get key for token request %s", txID)
+	}
+
+	txn := db.db.NewTransaction(false)
+	defer txn.Discard()
+	item, err := txn.Get([]byte(key))
+	if err != nil {
+		if err == badger.ErrKeyNotFound {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "could not set value for key %s", key)
+	}
+	value := &TokenRequest{}
+	if err := item.Value(func(val []byte) error {
+		var err error
+		value, err = UnmarshalTokenRequest(val)
+		if err != nil {
+			return errors.Wrapf(err, "could not set value for key %s", key)
+		}
+		return nil
+	}); err != nil {
+		return nil, errors.Wrapf(err, "failed to load token request for %s", txID)
+	}
+	return value.TR, nil
+}
+
 func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
 	it.Seek([]byte("tx"))
 
-	return &TransactionIterator{it: it, params: params}, nil
-}
-
-func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
-	// search for all matching keys
-	type Entry struct {
-		key   string
-		value []byte
+	selector := &TransactionSelector{
+		params: params,
 	}
-	var entries []Entry
-	stream := db.db.NewStream()
-	stream.NumGo = db.numGoStream
-	stream.LogPrefix = streamLogPrefixStatus
-	txIdAsBytes := []byte(txID)
-	stream.ChooseKey = func(item *badger.Item) bool {
-		return bytes.HasSuffix(item.Key(), txIdAsBytes)
-	}
-	stream.Send = func(buf *z.Buffer) error {
-		list, err := badger.BufferToKVList(buf)
-		if err != nil {
-			return err
-		}
-		for _, kv := range list.Kv {
-			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
-		}
-		return nil
-
-	}
-	if err := stream.Orchestrate(context.Background()); err != nil {
-		return err
-	}
-
-	if len(entries) == 0 {
-		// nothing to update
-		logger.Debugf("no entries found for txID %s, skipping", txID)
-		return nil
-	}
-
-	// update status for all matching keys
-	txn := db.db.NewTransaction(true)
-	for _, entry := range entries {
-		var bytes []byte
-		switch {
-		case strings.HasPrefix(entry.key, "mv"):
-			record, err := UnmarshalMovementRecord(entry.value)
-			if err != nil {
-				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
-			}
-			record.Record.Status = status
-			bytes, err = MarshalMovementRecord(record)
-			if err != nil {
-				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
-			}
-		case strings.HasPrefix(entry.key, "tx"):
-			record, err := UnmarshalTransactionRecord(entry.value)
-			if err != nil {
-				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
-			}
-			record.Record.Status = status
-			bytes, err = MarshalTransactionRecord(record)
-			if err != nil {
-				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
-			}
-		default:
-			continue
-		}
-
-		logger.Debugf("setting key %s to %s", entry.key, string(bytes))
-		if err := txn.Set([]byte(entry.key), bytes); err != nil {
-			return errors.Wrapf(err, "could not set value for key %s", entry.key)
-		}
-	}
-	if err := txn.Commit(); err != nil {
-		txn.Discard()
-		return errors.Wrapf(err, "could not commit transaction to set status for tx %s", txID)
-	}
-	return nil
+	return &TransactionIterator{it: it, selector: selector}, nil
 }
 
 func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*driver.MovementRecord, error) {
@@ -322,6 +360,158 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 	return res, nil
 }
 
+func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
+	txn := db.db.NewTransaction(false)
+	it := txn.NewIterator(badger.DefaultIteratorOptions)
+	it.Seek([]byte("mt"))
+
+	selector := &ValidationRecordsSelector{
+		params: params,
+	}
+	return &ValidationRecordsIterator{it: it, selector: selector}, nil
+}
+
+func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
+	logger.Debugf("set status of [%s] to [%s]", txID, status)
+	// search for all matching keys
+	type Entry struct {
+		key   string
+		value []byte
+	}
+	var entries []Entry
+	stream := db.db.NewStream()
+	stream.NumGo = db.numGoStream
+	stream.LogPrefix = streamLogPrefixStatus
+	txIdAsBytes := []byte(txID)
+	stream.ChooseKey = func(item *badger.Item) bool {
+		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+	}
+	stream.Send = func(buf *z.Buffer) error {
+		list, err := badger.BufferToKVList(buf)
+		if err != nil {
+			return err
+		}
+		for _, kv := range list.Kv {
+			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
+		}
+		return nil
+
+	}
+	if err := stream.Orchestrate(context.Background()); err != nil {
+		return err
+	}
+
+	if len(entries) == 0 {
+		// nothing to update
+		logger.Debugf("no entries found for txID %s, skipping", txID)
+		return nil
+	}
+
+	// update status for all matching keys
+	txn := db.db.NewTransaction(true)
+	for _, entry := range entries {
+		var bytes []byte
+		switch {
+		case strings.HasPrefix(entry.key, "mv"):
+			logger.Debugf("set status of movement [%s] to [%s]", txID, status)
+			record, err := UnmarshalMovementRecord(entry.value)
+			if err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			record.Record.Status = status
+			bytes, err = MarshalMovementRecord(record)
+			if err != nil {
+				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
+			}
+		case strings.HasPrefix(entry.key, "tx"):
+			logger.Debugf("set status of transaction [%s] to [%s]", txID, status)
+			record, err := UnmarshalTransactionRecord(entry.value)
+			if err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			record.Record.Status = status
+			bytes, err = MarshalTransactionRecord(record)
+			if err != nil {
+				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
+			}
+		case strings.HasPrefix(entry.key, "mt"):
+			logger.Debugf("set status of validation record [%s] to [%s]", txID, status)
+			record, err := UnmarshalValidationRecord(entry.value)
+			if err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			record.Record.Status = status
+			bytes, err = MarshalValidationRecord(record)
+			if err != nil {
+				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
+			}
+		default:
+			continue
+		}
+
+		logger.Debugf("setting key %s to %s", entry.key, string(bytes))
+		if err := txn.Set([]byte(entry.key), bytes); err != nil {
+			return errors.Wrapf(err, "could not set value for key %s", entry.key)
+		}
+	}
+	if err := txn.Commit(); err != nil {
+		txn.Discard()
+		return errors.Wrapf(err, "could not commit transaction to set status for tx %s", txID)
+	}
+	return nil
+}
+
+func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
+	// search for all matching keys
+	type Entry struct {
+		key   string
+		value []byte
+	}
+	var entries []Entry
+	stream := db.db.NewStream()
+	stream.NumGo = db.numGoStream
+	stream.LogPrefix = streamLogPrefixStatus
+	txIdAsBytes := []byte(txID)
+	stream.ChooseKey = func(item *badger.Item) bool {
+		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+	}
+	stream.Send = func(buf *z.Buffer) error {
+		list, err := badger.BufferToKVList(buf)
+		if err != nil {
+			return err
+		}
+		for _, kv := range list.Kv {
+			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
+		}
+		return nil
+
+	}
+	if err := stream.Orchestrate(context.Background()); err != nil {
+		return driver.Unknown, err
+	}
+
+	if len(entries) == 0 {
+		// nothing to update
+		logger.Debugf("no entries found for txID %s, skipping", txID)
+		return driver.Unknown, nil
+	}
+
+	// update status for all matching keys
+	for _, entry := range entries {
+		switch {
+		case strings.HasPrefix(entry.key, "tx"):
+			record, err := UnmarshalTransactionRecord(entry.value)
+			if err != nil {
+				return driver.Unknown, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			return record.Record.Status, nil
+		default:
+			continue
+		}
+	}
+	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
+}
+
 func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
 	next, err := db.seq.Next()
 	if err != nil {
@@ -338,6 +528,18 @@ func (db *Persistence) movementKey(txID string) (uint64, string, error) {
 	return next, dbKey("mv", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
 }
 
+func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) {
+	next, err := db.seq.Next()
+	if err != nil {
+		return 0, "", errors.Wrapf(err, "failed getting next index")
+	}
+	return next, dbKey("mt", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
+}
+
+func (db *Persistence) tokenRequestKey(txID string) (string, error) {
+	return dbKey("tr", txID), nil
+}
+
 func dbKey(namespace, key string) string {
 	return namespace + keys.NamespaceSeparator + key
 }
@@ -349,8 +551,8 @@ func (p RecordSlice) Less(i, j int) bool { return p[i].Id < p[j].Id }
 func (p RecordSlice) Swap(i, j int)      { p[i], p[j] = p[j], p[i] }
 
 type TransactionIterator struct {
-	it     *badger.Iterator
-	params driver.QueryTransactionsParams
+	it       *badger.Iterator
+	selector TransactionRecordSelector
 }
 
 func (t *TransactionIterator) Close() {
@@ -386,33 +588,13 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 
 		t.it.Next()
 
-		// match the time constraints
-		if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
-			logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
-			continue
-		}
-		if t.params.To != nil && record.Record.Timestamp.After(*t.params.To) {
-			logger.Debugf("skipping transaction [%s] because it is after the to time", record.Record.TxID)
+		matched, stop := t.selector.Select(record)
+		if stop {
 			return nil, nil
 		}
-		// match the wallet
-		senderMatch := true
-		if len(t.params.SenderWallet) != 0 && record.Record.SenderEID != t.params.SenderWallet {
-			senderMatch = false
-		}
-		receiverMatch := true
-		if len(t.params.RecipientWallet) != 0 && record.Record.RecipientEID != t.params.RecipientWallet {
-			receiverMatch = false
-		}
-		if !senderMatch && !receiverMatch {
-			logger.Debugf("skipping transaction [%s] because it does not match the sender [%s:%s] or receiver [%s:%s]",
-				record.Record.TxID,
-				record.Record.SenderEID, t.params.SenderWallet,
-				record.Record.RecipientEID, t.params.RecipientWallet,
-			)
+		if !matched {
 			continue
 		}
-
 		logger.Debugf("found transaction [%s,%s]", string(item.Key()), record.Record.TxID, record.Record.SenderEID, record.Record.RecipientEID)
 		return record.Record, nil
 	}
@@ -494,4 +676,155 @@ func (m *MovementSelector) Select(record *MovementRecord) bool {
 	}
 
 	return true
+}
+
+// TransactionSelector is used to select a set of transaction records
+type TransactionSelector struct {
+	params driver.QueryTransactionsParams
+}
+
+// Select returns true is the record matches the selection criteria.
+// Additionally, it returns another flag indicating if it is time to stop or not.
+func (t *TransactionSelector) Select(record *TransactionRecord) (bool, bool) {
+	// match the time constraints
+	if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
+		logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
+		return false, false
+	}
+	if t.params.To != nil && record.Record.Timestamp.After(*t.params.To) {
+		logger.Debugf("skipping transaction [%s] because it is after the to time", record.Record.TxID)
+		return false, true
+	}
+	if len(t.params.ActionTypes) != 0 {
+		found := false
+		for _, actionType := range t.params.ActionTypes {
+			if actionType == record.Record.ActionType {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
+	if len(t.params.Statuses) != 0 {
+		found := false
+		for _, statusType := range t.params.Statuses {
+			if statusType == record.Record.Status {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
+	// match the wallet
+	senderMatch := true
+	if len(t.params.SenderWallet) != 0 && record.Record.SenderEID != t.params.SenderWallet {
+		senderMatch = false
+	}
+	receiverMatch := true
+	if len(t.params.RecipientWallet) != 0 && record.Record.RecipientEID != t.params.RecipientWallet {
+		receiverMatch = false
+	}
+	if !senderMatch && !receiverMatch {
+		logger.Debugf("skipping transaction [%s] because it does not match the sender [%s:%s] or receiver [%s:%s]",
+			record.Record.TxID,
+			record.Record.SenderEID, t.params.SenderWallet,
+			record.Record.RecipientEID, t.params.RecipientWallet,
+		)
+		return false, false
+	}
+	return true, false
+}
+
+// ValidationRecordsSelector is used to select a set of transaction records
+type ValidationRecordsSelector struct {
+	params driver.QueryValidationRecordsParams
+}
+
+// Select returns true is the record matches the selection criteria.
+// Additionally, it returns another flag indicating if it is time to stop or not.
+func (t *ValidationRecordsSelector) Select(record *ValidationRecord) (bool, bool) {
+	// match the time constraints
+	if t.params.From != nil && record.Record.Timestamp.Before(*t.params.From) {
+		logger.Debugf("skipping transaction [%s] because it is before the from time", record.Record.TxID)
+		return false, false
+	}
+	if t.params.To != nil && record.Record.Timestamp.After(*t.params.To) {
+		logger.Debugf("skipping transaction [%s] because it is after the to time", record.Record.TxID)
+		return false, true
+	}
+
+	if len(t.params.Statuses) != 0 {
+		found := false
+		for _, statusType := range t.params.Statuses {
+			if statusType == record.Record.Status {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, false
+		}
+	}
+
+	if t.params.Filter != nil {
+		if !t.params.Filter(record.Record) {
+			return false, false
+		}
+	}
+
+	return true, false
+}
+
+type ValidationRecordsIterator struct {
+	it       *badger.Iterator
+	selector ValidationRecordSelector
+}
+
+func (t *ValidationRecordsIterator) Close() {
+	t.it.Close()
+}
+
+func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
+	for {
+		if !t.it.Valid() {
+			return nil, nil
+		}
+		item := t.it.Item()
+		if item == nil {
+			return nil, nil
+		}
+
+		if !strings.HasPrefix(string(item.Key()), "mt") {
+			t.it.Next()
+			continue
+		}
+
+		var record *ValidationRecord
+		err := item.Value(func(val []byte) error {
+			var err error
+			if record, err = UnmarshalValidationRecord(val); err != nil {
+				return errors.Wrapf(err, "could not unmarshal key %s", string(item.Key()))
+			}
+			return nil
+		})
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not get ValidationRecords for key %s", string(item.Key()))
+		}
+
+		t.it.Next()
+
+		matched, stop := t.selector.Select(record)
+		if stop {
+			return nil, nil
+		}
+		if !matched {
+			continue
+		}
+		logger.Debugf("found validation record [%s,%s]", string(item.Key()), record.Record.TxID)
+		return record.Record, nil
+	}
 }

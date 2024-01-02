@@ -6,12 +6,24 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+import "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
+type ValidationCode int
+
+const (
+	_               ValidationCode = iota
+	Valid                          // Transaction is valid and committed
+	Invalid                        // Transaction is invalid and has been discarded
+	Busy                           // Transaction does not yet have a validity state
+	Unknown                        // Transaction is unknown
+	HasDependencies                // Transaction is unknown but has known dependencies
+)
+
 // RWSet interface, used to read from, and write to, a rwset.
 type RWSet interface {
 	SetState(namespace string, key string, value []byte) error
 	GetState(namespace string, key string) ([]byte, error)
 	DeleteState(namespace string, key string) error
-	Equals(rwset interface{}, namespace string) error
 }
 
 type Entry interface {
@@ -33,4 +45,6 @@ type Executor interface {
 
 type Vault interface {
 	NewQueryExecutor() (Executor, error)
+	DeleteTokens(ns string, ids ...*token.ID) error
+	TransactionStatus(txID string) (ValidationCode, error)
 }

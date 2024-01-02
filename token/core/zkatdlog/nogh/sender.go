@@ -23,24 +23,27 @@ import (
 // It also returns the corresponding TransferMetadata
 func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
-	var signers []driver.Signer
 	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
 	pp := s.PublicParams()
-	for _, id := range signerIds {
-		// get signers for each input token
-		si, err := s.identityProvider.GetSigner(id)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
-		}
-		signers = append(signers, si)
+	if pp == nil {
+		return nil, nil, errors.Errorf("public parameters not inizialized")
 	}
+	//var signers []driver.Signer
+	//for _, id := range signerIds {
+	//	// get signers for each input token
+	//	si, err := s.identityProvider.GetSigner(id)
+	//	if err != nil {
+	//		return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
+	//	}
+	//	signers = append(signers, si)
+	//}
 
 	// get sender
-	sender, err := transfer.NewSender(signers, tokens, inputIDs, inputInf, pp)
+	sender, err := transfer.NewSender(nil, tokens, inputIDs, inputInf, pp)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -78,13 +81,13 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
-	transfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
+	zkTransfer, outputMetadata, err := sender.GenerateZKTransfer(values, owners)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to generate zkatdlog transfer action for txid [%s]", txID)
 	}
 
 	// add transfer action's metadata
-	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
+	common.SetTransferActionMetadata(opts.Attributes, zkTransfer.Metadata)
 
 	// prepare metadata
 	var outputMetadataRaw [][]byte
@@ -98,7 +101,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := htlc.GetOwnerAuditInfo(output.Owner.Raw, s.SP)
+		auditInfo, err := htlc.GetOwnerAuditInfo(output.Owner.Raw, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -107,23 +110,29 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 	// audit info for senders
 	var senderAuditInfos [][]byte
-	for _, t := range tokens {
-		auditInfo, err := htlc.GetOwnerAuditInfo(t.Owner, s.SP)
+	for i, t := range tokens {
+		auditInfo, err := htlc.GetOwnerAuditInfo(t.Owner, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
+		}
+		if len(auditInfo) == 0 {
+			logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i].String(), view.Identity(t.Owner))
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo)
 	}
 
-	outputs, err := transfer.GetSerializedOutputs()
+	outputs, err := zkTransfer.GetSerializedOutputs()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
 
 	receiverIsSender := make([]bool, len(ownerIdentities))
 	for i, receiver := range ownerIdentities {
-		receiverIsSender[i] = s.OwnerWalletByID(receiver) != nil
+		_, err := s.OwnerWalletByID(receiver)
+		receiverIsSender[i] = err == nil
 	}
+
+	logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(ids), len(senderAuditInfos), len(outputs))
 
 	metadata := &driver.TransferMetadata{
 		Outputs:            outputs,
@@ -136,7 +145,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 		ReceiverIsSender:   receiverIsSender,
 	}
 
-	return transfer, metadata, nil
+	return zkTransfer, metadata, nil
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed metadata
@@ -151,6 +160,9 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [
 
 	// get commitments from outputs
 	pp := s.PublicParams()
+	if pp == nil {
+		return errors.Errorf("public parameters not inizialized")
+	}
 	com := make([]*math.G1, len(tr.OutputTokens))
 	for i := 0; i < len(tr.OutputTokens); i++ {
 		com[i] = tr.OutputTokens[i].Data
@@ -179,10 +191,10 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
-	transfer := &transfer.TransferAction{}
-	err := transfer.Deserialize(raw)
+	transferAction := &transfer.TransferAction{}
+	err := transferAction.Deserialize(raw)
 	if err != nil {
 		return nil, err
 	}
-	return transfer, nil
+	return transferAction, nil
 }

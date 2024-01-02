@@ -9,7 +9,7 @@ package validator_test
 import (
 	"encoding/asn1"
 	"encoding/json"
-	"io/ioutil"
+	"os"
 	"time"
 
 	math "github.com/IBM/mathlib"
@@ -19,11 +19,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	msp2 "github.com/hyperledger/fabric/msp"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
@@ -35,21 +32,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator/mock"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	msp2 "github.com/hyperledger/fabric/msp"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-var fakeldger *mock.Ledger
-
-type idemix interface {
-	DeserializeAuditInfo(raw []byte) (*idemix2.AuditInfo, error)
-}
-
-type deserializer struct {
-	idemix idemix
-}
-
-func (d *deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.idemix.DeserializeAuditInfo(raw)
-}
+var fakeLedger *mock.Ledger
 
 var _ = Describe("validator", func() {
 	var (
@@ -69,10 +57,10 @@ var _ = Describe("validator", func() {
 		ar *driver.TokenRequest // atomic action request
 	)
 	BeforeEach(func() {
-		fakeldger = &mock.Ledger{}
+		fakeLedger = &mock.Ledger{}
 		var err error
 		// prepare public parameters
-		ipk, err = ioutil.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
+		ipk, err = os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
 		pp, err = crypto.Setup(100, 2, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
@@ -80,9 +68,9 @@ var _ = Describe("validator", func() {
 		c := math.Curves[pp.Curve]
 
 		asigner, _ := prepareECDSASigner()
-		des, err := idemix2.NewDeserializer(pp.IdemixIssuerPK)
+		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(&deserializer{idemix: des}, pp.PedParams, pp.IdemixIssuerPK, asigner, c)
+		auditor = audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -142,7 +130,7 @@ var _ = Describe("validator", func() {
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(fakeldger.GetStateStub, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(fakeLedger.GetStateStub, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -156,28 +144,28 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				raw, err = inputsForTransfer[0].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(0, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
 
 				raw, err = inputsForTransfer[1].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(1, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
 
 				raw, err = inputsForTransfer[0].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(2, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(2, raw, nil)
 
 				raw, err = inputsForTransfer[1].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(3, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
 
-				fakeldger.GetStateReturnsOnCall(4, nil, nil)
-				fakeldger.GetStateReturnsOnCall(5, nil, nil)
+				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
+				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
 
 				raw, err = asn1.Marshal(*tr)
 				Expect(err).NotTo(HaveOccurred())
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -191,28 +179,28 @@ var _ = Describe("validator", func() {
 
 				raw, err = inputsForRedeem[0].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(0, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
 
 				raw, err = inputsForRedeem[1].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(1, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
 
 				raw, err = inputsForRedeem[0].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(2, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(2, raw, nil)
 
 				raw, err = inputsForRedeem[1].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(3, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
 
-				fakeldger.GetStateReturnsOnCall(4, nil, nil)
+				fakeLedger.GetStateReturnsOnCall(4, nil, nil)
 
 				raw, err = asn1.Marshal(*rr)
 				Expect(err).NotTo(HaveOccurred())
 
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "1", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -225,31 +213,31 @@ var _ = Describe("validator", func() {
 			BeforeEach(func() {
 				raw, err = inputsForTransfer[0].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(0, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(0, raw, nil)
 
 				raw, err = inputsForTransfer[1].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(1, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(1, raw, nil)
 
-				fakeldger.GetStateReturnsOnCall(2, nil, nil)
+				fakeLedger.GetStateReturnsOnCall(2, nil, nil)
 
 				raw, err = inputsForTransfer[0].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(3, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(3, raw, nil)
 
 				raw, err = inputsForTransfer[1].Serialize()
 				Expect(err).NotTo(HaveOccurred())
-				fakeldger.GetStateReturnsOnCall(4, raw, nil)
+				fakeLedger.GetStateReturnsOnCall(4, raw, nil)
 
-				fakeldger.GetStateReturnsOnCall(5, nil, nil)
-				fakeldger.GetStateReturnsOnCall(6, nil, nil)
+				fakeLedger.GetStateReturnsOnCall(5, nil, nil)
+				fakeLedger.GetStateReturnsOnCall(6, nil, nil)
 
 				raw, err = asn1.Marshal(*ar)
 				Expect(err).NotTo(HaveOccurred())
 
 			})
 			It("succeeds", func() {
-				actions, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
+				actions, _, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
 				Expect(err).NotTo(HaveOccurred())
 				Expect(len(actions)).To(Equal(1))
 			})
@@ -269,7 +257,7 @@ var _ = Describe("validator", func() {
 
 				})
 				It("fails", func() {
-					_, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
+					_, _, err := engine.VerifyTokenRequestFromRaw(getState, "2", raw)
 					Expect(err.Error()).To(ContainSubstring("pseudonym signature invalid"))
 
 				})
@@ -376,10 +364,6 @@ func (f *fakeProv) IsSet(key string) bool {
 }
 
 func (f *fakeProv) UnmarshalKey(key string, rawVal interface{}) error {
-	*(rawVal.(*kvs.Opts)) = kvs.Opts{
-		Path: f.path,
-	}
-
 	return nil
 }
 
@@ -399,7 +383,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	registry := registry2.New()
 	registry.RegisterService(&fakeProv{typ: "memory"})
 
-	kvss, err := kvs.New("memory", "", registry)
+	kvss, err := kvs.New(registry, "memory", "")
 	Expect(err).NotTo(HaveOccurred())
 	err = registry.RegisterService(kvss)
 	Expect(err).NotTo(HaveOccurred())
@@ -410,7 +394,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix2.NewEIDNymProvider(config, registry)
+	p, err := idemix2.NewProviderWithEidRhNymPolicy(config, registry)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
@@ -571,5 +555,5 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 }
 
 func getState(key string) ([]byte, error) {
-	return fakeldger.GetState(key)
+	return fakeLedger.GetState(key)
 }

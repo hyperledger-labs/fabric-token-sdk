@@ -9,16 +9,13 @@ package fabtoken
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
-
-// ListTokens returns the list of unspent tokens
-// An UnspentToken consists of the token's unique identifier and information (type, value, owner)
-func (s *Service) ListTokens() (*token2.UnspentTokens, error) {
-	return s.QE.ListUnspentTokens()
-}
 
 // HistoryIssuedTokens returns the list of all issued tokens
 // An IssuedToken consists of the identity of the token issuer, the token unique identifier
@@ -40,4 +37,13 @@ func (s *Service) DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*toke
 	}
 
 	return tok, tokInfo.Issuer, nil
+}
+
+func (s *Service) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
+	tokenInfoRaw := meta.GetTokenInfo(target)
+	if len(tokenInfoRaw) == 0 {
+		logger.Debugf("metadata for [%s] not found", hash.Hashable(target).String())
+		return nil, errors.Errorf("metadata for [%s] not found", hash.Hashable(target).String())
+	}
+	return tokenInfoRaw, nil
 }

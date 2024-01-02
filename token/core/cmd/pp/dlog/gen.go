@@ -8,7 +8,7 @@ package dlog
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
 	math3 "github.com/IBM/mathlib"
@@ -32,9 +32,11 @@ type GeneratorArgs struct {
 	// Auditors is the list of auditor MSP directories containing the corresponding auditor certificate
 	Auditors []string
 	// Base is a dlog driver related parameter
-	Base int64
+	Base uint
 	// Exponent is a dlog driver related parameter
-	Exponent int
+	Exponent uint
+	// Aries is a flag to indicate that aries should be used as backend for idemix
+	Aries bool
 }
 
 var (
@@ -50,10 +52,12 @@ var (
 	Auditors []string
 	// Base is a dlog driver related parameter.
 	// It is used to define the maximum quantity a token can contain as Base^Exponent
-	Base int64
+	Base uint
 	// Exponent is a dlog driver related parameter
 	// It is used to define the maximum quantity a token can contain as Base^Exponent
-	Exponent int
+	Exponent uint
+	// Aries is a flag to indicate that aries should be used as backend for idemix
+	Aries bool
 )
 
 // Cmd returns the Cobra Command for Version
@@ -65,8 +69,9 @@ func Cmd() *cobra.Command {
 	flags.StringSliceVarP(&Auditors, "auditors", "a", nil, "list of auditor MSP directories containing the corresponding auditor certificate")
 	flags.StringSliceVarP(&Issuers, "issuers", "s", nil, "list of issuer MSP directories containing the corresponding issuer certificate")
 	flags.StringVarP(&IdemixMSPDir, "idemix", "i", "", "idemix msp dir")
-	flags.Int64VarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
-	flags.IntVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.UintVarP(&Base, "base", "b", 100, "base is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.UintVarP(&Exponent, "exponent", "e", 2, "exponent is used to define the maximum quantity a token can contain as Base^Exponent")
+	flags.BoolVarP(&Aries, "aries", "r", false, "flag to indicate that aries should be used as backend for idemix")
 
 	return cobraCommand
 }
@@ -89,6 +94,7 @@ var cobraCommand = &cobra.Command{
 			Auditors:          Auditors,
 			Base:              Base,
 			Exponent:          Exponent,
+			Aries:             Aries,
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to generate public parameters")
@@ -114,9 +120,16 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 
 	// Setup
 	// TODO: update the curve here
-	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, math3.BN254)
+	curveID := math3.BN254
+	if args.Aries {
+		curveID = math3.BLS12_381_BBS
+	}
+	pp, err := crypto.Setup(args.Base, args.Exponent, ipkBytes, curveID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
+	}
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "failed to validate public parameters")
 	}
 	if err := common.SetupIssuersAndAuditors(pp, args.Auditors, args.Issuers); err != nil {
 		return nil, err
@@ -128,7 +141,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed serializing public parameters")
 	}
 	path := filepath.Join(args.OutputDir, "zkatdlog_pp.json")
-	if err := ioutil.WriteFile(path, raw, 0755); err != nil {
+	if err := os.WriteFile(path, raw, 0755); err != nil {
 		return nil, errors.Wrap(err, "failed writing public parameters to file")
 	}
 

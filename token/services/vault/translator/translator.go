@@ -8,10 +8,10 @@ package translator
 
 import (
 	"crypto/sha256"
+	"encoding/base64"
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -21,20 +21,21 @@ var logger = flogging.MustGetLogger("token-sdk.vault.translator")
 
 // Translator validates token requests and generates the corresponding RWSets
 type Translator struct {
-	RWSet           RWSet
-	TxID            string
-	counter         uint64
-	metadataCounter uint64
-	namespace       string
+	RWSet RWSet
+	TxID  string
+	// SpentIDs the spent IDs added so far
+	SpentIDs []string
+
+	counter   uint64
+	namespace string
 }
 
 func New(txID string, rwSet RWSet, namespace string) *Translator {
 	w := &Translator{
-		RWSet:           rwSet,
-		TxID:            txID,
-		counter:         0,
-		metadataCounter: 0,
-		namespace:       namespace,
+		RWSet:     rwSet,
+		TxID:      txID,
+		counter:   0,
+		namespace: namespace,
 	}
 
 	return w
@@ -144,8 +145,12 @@ func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	return res, nil
 }
 
-func (w *Translator) IsTransferMetadataKeyWithSubKey(k string, subKey string) (bool, error) {
-	return keys.IsTransferMetadataKeyWithSubKey(k, subKey)
+func (w *Translator) GetTransferMetadataSubKey(k string) (string, error) {
+	return keys.GetTransferMetadataSubKey(k)
+}
+
+func (w *Translator) AreTokensSpent(id []string, graphHiding bool) ([]bool, error) {
+	return w.areTokensSpent(id, graphHiding)
 }
 
 func (w *Translator) checkProcess(action interface{}) error {
@@ -291,23 +296,26 @@ func (w *Translator) commitIssueAction(issueAction IssueAction) error {
 			return err
 		}
 	}
+
+	// store metadata
 	metadata := issueAction.GetMetadata()
-	if len(metadata) != 0 {
-		key, err := keys.CreateIssueActionMetadataKey(hash.Hashable(metadata).String())
+	for key, value := range metadata {
+		k, err := keys.CreateIssueActionMetadataKey(key)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
-		raw, err := w.RWSet.GetState(w.namespace, key)
+		raw, err := w.RWSet.GetState(w.namespace, k)
 		if err != nil {
 			return err
 		}
 		if len(raw) != 0 {
 			return errors.Errorf("entry with issue metadata key [%s] is already occupied by [%s]", key, string(raw))
 		}
-		if err := w.RWSet.SetState(w.namespace, key, metadata); err != nil {
+		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
 			return err
 		}
 	}
+
 	w.counter = w.counter + uint64(len(outputs))
 	return nil
 }
@@ -349,7 +357,7 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 	// store metadata
 	metadata := transferAction.GetMetadata()
 	for key, value := range metadata {
-		k, err := keys.CreateTransferActionMetadataKey(w.TxID, key, w.metadataCounter)
+		k, err := keys.CreateTransferActionMetadataKey(key)
 		if err != nil {
 			return errors.Wrapf(err, "failed constructing metadata key")
 		}
@@ -358,12 +366,11 @@ func (w *Translator) commitTransferAction(transferAction TransferAction) error {
 			return err
 		}
 		if len(raw) != 0 {
-			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, string(raw))
+			return errors.Errorf("entry with transfer metadata key [%s] is already occupied by [%s]", key, base64.StdEncoding.EncodeToString(raw))
 		}
 		if err := w.RWSet.SetState(w.namespace, k, value); err != nil {
 			return err
 		}
-		w.metadataCounter++
 	}
 
 	w.counter = w.counter + uint64(transferAction.NumOutputs())
@@ -376,7 +383,10 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 			logger.Debugf("Delete state %s\n", id)
 			err := w.RWSet.DeleteState(w.namespace, id)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "failed to delete output %s", id)
+			}
+			if err := w.appendSpentID(id); err != nil {
+				return errors.Wrapf(err, "failed to append spent id [%s]", id)
 			}
 		}
 	} else {
@@ -386,8 +396,47 @@ func (w *Translator) spendTokens(ids []string, graphHiding bool) error {
 			if err != nil {
 				return errors.Wrapf(err, "failed to add serial number %s", id)
 			}
+			if err := w.appendSpentID(id); err != nil {
+				return errors.Wrapf(err, "failed to append spent id [%s]", id)
+			}
 		}
 	}
 
+	return nil
+}
+
+func (w *Translator) areTokensSpent(ids []string, graphHiding bool) ([]bool, error) {
+	res := make([]bool, len(ids))
+	if graphHiding {
+		for i, id := range ids {
+			logger.Debugf("check serial number %s\n", id)
+			v, err := w.RWSet.GetState(w.namespace, id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get serial number %s", id)
+			}
+			res[i] = len(v) != 0
+		}
+	} else {
+		for i, id := range ids {
+			logger.Debugf("check state %s\n", id)
+			v, err := w.RWSet.GetState(w.namespace, id)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get output %s", id)
+			}
+			res[i] = len(v) == 0
+		}
+	}
+
+	return res, nil
+}
+
+func (w *Translator) appendSpentID(id string) error {
+	// check first it is already in the list
+	for _, d := range w.SpentIDs {
+		if d == id {
+			return errors.Errorf("[%s] already spent", id)
+		}
+	}
+	w.SpentIDs = append(w.SpentIDs, id)
 	return nil
 }

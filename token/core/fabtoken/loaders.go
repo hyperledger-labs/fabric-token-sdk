@@ -27,14 +27,14 @@ func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token,
 	return s.TokenVault.GetTokens(ids...)
 }
 
-// VaultPublicParamsLoader allows one to fetch the public parameters for fabtoken
-type VaultPublicParamsLoader struct {
+// PublicParamsLoader allows one to fetch the public parameters for fabtoken
+type PublicParamsLoader struct {
 	PublicParamsFetcher driver.PublicParamsFetcher
 	PPLabel             string
 }
 
 // Fetch fetches the public parameters from the backend
-func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
+func (s *PublicParamsLoader) Fetch() ([]byte, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
@@ -46,7 +46,7 @@ func (s *VaultPublicParamsLoader) Fetch() ([]byte, error) {
 }
 
 // FetchParams fetches the public parameters from the backend and unmarshal them
-func (s *VaultPublicParamsLoader) FetchParams() (*PublicParams, error) {
+func (s *PublicParamsLoader) FetchParams() (*PublicParams, error) {
 	logger.Debugf("fetch public parameters...")
 	raw, err := s.PublicParamsFetcher.Fetch()
 	if err != nil {
@@ -55,11 +55,12 @@ func (s *VaultPublicParamsLoader) FetchParams() (*PublicParams, error) {
 	}
 
 	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(raw).String())
-	pp := &PublicParams{}
-	pp.Label = s.PPLabel
-	err = pp.Deserialize(raw)
+	pp, err := NewPublicParamsFromBytes(raw, s.PPLabel)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
+		return nil, err
+	}
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrap(err, "failed to validate public parameters")
 	}
 	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(raw).String())
 	return pp, nil

@@ -9,6 +9,7 @@ package views
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -21,6 +22,7 @@ import (
 
 // IssueCash contains the input information to issue a token
 type IssueCash struct {
+	TMSID *token.TMSID
 	// Anonymous set to true if the transaction is anonymous, false otherwise
 	Anonymous bool
 	// Auditor is the name of the auditor identity
@@ -33,6 +35,8 @@ type IssueCash struct {
 	Quantity uint64
 	// Recipient is the identity of the recipient's FSC node
 	Recipient view.Identity
+	// RecipientEID is the expected enrolment id of the recipient
+	RecipientEID string
 }
 
 type IssueCashView struct {
@@ -44,25 +48,34 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	// to ask for the identity to use to assign ownership of the freshly created token.
 	// Notice that, this step would not be required if the issuer knew already which
 	// identity the recipient wants to use.
-	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient)
+	recipient, err := ttx.RequestRecipientIdentity(context, p.Recipient, ServiceOpts(p.TMSID)...)
 	assert.NoError(err, "failed getting recipient identity")
+
+	// match recipient EID
+	eID, err := token.GetManagementService(context, ServiceOpts(p.TMSID)...).WalletManager().GetEnrollmentID(recipient)
+	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
+	assert.True(strings.HasPrefix(eID, p.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, p.RecipientEID)
 
 	// Before assembling the transaction, the issuer can perform any activity that best fits the business process.
 	// In this example, if the token type is USD, the issuer checks that no more than 230 units of USD
 	// have been issued already including the current request.
 	// No check is performed for other types.
-	wallet := ttx.GetIssuerWallet(context, p.IssuerWallet)
+	wallet := ttx.GetIssuerWallet(context, p.IssuerWallet, ServiceOpts(p.TMSID)...)
 	assert.NotNil(wallet, "issuer wallet [%s] not found", p.IssuerWallet)
 	if p.TokenType == "USD" {
 		// Retrieve the list of issued tokens using a specific wallet for a given token type.
-		precision := token.GetManagementService(context).PublicParametersManager().Precision()
+		precision := token.GetManagementService(context, ServiceOpts(p.TMSID)...).PublicParametersManager().PublicParameters().Precision()
 
 		history, err := wallet.ListIssuedTokens(ttx.WithType(p.TokenType))
 		assert.NoError(err, "failed getting history for token type [%s]", p.TokenType)
 		fmt.Printf("History [%s,%s]<[241]?\n", history.Sum(precision).ToBigInt().Text(10), p.TokenType)
 
 		// Fail if the sum of the issued tokens and the current quest is larger than 241
-		assert.True(history.Sum(precision).Add(token2.NewQuantityFromUInt64(p.Quantity)).Cmp(token2.NewQuantityFromUInt64(241)) <= 0)
+		q, err := token2.UInt64ToQuantity(p.Quantity, precision)
+		assert.NoError(err, "failed to covert to quantity")
+		upperBound, err := token2.UInt64ToQuantity(241, precision)
+		assert.NoError(err, "failed to covert to quantity")
+		assert.True(history.Sum(precision).Add(q).Cmp(upperBound) <= 0, "no more USD can be issued, reached quota of 241")
 	}
 
 	// At this point, the issuer is ready to prepare the token transaction.
@@ -74,13 +87,13 @@ func (p *IssueCashView) Call(context view.Context) (interface{}, error) {
 	} else {
 		auditorID = view2.GetIdentityProvider(context).Identity(p.Auditor)
 	}
-	auditorOpt := ttx.WithAuditor(auditorID)
+	opts := append(TxOpts(p.TMSID), ttx.WithAuditor(auditorID))
 	if p.Anonymous {
 		// The issuer creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
-		tx, err = ttx.NewAnonymousTransaction(context, auditorOpt)
+		tx, err = ttx.NewAnonymousTransaction(context, opts...)
 	} else {
 		// The issuer creates a nominal transaction using the default identity
-		tx, err = ttx.NewTransaction(context, nil, auditorOpt)
+		tx, err = ttx.NewTransaction(context, nil, opts...)
 	}
 	assert.NoError(err, "failed creating issue transaction")
 	tx.SetApplicationMetadata("github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/issue", []byte("issue"))

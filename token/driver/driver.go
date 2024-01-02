@@ -21,3 +21,9 @@ type Driver interface {
 	// NewValidator returns a new Validator instance from the passed public parameters
 	NewValidator(pp PublicParameters) (Validator, error)
 }
+
+// ExtendedDriver is the interface that models additional services a token driver may offer
+type ExtendedDriver interface {
+	// NewWalletService returns an instance of the WalletService interface for the passed arguments
+	NewWalletService(sp view.ServiceProvider, network string, channel string, namespace string, params PublicParameters) (WalletService, error)
+}

@@ -7,22 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	"io/ioutil"
+	"os"
 	"path/filepath"
 
+	"github.com/IBM/idemix"
 	"github.com/pkg/errors"
-)
-
-const (
-	ConfigDirMsp              = "msp"
-	ConfigFileIssuerPublicKey = "IssuerPublicKey"
 )
 
 // LoadIssuerPublicKey reads the issuer public key from the config file
 func LoadIssuerPublicKey(idemixMSPDir string) (string, []byte, error) {
 	// Load Idemix Issuer Public Key
-	path := filepath.Join(idemixMSPDir, ConfigDirMsp, ConfigFileIssuerPublicKey)
-	ipkBytes, err := ioutil.ReadFile(path)
+	path := filepath.Join(idemixMSPDir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey)
+	ipkBytes, err := os.ReadFile(path)
 	if err != nil {
 		return "", nil, errors.Wrapf(err, "failed reading idemix issuer public key [%s]", path)
 	}

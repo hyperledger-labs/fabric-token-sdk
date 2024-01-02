@@ -33,23 +33,10 @@ func (r *ReadOnlyRWSWrapper) SetState(namespace string, key string, value []byte
 
 func (r *ReadOnlyRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
 	key = orionKey(key)
-	res, _, err := r.qe.Get(key)
-	return res, err
+	return r.qe.Get(key)
 }
 
 func (r *ReadOnlyRWSWrapper) DeleteState(namespace string, key string) error {
-	panic("programming error: this should not be called")
-}
-
-func (r *ReadOnlyRWSWrapper) Bytes() ([]byte, error) {
-	panic("programming error: this should not be called")
-}
-
-func (r *ReadOnlyRWSWrapper) Done() {
-	panic("programming error: this should not be called")
-}
-
-func (r *ReadOnlyRWSWrapper) Equals(right interface{}, namespace string) error {
 	panic("programming error: this should not be called")
 }
 
@@ -71,24 +58,12 @@ func (r *TxRWSWrapper) SetState(namespace string, key string, value []byte) erro
 
 func (r *TxRWSWrapper) GetState(namespace string, key string) ([]byte, error) {
 	key = orionKey(key)
-	res, _, err := r.tx.Get(r.db, key)
-	return res, err
+	return r.tx.Get(r.db, key)
 }
 
 func (r *TxRWSWrapper) DeleteState(namespace string, key string) error {
 	key = orionKey(key)
 	return r.tx.Delete(r.db, key)
-}
-
-func (r *TxRWSWrapper) Bytes() ([]byte, error) {
-	return nil, nil
-}
-
-func (r *TxRWSWrapper) Done() {
-}
-
-func (r *TxRWSWrapper) Equals(right interface{}, namespace string) error {
-	panic("implement me")
 }
 
 type RWSWrapper struct {

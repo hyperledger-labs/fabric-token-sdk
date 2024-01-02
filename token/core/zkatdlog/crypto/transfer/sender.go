@@ -41,13 +41,13 @@ type Sender struct {
 
 // NewSender returns a Sender
 func NewSender(signers []driver.Signer, tokens []*token.Token, ids []string, inf []*token.Metadata, pp *crypto.PublicParams) (*Sender, error) {
-	if len(signers) != len(tokens) || len(tokens) != len(inf) || len(ids) != len(inf) {
+	if (signers != nil && len(signers) != len(tokens)) || len(tokens) != len(inf) || len(ids) != len(inf) {
 		return nil, errors.Errorf("number of tokens to be spent does not match number of opening")
 	}
 	return &Sender{Signers: signers, Inputs: tokens, InputIDs: ids, InputInformation: inf, PublicParams: pp}, nil
 }
 
-// GenerateZKTransfer produces a TransferAction and an array of Metadata
+// GenerateZKTransfer produces a TransferAction and an array of ValidationRecords
 // that corresponds to the openings of the newly created outputs
 func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*TransferAction, []*token.Metadata, error) {
 	if len(values) != len(owners) {
@@ -89,7 +89,6 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 
 // SignTokenActions produces a signature for each input spent by the Sender
 func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
-	//todo check token actions (is this still needed?)
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {

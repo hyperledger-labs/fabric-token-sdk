@@ -12,15 +12,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Cmd returns the Cobra Command for Version
-func Cmd() *cobra.Command {
-	cobraCommand.AddCommand(fabtoken.Cmd())
-	cobraCommand.AddCommand(dlog.Cmd())
+// GenCmd returns the Cobra Command for Public Params Generation
+func GenCmd() *cobra.Command {
+	genCobraCommand.AddCommand(fabtoken.Cmd())
+	genCobraCommand.AddCommand(dlog.Cmd())
 
-	return cobraCommand
+	return genCobraCommand
 }
 
-var cobraCommand = &cobra.Command{
+var genCobraCommand = &cobra.Command{
 	Use:   "gen",
 	Short: "Gen public parameters.",
 	Long:  `Generates public parameters.`,

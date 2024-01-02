@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -33,8 +34,7 @@ type RWSet interface {
 
 type TokenStore interface {
 	// DeleteFabToken adds to the passed rws the deletion of the passed token
-	// TODO: we should delete also the extra tokens for the ids
-	DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error
+	DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
 	StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error
 	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error
 	StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error
@@ -42,20 +42,19 @@ type TokenStore interface {
 
 type CommonTokenStore struct {
 	notifier events.Publisher
+	tmsID    token.TMSID
 }
 
-func NewCommonTokenStore(sp view2.ServiceProvider) *CommonTokenStore {
+func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTokenStore, error) {
 	notifier, err := events.GetPublisher(sp)
 	if err != nil {
-		// TODO how to handle error here?
-		logger.Warnf("cannot get notifier instance")
-		// just return nil?
+		return nil, errors.WithMessagef(err, "failed to get event publisher")
 	}
 
-	return &CommonTokenStore{notifier: notifier}
+	return &CommonTokenStore{notifier: notifier, tmsID: tmsID}, nil
 }
 
-func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet) error {
+func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -81,14 +80,16 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 			return errors.Wrapf(err, "error getting token for key [%s]", outputID)
 		}
 		token := token2.Token{}
-		UnmarshalOrPanic(tokenRaw, &token)
+		if err := Unmarshal(tokenRaw, &token); err != nil {
+			return errors.Wrapf(err, "failed to unmarshal token")
+		}
 		for _, id := range ids {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("delete extended key [%s]", id)
 			}
 
 			logger.Debugf("post new delete-token event")
-			cts.Notify(DeleteToken, id, token.Type, txID, index)
+			cts.Notify(DeleteToken, cts.tmsID, id, token.Type, txID, index)
 
 			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
 			if err != nil {
@@ -110,6 +111,16 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 		return errors.Wrapf(err, "error deleting metadata for key [%s]", outputID)
 	}
 
+	// append a key reporting which transaction deleted this
+	deletedTokenKey, err := keys.CreateDeletedTokenKey(txID, index)
+	if err != nil {
+		return errors.Wrapf(err, "error creating deleted key output ID: %s", err)
+	}
+	err = rws.SetState(ns, deletedTokenKey, []byte(deletedBy))
+	if err != nil {
+		return errors.Wrapf(err, "failed to aadd deleted token key for key [%s]", outputID)
+	}
+
 	return nil
 }
 
@@ -118,7 +129,10 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	raw := MarshalOrPanic(tok)
+	raw, err := Marshal(tok)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token")
+	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s], append fabtoken output [%s,%s,%v]", txID, outputID, view.Identity(tok.Owner.Raw), string(raw))
@@ -130,13 +144,20 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	meta := map[string][]byte{}
 	meta[keys.Info] = infoRaw
 	if len(ids) > 0 {
-		meta[keys.IDs] = MarshalOrPanic(ids)
+		meta[keys.IDs], err = Marshal(ids)
+		if err != nil {
+			return errors.Wrapf(err, "failed to marshal token ids")
+		}
+
 	}
 	if err := rws.SetStateMetadata(ns, outputID, meta); err != nil {
 		return err
 	}
 
 	// store extended fabtoken, if needed
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("transaction [%s], append extended fabtoken output [%s,%v]", txID, outputID, ids)
+	}
 	for _, id := range ids {
 		if len(id) == 0 {
 			continue
@@ -158,7 +179,7 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 
 		// notify others
 		logger.Debugf("post new event!")
-		cts.Notify(AddToken, id, tok.Type, txID, index)
+		cts.Notify(AddToken, cts.tmsID, id, tok.Type, txID, index)
 	}
 
 	return nil
@@ -181,7 +202,10 @@ func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, ind
 			Raw: issuer,
 		},
 	}
-	raw := MarshalOrPanic(issuedToken)
+	raw, err := Marshal(issuedToken)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal issued token")
+	}
 
 	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
@@ -210,7 +234,10 @@ func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint6
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	raw := MarshalOrPanic(tok)
+	raw, err := Marshal(tok)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token")
+	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s], append audit token output [%s,%v]", txID, outputID, string(raw))
@@ -223,19 +250,4 @@ func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint6
 		return err
 	}
 	return nil
-}
-
-func MarshalOrPanic(o interface{}) []byte {
-	data, err := json.Marshal(o)
-	if err != nil {
-		panic(err)
-	}
-	return data
-}
-
-func UnmarshalOrPanic(raw []byte, o interface{}) {
-	err := json.Unmarshal(raw, o)
-	if err != nil {
-		panic(err)
-	}
 }

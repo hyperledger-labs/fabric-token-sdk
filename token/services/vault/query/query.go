@@ -10,12 +10,11 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/pkg/errors"
-
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.tms.zkat.query")
@@ -40,6 +39,14 @@ func NewEngine(vault driver.Vault, namespace string, cache cache) *Engine {
 	}
 }
 
+func (e *Engine) IsPending(id *token.ID) (bool, error) {
+	vc, err := e.Vault.TransactionStatus(id.TxId)
+	if err != nil {
+		return false, err
+	}
+	return vc == driver.Busy, nil
+}
+
 func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
@@ -60,7 +67,12 @@ func (e *Engine) IsMine(id *token.ID) (bool, error) {
 	return len(val) == 1 && val[0] == 1, nil
 }
 
+// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+// The token type can be empty. In that case, tokens of any type are returned.
 func (e *Engine) UnspentTokensIteratorBy(id, typ string) (driver2.UnspentTokensIterator, error) {
+	if len(id) == 0 {
+		return nil, errors.New("wallet id must be specified")
+	}
 	logger.Debugf("List token iterator [%s,%s]...", id, typ)
 	var startKey string
 	var err error
@@ -116,67 +128,47 @@ func (e *Engine) UnspentTokensIterator() (driver2.UnspentTokensIterator, error) 
 }
 
 func (e *Engine) ListUnspentTokens() (*token.UnspentTokens, error) {
-	logger.Debugf("List token...")
-	startKey, err := keys.CreateCompositeKey(keys.FabTokenKeyPrefix, nil)
+	logger.Debugf("List unspent token...")
+	it, err := e.UnspentTokensIterator()
 	if err != nil {
 		return nil, err
 	}
-	endKey := startKey + string(keys.MaxUnicodeRuneValue)
-
-	logger.Debugf("New query executor")
-	qe, err := e.Vault.NewQueryExecutor()
-	if err != nil {
-		return nil, err
-	}
-	defer qe.Done()
-
-	logger.Debugf("Get range query scan iterator... [%s,%s]", startKey, endKey)
-	iterator, err := qe.GetStateRangeScanIterator(e.namespace, startKey, endKey)
-	if err != nil {
-		return nil, err
-	}
-	defer iterator.Close()
-
-	logger.Debugf("scan range")
+	defer it.Close()
 	tokens := make([]*token.UnspentToken, 0)
 	for {
-		next, err := iterator.Next()
+		next, err := it.Next()
 		switch {
 		case err != nil:
 			logger.Errorf("scan failed [%s]", err)
 			return nil, err
-
 		case next == nil:
 			logger.Debugf("done")
-			// nil response from iterator indicates end of query results
 			return &token.UnspentTokens{Tokens: tokens}, nil
-
-		case len(next.V()) == 0:
-			// logger.Debugf("nil content for key [%s]", next.K())
-			continue
-
 		default:
-			logger.Debugf("parse token for key [%s]", next.K())
+			tokens = append(tokens, next)
+		}
+	}
+}
 
-			output, err := UnmarshallFabtoken(next.V())
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to retrieve unspent tokens for [%s]", next.K())
-			}
-
-			// show only tokens which are owned by transactor
-			logger.Debugf("adding token with ID [%s] to list of unspent tokens", next.K())
-			id, err := keys.GetTokenIdFromKey(next.K())
-			if err != nil {
-				return nil, err
-			}
-			// Convert quantity to decimal
-			tokens = append(tokens,
-				&token.UnspentToken{
-					Owner:    output.Owner,
-					Type:     output.Type,
-					Quantity: output.Quantity,
-					Id:       id,
-				})
+func (e *Engine) ListUnspentTokensBy(id, typ string) (*token.UnspentTokens, error) {
+	logger.Debugf("list unspent token by [%s:%s]...", id, typ)
+	it, err := e.UnspentTokensIteratorBy(id, typ)
+	if err != nil {
+		return nil, err
+	}
+	defer it.Close()
+	tokens := make([]*token.UnspentToken, 0)
+	for {
+		next, err := it.Next()
+		switch {
+		case err != nil:
+			logger.Errorf("scan failed [%s]", err)
+			return nil, err
+		case next == nil:
+			logger.Debugf("done")
+			return &token.UnspentTokens{Tokens: tokens}, nil
+		default:
+			tokens = append(tokens, next)
 		}
 	}
 }
@@ -295,6 +287,7 @@ func (e *Engine) PublicParams() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	logger.Debugf("got public parameters with key [%s], length [%d]", setupKey, len(raw))
 	return raw, nil
 }
 
@@ -321,12 +314,13 @@ func (e *Engine) GetTokenInfos(ids []*token.ID, callback driver2.QueryCallbackFu
 	return nil
 }
 
-func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCallbackFunc) error {
+func (e *Engine) GetTokenOutputs(ids []*token.ID, callback driver2.QueryCallbackFunc) error {
 	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return err
 	}
 	defer qe.Done()
+
 	for _, id := range ids {
 		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
 		if err != nil {
@@ -336,7 +330,6 @@ func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCall
 		if err != nil {
 			return errors.Wrapf(err, "failed getting state for id [%v]", id)
 		}
-
 		if err := callback(id, val); err != nil {
 			return err
 		}
@@ -344,7 +337,7 @@ func (e *Engine) GetTokenCommitments(ids []*token.ID, callback driver2.QueryCall
 	return nil
 }
 
-func (e *Engine) GetTokenInfoAndCommitments(ids []*token.ID, callback driver2.QueryCallback2Func) error {
+func (e *Engine) GetTokenInfoAndOutputs(ids []*token.ID, callback driver2.QueryCallback2Func) error {
 	qe, err := e.Vault.NewQueryExecutor()
 	if err != nil {
 		return err
@@ -414,6 +407,39 @@ func (e *Engine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error
 	return resKeys, res, nil
 }
 
+func (e *Engine) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error) {
+	logger.Debugf("retrieve deleted tokens from ids...")
+	qe, err := e.Vault.NewQueryExecutor()
+	if err != nil {
+		return nil, nil, err
+	}
+	defer qe.Done()
+
+	var deleted []bool
+	var toBlame []string
+	for _, id := range inputs {
+		idKey, err := keys.CreateDeletedTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed generating deleted token key [%v]", id)
+		}
+		who, err := qe.GetState(e.namespace, idKey)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting token for key [%v]", idKey)
+		}
+		if len(who) == 0 {
+			logger.Debugf("token [%s][%s] was not deleted", id, idKey)
+			deleted = append(deleted, false)
+			toBlame = append(toBlame, "")
+		} else {
+			logger.Debugf("token [%s][%s] was deleted by [%s]", id, idKey, string(who))
+			deleted = append(deleted, true)
+			toBlame = append(toBlame, string(who))
+		}
+	}
+	logger.Debugf("retrieve deleted tokens from ids done")
+	return toBlame, deleted, nil
+}
+
 func (e *Engine) unmarshalUnspentToken(key string, raw []byte, extended bool) (*token.UnspentToken, error) {
 	// lookup cache first
 	if tok, ok := e.unspentTokensCache.Get(key); ok {
@@ -471,8 +497,7 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 			return nil, nil
 		}
 		if len(next.V()) == 0 {
-			// TODO: remove this keys from the vault
-			// logger.Debugf("nil content for key [%s]", next.K())
+			logger.Warnf("nil content for key [%s], investigate the reason why this key is in the vault", next.K())
 			continue
 		}
 

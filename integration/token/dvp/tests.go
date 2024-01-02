@@ -15,14 +15,12 @@ import (
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/query"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
 
 func TestAll(network *integration.Infrastructure) {
-	// Give some time for the network to start
-	// TODO: remove this in the future by makings sure that the FSC nodes are connected to the p2p network.
+	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
 	// Ready to go
@@ -41,7 +39,7 @@ func TestAll(network *integration.Infrastructure) {
 }
 
 func registerAuditor(network *integration.Infrastructure) {
-	_, err := network.Client("auditor").CallView("register", nil)
+	_, err := network.Client("auditor").CallView("registerAuditor", nil)
 	Expect(err).NotTo(HaveOccurred())
 }
 
@@ -77,11 +75,15 @@ func sellHouse(network *integration.Infrastructure, houseID string) {
 }
 
 func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
-	b, err := query.NewClient(network.Client(id)).WalletBalance(wallet, typ)
+	res, err := network.Client(id).CallView("balance", common.JSONMarshall(&views2.BalanceQuery{
+		Wallet: wallet,
+		Type:   typ,
+	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(len(b)).To(BeEquivalentTo(1))
-	Expect(b[0].Type).To(BeEquivalentTo(typ))
-	q, err := token2.ToQuantity(b[0].Quantity, 64)
+	b := &views2.Balance{}
+	common.JSONUnmarshal(res.([]byte), b)
+	Expect(b.Type).To(BeEquivalentTo(typ))
+	q, err := token2.ToQuantity(b.Quantity, 64)
 	Expect(err).NotTo(HaveOccurred())
 	expectedQ := token2.NewQuantityFromUInt64(expected)
 	Expect(expectedQ.Cmp(q)).To(BeEquivalentTo(0), "[%s]!=[%s]", expected, q)

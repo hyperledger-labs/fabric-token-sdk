@@ -8,7 +8,7 @@ The Driver interface is used to create instances of the Token Manager Service, t
 Then a driver must be registered in order to be used by the Token Stack.
 This is usually done by calling the static function `Register` from the  `token/core` package.
 
-Here is an example that leverage the golang `package initialization` mechanism to register the driver:
+Here is an example that leverages the golang `package initialization` mechanism to register the driver:
 ```go
 func init() {
 	core.Register("my-driver", &Driver{})

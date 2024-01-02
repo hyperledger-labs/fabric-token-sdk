@@ -17,6 +17,19 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.auditor")
 
+// TxStatus is the status of a transaction
+type TxStatus = ttxdb.TxStatus
+
+const (
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending = ttxdb.Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed = ttxdb.Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted = ttxdb.Deleted
+)
+
+// Transaction models a generic token transaction
 type Transaction interface {
 	ID() string
 	Network() string
@@ -50,37 +63,36 @@ type Auditor struct {
 	db *ttxdb.DB
 }
 
-// New returns a new Auditor instance for the passed auditor wallet
-func New(sp view2.ServiceProvider, w *token.AuditorWallet) *Auditor {
-	return &Auditor{sp: sp, db: ttxdb.Get(sp, w)}
-}
-
 // Validate validates the passed token request
 func (a *Auditor) Validate(request *token.Request) error {
 	return request.AuditCheck()
 }
 
-// Audit evaluates the passed token request and returns the list on inputs and outputs in the request
-func (a *Auditor) Audit(request *token.Request) (*token.InputStream, *token.OutputStream, error) {
-	inputs, err := request.AuditInputs()
+// Audit extracts the list of inputs and outputs from the passed transaction.
+// In addition, the Audit locks the enrollment named ids.
+// Release must be invoked in case
+func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream, error) {
+	request := tx.Request()
+	record, err := request.AuditRecord()
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting inputs")
-	}
-	outputs, err := request.AuditOutputs()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed getting outputs")
+		return nil, nil, errors.WithMessagef(err, "failed getting transaction audit record")
 	}
 
-	return inputs, outputs, nil
+	var eids []string
+	eids = append(eids, record.Inputs.EnrollmentIDs()...)
+	eids = append(eids, record.Outputs.EnrollmentIDs()...)
+	if err := a.db.AcquireLocks(request.Anchor, eids...); err != nil {
+		return nil, nil, err
+	}
+
+	return record.Inputs, record.Outputs, nil
 }
 
-// NewQueryExecutor returns a new query executor
-func (a *Auditor) NewQueryExecutor() *QueryExecutor {
-	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
-}
-
-// Append adds the passed transaction to the auditor database
+// Append adds the passed transaction to the auditor database.
+// It also releases the locks acquired by Audit.
 func (a *Auditor) Append(tx Transaction) error {
+	defer a.Release(tx)
+
 	// append request to audit db
 	if err := a.db.Append(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
@@ -97,6 +109,32 @@ func (a *Auditor) Append(tx Transaction) error {
 	}
 	logger.Debugf("append done for request %s", tx.ID())
 	return nil
+}
+
+// Release releases the lock acquired of the passed transaction.
+func (a *Auditor) Release(tx Transaction) {
+	a.db.ReleaseLocks(tx.Request().Anchor)
+}
+
+// NewQueryExecutor returns a new query executor
+func (a *Auditor) NewQueryExecutor() *QueryExecutor {
+	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
+}
+
+// SetStatus sets the status of the audit records with the passed transaction id to the passed status
+func (a *Auditor) SetStatus(txID string, status TxStatus) error {
+	return a.db.SetStatus(txID, status)
+}
+
+// GetStatus return the status of the given transaction id.
+// It returns an error if no transaction with that id is found
+func (a *Auditor) GetStatus(txID string) (TxStatus, error) {
+	return a.db.GetStatus(txID)
+}
+
+// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
+	return a.db.GetTokenRequest(txID)
 }
 
 type TxStatusChangesListener struct {
@@ -117,5 +155,12 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
+	go func() {
+		logger.Debugf("unsubscribe for tx %s...", txID)
+		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {
+			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+		}
+		logger.Debugf("unsubscribe for tx %s...done", txID)
+	}()
 	return nil
 }

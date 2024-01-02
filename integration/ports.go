@@ -25,6 +25,7 @@ const (
 const (
 	BasePort TestPortRange = basePort + portsPerSuite*iota
 	ZKATDLogFungible
+	ZKATDLogFungibleHSM
 	FabTokenFungible
 	OrionZKATDLogBasics
 	OrionFabTokenBasics
@@ -38,10 +39,14 @@ const (
 	FabTokenInteropHTLCTwoFabricNetworks
 	FabTokenInteropFastExchangeTwoFabricNetworks
 	FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks
+	FabTokenInteropHTLCOrion
+	FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 	ZKATDLogInteropHTLC
 	ZKATDLogInteropHTLCTwoFabricNetworks
 	ZKATDLogInteropFastExchangeTwoFabricNetworks
 	ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks
+	ZKATDLogInteropHTLCOrion
+	ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks
 )
 
 // StartPortForNode On linux, the default ephemeral port range is 32768-60999 and can be

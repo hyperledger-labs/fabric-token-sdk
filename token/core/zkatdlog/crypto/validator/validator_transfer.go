@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"bytes"
 	"encoding/json"
 	"time"
 
@@ -31,6 +30,11 @@ type Context struct {
 	InputTokens       []*token.Token
 	Action            *transfer.TransferAction
 	Ledger            driver.Ledger
+	MetadataCounter   map[string]int
+}
+
+func (c *Context) CountMetadataKey(key string) {
+	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
 }
 
 type ValidateTransferFunc func(ctx *Context) error
@@ -109,15 +113,19 @@ func TransferHTLCValidate(ctx *Context) error {
 			out := ctx.Action.GetOutputs()[0].(*token.Token)
 
 			// check that owner field in output is correct
-			_, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
+			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
 			if err != nil {
 				return errors.Wrap(err, "failed to verify transfer from htlc script")
 			}
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			if err := HTLCMetadataCheck(ctx, op, sigma); err != nil {
+			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.Action, script, op, sigma)
+			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
+			}
+			if op != htlc2.Reclaim {
+				ctx.CountMetadataKey(metadataKey)
 			}
 		}
 	}
@@ -140,43 +148,16 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err != nil {
 				return err
 			}
-			if script.Deadline.Before(now) {
-				return errors.Errorf("htlc script invalid: expiration date has already passed")
+			if err := script.Validate(now); err != nil {
+				return errors.WithMessagef(err, "htlc script invalid")
 			}
+			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.Action, script)
+			if err != nil {
+				return errors.WithMessagef(err, "failed to check htlc metadata")
+			}
+			ctx.CountMetadataKey(metadataKey)
 			continue
 		}
 	}
-	return nil
-}
-
-// HTLCMetadataCheck checks that the HTLC metadata is in place
-func HTLCMetadataCheck(ctx *Context, op htlc2.OperationType, sig []byte) error {
-	if op == htlc2.Reclaim {
-		// No metadata in this case
-		return nil
-	}
-
-	// Unmarshal signature to ClaimSignature
-	claim := &htlc.ClaimSignature{}
-	if err := json.Unmarshal(sig, claim); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling cliam signature [%s]", string(sig))
-	}
-	// Check that it is well-formed
-	if len(claim.Preimage) == 0 || len(claim.RecipientSignature) == 0 {
-		return errors.New("expected a valid claim preImage and recipient signature")
-	}
-
-	// Check the pre-image is in the action's metadata
-	if len(ctx.Action.Metadata) == 0 {
-		return errors.New("cannot find htlc pre-image, no metadata")
-	}
-	value, ok := ctx.Action.Metadata[htlc.ClaimPreImage]
-	if !ok {
-		return errors.New("cannot find htlc pre-image, missing metadata entry")
-	}
-	if !bytes.Equal(value, claim.Preimage) {
-		return errors.Errorf("invalid action, cannot match htlc pre-image with metadata [%x]!=[%x]", value, claim.Preimage)
-	}
-
 	return nil
 }

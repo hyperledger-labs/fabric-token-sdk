@@ -26,6 +26,10 @@ type SignatureProvider interface {
 
 // Validator models a token request validator
 type Validator interface {
-	// VerifyTokenRequestFromRaw verifies the passed marshalled token request against the passed ledger and anchor
-	VerifyTokenRequestFromRaw(getState GetStateFnc, anchor string, raw []byte) ([]interface{}, error)
+	// UnmarshalActions returns the actions contained in the serialized token request
+	UnmarshalActions(raw []byte) ([]interface{}, error)
+	// VerifyTokenRequestFromRaw verifies the passed marshalled token request against the passed ledger and anchor.
+	// The function returns additionally a map that contains information about the token request. The content of this map
+	// is driver-dependant
+	VerifyTokenRequestFromRaw(getState GetStateFnc, anchor string, raw []byte) ([]interface{}, map[string][]byte, error)
 }

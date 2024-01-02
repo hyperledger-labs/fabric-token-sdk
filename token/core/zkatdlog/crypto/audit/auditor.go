@@ -139,21 +139,21 @@ func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata 
 	// De-obfuscate issue requests
 	outputsFromIssue, err := a.GetAuditInfoForIssuesFunc(tokenRequest.Issues, tokenRequestMetadata.Issues)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info for issues")
+		return errors.Wrapf(err, "failed getting audit info for issues for [%s]", txID)
 	}
 	// check validity of issue requests
 	err = a.CheckIssueRequests(outputsFromIssue, txID)
 	if err != nil {
-		return errors.Wrapf(err, "failed checking issues")
+		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
 	}
 	// De-odfuscate transfer requests
 	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfersFunc(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info for transfers")
+		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
 	}
 	// check validity of transfer requests
 	if err := a.CheckTransferRequests(auditableInputs, outputsFromTransfer, txID); err != nil {
-		return errors.Wrapf(err, "failed checking transfers")
+		return errors.Wrapf(err, "failed checking transfers [%s]", txID)
 	}
 
 	return nil
@@ -366,7 +366,7 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 	outputs := make([][]*AuditableToken, len(transfers))
 	for k, tr := range metadata {
 		if len(tr.SenderAuditInfos) != len(inputs[k]) {
-			return nil, nil, errors.Errorf("number of inputs does not match the number of senders")
+			return nil, nil, errors.Errorf("number of inputs does not match the number of senders [%d]!=[%d]", len(tr.SenderAuditInfos), len(inputs[k]))
 		}
 		for i := 0; i < len(tr.SenderAuditInfos); i++ {
 			var err error

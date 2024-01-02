@@ -53,6 +53,8 @@ const (
 type TxStatus string
 
 const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown TxStatus = "Unknown"
 	// Pending is the status of a transaction that has been submitted to the ledger
 	Pending TxStatus = "Pending"
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
@@ -125,10 +127,30 @@ func (t *TransactionRecord) String() string {
 	return s.String()
 }
 
+// ValidationRecord is a record that contains information about the validation of a given token request
+type ValidationRecord struct {
+	// TxID is the transaction ID
+	TxID string
+	// TokenRequest is the token request marshalled
+	TokenRequest []byte
+	// Metadata is the metadata produced by the validator when evaluating the token request
+	Metadata map[string][]byte
+	// Timestamp is the time the transaction was submitted to the db
+	Timestamp time.Time
+	// Status is the status of the transaction
+	Status TxStatus
+}
+
 // TransactionIterator is an iterator for transactions
 type TransactionIterator interface {
 	Close()
 	Next() (*TransactionRecord, error)
+}
+
+// ValidationRecordsIterator is an iterator for transactions
+type ValidationRecordsIterator interface {
+	Close()
+	Next() (*ValidationRecord, error)
 }
 
 // QueryMovementsParams defines the parameters for querying movements.
@@ -169,6 +191,29 @@ type QueryTransactionsParams struct {
 	// To is the end time of the query
 	// If nil, the query ends at the last transaction
 	To *time.Time
+	// ActionTypes is the list of action types to accept
+	// If empty, any action type is accepted
+	ActionTypes []ActionType
+	// Statuses is the list of transaction status to accept
+	// If empty, any status is accepted
+	Statuses []TxStatus
+}
+
+// QueryValidationRecordsParams defines the parameters for querying validation records.
+type QueryValidationRecordsParams struct {
+	// From is the start time of the query
+	// If nil, the query starts from the first transaction
+	From *time.Time
+	// To is the end time of the query
+	// If nil, the query ends at the last transaction
+	To *time.Time
+	// Statuses is the list of transaction status to accept
+	// If empty, any status is accepted
+	Statuses []TxStatus
+	// Filter defines a custom filter function.
+	// If specified, this filter will be applied.
+	// the filter returns true if the record must be selected, false otherwise.
+	Filter func(record *ValidationRecord) bool
 }
 
 // TokenTransactionDB defines the interface for a token transactions database
@@ -188,6 +233,10 @@ type TokenTransactionDB interface {
 	// SetStatus sets the status of a transaction
 	SetStatus(txID string, status TxStatus) error
 
+	// GetStatus returns the status of a given transaction.
+	// It returns an error if the transaction is not found
+	GetStatus(txID string) (TxStatus, error)
+
 	// AddMovement adds a movement record to the database.
 	// Each token transaction can be seen as a list of movements.
 	AddMovement(record *MovementRecord) error
@@ -200,6 +249,19 @@ type TokenTransactionDB interface {
 
 	// QueryMovements returns a list of movement records
 	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
+
+	// QueryValidations returns a list of validation  records
+	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
+
+	// AddValidationRecord adds a new validation records for the given params
+	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
+
+	// AddTokenRequest binds the passed transaction id to the passed token request
+	AddTokenRequest(txID string, tr []byte) error
+
+	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
+	// It returns nil without error if the key is not found.
+	GetTokenRequest(txID string) ([]byte, error)
 }
 
 // Driver is the interface for a database driver

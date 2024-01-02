@@ -28,6 +28,9 @@ type Scan struct {
 	Hash []byte
 	// HashFunc is the hash function to use in the scan
 	HashFunc crypto.Hash
+	// StartingTransactionID  is the transaction id from which to start the scan.
+	// If empty, the scan starts from the genesis block
+	StartingTransactionID string
 }
 
 type ScanView struct {
@@ -35,10 +38,16 @@ type ScanView struct {
 }
 
 func (s *ScanView) Call(context view.Context) (interface{}, error) {
-	preImage, err := htlc.ScanForPreImage(context, s.Hash, s.HashFunc, encoding.None, s.Timeout, token.WithTMSID(s.TMSID))
-	if err != nil {
-		return nil, err
-	}
+	preImage, err := htlc.ScanForPreImage(
+		context,
+		s.Hash,
+		s.HashFunc,
+		encoding.None,
+		s.Timeout,
+		token.WithTMSID(s.TMSID),
+		htlc.WithStartingTransaction(s.StartingTransactionID),
+	)
+	assert.NoError(err, "failed to scan for pre-image")
 	return preImage, nil
 }
 

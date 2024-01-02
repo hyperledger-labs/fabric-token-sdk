@@ -3,12 +3,12 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
@@ -100,6 +100,17 @@ func GetIssuerWalletForChannel(sp view2.ServiceProvider, channel, id string, opt
 
 // MyAuditorWallet returns the default auditor wallet, nil if not found.
 func MyAuditorWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *token.AuditorWallet {
+	w := token.GetManagementService(sp, opts...).WalletManager().AuditorWallet("")
+	if w == nil {
+		return nil
+	}
+	return w
+}
+
+// GetAuditorWallet returns the wallet whose id is the passed id.
+// If the passed id is empty, GetAuditorWallet has the same behaviour of MyAuditorWallet.
+// It returns nil, if no wallet is found.
+func GetAuditorWallet(sp view2.ServiceProvider, opts ...token.ServiceOption) *token.AuditorWallet {
 	w := token.GetManagementService(sp, opts...).WalletManager().AuditorWallet("")
 	if w == nil {
 		return nil

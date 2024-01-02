@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 func Orion(tokenSDKDriver string) []api.Topology {
@@ -39,13 +40,13 @@ func Orion(tokenSDKDriver string) []api.Topology {
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(),
 	)
-	auditor.RegisterViewFactory("register", &views2.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
 	// alice
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		orion.WithRole("alice"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "alice.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("alice.id1"),
 	)
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	alice.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -57,8 +58,8 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// bob
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "bob.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("bob.id1"),
 	)
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	bob.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -71,8 +72,8 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// charlie
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		orion.WithRole("charlie"),
-		token.WithDefaultOwnerIdentity(tokenSDKDriver),
-		token.WithOwnerIdentity(tokenSDKDriver, "charlie.id1"),
+		token.WithDefaultOwnerIdentity(),
+		token.WithOwnerIdentity("charlie.id1"),
 	)
 	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.IssueCashView{})
 	charlie.RegisterResponder(&views2.AcceptCashView{}, &views2.TransferView{})
@@ -85,10 +86,10 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	// we need to define the custodian
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
+	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetDefaultSDK(fscTopology)
-	tms := tokenTopology.AddTMS(orionTopology, "", tokenSDKDriver)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
 	tms.SetTokenGenPublicParams("100", "2")
 	orion2.SetCustodian(tms, custodian)
 
@@ -96,7 +97,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie")
 	orionTopology.SetDefaultSDK(fscTopology)
 
-	tokenTopology.SetDefaultSDK(fscTopology)
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms.AddAuditor(auditor)
 
 	return []api.Topology{

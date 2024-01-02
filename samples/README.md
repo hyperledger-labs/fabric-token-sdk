@@ -2,7 +2,7 @@
 
 Samples are a collection of small and simple apps that demonstrate how to use the library.
 
-To run the samples, we recommend to use go 1.16 or later. You will also need docker when using Fabric.
+To run the samples, we recommend to use `go 1.20`. You will also need docker when using Fabric.
 To make sure you have all the required docker images, you can run `make docker-images` in the
 folder `$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk`.
 
@@ -27,3 +27,11 @@ Here is a list of available examples:
 
 - [`DvP`](../integration/token/dvp/README.md): In this example, we see how to orchestrate a Delivery vs Payment use-case
 
+## Further information
+
+Almost all the samples and integration tests require the fabric binaries to be downloaded and the environment variable `FAB_BINS` set to point to the directory where these binaries are stored. One way to ensure this is to execute the following in the root of the fabric-smart-client project
+
+```shell
+make download-fabric
+export FAB_BINS=$PWD/../fabric/bin
+```
