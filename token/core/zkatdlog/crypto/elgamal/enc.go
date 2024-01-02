@@ -62,7 +62,7 @@ func (pk *PublicKey) Encrypt(M *math.G1) (*Ciphertext, *math.Zr, error) {
 	return c, r, nil
 }
 
-// Decrypt returns a elliptic curve point M such that C = (g^r, Mh^r)
+// Decrypt returns an elliptic curve point M such that C = (g^r, Mh^r)
 func (sk *SecretKey) Decrypt(c *Ciphertext) (*math.G1, error) {
 	if sk.x == nil {
 		return nil, errors.Errorf("Provide a non-nil secret key")
