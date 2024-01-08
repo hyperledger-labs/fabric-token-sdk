@@ -28,10 +28,10 @@ func TestGetWallet(t *testing.T) {
 
 	alice := view.Identity("alice")
 	meta := "meta"
-	wr := NewWalletsRegistry(token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}, nil, driver.OwnerRole, kvstore)
+	wr := NewWalletsRegistry(nil, driver.OwnerRole, NewKVSStorage(kvstore, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
 	wr.RegisterWallet("hello", nil)
 	assert.NoError(t, wr.RegisterIdentity(alice, "hello", meta))
-	wID, err := wr.GetWallet(alice)
+	wID, err := wr.GetWalletID(alice)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", wID)
 	var meta2 string
