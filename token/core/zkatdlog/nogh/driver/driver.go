@@ -111,14 +111,13 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	})
 	// wallet service
 	ws := zkatdlog.NewWalletService(
-		tmsID,
 		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		qe,
 		ppm,
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		kvs.GetService(sp),
+		identity.NewKVSStorage(kvs.GetService(sp), tmsID),
 	)
 	service, err := zkatdlog.NewTokenService(
 		ws,
@@ -222,14 +221,13 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 	}
 	// wallet service
 	ws := zkatdlog.NewWalletService(
-		tmsID,
 		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), nil, nil, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
 		nil,
 		publicParamsManager,
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		kvs.GetService(sp),
+		identity.NewKVSStorage(kvs.GetService(sp), tmsID),
 	)
 
 	if err := wallets.Reload(pp); err != nil {

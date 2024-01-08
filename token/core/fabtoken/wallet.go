@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -34,21 +33,20 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	tmsID token2.TMSID,
 	SignerService common.SignerService,
 	identityProvider driver.IdentityProvider,
 	walletServiceBacked WalletServiceBacked,
 	Deserializer driver.Deserializer,
-	kvs KVS,
+	store identity.Storage,
 ) *WalletService {
 	return &WalletService{
 		SignerService:          SignerService,
 		identityProvider:       identityProvider,
 		WalletServiceBacked:    walletServiceBacked,
 		Deserializer:           Deserializer,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(tmsID, identityProvider, driver.OwnerRole, kvs),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(tmsID, identityProvider, driver.IssuerRole, kvs),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(tmsID, identityProvider, driver.AuditorRole, kvs),
+		OwnerWalletsRegistry:   identity.NewWalletsRegistry(identityProvider, driver.OwnerRole, store),
+		IssuerWalletsRegistry:  identity.NewWalletsRegistry(identityProvider, driver.IssuerRole, store),
+		AuditorWalletsRegistry: identity.NewWalletsRegistry(identityProvider, driver.AuditorRole, store),
 	}
 }
 
