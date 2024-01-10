@@ -331,17 +331,25 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 }
 
 func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
-	logger.Debugf("adding transaction endorse ack record [%s]", txID)
-	if db.txn == nil {
-		return errors.New("no db transaction in progress")
+	tx, err := db.db.Begin()
+	if err != nil {
+		return errors.New("failed starting a transaction")
 	}
+	defer tx.Rollback()
+
+	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4)", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(id)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 
-	_, err := db.txn.Exec(query, txID, id, sigma, now)
-	return err
+	if _, err := tx.Exec(query, txID, id, sigma, now); err != nil {
+		return errors.Wrapf(err, "failed to execute")
+	}
+	if err := tx.Commit(); err != nil {
+		return errors.Wrap(err, "failed committing status update")
+	}
+	return nil
 }
 
 func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error) {
