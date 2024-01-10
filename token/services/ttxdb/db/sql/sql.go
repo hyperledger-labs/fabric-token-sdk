@@ -337,7 +337,7 @@ func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity
 	}
 
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, id, sigma, stored_at) VALUES ($1, $2, $3, $4)", db.table.TransactionEndorseAck)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4)", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(id)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 
 	_, err := db.txn.Exec(query, txID, id, sigma, now)
@@ -345,7 +345,7 @@ func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity
 }
 
 func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error) {
-	query := fmt.Sprintf("SELECT id, sigma FROM %s WHERE tx_id=$1;", db.table.TransactionEndorseAck)
+	query := fmt.Sprintf("SELECT endorser, sigma FROM %s WHERE tx_id=$1;", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID)
 
 	rows, err := db.db.Query(query, txID)
@@ -432,8 +432,9 @@ func (db *Persistence) CreateSchema() error {
 		CREATE TABLE IF NOT EXISTS %s (
 			id CHAR(36) NOT NULL PRIMARY KEY,
 			tx_id TEXT NOT NULL,
-			id BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
+			endorser BYTEA NOT NULL,
+            sigma BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );`,
 		db.table.Transactions,
