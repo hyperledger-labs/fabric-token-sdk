@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto/z"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger/keys"
@@ -59,6 +61,12 @@ type ValidationRecord struct {
 type TokenRequest struct {
 	TxID string
 	TR   []byte
+}
+
+type TransactionEndorseAck struct {
+	TxID  string
+	ID    view.Identity
+	Sigma []byte
 }
 
 type Persistence struct {
@@ -167,12 +175,12 @@ func (db *Persistence) AddMovement(record *driver.MovementRecord) error {
 		Record: record,
 	}
 
-	bytes, err := MarshalMovementRecord(value)
+	b, err := MarshalMovementRecord(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(key), bytes)
+	err = db.txn.Set([]byte(key), b)
 	if err != nil {
 		return errors.Wrapf(err, "could not set value for key %s", key)
 	}
@@ -192,12 +200,12 @@ func (db *Persistence) AddTransaction(record *driver.TransactionRecord) error {
 	}
 	logger.Debugf("Adding transaction record [%s:%d:%s:%s:%s:%s]", record.TxID, record.ActionType, record.TokenType, record.SenderEID, record.RecipientEID, record.Amount)
 
-	bytes, err := MarshalTransactionRecord(value)
+	b, err := MarshalTransactionRecord(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(key), bytes)
+	err = db.txn.Set([]byte(key), b)
 	if err != nil {
 		return errors.Wrapf(err, "could not set value for key %s", key)
 	}
@@ -210,7 +218,7 @@ func (db *Persistence) AddValidationRecord(txID string, tr []byte, meta map[stri
 	if err != nil {
 		return errors.Wrapf(err, "could not get key for validation record %s", txID)
 	}
-	logger.Debugf("Adding validation record [%s] with key", txID, key)
+	logger.Debugf("Adding validation record [%s] with key [%s]", txID, key)
 
 	value := &ValidationRecord{
 		Id: next,
@@ -222,12 +230,12 @@ func (db *Persistence) AddValidationRecord(txID string, tr []byte, meta map[stri
 		},
 	}
 
-	bytes, err := MarshalValidationRecord(value)
+	b, err := MarshalValidationRecord(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(key), bytes)
+	err = db.txn.Set([]byte(key), b)
 	if err != nil {
 		return errors.Wrapf(err, "could not set value for key %s", key)
 	}
@@ -240,19 +248,19 @@ func (db *Persistence) AddTokenRequest(txID string, tr []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "could not get key for token request %s", txID)
 	}
-	logger.Debugf("Adding token request [%s] with key", txID, key)
+	logger.Debugf("Adding token request [%s] with key [%s]", txID, key)
 
 	value := &TokenRequest{
 		TxID: txID,
 		TR:   tr,
 	}
 
-	bytes, err := MarshalTokenRequest(value)
+	b, err := MarshalTokenRequest(value)
 	if err != nil {
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(key), bytes)
+	err = db.txn.Set([]byte(key), b)
 	if err != nil {
 		return errors.Wrapf(err, "could not set value for key %s", key)
 	}
@@ -270,7 +278,7 @@ func (db *Persistence) GetTokenRequest(txID string) ([]byte, error) {
 	defer txn.Discard()
 	item, err := txn.Get([]byte(key))
 	if err != nil {
-		if err == badger.ErrKeyNotFound {
+		if errors.Is(err, badger.ErrKeyNotFound) {
 			return nil, nil
 		}
 		return nil, errors.Wrapf(err, "could not set value for key %s", key)
@@ -410,7 +418,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	// update status for all matching keys
 	txn := db.db.NewTransaction(true)
 	for _, entry := range entries {
-		var bytes []byte
+		var b []byte
 		switch {
 		case strings.HasPrefix(entry.key, "mv"):
 			logger.Debugf("set status of movement [%s] to [%s]", txID, status)
@@ -419,7 +427,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
-			bytes, err = MarshalMovementRecord(record)
+			b, err = MarshalMovementRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
@@ -430,7 +438,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
-			bytes, err = MarshalTransactionRecord(record)
+			b, err = MarshalTransactionRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
@@ -441,7 +449,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 				return errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 			}
 			record.Record.Status = status
-			bytes, err = MarshalValidationRecord(record)
+			b, err = MarshalValidationRecord(record)
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
@@ -449,8 +457,8 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			continue
 		}
 
-		logger.Debugf("setting key %s to %s", entry.key, string(bytes))
-		if err := txn.Set([]byte(entry.key), bytes); err != nil {
+		logger.Debugf("setting key %s to %s", entry.key, string(b))
+		if err := txn.Set([]byte(entry.key), b); err != nil {
 			return errors.Wrapf(err, "could not set value for key %s", entry.key)
 		}
 	}
@@ -512,6 +520,84 @@ func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
 	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
 }
 
+func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
+	key, err := db.transactionEndorseAckKey(txID, id)
+	if err != nil {
+		return errors.Wrapf(err, "could not get key for token request %s", txID)
+	}
+	logger.Debugf("Adding token request [%s] with key [%s]", txID, key)
+
+	value := &TransactionEndorseAck{
+		TxID:  txID,
+		ID:    id,
+		Sigma: sigma,
+	}
+
+	b, err := MarshalTransactionEndorseAck(value)
+	if err != nil {
+		return errors.Wrapf(err, "could not marshal record for key %s", key)
+	}
+
+	err = db.txn.Set([]byte(key), b)
+	if err != nil {
+		return errors.Wrapf(err, "could not set value for key %s", key)
+	}
+
+	return nil
+}
+
+func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error) {
+	acks := make(map[string][]byte)
+
+	// search for all matching keys
+	type Entry struct {
+		key   string
+		value []byte
+	}
+	var entries []Entry
+	stream := db.db.NewStream()
+	stream.NumGo = db.numGoStream
+	stream.LogPrefix = streamLogPrefixStatus
+	txIdAsBytes := []byte(txID)
+	stream.ChooseKey = func(item *badger.Item) bool {
+		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+	}
+	stream.Send = func(buf *z.Buffer) error {
+		list, err := badger.BufferToKVList(buf)
+		if err != nil {
+			return err
+		}
+		for _, kv := range list.Kv {
+			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
+		}
+		return nil
+
+	}
+	if err := stream.Orchestrate(context.Background()); err != nil {
+		return nil, err
+	}
+
+	if len(entries) == 0 {
+		// nothing to update
+		logger.Debugf("no entries found for txID %s, skipping", txID)
+		return nil, nil
+	}
+
+	for _, entry := range entries {
+		switch {
+		case strings.HasPrefix(entry.key, "tea"):
+			record, err := UnmarshalTransactionEndorseAck(entry.value)
+			if err != nil {
+				return nil, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
+			}
+			acks[record.ID.String()] = record.Sigma
+		default:
+			continue
+		}
+	}
+	return acks, errors.Errorf("transaction [%s] not found", txID)
+}
+
 func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
 	next, err := db.seq.Next()
 	if err != nil {
@@ -538,6 +624,10 @@ func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) 
 
 func (db *Persistence) tokenRequestKey(txID string) (string, error) {
 	return dbKey("tr", txID), nil
+}
+
+func (db *Persistence) transactionEndorseAckKey(txID string, id view.Identity) (string, error) {
+	return dbKey("tea", dbKey(txID, id.String())), nil
 }
 
 func dbKey(namespace, key string) string {
@@ -595,7 +685,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 		if !matched {
 			continue
 		}
-		logger.Debugf("found transaction [%s,%s]", string(item.Key()), record.Record.TxID, record.Record.SenderEID, record.Record.RecipientEID)
+		logger.Debugf("found transaction [%s,%s][%s,%s]", string(item.Key()), record.Record.TxID, record.Record.SenderEID, record.Record.RecipientEID)
 		return record.Record, nil
 	}
 }

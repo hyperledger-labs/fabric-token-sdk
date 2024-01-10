@@ -38,7 +38,7 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
 	opts.Path = filepath.Join(opts.Path, name)
-	logger.Debugf("init kvs with badger at [%s]", opts.Path)
+	logger.Debugf("init badger at [%s]", opts.Path)
 
 	err = os.MkdirAll(opts.Path, 0755)
 	if err != nil {

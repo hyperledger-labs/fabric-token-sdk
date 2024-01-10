@@ -19,7 +19,7 @@ import (
 
 type Driver struct{}
 
-// This database driver runs a pure go sqlite implementation in memory for testing purposes.
+// Open returns a pure go sqlite implementation in memory for testing purposes.
 func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	h := sha256.New()
 	if _, err := h.Write([]byte(name)); err != nil {
