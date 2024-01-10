@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-uuid"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/pkg/errors"
 )
@@ -329,6 +330,48 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 	return &ValidationRecordsIterator{txs: rows, filter: params.Filter}, nil
 }
 
+func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
+	logger.Debugf("adding transaction endorse ack record [%s]", txID)
+	if db.txn == nil {
+		return errors.New("no db transaction in progress")
+	}
+
+	now := time.Now().UTC()
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, id, sigma, stored_at) VALUES ($1, $2, $3, $4)", db.table.TransactionEndorseAck)
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(id)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
+
+	_, err := db.txn.Exec(query, txID, id, sigma, now)
+	return err
+}
+
+func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error) {
+	query := fmt.Sprintf("SELECT id, sigma FROM %s WHERE tx_id=$1;", db.table.TransactionEndorseAck)
+	logger.Debug(query, txID)
+
+	rows, err := db.db.Query(query, txID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to query")
+	}
+	acks := make(map[string][]byte)
+	for {
+		if !rows.Next() {
+			break
+		}
+		var id []byte
+		var sigma []byte
+		if err := rows.Scan(&id, sigma); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				// not an error for compatibility with badger.
+				logger.Warnf("tried to get status for non-existent tx %s, returning unknown", txID)
+				continue
+			}
+			return nil, errors.Wrapf(err, "error querying db")
+		}
+		acks[view.Identity(id).String()] = sigma
+	}
+	return acks, nil
+}
+
 func marshal(in map[string][]byte) (string, error) {
 	if b, err := json.Marshal(in); err != nil {
 		return "", err
@@ -384,7 +427,15 @@ func (db *Persistence) CreateSchema() error {
 			metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
 			status TEXT NOT NULL
-		);`,
+		);
+
+		CREATE TABLE IF NOT EXISTS %s (
+			id CHAR(36) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL,
+			id BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL,
+		);
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );`,
 		db.table.Transactions,
 		db.table.Transactions,
 		db.table.Transactions,
@@ -393,6 +444,9 @@ func (db *Persistence) CreateSchema() error {
 		db.table.Movements,
 		db.table.Requests,
 		db.table.Validations,
+		db.table.TransactionEndorseAck,
+		db.table.TransactionEndorseAck,
+		db.table.TransactionEndorseAck,
 	)
 
 	logger.Debug(schema)
@@ -488,10 +542,11 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 }
 
 type tableNames struct {
-	Movements    string
-	Transactions string
-	Requests     string
-	Validations  string
+	Movements             string
+	Transactions          string
+	Requests              string
+	Validations           string
+	TransactionEndorseAck string
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
@@ -512,9 +567,10 @@ func getTableNames(prefix, name string) (tableNames, error) {
 	suffix := "_" + hex.EncodeToString(h.Sum(nil)[:3])
 
 	return tableNames{
-		Transactions: fmt.Sprintf("%stransactions%s", prefix, suffix),
-		Movements:    fmt.Sprintf("%smovements%s", prefix, suffix),
-		Requests:     fmt.Sprintf("%srequests%s", prefix, suffix),
-		Validations:  fmt.Sprintf("%svalidations%s", prefix, suffix),
+		Transactions:          fmt.Sprintf("%stransactions%s", prefix, suffix),
+		Movements:             fmt.Sprintf("%smovements%s", prefix, suffix),
+		Requests:              fmt.Sprintf("%srequests%s", prefix, suffix),
+		Validations:           fmt.Sprintf("%svalidations%s", prefix, suffix),
+		TransactionEndorseAck: fmt.Sprintf("%stea%s", prefix, suffix),
 	}, nil
 }

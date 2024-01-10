@@ -28,6 +28,11 @@ func MarshalTokenRequest(mr *TokenRequest) ([]byte, error) {
 	return json.Marshal(mr)
 }
 
+// MarshalTransactionEndorseAck marshals a TransactionEndorseAck into a byte array
+func MarshalTransactionEndorseAck(mr *TransactionEndorseAck) ([]byte, error) {
+	return json.Marshal(mr)
+}
+
 // UnmarshalTokenRequest unmarshals a TokenRequest from a byte array
 func UnmarshalTokenRequest(data []byte) (*TokenRequest, error) {
 	var tokenRequest TokenRequest
@@ -61,6 +66,16 @@ func UnmarshalMovementRecord(data []byte) (*MovementRecord, error) {
 // UnmarshalValidationRecord unmarshals a ValidationRecord from a byte array
 func UnmarshalValidationRecord(data []byte) (*ValidationRecord, error) {
 	var record ValidationRecord
+	err := json.Unmarshal(data, &record)
+	if err != nil {
+		return nil, err
+	}
+	return &record, nil
+}
+
+// UnmarshalTransactionEndorseAck unmarshals a TransactionEndorseAck from a byte array
+func UnmarshalTransactionEndorseAck(data []byte) (*TransactionEndorseAck, error) {
+	var record TransactionEndorseAck
 	err := json.Unmarshal(data, &record)
 	if err != nil {
 		return nil, err

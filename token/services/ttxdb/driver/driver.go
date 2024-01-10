@@ -12,7 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
 // ActionType is the type of transaction
@@ -262,10 +263,14 @@ type TokenTransactionDB interface {
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(txID string) ([]byte, error)
+
+	AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error
+
+	GetEndorsementAcks(txID string) (map[string][]byte, error)
 }
 
 // Driver is the interface for a database driver
 type Driver interface {
 	// Open opens a database connection
-	Open(sp view.ServiceProvider, name string) (TokenTransactionDB, error)
+	Open(sp view2.ServiceProvider, name string) (TokenTransactionDB, error)
 }
