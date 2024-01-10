@@ -438,8 +438,7 @@ func (db *Persistence) CreateSchema() error {
 		);
 
 		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
+			tx_id TEXT NOT NULL PRIMARY KEY,
 			endorser BYTEA NOT NULL,
             sigma BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
