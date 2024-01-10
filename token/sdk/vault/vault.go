@@ -9,12 +9,11 @@ package vault
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"

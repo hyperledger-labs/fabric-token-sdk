@@ -20,7 +20,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
@@ -54,7 +54,19 @@ func (n *lm) AnonymousIdentity() view.Identity {
 
 type nv struct {
 	v          *fabric.Vault
-	tokenVault vault.TokenVault
+	tokenVault driver.TokenVault
+}
+
+func (v *nv) QueryEngine() api2.QueryEngine {
+	return v.tokenVault.QueryEngine()
+}
+
+func (v *nv) CertificationStorage() api2.CertificationStorage {
+	return v.tokenVault.CertificationStorage()
+}
+
+func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
+	return v.tokenVault.DeleteTokens(ns, ids...)
 }
 
 func (v *nv) Status(txID string) (driver.ValidationCode, error) {
@@ -90,14 +102,6 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 
 func (v *nv) DiscardTx(txID string) error {
 	return v.v.DiscardTx(txID)
-}
-
-func (v *nv) QueryEngine() driver2.QueryEngine {
-	return v.tokenVault.QueryEngine()
-}
-
-func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
-	return v.tokenVault.DeleteTokens(ns, ids...)
 }
 
 type ledger struct {

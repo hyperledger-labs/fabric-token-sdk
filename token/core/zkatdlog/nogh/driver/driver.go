@@ -103,7 +103,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	qe := v.QueryEngine()
 	ppm := ppm.NewPublicParamsManager(
 		crypto.DLogPublicParameters,
-		v.QueryEngine(),
+		qe,
 		zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters),
 	)
 	ppm.AddCallback(func(pp driver.PublicParameters) error {

@@ -30,8 +30,21 @@ type UnspentTokensIterator interface {
 	Next() (*token.UnspentToken, error)
 }
 
+type TokenVault interface {
+	// QueryEngine returns the query engine over this vault
+	QueryEngine() driver2.QueryEngine
+
+	// CertificationStorage returns the certification storage over this vault
+	CertificationStorage() driver2.CertificationStorage
+
+	// DeleteTokens delete the passed tokens in the passed namespace
+	DeleteTokens(ns string, ids ...*token.ID) error
+}
+
 // Vault models the vault service
 type Vault interface {
+	TokenVault
+
 	// GetLastTxID returns the last transaction ID committed into the vault
 	GetLastTxID() (string, error)
 

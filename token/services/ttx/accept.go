@@ -9,31 +9,30 @@ package ttx
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-type acceptView struct {
+type AcceptView struct {
 	tx      *Transaction
 	options *EndorsementsOpts
 }
 
-func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *acceptView {
+func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
 	options, err := CompileCollectEndorsementsOpts(opts...)
 	if err != nil {
 		panic(err)
 	}
-	return &acceptView{tx: tx, options: options}
+	return &AcceptView{tx: tx, options: options}
 }
 
-func (s *acceptView) Call(context view.Context) (interface{}, error) {
+func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	if err := s.respondToSignatureRequests(context); err != nil {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func (s *acceptView) Call(context view.Context) (interface{}, error) {
 	return s.tx, nil
 }
 
-func (s *acceptView) respondToSignatureRequests(context view.Context) error {
+func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.TokenRequest)
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")

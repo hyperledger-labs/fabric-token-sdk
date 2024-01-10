@@ -29,11 +29,15 @@ type QueryEngine interface {
 	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
 }
 
+type TokenVault interface {
+	DeleteTokens(ns string, ids ...*token2.ID) error
+}
+
 // OwnerWallet is a combination of a wallet and a query service
 type OwnerWallet struct {
 	wallet       *token.OwnerWallet
 	queryService QueryEngine
-	vault        Vault
+	vault        TokenVault
 	bufferSize   int
 }
 

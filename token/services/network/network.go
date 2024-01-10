@@ -17,7 +17,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -159,6 +159,18 @@ type Vault struct {
 	ns string
 }
 
+func (v *Vault) QueryEngine() api2.QueryEngine {
+	return v.v.QueryEngine()
+}
+
+func (v *Vault) CertificationStorage() api2.CertificationStorage {
+	return v.v.CertificationStorage()
+}
+
+func (v *Vault) DeleteTokens(ns string, ids ...*token2.ID) error {
+	return v.v.DeleteTokens(ns, ids...)
+}
+
 func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
@@ -181,14 +193,6 @@ func (v *Vault) Exists(id *token2.ID) bool {
 
 func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
 	return v.v.Store(certifications)
-}
-
-func (v *Vault) QueryEngine() driver2.QueryEngine {
-	return v.v.QueryEngine()
-}
-
-func (v *Vault) DeleteTokens(ns string, ids ...*token2.ID) error {
-	return v.v.DeleteTokens(ns, ids...)
 }
 
 func (v *Vault) Status(id string) (ValidationCode, error) {
