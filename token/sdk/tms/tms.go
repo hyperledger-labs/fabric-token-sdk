@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
@@ -71,7 +72,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 				ons,
 				namespace,
 				p.sp,
-				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
+				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}, &pledge.ScriptOwnership{}),
 				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 				tokenStore,
 			),
@@ -105,7 +106,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 			n,
 			namespace,
 			p.sp,
-			network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
+			network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}, &pledge.ScriptOwnership{}),
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 			tokenStore,
 		),

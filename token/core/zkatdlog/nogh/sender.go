@@ -10,11 +10,13 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/pledge"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -65,19 +67,27 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 			continue
 		}
-		owner, err := identity.UnmarshallRawOwner(output.Owner.Raw)
+		identity, err := owner.UnmarshallTypedIdentity(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed to unmarshal owner of the output token")
 		}
-		if owner.Type == identity.SerializedIdentityType {
+		if identity.Type == owner.SerializedIdentityType {
 			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 			continue
 		}
-		_, recipient, err := htlc.GetScriptSenderAndRecipient(owner)
+		_, recipient, issuer, err := interop.GetScriptSenderAndRecipient(identity)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting script sender and recipient")
 		}
-		ownerIdentities = append(ownerIdentities, recipient)
+		if identity.Type == htlc.ScriptType {
+			ownerIdentities = append(ownerIdentities, recipient)
+			continue
+		}
+		if identity.Type == pledge.ScriptType {
+			ownerIdentities = append(ownerIdentities, issuer)
+			continue
+		}
+		return nil, nil, errors.Errorf("owner's type not recognized [%s]", identity.Type)
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
@@ -101,7 +111,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := htlc.GetOwnerAuditInfo(output.Owner.Raw, s)
+		auditInfo, err := interop.GetOwnerAuditInfo(output.Owner.Raw, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -111,7 +121,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for senders
 	var senderAuditInfos [][]byte
 	for i, t := range tokens {
-		auditInfo, err := htlc.GetOwnerAuditInfo(t.Owner, s)
+		auditInfo, err := interop.GetOwnerAuditInfo(t.Owner, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}

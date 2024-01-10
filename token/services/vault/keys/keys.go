@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"unicode/utf8"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -37,6 +38,10 @@ const (
 	IssueActionMetadata         = "iam"
 	TransferActionMetadata      = "tam"
 	TokenRequestMetadata        = "trmd"
+
+	ProofOfExistencePrefix         = "pe"
+	ProofOfNonExistencePrefix      = "pne"
+	ProofOfMetadataExistencePrefix = "pme"
 )
 
 func GetTokenIdFromKey(key string) (*token.ID, error) {
@@ -216,3 +221,22 @@ func GetSNFromKey(key string) (string, error) {
 	return components[1], nil
 }
 */
+
+func CreateProofOfExistenceKey(tokenId *token.ID) (string, error) {
+	id := hash.Hashable(tokenId.String()).String()
+	return CreateCompositeKey(ProofOfExistencePrefix, []string{id})
+}
+
+func CreateProofOfNonExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return CreateCompositeKey(ProofOfNonExistencePrefix, []string{
+		hash.Hashable(tokenID.String()).String(),
+		hash.Hashable(origin).String(),
+	})
+}
+
+func CreateProofOfMetadataExistenceKey(tokenID *token.ID, origin string) (string, error) {
+	return CreateCompositeKey(ProofOfMetadataExistencePrefix, []string{
+		hash.Hashable(tokenID.String()).String(),
+		hash.Hashable(origin).String(),
+	})
+}

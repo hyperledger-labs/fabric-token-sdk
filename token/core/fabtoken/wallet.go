@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -74,11 +75,11 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	}
 
 	// match identity and audit info
-	recipient, err := identity.UnmarshallRawOwner(data.Identity)
+	recipient, err := owner.UnmarshallTypedIdentity(data.Identity)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", data.Identity)
 	}
-	if recipient.Type != identity.SerializedIdentityType {
+	if recipient.Type != owner.SerializedIdentityType {
 		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
 	}
 	err = matcher.Match(recipient.Identity)
@@ -272,7 +273,7 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 }
 
 func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	raw, err := identity.MarshallRawOwner(&identity.RawOwner{Type: identity.SerializedIdentityType, Identity: id})
+	raw, err := owner.MarshallTypedIdentity(&owner.TypedIdentity{Type: owner.SerializedIdentityType, Identity: id})
 	if err != nil {
 		return nil, err
 	}

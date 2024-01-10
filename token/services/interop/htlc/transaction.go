@@ -16,17 +16,14 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-const (
-	ScriptType            = "htlc" // htlc script
-	defaultDeadlineOffset = time.Hour
-)
+const defaultDeadlineOffset = time.Hour
 
 // WithHash sets a hash attribute to be used to customize the transfer command
 func WithHash(hash []byte) token.TransferOption {
@@ -74,17 +71,6 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 // Transaction holds a ttx transaction
 type Transaction struct {
 	*ttx.Transaction
-}
-
-// NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer
-func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption) (*Transaction, error) {
-	tx, err := ttx.NewTransaction(sp, signer, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return &Transaction{
-		Transaction: tx,
-	}, nil
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -191,7 +177,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
-	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	owner, err := owner.UnmarshallTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		return err
 	}
@@ -201,7 +187,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal RawOwner as an htlc script")
+		return errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
 
 	// Register the signer for the reclaim
@@ -241,7 +227,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
 
-	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	owner, err := owner.UnmarshallTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		return err
 	}
@@ -250,7 +236,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.New("invalid owner type, expected htlc script")
 	}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
-		return errors.New("failed to unmarshal RawOwner as an htlc script")
+		return errors.New("failed to unmarshal TypedIdentity as an htlc script")
 	}
 
 	image, err := script.HashInfo.Image(preImage)
@@ -345,11 +331,11 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ro := &identity.RawOwner{
+	ro := &owner.TypedIdentity{
 		Type:     ScriptType,
 		Identity: rawScript,
 	}
-	raw, err := identity.MarshallRawOwner(ro)
+	raw, err := owner.MarshallTypedIdentity(ro)
 	if err != nil {
 		return nil, nil, nil, err
 	}

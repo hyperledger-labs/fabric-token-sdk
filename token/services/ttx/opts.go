@@ -19,7 +19,15 @@ type TxOptions struct {
 	NoTransactionVerification bool
 }
 
-func compile(opts ...TxOption) (*TxOptions, error) {
+func (o TxOptions) TMSID() token.TMSID {
+	return token.TMSID{
+		Network:   o.Network,
+		Channel:   o.Channel,
+		Namespace: o.Namespace,
+	}
+}
+
+func CompileTxOption(opts ...TxOption) (*TxOptions, error) {
 	txOptions := &TxOptions{}
 	for _, opt := range opts {
 		if err := opt(txOptions); err != nil {

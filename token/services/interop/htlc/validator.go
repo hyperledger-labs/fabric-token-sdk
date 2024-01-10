@@ -11,8 +11,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/pkg/errors"
 )
 
@@ -29,12 +28,12 @@ type Action interface {
 }
 
 // VerifyOwner validates the owners of the transfer in the htlc script
-func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htlc.Script, OperationType, error) {
-	sender, err := identity.UnmarshallRawOwner(senderRawOwner)
+func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*Script, OperationType, error) {
+	sender, err := owner.UnmarshallTypedIdentity(senderRawOwner)
 	if err != nil {
 		return nil, None, err
 	}
-	script := &htlc.Script{}
+	script := &Script{}
 	err = json.Unmarshal(sender.Identity, script)
 	if err != nil {
 		return nil, None, err
@@ -56,14 +55,14 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htl
 }
 
 // MetadataClaimKeyCheck checks that the claim key is in place
-func MetadataClaimKeyCheck(action Action, script *htlc.Script, op OperationType, sig []byte) (string, error) {
+func MetadataClaimKeyCheck(action Action, script *Script, op OperationType, sig []byte) (string, error) {
 	if op == Reclaim {
 		// No metadata in this case
 		return "", nil
 	}
 
 	// Unmarshal signature to ClaimSignature
-	claim := &htlc.ClaimSignature{}
+	claim := &ClaimSignature{}
 	if err := json.Unmarshal(sig, claim); err != nil {
 		return "", errors.Wrapf(err, "failed unmarshalling claim signature [%s]", string(sig))
 	}
@@ -81,7 +80,7 @@ func MetadataClaimKeyCheck(action Action, script *htlc.Script, op OperationType,
 	if err != nil {
 		return "", errors.Wrapf(err, "failed to compute image of [%x]", claim.Preimage)
 	}
-	key := htlc.ClaimKey(image)
+	key := ClaimKey(image)
 	value, ok := metadata[key]
 	if !ok {
 		return "", errors.New("cannot find htlc pre-image, missing metadata entry")
@@ -94,17 +93,17 @@ func MetadataClaimKeyCheck(action Action, script *htlc.Script, op OperationType,
 }
 
 // MetadataLockKeyCheck checks that the lock key is in place
-func MetadataLockKeyCheck(action Action, script *htlc.Script) (string, error) {
+func MetadataLockKeyCheck(action Action, script *Script) (string, error) {
 	metadata := action.GetMetadata()
 	if len(metadata) == 0 {
 		return "", errors.New("cannot find htlc lock, no metadata")
 	}
-	key := htlc.LockKey(script.HashInfo.Hash)
+	key := LockKey(script.HashInfo.Hash)
 	value, ok := metadata[key]
 	if !ok {
 		return "", errors.New("cannot find htlc lock, missing metadata entry")
 	}
-	if !bytes.Equal(value, htlc.LockValue(script.HashInfo.Hash)) {
+	if !bytes.Equal(value, LockValue(script.HashInfo.Hash)) {
 		return "", errors.Errorf("invalid action, cannot match htlc lock with metadata [%x]!=[%x]", value, script.HashInfo.Hash)
 	}
 	return key, nil
