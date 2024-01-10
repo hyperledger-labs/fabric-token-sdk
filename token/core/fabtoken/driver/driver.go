@@ -42,7 +42,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	if err != nil {
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
-	qe := v.TokenVault().QueryEngine()
+	qe := v.QueryEngine()
 	networkLocalMembership := n.LocalMembership()
 
 	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(networkID, channel, namespace)

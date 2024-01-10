@@ -17,8 +17,8 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -159,6 +159,18 @@ type Vault struct {
 	ns string
 }
 
+func (v *Vault) QueryEngine() api2.QueryEngine {
+	return v.v.QueryEngine()
+}
+
+func (v *Vault) CertificationStorage() api2.CertificationStorage {
+	return v.v.CertificationStorage()
+}
+
+func (v *Vault) DeleteTokens(ns string, ids ...*token2.ID) error {
+	return v.v.DeleteTokens(ns, ids...)
+}
+
 func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
@@ -181,10 +193,6 @@ func (v *Vault) Exists(id *token2.ID) bool {
 
 func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
 	return v.v.Store(certifications)
-}
-
-func (v *Vault) TokenVault() *vault.Vault {
-	return v.v.TokenVault()
 }
 
 func (v *Vault) Status(id string) (ValidationCode, error) {
@@ -247,11 +255,11 @@ func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService,
 	for i, tok := range tokens {
 		ids[i] = tok.Id
 	}
-	spentIDs, err := tms.WalletManager().SpentIDs(ids)
+	meta, err := tms.WalletManager().SpentIDs(ids)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to compute spent ids for [%v]", ids)
 	}
-	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), spentIDs)
+	spent, err := v.n.AreTokensSpent(context, tms.Namespace(), ids, meta)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "cannot fetch spent flags from network [%s:%s] for ids [%v]", tms.Network(), tms.Channel(), ids)
 	}
@@ -266,7 +274,7 @@ func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService,
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
-	if err := v.v.TokenVault().DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+	if err := v.v.DeleteTokens(tms.Namespace(), toDelete...); err != nil {
 		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 
@@ -425,8 +433,8 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 }
 
 // AreTokensSpent retrieves the spent flag for the passed ids
-func (n *Network) AreTokensSpent(context view.Context, namespace string, IDs []string) ([]bool, error) {
-	return n.n.AreTokensSpent(context, namespace, IDs)
+func (n *Network) AreTokensSpent(context view.Context, namespace string, tokenIDs []*token2.ID, meta []string) ([]bool, error) {
+	return n.n.AreTokensSpent(context, namespace, tokenIDs, meta)
 }
 
 // LocalMembership returns the local membership for this network

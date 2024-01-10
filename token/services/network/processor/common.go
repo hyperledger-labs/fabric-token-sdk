@@ -9,18 +9,23 @@ package processor
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.network.processor")
+
+const (
+	IDs = "ids"
+)
 
 type GetStateOpt int
 
@@ -67,7 +72,7 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 	if err != nil {
 		return errors.Wrapf(err, "error getting metadata for key [%s]", outputID)
 	}
-	idsRaw, ok := meta[keys.IDs]
+	idsRaw, ok := meta[IDs]
 	if ok && len(idsRaw) > 0 {
 		// unmarshall ids
 		ids := make([]string, 0)
@@ -144,7 +149,7 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	meta := map[string][]byte{}
 	meta[keys.Info] = infoRaw
 	if len(ids) > 0 {
-		meta[keys.IDs], err = Marshal(ids)
+		meta[IDs], err = Marshal(ids)
 		if err != nil {
 			return errors.Wrapf(err, "failed to marshal token ids")
 		}

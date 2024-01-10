@@ -20,7 +20,7 @@ import (
 
 // AssertTokensInVault checks that the tokens are or are not in the vault
 func AssertTokensInVault(vault *network.Vault, tx *ttx.Transaction, outputs *token.OutputStream, id view.Identity) {
-	qe := vault.TokenVault().QueryEngine()
+	qe := vault.QueryEngine()
 	for _, output := range outputs.Outputs() {
 		tokenID := output.ID(tx.ID())
 		if output.Owner.Equal(id) || tx.TokenService().WalletManager().IsMe(output.Owner) {

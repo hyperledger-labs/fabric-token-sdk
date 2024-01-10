@@ -9,6 +9,7 @@ package owner
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -90,6 +91,14 @@ func (a *Owner) GetStatus(txID string) (TxStatus, error) {
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
 func (a *Owner) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
+}
+
+func (a *Owner) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
+	return a.db.AppendTransactionEndorseAck(txID, id, sigma)
+}
+
+func (a *Owner) GetEndorsementAcks(id string) (map[string][]byte, error) {
+	return a.db.GetEndorsementAcks(id)
 }
 
 type TxStatusChangesListener struct {

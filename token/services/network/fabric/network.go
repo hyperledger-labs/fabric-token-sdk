@@ -20,11 +20,11 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
@@ -38,7 +38,7 @@ const (
 	AreTokensSpent            = "areTokensSpent"
 )
 
-type GetFunc func() (view.Identity, []byte, error)
+type NewVaultFunc = func(network, channel, namespace string) (vault.TokenVault, error)
 
 type lm struct {
 	lm *fabric.LocalMembership
@@ -54,7 +54,19 @@ func (n *lm) AnonymousIdentity() view.Identity {
 
 type nv struct {
 	v          *fabric.Vault
-	tokenVault *vault.Vault
+	tokenVault driver.TokenVault
+}
+
+func (v *nv) QueryEngine() api2.QueryEngine {
+	return v.tokenVault.QueryEngine()
+}
+
+func (v *nv) CertificationStorage() api2.CertificationStorage {
+	return v.tokenVault.CertificationStorage()
+}
+
+func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
+	return v.tokenVault.DeleteTokens(ns, ids...)
 }
 
 func (v *nv) Status(txID string) (driver.ValidationCode, error) {
@@ -88,10 +100,6 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
-func (v *nv) TokenVault() *vault.Vault {
-	return v.tokenVault
-}
-
 func (v *nv) DiscardTx(txID string) error {
 	return v.v.DiscardTx(txID)
 }
@@ -122,15 +130,17 @@ type Network struct {
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
+	NewVault       NewVaultFunc
 }
 
-func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel) *Network {
+func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel, newVault NewVaultFunc) *Network {
 	return &Network{
 		n:          n,
 		ch:         ch,
 		sp:         sp,
 		ledger:     &ledger{ch.Ledger()},
 		vaultCache: map[string]driver.Vault{},
+		NewVault:   newVault,
 	}
 }
 
@@ -169,15 +179,10 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		return v, nil
 	}
 
-	tokenStore, err := processor.NewCommonTokenStore(n.sp, token2.TMSID{
-		Network:   n.Name(),
-		Channel:   n.Channel(),
-		Namespace: namespace,
-	})
+	tokenVault, err := n.NewVault(n.Name(), n.Channel(), namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token store")
+		return nil, errors.WithMessagef(err, "failed to get token vault")
 	}
-	tokenVault := vault.New(n.sp, n.Channel(), namespace, NewVault(n.ch, tokenStore))
 	nv := &nv{
 		v:          n.ch.Vault(),
 		tokenVault: tokenVault,
@@ -313,8 +318,17 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 	return tokens, nil
 }
 
-func (n *Network) AreTokensSpent(c view.Context, namespace string, IDs []string) ([]bool, error) {
-	idsRaw, err := json.Marshal(IDs)
+func (n *Network) AreTokensSpent(c view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	sIDs := make([]string, len(tokenIDs))
+	var err error
+	for i, id := range tokenIDs {
+		sIDs[i], err = keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot compute spent id for [%v]", id)
+		}
+	}
+
+	idsRaw, err := json.Marshal(sIDs)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed marshalling ids")
 	}

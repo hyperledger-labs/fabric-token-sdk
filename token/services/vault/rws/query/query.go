@@ -9,10 +9,11 @@ package query
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )

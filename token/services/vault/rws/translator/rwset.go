@@ -6,7 +6,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package translator
 
-import "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
+import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
+)
 
 //go:generate counterfeiter -o mock/rwset.go -fake-name RWSet . RWSet
 

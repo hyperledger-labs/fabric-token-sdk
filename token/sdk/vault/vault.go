@@ -18,6 +18,7 @@ import (
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws"
 	"github.com/pkg/errors"
 )
 
@@ -25,14 +26,14 @@ type Provider struct {
 	sp view.ServiceProvider
 
 	vaultCacheLock sync.RWMutex
-	vaultCache     map[string]driver.Vault
+	vaultCache     map[string]vault.TokenVault
 }
 
 func NewProvider(sp view.ServiceProvider) *Provider {
-	return &Provider{sp: sp, vaultCache: make(map[string]driver.Vault)}
+	return &Provider{sp: sp, vaultCache: make(map[string]vault.TokenVault)}
 }
 
-func (v *Provider) Vault(network string, channel string, namespace string) (driver.Vault, error) {
+func (v *Provider) Vault(network string, channel string, namespace string) (vault.TokenVault, error) {
 	k := network + channel + namespace
 	// Check cache
 	v.vaultCacheLock.RLock()
@@ -65,7 +66,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 	fns := fabric.GetFabricNetworkService(v.sp, network)
 	if fns != nil {
 		ch := fabric.GetChannel(v.sp, network, channel)
-		res = vault.New(
+		res = rws.NewVault(
 			v.sp,
 			ch.Name(),
 			namespace,
@@ -76,8 +77,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 		if ons == nil {
 			return nil, errors.Errorf("cannot find network [%s]", network)
 		}
-
-		res = vault.New(
+		res = rws.NewVault(
 			v.sp,
 			"",
 			namespace,
@@ -89,6 +89,14 @@ func (v *Provider) Vault(network string, channel string, namespace string) (driv
 	v.vaultCache[k] = res
 
 	return res, nil
+}
+
+type ProviderAdaptor struct {
+	*Provider
+}
+
+func (v *ProviderAdaptor) Vault(network string, channel string, namespace string) (driver.Vault, error) {
+	return v.Provider.Vault(network, channel, namespace)
 }
 
 type PublicParamsProvider struct {

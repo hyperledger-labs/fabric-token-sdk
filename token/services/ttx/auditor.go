@@ -35,7 +35,7 @@ const (
 	Deleted TxStatus = ttxdb.Deleted
 )
 
-type txAuditor struct {
+type TxAuditor struct {
 	sp                      view2.ServiceProvider
 	w                       *token.AuditorWallet
 	auditor                 *auditor.Auditor
@@ -43,44 +43,49 @@ type txAuditor struct {
 	transactionInfoProvider *TransactionInfoProvider
 }
 
-func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *txAuditor {
-	return &txAuditor{
+func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *TxAuditor {
+	backend := auditor.New(sp, w)
+	return &TxAuditor{
 		sp:                      sp,
 		w:                       w,
-		auditor:                 auditor.New(sp, w),
+		auditor:                 backend,
 		db:                      ttxdb.Get(sp, w),
-		transactionInfoProvider: NewTransactionInfoProvider(sp, w.TMS()),
+		transactionInfoProvider: newTransactionInfoProvider(sp, w.TMS(), backend),
 	}
 }
 
-func (a *txAuditor) Validate(tx *Transaction) error {
+func (a *TxAuditor) Validate(tx *Transaction) error {
 	return a.auditor.Validate(tx.TokenRequest)
 }
 
-func (a *txAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
+func (a *TxAuditor) Audit(tx *Transaction) (*token.InputStream, *token.OutputStream, error) {
 	return a.auditor.Audit(tx)
 }
 
 // Release unlocks the passed enrollment IDs.
-func (a *txAuditor) Release(tx *Transaction) {
+func (a *TxAuditor) Release(tx *Transaction) {
 	a.auditor.Release(tx)
 }
 
 // NewQueryExecutor returns a new query executor. The query executor is used to
 // execute queries against the auditor's DB.
 // The function `Done` on the query executor must be called when it is no longer needed.
-func (a *txAuditor) NewQueryExecutor() *auditor.QueryExecutor {
+func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 	return a.auditor.NewQueryExecutor()
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *txAuditor) SetStatus(txID string, status TxStatus) error {
+func (a *TxAuditor) SetStatus(txID string, status TxStatus) error {
 	return a.db.SetStatus(txID, status)
 }
 
 // TransactionInfo returns the transaction info for the given transaction ID.
-func (a *txAuditor) TransactionInfo(txID string) (*TransactionInfo, error) {
+func (a *TxAuditor) TransactionInfo(txID string) (*TransactionInfo, error) {
 	return a.transactionInfoProvider.TransactionInfo(txID)
+}
+
+func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {
+	return a.auditor.GetTokenRequest(txID)
 }
 
 type RegisterAuditorView struct {

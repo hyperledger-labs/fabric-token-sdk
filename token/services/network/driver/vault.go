@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -30,8 +30,21 @@ type UnspentTokensIterator interface {
 	Next() (*token.UnspentToken, error)
 }
 
+type TokenVault interface {
+	// QueryEngine returns the query engine over this vault
+	QueryEngine() driver2.QueryEngine
+
+	// CertificationStorage returns the certification storage over this vault
+	CertificationStorage() driver2.CertificationStorage
+
+	// DeleteTokens delete the passed tokens in the passed namespace
+	DeleteTokens(ns string, ids ...*token.ID) error
+}
+
 // Vault models the vault service
 type Vault interface {
+	TokenVault
+
 	// GetLastTxID returns the last transaction ID committed into the vault
 	GetLastTxID() (string, error)
 
@@ -51,12 +64,13 @@ type Vault interface {
 	// Store the passed token certifications, if applicable
 	Store(certifications map[*token.ID][]byte) error
 
-	// TokenVault returns the token vault
-	TokenVault() *vault.Vault
-
 	// Status returns the status of the transaction
 	Status(id string) (ValidationCode, error)
 
 	// DiscardTx discards the transaction with the passed id
 	DiscardTx(id string) error
+
+	QueryEngine() driver2.QueryEngine
+
+	DeleteTokens(ns string, ids ...*token.ID) error
 }

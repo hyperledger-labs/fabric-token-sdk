@@ -137,6 +137,10 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
 }
 
+func (a *Auditor) GetEndorsementAcks(id string) (map[string][]byte, error) {
+	return a.db.GetEndorsementAcks(id)
+}
+
 type TxStatusChangesListener struct {
 	net *network.Network
 	db  *ttxdb.DB

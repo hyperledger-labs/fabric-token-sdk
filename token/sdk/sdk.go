@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -27,9 +29,8 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/driver"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
@@ -67,7 +68,10 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	logger.Infof("Set TMS TMSProvider")
+
 	vaultProvider := vault.NewProvider(p.registry)
+	assert.NoError(p.registry.RegisterService(vaultProvider))
+
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
 		&vault.PublicParamsProvider{Provider: vaultProvider},
@@ -94,7 +98,7 @@ func (p *SDK) Install() error {
 		p.registry,
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
-		vaultProvider,
+		&vault.ProviderAdaptor{Provider: vaultProvider},
 		network2.NewCertificationClientProvider(p.registry),
 		selectorManagerProvider,
 	)))
@@ -104,9 +108,9 @@ func (p *SDK) Install() error {
 
 	// Token Transaction DB and derivatives
 	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
-	p.auditorManager = auditor.NewManager(p.registry, kvs.GetService(p.registry))
+	p.auditorManager = auditor.NewManager(p.registry, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(p.auditorManager))
-	p.ownerManager = owner.NewManager(p.registry, kvs.GetService(p.registry))
+	p.ownerManager = owner.NewManager(p.registry, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
 	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))

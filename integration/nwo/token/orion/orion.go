@@ -13,9 +13,6 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
-
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -23,9 +20,11 @@ import (
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"

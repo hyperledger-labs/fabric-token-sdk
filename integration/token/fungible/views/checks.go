@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
@@ -27,6 +26,7 @@ import (
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
+	TransactionInfo(id string) (*ttx.TransactionInfo, error)
 }
 
 type CheckTTXDB struct {
@@ -58,15 +58,14 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	if m.Auditor {
 		auditorWallet := tms.WalletManager().AuditorWallet(m.AuditorWalletID)
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
-		db := auditor.New(context, auditorWallet)
+		db := ttx.NewAuditor(context, auditorWallet)
 		qe = db.NewQueryExecutor().QueryExecutor
 		ttxDB = db
 	} else {
-		db := owner.New(context, tms)
+		db := ttx.NewOwner(context, tms)
 		qe = db.NewQueryExecutor().QueryExecutor
 		ttxDB = db
 	}
-	tip := ttx.NewTransactionInfoProviderFor(context, tms, ttxDB)
 	defer qe.Done()
 	it, err := qe.Transactions(owner.QueryTransactionsParams{})
 	assert.NoError(err, "failed to get transaction iterators")
@@ -112,7 +111,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			errorMessages = append(errorMessages, fmt.Sprintf("no metadata found for transaction record [%s]", transactionRecord.TxID))
 		}
 
-		txInfo, err := tip.TransactionInfo(transactionRecord.TxID)
+		txInfo, err := ttxDB.TransactionInfo(transactionRecord.TxID)
 		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction info for transaction record [%s]: [%s]", transactionRecord.TxID, err))
 		}
@@ -184,7 +183,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	} else {
 		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
 		index := 0
-		assert.NoError(v.TokenVault().QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
+		assert.NoError(v.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
 			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
 				errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%d], [%s]!=[%s]",
 					index,
@@ -276,7 +275,7 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
 	vault, err := net.Vault(c.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
-	qe := vault.TokenVault().QueryEngine()
+	qe := vault.QueryEngine()
 	var IDs []*token2.ID
 	count := 0
 	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {

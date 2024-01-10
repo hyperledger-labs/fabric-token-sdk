@@ -9,50 +9,49 @@ package translator_test
 import (
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
+	mock2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator/mock"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/keys"
-	writer2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/translator/mock"
 )
 
 const (
-	tokenNameSpace = keys.TokenNamespace
+	tokenNameSpace = ttx.TokenNamespace
 )
 
 var _ = Describe("Translator", func() {
 	var (
-		fakeRWSet *mock.RWSet
+		fakeRWSet *mock2.RWSet
 
-		writer *writer2.Translator
+		writer *translator.Translator
 
-		fakeissue    *mock.IssueAction
+		fakeissue    *mock2.IssueAction
 		sn           []string
-		faketransfer *mock.TransferAction
+		faketransfer *mock2.TransferAction
 	)
 
 	BeforeEach(func() {
-		fakeRWSet = &mock.RWSet{}
+		fakeRWSet = &mock2.RWSet{}
 
-		writer = writer2.New("0", fakeRWSet, tokenNameSpace)
+		writer = translator.New("0", fakeRWSet, tokenNameSpace)
 
 		fakeRWSet.GetStateReturns(nil, nil)
 		fakeRWSet.SetStateReturns(nil)
 
 		// fakeIssue
-		fakeissue = &mock.IssueAction{}
+		fakeissue = &mock2.IssueAction{}
 		// fakeTransfer
-		faketransfer = &mock.TransferAction{}
+		faketransfer = &mock2.TransferAction{}
 		// serial numbers
-		var err error
 		sn = make([]string, 3)
 		for i := 0; i < 3; i++ {
-			sn[i], err = keys.CreateSNKey("sn" + strconv.Itoa(i))
-			Expect(err).NotTo(HaveOccurred())
+			sn[i] = "sn" + strconv.Itoa(i)
 		}
-
 	})
 
 	Describe("Issue", func() {

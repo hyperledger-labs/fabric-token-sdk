@@ -16,9 +16,13 @@ import (
 )
 
 const (
-	minUnicodeRuneValue         = 0            // U+0000
-	MaxUnicodeRuneValue         = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
-	CompositeKeyNamespace       = "\x00"
+	minUnicodeRuneValue   = 0 // U+0000
+	compositeKeyNamespace = "\x00"
+	MaxUnicodeRuneValue   = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
+
+	numComponentsInKey         = 2 // 2 components: txid, index, excluding TokenKeyPrefix
+	numComponentsInExtendedKey = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
+
 	TokenKeyPrefix              = "ztoken"
 	FabTokenKeyPrefix           = "token"
 	DeletedTokenKeyPrefix       = "deltoken"
@@ -27,16 +31,12 @@ const (
 	TokenMineKeyPrefix          = "mine"
 	TokenSetupKeyPrefix         = "setup"
 	IssuedHistoryTokenKeyPrefix = "issued"
-	TokenNamespace              = "tns"
-	numComponentsInKey          = 2 // 2 components: txid, index, excluding TokenKeyPrefix
-	numComponentsInExtendedKey  = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
-	Info                        = "info"
-	IDs                         = "ids"
-	TokenRequestKeyPrefix       = "token_request"
-	SerialNumber                = "sn"
-	IssueActionMetadata         = "iam"
-	TransferActionMetadata      = "tam"
-	TokenRequestMetadata        = "trmd"
+
+	Info                   = "info"
+	TokenRequestKeyPrefix  = "token_request"
+	SerialNumber           = "sn"
+	IssueActionMetadata    = "iam"
+	TransferActionMetadata = "tam"
 )
 
 func GetTokenIdFromKey(key string) (*token.ID, error) {
@@ -170,7 +170,7 @@ func CreateCompositeKey(objectType string, attributes []string) (string, error) 
 	if err := ValidateCompositeKeyAttribute(objectType); err != nil {
 		return "", err
 	}
-	ck := CompositeKeyNamespace + objectType + string(rune(minUnicodeRuneValue))
+	ck := compositeKeyNamespace + objectType + string(rune(minUnicodeRuneValue))
 	for _, att := range attributes {
 		if err := ValidateCompositeKeyAttribute(att); err != nil {
 			return "", err
@@ -196,23 +196,3 @@ func ValidateCompositeKeyAttribute(str string) error {
 func CreateIssuedHistoryTokenKey(txID string, index uint64) (string, error) {
 	return CreateCompositeKey(IssuedHistoryTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }
-
-/*
-func GetSNFromKey(key string) (string, error) {
-	_, components, err := SplitCompositeKey(key)
-	if err != nil {
-		return "", errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
-	}
-
-	// 2 components in key: serial number key and seial number value
-	if len(components) != 2 {
-		return "", errors.New(fmt.Sprintf("not enough components in output ID composite key; expected 2, received '%d'", len(components)))
-	}
-	if components[0] != SerialNumber {
-		return "", errors.New(fmt.Sprintf("invalid serial number"))
-
-	}
-
-	return components[1], nil
-}
-*/
