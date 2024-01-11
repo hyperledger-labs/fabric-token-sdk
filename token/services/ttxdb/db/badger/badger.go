@@ -25,6 +25,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+type recordType string
+
+const (
+	EndorsementAck recordType = "tea"
+	TRequest                  = "tr"
+	Validation                = "mt"
+	Movement                  = "mv"
+	Transaction               = "tx"
+)
+
 const (
 	// SeqBandwidth sets the size of the lease, determining how many Next() requests can be served from memory
 	SeqBandwidth = 10
@@ -301,7 +311,7 @@ func (db *Persistence) GetTokenRequest(txID string) ([]byte, error) {
 func (db *Persistence) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	it.Seek([]byte("tx"))
+	it.Seek([]byte(Transaction))
 
 	selector := &TransactionSelector{
 		params: params,
@@ -321,7 +331,7 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 	}
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
-		if !strings.HasPrefix(string(item.Key()), "mv") {
+		if !strings.HasPrefix(string(item.Key()), Movement) {
 			continue
 		}
 		var record *MovementRecord
@@ -372,7 +382,7 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	txn := db.db.NewTransaction(false)
 	it := txn.NewIterator(badger.DefaultIteratorOptions)
-	it.Seek([]byte("mt"))
+	it.Seek([]byte(Validation))
 
 	selector := &ValidationRecordsSelector{
 		params: params,
@@ -385,7 +395,7 @@ type persistenceEntry struct {
 	value []byte
 }
 
-func (db *Persistence) entriesByTxID(condition func([]byte, []byte) bool, txID string, prefix string) ([]persistenceEntry, error) {
+func (db *Persistence) entriesByTxID(condition func([]byte, []byte) bool, txID string, prefix recordType) ([]persistenceEntry, error) {
 	var entries []persistenceEntry
 	stream := db.db.NewStream()
 	stream.NumGo = db.numGoStream
@@ -433,7 +443,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	for _, entry := range entries {
 		var b []byte
 		switch {
-		case strings.HasPrefix(entry.key, "mv"):
+		case strings.HasPrefix(entry.key, Movement):
 			logger.Debugf("set status of movement [%s] to [%s]", txID, status)
 			record, err := UnmarshalMovementRecord(entry.value)
 			if err != nil {
@@ -444,7 +454,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
-		case strings.HasPrefix(entry.key, "tx"):
+		case strings.HasPrefix(entry.key, Transaction):
 			logger.Debugf("set status of transaction [%s] to [%s]", txID, status)
 			record, err := UnmarshalTransactionRecord(entry.value)
 			if err != nil {
@@ -455,7 +465,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
-		case strings.HasPrefix(entry.key, "mt"):
+		case strings.HasPrefix(entry.key, Validation):
 			logger.Debugf("set status of validation record [%s] to [%s]", txID, status)
 			record, err := UnmarshalValidationRecord(entry.value)
 			if err != nil {
@@ -483,7 +493,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 }
 
 func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
-	entries, err := db.entriesByTxID(bytes.HasSuffix, txID, "tx")
+	entries, err := db.entriesByTxID(bytes.HasSuffix, txID, Transaction)
 	if err != nil {
 		return driver.Unknown, err
 	}
@@ -535,7 +545,7 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identit
 }
 
 func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	entries, err := db.entriesByTxID(bytes.Contains, txID, "tea")
+	entries, err := db.entriesByTxID(bytes.Contains, txID, EndorsementAck)
 	if err != nil {
 		return nil, err
 	}
@@ -562,7 +572,7 @@ func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "failed getting next index")
 	}
-	return next, dbKey("tx", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
+	return next, dbKey(Transaction, kThLexicographicString(IndexLength, int(next)), txID), nil
 }
 
 func (db *Persistence) movementKey(txID string) (uint64, string, error) {
@@ -570,7 +580,7 @@ func (db *Persistence) movementKey(txID string) (uint64, string, error) {
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "failed getting next index")
 	}
-	return next, dbKey("mv", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
+	return next, dbKey(Movement, kThLexicographicString(IndexLength, int(next)), txID), nil
 }
 
 func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) {
@@ -578,19 +588,19 @@ func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) 
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "failed getting next index")
 	}
-	return next, dbKey("mt", dbKey(kThLexicographicString(IndexLength, int(next)), txID)), nil
+	return next, dbKey(Validation, kThLexicographicString(IndexLength, int(next)), txID), nil
 }
 
 func (db *Persistence) tokenRequestKey(txID string) (string, error) {
-	return dbKey("tr", txID), nil
+	return dbKey(TRequest, txID), nil
 }
 
 func (db *Persistence) transactionEndorseAckKey(txID string, id view.Identity) (string, error) {
-	return dbKey("tea", dbKey(txID, id.String())), nil
+	return dbKey(EndorsementAck, txID, id.String()), nil
 }
 
-func dbKey(namespace, key string) string {
-	return namespace + keys.NamespaceSeparator + key
+func dbKey(namespace recordType, key ...string) string {
+	return strings.Join(append([]string{string(namespace)}, key...), keys.NamespaceSeparator)
 }
 
 type RecordSlice []*MovementRecord
@@ -618,7 +628,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 			return nil, nil
 		}
 
-		if !strings.HasPrefix(string(item.Key()), "tx") {
+		if !strings.HasPrefix(string(item.Key()), Transaction) {
 			t.it.Next()
 			continue
 		}
@@ -847,7 +857,7 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 			return nil, nil
 		}
 
-		if !strings.HasPrefix(string(item.Key()), "mt") {
+		if !strings.HasPrefix(string(item.Key()), Validation) {
 			t.it.Next()
 			continue
 		}
