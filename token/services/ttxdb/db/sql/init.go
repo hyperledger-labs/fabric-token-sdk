@@ -31,6 +31,7 @@ type Opts struct {
 	DataSource   string
 	TablePrefix  string
 	CreateSchema bool
+	Parallelism  bool
 }
 
 type Driver struct {
@@ -54,10 +55,10 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			OptsKey, EnvVarKey, opts.Driver)
 	}
-	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema)
+	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema, opts.Parallelism)
 }
 
-func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
+func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema, parallelism bool) (driver.TokenTransactionDB, error) {
 	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
 
 	tableNames, err := getTableNames(tablePrefix, name)
@@ -73,7 +74,7 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
 	}
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
-	p := &Persistence{db: db, table: tableNames}
+	p := &Persistence{db: db, table: tableNames, parallelism: parallelism}
 	if createSchema {
 		if err := p.CreateSchema(); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)

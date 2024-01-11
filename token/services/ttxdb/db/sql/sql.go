@@ -29,6 +29,9 @@ type Persistence struct {
 
 	txn     *sql.Tx
 	txnLock sync.Mutex
+
+	parallelism      bool
+	parallelismMutex sync.RWMutex
 }
 
 func (db *Persistence) Close() error {
@@ -331,6 +334,11 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 }
 
 func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
+	if !db.parallelism {
+		db.parallelismMutex.Lock()
+		defer db.parallelismMutex.Unlock()
+	}
+
 	tx, err := db.db.Begin()
 	if err != nil {
 		return errors.New("failed starting a transaction")
@@ -360,6 +368,11 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.I
 }
 
 func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
+	if !db.parallelism {
+		db.parallelismMutex.RLock()
+		defer db.parallelismMutex.RUnlock()
+	}
+
 	query := fmt.Sprintf("SELECT endorser, sigma FROM %s WHERE tx_id=$1;", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID)
 
