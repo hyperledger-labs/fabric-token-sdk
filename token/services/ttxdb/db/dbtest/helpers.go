@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/test-go/testify/assert"
 )
@@ -28,6 +30,7 @@ var Cases = []struct {
 	{"Rollback", TRollback},
 	{"TransactionQueries", TTransactionQueries},
 	{"ValidationRecordQueries", TValidationRecordQueries},
+	{"TEndorserAcks", TEndorserAcks},
 }
 
 func TStoresTimestamp(t *testing.T, db driver.TokenTransactionDB) {
@@ -637,4 +640,14 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 		}
 		txs = append(txs, r)
 	}
+}
+
+func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
+	assert.NoError(t, db.AppendTransactionEndorseAck("1", []byte("alice"), []byte("sigma1")))
+	assert.NoError(t, db.AppendTransactionEndorseAck("1", []byte("bob"), []byte("sigma2")))
+	acks, err := db.GetEndorsementAcks("1")
+	assert.NoError(t, err)
+	assert.Len(t, acks, 2)
+	assert.Equal(t, []byte("sigma1"), acks[view.Identity("alice").String()])
+	assert.Equal(t, []byte("sigma2"), acks[view.Identity("bob").String()])
 }
