@@ -19,31 +19,22 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type Storage interface {
-	StoreWalletID(wID WalletID) error
-	GetWalletID(identity view.Identity) (WalletID, error)
-	GetWalletIDs() ([]WalletID, error)
-	StoreIdentity(identity view.Identity, wID WalletID, meta any) error
-	IdentityExists(identity view.Identity, wID WalletID) bool
-	LoadMeta(identity view.Identity, meta any) error
-}
-
 type WalletsRegistry struct {
 	ID               token.TMSID
 	IdentityProvider driver.IdentityProvider
 	IdentityRole     driver.IdentityRole
-	Store            Storage
+	Storage          Storage
 
 	sync.RWMutex
 	Wallets map[string]driver.Wallet
 }
 
 // NewWalletsRegistry returns a new wallets registry for the passed parameters
-func NewWalletsRegistry(identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, store Storage) *WalletsRegistry {
+func NewWalletsRegistry(identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, storage Storage) *WalletsRegistry {
 	return &WalletsRegistry{
 		IdentityProvider: identityProvider,
 		IdentityRole:     identityRole,
-		Store:            store,
+		Storage:          storage,
 		Wallets:          map[string]driver.Wallet{},
 	}
 }
@@ -147,7 +138,7 @@ func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.Identity
 
 // RegisterWallet binds the passed wallet to the passed id
 func (r *WalletsRegistry) RegisterWallet(id string, w driver.Wallet) error {
-	if err := r.Store.StoreWalletID(id); err != nil {
+	if err := r.Storage.StoreWalletID(id); err != nil {
 		return errors.WithMessagef(err, "failed to store wallet entry [%s]", id)
 	}
 	r.Wallets[id] = w
@@ -160,7 +151,7 @@ func (r *WalletsRegistry) RegisterIdentity(identity view.Identity, wID string, m
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
-	return r.Store.StoreIdentity(identity, wID, meta)
+	return r.Storage.StoreIdentity(identity, wID, meta)
 }
 
 // GetIdentityMetadata loads metadata bound to the passed identity into the passed meta argument
@@ -168,7 +159,7 @@ func (r *WalletsRegistry) GetIdentityMetadata(identity view.Identity, wID string
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
 	}
-	if err := r.Store.LoadMeta(identity, meta); err != nil {
+	if err := r.Storage.LoadMeta(identity, meta); err != nil {
 		return errors.WithMessagef(err, "failed to retrieve identity's metadata [%s]", identity)
 	}
 	return nil
@@ -176,7 +167,7 @@ func (r *WalletsRegistry) GetIdentityMetadata(identity view.Identity, wID string
 
 // GetWalletID returns the wallet identifier bound to the passed identity
 func (r *WalletsRegistry) GetWalletID(identity view.Identity) (string, error) {
-	wID, err := r.Store.GetWalletID(identity)
+	wID, err := r.Storage.GetWalletID(identity)
 	if err != nil {
 		return "", nil
 	}
@@ -189,7 +180,7 @@ func (r *WalletsRegistry) GetWalletID(identity view.Identity) (string, error) {
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
 func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
-	return r.Store.IdentityExists(identity, wID)
+	return r.Storage.IdentityExists(identity, wID)
 }
 
 // WalletIDs returns the list of owner wallet identifiers
@@ -203,7 +194,7 @@ func (r *WalletsRegistry) WalletIDs() ([]string, error) {
 		duplicates[id] = true
 	}
 
-	ids, err := r.Store.GetWalletIDs()
+	ids, err := r.Storage.GetWalletIDs()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
 	}
