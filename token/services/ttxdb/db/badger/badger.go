@@ -571,28 +571,24 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 	return acks, nil
 }
 
-func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
+func (db *Persistence) nextKey(t recordType, txID string) (uint64, string, error) {
 	next, err := db.seq.Next()
 	if err != nil {
 		return 0, "", errors.Wrapf(err, "failed getting next index")
 	}
-	return next, dbKey(Transaction, kThLexicographicString(IndexLength, int(next)), txID), nil
+	return next, dbKey(t, kThLexicographicString(IndexLength, int(next)), txID), nil
+}
+
+func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
+	return db.nextKey(Transaction, txID)
 }
 
 func (db *Persistence) movementKey(txID string) (uint64, string, error) {
-	next, err := db.seq.Next()
-	if err != nil {
-		return 0, "", errors.Wrapf(err, "failed getting next index")
-	}
-	return next, dbKey(Movement, kThLexicographicString(IndexLength, int(next)), txID), nil
+	return db.nextKey(Movement, txID)
 }
 
 func (db *Persistence) validationRecordKey(txID string) (uint64, string, error) {
-	next, err := db.seq.Next()
-	if err != nil {
-		return 0, "", errors.Wrapf(err, "failed getting next index")
-	}
-	return next, dbKey(Validation, kThLexicographicString(IndexLength, int(next)), txID), nil
+	return db.nextKey(Validation, txID)
 }
 
 func (db *Persistence) tokenRequestKey(txID string) (string, error) {
@@ -603,8 +599,8 @@ func (db *Persistence) transactionEndorseAckKey(txID string, id view.Identity) (
 	return dbKey(EndorsementAck, txID, id.String()), nil
 }
 
-func dbKey(namespace recordType, key ...string) string {
-	return strings.Join(append([]string{string(namespace)}, key...), keys.NamespaceSeparator)
+func dbKey(t recordType, key ...string) string {
+	return strings.Join(append([]string{string(t)}, key...), keys.NamespaceSeparator)
 }
 
 type RecordSlice []*MovementRecord
