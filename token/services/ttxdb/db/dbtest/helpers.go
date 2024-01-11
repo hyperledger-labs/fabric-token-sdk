@@ -3,16 +3,17 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package dbtest
 
 import (
 	"fmt"
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/test-go/testify/assert"
 )
@@ -643,11 +644,20 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
-	assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte("alice"), []byte("sigma1")))
-	assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte("bob"), []byte("sigma2")))
+	wg := sync.WaitGroup{}
+	wg.Add(40)
+	for i := 0; i < 40; i++ {
+		go func(i int) {
+			assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
 	acks, err := db.GetTransactionEndorsementAcks("1")
 	assert.NoError(t, err)
-	assert.Len(t, acks, 2)
-	assert.Equal(t, []byte("sigma1"), acks[view.Identity("alice").String()])
-	assert.Equal(t, []byte("sigma2"), acks[view.Identity("bob").String()])
+	assert.Len(t, acks, 40)
+	for i := 0; i < 40; i++ {
+		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("alice_%d", i)).String()])
+	}
 }
