@@ -15,7 +15,7 @@ import (
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
-	GetEndorsementAcks(id string) (map[string][]byte, error)
+	GetTransactionEndorsementAcks(id string) (map[string][]byte, error)
 }
 
 // TransactionInfo contains the transaction info.
@@ -41,7 +41,7 @@ func newTransactionInfoProvider(sp view.ServiceProvider, tms *token.ManagementSe
 
 // TransactionInfo returns the transaction info for the given transaction ID.
 func (a *TransactionInfoProvider) TransactionInfo(txID string) (*TransactionInfo, error) {
-	endorsementAcks, err := a.ttxDB.GetEndorsementAcks(txID)
+	endorsementAcks, err := a.ttxDB.GetTransactionEndorsementAcks(txID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load endorsement acks for [%s]", txID)
 	}

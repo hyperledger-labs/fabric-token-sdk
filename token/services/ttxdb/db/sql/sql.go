@@ -330,7 +330,7 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 	return &ValidationRecordsIterator{txs: rows, filter: params.Filter}, nil
 }
 
-func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
+func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identity, sigma []byte) error {
 	tx, err := db.db.Begin()
 	if err != nil {
 		return errors.New("failed starting a transaction")
@@ -356,7 +356,7 @@ func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity
 	return nil
 }
 
-func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error) {
+func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
 	query := fmt.Sprintf("SELECT endorser, sigma FROM %s WHERE tx_id=$1;", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID)
 

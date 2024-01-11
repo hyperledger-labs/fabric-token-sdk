@@ -643,9 +643,9 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
-	assert.NoError(t, db.AppendTransactionEndorseAck("1", []byte("alice"), []byte("sigma1")))
-	assert.NoError(t, db.AppendTransactionEndorseAck("1", []byte("bob"), []byte("sigma2")))
-	acks, err := db.GetEndorsementAcks("1")
+	assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte("alice"), []byte("sigma1")))
+	assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte("bob"), []byte("sigma2")))
+	acks, err := db.GetTransactionEndorsementAcks("1")
 	assert.NoError(t, err)
 	assert.Len(t, acks, 2)
 	assert.Equal(t, []byte("sigma1"), acks[view.Identity("alice").String()])

@@ -94,11 +94,11 @@ func (a *Owner) GetTokenRequest(txID string) ([]byte, error) {
 }
 
 func (a *Owner) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
-	return a.db.AppendTransactionEndorseAck(txID, id, sigma)
+	return a.db.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
-func (a *Owner) GetEndorsementAcks(id string) (map[string][]byte, error) {
-	return a.db.GetEndorsementAcks(id)
+func (a *Owner) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
+	return a.db.GetTransactionEndorsementAcks(id)
 }
 
 type TxStatusChangesListener struct {
