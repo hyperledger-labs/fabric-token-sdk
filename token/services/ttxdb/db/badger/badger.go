@@ -29,11 +29,15 @@ type recordType string
 
 const (
 	EndorsementAck recordType = "tea"
-	TRequest                  = "tr"
-	Validation                = "mt"
-	Movement                  = "mv"
-	Transaction               = "tx"
+	TRequest       recordType = "tr"
+	Validation     recordType = "mt"
+	Movement       recordType = "mv"
+	Transaction    recordType = "tx"
 )
+
+func (t recordType) IsTypeOf(key string) bool {
+	return strings.HasPrefix(key, string(t))
+}
 
 const (
 	// SeqBandwidth sets the size of the lease, determining how many Next() requests can be served from memory
@@ -331,7 +335,7 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 	}
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
-		if !strings.HasPrefix(string(item.Key()), Movement) {
+		if !Movement.IsTypeOf(string(item.Key())) {
 			continue
 		}
 		var record *MovementRecord
@@ -443,7 +447,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	for _, entry := range entries {
 		var b []byte
 		switch {
-		case strings.HasPrefix(entry.key, Movement):
+		case Movement.IsTypeOf(entry.key):
 			logger.Debugf("set status of movement [%s] to [%s]", txID, status)
 			record, err := UnmarshalMovementRecord(entry.value)
 			if err != nil {
@@ -454,7 +458,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
-		case strings.HasPrefix(entry.key, Transaction):
+		case Transaction.IsTypeOf(entry.key):
 			logger.Debugf("set status of transaction [%s] to [%s]", txID, status)
 			record, err := UnmarshalTransactionRecord(entry.value)
 			if err != nil {
@@ -465,7 +469,7 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			if err != nil {
 				return errors.Wrapf(err, "could not marshal record for key %s", entry.key)
 			}
-		case strings.HasPrefix(entry.key, Validation):
+		case Validation.IsTypeOf(entry.key):
 			logger.Debugf("set status of validation record [%s] to [%s]", txID, status)
 			record, err := UnmarshalValidationRecord(entry.value)
 			if err != nil {
@@ -628,7 +632,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 			return nil, nil
 		}
 
-		if !strings.HasPrefix(string(item.Key()), Transaction) {
+		if !Transaction.IsTypeOf(string(item.Key())) {
 			t.it.Next()
 			continue
 		}
@@ -857,7 +861,7 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 			return nil, nil
 		}
 
-		if !strings.HasPrefix(string(item.Key()), Validation) {
+		if !Validation.IsTypeOf(string(item.Key())) {
 			t.it.Next()
 			continue
 		}
