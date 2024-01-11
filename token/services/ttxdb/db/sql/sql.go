@@ -340,10 +340,14 @@ func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4)", db.table.TransactionEndorseAck)
+	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(id)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 
-	if _, err := tx.Exec(query, txID, id, sigma, now); err != nil {
+	nonce, err := GetRandomNonce()
+	if err != nil {
+		return errors.Wrapf(err, "failed to get random nonce")
+	}
+	if _, err := tx.Exec(query, string(nonce), txID, id, sigma, now); err != nil {
 		return errors.Wrapf(err, "failed to execute")
 	}
 	if err := tx.Commit(); err != nil {
@@ -367,7 +371,7 @@ func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error
 		}
 		var id []byte
 		var sigma []byte
-		if err := rows.Scan(&id, sigma); err != nil {
+		if err := rows.Scan(&id, &sigma); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				// not an error for compatibility with badger.
 				logger.Warnf("tried to get status for non-existent tx %s, returning unknown", txID)
@@ -375,8 +379,11 @@ func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error
 			}
 			return nil, errors.Wrapf(err, "error querying db")
 		}
+		fmt.Printf(" found [%s] [%s]\n", id, sigma)
 		acks[view.Identity(id).String()] = sigma
 	}
+
+	fmt.Printf(" result [%v]\n", acks)
 	return acks, nil
 }
 
@@ -438,7 +445,8 @@ func (db *Persistence) CreateSchema() error {
 		);
 
 		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY,
+			id CHAR(24) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL,
 			endorser BYTEA NOT NULL,
             sigma BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
