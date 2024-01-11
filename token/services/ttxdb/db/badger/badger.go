@@ -330,9 +330,7 @@ func (db *Persistence) QueryMovements(params driver.QueryMovementsParams) ([]*dr
 	var records RecordSlice
 	defer it.Close()
 
-	selector := &MovementSelector{
-		params: params,
-	}
+	selector := newMovementSelector(params)
 	for it.Rewind(); it.Valid(); it.Next() {
 		item := it.Item()
 		if !Movement.IsTypeOf(string(item.Key())) {
@@ -679,62 +677,50 @@ func kThLexicographicString(n, k int) string {
 
 // MovementSelector is used to select a set of movement records
 type MovementSelector struct {
-	params driver.QueryMovementsParams
+	enrollmentIDs     map[string]bool
+	tokenTypes        map[string]bool
+	txStatuses        map[string]bool
+	movementDirection driver.MovementDirection
+}
+
+func newMovementSelector(params driver.QueryMovementsParams) *MovementSelector {
+	return &MovementSelector{
+		enrollmentIDs:     toMap(params.EnrollmentIDs),
+		tokenTypes:        toMap(params.TokenTypes),
+		txStatuses:        toMap(toStrings(params.TxStatuses)),
+		movementDirection: params.MovementDirection,
+	}
 }
 
 // Select returns true is the record matches the selection criteria
 func (m *MovementSelector) Select(record *MovementRecord) bool {
-	if len(m.params.EnrollmentIDs) != 0 {
-		found := false
-		for _, id := range m.params.EnrollmentIDs {
-			if record.Record.EnrollmentID == id {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	if len(m.params.TokenTypes) != 0 {
-		found := false
-		for _, typ := range m.params.TokenTypes {
-			if record.Record.TokenType == typ {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	if len(m.params.TxStatuses) != 0 {
-		found := false
-		for _, st := range m.params.TxStatuses {
-			if record.Record.Status == st {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	} else {
-		// exclude the deleted
-		if record.Record.Status == driver.Deleted {
-			return false
-		}
-	}
+	discarded := m.enrollmentIDs != nil && !m.enrollmentIDs[record.Record.EnrollmentID] ||
+		m.tokenTypes != nil && !m.tokenTypes[record.Record.TokenType] ||
+		m.txStatuses != nil && !m.txStatuses[string(record.Record.Status)] ||
+		m.txStatuses == nil && record.Record.Status == driver.Deleted ||
+		m.movementDirection == driver.Sent && record.Record.Amount.Sign() > 0 ||
+		m.movementDirection == driver.Received && record.Record.Amount.Sign() < 0
 
-	if m.params.MovementDirection == driver.Sent && record.Record.Amount.Sign() > 0 {
-		return false
-	}
+	return !discarded
+}
 
-	if m.params.MovementDirection == driver.Received && record.Record.Amount.Sign() < 0 {
-		return false
+func toStrings(statuses []driver.TxStatus) []string {
+	values := make([]string, len(statuses))
+	for i, status := range statuses {
+		values[i] = string(status)
 	}
+	return values
+}
 
-	return true
+func toMap(values []string) map[string]bool {
+	if len(values) == 0 {
+		return nil
+	}
+	m := make(map[string]bool, len(values))
+	for _, value := range values {
+		m[value] = true
+	}
+	return m
 }
 
 // TransactionSelector is used to select a set of transaction records
