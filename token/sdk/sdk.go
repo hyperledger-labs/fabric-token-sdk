@@ -69,7 +69,7 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	// register identity storage
-	assert.NoError(p.registry.RegisterService(identity2.NewStorageProvider(p.registry)), "failed to register identity storage")
+	assert.NoError(p.registry.RegisterService(identity2.NewKVSStorageProvider(p.registry)), "failed to register identity storage")
 
 	logger.Infof("Set TMS TMSProvider")
 

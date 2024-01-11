@@ -9,6 +9,8 @@ package fungible
 import (
 	"path/filepath"
 
+	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
@@ -111,9 +113,10 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	Expect(sp.RegisterService(dm)).ToNot(HaveOccurred())
 	kvss, err := kvs.NewWithConfig(sp, "memory", "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(kvss))
+	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
 	sigService := sig.NewSignService(sp, nil, kvss)
-	Expect(sp.RegisterService(sigService))
+	Expect(sp.RegisterService(sigService)).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(identity2.NewKVSStorageProvider(sp))).ToNot(HaveOccurred())
 
 	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
 	Expect(err).ToNot(HaveOccurred())

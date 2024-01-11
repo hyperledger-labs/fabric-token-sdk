@@ -14,14 +14,14 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/kvs"
 )
 
-type StorageProvider struct {
+type KVSStorageProvider struct {
 	sp view.ServiceProvider
 }
 
-func NewStorageProvider(sp view.ServiceProvider) *StorageProvider {
-	return &StorageProvider{sp: sp}
+func NewKVSStorageProvider(sp view.ServiceProvider) *KVSStorageProvider {
+	return &KVSStorageProvider{sp: sp}
 }
 
-func (s *StorageProvider) New(tmsID token.TMSID) (identity.Storage, error) {
+func (s *KVSStorageProvider) New(tmsID token.TMSID) (identity.Storage, error) {
 	return kvs.NewIdentityStorage(kvs2.GetService(s.sp), tmsID), nil
 }
