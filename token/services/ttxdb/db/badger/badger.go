@@ -9,6 +9,7 @@ package badger
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"os"
 	"sort"
 	"strings"
@@ -538,9 +539,15 @@ func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity
 		return errors.Wrapf(err, "could not marshal record for key %s", key)
 	}
 
-	err = db.txn.Set([]byte(key), b)
+	txn := db.db.NewTransaction(true)
+	defer txn.Discard()
+	err = txn.Set([]byte(key), b)
 	if err != nil {
 		return errors.Wrapf(err, "could not set value for key %s", key)
+	}
+	err = txn.Commit()
+	if err != nil {
+		return errors.Wrapf(err, "could not committ transaction for [%s]", txID)
 	}
 
 	return nil
@@ -560,7 +567,8 @@ func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error
 	stream.LogPrefix = streamLogPrefixStatus
 	txIdAsBytes := []byte(txID)
 	stream.ChooseKey = func(item *badger.Item) bool {
-		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+		fmt.Printf("key [%s]\n", item.Key())
+		return bytes.Contains(item.Key(), txIdAsBytes)
 	}
 	stream.Send = func(buf *z.Buffer) error {
 		list, err := badger.BufferToKVList(buf)
@@ -595,7 +603,7 @@ func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error
 			continue
 		}
 	}
-	return acks, errors.Errorf("transaction [%s] not found", txID)
+	return acks, nil
 }
 
 func (db *Persistence) transactionKey(txID string) (uint64, string, error) {
