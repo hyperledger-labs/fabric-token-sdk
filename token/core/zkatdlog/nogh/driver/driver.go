@@ -110,6 +110,14 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		return wallets.Reload(pp)
 	})
 	// wallet service
+	storageProvider, err := identity.GetStorageProvider(sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
+	identityStorage, err := storageProvider.New(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
 	ws := zkatdlog.NewWalletService(
 		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
@@ -117,7 +125,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		ppm,
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		identity.NewKVSStorage(kvs.GetService(sp), tmsID),
+		identityStorage,
 	)
 	service, err := zkatdlog.NewTokenService(
 		ws,
@@ -219,6 +227,15 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load public parameters")
 	}
+
+	storageProvider, err := identity.GetStorageProvider(sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
+	identityStorage, err := storageProvider.New(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
 	// wallet service
 	ws := zkatdlog.NewWalletService(
 		msp.NewSigService(view.GetSigService(sp)),
@@ -227,7 +244,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		publicParamsManager,
 		zkatdlog.NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		identity.NewKVSStorage(kvs.GetService(sp), tmsID),
+		identityStorage,
 	)
 
 	if err := wallets.Reload(pp); err != nil {

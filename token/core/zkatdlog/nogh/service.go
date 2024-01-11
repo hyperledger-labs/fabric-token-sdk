@@ -8,7 +8,6 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -33,13 +32,6 @@ type PublicParametersManager interface {
 }
 
 type DeserializerProviderFunc = func(params *crypto.PublicParams) (driver.Deserializer, error)
-
-type KVS interface {
-	Exists(id string) bool
-	Put(id string, state interface{}) error
-	Get(id string, state interface{}) error
-	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
-}
 
 type Service struct {
 	*WalletService

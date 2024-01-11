@@ -10,7 +10,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
+	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
@@ -23,6 +23,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
@@ -66,6 +67,9 @@ func (p *SDK) Install() error {
 		return nil
 	}
 	logger.Infof("Token platform enabled, installing...")
+
+	// register identity storage
+	assert.NoError(p.registry.RegisterService(identity2.NewStorageProvider(p.registry)), "failed to register identity storage")
 
 	logger.Infof("Set TMS TMSProvider")
 

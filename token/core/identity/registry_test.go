@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identity
+package identity_test
 
 import (
 	"testing"
@@ -15,6 +15,8 @@ import (
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,13 +25,13 @@ func TestGetWallet(t *testing.T) {
 	cp := &mock.ConfigProvider{}
 	cp.IsSetReturns(false)
 	registry := registry2.New()
-	kvstore, err := kvs.NewWithConfig(registry, "memory", "_default", cp)
+	kvsStorage, err := kvs.NewWithConfig(registry, "memory", "_default", cp)
 	assert.NoError(t, err)
 
 	alice := view.Identity("alice")
 	meta := "meta"
-	wr := NewWalletsRegistry(nil, driver.OwnerRole, NewKVSStorage(kvstore, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
-	wr.RegisterWallet("hello", nil)
+	wr := identity.NewWalletsRegistry(nil, driver.OwnerRole, kvs2.NewIdentityStorage(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
+	assert.NoError(t, wr.RegisterWallet("hello", nil))
 	assert.NoError(t, wr.RegisterIdentity(alice, "hello", meta))
 	wID, err := wr.GetWalletID(alice)
 	assert.NoError(t, err)

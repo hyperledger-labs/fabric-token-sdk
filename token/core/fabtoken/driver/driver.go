@@ -96,12 +96,20 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		Channel:   channel,
 		Namespace: namespace,
 	}
+	storageProvider, err := identity.GetStorageProvider(sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
+	identityStorage, err := storageProvider.New(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
 	ws := fabtoken.NewWalletService(
 		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		qe,
 		fabtoken.NewDeserializer(),
-		identity.NewKVSStorage(kvs.GetService(sp), tmsID),
+		identityStorage,
 	)
 
 	service := fabtoken.NewService(
@@ -194,12 +202,20 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		Namespace: namespace,
 	}
 	// wallet service
+	storageProvider, err := identity.GetStorageProvider(sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
+	identityStorage, err := storageProvider.New(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
 	ws := fabtoken.NewWalletService(
 		msp.NewSigService(view.GetSigService(sp)),
 		identity.NewProvider(view.GetSigService(sp), nil, nil, fabtoken.NewEnrollmentIDDeserializer(), wallets),
 		nil,
 		fabtoken.NewDeserializer(),
-		identity.NewKVSStorage(kvs.GetService(sp), tmsID),
+		identityStorage,
 	)
 
 	return ws, nil

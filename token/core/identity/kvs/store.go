@@ -4,18 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package identity
+package kvs
 
 import (
 	"fmt"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 )
-
-type WalletID = string
 
 type KVS interface {
 	Exists(id string) bool
@@ -24,28 +24,28 @@ type KVS interface {
 	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
 }
 
-type KVSStorage struct {
+type IdentityStorage struct {
 	kvs   KVS
 	tmsID token.TMSID
 }
 
-func NewKVSStorage(kvs KVS, tmsID token.TMSID) *KVSStorage {
-	return &KVSStorage{kvs: kvs, tmsID: tmsID}
+func NewIdentityStorage(kvs KVS, tmsID token.TMSID) *IdentityStorage {
+	return &IdentityStorage{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *KVSStorage) StoreWalletID(wID WalletID) error {
+func (s *IdentityStorage) StoreWalletID(wID identity.WalletID) error {
 	return s.kvs.Put(kvs.CreateCompositeKeyOrPanic("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace, wID}), wID)
 }
 
-func (s *KVSStorage) GetWalletID(identity view.Identity) (WalletID, error) {
-	var wID WalletID
-	if err := s.kvs.Get(identity.Hash(), &wID); err != nil {
+func (s *IdentityStorage) GetWalletID(id view.Identity) (identity.WalletID, error) {
+	var wID identity.WalletID
+	if err := s.kvs.Get(id.Hash(), &wID); err != nil {
 		return "", err
 	}
 	return wID, nil
 }
 
-func (s *KVSStorage) GetWalletIDs() ([]WalletID, error) {
+func (s *IdentityStorage) GetWalletIDs() ([]identity.WalletID, error) {
 	it, err := s.kvs.GetByPartialCompositeID("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
@@ -61,7 +61,7 @@ func (s *KVSStorage) GetWalletIDs() ([]WalletID, error) {
 	return walletIDs, nil
 }
 
-func (s *KVSStorage) StoreIdentity(identity view.Identity, wID WalletID, meta any) error {
+func (s *IdentityStorage) StoreIdentity(identity view.Identity, wID identity.WalletID, meta any) error {
 	idHash := identity.Hash()
 	if err := s.kvs.Put(idHash, wID); err != nil {
 		return errors.WithMessagef(err, "failed to store identity's wallet [%s]", identity)
@@ -77,14 +77,14 @@ func (s *KVSStorage) StoreIdentity(identity view.Identity, wID WalletID, meta an
 	return nil
 }
 
-func (s *KVSStorage) LoadMeta(identity view.Identity, meta any) error {
+func (s *IdentityStorage) LoadMeta(identity view.Identity, meta any) error {
 	return s.kvs.Get("meta"+identity.Hash(), meta)
 }
 
-func (s *KVSStorage) IdentityExists(identity view.Identity, wID WalletID) bool {
+func (s *IdentityStorage) IdentityExists(identity view.Identity, wID identity.WalletID) bool {
 	return s.kvs.Exists(s.walletPrefix(wID) + identity.Hash())
 }
 
-func (s *KVSStorage) walletPrefix(wID WalletID) string {
+func (s *IdentityStorage) walletPrefix(wID identity.WalletID) string {
 	return fmt.Sprintf("%s-%s-%s-%s", s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace, wID)
 }
