@@ -367,6 +367,7 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
+	defer rows.Close()
 	acks := make(map[string][]byte)
 	for {
 		if !rows.Next() {
