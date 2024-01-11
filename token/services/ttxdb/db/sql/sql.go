@@ -330,7 +330,7 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 	return &ValidationRecordsIterator{txs: rows, filter: params.Filter}, nil
 }
 
-func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identity, sigma []byte) error {
+func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
 	tx, err := db.db.Begin()
 	if err != nil {
 		return errors.New("failed starting a transaction")
@@ -341,13 +341,16 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identit
 
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.TransactionEndorseAck)
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(id)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
 
-	nonce, err := GetRandomNonce()
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return errors.Wrapf(err, "error generating uuid")
+	}
 	if err != nil {
 		return errors.Wrapf(err, "failed to get random nonce")
 	}
-	if _, err := tx.Exec(query, string(nonce), txID, id, sigma, now); err != nil {
+	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
 		return errors.Wrapf(err, "failed to execute")
 	}
 	if err := tx.Commit(); err != nil {
@@ -379,11 +382,8 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 			}
 			return nil, errors.Wrapf(err, "error querying db")
 		}
-		fmt.Printf(" found [%s] [%s]\n", id, sigma)
 		acks[view.Identity(id).String()] = sigma
 	}
-
-	fmt.Printf(" result [%v]\n", acks)
 	return acks, nil
 }
 
@@ -445,7 +445,7 @@ func (db *Persistence) CreateSchema() error {
 		);
 
 		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(24) NOT NULL PRIMARY KEY,
+			id CHAR(36) NOT NULL PRIMARY KEY,
 			tx_id TEXT NOT NULL,
 			endorser BYTEA NOT NULL,
             sigma BYTEA NOT NULL,

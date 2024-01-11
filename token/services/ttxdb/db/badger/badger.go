@@ -526,7 +526,7 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identit
 	if err != nil {
 		return errors.Wrapf(err, "could not get key for token request %s", txID)
 	}
-	logger.Debugf("Adding token request [%s] with key [%s]", txID, key)
+	logger.Debugf("adding transaction endorsement ack [%s] with key [%s]", txID, key)
 
 	value := &TransactionEndorseAck{
 		TxID:  txID,
@@ -547,7 +547,7 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identit
 	}
 	err = txn.Commit()
 	if err != nil {
-		return errors.Wrapf(err, "could not committ transaction for [%s]", txID)
+		return errors.Wrapf(err, "could not commit transaction for [%s]", txID)
 	}
 
 	return nil
