@@ -380,20 +380,23 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 	return &ValidationRecordsIterator{it: it, selector: selector}, nil
 }
 
-func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
-	logger.Debugf("set status of [%s] to [%s]", txID, status)
-	// search for all matching keys
-	type Entry struct {
-		key   string
-		value []byte
-	}
-	var entries []Entry
+type persistenceEntry struct {
+	key   string
+	value []byte
+}
+
+func (db *Persistence) entriesByTxID(condition func([]byte, []byte) bool, txID string, prefix string) ([]persistenceEntry, error) {
+	var entries []persistenceEntry
 	stream := db.db.NewStream()
 	stream.NumGo = db.numGoStream
 	stream.LogPrefix = streamLogPrefixStatus
+	if len(prefix) > 0 {
+		stream.Prefix = []byte(prefix)
+	}
 	txIdAsBytes := []byte(txID)
 	stream.ChooseKey = func(item *badger.Item) bool {
-		return bytes.HasSuffix(item.Key(), txIdAsBytes)
+		fmt.Printf("key [%s]\n", item.Key())
+		return condition(item.Key(), txIdAsBytes)
 	}
 	stream.Send = func(buf *z.Buffer) error {
 		list, err := badger.BufferToKVList(buf)
@@ -401,12 +404,21 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 			return err
 		}
 		for _, kv := range list.Kv {
-			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
+			entries = append(entries, persistenceEntry{key: string(kv.Key), value: kv.Value})
 		}
 		return nil
 
 	}
 	if err := stream.Orchestrate(context.Background()); err != nil {
+		return nil, err
+	}
+	return entries, nil
+}
+
+func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
+	logger.Debugf("set status of [%s] to [%s]", txID, status)
+	entries, err := db.entriesByTxID(bytes.HasSuffix, txID, "")
+	if err != nil {
 		return err
 	}
 
@@ -471,31 +483,8 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 }
 
 func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
-	// search for all matching keys
-	type Entry struct {
-		key   string
-		value []byte
-	}
-	var entries []Entry
-	stream := db.db.NewStream()
-	stream.NumGo = db.numGoStream
-	stream.LogPrefix = streamLogPrefixStatus
-	txIdAsBytes := []byte(txID)
-	stream.ChooseKey = func(item *badger.Item) bool {
-		return bytes.HasSuffix(item.Key(), txIdAsBytes)
-	}
-	stream.Send = func(buf *z.Buffer) error {
-		list, err := badger.BufferToKVList(buf)
-		if err != nil {
-			return err
-		}
-		for _, kv := range list.Kv {
-			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
-		}
-		return nil
-
-	}
-	if err := stream.Orchestrate(context.Background()); err != nil {
+	entries, err := db.entriesByTxID(bytes.HasSuffix, txID, "tx")
+	if err != nil {
 		return driver.Unknown, err
 	}
 
@@ -505,20 +494,12 @@ func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
 		return driver.Unknown, nil
 	}
 
-	// update status for all matching keys
-	for _, entry := range entries {
-		switch {
-		case strings.HasPrefix(entry.key, "tx"):
-			record, err := UnmarshalTransactionRecord(entry.value)
-			if err != nil {
-				return driver.Unknown, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
-			}
-			return record.Record.Status, nil
-		default:
-			continue
-		}
+	entry := entries[0]
+	record, err := UnmarshalTransactionRecord(entry.value)
+	if err != nil {
+		return driver.Unknown, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 	}
-	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
+	return record.Record.Status, nil
 }
 
 func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identity, sigma []byte) error {
@@ -554,34 +535,8 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identit
 }
 
 func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	acks := make(map[string][]byte)
-
-	// search for all matching keys
-	type Entry struct {
-		key   string
-		value []byte
-	}
-	var entries []Entry
-	stream := db.db.NewStream()
-	stream.NumGo = db.numGoStream
-	stream.LogPrefix = streamLogPrefixStatus
-	txIdAsBytes := []byte(txID)
-	stream.ChooseKey = func(item *badger.Item) bool {
-		fmt.Printf("key [%s]\n", item.Key())
-		return bytes.Contains(item.Key(), txIdAsBytes)
-	}
-	stream.Send = func(buf *z.Buffer) error {
-		list, err := badger.BufferToKVList(buf)
-		if err != nil {
-			return err
-		}
-		for _, kv := range list.Kv {
-			entries = append(entries, Entry{key: string(kv.Key), value: kv.Value})
-		}
-		return nil
-
-	}
-	if err := stream.Orchestrate(context.Background()); err != nil {
+	entries, err := db.entriesByTxID(bytes.Contains, txID, "tea")
+	if err != nil {
 		return nil, err
 	}
 
@@ -591,17 +546,13 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 		return nil, nil
 	}
 
+	acks := make(map[string][]byte, len(entries))
 	for _, entry := range entries {
-		switch {
-		case strings.HasPrefix(entry.key, "tea"):
-			record, err := UnmarshalTransactionEndorseAck(entry.value)
-			if err != nil {
-				return nil, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
-			}
-			acks[record.ID.String()] = record.Sigma
-		default:
-			continue
+		record, err := UnmarshalTransactionEndorseAck(entry.value)
+		if err != nil {
+			return nil, errors.Wrapf(err, "could not unmarshal key %s", entry.key)
 		}
+		acks[record.ID.String()] = record.Sigma
 	}
 	return acks, nil
 }
