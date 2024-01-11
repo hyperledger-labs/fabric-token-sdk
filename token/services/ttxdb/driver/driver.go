@@ -264,9 +264,11 @@ type TokenTransactionDB interface {
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(txID string) ([]byte, error)
 
-	AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error
+	// AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
+	AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error
 
-	GetEndorsementAcks(txID string) (map[string][]byte, error)
+	// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
+	GetTransactionEndorsementAcks(txID string) (map[string][]byte, error)
 }
 
 // Driver is the interface for a database driver

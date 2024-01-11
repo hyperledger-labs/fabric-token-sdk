@@ -521,7 +521,7 @@ func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
 	return driver.Unknown, errors.Errorf("transaction [%s] not found", txID)
 }
 
-func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
+func (db *Persistence) AddTransactionEndorsementAck(txID string, id view.Identity, sigma []byte) error {
 	key, err := db.transactionEndorseAckKey(txID, id)
 	if err != nil {
 		return errors.Wrapf(err, "could not get key for token request %s", txID)
@@ -553,7 +553,7 @@ func (db *Persistence) AppendTransactionEndorseAck(txID string, id view.Identity
 	return nil
 }
 
-func (db *Persistence) GetEndorsementAcks(txID string) (map[string][]byte, error) {
+func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
 	acks := make(map[string][]byte)
 
 	// search for all matching keys

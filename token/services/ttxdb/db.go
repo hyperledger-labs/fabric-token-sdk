@@ -428,12 +428,14 @@ func (db *DB) ReleaseLocks(anchor string) {
 
 }
 
-func (db *DB) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
-	return db.db.AppendTransactionEndorseAck(txID, id, sigma)
+// AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
+func (db *DB) AddTransactionEndorsementAck(txID string, id view2.Identity, sigma []byte) error {
+	return db.db.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
-func (db *DB) GetEndorsementAcks(txID string) (map[string][]byte, error) {
-	return db.db.GetEndorsementAcks(txID)
+// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
+func (db *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
+	return db.db.GetTransactionEndorsementAcks(txID)
 }
 
 func (db *DB) appendSendMovements(record *token.AuditRecord) error {

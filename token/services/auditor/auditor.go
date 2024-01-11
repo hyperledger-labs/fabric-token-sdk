@@ -137,8 +137,8 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
 }
 
-func (a *Auditor) GetEndorsementAcks(id string) (map[string][]byte, error) {
-	return a.db.GetEndorsementAcks(id)
+func (a *Auditor) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
+	return a.db.GetTransactionEndorsementAcks(id)
 }
 
 type TxStatusChangesListener struct {
