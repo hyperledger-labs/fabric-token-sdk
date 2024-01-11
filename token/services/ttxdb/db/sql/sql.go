@@ -369,13 +369,10 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 	}
 	defer rows.Close()
 	acks := make(map[string][]byte)
-	for {
-		if !rows.Next() {
-			break
-		}
-		var id []byte
+	for rows.Next() {
+		var endorser []byte
 		var sigma []byte
-		if err := rows.Scan(&id, &sigma); err != nil {
+		if err := rows.Scan(&endorser, &sigma); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				// not an error for compatibility with badger.
 				logger.Warnf("tried to get status for non-existent tx %s, returning unknown", txID)
@@ -383,7 +380,10 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 			}
 			return nil, errors.Wrapf(err, "error querying db")
 		}
-		acks[view.Identity(id).String()] = sigma
+		acks[view.Identity(endorser).String()] = sigma
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 	return acks, nil
 }
