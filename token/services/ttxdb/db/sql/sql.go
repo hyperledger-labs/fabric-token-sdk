@@ -347,9 +347,6 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.I
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
-	if err != nil {
-		return errors.Wrapf(err, "failed to get random nonce")
-	}
 	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
 		return errors.Wrapf(err, "failed to execute")
 	}
@@ -594,19 +591,19 @@ func getTableNames(prefix, name string) (tableNames, error) {
 
 type SerializedPersistence struct {
 	*Persistence
-	parallelismMutex sync.RWMutex
+	mutex sync.RWMutex
 }
 
 func (db *SerializedPersistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
-	db.parallelismMutex.Lock()
-	defer db.parallelismMutex.Unlock()
+	db.mutex.Lock()
+	defer db.mutex.Unlock()
 
 	return db.Persistence.AddTransactionEndorsementAck(txID, endorser, sigma)
 }
 
 func (db *SerializedPersistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	db.parallelismMutex.RLock()
-	defer db.parallelismMutex.RUnlock()
+	db.mutex.RLock()
+	defer db.mutex.RUnlock()
 
 	return db.Persistence.GetTransactionEndorsementAcks(txID)
 }
