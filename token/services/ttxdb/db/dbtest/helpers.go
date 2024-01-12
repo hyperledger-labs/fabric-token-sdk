@@ -649,6 +649,9 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	for i := 0; i < 40; i++ {
 		go func(i int) {
 			assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
+			acks, err := db.GetTransactionEndorsementAcks("1")
+			assert.NoError(t, err)
+			assert.True(t, len(acks) != 0)
 			wg.Done()
 		}(i)
 	}
