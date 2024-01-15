@@ -93,7 +93,12 @@ func (cm *Manager) Restore() error {
 }
 
 func (cm *Manager) newOwner(tms *token.ManagementService) (*Owner, error) {
-	owner := &Owner{sp: cm.sp, db: ttxdb.Get(cm.sp, &tmsWallet{tms: tms})}
+	tmsID := tms.ID()
+	walletID := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	owner := &Owner{
+		sp: cm.sp,
+		db: ttxdb.Get(cm.sp, tmsID.String(), walletID),
+	}
 	net := network.GetInstance(cm.sp, tms.ID().Network, tms.ID().Channel)
 	if net == nil {
 		return nil, errors.Errorf("failed to get network instance for [%s:%s]", tms.ID().Network, tms.ID().Channel)
@@ -218,17 +223,4 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 // New returns the Owner instance for the passed TMS
 func New(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 	return Get(sp, tms)
-}
-
-type tmsWallet struct {
-	tms *token.ManagementService
-}
-
-func (t *tmsWallet) ID() string {
-	id := t.tms.ID()
-	return fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace)
-}
-
-func (t *tmsWallet) TMS() *token.ManagementService {
-	return t.tms
 }

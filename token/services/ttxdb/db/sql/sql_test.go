@@ -58,6 +58,15 @@ func TestSqlite(t *testing.T) {
 			c.Fn(xt, db)
 		})
 	}
+
+	// Tokens
+	for _, c := range dbtest.TokensCases {
+		db := getDatabase(t, "sqlite", c.Name)
+		t.Run(c.Name, func(xt *testing.T) { c.Fn(xt, db) })
+		if err := db.Close(); err != nil {
+			t.Error(err)
+		}
+	}
 }
 
 func TestPostgres(t *testing.T) {

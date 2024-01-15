@@ -159,7 +159,7 @@ func (p *SDK) Start(ctx context.Context) error {
 
 	// restore owner and auditor dbs, if any
 	if err := p.ownerManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore onwer dbs")
+		return errors.WithMessagef(err, "failed to restore owner dbs")
 	}
 	if err := p.auditorManager.Restore(); err != nil {
 		return errors.WithMessagef(err, "failed to restore auditor dbs")

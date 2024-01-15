@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 func transactionsConditionsSql(params driver.QueryTransactionsParams) (string, []interface{}) {
@@ -172,6 +173,25 @@ func in(args *[]interface{}, field string, searchFor []interface{}) (where strin
 	}
 
 	return fmt.Sprintf("(%s)", strings.Join(argnum, " OR "))
+}
+
+func whereTokenIDs(args *[]interface{}, namespace string, ids []*token.ID) (where string) {
+	switch len(ids) {
+	case 0:
+		return ""
+	case 1:
+		*args = append(*args, namespace, ids[0].TxId, ids[0].Index)
+		l := len(*args)
+		return fmt.Sprintf("ns = %s AND tx_id = %s AND idx = %s", fmt.Sprintf("$%d", l-2), fmt.Sprintf("$%d", l-1), fmt.Sprintf("$%d", l))
+	default:
+		in := make([]string, len(ids))
+		for i, id := range ids {
+			*args = append(*args, namespace, id.TxId, id.Index)
+			l := len(*args)
+			in[i] = fmt.Sprintf("(%s, %s, %s)", fmt.Sprintf("$%d", l-2), fmt.Sprintf("$%d", l-1), fmt.Sprintf("$%d", l))
+		}
+		return fmt.Sprintf("(ns, tx_id, idx) IN ( %s )", strings.Join(in, ", "))
+	}
 }
 
 func add(and *[]string, clause string) {

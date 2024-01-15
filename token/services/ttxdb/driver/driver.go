@@ -14,6 +14,8 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // ActionType is the type of transaction
@@ -269,6 +271,54 @@ type TokenTransactionDB interface {
 
 	// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
 	GetTransactionEndorsementAcks(txID string) (map[string][]byte, error)
+
+	// TokenDB provides all the features to store and retrieve tokens
+	TokenDB
+}
+
+type TokenDB interface {
+	StoreOwnerToken(tr TokenRecord, owners []string) error
+	StoreIssuedToken(tr TokenRecord) error
+	StoreAuditToken(tr TokenRecord) error
+	Delete(namespace, txID string, index uint64, deletedBy string) error
+	IsMine(namespace, txID string, index uint64) (bool, error)
+	UnspentTokensIterator(namespace string) (driver.UnspentTokensIterator, error)
+	UnspentTokensIteratorBy(namespace string, id, typ string) (driver.UnspentTokensIterator, error)
+	ListUnspentTokens(namespace string) (*token.UnspentTokens, error)
+	ListUnspentTokensBy(ns, ownerEID, typ string) (*token.UnspentTokens, error)
+	ListAuditTokens(namespace string, ids ...*token.ID) ([]*token.Token, error)
+	ListHistoryIssuedTokens(namespace string) (*token.IssuedTokens, error)
+	GetTokenInfos(namespace string, ids []*token.ID, callback driver.QueryCallbackFunc) error
+	GetAllTokenInfos(namespace string, ids []*token.ID) ([][]byte, error)
+	GetTokens(namespace string, inputs ...*token.ID) ([]string, []*token.Token, error)
+	WhoDeletedTokens(namespace string, inputs ...*token.ID) ([]string, []bool, error)
+}
+
+type TokenRecord struct {
+	// TxID is the ID of the transaction that created the token
+	TxID string
+	// Index is the index in the transaction
+	Index uint64
+	// Namespace is the namespace where the token was created
+	Namespace string
+	// IssuerRaw represents the serialization of the issuer identity
+	// if this is an IssuedToken.
+	IssuerRaw []byte
+	// OwnerRaw is the serialization of the owner identity
+	OwnerRaw []byte
+	// InfoRaw is the output of TMS.GetTokenInfo (json encoded)
+	InfoRaw string
+	// Quantity is the number of units of Type carried in the token.
+	// It is encoded as a string containing a number in base 16. The string has prefix ``0x''.
+	Quantity string
+	// Type is the type of token
+	Type string
+	// Amount is the Quantity converted to decimal
+	Amount uint64
+	// TxStatus is the status of the transaction
+	TxStatus TxStatus
+	// SettledAt is the settlement time if known
+	SettledAt time.Time
 }
 
 // Driver is the interface for a database driver

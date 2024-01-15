@@ -398,11 +398,11 @@ func unmarshal(in []byte, out *map[string][]byte) error {
 
 func (db *Persistence) CreateSchema() error {
 	logger.Info("creating tables")
-	tx, err := db.db.Begin()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	// tx, err := db.db.Begin()
+	// if err != nil {
+	// 	return err
+	// }
+	// defer tx.Rollback()
 
 	schema := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
@@ -463,12 +463,12 @@ func (db *Persistence) CreateSchema() error {
 	)
 
 	logger.Debug(schema)
-	if _, err = tx.Exec(schema); err != nil {
+	if _, err := db.db.Exec(schema); err != nil {
 		return err
 	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
+	// if err = tx.Commit(); err != nil {
+	// 	return err
+	// }
 	return nil
 }
 
@@ -560,6 +560,10 @@ type tableNames struct {
 	Requests              string
 	Validations           string
 	TransactionEndorseAck string
+	Tokens                string
+	Ownership             string
+	AuditTokens           string
+	IssuedTokens          string
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
@@ -585,6 +589,10 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		Requests:              fmt.Sprintf("%srequests%s", prefix, suffix),
 		Validations:           fmt.Sprintf("%svalidations%s", prefix, suffix),
 		TransactionEndorseAck: fmt.Sprintf("%stea%s", prefix, suffix),
+		Tokens:                fmt.Sprintf("%stokens%s", prefix, suffix),
+		Ownership:             fmt.Sprintf("%sownership%s", prefix, suffix),
+		AuditTokens:           fmt.Sprintf("%saudit_tokens%s", prefix, suffix),
+		IssuedTokens:          fmt.Sprintf("%sissued_tokens%s", prefix, suffix),
 	}, nil
 }
 

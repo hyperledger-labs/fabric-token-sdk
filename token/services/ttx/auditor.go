@@ -44,12 +44,16 @@ type TxAuditor struct {
 }
 
 func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *TxAuditor {
+	if w == nil {
+		logger.Debugf("no wallet provided")
+		return nil
+	}
 	backend := auditor.New(sp, w)
 	return &TxAuditor{
 		sp:                      sp,
 		w:                       w,
 		auditor:                 backend,
-		db:                      ttxdb.Get(sp, w),
+		db:                      ttxdb.Get(sp, w.TMS().ID().String(), w.ID()),
 		transactionInfoProvider: newTransactionInfoProvider(sp, w.TMS(), backend),
 	}
 }

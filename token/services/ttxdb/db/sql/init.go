@@ -80,9 +80,13 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema, 
 	if !parallelism {
 		ttxDB = &SerializedPersistence{Persistence: p}
 	}
+
 	if createSchema {
 		if err := p.CreateSchema(); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)
+		}
+		if err := p.CreateTokenSchema(); err != nil {
+			logger.Fatal(err)
 		}
 	}
 	return ttxDB, nil

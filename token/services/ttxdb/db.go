@@ -17,7 +17,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )
@@ -634,11 +636,11 @@ func NewManager(sp view.ServiceProvider, driver string) *Manager {
 }
 
 // DB returns a DB for the given wallet
-func (cm *Manager) DB(w Wallet) (*DB, error) {
+func (cm *Manager) DB(tmsID, walletID string) (*DB, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	id := w.TMS().ID().String() + w.ID()
+	id := tmsID + walletID
 	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.dbs[id]
 	if !ok {
@@ -662,19 +664,15 @@ var (
 
 // Get returns the DB for the given wallet.
 // Nil might be returned if the wallet is not found or an error occurred.
-func Get(sp view.ServiceProvider, w Wallet) *DB {
-	if w == nil {
-		logger.Debugf("no wallet provided")
-		return nil
-	}
+func Get(sp view.ServiceProvider, tmsID, walletID string) *DB {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	c, err := s.(*Manager).DB(w)
+	c, err := s.(*Manager).DB(tmsID, walletID)
 	if err != nil {
-		logger.Errorf("failed to get db for wallet [%s:%s]: [%s]", w.TMS().ID(), w.ID(), err)
+		logger.Errorf("failed to get db for wallet [%s:%s]: [%s]", tmsID, walletID, err)
 		return nil
 	}
 	return c
@@ -700,4 +698,80 @@ func deduplicate(source []string) []string {
 		}
 	}
 	return res
+}
+
+func (db *DB) StoreOwnerToken(tr driver.TokenRecord, owners []string) error {
+	return db.db.StoreOwnerToken(tr, owners)
+}
+
+func (db *DB) StoreIssuedToken(tr driver.TokenRecord) error {
+	return db.db.StoreIssuedToken(tr)
+}
+
+func (db *DB) StoreAuditToken(tr driver.TokenRecord) error {
+	return db.db.StoreAuditToken(tr)
+}
+
+func (db *DB) Delete(namespace, txID string, index uint64, deletedBy string) error {
+	return db.db.Delete(namespace, txID, index, deletedBy)
+}
+
+// Functions used by QueryEngine
+
+// IsMine returns true if the passed id is owned by any known wallet
+func (db *DB) IsMine(namespace string, txID string, index uint64) (bool, error) {
+	return db.db.IsMine(namespace, txID, index)
+}
+
+// UnspentTokensIterator returns an iterator over all unspent tokens
+func (db *DB) UnspentTokensIterator(namespace string) (tdriver.UnspentTokensIterator, error) {
+	return db.db.UnspentTokensIterator(namespace)
+}
+
+// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
+// The token type can be empty. In that case, tokens of any type are returned.
+func (db *DB) UnspentTokensIteratorBy(namespace, id, typ string) (tdriver.UnspentTokensIterator, error) {
+	return db.db.UnspentTokensIteratorBy(namespace, id, typ)
+}
+
+// ListUnspentTokensBy returns the list of unspent tokens, filtered by owner id and token type
+func (db *DB) ListUnspentTokensBy(ns, ownerEID, typ string) (*token2.UnspentTokens, error) {
+	return db.db.ListUnspentTokensBy(ns, ownerEID, typ)
+}
+
+// ListUnspentTokens returns the list of unspent tokens
+func (db *DB) ListUnspentTokens(namespace string) (*token2.UnspentTokens, error) {
+	return db.db.ListUnspentTokens(namespace)
+}
+
+// ListAuditTokens returns the audited tokens associated to the passed ids
+func (db *DB) ListAuditTokens(namespace string, ids ...*token2.ID) ([]*token2.Token, error) {
+	return db.db.ListAuditTokens(namespace, ids...)
+}
+
+// ListHistoryIssuedTokens returns the list of issues tokens
+func (db *DB) ListHistoryIssuedTokens(namespace string) (*token2.IssuedTokens, error) {
+	return db.db.ListHistoryIssuedTokens(namespace)
+}
+
+// GetTokenInfos retrieves the token information for the passed ids.
+// For each id, the callback is invoked to unmarshal the token information
+func (db *DB) GetTokenInfos(namespace string, ids []*token2.ID, callback tdriver.QueryCallbackFunc) error {
+	return db.db.GetTokenInfos(namespace, ids, callback)
+}
+
+// GetAllTokenInfos retrieves the token information for the passed ids.
+func (db *DB) GetAllTokenInfos(namespace string, ids []*token2.ID) ([][]byte, error) {
+	return db.db.GetAllTokenInfos(namespace, ids)
+}
+
+// GetTokens returns the list of tokens with their respective vault keys
+func (db *DB) GetTokens(namespace string, inputs ...*token2.ID) ([]string, []*token2.Token, error) {
+	return db.db.GetTokens(namespace, inputs...)
+}
+
+// WhoDeletedTokens returns info about who deleted the passed tokens.
+// The bool array is an indicator used to tell if the token at a given position has been deleted or not
+func (db *DB) WhoDeletedTokens(namespace string, inputs ...*token2.ID) ([]string, []bool, error) {
+	return db.db.WhoDeletedTokens(namespace, inputs...)
 }

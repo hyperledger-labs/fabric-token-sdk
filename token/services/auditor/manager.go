@@ -97,7 +97,10 @@ func (cm *Manager) Restore() error {
 }
 
 func (cm *Manager) newAuditor(w *token.AuditorWallet) (*Auditor, error) {
-	auditor := &Auditor{sp: cm.sp, db: ttxdb.Get(cm.sp, w)}
+	auditor := &Auditor{
+		sp: cm.sp,
+		db: ttxdb.Get(cm.sp, w.TMS().String(), w.ID()),
+	}
 	net := network.GetInstance(cm.sp, w.TMS().Network(), w.TMS().Channel())
 	if net == nil {
 		return nil, errors.Errorf("failed to get network instance for [%s:%s]", w.TMS().Network(), w.TMS().Channel())

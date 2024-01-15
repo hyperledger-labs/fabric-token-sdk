@@ -7,9 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package processor
 
 import (
-	"encoding/json"
+	"fmt"
+	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -18,7 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.network.processor")
@@ -48,151 +49,54 @@ type TokenStore interface {
 type CommonTokenStore struct {
 	notifier events.Publisher
 	tmsID    token.TMSID
+	db       driver.TokenDB
 }
 
 func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTokenStore, error) {
+	// walletID := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	// db := ttxdb.Get(sp, tmsID.String(), walletID)
+	db := ttxdb.Get(sp, fmt.Sprintf("%s,%s", tmsID.Channel, tmsID.Namespace), "tok") // TODO: cheating to make it easier to match from the QueryEngine
+	if db == nil {
+		return nil, errors.New("cannot get database")
+	}
+
 	notifier, err := events.GetPublisher(sp)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get event publisher")
 	}
 
-	return &CommonTokenStore{notifier: notifier, tmsID: tmsID}, nil
+	return &CommonTokenStore{notifier: notifier, tmsID: tmsID, db: db}, nil
 }
 
 func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
-	outputID, err := keys.CreateFabTokenKey(txID, index)
+	logger.Debugf("delete key [%s,%d]", txID, index)
+	err := cts.db.Delete(ns, txID, index, deletedBy)
 	if err != nil {
-		return errors.Wrapf(err, "error creating output ID: %s", err)
+		logger.Error(err)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("delete key [%s]", outputID)
-	}
-
-	meta, err := rws.GetStateMetadata(ns, outputID)
-	if err != nil {
-		return errors.Wrapf(err, "error getting metadata for key [%s]", outputID)
-	}
-	idsRaw, ok := meta[IDs]
-	if ok && len(idsRaw) > 0 {
-		// unmarshall ids
-		ids := make([]string, 0)
-		if err := json.Unmarshal(idsRaw, &ids); err != nil {
-			return errors.Wrapf(err, "error unmarshalling IDs for key [%s]", outputID)
-		}
-		// delete extended tokens as well
-		tokenRaw, err := rws.GetState(ns, outputID)
-		if err != nil {
-			return errors.Wrapf(err, "error getting token for key [%s]", outputID)
-		}
-		token := token2.Token{}
-		if err := Unmarshal(tokenRaw, &token); err != nil {
-			return errors.Wrapf(err, "failed to unmarshal token")
-		}
-		for _, id := range ids {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("delete extended key [%s]", id)
-			}
-
-			logger.Debugf("post new delete-token event")
-			cts.Notify(DeleteToken, cts.tmsID, id, token.Type, txID, index)
-
-			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
-			if err != nil {
-				return errors.Wrapf(err, "error creating extendend output ID: %s", err)
-			}
-			err = rws.DeleteState(ns, outputID)
-			if err != nil {
-				return errors.Wrapf(err, "error deleting extended key [%s]", outputID)
-			}
-		}
-	}
-
-	err = rws.DeleteState(ns, outputID)
-	if err != nil {
-		return errors.Wrapf(err, "error deleting key [%s]", outputID)
-	}
-	err = rws.SetStateMetadata(ns, outputID, nil)
-	if err != nil {
-		return errors.Wrapf(err, "error deleting metadata for key [%s]", outputID)
-	}
-
-	// append a key reporting which transaction deleted this
-	deletedTokenKey, err := keys.CreateDeletedTokenKey(txID, index)
-	if err != nil {
-		return errors.Wrapf(err, "error creating deleted key output ID: %s", err)
-	}
-	err = rws.SetState(ns, deletedTokenKey, []byte(deletedBy))
-	if err != nil {
-		return errors.Wrapf(err, "failed to aadd deleted token key for key [%s]", outputID)
-	}
-
-	return nil
+	return err
 }
 
 func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
-	// Add a lookup key to identify quickly that this token belongs to this instance
-	mineTokenID, err := keys.CreateTokenMineKey(txID, index)
-	if err != nil {
-		return errors.Wrapf(err, "failed computing mine key for for tx [%s]", txID)
+	logger.Debugf("transaction [%s], append fabtoken output [%s,%d,%v]", txID, index, view.Identity(tok.Owner.Raw), len(infoRaw))
+	amount := uint64(999) // TODO
+	tr := driver.TokenRecord{
+		Namespace: ns,
+		TxID:      txID,
+		Index:     index,
+		OwnerRaw:  tok.Owner.Raw,
+		Type:      tok.Type,
+		Quantity:  tok.Quantity,
+		Amount:    amount,
+		InfoRaw:   string(infoRaw),
+		// TODO: TxStatus
 	}
-	err = rws.SetState(ns, mineTokenID, []byte{1})
+	err := cts.db.StoreOwnerToken(tr, ids)
 	if err != nil {
+		logger.Critical(err)
 		return err
-	}
-
-	// Store token
-	outputID, err := keys.CreateFabTokenKey(txID, index)
-	if err != nil {
-		return errors.Wrapf(err, "error creating output ID: %s", err)
-	}
-	raw, err := Marshal(tok)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token")
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s], append fabtoken output [%s,%s,%v]", txID, outputID, view.Identity(tok.Owner.Raw), string(raw))
-	}
-	if err := rws.SetState(ns, outputID, raw); err != nil {
-		return err
-	}
-
-	meta := map[string][]byte{}
-	meta[keys.Info] = infoRaw
-	if len(ids) > 0 {
-		meta[IDs], err = Marshal(ids)
-		if err != nil {
-			return errors.Wrapf(err, "failed to marshal token ids")
-		}
-
-	}
-	if err := rws.SetStateMetadata(ns, outputID, meta); err != nil {
-		return err
-	}
-
-	// store extended fabtoken, if needed
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s], append extended fabtoken output [%s,%v]", txID, outputID, ids)
 	}
 	for _, id := range ids {
-		if len(id) == 0 {
-			continue
-		}
-
-		outputID, err := keys.CreateExtendedFabTokenKey(id, tok.Type, txID, index)
-		if err != nil {
-			return errors.Wrapf(err, "error creating output ID: %s", err)
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], append extended fabtoken output [%s, %s,%s,%v]", txID, outputID, view.Identity(tok.Owner.Raw), id, string(raw))
-		}
-		if err := rws.SetState(ns, outputID, raw); err != nil {
-			return err
-		}
-		if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
-			return err
-		}
-
 		// notify others
 		logger.Debugf("post new event!")
 		cts.Notify(AddToken, cts.tmsID, id, tok.Type, txID, index)
@@ -202,67 +106,55 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 }
 
 func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
-	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
-	if err != nil {
-		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
-	}
-	issuedToken := &token2.IssuedToken{
-		Id: &token2.ID{
-			TxId:  txID,
-			Index: index,
-		},
-		Owner:    tok.Owner,
-		Type:     tok.Type,
-		Quantity: tok.Quantity,
-		Issuer: &token2.Owner{
-			Raw: issuer,
-		},
-	}
-	raw, err := Marshal(issuedToken)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal issued token")
-	}
-
 	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
 		return errors.Wrapf(err, "invalid quantity [%s]", tok.Quantity)
 	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s], append issued history token [%s,%s][%s,%v]",
-			txID,
-			tok.Type, q.Decimal(),
-			outputID, string(raw),
-		)
+	a, err := strconv.ParseUint(q.Decimal(), 10, int(precision))
+	if err != nil {
+		return errors.New("can't parse quantity to uint64")
 	}
 
-	if err := rws.SetState(ns, outputID, raw); err != nil {
-		return err
+	tr := driver.TokenRecord{
+		Namespace: ns,
+		TxID:      txID,
+		Index:     index,
+		OwnerRaw:  tok.Owner.Raw,
+		IssuerRaw: issuer,
+		Type:      tok.Type,
+		Quantity:  tok.Quantity,
+		Amount:    a,
+		InfoRaw:   string(infoRaw),
+		// TODO: TxStatus
 	}
-	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+
+	logger.Debugf("transaction [%s], append issued history token [%s,%s][%s,%d]",
+		txID, tok.Type, a, index, len(infoRaw),
+	)
+
+	err = cts.db.StoreIssuedToken(tr)
+	if err != nil {
+		logger.Critical(err)
 		return err
 	}
 	return nil
 }
 
 func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error {
-	outputID, err := keys.CreateAuditTokenKey(txID, index)
+	tr := driver.TokenRecord{
+		Namespace: ns,
+		TxID:      txID,
+		Index:     index,
+		OwnerRaw:  tok.Owner.Raw,
+		Type:      tok.Type,
+		Quantity:  tok.Quantity,
+		Amount:    999, // TODO
+		InfoRaw:   string(infoRaw),
+		// TODO: TxStatus
+	}
+	err := cts.db.StoreAuditToken(tr)
 	if err != nil {
-		return errors.Wrapf(err, "error creating output ID: %s", err)
-	}
-	raw, err := Marshal(tok)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token")
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s], append audit token output [%s,%v]", txID, outputID, string(raw))
-	}
-
-	if err := rws.SetState(ns, outputID, raw); err != nil {
-		return err
-	}
-	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+		logger.Critical(err)
 		return err
 	}
 	return nil
