@@ -13,8 +13,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -35,7 +35,7 @@ type LocalMembership struct {
 	signerService          common.SignerService
 	binderService          common.BinderService
 	deserializerManager    common.DeserializerManager
-	kvs                    common.KVS
+	walletPathStorage      identity.WalletPathStorage
 	mspID                  string
 
 	resolversMutex           sync.RWMutex
@@ -53,7 +53,7 @@ func NewLocalMembership(
 	signerService common.SignerService,
 	binderService common.BinderService,
 	deserializerManager common.DeserializerManager,
-	kvs common.KVS,
+	walletPathStorage identity.WalletPathStorage,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
@@ -63,7 +63,7 @@ func NewLocalMembership(
 		signerService:            signerService,
 		binderService:            binderService,
 		deserializerManager:      deserializerManager,
-		kvs:                      kvs,
+		walletPathStorage:        walletPathStorage,
 		mspID:                    mspID,
 		bccspResolversByIdentity: map[string]*common.Resolver{},
 		resolversByEnrollmentID:  map[string]*common.Resolver{},
@@ -318,37 +318,25 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
-	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", "x509", "registeredIdentity", id})
-	if err != nil {
-		return errors.Wrapf(err, "failed to create identity key")
-	}
-	return lm.kvs.Put(k, path)
+	return lm.walletPathStorage.AddWallet(id, path)
 }
 
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", "x509", "registeredIdentity"})
+	it, err := lm.walletPathStorage.WalletPaths()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
 	defer it.Close()
 	for it.HasNext() {
-		var path string
-		k, err := it.Next(&path)
+		entry, err := it.Next()
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
 		}
-
-		_, attrs, err := kvs.SplitCompositeKey(k)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to split key [%s]", k)
-		}
-
-		id := attrs[3]
+		id := entry.ID
 		if lm.getResolver(id) != nil {
 			continue
 		}
-
-		if err := lm.registerIdentity(&config.Identity{ID: id, Path: path}, lm.GetDefaultIdentifier() == ""); err != nil {
+		if err := lm.registerIdentity(&config.Identity{ID: id, Path: entry.Path}, lm.GetDefaultIdentifier() == ""); err != nil {
 			return err
 		}
 	}

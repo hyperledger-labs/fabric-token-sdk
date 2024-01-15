@@ -11,7 +11,6 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
@@ -56,6 +55,10 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 
 	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
 	// Prepare wallets
+	storageProvider, err := identity.GetStorageProvider(sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
 	wallets := identity.NewWallets()
 	dsManager, err := common.GetDeserializerManager(sp)
 	if err != nil {
@@ -69,7 +72,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		networkLocalMembership.DefaultIdentity(), // network default identity
 		msp.NewSigService(view.GetSigService(sp)), // signer service
 		view.GetEndpointService(sp),               // endpoint service
-		kvs.GetService(sp),
+		storageProvider,
 		dsManager,
 		false,
 	)
@@ -110,11 +113,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		return wallets.Reload(pp)
 	})
 	// wallet service
-	storageProvider, err := identity.GetStorageProvider(sp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
-	}
-	identityStorage, err := storageProvider.New(tmsID)
+	identityStorage, err := storageProvider.NewStorage(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
@@ -178,6 +177,11 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 	}
 
 	// Prepare wallets
+	storageProvider, err := identity.GetStorageProvider(sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get identity storage provider")
+	}
+
 	wallets := identity.NewWallets()
 	dsManager, err := common.GetDeserializerManager(sp)
 	if err != nil {
@@ -191,7 +195,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		nil,       // network default identity
 		msp.NewSigService(view.GetSigService(sp)), // signer service
 		nil, // endpoint service
-		kvs.GetService(sp),
+		storageProvider,
 		dsManager,
 		true,
 	)
@@ -228,11 +232,7 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		return nil, errors.WithMessage(err, "failed to load public parameters")
 	}
 
-	storageProvider, err := identity.GetStorageProvider(sp)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get identity storage provider")
-	}
-	identityStorage, err := storageProvider.New(tmsID)
+	identityStorage, err := storageProvider.NewStorage(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
