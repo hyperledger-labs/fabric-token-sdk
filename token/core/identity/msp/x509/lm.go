@@ -156,7 +156,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	if err := lm.storeEntryInKVS(id, path); err != nil {
+	if err := lm.walletPathStorage.Add(identity.WalletPath{ID: id, Path: path}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(&config.Identity{
@@ -317,12 +317,8 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 	return nil
 }
 
-func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
-	return lm.walletPathStorage.AddWallet(id, path)
-}
-
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.walletPathStorage.WalletPaths()
+	it, err := lm.walletPathStorage.Iterator()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

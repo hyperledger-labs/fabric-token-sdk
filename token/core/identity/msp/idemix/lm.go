@@ -160,7 +160,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if err := lm.storeEntryInKVS(id, path); err != nil {
+	if err := lm.storage.Add(identity.WalletPath{ID: id, Path: path}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
@@ -352,12 +352,8 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 	return lm.cacheSize, nil
 }
 
-func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
-	return lm.storage.AddWallet(id, path)
-}
-
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.storage.WalletPaths()
+	it, err := lm.storage.Iterator()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

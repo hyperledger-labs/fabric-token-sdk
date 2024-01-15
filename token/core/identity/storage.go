@@ -39,8 +39,8 @@ type Storage interface {
 }
 
 type WalletPathStorage interface {
-	AddWallet(id string, path string) error
-	WalletPaths() (Iterator[WalletPath], error)
+	Add(wp WalletPath) error
+	Iterator() (Iterator[WalletPath], error)
 }
 
 type StorageProvider interface {

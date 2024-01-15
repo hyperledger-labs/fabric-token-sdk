@@ -97,15 +97,15 @@ func NewWalletPathStorage(kvs KVS, prefix string) *WalletPathStorage {
 	return &WalletPathStorage{kvs: kvs, prefix: prefix}
 }
 
-func (w *WalletPathStorage) AddWallet(id string, path string) error {
-	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", w.prefix, "registeredIdentity", id})
+func (w *WalletPathStorage) Add(wp identity.WalletPath) error {
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", w.prefix, "registeredIdentity", wp.ID})
 	if err != nil {
 		return errors.Wrapf(err, "failed to create identity key")
 	}
-	return w.kvs.Put(k, path)
+	return w.kvs.Put(k, wp.Path)
 }
 
-func (w *WalletPathStorage) WalletPaths() (identity.Iterator[identity.WalletPath], error) {
+func (w *WalletPathStorage) Iterator() (identity.Iterator[identity.WalletPath], error) {
 	it, err := w.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", w.prefix, "registeredIdentity"})
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get registered identities from kvs")
@@ -115,14 +115,6 @@ func (w *WalletPathStorage) WalletPaths() (identity.Iterator[identity.WalletPath
 
 type WalletPathStorageIterator struct {
 	kvs.Iterator
-}
-
-func (w *WalletPathStorageIterator) HasNext() bool {
-	return w.Iterator.HasNext()
-}
-
-func (w *WalletPathStorageIterator) Close() error {
-	return w.Iterator.Close()
 }
 
 func (w *WalletPathStorageIterator) Next() (identity.WalletPath, error) {
