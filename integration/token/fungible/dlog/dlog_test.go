@@ -31,7 +31,7 @@ var _ = Describe("EndToEnd", func() {
 		network.Stop()
 	})
 
-	Describe("Fungible with Auditor ne Issuer", func() {
+	Describe("T1 Fungible with Auditor ne Issuer", func() {
 		BeforeEach(func() {
 			// notice that fabric-ca does not support yet aries
 			var err error
@@ -90,7 +90,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 	})
 
-	Describe("Fungible with Auditor = Issuer", func() {
+	Describe("T2 Fungible with Auditor = Issuer", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
@@ -119,7 +119,7 @@ var _ = Describe("EndToEnd", func() {
 
 	})
 
-	Describe("Fungible with Auditor ne Issuer + Fabric CA", func() {
+	Describe("T3 Fungible with Auditor ne Issuer + Fabric CA", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
@@ -139,7 +139,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 	})
 
-	Describe("Fungible with Auditor ne Issuer + SQL", func() {
+	Describe("T4 Fungible with Auditor ne Issuer + SQL", func() {
 		BeforeEach(func() {
 			var err error
 			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
