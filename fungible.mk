@@ -4,7 +4,7 @@ integration-tests-dlog-fabric:
 
 .PHONY: integration-tests-dlog-fabric-t1
 integration-tests-dlog-fabric-t1:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "ne" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "T1" .
 
 .PHONY: integration-tests-dlog-fabric-t1-extras
 integration-tests-dlog-fabric-t1-extras:
@@ -12,11 +12,15 @@ integration-tests-dlog-fabric-t1-extras:
 
 .PHONY: integration-tests-dlog-fabric-t2
 integration-tests-dlog-fabric-t2:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "=" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "T2" .
 
 .PHONY: integration-tests-dlog-fabric-t3
 integration-tests-dlog-fabric-t3:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "CA" .
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "T3" .
+
+.PHONY: integration-tests-dlog-fabric-t4
+integration-tests-dlog-fabric-t4:
+	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "T4" .
 
 .PHONY: integration-tests-fabtoken-dlog-fabric
 integration-tests-fabtoken-dlog-fabric:

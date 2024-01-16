@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/IBM/idemix"
+	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/IBM/idemix/idemixmsp"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -21,9 +22,9 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
@@ -48,7 +49,8 @@ type LocalMembership struct {
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
 	deserializerManager    common.DeserializerManager
-	kvs                    common.KVS
+	storage                identity.WalletPathStorage
+	keystore               keystore.KVS
 	mspID                  string
 	cacheSize              int
 
@@ -68,7 +70,8 @@ func NewLocalMembership(
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	deserializerManager common.DeserializerManager,
-	kvs common.KVS,
+	walletPathStorage identity.WalletPathStorage,
+	keystore keystore.KVS,
 	mspID string,
 	cacheSize int,
 	curveID math3.CurveID,
@@ -81,7 +84,8 @@ func NewLocalMembership(
 		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,
 		deserializerManager:     deserializerManager,
-		kvs:                     kvs,
+		storage:                 walletPathStorage,
+		keystore:                keystore,
 		mspID:                   mspID,
 		cacheSize:               cacheSize,
 		resolversByEnrollmentID: map[string]*common.Resolver{},
@@ -156,7 +160,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if err := lm.storeEntryInKVS(id, path); err != nil {
+	if err := lm.storage.Add(identity.WalletPath{ID: id, Path: path}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
@@ -246,7 +250,7 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 		}
 	}
 	// TODO: remove the need for ServiceProvider
-	cryptoProvider, err := NewKVSBCCSP(lm.kvs, curveID)
+	cryptoProvider, err := NewKVSBCCSP(lm.keystore, curveID)
 	if err != nil {
 		return errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
@@ -348,38 +352,23 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 	return lm.cacheSize, nil
 }
 
-func (lm *LocalMembership) storeEntryInKVS(id string, path string) error {
-	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", "idemix", "registeredIdentity", id})
-	if err != nil {
-		return errors.Wrapf(err, "failed to create identity key")
-	}
-	return lm.kvs.Put(k, path)
-}
-
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", "idemix", "registeredIdentity"})
+	it, err := lm.storage.Iterator()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
 	defer it.Close()
 	for it.HasNext() {
-		var path string
-		k, err := it.Next(&path)
+		entry, err := it.Next()
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get next registered identities from kvs")
 		}
 
-		_, attrs, err := kvs.SplitCompositeKey(k)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to split key [%s]", k)
-		}
-
-		id := attrs[3]
+		id := entry.ID
 		if lm.getResolver(id) != nil {
 			continue
 		}
-
-		if err := lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
+		if err := lm.registerIdentity(config.Identity{ID: id, Path: entry.Path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
 			return err
 		}
 	}

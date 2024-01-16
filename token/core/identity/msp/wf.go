@@ -50,7 +50,7 @@ type WalletFactory struct {
 	NetworkDefaultIdentity view2.Identity
 	SignerService          common.SignerService
 	BinderService          common.BinderService
-	KVS                    common.KVS
+	StorageProvider        identity.StorageProvider
 	DeserializerManager    common.DeserializerManager
 	ignoreRemote           bool
 }
@@ -64,7 +64,7 @@ func NewWalletFactory(
 	networkDefaultIdentity view2.Identity,
 	signerService common.SignerService,
 	binderService common.BinderService,
-	kvs common.KVS,
+	storageProvider identity.StorageProvider,
 	deserializerManager common.DeserializerManager,
 	ignoreRemote bool,
 ) *WalletFactory {
@@ -76,7 +76,7 @@ func NewWalletFactory(
 		NetworkDefaultIdentity: networkDefaultIdentity,
 		SignerService:          signerService,
 		BinderService:          binderService,
-		KVS:                    kvs,
+		StorageProvider:        storageProvider,
 		DeserializerManager:    deserializerManager,
 		ignoreRemote:           ignoreRemote,
 	}
@@ -89,13 +89,22 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 
+	walletPathStorage, err := f.StorageProvider.GetWalletPathStorage("idemix")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet path storage")
+	}
+	keystore, err := f.StorageProvider.NewKeystore()
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get new keystore")
+	}
 	lm := idemix.NewLocalMembership(
 		f.SP,
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.DeserializerManager,
-		f.KVS,
+		walletPathStorage,
+		keystore,
 		RoleToMSPID[role],
 		cacheSize,
 		curveID,
@@ -111,7 +120,20 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity.Wallet
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	lm := x509.NewLocalMembership(f.ConfigManager, f.NetworkDefaultIdentity, f.SignerService, f.BinderService, f.DeserializerManager, f.KVS, RoleToMSPID[role], false)
+	walletPathStorage, err := f.StorageProvider.GetWalletPathStorage("x509")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet path storage")
+	}
+	lm := x509.NewLocalMembership(
+		f.ConfigManager,
+		f.NetworkDefaultIdentity,
+		f.SignerService,
+		f.BinderService,
+		f.DeserializerManager,
+		walletPathStorage,
+		RoleToMSPID[role],
+		false,
+	)
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
@@ -124,13 +146,17 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
+	walletPathStorage, err := f.StorageProvider.GetWalletPathStorage("x509")
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get wallet path storage")
+	}
 	lm := x509.NewLocalMembership(
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.BinderService,
 		f.DeserializerManager,
-		f.KVS,
+		walletPathStorage,
 		RoleToMSPID[role],
 		true,
 	)

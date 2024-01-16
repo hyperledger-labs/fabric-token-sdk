@@ -331,22 +331,21 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 }
 
 func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
-	tx, err := db.db.Begin()
-	if err != nil {
-		return errors.New("failed starting a transaction")
-	}
-	defer tx.Rollback()
-
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.TransactionEndorseAck)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(endorser)), fmt.Sprintf("(%d bytes)", len(sigma)), now)
-
 	id, err := uuid.GenerateUUID()
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
+
+	tx, err := db.db.Begin()
+	if err != nil {
+		return errors.New("failed starting a transaction")
+	}
+	defer tx.Rollback()
 	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
 		return errors.Wrapf(err, "failed to execute")
 	}
