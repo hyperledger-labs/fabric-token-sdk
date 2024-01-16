@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -333,7 +334,7 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 }
 
 func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
-	logger.Debugf("adding transaction endorse ack record [%s]", txID)
+	logger.Infof("adding transaction endorse ack record [%s] [%s]", txID, string(debug.Stack()))
 
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.TransactionEndorseAck)
