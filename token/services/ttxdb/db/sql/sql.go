@@ -30,8 +30,6 @@ type Persistence struct {
 
 	txn     *sql.Tx
 	txnLock sync.Mutex
-
-	mutex sync.RWMutex
 }
 
 func (db *Persistence) Close() error {
