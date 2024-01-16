@@ -348,7 +348,7 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.I
 	}
 	defer tx.Rollback()
 	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
-		return errors.Wrapf(err, "failed to execute [%s]")
+		return errors.Wrapf(err, "failed to execute")
 	}
 	if err := tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
