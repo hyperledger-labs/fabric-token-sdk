@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -331,7 +332,7 @@ func (db *Persistence) QueryValidations(params driver.QueryValidationRecordsPara
 }
 
 func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
-	logger.Debugf("adding transaction endorse ack record [%s]", txID)
+	logger.Infof("adding transaction endorse ack record [%s] [%s]", txID, debug.Stack())
 
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, endorser, sigma, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.TransactionEndorseAck)
@@ -347,7 +348,7 @@ func (db *Persistence) AddTransactionEndorsementAck(txID string, endorser view.I
 	}
 	defer tx.Rollback()
 	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
-		return errors.Wrapf(err, "failed to execute")
+		return errors.Wrapf(err, "failed to execute [%s]")
 	}
 	if err := tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
