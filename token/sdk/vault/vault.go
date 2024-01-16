@@ -63,26 +63,28 @@ func (v *Provider) Vault(network string, channel string, namespace string) (vaul
 	}
 
 	// Create new vault
-	fns := fabric.GetFabricNetworkService(v.sp, network)
-	if fns != nil {
+	if fns := fabric.GetFabricNetworkService(v.sp, network); fns != nil {
 		ch := fabric.GetChannel(v.sp, network, channel)
-		res = rws.NewVault(
-			v.sp,
-			ch.Name(),
-			namespace,
-			fabric2.NewVault(ch, tokenStore),
-		)
+		tmsID := token3.TMSID{
+			Network:   network,
+			Channel:   ch.Name(),
+			Namespace: namespace,
+		}
+		res, err = rws.NewVault(v.sp, tmsID, fabric2.NewVault(ch, tokenStore))
 	} else {
 		ons := orion.GetOrionNetworkService(v.sp, network)
 		if ons == nil {
 			return nil, errors.Errorf("cannot find network [%s]", network)
 		}
-		res = rws.NewVault(
-			v.sp,
-			"",
-			namespace,
-			orion2.NewVault(ons, tokenStore),
-		)
+		tmsID := token3.TMSID{
+			Network:   network,
+			Channel:   "",
+			Namespace: namespace,
+		}
+		res, err = rws.NewVault(v.sp, tmsID, orion2.NewVault(ons, tokenStore))
+	}
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create new vault")
 	}
 
 	// update cache

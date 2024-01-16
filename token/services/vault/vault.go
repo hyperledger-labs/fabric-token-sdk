@@ -11,17 +11,16 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type QueryEngine = driver.QueryEngine
 
-type CertificationStorage = driver.CertificationStorage
-
 type TokenVault interface {
 	QueryEngine() QueryEngine
-	CertificationStorage() CertificationStorage
+	CertificationStorage() certification.Storage
 	DeleteTokens(ns string, ids ...*token.ID) error
 }
 
