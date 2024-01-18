@@ -269,16 +269,6 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
 			}
-			// Add a lookup key to identity quickly that this token belongs to this
-			mineTokenID, err := keys.CreateTokenMineKey(components[0], index)
-			if err != nil {
-				return errors.Wrapf(err, "failed computing mine key for for key [%s]", key)
-			}
-			err = rws.SetState(ns, mineTokenID, []byte{1})
-			if err != nil {
-				return err
-			}
-
 			// Store Fabtoken-like entry
 			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
 				return err

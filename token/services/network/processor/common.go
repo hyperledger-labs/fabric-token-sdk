@@ -130,6 +130,17 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 }
 
 func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
+	// Add a lookup key to identify quickly that this token belongs to this instance
+	mineTokenID, err := keys.CreateTokenMineKey(txID, index)
+	if err != nil {
+		return errors.Wrapf(err, "failed computing mine key for for tx [%s]", txID)
+	}
+	err = rws.SetState(ns, mineTokenID, []byte{1})
+	if err != nil {
+		return err
+	}
+
+	// Store token
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
