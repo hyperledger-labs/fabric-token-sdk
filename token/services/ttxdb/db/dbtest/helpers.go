@@ -15,6 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
 
@@ -32,6 +33,7 @@ var Cases = []struct {
 	{"TransactionQueries", TTransactionQueries},
 	{"ValidationRecordQueries", TValidationRecordQueries},
 	{"TEndorserAcks", TEndorserAcks},
+	{"TCertification", TCertification},
 }
 
 func TStoresTimestamp(t *testing.T, db driver.TokenTransactionDB) {
@@ -663,5 +665,40 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("alice_%d", i)).String()])
+	}
+}
+
+func TCertification(t *testing.T, db driver.TokenTransactionDB) {
+	wg := sync.WaitGroup{}
+	wg.Add(40)
+	for i := 0; i < 40; i++ {
+		go func(i int) {
+			tokenID := &token2.ID{
+				TxId:  fmt.Sprintf("tx_%d", i),
+				Index: 0,
+			}
+			assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
+				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
+			}))
+			assert.True(t, db.ExistsCertification(tokenID))
+			assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+				assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
+				return nil
+			}))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	for i := 0; i < 40; i++ {
+		tokenID := &token2.ID{
+			TxId:  fmt.Sprintf("tx_%d", i),
+			Index: 0,
+		}
+		assert.True(t, db.ExistsCertification(tokenID))
+		assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+			assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
+			return nil
+		}))
 	}
 }

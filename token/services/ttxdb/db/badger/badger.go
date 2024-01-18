@@ -16,12 +16,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/dgraph-io/badger/v3"
 	"github.com/dgraph-io/ristretto/z"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -33,6 +33,7 @@ const (
 	Validation     recordType = "mt"
 	Movement       recordType = "mv"
 	Transaction    recordType = "tx"
+	Certification  recordType = "cert"
 )
 
 func (t recordType) IsTypeOf(key string) bool {
@@ -569,6 +570,81 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 	return acks, nil
 }
 
+func (db *Persistence) StoreCertifications(certifications map[*token.ID][]byte) error {
+	txn := db.db.NewTransaction(true)
+	defer txn.Discard()
+
+	for tokenID, certification := range certifications {
+		key, err := db.certificationKey(tokenID)
+		if err != nil {
+			return errors.Wrapf(err, "could not get key for token id %s", tokenID)
+		}
+		logger.Debugf("adding certification [%s] with key [%s]", tokenID, key)
+
+		err = txn.Set([]byte(key), certification)
+		if err != nil {
+			return errors.Wrapf(err, "could not set value for key %s", key)
+		}
+	}
+	if err := txn.Commit(); err != nil {
+		return errors.Wrapf(err, "could not commit certifications")
+	}
+	return nil
+}
+
+func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error {
+	txn := db.db.NewTransaction(false)
+	defer txn.Discard()
+
+	for _, tokenID := range ids {
+		key, err := db.certificationKey(tokenID)
+		if err != nil {
+			return errors.Wrapf(err, "could not get key for token id [%s]", tokenID)
+		}
+		item, err := txn.Get([]byte(key))
+		if err != nil {
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				if err := callback(tokenID, nil); err != nil {
+					return errors.WithMessagef(err, "failed callback for [%s]", tokenID)
+				}
+				continue
+			}
+			return errors.Wrapf(err, "could not get value for key [%s]", key)
+		}
+
+		var certification []byte
+		certification, err = item.ValueCopy(certification)
+		if err != nil {
+			return errors.Wrapf(err, "failed to copy value")
+		}
+
+		if err := callback(tokenID, certification); err != nil {
+			return errors.WithMessagef(err, "failed callback for [%s]", tokenID)
+		}
+	}
+	return nil
+}
+
+func (db *Persistence) ExistsCertification(tokenID *token.ID) bool {
+	txn := db.db.NewTransaction(false)
+	defer txn.Discard()
+
+	key, err := db.certificationKey(tokenID)
+	if err != nil {
+		logger.Warnf("could not get key for token id [%s]: [%s]", tokenID, err)
+		return false
+	}
+	item, err := txn.Get([]byte(key))
+	if err != nil {
+		if errors.Is(err, badger.ErrKeyNotFound) {
+			return false
+		}
+		logger.Warnf("could not get value for key [%s]: [%s]", key, err)
+		return false
+	}
+	return item.ValueSize() != 0
+}
+
 func (db *Persistence) nextKey(t recordType, txID string) (uint64, string, error) {
 	next, err := db.seq.Next()
 	if err != nil {
@@ -595,6 +671,10 @@ func (db *Persistence) tokenRequestKey(txID string) (string, error) {
 
 func (db *Persistence) transactionEndorseAckKey(txID string, id view.Identity) (string, error) {
 	return dbKey(EndorsementAck, txID, id.String()), nil
+}
+
+func (db *Persistence) certificationKey(tokenID *token.ID) (string, error) {
+	return dbKey(Certification, tokenID.TxId, fmt.Sprintf("%d", tokenID.Index)), nil
 }
 
 func dbKey(t recordType, key ...string) string {

@@ -69,7 +69,6 @@ func (p *SDK) Install() error {
 	logger.Infof("Token platform enabled, installing...")
 
 	assert.NoError(p.registry.RegisterService(identity2.NewKVSStorageProvider(p.registry)), "failed to register identity storage")
-	assert.NoError(p.registry.RegisterService(certification.NewKVSStorageProvider(p.registry)), "failed to register certification storage")
 
 	logger.Infof("Set TMS TMSProvider")
 
@@ -123,6 +122,9 @@ func (p *SDK) Install() error {
 	if enabled {
 		assert.NoError(orion.InstallViews(p.registry), "failed to install custodian views")
 	}
+
+	// Certification
+	assert.NoError(p.registry.RegisterService(certification.NewTTXDBStorageProvider(p.registry)), "failed to register certification storage")
 
 	// Install metrics
 	assert.NoError(

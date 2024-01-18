@@ -121,10 +121,10 @@ func TestGetTableNames(t *testing.T) {
 		expectedResult tableNames
 		expectErr      bool
 	}{
-		{"", tableNames{Transactions: "transactions_5193a5", Movements: "movements_5193a5", Requests: "requests_5193a5", Validations: "validations_5193a5", TransactionEndorseAck: "tea_5193a5"}, false},
-		{"valid_prefix", tableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5", TransactionEndorseAck: "valid_prefix_tea_5193a5"}, false},
-		{"Valid_prefix", tableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5", TransactionEndorseAck: "Valid_prefix_tea_5193a5"}, false},
-		{"valid", tableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5", TransactionEndorseAck: "valid_tea_5193a5"}, false},
+		{"", tableNames{Transactions: "transactions_5193a5", Movements: "movements_5193a5", Requests: "requests_5193a5", Validations: "validations_5193a5", TransactionEndorseAck: "tea_5193a5", Certifications: "ertifications_5193a5"}, false},
+		{"valid_prefix", tableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5", TransactionEndorseAck: "valid_prefix_tea_5193a5", Certifications: "valid_prefix_ertifications_5193a5"}, false},
+		{"Valid_prefix", tableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5", TransactionEndorseAck: "Valid_prefix_tea_5193a5", Certifications: "Valid_prefix_ertifications_5193a5"}, false},
+		{"valid", tableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5", TransactionEndorseAck: "valid_tea_5193a5", Certifications: "valid_ertifications_5193a5"}, false},
 		{"invalid;", tableNames{}, true},
 		{"invalid ", tableNames{}, true},
 		{"in<valid", tableNames{}, true},

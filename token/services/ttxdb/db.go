@@ -19,6 +19,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )
@@ -439,6 +440,14 @@ func (db *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, err
 	return db.db.GetTransactionEndorsementAcks(txID)
 }
 
+func (db *DB) StoreCertifications(certifications map[*token2.ID][]byte) error {
+	return db.db.StoreCertifications(certifications)
+}
+
+func (db *DB) ExistsCertification(tokenID *token2.ID) bool {
+	return db.db.ExistsCertification(tokenID)
+}
+
 func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
@@ -685,6 +694,22 @@ func Get(sp view.ServiceProvider, w Wallet) *DB {
 	c, err := s.(*Manager).DB(w)
 	if err != nil {
 		logger.Errorf("failed to get db for wallet [%s:%s]: [%s]", w.TMS().ID(), w.ID(), err)
+		return nil
+	}
+	return c
+}
+
+// GetByTMSId returns the DB for the given TMS id.
+// Nil might be returned if the wallet is not found or an error occurred.
+func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) *DB {
+	s, err := sp.GetService(managerType)
+	if err != nil {
+		logger.Errorf("failed to get manager service: [%s]", err)
+		return nil
+	}
+	c, err := s.(*Manager).DBByTMSId(tmsID)
+	if err != nil {
+		logger.Errorf("failed to get db for wallet [%s]: [%s]", tmsID, err)
 		return nil
 	}
 	return c

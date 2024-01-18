@@ -27,6 +27,11 @@ const (
 	EnvVarKey = "TTXDB_DATASOURCE"
 )
 
+var (
+	serializedPersistence *SerializedPersistence
+	persistenceMutex      sync.Mutex
+)
+
 type Opts struct {
 	Driver       string
 	DataSource   string
@@ -113,7 +118,7 @@ func (d *Driver) openDB(driverName, dataSourceName string, maxOpenConns int) (*s
 }
 
 func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
-	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
+	logger.Infof("connecting to [%s:%s:%s] database", driverName, dataSourceName, tablePrefix) // dataSource can contain a password
 
 	tableNames, err := getTableNames(tablePrefix, name)
 	if err != nil {
@@ -131,11 +136,24 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 	p := &Persistence{db: db, table: tableNames}
 	if createSchema {
-		if err := p.CreateSchema(); err != nil {
+		if err := persistence.CreateSchema(); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)
 		}
 	}
+
+	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 	return p, nil
+}
+
+func openDB(driverName, dataSourceName string) (*sql.DB, error) {
+	db, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
+	}
+	if err = db.Ping(); err != nil {
+		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
+	}
+	return db, nil
 }
 
 func init() {
