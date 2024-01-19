@@ -118,7 +118,7 @@ func (d *Driver) openDB(driverName, dataSourceName string, maxOpenConns int) (*s
 }
 
 func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
-	logger.Infof("connecting to [%s:%s:%s] database", driverName, dataSourceName, tablePrefix) // dataSource can contain a password
+	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
 
 	tableNames, err := getTableNames(tablePrefix, name)
 	if err != nil {

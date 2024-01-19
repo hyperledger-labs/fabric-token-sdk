@@ -701,4 +701,31 @@ func TCertification(t *testing.T, db driver.TokenTransactionDB) {
 			return nil
 		}))
 	}
+
+	// check the certification of a token that was never stored
+	tokenID := &token2.ID{
+		TxId:  "pineapple",
+		Index: 0,
+	}
+	assert.False(t, db.ExistsCertification(tokenID))
+	found := false
+	assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+		found = true
+		assert.Equal(t, tokenID, id)
+		assert.Empty(t, bytes)
+		return nil
+	}))
+	assert.False(t, found)
+
+	// store an empty certification and check that it returned
+	assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
+		tokenID: {},
+	}))
+	assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+		found = true
+		assert.Equal(t, tokenID, id)
+		assert.Empty(t, bytes)
+		return nil
+	}))
+	assert.True(t, found)
 }

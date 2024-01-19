@@ -14,7 +14,6 @@ import (
 	"fmt"
 	"math/big"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -387,16 +386,14 @@ func (db *Persistence) ExistsCertification(tokenID *token.ID) bool {
 	var certification []byte
 	if err := row.Scan(&certification); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			// not an error for compatibility with badger.
-			logger.Warnf("tried to get status for non-existent token id %s, returning false", tokenIDStr)
 			return false
 		}
-		logger.Warnf("tried to get status for token id %s, returning %s", tokenIDStr, err)
+		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenIDStr, err)
 		return false
 	}
 	result := len(certification) != 0
 	if !result {
-		logger.Warnf("tried to get status for token id %s, got an empty certification", tokenIDStr)
+		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenIDStr)
 	}
 	return result
 }
@@ -408,21 +405,8 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 
 	}
 	// build query
-	var tokenIDs []any
-	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications)
-	var builder strings.Builder
-	builder.WriteString(query)
-	builder.WriteString("token_id=$1")
-	tokenIDs = []any{fmt.Sprintf("%s%d", ids[0].TxId, ids[0].Index)}
-	for i := 1; i < len(ids)-1; i++ {
-		builder.WriteString(" || ")
-		builder.WriteString(fmt.Sprintf("token_id=%d", i+1))
-		tokenIDs = append(tokenIDs, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index))
-	}
-	builder.WriteString(";")
-	query = builder.String()
-
-	fmt.Printf("query [%s]\n", query)
+	conditions, tokenIDs := certificationsQuerySql(ids)
+	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications) + conditions
 
 	rows, err := db.db.Query(query, tokenIDs...)
 	if err != nil {

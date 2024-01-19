@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 )
 
@@ -154,6 +156,21 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 	where := fmt.Sprintf("WHERE %s%s%s;", strings.Join(and, " AND "), order, limit)
 
 	return where, args
+}
+
+func certificationsQuerySql(ids []*token2.ID) (string, []any) {
+	var builder strings.Builder
+	builder.WriteString("token_id=$1")
+	var tokenIDs []any
+	tokenIDs = []any{fmt.Sprintf("%s%d", ids[0].TxId, ids[0].Index)}
+	for i := 1; i <= len(ids)-1; i++ {
+		builder.WriteString(" || ")
+		builder.WriteString(fmt.Sprintf("token_id=$%d", i+1))
+		tokenIDs = append(tokenIDs, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index))
+	}
+	builder.WriteString(";")
+
+	return builder.String(), tokenIDs
 }
 
 func in(args *[]interface{}, field string, searchFor []interface{}) (where string) {

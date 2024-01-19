@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/test-go/testify/assert"
 )
@@ -243,5 +245,24 @@ func compareArgs(t *testing.T, expected, actual []interface{}) {
 		default:
 			assert.Equal(t, expected[i], actual[i])
 		}
+	}
+}
+
+func TestCertificationsQuerySql(t *testing.T) {
+	ids := []*token2.ID{
+		{
+			TxId:  "pineapple",
+			Index: 1,
+		},
+		{
+			TxId:  "banana",
+			Index: 2,
+		},
+	}
+	conditions, idStrs := certificationsQuerySql(ids)
+	assert.Equal(t, conditions, "token_id=$1 || token_id=$2;")
+	assert.Len(t, idStrs, len(ids))
+	for i := 0; i < len(ids); i++ {
+		assert.Equal(t, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index), idStrs[i])
 	}
 }
