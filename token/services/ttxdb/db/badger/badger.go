@@ -604,10 +604,7 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 		item, err := txn.Get([]byte(key))
 		if err != nil {
 			if errors.Is(err, badger.ErrKeyNotFound) {
-				if err := callback(tokenID, nil); err != nil {
-					return errors.WithMessagef(err, "failed callback for [%s]", tokenID)
-				}
-				continue
+				return errors.Wrapf(err, "certification not found for [%s]", key)
 			}
 			return errors.Wrapf(err, "could not get value for key [%s]", key)
 		}
@@ -617,7 +614,9 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 		if err != nil {
 			return errors.Wrapf(err, "failed to copy value")
 		}
-
+		if len(certification) == 0 {
+			return errors.Errorf("certification not found for [%s]", key)
+		}
 		if err := callback(tokenID, certification); err != nil {
 			return errors.WithMessagef(err, "failed callback for [%s]", tokenID)
 		}

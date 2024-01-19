@@ -709,23 +709,19 @@ func TCertification(t *testing.T, db driver.TokenTransactionDB) {
 	}
 	assert.False(t, db.ExistsCertification(tokenID))
 	found := false
-	assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+	assert.Error(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
 		found = true
-		assert.Equal(t, tokenID, id)
-		assert.Empty(t, bytes)
 		return nil
 	}))
 	assert.False(t, found)
 
-	// store an empty certification and check that it returned
+	// store an empty certification and check that an error is returned
 	assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
 		tokenID: {},
 	}))
-	assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+	assert.Error(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
 		found = true
-		assert.Equal(t, tokenID, id)
-		assert.Empty(t, bytes)
 		return nil
 	}))
-	assert.True(t, found)
+	assert.False(t, found)
 }

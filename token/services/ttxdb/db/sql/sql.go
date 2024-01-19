@@ -413,6 +413,7 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 		return errors.Wrapf(err, "failed to query")
 	}
 	defer rows.Close()
+	counter := 0
 	for rows.Next() {
 		var txID string
 		var txIndex int
@@ -424,12 +425,19 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 			TxId:  txID,
 			Index: uint64(txIndex),
 		}
+		if len(certification) == 0 {
+			return errors.Errorf("certification not found for [%s]", tokenID)
+		}
 		if err := callback(tokenID, certification); err != nil {
 			return errors.WithMessagef(err, "failed callback for [%s]", tokenID)
 		}
+		counter++
 	}
 	if err = rows.Err(); err != nil {
 		return err
+	}
+	if counter != len(ids) {
+		return errors.Errorf("not all tokens are certified")
 	}
 
 	return nil

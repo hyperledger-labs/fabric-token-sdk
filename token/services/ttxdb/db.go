@@ -440,10 +440,13 @@ func (db *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, err
 	return db.db.GetTransactionEndorsementAcks(txID)
 }
 
+// StoreCertifications stores the passed certifications
 func (db *DB) StoreCertifications(certifications map[*token2.ID][]byte) error {
 	return db.db.StoreCertifications(certifications)
 }
 
+// ExistsCertification returns true if a certification for the passed token exists,
+// false otherwise
 func (db *DB) ExistsCertification(tokenID *token2.ID) bool {
 	return db.db.ExistsCertification(tokenID)
 }
