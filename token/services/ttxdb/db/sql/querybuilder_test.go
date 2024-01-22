@@ -265,4 +265,8 @@ func TestCertificationsQuerySql(t *testing.T) {
 	for i := 0; i < len(ids); i++ {
 		assert.Equal(t, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index), idStrs[i])
 	}
+
+	conditions, idStrs = certificationsQuerySql(nil)
+	assert.Equal(t, "l", conditions)
+	assert.Nil(t, idStrs)
 }

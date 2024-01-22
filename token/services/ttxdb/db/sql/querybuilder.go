@@ -159,6 +159,9 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 }
 
 func certificationsQuerySql(ids []*token2.ID) (string, []any) {
+	if len(ids) == 0 {
+		return ";", nil
+	}
 	var builder strings.Builder
 	builder.WriteString("token_id=$1")
 	var tokenIDs []any
