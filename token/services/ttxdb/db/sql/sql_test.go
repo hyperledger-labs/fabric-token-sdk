@@ -108,15 +108,70 @@ func TestPostgres(t *testing.T) {
 }
 
 func TestGetTableNames(t *testing.T) {
+	const transactions = "transactions_5193a5"
+	const movements = "movements_5193a5"
+	const requests = "requests_5193a5"
+	const validations = "validations_5193a5"
+	const tea = "tea_5193a5"
+	const ownership = "ownership_5193a5"
+	const tokens = "tokens_5193a5"
+	const audit_tokens = "audit_tokens_5193a5"
+	const issued_tokens = "issued_tokens_5193a5"
+	const public_params = "public_params_5193a5"
+
 	cases := []struct {
 		prefix         string
 		expectedResult tableNames
 		expectErr      bool
 	}{
-		{"", tableNames{Transactions: "transactions_5193a5", Movements: "movements_5193a5", Requests: "requests_5193a5", Validations: "validations_5193a5", TransactionEndorseAck: "tea_5193a5"}, false},
-		{"valid_prefix", tableNames{Transactions: "valid_prefix_transactions_5193a5", Movements: "valid_prefix_movements_5193a5", Requests: "valid_prefix_requests_5193a5", Validations: "valid_prefix_validations_5193a5", TransactionEndorseAck: "valid_prefix_tea_5193a5"}, false},
-		{"Valid_prefix", tableNames{Transactions: "Valid_prefix_transactions_5193a5", Movements: "Valid_prefix_movements_5193a5", Requests: "Valid_prefix_requests_5193a5", Validations: "Valid_prefix_validations_5193a5", TransactionEndorseAck: "Valid_prefix_tea_5193a5"}, false},
-		{"valid", tableNames{Transactions: "valid_transactions_5193a5", Movements: "valid_movements_5193a5", Requests: "valid_requests_5193a5", Validations: "valid_validations_5193a5", TransactionEndorseAck: "valid_tea_5193a5"}, false},
+		{"", tableNames{
+			Transactions:          transactions,
+			Movements:             movements,
+			Requests:              requests,
+			Validations:           validations,
+			TransactionEndorseAck: tea,
+			Ownership:             ownership,
+			Tokens:                tokens,
+			AuditTokens:           audit_tokens,
+			IssuedTokens:          issued_tokens,
+			PublicParams:          public_params,
+		}, false},
+		{"valid_prefix", tableNames{
+			Transactions:          "valid_prefix_" + transactions,
+			Movements:             "valid_prefix_" + movements,
+			Requests:              "valid_prefix_" + requests,
+			Validations:           "valid_prefix_" + validations,
+			TransactionEndorseAck: "valid_prefix_" + tea,
+			Ownership:             "valid_prefix_" + ownership,
+			Tokens:                "valid_prefix_" + tokens,
+			AuditTokens:           "valid_prefix_" + audit_tokens,
+			IssuedTokens:          "valid_prefix_" + issued_tokens,
+			PublicParams:          "valid_prefix_" + public_params,
+		}, false},
+		{"Valid_prefix", tableNames{
+			Transactions:          "Valid_prefix_" + transactions,
+			Movements:             "Valid_prefix_" + movements,
+			Requests:              "Valid_prefix_" + requests,
+			Validations:           "Valid_prefix_" + validations,
+			TransactionEndorseAck: "Valid_prefix_" + tea,
+			Ownership:             "Valid_prefix_" + ownership,
+			Tokens:                "Valid_prefix_" + tokens,
+			AuditTokens:           "Valid_prefix_" + audit_tokens,
+			IssuedTokens:          "Valid_prefix_" + issued_tokens,
+			PublicParams:          "Valid_prefix_" + public_params,
+		}, false},
+		{"valid", tableNames{
+			Transactions:          "valid_" + transactions,
+			Movements:             "valid_" + movements,
+			Requests:              "valid_" + requests,
+			Validations:           "valid_" + validations,
+			TransactionEndorseAck: "valid_" + tea,
+			Ownership:             "valid_" + ownership,
+			Tokens:                "valid_" + tokens,
+			AuditTokens:           "valid_" + audit_tokens,
+			IssuedTokens:          "valid_" + issued_tokens,
+			PublicParams:          "valid_" + public_params,
+		}, false},
 		{"invalid;", tableNames{}, true},
 		{"invalid ", tableNames{}, true},
 		{"in<valid", tableNames{}, true},

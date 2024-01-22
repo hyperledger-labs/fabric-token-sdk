@@ -61,10 +61,11 @@ func (db *Persistence) storeToken(tr driver.TokenRecord, owners []string, table 
 	return err
 }
 
+// Delete is called when spending a token
 func (db *Persistence) Delete(ns, txID string, index uint64, deletedBy string) error {
 	// We don't delete audit tokens, and we keep the 'ownership' relation.
 	now := time.Now().UTC()
-	query := fmt.Sprintf("UPDATE %s SET is_spent = true, spent_by = $1, spent_at = $2 WHERE ns = $3 AND tx_id = $4 AND idx = $5;", db.table.Tokens)
+	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE ns = $3 AND tx_id = $4 AND idx = $5;", db.table.Tokens)
 	logger.Debug(query, deletedBy, now, ns, txID, index)
 	if _, err := db.db.Exec(query, deletedBy, now, ns, txID, index); err != nil {
 		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
@@ -72,9 +73,25 @@ func (db *Persistence) Delete(ns, txID string, index uint64, deletedBy string) e
 	return nil
 }
 
+// Delete multiple tokens at the same time (e.g. when invalid or expired)
+func (db *Persistence) DeleteTokens(ns string, ids ...*token.ID) error {
+	now := time.Now().UTC()
+
+	args := []interface{}{"", now}
+	where := whereTokenIDs(&args, ns, ids)
+
+	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
+	logger.Debug(query, args)
+	if _, err := db.db.Exec(query, args...); err != nil {
+		return errors.Wrapf(err, "error setting tokens to deleted [%v]", ids)
+	}
+	return nil
+}
+
+// IsMine just checks if the token is in the local storage and not deleted
 func (db *Persistence) IsMine(ns, txID string, index uint64) (bool, error) {
 	id := ""
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE ns = $1 AND tx_id = $2 AND idx = $3 AND is_spent = false LIMIT 1;", db.table.Tokens)
+	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE ns = $1 AND tx_id = $2 AND idx = $3 AND is_deleted = false LIMIT 1;", db.table.Tokens)
 	logger.Debug(query, ns, txID, index)
 
 	row := db.db.QueryRow(query, ns, txID, index)
@@ -91,7 +108,7 @@ func (db *Persistence) IsMine(ns, txID string, index uint64) (bool, error) {
 func (db *Persistence) UnspentTokensIterator(ns string) (tdriver.UnspentTokensIterator, error) {
 	var uti UnspentTokensIterator
 
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE ns = $1 AND is_spent = false", db.table.Tokens)
+	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE ns = $1 AND is_deleted = false", db.table.Tokens)
 	logger.Debug(query, ns)
 	rows, err := db.db.Query(query, ns)
 	uti.txs = rows
@@ -110,7 +127,7 @@ func (db *Persistence) UnspentTokensIteratorBy(ns, ownerEID, typ string) (tdrive
 	if typ != "" {
 		args = append(args, typ)
 	}
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s INNER JOIN %s ON %s.ns = $1 AND %s.tx_id = %s.tx_id AND %s.idx = %s.idx AND %s.is_spent = false",
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s INNER JOIN %s ON %s.ns = $1 AND %s.tx_id = %s.tx_id AND %s.idx = %s.idx AND %s.is_deleted = false",
 		db.table.Tokens, db.table.Tokens, // select
 		db.table.Tokens,                     // from
 		db.table.Ownership,                  // inner join
@@ -252,7 +269,7 @@ func (db *Persistence) GetTokenInfos(ns string, ids []*token.ID, callback tdrive
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ns, ids)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, info FROM %s WHERE %s AND is_spent = false", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, info FROM %s WHERE %s AND is_deleted = false", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -260,19 +277,30 @@ func (db *Persistence) GetTokenInfos(ns string, ids []*token.ID, callback tdrive
 	}
 	defer rows.Close()
 
+	infos := make([][]byte, len(ids))
 	for rows.Next() {
 		var info []byte
 		var id token.ID
 		if err := rows.Scan(&id.TxId, &id.Index, &info); err != nil {
 			return err
 		}
-		if err := callback(&id, info); err != nil {
-			return err
+		// the callback is expected to be called in order of the ids
+		for i := 0; i < len(ids); i++ {
+			if *ids[i] == id {
+				infos[i] = info
+				break
+			}
 		}
 	}
 	if err = rows.Err(); err != nil {
 		return err
 	}
+	for i := 0; i < len(ids); i++ {
+		if err := callback(ids[i], infos[i]); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -284,7 +312,7 @@ func (db *Persistence) GetAllTokenInfos(ns string, ids []*token.ID) ([][]byte, e
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ns, ids)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, info FROM %s WHERE %s AND is_spent = false", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, info FROM %s WHERE %s AND is_deleted = false", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	infos := make([][]byte, len(ids))
@@ -322,7 +350,7 @@ func (db *Persistence) GetTokens(ns string, inputs ...*token.ID) ([]string, []*t
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ns, inputs)
 
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_spent = false", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -373,7 +401,7 @@ func (db *Persistence) WhoDeletedTokens(ns string, inputs ...*token.ID) ([]strin
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ns, inputs)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_spent FROM %s WHERE %s", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -404,8 +432,76 @@ func (db *Persistence) WhoDeletedTokens(ns string, inputs ...*token.ID) ([]strin
 	return spentBy, isSpent, rows.Err()
 }
 
+type UnspentTokensIterator struct {
+	txs *sql.Rows
+}
+
+func (u *UnspentTokensIterator) Close() {
+	u.txs.Close()
+}
+
+func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
+	if !u.txs.Next() {
+		return nil, nil
+	}
+
+	var typ, quantity string
+	var owner []byte
+	var id token.ID
+	// tx_id, idx, owner_raw, token_type, quantity
+	err := u.txs.Scan(
+		&id.TxId,
+		&id.Index,
+		&owner,
+		&typ,
+		&quantity,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &token.UnspentToken{
+		Id: &id,
+		Owner: &token.Owner{
+			Raw: owner,
+		},
+		Type:     typ,
+		Quantity: quantity,
+	}, err
+}
+
+// Public Params
+func (db *Persistence) StorePublicParams(raw []byte) error {
+	now := time.Now().UTC()
+	query := fmt.Sprintf("INSERT INTO %s (raw, stored_at) VALUES ($1, $2)", "public_params")
+	logger.Debug(query, fmt.Sprintf("(%d bytes), %v", len(raw), now))
+
+	_, err := db.db.Exec(query, raw, now)
+	return err
+}
+
+func (db *Persistence) GetRawPublicParams() ([]byte, error) {
+	var params []byte
+	query := fmt.Sprintf("SELECT raw FROM %s ORDER BY stored_at DESC LIMIT 1;", "public_params")
+	logger.Debug(query)
+
+	row := db.db.QueryRow(query)
+	err := row.Scan(&params)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.Errorf("params not found")
+		}
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return params, nil
+}
+
 func (db *Persistence) CreateTokenSchema() error {
 	logger.Info("creating token tables")
+	tx, err := db.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
 	// owner_raw is as1 encoded Type(string), Identity([]byte) (see token/core/identity/owner.go).
 	// If Type is "htlc", Identity is a json encoded Script.
@@ -424,12 +520,12 @@ func (db *Persistence) CreateTokenSchema() error {
 			info JSON NOT NULL,
 			tx_status TEXT NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
-			is_spent BOOL NOT NULL DEFAULT false,
+			is_deleted BOOL NOT NULL DEFAULT false,
 			spent_by TEXT NOT NULL DEFAULT '',
 			spent_at TIMESTAMP,
 			PRIMARY KEY (tx_id, idx, ns)
 		);
-		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_spent );
+		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted );
 
 		-- Audit tokens
 		CREATE TABLE IF NOT EXISTS %s (
@@ -471,6 +567,13 @@ func (db *Persistence) CreateTokenSchema() error {
 			enrollment_id TEXT NOT NULL,
 			PRIMARY KEY (tx_id, idx, ns, enrollment_id)
 		);
+
+		-- Public Parameters
+		CREATE TABLE IF NOT EXISTS %s (
+			raw BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL,
+			PRIMARY KEY (raw)
+		);
 		`,
 		db.table.Tokens,
 		db.table.Tokens,
@@ -478,49 +581,15 @@ func (db *Persistence) CreateTokenSchema() error {
 		db.table.AuditTokens,
 		db.table.IssuedTokens,
 		db.table.Ownership,
+		"public_params",
 	)
 
 	logger.Debug(schema)
 	if _, err := db.db.Exec(schema); err != nil {
 		return errors.Wrap(err, "error creating schema")
 	}
-
+	if err = tx.Commit(); err != nil {
+		return err
+	}
 	return nil
-}
-
-type UnspentTokensIterator struct {
-	txs *sql.Rows
-}
-
-func (u *UnspentTokensIterator) Close() {
-	u.txs.Close()
-}
-
-func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
-	if !u.txs.Next() {
-		return nil, nil
-	}
-
-	var typ, quantity string
-	var owner []byte
-	var id token.ID
-	// tx_id, idx, owner_raw, token_type, quantity
-	err := u.txs.Scan(
-		&id.TxId,
-		&id.Index,
-		&owner,
-		&typ,
-		&quantity,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &token.UnspentToken{
-		Id: &id,
-		Owner: &token.Owner{
-			Raw: owner,
-		},
-		Type:     typ,
-		Quantity: quantity,
-	}, err
 }

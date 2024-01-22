@@ -20,6 +20,8 @@ var TokensCases = []struct {
 	{"GetTokenInfos", TGetTokenInfos},
 	{"ListAuditTokens", TListAuditTokens},
 	{"ListIssuedTokens", TListIssuedTokens},
+	{"DeleteMultiple", TDeleteMultiple},
+	{"PublicParams", TPublicParams},
 }
 
 func TSaveAndGetToken(t *testing.T, db driver.TokenDB) {
@@ -288,7 +290,9 @@ func TListIssuedTokens(t *testing.T, db driver.TokenDB) {
 	assert.NoError(t, db.StoreIssuedToken(tr))
 
 	tok, err := db.ListHistoryIssuedTokens(ns)
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(err)
+	}
 	assert.Len(t, tok.Tokens, 3)
 	assert.Equal(t, 3, tok.Count(), "expected 3 issued tokens")
 	assert.Equal(t, "0x01", tok.Tokens[0].Quantity, "expected tx101-0 to be returned")
@@ -358,4 +362,101 @@ func TGetTokenInfos(t *testing.T, db driver.TokenDB) {
 	assert.Len(t, infos, 2)
 	assert.Equal(t, "tx101", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
+
+	// Order should match the provided order
+	ids = []*token.ID{
+		{TxId: "tx102", Index: 1},
+		{TxId: "tx102", Index: 0},
+		{TxId: "tx101", Index: 0},
+		{TxId: "non existent", Index: 0},
+	}
+	infos = [][]byte{}
+	assert.NoError(t, db.GetTokenInfos(ns, ids, func(id *token.ID, info []byte) error {
+		infos = append(infos, info)
+		return nil
+	}))
+	assert.Equal(t, "tx102", string(infos[0]))
+	assert.Equal(t, "tx102", string(infos[1]))
+	assert.Equal(t, "tx101", string(infos[2]))
+	assert.Equal(t, "", string(infos[3]))
+}
+
+func TDeleteMultiple(t *testing.T, db driver.TokenDB) {
+	tr := driver.TokenRecord{
+		TxID:      "tx101",
+		Index:     0,
+		Namespace: ns,
+		IssuerRaw: []byte{},
+		OwnerRaw:  []byte{1, 2, 3},
+		InfoRaw:   "",
+		Quantity:  "0x01",
+		Type:      "ABC",
+		Amount:    0,
+		TxStatus:  "",
+	}
+	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	tr = driver.TokenRecord{
+		TxID:      "tx101",
+		Index:     1,
+		Namespace: ns,
+		IssuerRaw: []byte{},
+		OwnerRaw:  []byte{1, 2, 3},
+		InfoRaw:   "",
+		Quantity:  "0x01",
+		Type:      "ABC",
+		Amount:    0,
+		TxStatus:  "",
+	}
+	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
+	tr = driver.TokenRecord{
+		TxID:      "tx102",
+		Index:     0,
+		Namespace: ns,
+		IssuerRaw: []byte{},
+		OwnerRaw:  []byte{1, 2, 3},
+		InfoRaw:   "",
+		Quantity:  "0x01",
+		Type:      "ABC",
+		Amount:    0,
+		TxStatus:  "",
+	}
+	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.DeleteTokens(ns,
+		&token.ID{TxId: "tx101", Index: 0},
+		&token.ID{TxId: "tx102", Index: 0},
+	))
+
+	tok, err := db.ListUnspentTokens(ns)
+	assert.NoError(t, err)
+	assert.Len(t, tok.Tokens, 1, "expected only tx101-0 and tx102-0 to be deleted", tok.Tokens)
+
+	mine, err := db.IsMine(ns, "tx101", 0)
+	assert.NoError(t, err)
+	assert.False(t, mine, "expected deleted token to not be mine")
+
+	mine, err = db.IsMine(ns, "tx101", 1)
+	assert.NoError(t, err)
+	assert.True(t, mine, "expected existing token to be mine")
+}
+
+func TPublicParams(t *testing.T, db driver.TokenDB) {
+	b := []byte("test bytes")
+	b1 := []byte("test bytes1")
+
+	_, err := db.GetRawPublicParams()
+	assert.Error(t, err) // not found
+
+	err = db.StorePublicParams(b)
+	assert.NoError(t, err)
+
+	res, err := db.GetRawPublicParams()
+	assert.NoError(t, err) // not found
+	assert.Equal(t, res, b)
+
+	err = db.StorePublicParams(b1)
+	assert.NoError(t, err)
+
+	res, err = db.GetRawPublicParams()
+	assert.NoError(t, err) // not found
+	assert.Equal(t, res, b1)
 }

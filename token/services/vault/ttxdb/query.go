@@ -9,11 +9,14 @@ package ttxdb
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	vdriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type TokenQueryEngine struct {
-	// Vault     vdriver.Vault
+	Vault     vdriver.Vault
 	namespace string
 	db        *ttxdb.DB
 }
@@ -28,12 +31,12 @@ func NewEngine(namespace string, db *ttxdb.DB) *TokenQueryEngine {
 
 // IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
 func (tqe *TokenQueryEngine) IsPending(id *token.ID) (bool, error) {
-	panic("not implemented")
-	// vc, err := tqe.Vault.TransactionStatus(id.TxId)
-	// if err != nil {
-	// 	return false, err
-	// }
-	// return vc == vdriver.Busy, nil
+	// TODO
+	vc, err := tqe.Vault.TransactionStatus(id.TxId)
+	if err != nil {
+		return false, err
+	}
+	return vc == vdriver.Busy, nil
 }
 
 // IsMine returns true if the passed id is owned by any known wallet
@@ -85,60 +88,60 @@ func (tqe *TokenQueryEngine) GetTokenInfos(ids []*token.ID, callback driver.Quer
 
 // GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
 func (tqe *TokenQueryEngine) GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error {
-	panic("not implemented")
-	// qe, err := tqe.Vault.NewQueryExecutor()
-	// if err != nil {
-	// 	return err
-	// }
-	// defer qe.Done()
+	// TODO
+	qe, err := tqe.Vault.NewQueryExecutor()
+	if err != nil {
+		return err
+	}
+	defer qe.Done()
 
-	// for _, id := range ids {
-	// 	outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
-	// 	if err != nil {
-	// 		return errors.Wrapf(err, "error creating output ID: %v", id)
-	// 	}
-	// 	val, err := qe.GetState(tqe.namespace, outputID)
-	// 	if err != nil {
-	// 		return errors.Wrapf(err, "failed getting state for id [%v]", id)
-	// 	}
-	// 	if err := callback(id, val); err != nil {
-	// 		return err
-	// 	}
-	// }
-	// return nil
+	for _, id := range ids {
+		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return errors.Wrapf(err, "error creating output ID: %v", id)
+		}
+		val, err := qe.GetState(tqe.namespace, outputID)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting state for id [%v]", id)
+		}
+		if err := callback(id, val); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
 func (tqe *TokenQueryEngine) GetTokenInfoAndOutputs(ids []*token.ID, callback driver.QueryCallback2Func) error {
-	panic("not implemented")
-	// qe, err := tqe.Vault.NewQueryExecutor()
-	// if err != nil {
-	// 	return err
-	// }
-	// defer qe.Done()
+	// TODO
+	qe, err := tqe.Vault.NewQueryExecutor()
+	if err != nil {
+		return err
+	}
+	defer qe.Done()
 
-	// // get info from database
-	// infos, err := tqe.db.GetAllTokenInfos(tqe.namespace, ids)
-	// if err != nil {
-	// 	return err
-	// }
+	// get info from database
+	infos, err := tqe.db.GetAllTokenInfos(tqe.namespace, ids)
+	if err != nil {
+		return err
+	}
 
-	// // The actual token, as stored by the tokenchaincode, is in the vault
-	// for i, id := range ids {
-	// 	outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
-	// 	if err != nil {
-	// 		return errors.Wrapf(err, "error creating output ID: %v", id)
-	// 	}
-	// 	val, err := qe.GetState(tqe.namespace, outputID)
-	// 	if err != nil {
-	// 		return errors.Wrapf(err, "failed getting state for id [%v]", id)
-	// 	}
+	// The actual token, as stored by the tokenchaincode, is in the vault
+	for i, id := range ids {
+		outputID, err := keys.CreateTokenKey(id.TxId, id.Index)
+		if err != nil {
+			return errors.Wrapf(err, "error creating output ID: %v", id)
+		}
+		val, err := qe.GetState(tqe.namespace, outputID)
+		if err != nil {
+			return errors.Wrapf(err, "failed getting state for id [%v]", id)
+		}
 
-	// 	if err := callback(id, outputID, val, infos[i]); err != nil {
-	// 		return err
-	// 	}
-	// }
-	// return nil
+		if err := callback(id, outputID, val, infos[i]); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // GetTokens returns the list of tokens with their respective vault keys

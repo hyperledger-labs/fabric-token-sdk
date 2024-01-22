@@ -775,3 +775,18 @@ func (db *DB) GetTokens(namespace string, inputs ...*token2.ID) ([]string, []*to
 func (db *DB) WhoDeletedTokens(namespace string, inputs ...*token2.ID) ([]string, []bool, error) {
 	return db.db.WhoDeletedTokens(namespace, inputs...)
 }
+
+// DeleteTokens is a function on the Vault to permanently delete tokens,
+// for instance if they are invalid or expired.
+func (db *DB) DeleteTokens(namespace string, ids ...*token2.ID) error {
+	return db.db.DeleteTokens(namespace, ids...)
+}
+
+// Public Params
+func (db *DB) StorePublicParams(raw []byte) error {
+	return db.db.StorePublicParams(raw)
+}
+
+func (db *DB) GetRawPublicParams() ([]byte, error) {
+	return db.db.GetRawPublicParams()
+}

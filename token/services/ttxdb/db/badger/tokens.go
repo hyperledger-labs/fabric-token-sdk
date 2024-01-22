@@ -268,3 +268,16 @@ func (db *Persistence) GetTokens(namespace string, inputs ...*token.ID) ([]strin
 func (db *Persistence) WhoDeletedTokens(namespace string, inputs ...*token.ID) ([]string, []bool, error) {
 	panic("not implemented")
 }
+
+func (db *Persistence) DeleteTokens(ns string, ids ...*token.ID) error {
+	panic("not implemented")
+}
+
+// Public Params
+func (db *Persistence) StorePublicParams(raw []byte) error {
+	panic("not implemented")
+}
+
+func (db *Persistence) GetRawPublicParams() ([]byte, error) {
+	panic("not implemented")
+}

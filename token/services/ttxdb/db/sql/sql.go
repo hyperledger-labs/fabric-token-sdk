@@ -398,11 +398,11 @@ func unmarshal(in []byte, out *map[string][]byte) error {
 
 func (db *Persistence) CreateSchema() error {
 	logger.Info("creating tables")
-	// tx, err := db.db.Begin()
-	// if err != nil {
-	// 	return err
-	// }
-	// defer tx.Rollback()
+	tx, err := db.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
 
 	schema := fmt.Sprintf(`
 		CREATE TABLE IF NOT EXISTS %s (
@@ -466,9 +466,9 @@ func (db *Persistence) CreateSchema() error {
 	if _, err := db.db.Exec(schema); err != nil {
 		return err
 	}
-	// if err = tx.Commit(); err != nil {
-	// 	return err
-	// }
+	if err = tx.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -564,6 +564,7 @@ type tableNames struct {
 	Ownership             string
 	AuditTokens           string
 	IssuedTokens          string
+	PublicParams          string
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
@@ -593,6 +594,7 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		Ownership:             fmt.Sprintf("%sownership%s", prefix, suffix),
 		AuditTokens:           fmt.Sprintf("%saudit_tokens%s", prefix, suffix),
 		IssuedTokens:          fmt.Sprintf("%sissued_tokens%s", prefix, suffix),
+		PublicParams:          fmt.Sprintf("%spublic_params%s", prefix, suffix),
 	}, nil
 }
 

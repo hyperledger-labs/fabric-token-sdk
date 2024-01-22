@@ -292,6 +292,10 @@ type TokenDB interface {
 	GetAllTokenInfos(namespace string, ids []*token.ID) ([][]byte, error)
 	GetTokens(namespace string, inputs ...*token.ID) ([]string, []*token.Token, error)
 	WhoDeletedTokens(namespace string, inputs ...*token.ID) ([]string, []bool, error)
+
+	DeleteTokens(namespace string, ids ...*token.ID) error
+	StorePublicParams(raw []byte) error
+	GetRawPublicParams() ([]byte, error)
 }
 
 type TokenRecord struct {

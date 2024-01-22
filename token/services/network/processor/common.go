@@ -53,9 +53,8 @@ type CommonTokenStore struct {
 }
 
 func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTokenStore, error) {
-	// walletID := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
-	// db := ttxdb.Get(sp, tmsID.String(), walletID)
-	db := ttxdb.Get(sp, fmt.Sprintf("%s,%s", tmsID.Channel, tmsID.Namespace), "tok") // TODO: cheating to make it easier to match from the QueryEngine
+	walletID := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	db := ttxdb.Get(sp, tmsID.String(), walletID)
 	if db == nil {
 		return nil, errors.New("cannot get database")
 	}
@@ -69,7 +68,7 @@ func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTo
 }
 
 func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
-	logger.Debugf("delete key [%s,%d]", txID, index)
+	logger.Debugf("spend token [%s,%d]", txID, index)
 	err := cts.db.Delete(ns, txID, index, deletedBy)
 	if err != nil {
 		logger.Error(err)
