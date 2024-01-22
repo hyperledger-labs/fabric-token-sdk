@@ -267,6 +267,6 @@ func TestCertificationsQuerySql(t *testing.T) {
 	}
 
 	conditions, idStrs = certificationsQuerySql(nil)
-	assert.Equal(t, "l", conditions)
+	assert.Equal(t, ";", conditions)
 	assert.Nil(t, idStrs)
 }
