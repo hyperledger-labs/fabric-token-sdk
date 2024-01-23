@@ -18,7 +18,6 @@ token:
         tablePrefix: tsdk  
         driver: sqlite     
         dataSource: {{ SQLDataSource }}
-        parallelism: false
     {{ else }}
       type: badger
       opts:

@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -31,15 +31,14 @@ type Opts struct {
 	DataSource   string
 	TablePrefix  string
 	CreateSchema bool
-	Parallelism  bool
 }
 
 type Driver struct {
 }
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
+func (d Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	opts := &Opts{}
-	if err := view2.GetConfigService(sp).UnmarshalKey(OptsKey, opts); err != nil {
+	if err := view.GetConfigService(sp).UnmarshalKey(OptsKey, opts); err != nil {
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
 	if opts.Driver == "" {
@@ -55,10 +54,10 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			OptsKey, EnvVarKey, opts.Driver)
 	}
-	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema, opts.Parallelism)
+	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema)
 }
 
-func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema, parallelism bool) (driver.TokenTransactionDB, error) {
+func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
 	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
 
 	tableNames, err := getTableNames(tablePrefix, name)
@@ -74,18 +73,13 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema, 
 		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
 	}
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
-	var ttxDB driver.TokenTransactionDB
 	p := &Persistence{db: db, table: tableNames}
-	ttxDB = p
-	if !parallelism {
-		ttxDB = &SerializedPersistence{Persistence: p}
-	}
 	if createSchema {
 		if err := p.CreateSchema(); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)
 		}
 	}
-	return ttxDB, nil
+	return p, nil
 }
 
 func init() {

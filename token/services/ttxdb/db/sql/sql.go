@@ -587,22 +587,3 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		TransactionEndorseAck: fmt.Sprintf("%stea%s", prefix, suffix),
 	}, nil
 }
-
-type SerializedPersistence struct {
-	*Persistence
-	mutex sync.RWMutex
-}
-
-func (db *SerializedPersistence) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
-	db.mutex.Lock()
-	defer db.mutex.Unlock()
-
-	return db.Persistence.AddTransactionEndorsementAck(txID, endorser, sigma)
-}
-
-func (db *SerializedPersistence) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	db.mutex.RLock()
-	defer db.mutex.RUnlock()
-
-	return db.Persistence.GetTransactionEndorsementAcks(txID)
-}
