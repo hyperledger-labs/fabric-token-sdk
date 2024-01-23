@@ -423,6 +423,9 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 			return err
 		}
 		// the callback is expected to be called in order of the ids
+		if len(certification) == 0 {
+			return errors.Errorf("empty certification for [%s]", id.String())
+		}
 		for i := 0; i < len(ids); i++ {
 			if *ids[i] == id {
 				certifications[i] = certification
