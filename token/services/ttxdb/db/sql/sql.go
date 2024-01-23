@@ -402,8 +402,8 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 	if len(ids) == 0 {
 		// nothing to do here
 		return nil
-
 	}
+
 	// build query
 	conditions, tokenIDs := certificationsQuerySql(ids)
 	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications) + conditions
@@ -413,31 +413,36 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 		return errors.Wrapf(err, "failed to query")
 	}
 	defer rows.Close()
+
+	certifications := make([][]byte, len(ids))
 	counter := 0
 	for rows.Next() {
-		var txID string
-		var txIndex int
 		var certification []byte
-		if err := rows.Scan(&txID, &txIndex, &certification); err != nil {
-			return errors.Wrapf(err, "error querying db")
+		var id token.ID
+		if err := rows.Scan(&id.TxId, &id.Index, &certification); err != nil {
+			return err
 		}
-		tokenID := &token.ID{
-			TxId:  txID,
-			Index: uint64(txIndex),
-		}
-		if len(certification) == 0 {
-			return errors.Errorf("certification not found for [%s]", tokenID)
-		}
-		if err := callback(tokenID, certification); err != nil {
-			return errors.WithMessagef(err, "failed callback for [%s]", tokenID)
+		// the callback is expected to be called in order of the ids
+		for i := 0; i < len(ids); i++ {
+			if *ids[i] == id {
+				certifications[i] = certification
+				break
+			}
 		}
 		counter++
 	}
+
 	if err = rows.Err(); err != nil {
 		return err
 	}
 	if counter != len(ids) {
 		return errors.Errorf("not all tokens are certified")
+	}
+
+	for i, certification := range certifications {
+		if err := callback(ids[i], certification); err != nil {
+			return errors.WithMessagef(err, "failed callback for [%s]", ids[i])
+		}
 	}
 
 	return nil
