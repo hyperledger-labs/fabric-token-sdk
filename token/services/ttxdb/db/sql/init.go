@@ -100,7 +100,6 @@ func (d *Driver) openDB(driverName, dataSourceName string) (*sql.DB, error) {
 	// check again
 	p, ok = d.dbs[id]
 	if ok {
-		d.mutex.RUnlock()
 		return p, nil
 	}
 	p, err := sql.Open(driverName, dataSourceName)
