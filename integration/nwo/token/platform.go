@@ -249,7 +249,7 @@ func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
 		"SQL":         func() bool { return p.Topology.SqlTTXDB },
 		"SQLDataSource": func() string {
-			return p.TTXDBSQLDataSourceDir(node) + "db.sqlite"
+			return "file:" + p.TTXDBSQLDataSourceDir(node) + "db.sqlite?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
 		},
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())

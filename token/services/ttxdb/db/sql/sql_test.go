@@ -60,6 +60,23 @@ func TestSqlite(t *testing.T) {
 	}
 }
 
+func TestSqliteMemory(t *testing.T) {
+	var err error
+	tempDir, err = os.MkdirTemp("", "sql-token-test")
+	if err != nil {
+		t.Fatalf("failed to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	for _, c := range dbtest.Cases {
+		db := getDatabase(t, "sqlite_memory", c.Name)
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+}
+
 func TestPostgres(t *testing.T) {
 	if os.Getenv("TESTCONTAINERS") != "true" {
 		t.Skip("set environment variable TESTCONTAINERS to true to include postgres test")
