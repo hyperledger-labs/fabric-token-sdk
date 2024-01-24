@@ -92,6 +92,7 @@ func (d *Driver) openDB(driverName, dataSourceName string) (*sql.DB, error) {
 		d.mutex.RUnlock()
 		return p, nil
 	}
+	d.mutex.RUnlock()
 
 	d.mutex.Lock()
 	defer d.mutex.Unlock()
