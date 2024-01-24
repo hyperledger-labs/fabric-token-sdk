@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -34,9 +35,11 @@ type Opts struct {
 }
 
 type Driver struct {
+	mutex sync.RWMutex
+	dbs   map[string]*sql.DB
 }
 
-func (d Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
+func (d *Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	opts := &Opts{}
 	if err := view.GetConfigService(sp).UnmarshalKey(OptsKey, opts); err != nil {
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
@@ -54,7 +57,57 @@ func (d Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransact
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			OptsKey, EnvVarKey, opts.Driver)
 	}
-	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema)
+
+	db, err := d.openDB(opts.Driver, dataSourceName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db [%s]", opts.Driver)
+	}
+	if err = db.Ping(); err != nil {
+		return nil, errors.Wrapf(err, "failed to ping db [%s]", opts.Driver)
+	}
+
+	tableNames, err := getTableNames(opts.TablePrefix, name)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get table names")
+	}
+	logger.Infof("connected to [%s:%s] database", opts.Driver, opts.TablePrefix)
+	p := &Persistence{db: db, table: tableNames}
+	if opts.CreateSchema {
+		if err := p.CreateSchema(); err != nil {
+			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", opts.Driver, tableNames)
+		}
+	}
+	return p, nil
+}
+
+func (d *Driver) openDB(driverName, dataSourceName string) (*sql.DB, error) {
+	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
+
+	id := driverName + dataSourceName
+	var p *sql.DB
+	d.mutex.RLock()
+	p, ok := d.dbs[id]
+	if ok {
+		logger.Infof("reuse [%s] database (cached)", driverName)
+		d.mutex.RUnlock()
+		return p, nil
+	}
+
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	// check again
+	p, ok = d.dbs[id]
+	if ok {
+		d.mutex.RUnlock()
+		return p, nil
+	}
+	p, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
+	}
+	d.dbs[id] = p
+	return p, nil
 }
 
 func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
