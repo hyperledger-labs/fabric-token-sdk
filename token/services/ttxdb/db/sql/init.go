@@ -136,5 +136,5 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 }
 
 func init() {
-	ttxdb.Register("sql", &Driver{})
+	ttxdb.Register("sql", &Driver{dbs: make(map[string]*sql.DB)})
 }
