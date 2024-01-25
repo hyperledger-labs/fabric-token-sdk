@@ -365,6 +365,9 @@ func (db *Persistence) StoreCertifications(certifications map[*token.ID][]byte) 
 	}
 	defer tx.Rollback()
 	for tokenID, certification := range certifications {
+		if tokenID == nil {
+			return errors.Errorf("invalid token-id, cannot be nil")
+		}
 		tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
 		logger.Debug(query, tokenIDStr, fmt.Sprintf("(%d bytes)", len(certification)), now)
 		if _, err := tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
@@ -378,6 +381,9 @@ func (db *Persistence) StoreCertifications(certifications map[*token.ID][]byte) 
 }
 
 func (db *Persistence) ExistsCertification(tokenID *token.ID) bool {
+	if tokenID == nil {
+		return false
+	}
 	tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
 	query := fmt.Sprintf("SELECT certification FROM %s WHERE token_id=$1;", db.table.Certifications)
 	logger.Debug(query, tokenIDStr)
@@ -405,7 +411,10 @@ func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.I
 	}
 
 	// build query
-	conditions, tokenIDs := certificationsQuerySql(ids)
+	conditions, tokenIDs, err := certificationsQuerySql(ids)
+	if err != nil {
+		return err
+	}
 	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications) + conditions
 
 	rows, err := db.db.Query(query, tokenIDs...)

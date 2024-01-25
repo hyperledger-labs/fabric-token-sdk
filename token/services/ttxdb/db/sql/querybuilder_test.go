@@ -259,14 +259,16 @@ func TestCertificationsQuerySql(t *testing.T) {
 			Index: 2,
 		},
 	}
-	conditions, idStrs := certificationsQuerySql(ids)
+	conditions, idStrs, err := certificationsQuerySql(ids)
+	assert.NoError(t, err)
 	assert.Equal(t, conditions, "token_id=$1 || token_id=$2;")
 	assert.Len(t, idStrs, len(ids))
 	for i := 0; i < len(ids); i++ {
 		assert.Equal(t, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index), idStrs[i])
 	}
 
-	conditions, idStrs = certificationsQuerySql(nil)
+	conditions, idStrs, err = certificationsQuerySql(nil)
+	assert.NoError(t, err)
 	assert.Equal(t, ";", conditions)
 	assert.Nil(t, idStrs)
 }
