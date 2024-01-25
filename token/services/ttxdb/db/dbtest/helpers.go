@@ -645,8 +645,9 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	wg := sync.WaitGroup{}
-	wg.Add(40)
-	for i := 0; i < 40; i++ {
+	n := 1000
+	wg.Add(n)
+	for i := 0; i < n; i++ {
 		go func(i int) {
 			assert.NoError(t, db.AddTransactionEndorsementAck("1", []byte(fmt.Sprintf("alice_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err := db.GetTransactionEndorsementAcks("1")
@@ -659,8 +660,8 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 
 	acks, err := db.GetTransactionEndorsementAcks("1")
 	assert.NoError(t, err)
-	assert.Len(t, acks, 40)
-	for i := 0; i < 40; i++ {
+	assert.Len(t, acks, n)
+	for i := 0; i < n; i++ {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("alice_%d", i)).String()])
 	}
 }
