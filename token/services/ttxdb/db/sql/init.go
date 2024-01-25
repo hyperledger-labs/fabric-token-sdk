@@ -27,11 +27,6 @@ const (
 	EnvVarKey = "TTXDB_DATASOURCE"
 )
 
-var (
-	serializedPersistence *SerializedPersistence
-	persistenceMutex      sync.Mutex
-)
-
 type Opts struct {
 	Driver       string
 	DataSource   string
@@ -136,24 +131,13 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 	p := &Persistence{db: db, table: tableNames}
 	if createSchema {
-		if err := persistence.CreateSchema(); err != nil {
+		if err := p.CreateSchema(); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)
 		}
 	}
 
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 	return p, nil
-}
-
-func openDB(driverName, dataSourceName string) (*sql.DB, error) {
-	db, err := sql.Open(driverName, dataSourceName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
-	}
-	if err = db.Ping(); err != nil {
-		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
-	}
-	return db, nil
 }
 
 func init() {

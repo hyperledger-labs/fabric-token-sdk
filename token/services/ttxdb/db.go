@@ -451,6 +451,13 @@ func (db *DB) ExistsCertification(tokenID *token2.ID) bool {
 	return db.db.ExistsCertification(tokenID)
 }
 
+// GetCertifications returns the certifications of the passed tokens.
+// For each token, the callback function is invoked.
+// If a token doesn't have a certification, the function returns an error
+func (db *DB) GetCertifications(ids []*token2.ID, callback func(*token2.ID, []byte) error) error {
+	return db.db.GetCertifications(ids, callback)
+}
+
 func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
