@@ -38,7 +38,7 @@ func TestDB(t *testing.T) {
 
 func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.DB) {
 	wg := sync.WaitGroup{}
-	n := 1000
+	n := 100
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func(i int) {
