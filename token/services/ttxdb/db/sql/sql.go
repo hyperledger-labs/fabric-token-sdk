@@ -20,12 +20,14 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type Persistence struct {
-	db    *sql.DB
-	table tableNames
+	db     *sql.DB
+	closed bool
+	table  tableNames
 
 	txn     *sql.Tx
 	txnLock sync.Mutex
@@ -42,6 +44,7 @@ func (db *Persistence) Close() error {
 	if err != nil {
 		return errors.Wrap(err, "could not close DB")
 	}
+	db.closed = true
 
 	return nil
 }
@@ -248,38 +251,6 @@ func (db *Persistence) SetStatus(txID string, status driver.TxStatus) error {
 	return nil
 }
 
-// setStatusIfExists checks if the record exists before updating it, because some sql drivers return an
-// error on update of a non-existent record
-func (db *Persistence) setStatusIfExists(tx *sql.Tx, table, txID string, status driver.TxStatus) error {
-	curStatus := driver.Unknown
-	query := fmt.Sprintf("SELECT status FROM %s WHERE tx_id = $1 LIMIT 1;", table)
-	logger.Debug(query)
-
-	err := tx.QueryRow(query, txID).Scan(&curStatus)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			logger.Debugf("no %s found for txID %s, skipping", table, txID)
-			return nil
-		} else {
-			return errors.Wrapf(err, "db error")
-		}
-	}
-	if status == curStatus {
-		logger.Debugf("status for %s %s is already %s, skipping", table, txID, status)
-		return nil
-	}
-
-	query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", table)
-	logger.Debug(query)
-
-	_, err = tx.Exec(query, status, txID)
-	if err != nil {
-		return errors.Wrapf(err, "error updating tx [%s]", txID)
-	}
-
-	return nil
-}
-
 func (db *Persistence) GetStatus(txID string) (driver.TxStatus, error) {
 	var status driver.TxStatus
 	query := fmt.Sprintf("SELECT status FROM %s WHERE tx_id=$1;", db.table.Transactions)
@@ -384,6 +355,143 @@ func (db *Persistence) GetTransactionEndorsementAcks(txID string) (map[string][]
 	return acks, nil
 }
 
+func (db *Persistence) StoreCertifications(certifications map[*token.ID][]byte) error {
+	now := time.Now().UTC()
+	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, tx_index, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
+
+	tx, err := db.db.Begin()
+	if err != nil {
+		return errors.New("failed starting a transaction")
+	}
+	defer tx.Rollback()
+	for tokenID, certification := range certifications {
+		if tokenID == nil {
+			return errors.Errorf("invalid token-id, cannot be nil")
+		}
+		tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
+		logger.Debug(query, tokenIDStr, fmt.Sprintf("(%d bytes)", len(certification)), now)
+		if _, err := tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
+			return errors.Wrapf(err, "failed to execute")
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return errors.Wrap(err, "failed committing status update")
+	}
+	return nil
+}
+
+func (db *Persistence) ExistsCertification(tokenID *token.ID) bool {
+	if tokenID == nil {
+		return false
+	}
+	tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
+	query := fmt.Sprintf("SELECT certification FROM %s WHERE token_id=$1;", db.table.Certifications)
+	logger.Debug(query, tokenIDStr)
+
+	row := db.db.QueryRow(query, tokenIDStr)
+	var certification []byte
+	if err := row.Scan(&certification); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false
+		}
+		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenIDStr, err)
+		return false
+	}
+	result := len(certification) != 0
+	if !result {
+		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenIDStr)
+	}
+	return result
+}
+
+func (db *Persistence) GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error {
+	if len(ids) == 0 {
+		// nothing to do here
+		return nil
+	}
+
+	// build query
+	conditions, tokenIDs, err := certificationsQuerySql(ids)
+	if err != nil {
+		return err
+	}
+	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications) + conditions
+
+	rows, err := db.db.Query(query, tokenIDs...)
+	if err != nil {
+		return errors.Wrapf(err, "failed to query")
+	}
+	defer rows.Close()
+
+	certifications := make([][]byte, len(ids))
+	counter := 0
+	for rows.Next() {
+		var certification []byte
+		var id token.ID
+		if err := rows.Scan(&id.TxId, &id.Index, &certification); err != nil {
+			return err
+		}
+		// the callback is expected to be called in order of the ids
+		if len(certification) == 0 {
+			return errors.Errorf("empty certification for [%s]", id.String())
+		}
+		for i := 0; i < len(ids); i++ {
+			if *ids[i] == id {
+				certifications[i] = certification
+				break
+			}
+		}
+		counter++
+	}
+
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	if counter != len(ids) {
+		return errors.Errorf("not all tokens are certified")
+	}
+
+	for i, certification := range certifications {
+		if err := callback(ids[i], certification); err != nil {
+			return errors.WithMessagef(err, "failed callback for [%s]", ids[i])
+		}
+	}
+
+	return nil
+}
+
+// setStatusIfExists checks if the record exists before updating it, because some sql drivers return an
+// error on update of a non-existent record
+func (db *Persistence) setStatusIfExists(tx *sql.Tx, table, txID string, status driver.TxStatus) error {
+	curStatus := driver.Unknown
+	query := fmt.Sprintf("SELECT status FROM %s WHERE tx_id = $1 LIMIT 1;", table)
+	logger.Debug(query)
+
+	err := tx.QueryRow(query, txID).Scan(&curStatus)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			logger.Debugf("no %s found for txID %s, skipping", table, txID)
+			return nil
+		} else {
+			return errors.Wrapf(err, "db error")
+		}
+	}
+	if status == curStatus {
+		logger.Debugf("status for %s %s is already %s, skipping", table, txID, status)
+		return nil
+	}
+
+	query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", table)
+	logger.Debug(query)
+
+	_, err = tx.Exec(query, status, txID)
+	if err != nil {
+		return errors.Wrapf(err, "error updating tx [%s]", txID)
+	}
+
+	return nil
+}
+
 func marshal(in map[string][]byte) (string, error) {
 	if b, err := json.Marshal(in); err != nil {
 		return "", err
@@ -448,7 +556,16 @@ func (db *Persistence) CreateSchema() error {
             sigma BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );`,
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+
+		CREATE TABLE IF NOT EXISTS %s (
+			token_id TEXT NOT NULL,
+			tx_id TEXT NOT NULL,
+			tx_index INT NOT NULL,
+			certification BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS token_id_id_%s ON %s ( token_id );`,
 		db.table.Transactions,
 		db.table.Transactions,
 		db.table.Transactions,
@@ -460,6 +577,9 @@ func (db *Persistence) CreateSchema() error {
 		db.table.TransactionEndorseAck,
 		db.table.TransactionEndorseAck,
 		db.table.TransactionEndorseAck,
+		db.table.Certifications,
+		db.table.Certifications,
+		db.table.Certifications,
 	)
 
 	logger.Debug(schema)
@@ -560,6 +680,7 @@ type tableNames struct {
 	Requests              string
 	Validations           string
 	TransactionEndorseAck string
+	Certifications        string
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
@@ -585,5 +706,6 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		Requests:              fmt.Sprintf("%srequests%s", prefix, suffix),
 		Validations:           fmt.Sprintf("%svalidations%s", prefix, suffix),
 		TransactionEndorseAck: fmt.Sprintf("%stea%s", prefix, suffix),
+		Certifications:        fmt.Sprintf("%sertifications%s", prefix, suffix),
 	}, nil
 }

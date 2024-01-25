@@ -135,6 +135,8 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)
 		}
 	}
+
+	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 	return p, nil
 }
 
