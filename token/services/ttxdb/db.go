@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package ttxdb
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 	"sort"
@@ -635,10 +636,19 @@ func NewManager(sp view.ServiceProvider, driver string) *Manager {
 
 // DB returns a DB for the given wallet
 func (cm *Manager) DB(w Wallet) (*DB, error) {
+	return cm.DBByID(w.TMS().ID().String() + w.ID())
+}
+
+// DBByTMSId returns a DB for the given TMS id
+func (cm *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
+	return cm.DBByID(id.String() + fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace))
+}
+
+// DBByID returns a DBByID for the given identifier
+func (cm *Manager) DBByID(id string) (*DB, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	id := w.TMS().ID().String() + w.ID()
 	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.dbs[id]
 	if !ok {

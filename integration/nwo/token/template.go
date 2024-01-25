@@ -16,9 +16,9 @@ token:
       opts:
         createSchema: true 
         tablePrefix: tsdk  
-        driver: sqlite     
+        driver: sqlite    
+        maxOpenConns: 10
         dataSource: {{ SQLDataSource }}
-        parallelism: false
     {{ else }}
       type: badger
       opts:

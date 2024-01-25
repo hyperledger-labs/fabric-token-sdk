@@ -26,7 +26,7 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 		return nil, err
 	}
 
-	return sql.OpenDB("sqlite", fmt.Sprintf("file:%x?mode=memory&cache=shared", h.Sum(nil)), "test", name, true, true)
+	return sql.OpenDB("sqlite", fmt.Sprintf("file:%x?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", h.Sum(nil)), "test", name, true)
 }
 
 func init() {

@@ -10,8 +10,9 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"sync"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -31,15 +32,17 @@ type Opts struct {
 	DataSource   string
 	TablePrefix  string
 	CreateSchema bool
-	Parallelism  bool
+	MaxOpenConns int
 }
 
 type Driver struct {
+	mutex sync.RWMutex
+	dbs   map[string]*sql.DB
 }
 
-func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
+func (d *Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransactionDB, error) {
 	opts := &Opts{}
-	if err := view2.GetConfigService(sp).UnmarshalKey(OptsKey, opts); err != nil {
+	if err := view.GetConfigService(sp).UnmarshalKey(OptsKey, opts); err != nil {
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
 	if opts.Driver == "" {
@@ -55,10 +58,61 @@ func (d Driver) Open(sp view2.ServiceProvider, name string) (driver.TokenTransac
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			OptsKey, EnvVarKey, opts.Driver)
 	}
-	return OpenDB(opts.Driver, dataSourceName, opts.TablePrefix, name, opts.CreateSchema, opts.Parallelism)
+
+	db, err := d.openDB(opts.Driver, dataSourceName, opts.MaxOpenConns)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db [%s]", opts.Driver)
+	}
+	if err = db.Ping(); err != nil {
+		return nil, errors.Wrapf(err, "failed to ping db [%s]", opts.Driver)
+	}
+
+	tableNames, err := getTableNames(opts.TablePrefix, name)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get table names")
+	}
+	logger.Infof("connected to [%s:%s] database", opts.Driver, opts.TablePrefix)
+	p := &Persistence{db: db, table: tableNames}
+	if opts.CreateSchema {
+		if err := p.CreateSchema(); err != nil {
+			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", opts.Driver, tableNames)
+		}
+	}
+	return p, nil
 }
 
-func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema, parallelism bool) (driver.TokenTransactionDB, error) {
+func (d *Driver) openDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
+	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
+
+	id := driverName + dataSourceName
+	var p *sql.DB
+	d.mutex.RLock()
+	p, ok := d.dbs[id]
+	if ok {
+		logger.Infof("reuse [%s] database (cached)", driverName)
+		d.mutex.RUnlock()
+		return p, nil
+	}
+	d.mutex.RUnlock()
+
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+
+	// check again
+	p, ok = d.dbs[id]
+	if ok {
+		return p, nil
+	}
+	p, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
+	}
+	p.SetMaxOpenConns(maxOpenConns)
+	d.dbs[id] = p
+	return p, nil
+}
+
+func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema bool) (driver.TokenTransactionDB, error) {
 	logger.Infof("connecting to [%s:%s] database", driverName, tablePrefix) // dataSource can contain a password
 
 	tableNames, err := getTableNames(tablePrefix, name)
@@ -73,21 +127,17 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema, 
 	if err = db.Ping(); err != nil {
 		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
 	}
+	db.SetMaxOpenConns(10)
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
-	var ttxDB driver.TokenTransactionDB
 	p := &Persistence{db: db, table: tableNames}
-	ttxDB = p
-	if !parallelism {
-		ttxDB = &SerializedPersistence{Persistence: p}
-	}
 	if createSchema {
 		if err := p.CreateSchema(); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema [%s:%s]", driverName, tableNames)
 		}
 	}
-	return ttxDB, nil
+	return p, nil
 }
 
 func init() {
-	ttxdb.Register("sql", &Driver{})
+	ttxdb.Register("sql", &Driver{dbs: make(map[string]*sql.DB)})
 }

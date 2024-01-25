@@ -31,11 +31,11 @@ func getDatabase(t *testing.T, typ string, key string) (db driver.TokenTransacti
 	var err error
 	switch typ {
 	case "sqlite":
-		db, err = OpenDB("sqlite", path.Join(tempDir, "db.sqlite"), "test", key, true, false)
+		db, err = OpenDB("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), "test", key, true)
 	case "sqlite_memory":
-		db, err = OpenDB("sqlite", fmt.Sprintf("file:%s?mode=memory&cache=shared", key), "test", key, true, false)
+		db, err = OpenDB("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", key), "test", key, true)
 	case "postgres":
-		db, err = OpenDB("postgres", pgConnStr, "tsdk", key, true, true)
+		db, err = OpenDB("postgres", pgConnStr, "tsdk", key, true)
 	}
 	if err != nil {
 		t.Fatal(err)
@@ -53,6 +53,23 @@ func TestSqlite(t *testing.T) {
 
 	for _, c := range dbtest.Cases {
 		db := getDatabase(t, "sqlite", c.Name)
+		t.Run(c.Name, func(xt *testing.T) {
+			defer db.Close()
+			c.Fn(xt, db)
+		})
+	}
+}
+
+func TestSqliteMemory(t *testing.T) {
+	var err error
+	tempDir, err = os.MkdirTemp("", "sql-token-test")
+	if err != nil {
+		t.Fatalf("failed to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	for _, c := range dbtest.Cases {
+		db := getDatabase(t, "sqlite_memory", c.Name)
 		t.Run(c.Name, func(xt *testing.T) {
 			defer db.Close()
 			c.Fn(xt, db)
