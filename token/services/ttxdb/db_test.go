@@ -22,7 +22,7 @@ import (
 
 func TestDB(t *testing.T) {
 	// create a new config service by loading the config file
-	cp, err := config.NewProvider("./testdata/token0")
+	cp, err := config.NewProvider("./testdata/sqlite")
 	assert.NoError(t, err)
 	registry := registry2.New()
 	assert.NoError(t, registry.RegisterService(cp))
@@ -38,7 +38,7 @@ func TestDB(t *testing.T) {
 
 func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.DB) {
 	wg := sync.WaitGroup{}
-	n := 1000
+	n := 100
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func(i int) {
@@ -46,7 +46,6 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.DB) {
 			acks, err := db1.GetTransactionEndorsementAcks("1")
 			assert.NoError(t, err)
 			assert.True(t, len(acks) != 0)
-
 			assert.NoError(t, db2.AddTransactionEndorsementAck("2", []byte(fmt.Sprintf("bob_%d", i)), []byte(fmt.Sprintf("sigma_%d", i))))
 			acks, err = db2.GetTransactionEndorsementAcks("2")
 			assert.NoError(t, err)

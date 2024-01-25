@@ -244,16 +244,16 @@ registry:
 
 #############################################################################
 #  Database section
-#  Supported types are: "sqlite3", "postgres", and "mysql".
+#  Supported types are: "sqlite", "postgres", and "mysql".
 #  The datasource value depends on the type.
-#  If the type is "sqlite3", the datasource value is a file name to use
-#  as the database store.  Since "sqlite3" is an embedded database, it
+#  If the type is "sqlite", the datasource value is a file name to use
+#  as the database store.  Since "sqlite" is an embedded database, it
 #  may not be used if you want to run the fabric-ca-server in a cluster.
 #  To run the fabric-ca-server in a cluster, you must choose "postgres"
 #  or "mysql".
 #############################################################################
 db:
-  type: sqlite3
+  type: sqlite
   datasource: fabric-ca-server.db
   tls:
       enabled: false

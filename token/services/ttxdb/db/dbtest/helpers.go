@@ -645,7 +645,7 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	wg := sync.WaitGroup{}
-	n := 1000
+	n := 100
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func(i int) {

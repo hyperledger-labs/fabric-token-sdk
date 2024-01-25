@@ -32,6 +32,7 @@ type Opts struct {
 	DataSource   string
 	TablePrefix  string
 	CreateSchema bool
+	MaxOpenConns int
 }
 
 type Driver struct {
@@ -58,7 +59,7 @@ func (d *Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransac
 			OptsKey, EnvVarKey, opts.Driver)
 	}
 
-	db, err := d.openDB(opts.Driver, dataSourceName)
+	db, err := d.openDB(opts.Driver, dataSourceName, opts.MaxOpenConns)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db [%s]", opts.Driver)
 	}
@@ -80,7 +81,7 @@ func (d *Driver) Open(sp view.ServiceProvider, name string) (driver.TokenTransac
 	return p, nil
 }
 
-func (d *Driver) openDB(driverName, dataSourceName string) (*sql.DB, error) {
+func (d *Driver) openDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
 	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
 
 	id := driverName + dataSourceName
@@ -106,6 +107,7 @@ func (d *Driver) openDB(driverName, dataSourceName string) (*sql.DB, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
 	}
+	p.SetMaxOpenConns(maxOpenConns)
 	d.dbs[id] = p
 	return p, nil
 }
@@ -125,6 +127,7 @@ func OpenDB(driverName, dataSourceName, tablePrefix, name string, createSchema b
 	if err = db.Ping(); err != nil {
 		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
 	}
+	db.SetMaxOpenConns(10)
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 	p := &Persistence{db: db, table: tableNames}
 	if createSchema {
