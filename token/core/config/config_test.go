@@ -16,7 +16,7 @@ import (
 // TestGetTMSs tests the GetTMSs function
 func TestGetTMSs(t *testing.T) {
 	// create a new config service by loading the config file
-	cp, err := config.NewProvider("./testdata/sqlite")
+	cp, err := config.NewProvider("./testdata/token0")
 	assert.NoError(t, err)
 
 	// instantiate the token sdk config
