@@ -93,7 +93,7 @@ token:
 
     # The sql driver uses golangs database/sql package internally.
     # In theory you can use any driver if you import it in your application;
-    # for instance `import _ "github.com/mattn/go-sqlite"` for the cgo version of sqlite.
+    # for instance `import _ "github.com/mattn/go-sqlite3"` for the cgo version of sqlite.
     # See https://github.com/golang/go/wiki/SQLDrivers. We only tested with github.com/lib/pq
     # and modernc.org/sqlite, and it's likely that other drivers don't work exactly the same.
     # To try a new sql driver, add a test here: token/services/ttxdb/db/sql/sql_test.go.
