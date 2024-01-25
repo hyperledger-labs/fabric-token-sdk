@@ -104,7 +104,7 @@ token:
     #   tablePrefix: tsdk  # optional
     #   driver: sqlite     # in the application, `import _ "modernc.org/sqlite"`
     #   dataSource: /some/path/ttxdb.sqlite
-    #   parallelism: true  # by default this is false, set to true if the driver supports parallelism
+    #   maxOpenConns: 10  # by default this is 0 (unlimited), sets the maximum number of open connections to the database
     #
     # Alternative (`import _ "github.com/lib/pq"`).
     # The 'dataSource' field can be sensitive (contain a password). In that case,
