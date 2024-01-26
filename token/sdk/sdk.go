@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -31,7 +33,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
@@ -85,6 +86,10 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
+	// Network provider
+	networkProvider := network.NewProvider(p.registry)
+	assert.NoError(p.registry.RegisterService(networkProvider))
+
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
 	switch configProvider.GetString("token.selector.driver") {
@@ -100,29 +105,38 @@ func (p *SDK) Install() error {
 		subscriber, err := events.GetSubscriber(p.registry)
 		assert.NoError(err, "failed to get events subscriber")
 		selectorManagerProvider = mailman.NewService(
-			tms.NewVaultProvider(p.registry),
+			tms.NewVaultProvider(networkProvider),
 			subscriber,
 			tracing.Get(p.registry).GetTracer(),
 		)
 	}
 
 	// Register the token management service provider
-	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
+	tmsp := token.NewManagementServiceProvider(
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
 		&vault.ProviderAdaptor{Provider: vaultProvider},
 		network2.NewCertificationClientProvider(p.registry),
 		selectorManagerProvider,
-	)))
-
-	// Network provider
-	assert.NoError(p.registry.RegisterService(network.NewProvider(p.registry)))
+	)
+	assert.NoError(p.registry.RegisterService(tmsp))
 
 	// Token Transaction DB and derivatives
-	assert.NoError(p.registry.RegisterService(ttxdb.NewManager(p.registry, "")))
-	p.auditorManager = auditor.NewManager(p.registry, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	ttxdbManager := ttxdb.NewManager(p.registry, "")
+	assert.NoError(p.registry.RegisterService(ttxdbManager))
+	p.auditorManager = auditor.NewManager(
+		tmsp,
+		networkProvider,
+		ttxdbManager,
+		storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)),
+	)
 	assert.NoError(p.registry.RegisterService(p.auditorManager))
-	p.ownerManager = owner.NewManager(p.registry, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
+	p.ownerManager = owner.NewManager(
+		tmsp,
+		networkProvider,
+		ttxdbManager,
+		storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)),
+	)
 	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
 	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))

@@ -9,8 +9,6 @@ package tms
 import (
 	"os"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -23,6 +21,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/pkg/errors"
 )
 
@@ -117,18 +116,26 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	return nil
 }
 
-type VaultProvider struct {
-	sp view.ServiceProvider
+type NetworkProvider interface {
+	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
-func NewVaultProvider(sp view.ServiceProvider) *VaultProvider {
-	return &VaultProvider{sp: sp}
+type VaultProvider struct {
+	np NetworkProvider
+}
+
+func NewVaultProvider(np NetworkProvider) *VaultProvider {
+	return &VaultProvider{np: np}
 }
 
 func (v *VaultProvider) Vault(tms *token3.ManagementService) (mailman.Vault, mailman.QueryService, error) {
-	vault, err := network.GetInstance(v.sp, tms.Network(), tms.Channel()).Vault(tms.Namespace())
+	net, err := v.np.GetNetwork(tms.Network(), tms.Channel())
 	if err != nil {
-		return nil, nil, errors.Errorf("cannot get ntwork vault for TMS [%s]", tms.ID())
+		return nil, nil, errors.Errorf("cannot get network for TMS [%s]", tms.ID())
+	}
+	vault, err := net.Vault(tms.Namespace())
+	if err != nil {
+		return nil, nil, errors.Errorf("cannot get network vault for TMS [%s]", tms.ID())
 	}
 	return vault, tms.Vault().NewQueryEngine(), nil
 }

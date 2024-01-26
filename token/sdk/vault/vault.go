@@ -18,6 +18,7 @@ import (
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws"
 	"github.com/pkg/errors"
 )
@@ -62,6 +63,11 @@ func (v *Provider) Vault(network string, channel string, namespace string) (vaul
 		return nil, errors.WithMessagef(err, "failed to get token store")
 	}
 
+	storageProvider, err := certification.GetStorageProvider(v.sp)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get storage provider")
+	}
+
 	// Create new vault
 	if fns := fabric.GetFabricNetworkService(v.sp, network); fns != nil {
 		ch := fabric.GetChannel(v.sp, network, channel)
@@ -70,7 +76,14 @@ func (v *Provider) Vault(network string, channel string, namespace string) (vaul
 			Channel:   ch.Name(),
 			Namespace: namespace,
 		}
-		res, err = rws.NewVault(v.sp, tmsID, fabric2.NewVault(ch, tokenStore))
+		storage, err := storageProvider.NewStorage(tmsID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create new storage")
+		}
+		res, err = rws.NewVault(storage, tmsID, fabric2.NewVault(ch, tokenStore))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create new vault")
+		}
 	} else {
 		ons := orion.GetOrionNetworkService(v.sp, network)
 		if ons == nil {
@@ -81,10 +94,14 @@ func (v *Provider) Vault(network string, channel string, namespace string) (vaul
 			Channel:   "",
 			Namespace: namespace,
 		}
-		res, err = rws.NewVault(v.sp, tmsID, orion2.NewVault(ons, tokenStore))
-	}
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to create new vault")
+		storage, err := storageProvider.NewStorage(tmsID)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create new storage")
+		}
+		res, err = rws.NewVault(storage, tmsID, orion2.NewVault(ons, tokenStore))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to create new vault")
+		}
 	}
 
 	// update cache

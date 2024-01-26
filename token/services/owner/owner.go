@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package owner
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -46,10 +45,14 @@ type QueryExecutor struct {
 	*ttxdb.QueryExecutor
 }
 
+type NetworkProvider interface {
+	GetNetwork(network string, channel string) (*network.Network, error)
+}
+
 // Owner is the interface for the owner service
 type Owner struct {
-	sp view.ServiceProvider
-	db *ttxdb.DB
+	networkProvider NetworkProvider
+	db              *ttxdb.DB
 }
 
 // NewQueryExecutor returns a new query executor
@@ -65,11 +68,11 @@ func (a *Owner) Append(tx Transaction) error {
 	}
 
 	// listen to events
-	net := network.GetInstance(a.sp, tx.Network(), tx.Channel())
-	if net == nil {
-		return errors.Errorf("failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
+	net, err := a.networkProvider.GetNetwork(tx.Network(), tx.Channel())
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
-	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
+	logger.Debugf("register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
 	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.db}); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}

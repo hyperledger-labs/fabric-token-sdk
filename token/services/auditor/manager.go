@@ -19,20 +19,33 @@ import (
 	"github.com/pkg/errors"
 )
 
+type TokenManagementServiceProvider interface {
+	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
+}
+
+type TTXDBProvider interface {
+	DB(w ttxdb.Wallet) (*ttxdb.DB, error)
+}
+
 // Manager handles the databases
 type Manager struct {
-	sp       view.ServiceProvider
+	tmsProvider     TokenManagementServiceProvider
+	networkProvider NetworkProvider
+	ttxdbProvider   TTXDBProvider
+
 	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
 	auditors map[string]*Auditor
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(sp view.ServiceProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(tmsProvider TokenManagementServiceProvider, networkProvider NetworkProvider, ttxdbProvider TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
-		sp:       sp,
-		storage:  storage,
-		auditors: map[string]*Auditor{},
+		tmsProvider:     tmsProvider,
+		networkProvider: networkProvider,
+		storage:         storage,
+		ttxdbProvider:   ttxdbProvider,
+		auditors:        map[string]*Auditor{},
 	}
 }
 
@@ -81,9 +94,9 @@ func (cm *Manager) Restore() error {
 			return errors.Wrapf(err, "failed to get next entry for [%s:%s]...", entry.TMSID.String(), entry.WalletID)
 		}
 		logger.Infof("restore audit dbs for entry [%s:%s]...", entry.TMSID.String(), entry.WalletID)
-		tms := token.GetManagementService(cm.sp, token.WithTMSID(entry.TMSID))
-		if tms == nil {
-			return errors.Errorf("cannot find TMS [%s]", entry.TMSID)
+		tms, err := cm.tmsProvider.GetManagementService(token.WithTMSID(entry.TMSID))
+		if err != nil {
+			return errors.WithMessagef(err, "cannot find TMS [%s]", entry.TMSID)
 		}
 		w := tms.WalletManager().AuditorWallet(entry.WalletID)
 		if w == nil {
@@ -97,22 +110,29 @@ func (cm *Manager) Restore() error {
 }
 
 func (cm *Manager) newAuditor(w *token.AuditorWallet) (*Auditor, error) {
-	auditor := &Auditor{sp: cm.sp, db: ttxdb.Get(cm.sp, w)}
-	net := network.GetInstance(cm.sp, w.TMS().Network(), w.TMS().Channel())
-	if net == nil {
-		return nil, errors.Errorf("failed to get network instance for [%s:%s]", w.TMS().Network(), w.TMS().Channel())
+	db, err := cm.ttxdbProvider.DB(w)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", w.ID())
+	}
+	auditor := &Auditor{np: cm.networkProvider, db: db}
+	_, err = cm.networkProvider.GetNetwork(w.TMS().Network(), w.TMS().Channel())
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", w.TMS().Network(), w.TMS().Channel())
 	}
 	logger.Debugf("auditdb: register tx status listener for all tx at network [%s:%s]", w.TMS().Network(), w.TMS().Channel())
 	return auditor, nil
 }
 
 func (cm *Manager) restore(w *token.AuditorWallet) error {
-	net := network.GetInstance(cm.sp, w.TMS().Network(), w.TMS().Channel())
-	if net == nil {
-		return errors.Errorf("failed to get network instance for [%s:%s]", w.TMS().Network(), w.TMS().Channel())
+	net, err := cm.networkProvider.GetNetwork(w.TMS().Network(), w.TMS().Channel())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", w.TMS().Network(), w.TMS().Channel())
 	}
 
-	auditor := New(cm.sp, w)
+	auditor, err := cm.Auditor(w)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get auditor for [%s]", w.ID())
+	}
 	qe := auditor.NewQueryExecutor()
 	defer qe.Done()
 

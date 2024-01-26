@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -57,9 +56,13 @@ func (a *QueryExecutor) Done() {
 	a.QueryExecutor.Done()
 }
 
+type NetworkProvider interface {
+	GetNetwork(network string, channel string) (*network.Network, error)
+}
+
 // Auditor is the interface for the auditor service
 type Auditor struct {
-	sp view2.ServiceProvider
+	np NetworkProvider
 	db *ttxdb.DB
 }
 
@@ -99,9 +102,9 @@ func (a *Auditor) Append(tx Transaction) error {
 	}
 
 	// lister to events
-	net := network.GetInstance(a.sp, tx.Network(), tx.Channel())
-	if net == nil {
-		return errors.Errorf("failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
+	net, err := a.np.GetNetwork(tx.Network(), tx.Channel())
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
 	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.db}); err != nil {
