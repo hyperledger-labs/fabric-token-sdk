@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -24,33 +23,38 @@ type Backend interface {
 	Load(context view.Context, cr *CertificationRequest) ([][]byte, error)
 }
 
+type ResponderRegistry interface {
+	RegisterResponder(responder view.View, initiatedBy interface{}) error
+}
+
 type CertificationService struct {
-	sp      view2.ServiceProvider
+	ResponderRegistry ResponderRegistry
+
 	wallets map[string]string
 	backend Backend
 	metrics *Metrics
 }
 
-func NewCertificationService(sp view2.ServiceProvider, backend Backend) *CertificationService {
+func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Provider, backend Backend) *CertificationService {
 	return &CertificationService{
-		sp:      sp,
-		wallets: map[string]string{},
-		metrics: NewMetrics(metrics.GetProvider(sp)),
-		backend: backend,
+		wallets:           map[string]string{},
+		metrics:           NewMetrics(mp),
+		backend:           backend,
+		ResponderRegistry: responderRegistry,
 	}
 }
 
 func (c *CertificationService) Start() error {
 	logger.Debugf("starting certifier service...")
 	(&sync.Once{}).Do(func() {
-		view2.GetRegistry(c.sp).RegisterResponder(c, &CertificationRequestView{})
+		c.ResponderRegistry.RegisterResponder(c, &CertificationRequestView{})
 	})
 	logger.Debugf("starting certifier service...done")
 	return nil
 }
 
-func (c *CertificationService) SetWallet(network string, channel string, namespace string, wallet string) {
-	c.wallets[network+":"+channel+":"+namespace] = wallet
+func (c *CertificationService) SetWallet(tms *token2.ManagementService, wallet string) {
+	c.wallets[tms.Network()+":"+tms.Channel()+":"+tms.Namespace()] = wallet
 }
 
 func (c *CertificationService) Call(context view.Context) (interface{}, error) {

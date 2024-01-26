@@ -10,9 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -36,7 +34,7 @@ type LockerProvider interface {
 }
 
 type SelectorService struct {
-	sp                   view.ServiceProvider
+	tracer               Tracer
 	numRetry             int
 	timeout              time.Duration
 	requestCertification bool
@@ -47,27 +45,21 @@ type SelectorService struct {
 	managers       map[string]token.SelectorManager
 }
 
-func NewProvider(sp view.ServiceProvider, lockerProvider LockerProvider, numRetry int, timeout time.Duration) *SelectorService {
+func NewProvider(lockerProvider LockerProvider, numRetry int, timeout time.Duration, tracer Tracer) *SelectorService {
 	return &SelectorService{
-		sp:                   sp,
 		lockerProvider:       lockerProvider,
 		lockers:              map[string]Locker{},
 		managers:             map[string]token.SelectorManager{},
 		numRetry:             numRetry,
 		timeout:              timeout,
 		requestCertification: true,
+		tracer:               tracer,
 	}
 }
 
-func (s *SelectorService) SelectorManager(network string, channel string, namespace string) (token.SelectorManager, error) {
-	tms := token.GetManagementService(
-		s.sp,
-		token.WithNetwork(network),
-		token.WithChannel(channel),
-		token.WithNamespace(namespace),
-	)
+func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.SelectorManager, error) {
 	if tms == nil {
-		return nil, errors.Errorf("failed to get TMS for [%s:%s:%s]", network, channel, namespace)
+		return nil, errors.Errorf("invalid tms, nil reference")
 	}
 
 	key := tms.Network() + tms.Channel() + tms.Namespace()
@@ -92,7 +84,7 @@ func (s *SelectorService) SelectorManager(network string, channel string, namesp
 	locker, ok := s.lockers[key]
 	if !ok {
 		logger.Debugf("new in-memory locker for [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
-		locker = s.lockerProvider.New(network, channel, namespace)
+		locker = s.lockerProvider.New(tms.Network(), tms.Channel(), tms.Namespace())
 		s.lockers[key] = locker
 	} else {
 		logger.Debugf("in-memory selector for [%s:%s:%s] exists", tms.Network(), tms.Channel(), tms.Namespace())
@@ -114,7 +106,7 @@ func (s *SelectorService) SelectorManager(network string, channel string, namesp
 		s.timeout,
 		s.requestCertification,
 		pp.Precision(),
-		tracing.Get(s.sp).GetTracer(),
+		s.tracer,
 	)
 	s.managers[key] = manager
 	return manager, nil

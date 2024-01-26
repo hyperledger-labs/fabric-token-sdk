@@ -3,10 +3,11 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package dummy
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
@@ -44,11 +45,11 @@ func NewDriver() *Driver {
 	return &Driver{}
 }
 
-func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, network, channel, namespace string) (driver.CertificationClient, error) {
+func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.CertificationClient, error) {
 	return &CertificationClient{}, nil
 }
 
-func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, channel, namespace, wallet string) (driver.CertificationService, error) {
+func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet string) (driver.CertificationService, error) {
 	return &CertificationService{}, nil
 }
 

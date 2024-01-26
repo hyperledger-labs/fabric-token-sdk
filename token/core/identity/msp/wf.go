@@ -8,7 +8,6 @@ package msp
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
@@ -43,7 +42,6 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 
 // WalletFactory is the factory for creating wallets, idemix and x509
 type WalletFactory struct {
-	SP                     view.ServiceProvider
 	NetworkID              string
 	ConfigManager          config.Manager
 	FSCIdentity            view2.Identity
@@ -57,7 +55,6 @@ type WalletFactory struct {
 
 // NewWalletFactory creates a new WalletFactory
 func NewWalletFactory(
-	sp view.ServiceProvider,
 	networkID string,
 	configManager config.Manager,
 	fscIdentity view2.Identity,
@@ -69,7 +66,6 @@ func NewWalletFactory(
 	ignoreRemote bool,
 ) *WalletFactory {
 	return &WalletFactory{
-		SP:                     sp,
 		NetworkID:              networkID,
 		ConfigManager:          configManager,
 		FSCIdentity:            fscIdentity,
@@ -98,7 +94,6 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		return nil, errors.Wrapf(err, "failed to get new keystore")
 	}
 	lm := idemix.NewLocalMembership(
-		f.SP,
 		f.ConfigManager,
 		f.NetworkDefaultIdentity,
 		f.SignerService,

@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -20,6 +20,6 @@ type CertificationService interface {
 }
 
 type Driver interface {
-	NewCertificationClient(sp view.ServiceProvider, network, channel, namespace string) (CertificationClient, error)
-	NewCertificationService(sp view.ServiceProvider, network, channel, namespace, wallet string) (CertificationService, error)
+	NewCertificationClient(tms *token.ManagementService) (CertificationClient, error)
+	NewCertificationService(tms *token.ManagementService, wallet string) (CertificationService, error)
 }

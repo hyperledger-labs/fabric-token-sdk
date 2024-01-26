@@ -12,9 +12,11 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	tms2 "github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
@@ -77,6 +79,7 @@ func (p *SDK) Install() error {
 
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
+		configProvider,
 		&vault.PublicParamsProvider{Provider: vaultProvider},
 		tms.NewPostInitializer(p.registry).PostInit,
 	)
@@ -87,18 +90,24 @@ func (p *SDK) Install() error {
 	switch configProvider.GetString("token.selector.driver") {
 	case "simple":
 		selectorManagerProvider = selector.NewProvider(
-			p.registry,
 			network2.NewLockerProvider(p.registry, 2*time.Second, 5*time.Minute),
 			2,
-			5*time.Second)
+			5*time.Second,
+			tracing.Get(p.registry).GetTracer(),
+		)
 	default:
 		// we use mailman as our default selector
-		selectorManagerProvider = mailman.NewService(p.registry)
+		subscriber, err := events.GetSubscriber(p.registry)
+		assert.NoError(err, "failed to get events subscriber")
+		selectorManagerProvider = mailman.NewService(
+			tms.NewVaultProvider(p.registry),
+			subscriber,
+			tracing.Get(p.registry).GetTracer(),
+		)
 	}
 
 	// Register the token management service provider
 	assert.NoError(p.registry.RegisterService(token.NewManagementServiceProvider(
-		p.registry,
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
 		&vault.ProviderAdaptor{Provider: vaultProvider},
@@ -147,15 +156,16 @@ func (p *SDK) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed get the TMS configurations")
 	}
+	tmsp := token.GetManagementServiceProvider(p.registry)
 	for _, tmsConfig := range tmsConfigs {
 		tmsID := token.TMSID{
 			Network:   tmsConfig.TMS().Network,
 			Channel:   tmsConfig.TMS().Channel,
 			Namespace: tmsConfig.TMS().Namespace,
 		}
-		tms := token.GetManagementService(p.registry, token.WithTMSID(tmsID))
-		if tms == nil {
-			return errors.Errorf("failed to load configured TMS [%s]", tmsID)
+		_, err := tmsp.GetManagementService(token.WithTMSID(tmsID))
+		if err != nil {
+			return errors.WithMessagef(err, "failed to load configured TMS [%s]", tmsID)
 		}
 	}
 

@@ -61,7 +61,6 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
 	mspWalletFactory := msp.NewWalletFactory(
-		sp,                                       // service provider
 		networkID,                                // network ID
 		tmsConfig,                                // config manager
 		fscIdentity,                              // FSC identity
@@ -166,7 +165,6 @@ func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, cha
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
 	mspWalletFactory := msp.NewWalletFactory(
-		sp,        // service provider
 		networkID, // network ID
 		tmsConfig, // config manager
 		nil,       // FSC identity

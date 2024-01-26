@@ -24,23 +24,31 @@ type Vault interface {
 	PublicParams(networkID string, channel string, namespace string) ([]byte, error)
 }
 
+type ConfigProvider interface {
+	UnmarshalKey(key string, rawVal interface{}) error
+	IsSet(key string) bool
+	TranslatePath(path string) string
+}
+
 // TMSProvider is a token management service provider.
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
-	sp           view.ServiceProvider
-	vault        Vault
-	callbackFunc CallbackFunc
+	sp             view.ServiceProvider
+	configProvider ConfigProvider
+	vault          Vault
+	callbackFunc   CallbackFunc
 
 	lock     sync.Mutex
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(sp view.ServiceProvider, vault Vault, callbackFunc CallbackFunc) *TMSProvider {
+func NewTMSProvider(sp view.ServiceProvider, configProvider ConfigProvider, vault Vault, callbackFunc CallbackFunc) *TMSProvider {
 	ms := &TMSProvider{
-		sp:           sp,
-		vault:        vault,
-		callbackFunc: callbackFunc,
-		services:     map[string]driver.TokenManagerService{},
+		sp:             sp,
+		configProvider: configProvider,
+		vault:          vault,
+		callbackFunc:   callbackFunc,
+		services:       map[string]driver.TokenManagerService{},
 	}
 	return ms
 }
@@ -104,7 +112,7 @@ func (m *TMSProvider) driverFor(networkID string, channel string, namespace stri
 	pp, err := m.loadPublicParams(networkID, channel, namespace, publicParamsFetcher)
 	if err != nil {
 		// resort to configuration
-		tmsConfig, err2 := config.NewTokenSDK(view.GetConfigService(m.sp)).GetTMS(networkID, channel, namespace)
+		tmsConfig, err2 := config.NewTokenSDK(m.configProvider).GetTMS(networkID, channel, namespace)
 		if err2 != nil {
 			return "", errors.WithMessagef(err, "failed to identify driver from the configuration of [%s:%s:%s], loading driver from public parameters failed too [%s]", networkID, channel, namespace, err)
 		}
