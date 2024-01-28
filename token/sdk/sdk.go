@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -33,6 +31,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
@@ -71,7 +70,11 @@ func (p *SDK) Install() error {
 	}
 	logger.Infof("Token platform enabled, installing...")
 
-	assert.NoError(p.registry.RegisterService(identity2.NewKVSStorageProvider(p.registry)), "failed to register identity storage")
+	identityStorageProvider := identity2.NewKVSStorageProvider(kvs.GetService(p.registry))
+	assert.NoError(
+		p.registry.RegisterService(identityStorageProvider),
+		"failed to register identity storage",
+	)
 
 	logger.Infof("Set TMS TMSProvider")
 
@@ -116,7 +119,7 @@ func (p *SDK) Install() error {
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
 		&vault.ProviderAdaptor{Provider: vaultProvider},
-		network2.NewCertificationClientProvider(p.registry),
+		network2.NewCertificationClientProvider(),
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
@@ -139,7 +142,7 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
-	enabled, err := orion.IsCustodian(view2.GetConfigService(p.registry))
+	enabled, err := orion.IsCustodian(configProvider)
 	assert.NoError(err, "failed to get custodian status")
 	logger.Infof("Orion Custodian enabled: %t", enabled)
 	if enabled {
@@ -147,7 +150,10 @@ func (p *SDK) Install() error {
 	}
 
 	// Certification
-	assert.NoError(p.registry.RegisterService(certification.NewTTXDBStorageProvider(p.registry)), "failed to register certification storage")
+	assert.NoError(p.registry.RegisterService(
+		certification.NewTTXDBStorageProvider(ttxdbManager)),
+		"failed to register certification storage",
+	)
 
 	// Install metrics
 	assert.NoError(
@@ -170,14 +176,14 @@ func (p *SDK) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed get the TMS configurations")
 	}
-	tmsp := token.GetManagementServiceProvider(p.registry)
+	tmsProvider := token.GetManagementServiceProvider(p.registry)
 	for _, tmsConfig := range tmsConfigs {
 		tmsID := token.TMSID{
 			Network:   tmsConfig.TMS().Network,
 			Channel:   tmsConfig.TMS().Channel,
 			Namespace: tmsConfig.TMS().Namespace,
 		}
-		_, err := tmsp.GetManagementService(token.WithTMSID(tmsID))
+		_, err := tmsProvider.GetManagementService(token.WithTMSID(tmsID))
 		if err != nil {
 			return errors.WithMessagef(err, "failed to load configured TMS [%s]", tmsID)
 		}
