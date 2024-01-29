@@ -69,11 +69,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (driver
 	key := opts.Network + opts.Channel + opts.Network
 	service, ok := m.services[key]
 	if !ok {
-		if opts.PublicParamsFetcher == nil {
-			return nil, errors.Errorf("public params fetcher not specified")
-		}
-		logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", opts.Network, opts.Channel, opts.Namespace)
-
+		logger.Debugf("creating new token manager service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 		var err error
 		service, err = m.newTMS(&opts)
 		if err != nil {
@@ -91,10 +87,7 @@ func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver
 	if len(opts.Namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}
-	if opts.PublicParamsFetcher == nil {
-		return nil, errors.Errorf("public params fetcher not specified")
-	}
-	logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", opts.Network, opts.Channel, opts.Namespace)
+	logger.Debugf("creating new token manager service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 
 	service, err := m.newTMS(&opts)
 	if err != nil {
@@ -119,8 +112,21 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) error {
 	key := opts.Network + opts.Channel + opts.Network
 	service, ok := m.services[key]
 	if ok {
-		return service.PublicParamsManager().SetPublicParameters(opts.PublicParams)
+		// if the public params identifiers are the same, then just pass the new public params
+		newPP, err := SerializedPublicParametersFromBytes(opts.PublicParams)
+		if err != nil {
+			return errors.WithMessage(err, "failed unmarshalling public parameters")
+		}
+		if newPP.Identifier == service.PublicParamsManager().PublicParameters().Identifier() {
+			return service.PublicParamsManager().SetPublicParameters(opts.PublicParams)
+		}
+
+		// if the public params identifiers are NOT the same, then unload the current instance
+		// and create the new one with the new public params
+		panic("not implemented yet")
 	}
+
+	// instantiate the token management service
 	panic("not implemented yet")
 }
 
@@ -133,7 +139,7 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 	if !ok {
 		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", driverName)
 	}
-	logger.Debugf("instantiating token service for network [%s], channel [%s], namespace [%s], with driver identifier [%s]", opts.Network, opts.Channel, opts.Namespace, driverName)
+	logger.Debugf("instantiating token service for [%s:%s:%s], with driver identifier [%s]", opts.Network, opts.Channel, opts.Namespace, driverName)
 
 	ts, err := d.NewTokenService(m.sp, opts.PublicParamsFetcher, opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
@@ -167,16 +173,24 @@ func (m *TMSProvider) driverFor(opts *driver.ServiceOptions) (string, error) {
 }
 
 func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) (*driver.SerializedPublicParameters, error) {
-	ppRaw, err := m.vault.PublicParams(opts.Network, opts.Channel, opts.Namespace)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to load public params from the vault")
-	}
-	if len(ppRaw) == 0 {
-		ppRaw, err = opts.PublicParamsFetcher.Fetch()
+	var ppRaw []byte
+	var err error
+	if len(opts.PublicParams) != 0 {
+		ppRaw = opts.PublicParams
+	} else {
+		ppRaw, err = m.vault.PublicParams(opts.Network, opts.Channel, opts.Namespace)
 		if err != nil {
-			return nil, errors.WithMessage(err, "failed fetching public parameters")
+			return nil, errors.WithMessage(err, "failed to load public params from the vault")
+		}
+		if len(ppRaw) == 0 {
+			ppRaw, err = opts.PublicParamsFetcher.Fetch()
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed fetching public parameters")
+			}
 		}
 	}
+
+	// deserialize public params
 	pp, err := SerializedPublicParametersFromBytes(ppRaw)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed unmarshalling public parameters")
