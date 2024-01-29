@@ -76,6 +76,15 @@ func NewManagementServiceProvider(
 // GetManagementService returns an instance of the management service for the passed options.
 // If the management service has not been created yet, it will be created.
 func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) (*ManagementService, error) {
+	return p.managementService(false, opts...)
+}
+
+// NewManagementService returns a new instance of the management service for the passed options.
+func (p *ManagementServiceProvider) NewManagementService(opts ...ServiceOption) (*ManagementService, error) {
+	return p.managementService(true, opts...)
+}
+
+func (p *ManagementServiceProvider) managementService(aNew bool, opts ...ServiceOption) (*ManagementService, error) {
 	opt, err := CompileServiceOptions(opts...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to compile options")
@@ -86,14 +95,23 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 	}
 
 	logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
-	tokenService, err := p.tmsProvider.GetTokenManagerService(
-		opt.Network,
-		opt.Channel,
-		opt.Namespace,
-		opt.PublicParamsFetcher,
-	)
+
+	var tokenService driver.TokenManagerService
+	driverOpts := driver.ServiceOptions{
+		Network:             opt.Network,
+		Channel:             opt.Channel,
+		Namespace:           opt.Namespace,
+		PublicParamsFetcher: opt.PublicParamsFetcher,
+		PublicParams:        opt.PublicParams,
+		Params:              opt.Params,
+	}
+	if aNew {
+		tokenService, err = p.tmsProvider.NewTokenManagerService(driverOpts)
+	} else {
+		tokenService, err = p.tmsProvider.GetTokenManagerService(driverOpts)
+	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt.TMSID())
+		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt)
 	}
 
 	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
@@ -115,6 +133,19 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 		return nil, errors.WithMessagef(err, "failed to initialize token management service")
 	}
 	return ms, nil
+}
+
+func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
+	err := p.tmsProvider.Update(driver.ServiceOptions{
+		Network:      tmsID.Network,
+		Channel:      tmsID.Channel,
+		Namespace:    tmsID.Namespace,
+		PublicParams: val,
+	})
+	if err != nil {
+		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
+	}
+	return nil
 }
 
 // GetManagementServiceProvider returns the management service provider from the passed service provider.
