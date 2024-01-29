@@ -10,18 +10,18 @@ import (
 	"sort"
 	"sync"
 
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 var (
 	driversMu sync.RWMutex
-	drivers   = make(map[string]api2.Driver)
+	drivers   = make(map[string]driver.Driver)
 )
 
 // Register makes a kvs driver available by the provided name.
 // If Register is called twice with the same name or if driver is nil,
 // it panics.
-func Register(name string, driver api2.Driver) {
+func Register(name string, driver driver.Driver) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
 	if driver == nil {
