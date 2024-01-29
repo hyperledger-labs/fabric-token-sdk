@@ -77,14 +77,7 @@ func (r *RegisterView) startCertificationService(context view.Context, tms *toke
 	// Start Certifier
 	certificationDriver := pp.CertificationDriver()
 	logger.Debugf("start certification service with driver [%s]...", certificationDriver)
-	c, err := certifier.NewCertificationService(
-		context,
-		tms.Network(),
-		tms.Channel(),
-		tms.Namespace(),
-		r.Wallet,
-		certificationDriver,
-	)
+	c, err := certifier.NewCertificationService(tms, r.Wallet)
 	if err != nil {
 		return errors.WithMessagef(err, "failed instantiating certifier [%s]", tms)
 	}

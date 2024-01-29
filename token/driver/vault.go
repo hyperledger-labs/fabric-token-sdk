@@ -21,6 +21,7 @@ type UnspentTokensIterator interface {
 
 type Vault interface {
 	QueryEngine() QueryEngine
+	CertificationStorage() CertificationStorage
 }
 
 type CertificationStorage interface {

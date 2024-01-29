@@ -72,7 +72,7 @@ func (q *QueryEngine) ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error
 					break
 				}
 				if pending {
-					logger.Warnf("cannot get audit token for id [%d] because the relative transaction is pending, retry at [%d]", id, i)
+					logger.Warnf("cannot get audit token for id [%s] because the relative transaction is pending, retry at [%d]", id, i)
 					if i == q.NumRetries-1 {
 						return nil, errors.Wrapf(err, "failed to get audit tokens, tx [%s] is still pending", id.TxId)
 					}
@@ -112,6 +112,18 @@ func (q *QueryEngine) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
 	return tokens, err
 }
 
+type CertificationStorage struct {
+	c driver.CertificationStorage
+}
+
+func (c *CertificationStorage) Exists(id *token2.ID) bool {
+	return c.c.Exists(id)
+}
+
+func (c *CertificationStorage) Store(certifications map[*token2.ID][]byte) error {
+	return c.c.Store(certifications)
+}
+
 // Vault models a token vault
 type Vault struct {
 	v driver.Vault
@@ -120,6 +132,10 @@ type Vault struct {
 // NewQueryEngine returns a new query engine
 func (v *Vault) NewQueryEngine() *QueryEngine {
 	return NewQueryEngine(v.v.QueryEngine(), 3, 3*time.Second)
+}
+
+func (v *Vault) CertificationStorage() *CertificationStorage {
+	return &CertificationStorage{v.v.CertificationStorage()}
 }
 
 // UnspentTokensIterator models an iterator over all unspent tokens stored in the vault

@@ -10,39 +10,41 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
 
+type Subscribe = events.Subscriber
+
+type VaultProvider interface {
+	Vault(tms *token.ManagementService) (Vault, QueryService, error)
+}
+
 type SelectorService struct {
-	sp       view.ServiceProvider
+	vaultProvider VaultProvider
+	subscribe     Subscribe
+	tracer        Tracer
+
 	lock     sync.RWMutex
 	managers map[string]token.SelectorManager
 	// TODO create a shared worker pool for all selectors
 	// workerPool []*worker
 }
 
-func NewService(sp view.ServiceProvider) *SelectorService {
+func NewService(vaultProvider VaultProvider, subscribe Subscribe, tracer Tracer) *SelectorService {
 	return &SelectorService{
-		sp:       sp,
-		managers: make(map[string]token.SelectorManager),
+		vaultProvider: vaultProvider,
+		subscribe:     subscribe,
+		tracer:        tracer,
+		managers:      make(map[string]token.SelectorManager),
 	}
 }
 
-func (s *SelectorService) SelectorManager(networkID string, channel string, namespace string) (token.SelectorManager, error) {
-	tms := token.GetManagementService(
-		s.sp,
-		token.WithNetwork(networkID),
-		token.WithChannel(channel),
-		token.WithNamespace(namespace),
-	)
+func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.SelectorManager, error) {
 	if tms == nil {
-		return nil, errors.Errorf("failed to get TMS for [%s:%s:%s]", networkID, channel, namespace)
+		return nil, errors.Errorf("invalid tms, nil reference")
 	}
 
 	key := tms.Network() + tms.Channel() + tms.Namespace()
@@ -67,12 +69,6 @@ func (s *SelectorService) SelectorManager(networkID string, channel string, name
 
 	// otherwise, build a new Manager
 
-	// get notification service
-	sub, err := events.GetSubscriber(s.sp)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get event subscriber")
-	}
-
 	// create walletID extractor function using TMS wallet manager
 	walletIDByRawIdentity := func(rawIdentity []byte) string {
 		w := tms.WalletManager().OwnerWalletByIdentity(rawIdentity)
@@ -87,11 +83,19 @@ func (s *SelectorService) SelectorManager(networkID string, channel string, name
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	vault, err := network.GetInstance(s.sp, tms.Network(), tms.Channel()).Vault(tms.Namespace())
+	vault, qs, err := s.vaultProvider.Vault(tms)
 	if err != nil {
 		return nil, errors.Errorf("cannot get ntwork vault for TMS [%s]", tms.ID())
 	}
-	newManager := NewManager(tms.ID(), vault, tms.Vault().NewQueryEngine(), walletIDByRawIdentity, tracing.Get(s.sp).GetTracer(), pp.Precision(), sub)
+	newManager := NewManager(
+		tms.ID(),
+		vault,
+		qs,
+		walletIDByRawIdentity,
+		s.tracer,
+		pp.Precision(),
+		s.subscribe,
+	)
 	newManager.Start()
 	s.managers[key] = newManager
 	return newManager, nil

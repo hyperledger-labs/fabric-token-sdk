@@ -38,18 +38,17 @@ type SelectorManager interface {
 // SelectorManagerProvider provides instances of SelectorManager
 type SelectorManagerProvider interface {
 	// SelectorManager returns a SelectorManager instance for the passed inputs.
-	SelectorManager(network string, channel string, namespace string) (SelectorManager, error)
+	SelectorManager(tms *ManagementService) (SelectorManager, error)
 }
 
 // CertificationClientProvider provides instances of CertificationClient
 type CertificationClientProvider interface {
 	// New returns a new CertificationClient instance for the passed inputs
-	New(network string, channel string, namespace string, driver string) (driver.CertificationClient, error)
+	New(tms *ManagementService) (driver.CertificationClient, error)
 }
 
 // ManagementServiceProvider provides instances of the management service
 type ManagementServiceProvider struct {
-	sp                          ServiceProvider
 	tmsProvider                 driver.TokenManagerServiceProvider
 	normalizer                  Normalizer
 	certificationClientProvider CertificationClientProvider
@@ -59,7 +58,6 @@ type ManagementServiceProvider struct {
 
 // NewManagementServiceProvider returns a new instance of ManagementServiceProvider
 func NewManagementServiceProvider(
-	sp ServiceProvider,
 	tmsProvider driver.TokenManagerServiceProvider,
 	normalizer Normalizer,
 	vaultProvider VaultProvider,
@@ -67,7 +65,6 @@ func NewManagementServiceProvider(
 	selectorManagerProvider SelectorManagerProvider,
 ) *ManagementServiceProvider {
 	return &ManagementServiceProvider{
-		sp:                          sp,
 		tmsProvider:                 tmsProvider,
 		normalizer:                  normalizer,
 		vaultProvider:               vaultProvider,
@@ -102,7 +99,6 @@ func (p *ManagementServiceProvider) GetManagementService(opts ...ServiceOption) 
 	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
 	ms := &ManagementService{
-		sp:                          p.sp,
 		network:                     opt.Network,
 		channel:                     opt.Channel,
 		namespace:                   opt.Namespace,

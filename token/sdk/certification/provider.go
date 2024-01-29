@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package certification
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -17,27 +16,35 @@ import (
 )
 
 type KVSStorageProvider struct {
-	sp view.ServiceProvider
+	kvs *kvs.KVS
 }
 
-func NewKVSStorageProvider(sp view.ServiceProvider) *KVSStorageProvider {
-	return &KVSStorageProvider{sp: sp}
+func NewKVSStorageProvider(kvs *kvs.KVS) *KVSStorageProvider {
+	return &KVSStorageProvider{kvs: kvs}
 }
 
 func (s *KVSStorageProvider) NewStorage(tmsID token2.TMSID) (certification.Storage, error) {
-	return kvs2.NewCertificationStorage(kvs.GetService(s.sp), tmsID), nil
+	return kvs2.NewCertificationStorage(s.kvs, tmsID), nil
+}
+
+type TTXDBProvider interface {
+	DBByTMSId(id token2.TMSID) (*ttxdb.DB, error)
 }
 
 type TTXDBStorageProvider struct {
-	sp view.ServiceProvider
+	ttxdbProvider TTXDBProvider
 }
 
-func NewTTXDBStorageProvider(sp view.ServiceProvider) *TTXDBStorageProvider {
-	return &TTXDBStorageProvider{sp: sp}
+func NewTTXDBStorageProvider(ttxdbProvider TTXDBProvider) *TTXDBStorageProvider {
+	return &TTXDBStorageProvider{ttxdbProvider: ttxdbProvider}
 }
 
 func (s *TTXDBStorageProvider) NewStorage(tmsID token2.TMSID) (certification.Storage, error) {
-	return &TTXDBCertificationStorage{ttxdb.GetByTMSId(s.sp, tmsID)}, nil
+	db, err := s.ttxdbProvider.DBByTMSId(tmsID)
+	if err != nil {
+		return nil, err
+	}
+	return &TTXDBCertificationStorage{DB: db}, nil
 }
 
 type TTXDBCertificationStorage struct {

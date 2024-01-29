@@ -3,26 +3,27 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package certifier
 
 import (
-	"github.com/pkg/errors"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 )
 
 type CertificationClient struct {
 	c driver.CertificationClient
 }
 
-func NewCertificationClient(sp view.ServiceProvider, network, channel, namespace, driver string) (*CertificationClient, error) {
+func NewCertificationClient(tms *token.ManagementService) (*CertificationClient, error) {
+	driver := tms.PublicParametersManager().PublicParameters().CertificationDriver()
 	d, ok := drivers[driver]
 	if !ok {
 		return nil, errors.Errorf("certifier driver [%s] not found", driver)
 	}
-	c, err := d.NewCertificationClient(sp, network, channel, namespace)
+	c, err := d.NewCertificationClient(tms)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating certification manager with driver [%s]", driver)
 	}

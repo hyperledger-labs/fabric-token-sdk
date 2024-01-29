@@ -11,56 +11,57 @@ import (
 	"sync"
 	"time"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/pkg/errors"
 )
 
-type BackendFactory func(sp view2.ServiceProvider, network, channel, namespace, wallet string) (Backend, error)
+type BackendFactory func(tms *token.ManagementService, wallet string) (Backend, error)
+
+type Resolver interface {
+	ResolveIdentities(endpoints ...string) ([]view.Identity, error)
+}
+
+type Subscriber = events.Subscriber
 
 type Driver struct {
+	BackendFactory    BackendFactory
+	Resolver          Resolver
+	Subscriber        Subscriber
+	ViewManager       ViewManager
+	ResponderRegistry ResponderRegistry
+	MetricsProvider   metrics.Provider
+
 	Sync                 sync.Mutex
 	CertificationClients map[string]*CertificationClient
 	CertificationService *CertificationService
-	BackendFactory       BackendFactory
 }
 
-func NewDriver(bf BackendFactory) *Driver {
+func NewDriver(backendFactory BackendFactory, resolver Resolver, subscriber Subscriber, viewManager ViewManager, responderRegistry ResponderRegistry, metricsProvider metrics.Provider) *Driver {
 	return &Driver{
-		Sync:                 sync.Mutex{},
+		BackendFactory:       backendFactory,
+		Resolver:             resolver,
+		Subscriber:           subscriber,
+		ViewManager:          viewManager,
+		ResponderRegistry:    responderRegistry,
+		MetricsProvider:      metricsProvider,
 		CertificationClients: map[string]*CertificationClient{},
-		BackendFactory:       bf,
 	}
 }
 
-func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, channel, namespace string) (driver.CertificationClient, error) {
+func (d *Driver) NewCertificationClient(tms *token.ManagementService) (driver.CertificationClient, error) {
 	d.Sync.Lock()
 	defer d.Sync.Unlock()
 
-	k := channel + ":" + namespace
+	k := tms.Channel() + ":" + tms.Namespace()
 	cm, ok := d.CertificationClients[k]
 	if !ok {
-		n := network.GetInstance(sp, networkID, channel)
-		if n == nil {
-			return nil, errors.Errorf("network [%s] not found", networkID)
-		}
-		v, err := n.Vault(namespace)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get vault for network [%s:%s]", networkID, channel)
-		}
-
-		// Load certifier identities
-		tms := token.GetManagementService(sp, token.WithTMS(networkID, channel, namespace))
-		if tms == nil {
-			return nil, errors.Errorf("failed to get token management service for network [%s:%s:%s]", networkID, channel, namespace)
-		}
 		var certifiers []view.Identity
-		certifiers, err = view2.GetEndpointService(sp).ResolveIdentities(tms.ConfigManager().Certifiers()...)
+		certifiers, err := d.Resolver.ResolveIdentities(tms.ConfigManager().Certifiers()...)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "cannot resolve certifier identities")
 		}
@@ -68,20 +69,15 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 			return nil, errors.Errorf("no certifier id configured")
 		}
 
-		sub, err := events.GetSubscriber(sp)
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to get global subscriber")
-		}
-
-		certificationClient := NewCertificationClient(
+		var certificationClient = NewCertificationClient(
 			context.Background(),
-			channel,
-			namespace,
-			v,
-			v,
-			view2.GetManager(sp),
+			tms.Channel(),
+			tms.Namespace(),
+			tms.Vault().NewQueryEngine(),
+			tms.Vault().CertificationStorage(),
+			d.ViewManager,
 			certifiers,
-			sub,
+			d.Subscriber,
 			3,
 			10*time.Second,
 		)
@@ -96,18 +92,18 @@ func (d *Driver) NewCertificationClient(sp view2.ServiceProvider, networkID, cha
 	return cm, nil
 }
 
-func (d *Driver) NewCertificationService(sp view2.ServiceProvider, network, channel, namespace, wallet string) (driver.CertificationService, error) {
+func (d *Driver) NewCertificationService(tms *token.ManagementService, wallet string) (driver.CertificationService, error) {
 	d.Sync.Lock()
 	defer d.Sync.Unlock()
 
 	if d.CertificationService == nil {
-		backend, err := d.BackendFactory(sp, network, channel, namespace, wallet)
+		backend, err := d.BackendFactory(tms, wallet)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to create backend")
 		}
-		d.CertificationService = NewCertificationService(sp, backend)
+		d.CertificationService = NewCertificationService(d.ResponderRegistry, d.MetricsProvider, backend)
 	}
-	d.CertificationService.SetWallet(network, channel, namespace, wallet)
+	d.CertificationService.SetWallet(tms, wallet)
 
 	return d.CertificationService, nil
 }

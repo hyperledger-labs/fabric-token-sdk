@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -44,7 +43,6 @@ type PublicParametersWithIdemixSupport interface {
 }
 
 type LocalMembership struct {
-	sp                     view2.ServiceProvider
 	configManager          config.Manager
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
@@ -65,7 +63,6 @@ type LocalMembership struct {
 }
 
 func NewLocalMembership(
-	sp view2.ServiceProvider,
 	configManager config.Manager,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
@@ -79,7 +76,6 @@ func NewLocalMembership(
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
-		sp:                      sp,
 		configManager:           configManager,
 		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,

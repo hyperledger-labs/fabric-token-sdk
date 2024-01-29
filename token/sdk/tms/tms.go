@@ -21,6 +21,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/pkg/errors"
 )
 
@@ -113,4 +114,28 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
 	return nil
+}
+
+type NetworkProvider interface {
+	GetNetwork(network string, channel string) (*network.Network, error)
+}
+
+type VaultProvider struct {
+	np NetworkProvider
+}
+
+func NewVaultProvider(np NetworkProvider) *VaultProvider {
+	return &VaultProvider{np: np}
+}
+
+func (v *VaultProvider) Vault(tms *token3.ManagementService) (mailman.Vault, mailman.QueryService, error) {
+	net, err := v.np.GetNetwork(tms.Network(), tms.Channel())
+	if err != nil {
+		return nil, nil, errors.Errorf("cannot get network for TMS [%s]", tms.ID())
+	}
+	vault, err := net.Vault(tms.Namespace())
+	if err != nil {
+		return nil, nil, errors.Errorf("cannot get network vault for TMS [%s]", tms.ID())
+	}
+	return vault, tms.Vault().NewQueryEngine(), nil
 }

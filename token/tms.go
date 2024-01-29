@@ -152,7 +152,6 @@ func WithTMSID(id TMSID) ServiceOption {
 // The TMS gives access, among other things, to the wallet manager, the public parameters,
 // the token selector, and so on.
 type ManagementService struct {
-	sp        view.ServiceProvider
 	network   string
 	channel   string
 	namespace string
@@ -234,9 +233,7 @@ func (t *ManagementService) CertificationManager() *CertificationManager {
 
 // CertificationClient returns the certification client for this TMS
 func (t *ManagementService) CertificationClient() (*CertificationClient, error) {
-	certificationClient, err := t.certificationClientProvider.New(
-		t.Network(), t.Channel(), t.Namespace(), t.PublicParametersManager().PublicParameters().CertificationDriver(),
-	)
+	certificationClient, err := t.certificationClientProvider.New(nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to create ceritifacation client")
 	}
@@ -251,7 +248,7 @@ func (t *ManagementService) PublicParametersManager() *PublicParametersManager {
 
 // SelectorManager returns a manager that gives access to the token selectors
 func (t *ManagementService) SelectorManager() (SelectorManager, error) {
-	return t.selectorManagerProvider.SelectorManager(t.Network(), t.Channel(), t.Namespace())
+	return t.selectorManagerProvider.SelectorManager(t)
 }
 
 // SigService returns the signature service for this TMS

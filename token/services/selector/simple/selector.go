@@ -33,7 +33,7 @@ type Locker interface {
 	IsLocked(id *token2.ID) bool
 }
 
-type Tracer tracing.Tracer
+type Tracer = tracing.Tracer
 
 type selector struct {
 	txID         string

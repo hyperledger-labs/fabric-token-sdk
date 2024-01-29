@@ -116,8 +116,8 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
 	sigService := sig.NewSignService(sp, nil, kvss)
 	Expect(sp.RegisterService(sigService)).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(identity2.NewKVSStorageProvider(sp))).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(certification.NewKVSStorageProvider(sp))).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(identity2.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())
+	Expect(sp.RegisterService(certification.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())
 
 	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
 	Expect(err).ToNot(HaveOccurred())
