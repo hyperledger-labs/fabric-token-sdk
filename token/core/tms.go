@@ -72,7 +72,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (driver
 		if opts.PublicParamsFetcher == nil {
 			return nil, errors.Errorf("public params fetcher not specified")
 		}
-		logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", opts.Network, opts.Channel, opts.Network)
+		logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", opts.Network, opts.Channel, opts.Namespace)
 
 		var err error
 		service, err = m.newTMS(&opts)
@@ -94,7 +94,7 @@ func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver
 	if opts.PublicParamsFetcher == nil {
 		return nil, errors.Errorf("public params fetcher not specified")
 	}
-	logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", opts.Network, opts.Channel, opts.Network)
+	logger.Debugf("creating new token manager service for network %s, channel %s, namespace %s", opts.Network, opts.Channel, opts.Namespace)
 
 	service, err := m.newTMS(&opts)
 	if err != nil {
@@ -127,21 +127,21 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) error {
 func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerService, error) {
 	driverName, err := m.driverFor(opts)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get driver for [%s:%s:%s]", opts.Network, opts.Channel, opts.Network)
+		return nil, errors.WithMessagef(err, "failed to get driver for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 	}
 	d, ok := drivers[driverName]
 	if !ok {
 		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", driverName)
 	}
-	logger.Debugf("instantiating token service for network [%s], channel [%s], namespace [%s], with driver identifier [%s]", opts.Network, opts.Channel, opts.Network, driverName)
+	logger.Debugf("instantiating token service for network [%s], channel [%s], namespace [%s], with driver identifier [%s]", opts.Network, opts.Channel, opts.Namespace, driverName)
 
-	ts, err := d.NewTokenService(m.sp, opts.PublicParamsFetcher, opts.Network, opts.Channel, opts.Network)
+	ts, err := d.NewTokenService(m.sp, opts.PublicParamsFetcher, opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to instantiate token service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Network)
+		return nil, errors.WithMessagef(err, "failed to instantiate token service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 	}
 
 	if m.callbackFunc != nil {
-		if err := m.callbackFunc(ts, opts.Network, opts.Channel, opts.Network); err != nil {
+		if err := m.callbackFunc(ts, opts.Network, opts.Channel, opts.Namespace); err != nil {
 			return nil, err
 		}
 	}
@@ -152,22 +152,22 @@ func (m *TMSProvider) driverFor(opts *driver.ServiceOptions) (string, error) {
 	pp, err := m.loadPublicParams(opts)
 	if err != nil {
 		// resort to configuration
-		tmsConfig, err2 := config.NewTokenSDK(m.configProvider).GetTMS(opts.Network, opts.Channel, opts.Network)
+		tmsConfig, err2 := config.NewTokenSDK(m.configProvider).GetTMS(opts.Network, opts.Channel, opts.Namespace)
 		if err2 != nil {
-			return "", errors.WithMessagef(err, "failed to identify driver from the configuration of [%s:%s:%s], loading driver from public parameters failed too [%s]", opts.Network, opts.Channel, opts.Network, err)
+			return "", errors.WithMessagef(err, "failed to identify driver from the configuration of [%s:%s:%s], loading driver from public parameters failed too [%s]", opts.Network, opts.Channel, opts.Namespace, err)
 		}
 
 		driverName := tmsConfig.TMS().Driver
 		if len(driverName) != 0 {
 			return driverName, nil
 		}
-		return "", errors.WithMessagef(err, "failed to identify driver for [%s:%s:%s]", opts.Network, opts.Channel, opts.Network)
+		return "", errors.WithMessagef(err, "failed to identify driver for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 	}
 	return pp.Identifier, nil
 }
 
 func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) (*driver.SerializedPublicParameters, error) {
-	ppRaw, err := m.vault.PublicParams(opts.Network, opts.Channel, opts.Network)
+	ppRaw, err := m.vault.PublicParams(opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load public params from the vault")
 	}
