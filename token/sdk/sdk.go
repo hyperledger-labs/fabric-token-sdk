@@ -55,7 +55,6 @@ type Registry interface {
 type SDK struct {
 	registry       Registry
 	auditorManager *auditor.Manager
-	ownerManager   *owner.Manager
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -81,17 +80,25 @@ func (p *SDK) Install() error {
 	vaultProvider := vault.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
+	// Network provider
+	networkProvider := network.NewProvider(p.registry)
+	assert.NoError(p.registry.RegisterService(networkProvider))
+
+	// Token Transaction DB and derivatives
+	ttxdbManager := ttxdb.NewManager(p.registry, "")
+	assert.NoError(p.registry.RegisterService(ttxdbManager))
+	ownerManager := owner.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(ownerManager))
+	p.auditorManager = auditor.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(p.auditorManager))
+
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
 		configProvider,
 		&vault.PublicParamsProvider{Provider: vaultProvider},
-		tms.NewPostInitializer(p.registry).PostInit,
+		tms.NewPostInitializer(p.registry, ownerManager, p.auditorManager).PostInit,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
-
-	// Network provider
-	networkProvider := network.NewProvider(p.registry)
-	assert.NoError(p.registry.RegisterService(networkProvider))
 
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
@@ -123,24 +130,6 @@ func (p *SDK) Install() error {
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
-
-	// Token Transaction DB and derivatives
-	ttxdbManager := ttxdb.NewManager(p.registry, "")
-	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	p.auditorManager = auditor.NewManager(
-		tmsp,
-		networkProvider,
-		ttxdbManager,
-		storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)),
-	)
-	assert.NoError(p.registry.RegisterService(p.auditorManager))
-	p.ownerManager = owner.NewManager(
-		tmsp,
-		networkProvider,
-		ttxdbManager,
-		storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)),
-	)
-	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
 	enabled, err := orion.IsCustodian(configProvider)
 	assert.NoError(err, "failed to get custodian status")
@@ -187,14 +176,6 @@ func (p *SDK) Start(ctx context.Context) error {
 		if err != nil {
 			return errors.WithMessagef(err, "failed to load configured TMS [%s]", tmsID)
 		}
-	}
-
-	// restore owner and auditor dbs, if any
-	if err := p.ownerManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore onwer dbs")
-	}
-	if err := p.auditorManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore auditor dbs")
 	}
 
 	logger.Infof("Token platform enabled, starting...done")

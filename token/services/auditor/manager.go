@@ -29,7 +29,6 @@ type TTXDBProvider interface {
 
 // Manager handles the databases
 type Manager struct {
-	tmsProvider     TokenManagementServiceProvider
 	networkProvider NetworkProvider
 	ttxdbProvider   TTXDBProvider
 
@@ -39,9 +38,8 @@ type Manager struct {
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(tmsProvider TokenManagementServiceProvider, networkProvider NetworkProvider, ttxdbProvider TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(networkProvider NetworkProvider, ttxdbProvider TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
-		tmsProvider:     tmsProvider,
 		networkProvider: networkProvider,
 		storage:         storage,
 		ttxdbProvider:   ttxdbProvider,
@@ -72,7 +70,7 @@ func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
 	return c, nil
 }
 
-func (cm *Manager) Restore() error {
+func (cm *Manager) RestoreTMS(tms *token.ManagementService) error {
 	logger.Infof("restore audit dbs...")
 	it, err := cm.storage.Iterator()
 	if err != nil {
@@ -93,19 +91,17 @@ func (cm *Manager) Restore() error {
 		if err != nil {
 			return errors.Wrapf(err, "failed to get next entry for [%s:%s]...", entry.TMSID.String(), entry.WalletID)
 		}
-		logger.Infof("restore audit dbs for entry [%s:%s]...", entry.TMSID.String(), entry.WalletID)
-		tms, err := cm.tmsProvider.GetManagementService(token.WithTMSID(entry.TMSID))
-		if err != nil {
-			return errors.WithMessagef(err, "cannot find TMS [%s]", entry.TMSID)
+		if entry.TMSID.Equal(tms.ID()) {
+			logger.Infof("restore audit dbs for entry [%s:%s]...", entry.TMSID.String(), entry.WalletID)
+			w := tms.WalletManager().AuditorWallet(entry.WalletID)
+			if w == nil {
+				return errors.Errorf("cannot find auditor wallet for [%s:%s]", entry.TMSID, entry.WalletID)
+			}
+			if err := cm.restore(w); err != nil {
+				return errors.Wrapf(err, "cannot bootstrap auditdb for [%s:%s]", entry.TMSID, entry.WalletID)
+			}
+			logger.Infof("restore audit dbs for entry [%s:%s]...done", entry.TMSID.String(), entry.WalletID)
 		}
-		w := tms.WalletManager().AuditorWallet(entry.WalletID)
-		if w == nil {
-			return errors.Errorf("cannot find auditor wallet for [%s:%s]", entry.TMSID, entry.WalletID)
-		}
-		if err := cm.restore(w); err != nil {
-			return errors.Wrapf(err, "cannot bootstrap auditdb for [%s:%s]", entry.TMSID, entry.WalletID)
-		}
-		logger.Infof("restore audit dbs for entry [%s:%s]...done", entry.TMSID.String(), entry.WalletID)
 	}
 }
 

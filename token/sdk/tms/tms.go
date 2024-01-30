@@ -16,11 +16,13 @@ import (
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/pkg/errors"
 )
@@ -28,11 +30,13 @@ import (
 var logger = flogging.MustGetLogger("token-sdk")
 
 type PostInitializer struct {
-	sp view.ServiceProvider
+	sp             view.ServiceProvider
+	ownerManager   *owner.Manager
+	auditorManager *auditor.Manager
 }
 
-func NewPostInitializer(sp view.ServiceProvider) *PostInitializer {
-	return &PostInitializer{sp: sp}
+func NewPostInitializer(sp view.ServiceProvider, ownerManager *owner.Manager, auditorManager *auditor.Manager) *PostInitializer {
+	return &PostInitializer{sp: sp, ownerManager: ownerManager, auditorManager: auditorManager}
 }
 
 func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, channel, namespace string) error {
@@ -52,6 +56,20 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 			}
 			logger.Infof("load public parameters from [%s] done", cPP.Path)
 		}
+	}
+
+	tmsID := token3.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
+	}
+	// restore owner db
+	if err := p.ownerManager.RestoreTMS(tmsID); err != nil {
+		return errors.WithMessagef(err, "failed to restore onwer dbs for [%s]", tmsID)
+	}
+	// restore auditor db
+	if err := p.auditorManager.RestoreTMS(token3.GetManagementService(p.sp, token3.WithTMSID(tmsID))); err != nil {
+		return errors.WithMessagef(err, "failed to restore auditor dbs for [%s]", tmsID)
 	}
 
 	n := fabric.GetFabricNetworkService(p.sp, networkID)

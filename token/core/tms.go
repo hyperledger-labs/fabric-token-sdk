@@ -148,9 +148,11 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 	}
 
 	if m.callbackFunc != nil {
-		if err := m.callbackFunc(ts, opts.Network, opts.Channel, opts.Namespace); err != nil {
-			return nil, err
-		}
+		go func() {
+			if err := m.callbackFunc(ts, opts.Network, opts.Channel, opts.Namespace); err != nil {
+				logger.Fatalf("failure [%s]", err)
+			}
+		}()
 	}
 	return ts, nil
 }

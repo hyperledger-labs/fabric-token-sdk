@@ -658,6 +658,10 @@ func (cm *Manager) DB(w Wallet) (*DB, error) {
 	return cm.DBByID(w.TMS().ID().String() + w.ID())
 }
 
+func (cm *Manager) DBByIDs(tmsID token.TMSID, walletID string) (*DB, error) {
+	return cm.DBByID(tmsID.String() + walletID)
+}
+
 // DBByTMSId returns a DB for the given TMS id
 func (cm *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
 	return cm.DBByID(id.String() + fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace))
