@@ -117,8 +117,8 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) error {
 		if err != nil {
 			return errors.WithMessage(err, "failed unmarshalling public parameters")
 		}
-		if service.PublicParamsManager().PublicParameters() == nil ||
-			(service.PublicParamsManager().PublicParameters() != nil && newPP.Identifier == service.PublicParamsManager().PublicParameters().Identifier()) {
+		oldPP := service.PublicParamsManager().PublicParameters()
+		if oldPP == nil || (oldPP != nil && newPP.Identifier == oldPP.Identifier()) {
 			return service.PublicParamsManager().SetPublicParameters(opts.PublicParams)
 		}
 

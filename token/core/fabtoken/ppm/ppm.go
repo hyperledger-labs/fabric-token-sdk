@@ -38,7 +38,10 @@ type PublicParamsManager struct {
 
 // NewPublicParamsManager initializes a PublicParamsManager with the passed PublicParamsLoader
 func NewPublicParamsManager(PPLabel string, vault Vault) *PublicParamsManager {
-	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, Mutex: sync.RWMutex{}}
+	return &PublicParamsManager{
+		PPLabel: PPLabel,
+		Vault:   vault,
+	}
 }
 
 // NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
@@ -46,12 +49,16 @@ func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) (*PublicParamsM
 	if pp == nil {
 		return nil, errors.Errorf("public parameters must be non-nil")
 	}
-	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}, nil
+	return &PublicParamsManager{PP: pp, PPLabel: pp.Label}, nil
 }
 
 // PublicParameters returns the public parameters of PublicParamsManager
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
-	return v.PublicParams()
+	pp := v.PublicParams()
+	if pp == nil {
+		return nil
+	}
+	return pp
 }
 
 // SerializePublicParameters returns the public params in a serialized form
@@ -89,7 +96,6 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 	if err != nil {
 		return err
 	}
-	logger.Debugf("setting new public parameters...")
 
 	if err := pp.Validate(); err != nil {
 		return errors.WithMessage(err, "invalid public parameters")
@@ -111,8 +117,6 @@ func (v *PublicParamsManager) Issuers() [][]byte {
 
 // PublicParams returns the fabtoken public parameters
 func (v *PublicParamsManager) PublicParams() *fabtoken.PublicParams {
-	logger.Debugf("getting new public parameters...")
-
 	v.Mutex.RLock()
 	defer v.Mutex.RUnlock()
 	return v.PP
