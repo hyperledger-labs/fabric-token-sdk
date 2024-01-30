@@ -56,7 +56,7 @@ func NewTMSProvider(sp view.ServiceProvider, configProvider ConfigProvider, vaul
 // GetTokenManagerService returns a driver.TokenManagerService instance for the passed parameters.
 // If a TokenManagerService is not available, it creates one by first fetching the public parameters using the passed driver.PublicParamsFetcher.
 // If no driver is registered for the public params identifier, it returns an error.
-func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (driver.TokenManagerService, error) {
+func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (service driver.TokenManagerService, err error) {
 	if len(opts.Network) == 0 {
 		return nil, errors.Errorf("network not specified")
 	}
@@ -64,10 +64,22 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (driver
 		return nil, errors.Errorf("namespace not specified")
 	}
 	m.lock.Lock()
-	defer m.lock.Unlock()
+	invokeCallback := false
+	defer func() {
+		// unlock
+		m.lock.Unlock()
+		// invoke callback
+		if invokeCallback && m.callbackFunc != nil {
+			err = m.callbackFunc(service, opts.Network, opts.Channel, opts.Namespace)
+			if err != nil {
+				logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
+			}
+		}
+	}()
 
 	key := opts.Network + opts.Channel + opts.Network
-	service, ok := m.services[key]
+	var ok bool
+	service, ok = m.services[key]
 	if !ok {
 		logger.Debugf("creating new token manager service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 		var err error
@@ -76,6 +88,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (driver
 			return nil, err
 		}
 		m.services[key] = service
+		invokeCallback = true
 	}
 	return service, nil
 }
@@ -147,13 +160,6 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 		return nil, errors.WithMessagef(err, "failed to instantiate token service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 	}
 
-	if m.callbackFunc != nil {
-		go func() {
-			if err := m.callbackFunc(ts, opts.Network, opts.Channel, opts.Namespace); err != nil {
-				logger.Fatalf("failure [%s]", err)
-			}
-		}()
-	}
 	return ts, nil
 }
 
