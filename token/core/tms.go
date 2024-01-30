@@ -142,7 +142,7 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 	}
 	logger.Debugf("instantiating token service for [%s:%s:%s], with driver identifier [%s]", opts.Network, opts.Channel, opts.Namespace, driverName)
 
-	ts, err := d.NewTokenService(m.sp, opts.PublicParamsFetcher, opts.Network, opts.Channel, opts.Namespace)
+	ts, err := d.NewTokenService(m.sp, opts.Network, opts.Channel, opts.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate token service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
 	}

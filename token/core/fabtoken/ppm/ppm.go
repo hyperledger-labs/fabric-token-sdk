@@ -19,14 +19,6 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.fabtoken")
 
-type PublicParamsLoader interface {
-	// Fetch fetches the public parameters from the backend
-	Fetch() ([]byte, error)
-	// FetchParams fetches the public parameters from the backend and unmarshal them.
-	// The public parameters are also validated.
-	FetchParams() (*fabtoken.PublicParams, error)
-}
-
 type Vault interface {
 	// PublicParams returns the public parameters
 	PublicParams() ([]byte, error)
@@ -36,8 +28,6 @@ type Vault interface {
 type PublicParamsManager struct {
 	// fabtoken public parameters
 	PP *fabtoken.PublicParams
-	// a loader for fabric public parameters
-	PublicParamsLoader PublicParamsLoader
 	// the vault
 	Vault Vault
 	// label of the public params
@@ -47,8 +37,8 @@ type PublicParamsManager struct {
 }
 
 // NewPublicParamsManager initializes a PublicParamsManager with the passed PublicParamsLoader
-func NewPublicParamsManager(PPLabel string, vault Vault, publicParamsLoader PublicParamsLoader) *PublicParamsManager {
-	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, PublicParamsLoader: publicParamsLoader, Mutex: sync.RWMutex{}}
+func NewPublicParamsManager(PPLabel string, vault Vault) *PublicParamsManager {
+	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, Mutex: sync.RWMutex{}}
 }
 
 // NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
@@ -107,18 +97,6 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 
 	v.PP = pp
 	return nil
-}
-
-// Fetch fetches the public parameters from the backend
-func (v *PublicParamsManager) Fetch() ([]byte, error) {
-	if v.PublicParamsLoader == nil {
-		return nil, errors.New("public parameters loader not set")
-	}
-	raw, err := v.PublicParamsLoader.Fetch()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed force fetching public parameters")
-	}
-	return raw, nil
 }
 
 // AuditorIdentity returns the identity of the auditor

@@ -56,8 +56,6 @@ type PublicParameters interface {
 type PublicParamsManager interface {
 	// Load loads the public parameters either from the local storage, if available
 	Load() error
-	// Fetch fetches the public parameters
-	Fetch() ([]byte, error)
 	// PublicParameters returns the public parameters.
 	PublicParameters() PublicParameters
 	// SetPublicParameters updates the public parameters with the passed value

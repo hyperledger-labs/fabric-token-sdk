@@ -85,8 +85,3 @@ func (c *PublicParametersManager) Validate() error {
 func (c *PublicParametersManager) SetPublicParameters(raw []byte) error {
 	return c.ppm.SetPublicParameters(raw)
 }
-
-// Fetch fetches the public parameters from the backend
-func (c *PublicParametersManager) Fetch() ([]byte, error) {
-	return c.ppm.Fetch()
-}

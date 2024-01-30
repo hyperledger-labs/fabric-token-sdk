@@ -20,21 +20,13 @@ var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
 
 type SetPublicParametersCallbackFunc = func(pp driver.PublicParameters) error
 
-type PublicParamsLoader interface {
-	// Fetch fetches the public parameters from the backend
-	Fetch() ([]byte, error)
-	// FetchParams fetches the public parameters from the backend and unmarshal them
-	FetchParams() (*crypto.PublicParams, error)
-}
-
 type Vault interface {
 	// PublicParams returns the public parameters
 	PublicParams() ([]byte, error)
 }
 
 type PublicParamsManager struct {
-	PP                 *crypto.PublicParams
-	PublicParamsLoader PublicParamsLoader
+	PP *crypto.PublicParams
 	// the vault
 	Vault Vault
 	// label of the public params
@@ -45,8 +37,8 @@ type PublicParamsManager struct {
 	Callbacks []SetPublicParametersCallbackFunc
 }
 
-func NewPublicParamsManager(PPLabel string, vault Vault, publicParamsLoader PublicParamsLoader) *PublicParamsManager {
-	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, PublicParamsLoader: publicParamsLoader, Mutex: sync.RWMutex{}}
+func NewPublicParamsManager(PPLabel string, vault Vault) *PublicParamsManager {
+	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, Mutex: sync.RWMutex{}}
 }
 
 func NewFromParams(pp *crypto.PublicParams) (*PublicParamsManager, error) {
@@ -110,20 +102,6 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 	v.PP = pp
 
 	return nil
-}
-
-func (v *PublicParamsManager) Fetch() ([]byte, error) {
-	logger.Debugf("fetch public parameters...")
-	if v.PublicParamsLoader == nil {
-		return nil, errors.New("public parameters loader not set")
-	}
-	raw, err := v.PublicParamsLoader.Fetch()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed force fetching public parameters")
-	}
-	logger.Debugf("fetched public parameters [%s]", hash.Hashable(raw).String())
-
-	return raw, nil
 }
 
 func (v *PublicParamsManager) PublicParams() *crypto.PublicParams {
