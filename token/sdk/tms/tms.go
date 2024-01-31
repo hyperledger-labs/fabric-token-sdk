@@ -72,10 +72,27 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		return errors.WithMessagef(err, "failed to restore auditor dbs for [%s]", tmsID)
 	}
 
+	if orion.GetOrionNetworkService(p.sp, networkID) != nil {
+		// fetch public params
+		nw := network.GetInstance(p.sp, networkID, channel)
+		ppRaw, err := nw.FetchPublicParameters(namespace)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to fetch public parameters for [%s:%s:%s]", networkID, channel, namespace)
+		}
+		if err := tms.PublicParamsManager().SetPublicParameters(ppRaw); err != nil {
+			return errors.WithMessagef(err, "failed to set public params for [%s:%s:%s]", networkID, channel, namespace)
+		}
+		return nil
+	}
+
+	return nil
+}
+
+func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) error {
 	n := fabric.GetFabricNetworkService(p.sp, networkID)
 	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
 		// register processor
-		logger.Debugf("register orion committer processor for [%s]", tmsID)
+		logger.Debugf("register orion committer processor for [%s:%s:%s]", networkID, channel, namespace)
 		ons := orion.GetOrionNetworkService(p.sp, networkID)
 		tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
 			Network:   ons.Name(),
@@ -98,20 +115,11 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		); err != nil {
 			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", networkID)
 		}
-		// fetch public params
-		nw := network.GetInstance(p.sp, networkID, channel)
-		ppRaw, err := nw.FetchPublicParameters(namespace)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to fetch public parameters for [%s:%s:%s]", networkID, channel, namespace)
-		}
-		if err := tms.PublicParamsManager().SetPublicParameters(ppRaw); err != nil {
-			return errors.WithMessagef(err, "failed to set public params for [%s:%s:%s]", networkID, channel, namespace)
-		}
 		return nil
 	}
 
 	// register processor
-	logger.Debugf("register fabric committer processor for [%s]", tmsID)
+	logger.Debugf("register fabric committer processor for [%s:%s:%s]", networkID, channel, namespace)
 	tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
 		Network:   n.Name(),
 		Channel:   channel,
@@ -133,6 +141,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
+
 	return nil
 }
 
