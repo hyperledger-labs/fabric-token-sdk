@@ -94,7 +94,6 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			logger.Debugf("Parsing write key [%s]", key)
 		}
 		if key == setUpKey {
-			logger.Debugf("setting new public parameters...")
 			if err := tsmProvider.Update(token.TMSID{
 				Network:   tx.Network(),
 				Channel:   tx.Channel(),
@@ -102,11 +101,9 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			}, val); err != nil {
 				return errors.Wrapf(err, "failed updating public params ")
 			}
-			logger.Debugf("setting new public parameters...done.")
 			break
 		}
 	}
-	logger.Debugf("Successfully updated public parameters")
 	return nil
 }
 

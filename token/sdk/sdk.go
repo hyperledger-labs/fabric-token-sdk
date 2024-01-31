@@ -166,12 +166,14 @@ func (p *SDK) Start(ctx context.Context) error {
 		return errors.WithMessagef(err, "failed get the TMS configurations")
 	}
 	tmsProvider := token.GetManagementServiceProvider(p.registry)
+	logger.Infof("configured token management system [%d]", len(tmsConfigs))
 	for _, tmsConfig := range tmsConfigs {
 		tmsID := token.TMSID{
 			Network:   tmsConfig.TMS().Network,
 			Channel:   tmsConfig.TMS().Channel,
 			Namespace: tmsConfig.TMS().Namespace,
 		}
+		logger.Infof("configured token management system [%s]", tmsID)
 		_, err := tmsProvider.GetManagementService(token.WithTMSID(tmsID))
 		if err != nil {
 			return errors.WithMessagef(err, "failed to load configured TMS [%s]", tmsID)

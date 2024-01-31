@@ -75,6 +75,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	n := fabric.GetFabricNetworkService(p.sp, networkID)
 	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
 		// register processor
+		logger.Debugf("register orion committer processor for [%s]", tmsID)
 		ons := orion.GetOrionNetworkService(p.sp, networkID)
 		tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
 			Network:   ons.Name(),
@@ -110,6 +111,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	}
 
 	// register processor
+	logger.Debugf("register fabric committer processor for [%s]", tmsID)
 	tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
 		Network:   n.Name(),
 		Channel:   channel,

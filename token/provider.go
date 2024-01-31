@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -136,6 +137,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 }
 
 func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
+	logger.Debugf("update tms [%s] with public params [%s]", tmsID, hash.Hashable(val))
 	err := p.tmsProvider.Update(driver.ServiceOptions{
 		Network:      tmsID.Network,
 		Channel:      tmsID.Channel,
@@ -145,6 +147,7 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
 	}
+	logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, hash.Hashable(val))
 	return nil
 }
 

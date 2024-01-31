@@ -77,11 +77,11 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 		}
 	}()
 
-	key := opts.Network + opts.Channel + opts.Network
+	key := opts.Network + opts.Channel + opts.Namespace
 	var ok bool
 	service, ok = m.services[key]
 	if !ok {
-		logger.Debugf("creating new token manager service for [%s:%s:%s]", opts.Network, opts.Channel, opts.Namespace)
+		logger.Debugf("creating new token manager service for [%s:%s:%s] with key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
 		var err error
 		service, err = m.newTMS(&opts)
 		if err != nil {
@@ -122,7 +122,8 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	key := opts.Network + opts.Channel + opts.Network
+	key := opts.Network + opts.Channel + opts.Namespace
+	logger.Debugf("update tms for [%s:%s:%s] with key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
 	service, ok := m.services[key]
 	if ok {
 		// if the public params identifiers are the same, then just pass the new public params

@@ -861,10 +861,10 @@ func TestMixed(network *integration.Infrastructure) {
 	RegisterAuditorForTMSID(network, "auditor2", fabTokenId, nil)
 
 	// give some time to the nodes to get the public parameters
-	time.Sleep(10 * time.Second)
+	time.Sleep(40 * time.Second)
 
-	CheckPublicParamsForTMSID(network, dlogId, "issuer1", "auditor1", "alice", "bob")
-	CheckPublicParamsForTMSID(network, fabTokenId, "issuer2", "auditor2", "alice", "bob")
+	Eventually(CheckPublicParamsMatch).WithArguments(network, dlogId, "issuer1", "auditor1", "alice", "bob").WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(CheckPublicParamsMatch).WithArguments(network, fabTokenId, "issuer2", "auditor2", "alice", "bob").WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
 
 	IssueCashForTMSID(network, "", "USD", 110, "alice", "auditor1", true, "issuer1", dlogId)
 	IssueCashForTMSID(network, "", "USD", 115, "alice", "auditor2", true, "issuer2", fabTokenId)
