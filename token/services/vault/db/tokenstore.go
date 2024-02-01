@@ -4,55 +4,30 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package processor
+package db
 
 import (
 	"fmt"
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	ndriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.network.processor")
-
-const (
-	IDs = "ids"
-)
-
-type GetStateOpt int
-
-type RWSet interface {
-	SetState(namespace string, key string, value []byte) error
-	GetState(namespace string, key string) ([]byte, error)
-	GetStateMetadata(namespace, key string) (map[string][]byte, error)
-	DeleteState(namespace string, key string) error
-	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
-}
-
-type TokenStore interface {
-	// DeleteFabToken adds to the passed rws the deletion of the passed token
-	DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
-	StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error
-	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error
-	StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error
-}
-
-type CommonTokenStore struct {
+type TokenStore struct {
 	notifier events.Publisher
 	tmsID    token.TMSID
 	db       driver.TokenDB
 }
 
-func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTokenStore, error) {
+func NewTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*TokenStore, error) {
 	walletID := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	db := ttxdb.Get(sp, tmsID.String(), walletID)
 	if db == nil {
@@ -64,10 +39,10 @@ func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTo
 		return nil, errors.WithMessagef(err, "failed to get event publisher")
 	}
 
-	return &CommonTokenStore{notifier: notifier, tmsID: tmsID, db: db}, nil
+	return &TokenStore{notifier: notifier, tmsID: tmsID, db: db}, nil
 }
 
-func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
+func (cts *TokenStore) DeleteFabToken(ns string, txID string, index uint64, rws ndriver.RWSetProcessor, deletedBy string) error {
 	logger.Debugf("spend token [%s,%d]", txID, index)
 	err := cts.db.Delete(ns, txID, index, deletedBy)
 	if err != nil {
@@ -76,7 +51,7 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 	return err
 }
 
-func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
+func (cts *TokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws ndriver.RWSetProcessor, infoRaw []byte, ids []string) error {
 	logger.Debugf("transaction [%s], append fabtoken output [%s,%d,%v]", txID, index, view.Identity(tok.Owner.Raw), len(infoRaw))
 	amount := uint64(999) // TODO
 	tr := driver.TokenRecord{
@@ -98,13 +73,13 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	for _, id := range ids {
 		// notify others
 		logger.Debugf("post new event!")
-		cts.Notify(AddToken, cts.tmsID, id, tok.Type, txID, index)
+		cts.Notify(ndriver.AddToken, cts.tmsID, id, tok.Type, txID, index)
 	}
 
 	return nil
 }
 
-func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
+func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws ndriver.RWSetProcessor, infoRaw []byte, issuer view.Identity, precision uint64) error {
 	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
 		return errors.Wrapf(err, "invalid quantity [%s]", tok.Quantity)
@@ -139,7 +114,7 @@ func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, ind
 	return nil
 }
 
-func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error {
+func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws ndriver.RWSetProcessor, infoRaw []byte) error {
 	tr := driver.TokenRecord{
 		Namespace: ns,
 		TxID:      txID,
@@ -157,4 +132,22 @@ func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint6
 		return err
 	}
 	return nil
+}
+
+func (cts *TokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
+	if cts.notifier == nil {
+		logger.Warnf("cannot notify others!")
+		return
+	}
+
+	e := ndriver.NewTokenProcessorEvent(topic, &ndriver.TokenMessage{
+		TMSID:     tmsID,
+		WalletID:  walletID,
+		TokenType: tokenType,
+		TxID:      txID,
+		Index:     index,
+	})
+
+	logger.Debugf("Publish new event %v", e)
+	cts.notifier.Publish(e)
 }

@@ -15,7 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -85,7 +85,7 @@ func NewCertificationClient(
 	}
 
 	eventOperationMap := make(map[string]Op)
-	eventOperationMap[processor.AddToken] = Add
+	eventOperationMap[driver.AddToken] = Add
 	if notifier != nil {
 		for topic := range eventOperationMap {
 			notifier.Subscribe(topic, cc)
@@ -180,7 +180,7 @@ func (cc *CertificationClient) Start() {
 }
 
 func (cc *CertificationClient) OnReceive(event events.Event) {
-	t, ok := event.Message().(processor.TokenMessage)
+	t, ok := event.Message().(driver.TokenMessage)
 	if !ok {
 		logger.Warnf("cannot cast to TokenMessage %v", event.Message())
 		// drop this event

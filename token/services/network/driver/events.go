@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package processor
+package driver
 
 import "github.com/hyperledger-labs/fabric-token-sdk/token"
 
@@ -39,22 +39,4 @@ func (t *TokenProcessorEvent) Topic() string {
 
 func (t *TokenProcessorEvent) Message() interface{} {
 	return t.message
-}
-
-func (cts *CommonTokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
-	if cts.notifier == nil {
-		logger.Warnf("cannot notify others!")
-		return
-	}
-
-	e := NewTokenProcessorEvent(topic, &TokenMessage{
-		TMSID:     tmsID,
-		WalletID:  walletID,
-		TokenType: tokenType,
-		TxID:      txID,
-		Index:     index,
-	})
-
-	logger.Debugf("Publish new event %v", e)
-	cts.notifier.Publish(e)
 }

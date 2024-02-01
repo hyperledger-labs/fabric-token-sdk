@@ -20,7 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws"
 	"github.com/pkg/errors"
 )
 
@@ -57,7 +57,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
 		// register processor
 		ons := orion.GetOrionNetworkService(p.sp, networkID)
-		tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
+		tokenStore, err := rws.NewTokenStore(p.sp, token3.TMSID{
 			Network:   ons.Name(),
 			Channel:   channel,
 			Namespace: namespace,
@@ -91,7 +91,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	}
 
 	// register processor
-	tokenStore, err := processor.NewCommonTokenStore(p.sp, token3.TMSID{
+	tokenStore, err := rws.NewTokenStore(p.sp, token3.TMSID{
 		Network:   n.Name(),
 		Channel:   channel,
 		Namespace: namespace,

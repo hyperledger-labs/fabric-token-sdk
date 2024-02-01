@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package ttxdb
+package db
 
 import (
 	"fmt"
@@ -15,12 +15,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("vault.ttxdb")
+var logger = flogging.MustGetLogger("vault.db")
 
 type Vault struct {
 	vault                driver.Vault

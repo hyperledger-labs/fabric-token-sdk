@@ -11,18 +11,18 @@ import (
 
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
+	ndriver "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type Vault struct {
 	ons        *orion.NetworkService
-	tokenStore processor.TokenStore
+	tokenStore ndriver.TokenStore
 }
 
-func NewVault(ons *orion.NetworkService, tokenStore processor.TokenStore) *Vault {
+func NewVault(ons *orion.NetworkService, tokenStore ndriver.TokenStore) *Vault {
 	return &Vault{ons: ons, tokenStore: tokenStore}
 }
 

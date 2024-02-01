@@ -10,17 +10,20 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.network.orion")
 
 type ONS interface {
 	Name() string
@@ -33,10 +36,10 @@ type RWSetProcessor struct {
 	sp         view2.ServiceProvider
 	ownership  network.Authorization
 	issued     network.Issued
-	tokenStore processor.TokenStore
+	tokenStore driver.TokenStore
 }
 
-func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued, tokenStore processor.TokenStore) *RWSetProcessor {
+func NewTokenRWSetProcessor(network ONS, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued, tokenStore driver.TokenStore) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:    network,
 		nss:        []string{ns},

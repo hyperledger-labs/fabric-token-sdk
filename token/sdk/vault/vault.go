@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws"
 	"github.com/pkg/errors"
@@ -53,7 +52,7 @@ func (v *Provider) Vault(network string, channel string, namespace string) (vaul
 		return res, nil
 	}
 
-	tokenStore, err := processor.NewCommonTokenStore(v.sp, token3.TMSID{
+	tokenStore, err := rws.NewTokenStore(v.sp, token3.TMSID{
 		Network:   network,
 		Channel:   channel,
 		Namespace: namespace,
