@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package tms
 
 import (
-	"os"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -46,24 +44,6 @@ func NewPostInitializer(sp view.ServiceProvider, networkProvider *network.Provid
 }
 
 func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, channel, namespace string) error {
-	// Check public params
-	cPP := tms.ConfigManager().TMS().PublicParameters
-	if cPP != nil && len(cPP.Path) != 0 {
-		logger.Infof("load public parameters from [%s]...", cPP.Path)
-		if tms.PublicParamsManager().PublicParameters() != nil {
-			logger.Infof("public parameters already available, skip loading from [%s]...", cPP.Path)
-		} else {
-			ppRaw, err := os.ReadFile(cPP.Path)
-			if err != nil {
-				return errors.Errorf("failed to load public parameters from [%s]: [%s]", cPP.Path, err)
-			}
-			if err := tms.PublicParamsManager().SetPublicParameters(ppRaw); err != nil {
-				return errors.WithMessagef(err, "failed to set public params for [%s:%s:%s]", networkID, channel, namespace)
-			}
-			logger.Infof("load public parameters from [%s] done", cPP.Path)
-		}
-	}
-
 	tmsID := token3.TMSID{
 		Network:   networkID,
 		Channel:   channel,
@@ -74,10 +54,9 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		return errors.WithMessagef(err, "failed to restore onwer dbs for [%s]", tmsID)
 	}
 	// restore auditor db
-	if err := p.auditorManager.RestoreTMS(token3.GetManagementService(p.sp, token3.WithTMSID(tmsID))); err != nil {
+	if err := p.auditorManager.RestoreTMS(tmsID); err != nil {
 		return errors.WithMessagef(err, "failed to restore auditor dbs for [%s]", tmsID)
 	}
-
 	return nil
 }
 
