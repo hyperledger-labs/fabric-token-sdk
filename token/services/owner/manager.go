@@ -68,7 +68,7 @@ func (cm *Manager) Owner(tmsID token.TMSID) (*Owner, error) {
 func (cm *Manager) newOwner(tmsID token.TMSID) (*Owner, error) {
 	db, err := cm.ttxdbProvider.DBByTMSId(tmsID)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s:%s]", tmsID.Network, tmsID.Channel)
+		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
 	owner := &Owner{
 		networkProvider: cm.networkProvider,
