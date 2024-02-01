@@ -91,12 +91,12 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(ownerManager))
 	auditorManager := auditor.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(auditorManager))
-	p.postInitializer = tms.NewPostInitializer(p.registry, ownerManager, auditorManager)
+	p.postInitializer = tms.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
 
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
 		configProvider,
-		&vault.PublicParamsProvider{Provider: vaultProvider},
+		&vault.PublicParamsProvider{Provider: networkProvider},
 		p.postInitializer.PostInit,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
@@ -126,7 +126,7 @@ func (p *SDK) Install() error {
 	tmsp := token.NewManagementServiceProvider(
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
-		&vault.ProviderAdaptor{Provider: vaultProvider},
+		&vault.ProviderAdaptor{Provider: networkProvider},
 		network2.NewCertificationClientProvider(),
 		selectorManagerProvider,
 	)
@@ -166,7 +166,7 @@ func (p *SDK) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed get the TMS configurations")
 	}
-	tmsProvider := token.GetManagementServiceProvider(p.registry)
+	//tmsProvider := token.GetManagementServiceProvider(p.registry)
 	logger.Infof("configured token management service [%d]", len(tmsConfigs))
 	for _, tmsConfig := range tmsConfigs {
 		tmsID := token.TMSID{
@@ -179,12 +179,6 @@ func (p *SDK) Start(ctx context.Context) error {
 		// connect network
 		if err := p.postInitializer.ConnectNetwork(tmsID.Network, tmsID.Channel, tmsID.Namespace); err != nil {
 			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
-		}
-
-		// load management service
-		_, err := tmsProvider.GetManagementService(token.WithTMSID(tmsID))
-		if err != nil {
-			return errors.WithMessagef(err, "failed to load configured TMS [%s]", tmsID)
 		}
 	}
 

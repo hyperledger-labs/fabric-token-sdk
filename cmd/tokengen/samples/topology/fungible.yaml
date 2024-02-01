@@ -108,7 +108,6 @@ topologies:
   - network: default
     channel: testchannel
     namespace: tns
-    driver: dlog
     publicparamsgenargs:
     - "100"
     - "2"

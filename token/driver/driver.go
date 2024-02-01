@@ -17,7 +17,7 @@ type Driver interface {
 	// PublicParametersFromBytes unmarshals the bytes to a PublicParameters instance.
 	PublicParametersFromBytes(params []byte) (PublicParameters, error)
 	// NewTokenService returns a new TokenManagerService instance.
-	NewTokenService(sp ServiceProvider, networkID string, channel string, namespace string) (TokenManagerService, error)
+	NewTokenService(sp ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (TokenManagerService, error)
 	// NewPublicParametersManager returns a new PublicParametersManager instance from the passed public parameters
 	NewPublicParametersManager(pp PublicParameters) (PublicParamsManager, error)
 	// NewValidator returns a new Validator instance from the passed public parameters

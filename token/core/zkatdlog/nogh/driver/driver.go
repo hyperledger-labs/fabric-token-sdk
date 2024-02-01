@@ -9,8 +9,6 @@ package driver
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -24,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
 
@@ -38,7 +37,10 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
+func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
+	if len(publicParams) == 0 {
+		return nil, errors.Errorf("empty public parameters")
+	}
 	n := network.GetInstance(sp, networkID, channel)
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
@@ -134,7 +136,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	if err := ppm.Load(); err != nil {
+	if err := ppm.SetPublicParameters(publicParams); err != nil {
 		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 

@@ -32,7 +32,10 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
+func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
+	if len(publicParams) == 0 {
+		return nil, errors.Errorf("empty public parameters")
+	}
 	n := network.GetInstance(sp, networkID, channel)
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
@@ -122,7 +125,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		fabtoken.NewDeserializer(),
 		tmsConfig,
 	)
-	if err := service.PPM.Load(); err != nil {
+	if err := service.PPM.SetPublicParameters(publicParams); err != nil {
 		return nil, errors.WithMessage(err, "failed to update public parameters")
 	}
 	return service, nil

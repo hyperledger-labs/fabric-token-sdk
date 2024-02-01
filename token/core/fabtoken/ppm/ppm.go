@@ -92,6 +92,10 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
 
+	if len(raw) == 0 {
+		return errors.Errorf("empty public parameters")
+	}
+
 	pp, err := fabtoken.NewPublicParamsFromBytes(raw, v.PPLabel)
 	if err != nil {
 		return err
