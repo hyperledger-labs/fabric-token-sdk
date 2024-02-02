@@ -19,7 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/rws"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	"github.com/pkg/errors"
@@ -73,7 +73,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			Namespace: namespace,
 		}
 		logger.Debugf("register orion committer processor for [%s]", tmsID)
-		tokenStore, err := processor.NewCommonTokenStore(p.sp, tmsID)
+		tokenStore, err := rws.NewTokenStore(p.sp, tmsID)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get token store")
 		}
@@ -113,7 +113,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	tokenStore, err := processor.NewCommonTokenStore(p.sp, tmsID)
+	tokenStore, err := rws.NewTokenStore(p.sp, tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token store")
 	}

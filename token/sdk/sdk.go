@@ -28,6 +28,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault/rws"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
@@ -77,7 +78,7 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Set TMS TMSProvider")
 
-	vaultProvider := vault.NewProvider(p.registry)
+	vaultProvider := rws.NewVaultProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
 	// Network provider

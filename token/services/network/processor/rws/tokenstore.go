@@ -4,18 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package processor
+package rws
 
 import (
 	"encoding/json"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -27,39 +27,21 @@ const (
 	IDs = "ids"
 )
 
-type GetStateOpt int
-
-type RWSet interface {
-	SetState(namespace string, key string, value []byte) error
-	GetState(namespace string, key string) ([]byte, error)
-	GetStateMetadata(namespace, key string) (map[string][]byte, error)
-	DeleteState(namespace string, key string) error
-	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
-}
-
-type TokenStore interface {
-	// DeleteFabToken adds to the passed rws the deletion of the passed token
-	DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
-	StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error
-	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error
-	StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error
-}
-
-type CommonTokenStore struct {
+type TokenStore struct {
 	notifier events.Publisher
 	tmsID    token.TMSID
 }
 
-func NewCommonTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*CommonTokenStore, error) {
+func NewTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*TokenStore, error) {
 	notifier, err := events.GetPublisher(sp)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get event publisher")
 	}
 
-	return &CommonTokenStore{notifier: notifier, tmsID: tmsID}, nil
+	return &TokenStore{notifier: notifier, tmsID: tmsID}, nil
 }
 
-func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error {
+func (cts *TokenStore) DeleteFabToken(ns string, txID string, index uint64, rws processor.RWSet, deletedBy string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -85,7 +67,7 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 			return errors.Wrapf(err, "error getting token for key [%s]", outputID)
 		}
 		token := token2.Token{}
-		if err := Unmarshal(tokenRaw, &token); err != nil {
+		if err := processor.Unmarshal(tokenRaw, &token); err != nil {
 			return errors.Wrapf(err, "failed to unmarshal token")
 		}
 		for _, id := range ids {
@@ -94,7 +76,7 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 			}
 
 			logger.Debugf("post new delete-token event")
-			cts.Notify(DeleteToken, cts.tmsID, id, token.Type, txID, index)
+			cts.Notify(processor.DeleteToken, cts.tmsID, id, token.Type, txID, index)
 
 			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
 			if err != nil {
@@ -129,7 +111,7 @@ func (cts *CommonTokenStore) DeleteFabToken(ns string, txID string, index uint64
 	return nil
 }
 
-func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, ids []string) error {
+func (cts *TokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, infoRaw []byte, ids []string) error {
 	// Add a lookup key to identify quickly that this token belongs to this instance
 	mineTokenID, err := keys.CreateTokenMineKey(txID, index)
 	if err != nil {
@@ -145,7 +127,7 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	raw, err := Marshal(tok)
+	raw, err := processor.Marshal(tok)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token")
 	}
@@ -160,7 +142,7 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 	meta := map[string][]byte{}
 	meta[keys.Info] = infoRaw
 	if len(ids) > 0 {
-		meta[IDs], err = Marshal(ids)
+		meta[IDs], err = processor.Marshal(ids)
 		if err != nil {
 			return errors.Wrapf(err, "failed to marshal token ids")
 		}
@@ -195,13 +177,13 @@ func (cts *CommonTokenStore) StoreFabToken(ns string, txID string, index uint64,
 
 		// notify others
 		logger.Debugf("post new event!")
-		cts.Notify(AddToken, cts.tmsID, id, tok.Type, txID, index)
+		cts.Notify(processor.AddToken, cts.tmsID, id, tok.Type, txID, index)
 	}
 
 	return nil
 }
 
-func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
+func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
@@ -218,7 +200,7 @@ func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, ind
 			Raw: issuer,
 		},
 	}
-	raw, err := Marshal(issuedToken)
+	raw, err := processor.Marshal(issuedToken)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal issued token")
 	}
@@ -245,12 +227,12 @@ func (cts *CommonTokenStore) StoreIssuedHistoryToken(ns string, txID string, ind
 	return nil
 }
 
-func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws RWSet, infoRaw []byte) error {
+func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, infoRaw []byte) error {
 	outputID, err := keys.CreateAuditTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
 	}
-	raw, err := Marshal(tok)
+	raw, err := processor.Marshal(tok)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token")
 	}
@@ -266,4 +248,22 @@ func (cts *CommonTokenStore) StoreAuditToken(ns string, txID string, index uint6
 		return err
 	}
 	return nil
+}
+
+func (cts *TokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
+	if cts.notifier == nil {
+		logger.Warnf("cannot notify others!")
+		return
+	}
+
+	e := processor.NewTokenProcessorEvent(topic, &processor.TokenMessage{
+		TMSID:     tmsID,
+		WalletID:  walletID,
+		TokenType: tokenType,
+		TxID:      txID,
+		Index:     index,
+	})
+
+	logger.Debugf("Publish new event %v", e)
+	cts.notifier.Publish(e)
 }

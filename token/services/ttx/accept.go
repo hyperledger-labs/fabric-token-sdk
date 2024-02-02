@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -112,7 +111,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		signatureRequest := &SignatureRequest{}
 
 		if i == 0 {
-			k, err := keys.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
+			k, err := kvs.CreateCompositeKey("signatureRequest", []string{s.tx.ID()})
 			if err != nil {
 				return errors.Wrap(err, "failed to generate key to store signature request")
 			}
