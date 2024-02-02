@@ -54,7 +54,11 @@ func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) (*PublicParamsM
 
 // PublicParameters returns the public parameters of PublicParamsManager
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
-	return v.PublicParams()
+	pp := v.PublicParams()
+	if pp == nil {
+		return nil
+	}
+	return pp
 }
 
 // SerializePublicParameters returns the public params in a serialized form
