@@ -11,8 +11,6 @@ import (
 	"reflect"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -675,7 +673,7 @@ func (f *ReceiveTransactionView) unmarshalAsSignatureRequest(context view.Contex
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to receive transaction")
 	}
-	k, err := keys.CreateCompositeKey("signatureRequest", []string{tx.ID()})
+	k, err := kvs.CreateCompositeKey("signatureRequest", []string{tx.ID()})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to generate key to store signature request")
 	}
