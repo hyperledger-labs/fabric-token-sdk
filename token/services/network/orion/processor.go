@@ -188,7 +188,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			return errors.Wrapf(err, "invalid output index for key [%s]", key)
 		}
 
-		// This is a delete p[, delete it from the token store
+		// This is a delete op, delete it from the token store
 		if len(tokenOnLedger) == 0 {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
