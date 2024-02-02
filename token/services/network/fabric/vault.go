@@ -59,7 +59,7 @@ func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
 
 	wrappedRWS := &rwsWrapper{RWSet: rws}
 	for _, id := range ids {
-		if err := v.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS, string(debug.Stack())); err != nil {
+		if err := v.tokenStore.DeleteToken(ns, id.TxId, id.Index, wrappedRWS, string(debug.Stack())); err != nil {
 			return errors.Wrapf(err, "failed to append deletion of [%s]", id)
 		}
 	}

@@ -41,7 +41,7 @@ func NewTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*TokenStore, er
 	return &TokenStore{notifier: notifier, tmsID: tmsID}, nil
 }
 
-func (cts *TokenStore) DeleteFabToken(ns string, txID string, index uint64, rws processor.RWSet, deletedBy string) error {
+func (cts *TokenStore) DeleteToken(ns string, txID string, index uint64, rws processor.RWSet, deletedBy string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -111,7 +111,7 @@ func (cts *TokenStore) DeleteFabToken(ns string, txID string, index uint64, rws 
 	return nil
 }
 
-func (cts *TokenStore) StoreFabToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, infoRaw []byte, ids []string) error {
+func (cts *TokenStore) StoreToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string) error {
 	// Add a lookup key to identify quickly that this token belongs to this instance
 	mineTokenID, err := keys.CreateTokenMineKey(txID, index)
 	if err != nil {
@@ -140,7 +140,7 @@ func (cts *TokenStore) StoreFabToken(ns string, txID string, index uint64, tok *
 	}
 
 	meta := map[string][]byte{}
-	meta[keys.Info] = infoRaw
+	meta[keys.Info] = tokenOnLedgerMetadata
 	if len(ids) > 0 {
 		meta[IDs], err = processor.Marshal(ids)
 		if err != nil {
@@ -171,7 +171,7 @@ func (cts *TokenStore) StoreFabToken(ns string, txID string, index uint64, tok *
 		if err := rws.SetState(ns, outputID, raw); err != nil {
 			return err
 		}
-		if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+		if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: tokenOnLedgerMetadata}); err != nil {
 			return err
 		}
 
@@ -183,7 +183,7 @@ func (cts *TokenStore) StoreFabToken(ns string, txID string, index uint64, tok *
 	return nil
 }
 
-func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error {
+func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
@@ -221,13 +221,13 @@ func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uin
 	if err := rws.SetState(ns, outputID, raw); err != nil {
 		return err
 	}
-	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: tokenOnLedgerMetadata}); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, infoRaw []byte) error {
+func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte) error {
 	outputID, err := keys.CreateAuditTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -244,7 +244,7 @@ func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok
 	if err := rws.SetState(ns, outputID, raw); err != nil {
 		return err
 	}
-	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: infoRaw}); err != nil {
+	if err := rws.SetStateMetadata(ns, outputID, map[string][]byte{keys.Info: tokenOnLedgerMetadata}); err != nil {
 		return err
 	}
 	return nil

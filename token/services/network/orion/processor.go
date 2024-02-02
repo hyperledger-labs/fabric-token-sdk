@@ -123,7 +123,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		for _, id := range ids {
-			if err := r.tokenStore.DeleteFabToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
+			if err := r.tokenStore.DeleteToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 		}
@@ -133,7 +133,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 	var valuesToAppend [][]byte
 
 	for i := 0; i < rws.NumWrites(ns); i++ {
-		key, val, err := rws.GetWriteAt(ns, i)
+		key, tokenOnLedger, err := rws.GetWriteAt(ns, i)
 		if err != nil {
 			return err
 		}
@@ -180,7 +180,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 
 		// the vault does not understand keys with `~`, therefore we store the equivalent key-value pairs without that symbol.
 		keysToAppend = append(keysToAppend, key)
-		valuesToAppend = append(valuesToAppend, val)
+		valuesToAppend = append(valuesToAppend, tokenOnLedger)
 
 		index, err := strconv.ParseUint(components[1], 10, 64)
 		if err != nil {
@@ -188,12 +188,12 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			return errors.Wrapf(err, "invalid output index for key [%s]", key)
 		}
 
-		// This is a delete, add a delete for fabtoken
-		if len(val) == 0 {
+		// This is a delete op, delete it from the token store
+		if len(tokenOnLedger) == 0 {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
 			}
-			if err := r.tokenStore.DeleteFabToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
+			if err := r.tokenStore.DeleteToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
 				return err
 			}
 			continue
@@ -208,13 +208,13 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		}
 
 		// get token in the clear
-		tok, issuer, tokenInfoRaw, err := metadata.GetToken(val)
+		tok, issuer, tokenOnLedgerMetadata, err := metadata.GetToken(tokenOnLedger)
 		if err != nil {
 			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
 			continue
 		}
 		if tok == nil {
-			logger.Warnf("failed getting token in the clear for key [%s, %s]", key, string(val))
+			logger.Warnf("failed getting token in the clear for key [%s, %s]", key, string(tokenOnLedger))
 			continue
 		}
 
@@ -223,8 +223,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
 			}
-			// Store Fabtoken-like entry
-			if err := r.tokenStore.StoreFabToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, ids); err != nil {
+			if err := r.tokenStore.StoreToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata, ids); err != nil {
 				return err
 			}
 		} else {
@@ -238,7 +237,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}
-			if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw); err != nil {
+			if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata); err != nil {
 				return err
 			}
 		}
@@ -247,7 +246,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenInfoRaw, issuer, pp.Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata, issuer, pp.Precision()); err != nil {
 				return err
 			}
 		}
