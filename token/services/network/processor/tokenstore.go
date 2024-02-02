@@ -21,11 +21,10 @@ type RWSet interface {
 }
 
 type TokenStore interface {
-	// DeleteFabToken adds to the passed rws the deletion of the passed token
-	DeleteFabToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
-	StoreFabToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, infoRaw []byte, ids []string) error
-	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, infoRaw []byte, issuer view.Identity, precision uint64) error
-	StoreAuditToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, infoRaw []byte) error
+	DeleteToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
+	StoreToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string) error
+	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error
+	StoreAuditToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte) error
 }
 
 const (
