@@ -975,7 +975,7 @@ func (r *Request) Transfers() []*Transfer {
 // AuditCheck performs the audit check of the request in addition to
 // the checks of the token request itself via IsValid.
 func (r *Request) AuditCheck() error {
-	logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID().String())
+	logger.Debugf("audit check request [%s] on tms [%s]", r.Anchor, r.TokenService.ID())
 	if err := r.IsValid(); err != nil {
 		return err
 	}

@@ -746,6 +746,18 @@ func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token
 	}
 }
 
+func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...string) bool {
+	for _, id := range ids {
+		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
+			TMSID: tmsId,
+		}))
+		if err != nil {
+			return false
+		}
+	}
+	return true
+}
+
 func GetTMS(network *integration.Infrastructure, networkName string) *topology.TMS {
 	var tms *topology.TMS
 	p := network.Ctx.PlatformsByName["token"]

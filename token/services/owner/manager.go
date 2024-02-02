@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package owner
 
 import (
-	"fmt"
 	"reflect"
 	"sync"
 
@@ -19,17 +18,12 @@ import (
 	"github.com/pkg/errors"
 )
 
-type TokenManagementServiceProvider interface {
-	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
-}
-
 type TTXDBProvider interface {
-	DB(w ttxdb.Wallet) (*ttxdb.DB, error)
+	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
 }
 
 // Manager handles the databases
 type Manager struct {
-	tmsProvider     TokenManagementServiceProvider
 	networkProvider NetworkProvider
 	ttxdbProvider   TTXDBProvider
 
@@ -39,9 +33,8 @@ type Manager struct {
 }
 
 // NewManager creates a new Owner manager.
-func NewManager(tmsProvide TokenManagementServiceProvider, np NetworkProvider, ttxdbManager TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(np NetworkProvider, ttxdbManager TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
-		tmsProvider:     tmsProvide,
 		networkProvider: np,
 		storage:         storage,
 		ttxdbProvider:   ttxdbManager,
@@ -50,99 +43,66 @@ func NewManager(tmsProvide TokenManagementServiceProvider, np NetworkProvider, t
 }
 
 // Owner returns the Owner for the given TMS
-func (cm *Manager) Owner(tms *token.ManagementService) (*Owner, error) {
+func (cm *Manager) Owner(tmsID token.TMSID) (*Owner, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
-	id := tms.ID().String()
+	id := tmsID.String()
 	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.owners[id]
 	if !ok {
 		// add an entry
-		if err := cm.storage.Put(tms.ID(), ""); err != nil {
-			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tms.ID())
+		if err := cm.storage.Put(tmsID, ""); err != nil {
+			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tmsID)
 		}
 		var err error
-		c, err = cm.newOwner(tms)
+		c, err = cm.newOwner(tmsID)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to instantiate owner for wallet [%s]", tms.ID())
+			return nil, errors.WithMessagef(err, "failed to instantiate owner for wallet [%s]", tmsID)
 		}
 		cm.owners[id] = c
 	}
 	return c, nil
 }
 
-func (cm *Manager) Restore() error {
-	logger.Infof("restore owner dbs...")
-	it, err := cm.storage.Iterator()
+func (cm *Manager) newOwner(tmsID token.TMSID) (*Owner, error) {
+	db, err := cm.ttxdbProvider.DBByTMSId(tmsID)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to list existing owners")
-	}
-	defer func(it storage.Iterator[*storage.DBEntry]) {
-		err := it.Close()
-		if err != nil {
-			logger.Warnf("failed to close iterator [%s]", err)
-		}
-	}(it)
-	for {
-		if !it.HasNext() {
-			logger.Infof("restore owner dbs...done")
-			return nil
-		}
-		entry, err := it.Next()
-		if err != nil {
-			return errors.Wrapf(err, "failed to get next entry")
-		}
-		logger.Infof("restore owner dbs for entry [%s]...", entry.TMSID.String())
-		tms, err := cm.tmsProvider.GetManagementService(token.WithTMSID(entry.TMSID))
-		if err != nil {
-			return errors.WithMessagef(err, "cannot find TMS [%s]", entry.TMSID)
-		}
-		if err := cm.restore(tms); err != nil {
-			return errors.Errorf("cannot bootstrap auditdb for [%s]", entry.TMSID)
-		}
-		logger.Infof("restore owner dbs for entry [%s]...done", entry.TMSID.String())
-	}
-}
-
-func (cm *Manager) newOwner(tms *token.ManagementService) (*Owner, error) {
-	db, err := cm.ttxdbProvider.DB(&tmsWallet{tms: tms})
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s:%s]", tms.ID().Network, tms.ID().Channel)
+		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
 	owner := &Owner{
 		networkProvider: cm.networkProvider,
 		db:              db,
 	}
-	_, err = cm.networkProvider.GetNetwork(tms.ID().Network, tms.ID().Channel)
+	_, err = cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tms.ID().Network, tms.ID().Channel)
+		return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 	return owner, nil
 }
 
-func (cm *Manager) restore(tms *token.ManagementService) error {
-	net, err := cm.networkProvider.GetNetwork(tms.ID().Network, tms.ID().Channel)
+func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
+	net, err := cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tms.ID().Network, tms.ID().Channel)
+		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	owner, err := cm.Owner(tms)
+	owner, err := cm.Owner(tmsID)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get owner for [%s:%s]", tms.ID().Network, tms.ID().Channel)
+		return errors.WithMessagef(err, "failed to get owner for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 	qe := owner.NewQueryExecutor()
 	defer qe.Done()
 
 	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
-		return errors.Errorf("failed to get tx iterator for [%s:%s:%s]", tms.ID().Network, tms.ID().Channel, tms.ID())
+		return errors.Errorf("failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	defer it.Close()
 
-	v, err := net.Vault(tms.ID().Channel)
+	v, err := net.Vault(tmsID.Channel)
 	if err != nil {
-		return errors.Errorf("failed to get vault for [%s:%s:%s]", tms.ID().Network, tms.ID().Channel, tms.ID())
+		return errors.Errorf("failed to get vault for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	var pendingTXs []string
 	type ToBeUpdated struct {
@@ -153,13 +113,13 @@ func (cm *Manager) restore(tms *token.ManagementService) error {
 	for {
 		tr, err := it.Next()
 		if err != nil {
-			return errors.Errorf("failed to get next tx record for [%s:%s:%s]", tms.ID().Network, tms.ID().Channel, tms.ID())
+			return errors.Errorf("failed to get next tx record for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 		}
 		if tr == nil {
 			break
 		}
 		if tr.Status == ttxdb.Pending {
-			logger.Debugf("found pending transaction [%s] at [%s:%s]", tr.TxID, tms.ID().Network, tms.ID().Channel)
+			logger.Debugf("found pending transaction [%s] at [%s:%s]", tr.TxID, tmsID.Network, tmsID.Channel)
 			found := false
 			for _, txID := range pendingTXs {
 				if tr.TxID == txID {
@@ -204,11 +164,11 @@ func (cm *Manager) restore(tms *token.ManagementService) error {
 		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
 	}
 
-	logger.Infof("ownerdb [%s:%s], found [%d] pending transactions", tms.ID().Network, tms.ID().Channel, len(pendingTXs))
+	logger.Infof("ownerdb [%s:%s], found [%d] pending transactions", tmsID.Network, tmsID.Channel, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
 		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, owner.db}); err != nil {
-			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tms.ID().Network, tms.ID().Channel, txID)
+			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, txID)
 		}
 	}
 
@@ -230,7 +190,7 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).Owner(tms)
+	auditor, err := s.(*Manager).Owner(tms.ID())
 	if err != nil {
 		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
 		return nil
@@ -241,17 +201,4 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 // New returns the Owner instance for the passed TMS
 func New(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 	return Get(sp, tms)
-}
-
-type tmsWallet struct {
-	tms *token.ManagementService
-}
-
-func (t *tmsWallet) ID() string {
-	id := t.tms.ID()
-	return fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace)
-}
-
-func (t *tmsWallet) TMS() *token.ManagementService {
-	return t.tms
 }

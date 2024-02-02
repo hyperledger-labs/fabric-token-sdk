@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -133,47 +132,4 @@ func (s *VaultTokenLoader) LoadTokens(ids []*token3.ID) ([]string, []*token.Toke
 	}
 
 	return inputIDs, tokens, inputInf, signerIds, nil
-}
-
-type PublicParamsLoader struct {
-	PublicParamsFetcher driver.PublicParamsFetcher
-	PPLabel             string
-}
-
-func NewPublicParamsLoader(publicParamsFetcher driver.PublicParamsFetcher, PPLabel string) *PublicParamsLoader {
-	return &PublicParamsLoader{PublicParamsFetcher: publicParamsFetcher, PPLabel: PPLabel}
-}
-
-// Fetch fetches the public parameters from the backend
-func (s *PublicParamsLoader) Fetch() ([]byte, error) {
-	logger.Debugf("fetch public parameters...")
-	raw, err := s.PublicParamsFetcher.Fetch()
-	if err != nil {
-		logger.Errorf("failed retrieving public params [%s]", err)
-		return nil, err
-	}
-	logger.Debugf("fetched public parameters [%s]", hash.Hashable(raw).String())
-	return raw, nil
-}
-
-// FetchParams fetches the public parameters from the backend and unmarshal them
-func (s *PublicParamsLoader) FetchParams() (*crypto.PublicParams, error) {
-	logger.Debugf("fetch public parameters...")
-	raw, err := s.PublicParamsFetcher.Fetch()
-	if err != nil {
-		logger.Errorf("failed retrieving public params [%s]", err)
-		return nil, err
-	}
-
-	logger.Debugf("fetched public parameters [%s], unmarshal them...", hash.Hashable(raw).String())
-	pp := &crypto.PublicParams{}
-	pp.Label = s.PPLabel
-	if err := pp.Deserialize(raw); err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal public parameters")
-	}
-	logger.Debugf("fetched public parameters [%s], unmarshal them...done", hash.Hashable(raw).String())
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrap(err, "failed to validate public parameters")
-	}
-	return pp, nil
 }

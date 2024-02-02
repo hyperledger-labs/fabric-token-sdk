@@ -37,7 +37,10 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 	return pp, nil
 }
 
-func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher driver.PublicParamsFetcher, networkID string, channel string, namespace string) (driver.TokenManagerService, error) {
+func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
+	if len(publicParams) == 0 {
+		return nil, errors.Errorf("empty public parameters")
+	}
 	n := network.GetInstance(sp, networkID, channel)
 	if n == nil {
 		return nil, errors.Errorf("network [%s] does not exists", networkID)
@@ -103,11 +106,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 		Namespace: namespace,
 	}
 	qe := v.QueryEngine()
-	ppm := ppm.NewPublicParamsManager(
-		crypto.DLogPublicParameters,
-		qe,
-		zkatdlog.NewPublicParamsLoader(publicParamsFetcher, crypto.DLogPublicParameters),
-	)
+	ppm := ppm.NewPublicParamsManager(crypto.DLogPublicParameters, qe)
 	ppm.AddCallback(func(pp driver.PublicParameters) error {
 		return wallets.Reload(pp)
 	})
@@ -137,7 +136,7 @@ func (d *Driver) NewTokenService(sp view.ServiceProvider, publicParamsFetcher dr
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	if err := ppm.Load(); err != nil {
+	if err := ppm.SetPublicParameters(publicParams); err != nil {
 		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 
@@ -164,7 +163,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	return ppm.NewFromParams(pp)
 }
 
-func (d *Driver) NewWalletService(sp view.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
+func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)

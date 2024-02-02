@@ -19,14 +19,6 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.fabtoken")
 
-type PublicParamsLoader interface {
-	// Fetch fetches the public parameters from the backend
-	Fetch() ([]byte, error)
-	// FetchParams fetches the public parameters from the backend and unmarshal them.
-	// The public parameters are also validated.
-	FetchParams() (*fabtoken.PublicParams, error)
-}
-
 type Vault interface {
 	// PublicParams returns the public parameters
 	PublicParams() ([]byte, error)
@@ -36,8 +28,6 @@ type Vault interface {
 type PublicParamsManager struct {
 	// fabtoken public parameters
 	PP *fabtoken.PublicParams
-	// a loader for fabric public parameters
-	PublicParamsLoader PublicParamsLoader
 	// the vault
 	Vault Vault
 	// label of the public params
@@ -47,8 +37,11 @@ type PublicParamsManager struct {
 }
 
 // NewPublicParamsManager initializes a PublicParamsManager with the passed PublicParamsLoader
-func NewPublicParamsManager(PPLabel string, vault Vault, publicParamsLoader PublicParamsLoader) *PublicParamsManager {
-	return &PublicParamsManager{PPLabel: PPLabel, Vault: vault, PublicParamsLoader: publicParamsLoader, Mutex: sync.RWMutex{}}
+func NewPublicParamsManager(PPLabel string, vault Vault) *PublicParamsManager {
+	return &PublicParamsManager{
+		PPLabel: PPLabel,
+		Vault:   vault,
+	}
 }
 
 // NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
@@ -56,12 +49,16 @@ func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) (*PublicParamsM
 	if pp == nil {
 		return nil, errors.Errorf("public parameters must be non-nil")
 	}
-	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}, nil
+	return &PublicParamsManager{PP: pp, PPLabel: pp.Label}, nil
 }
 
 // PublicParameters returns the public parameters of PublicParamsManager
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {
-	return v.PublicParams()
+	pp := v.PublicParams()
+	if pp == nil {
+		return nil
+	}
+	return pp
 }
 
 // SerializePublicParameters returns the public params in a serialized form
@@ -95,11 +92,14 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 	v.Mutex.Lock()
 	defer v.Mutex.Unlock()
 
+	if len(raw) == 0 {
+		return errors.Errorf("empty public parameters")
+	}
+
 	pp, err := fabtoken.NewPublicParamsFromBytes(raw, v.PPLabel)
 	if err != nil {
 		return err
 	}
-	logger.Debugf("setting new public parameters...")
 
 	if err := pp.Validate(); err != nil {
 		return errors.WithMessage(err, "invalid public parameters")
@@ -107,18 +107,6 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 
 	v.PP = pp
 	return nil
-}
-
-// Fetch fetches the public parameters from the backend
-func (v *PublicParamsManager) Fetch() ([]byte, error) {
-	if v.PublicParamsLoader == nil {
-		return nil, errors.New("public parameters loader not set")
-	}
-	raw, err := v.PublicParamsLoader.Fetch()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed force fetching public parameters")
-	}
-	return raw, nil
 }
 
 // AuditorIdentity returns the identity of the auditor
@@ -133,8 +121,6 @@ func (v *PublicParamsManager) Issuers() [][]byte {
 
 // PublicParams returns the fabtoken public parameters
 func (v *PublicParamsManager) PublicParams() *fabtoken.PublicParams {
-	logger.Debugf("getting new public parameters...")
-
 	v.Mutex.RLock()
 	defer v.Mutex.RUnlock()
 	return v.PP

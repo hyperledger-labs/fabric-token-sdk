@@ -80,16 +80,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 
 // init when invoked extracts the public params from rwset and updates the local version
 func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
-	tms := token.GetManagementService(
-		r.sp,
-		token.WithNetwork(tx.Network()),
-		token.WithChannel(tx.Channel()),
-		token.WithNamespace(ns),
-	)
-	if tms == nil {
-		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
-	}
-
+	tsmProvider := token.GetManagementServiceProvider(r.sp)
 	setUpKey, err := keys.CreateSetupKey()
 	if err != nil {
 		return errors.Errorf("failed creating setup key")
@@ -103,16 +94,16 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			logger.Debugf("Parsing write key [%s]", key)
 		}
 		if key == setUpKey {
-			logger.Debugf("setting new public parameters...")
-			err = tms.PublicParametersManager().SetPublicParameters(val)
-			if err != nil {
+			if err := tsmProvider.Update(token.TMSID{
+				Network:   tx.Network(),
+				Channel:   tx.Channel(),
+				Namespace: ns,
+			}, val); err != nil {
 				return errors.Wrapf(err, "failed updating public params ")
 			}
-			logger.Debugf("setting new public parameters...done.")
 			break
 		}
 	}
-	logger.Debugf("Successfully updated public parameters")
 	return nil
 }
 

@@ -53,9 +53,8 @@ type Registry interface {
 }
 
 type SDK struct {
-	registry       Registry
-	auditorManager *auditor.Manager
-	ownerManager   *owner.Manager
+	registry        Registry
+	postInitializer *tms.PostInitializer
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -81,17 +80,26 @@ func (p *SDK) Install() error {
 	vaultProvider := vault.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
-	tmsProvider := tms2.NewTMSProvider(
-		p.registry,
-		configProvider,
-		&vault.PublicParamsProvider{Provider: vaultProvider},
-		tms.NewPostInitializer(p.registry).PostInit,
-	)
-	assert.NoError(p.registry.RegisterService(tmsProvider))
-
 	// Network provider
 	networkProvider := network.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(networkProvider))
+
+	// Token Transaction DB and derivatives
+	ttxdbManager := ttxdb.NewManager(p.registry, "")
+	assert.NoError(p.registry.RegisterService(ttxdbManager))
+	ownerManager := owner.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(ownerManager))
+	auditorManager := auditor.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(auditorManager))
+	p.postInitializer = tms.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
+
+	tmsProvider := tms2.NewTMSProvider(
+		p.registry,
+		configProvider,
+		&vault.PublicParamsProvider{Provider: networkProvider},
+		p.postInitializer.PostInit,
+	)
+	assert.NoError(p.registry.RegisterService(tmsProvider))
 
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
@@ -118,29 +126,11 @@ func (p *SDK) Install() error {
 	tmsp := token.NewManagementServiceProvider(
 		tmsProvider,
 		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
-		&vault.ProviderAdaptor{Provider: vaultProvider},
+		&vault.ProviderAdaptor{Provider: networkProvider},
 		network2.NewCertificationClientProvider(),
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
-
-	// Token Transaction DB and derivatives
-	ttxdbManager := ttxdb.NewManager(p.registry, "")
-	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	p.auditorManager = auditor.NewManager(
-		tmsp,
-		networkProvider,
-		ttxdbManager,
-		storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)),
-	)
-	assert.NoError(p.registry.RegisterService(p.auditorManager))
-	p.ownerManager = owner.NewManager(
-		tmsp,
-		networkProvider,
-		ttxdbManager,
-		storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)),
-	)
-	assert.NoError(p.registry.RegisterService(p.ownerManager))
 
 	enabled, err := orion.IsCustodian(configProvider)
 	assert.NoError(err, "failed to get custodian status")
@@ -176,25 +166,20 @@ func (p *SDK) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed get the TMS configurations")
 	}
-	tmsProvider := token.GetManagementServiceProvider(p.registry)
+	//tmsProvider := token.GetManagementServiceProvider(p.registry)
+	logger.Infof("configured token management service [%d]", len(tmsConfigs))
 	for _, tmsConfig := range tmsConfigs {
 		tmsID := token.TMSID{
 			Network:   tmsConfig.TMS().Network,
 			Channel:   tmsConfig.TMS().Channel,
 			Namespace: tmsConfig.TMS().Namespace,
 		}
-		_, err := tmsProvider.GetManagementService(token.WithTMSID(tmsID))
-		if err != nil {
-			return errors.WithMessagef(err, "failed to load configured TMS [%s]", tmsID)
-		}
-	}
+		logger.Infof("start token management service [%s]...", tmsID)
 
-	// restore owner and auditor dbs, if any
-	if err := p.ownerManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore onwer dbs")
-	}
-	if err := p.auditorManager.Restore(); err != nil {
-		return errors.WithMessagef(err, "failed to restore auditor dbs")
+		// connect network
+		if err := p.postInitializer.ConnectNetwork(tmsID.Network, tmsID.Channel, tmsID.Namespace); err != nil {
+			return errors.WithMessagef(err, "failed to connect to connect backend to tms [%s]", tmsID)
+		}
 	}
 
 	logger.Infof("Token platform enabled, starting...done")

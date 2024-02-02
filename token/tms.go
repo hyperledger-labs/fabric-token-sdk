@@ -50,6 +50,8 @@ type ServiceOptions struct {
 	Namespace string
 	// PublicParamsFetcher is used to fetch the public parameters
 	PublicParamsFetcher PublicParamsFetcher
+	// PublicParams contains the public params to use to instantiate the driver
+	PublicParams []byte
 	// Params is used to store any application specific parameter
 	Params map[string]interface{}
 }
@@ -119,10 +121,18 @@ func WithNamespace(namespace string) ServiceOption {
 	}
 }
 
-// WithPublicParameterFetcher sets the public parameter fetcher
+// WithPublicParameterFetcher sets the public parameters fetcher
 func WithPublicParameterFetcher(ppFetcher PublicParamsFetcher) ServiceOption {
 	return func(o *ServiceOptions) error {
 		o.PublicParamsFetcher = ppFetcher
+		return nil
+	}
+}
+
+// WithPublicParameter sets the public parameters
+func WithPublicParameter(publicParams []byte) ServiceOption {
+	return func(o *ServiceOptions) error {
+		o.PublicParams = publicParams
 		return nil
 	}
 }
