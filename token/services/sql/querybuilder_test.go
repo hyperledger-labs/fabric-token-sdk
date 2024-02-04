@@ -11,9 +11,8 @@ import (
 	"testing"
 	"time"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
 
