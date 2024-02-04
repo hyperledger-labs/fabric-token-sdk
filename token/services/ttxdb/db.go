@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttxdb
 
 import (
-	"fmt"
 	"math/big"
 	"reflect"
 	"sort"
@@ -18,27 +17,21 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
-)
-
-const (
-	// PersistenceTypeConfigKey is the key for the persistence type in the config.
-	PersistenceTypeConfigKey = "token.ttxdb.persistence.type"
 )
 
 var (
 	logger    = flogging.MustGetLogger("token-sdk.ttxdb")
 	driversMu sync.RWMutex
-	drivers   = make(map[string]driver.Driver)
+	drivers   = make(map[string]driver.TTXDBDriver)
 )
 
 // Register makes a DB driver available by the provided name.
 // If Register is called twice with the same name or if driver is nil,
 // it panics.
-func Register(name string, driver driver.Driver) {
+func Register(name string, driver driver.TTXDBDriver) {
 	driversMu.Lock()
 	defer driversMu.Unlock()
 	if driver == nil {
@@ -87,13 +80,6 @@ const (
 	// Redeem is the action type for redeeming tokens.
 	Redeem
 )
-
-// MovementRecord is a record of a movement of assets.
-// Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
-// and each token type that was transferred.
-// The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
-// in a given token transaction.
-type MovementRecord = driver.MovementRecord
 
 // TransactionRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
@@ -167,20 +153,6 @@ type QueryExecutor struct {
 	closed bool
 }
 
-// NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
-func (qe *QueryExecutor) NewPaymentsFilter() *PaymentsFilter {
-	return &PaymentsFilter{
-		db: qe.db,
-	}
-}
-
-// NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
-func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
-	return &HoldingsFilter{
-		db: qe.db,
-	}
-}
-
 // Transactions returns an iterators of transaction records filtered by the given params.
 func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
 	it, err := qe.db.db.QueryTransactions(params)
@@ -247,47 +219,6 @@ func newDB(p driver.TokenTransactionDB) *DB {
 	}
 }
 
-// Append appends send and receive movements, and transaction records corresponding to the passed token request
-func (db *DB) Append(req *token.Request) error {
-	logger.Debugf("Appending new record... [%d]", db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
-	record, err := req.AuditRecord()
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
-	}
-
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
-	}
-	if err := db.appendSendMovements(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append send movements for txid [%s] failed", record.Anchor)
-	}
-	if err := db.appendReceivedMovements(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
-	}
-	if err := db.appendTokenRequest(req); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
-	}
-	if err := db.appendTransactions(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
-	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
-	}
-
-	logger.Debugf("Appending new completed without errors")
-	return nil
-}
-
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
 func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	logger.Debugf("Appending new transaction record... [%d]", db.counter)
@@ -322,30 +253,6 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	}
 
 	logger.Debugf("Appending transaction record new completed without errors")
-	return nil
-}
-
-// AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
-func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
-	logger.Debugf("Appending new validation record... [%d]", db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
-	}
-	if err := db.db.AddValidationRecord(txID, tr, meta); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
-	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
-	}
-
-	logger.Debugf("Appending validation record completed without errors")
 	return nil
 }
 
@@ -393,43 +300,6 @@ func (db *DB) GetTokenRequest(txID string) ([]byte, error) {
 	return db.db.GetTokenRequest(txID)
 }
 
-// AcquireLocks acquires locks for the passed anchor and enrollment ids.
-// This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (db *DB) AcquireLocks(anchor string, eIDs ...string) error {
-	dedup := deduplicate(eIDs)
-	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
-	db.eIDsLocks.LoadOrStore(anchor, dedup)
-	for _, id := range dedup {
-		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
-		lock.(*sync.RWMutex).Lock()
-		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
-	}
-	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
-	return nil
-}
-
-// ReleaseLocks releases the locks associated to the passed anchor
-func (db *DB) ReleaseLocks(anchor string) {
-	dedupBoxed, ok := db.eIDsLocks.LoadAndDelete(anchor)
-	if !ok {
-		logger.Debugf("nothing to release for [%s] ", anchor)
-		return
-	}
-	dedup := dedupBoxed.([]string)
-	logger.Debugf("Release locks for [%s:%v] enrollment ids", anchor, dedup)
-	for _, id := range dedup {
-		lock, ok := db.eIDsLocks.Load(id)
-		if !ok {
-			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
-			continue
-		}
-		logger.Debugf("unlock lock for [%s:%v] enrollment id done", anchor, id)
-		lock.(*sync.RWMutex).Unlock()
-	}
-	logger.Debugf("Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
-
-}
-
 // AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
 func (db *DB) AddTransactionEndorsementAck(txID string, id view2.Identity, sigma []byte) error {
 	return db.db.AddTransactionEndorsementAck(txID, id, sigma)
@@ -440,92 +310,27 @@ func (db *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, err
 	return db.db.GetTransactionEndorsementAcks(txID)
 }
 
-// StoreCertifications stores the passed certifications
-func (db *DB) StoreCertifications(certifications map[*token2.ID][]byte) error {
-	return db.db.StoreCertifications(certifications)
-}
+// AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
+func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+	logger.Debugf("Appending new validation record... [%d]", db.counter)
+	db.storeLock.Lock()
+	defer db.storeLock.Unlock()
+	logger.Debug("lock acquired")
 
-// ExistsCertification returns true if a certification for the passed token exists,
-// false otherwise
-func (db *DB) ExistsCertification(tokenID *token2.ID) bool {
-	return db.db.ExistsCertification(tokenID)
-}
-
-// GetCertifications returns the certifications of the passed tokens.
-// For each token, the callback function is invoked.
-// If a token doesn't have a certification, the function returns an error
-func (db *DB) GetCertifications(ids []*token2.ID, callback func(*token2.ID, []byte) error) error {
-	return db.db.GetCertifications(ids, callback)
-}
-
-func (db *DB) appendSendMovements(record *token.AuditRecord) error {
-	inputs := record.Inputs
-	outputs := record.Outputs
-	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
-	eIDs := joinIOEIDs(record)
-	tokenTypes := outputs.TokenTypes()
-
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			diff := sent.Sub(sent, received)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				continue
-			}
-
-			if err := db.db.AddMovement(&driver.MovementRecord{
-				TxID:         record.Anchor,
-				EnrollmentID: eID,
-				Amount:       diff.Neg(diff),
-				TokenType:    tokenType,
-				Status:       driver.Pending,
-			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
-					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-				}
-				return err
-			}
-		}
+	if err := db.db.BeginUpdate(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	logger.Debugf("finished to append send movements for tx [%s]", record.Anchor)
-
-	return nil
-}
-
-func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
-	inputs := record.Inputs
-	outputs := record.Outputs
-	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
-	eIDs := joinIOEIDs(record)
-	tokenTypes := outputs.TokenTypes()
-
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			diff := received.Sub(received, sent)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				// Nothing received
-				continue
-			}
-
-			if err := db.db.AddMovement(&driver.MovementRecord{
-				TxID:         record.Anchor,
-				EnrollmentID: eID,
-				Amount:       diff,
-				TokenType:    tokenType,
-				Status:       driver.Pending,
-			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
-					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-				}
-				return err
-			}
-		}
+	if err := db.db.AddValidationRecord(txID, tr, meta); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
-	logger.Debugf("finished to append received movements for tx [%s]", record.Anchor)
+	if err := db.db.Commit(); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
+	}
 
+	logger.Debugf("Appending validation record completed without errors")
 	return nil
 }
 
@@ -625,66 +430,50 @@ func (db *DB) rollback(err error) {
 	}
 }
 
+type Config interface {
+	DriverFor(tmsID token.TMSID) (string, error)
+}
+
 // Manager handles the databases
 type Manager struct {
 	sp     view.ServiceProvider
-	driver string
-	mutex  sync.Mutex
-	dbs    map[string]*DB
+	config Config
+
+	mutex sync.Mutex
+	dbs   map[string]*DB
 }
 
 // NewManager creates a new DB manager.
-// The driver is the name of the driver to use.
-// If the driver is not supported, an error is returned.
-// If the driver is not specified, the driver is taken from the configuration.
-// If the configuration is not specified, the default driver is used.
-func NewManager(sp view.ServiceProvider, driver string) *Manager {
-	if len(driver) == 0 {
-		driver = view.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
-		if len(driver) == 0 {
-			driver = "memory"
-		}
-	}
-	logger.Debugf("instantiate ttxdb manager using driver [%s]", driver)
+func NewManager(sp view.ServiceProvider, config Config) *Manager {
 	return &Manager{
 		sp:     sp,
-		driver: driver,
+		config: config,
 		dbs:    map[string]*DB{},
 	}
 }
 
-// DB returns a DB for the given wallet
-func (cm *Manager) DB(w Wallet) (*DB, error) {
-	return cm.DBByID(w.TMS().ID().String() + w.ID())
-}
-
-func (cm *Manager) DBByIDs(tmsID token.TMSID, walletID string) (*DB, error) {
-	return cm.DBByID(tmsID.String() + walletID)
-}
-
 // DBByTMSId returns a DB for the given TMS id
-func (cm *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
-	return cm.DBByID(id.String() + fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace))
-}
-
-// DBByID returns a DBByID for the given identifier
-func (cm *Manager) DBByID(id string) (*DB, error) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
+func (m *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := cm.dbs[id]
+	c, ok := m.dbs[id.String()]
 	if !ok {
-		d := drivers[cm.driver]
-		if d == nil {
-			return nil, errors.Errorf("no driver found for [%s]", cm.driver)
-		}
-		driverInstance, err := d.Open(cm.sp, id)
+		driverName, err := m.config.DriverFor(id)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
+			return nil, errors.Wrapf(err, "no driver found for [%s]", id)
+		}
+		d := drivers[driverName]
+		if d == nil {
+			return nil, errors.Errorf("no driver found for [%s]", driverName)
+		}
+		driverInstance, err := d.Open(m.sp, id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", driverName)
 		}
 		c = newDB(driverInstance)
-		cm.dbs[id] = c
+		m.dbs[id.String()] = c
 	}
 	return c, nil
 }
@@ -693,60 +482,16 @@ var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
-// Get returns the DB for the given wallet.
-// Nil might be returned if the wallet is not found or an error occurred.
-func Get(sp view.ServiceProvider, w Wallet) *DB {
-	if w == nil {
-		logger.Debugf("no wallet provided")
-		return nil
-	}
-	s, err := sp.GetService(managerType)
-	if err != nil {
-		logger.Errorf("failed to get manager service: [%s]", err)
-		return nil
-	}
-	c, err := s.(*Manager).DB(w)
-	if err != nil {
-		logger.Errorf("failed to get db for wallet [%s:%s]: [%s]", w.TMS().ID(), w.ID(), err)
-		return nil
-	}
-	return c
-}
-
 // GetByTMSId returns the DB for the given TMS id.
 // Nil might be returned if the wallet is not found or an error occurred.
-func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) *DB {
+func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
-		logger.Errorf("failed to get manager service: [%s]", err)
-		return nil
+		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
 	c, err := s.(*Manager).DBByTMSId(tmsID)
 	if err != nil {
-		logger.Errorf("failed to get db for wallet [%s]: [%s]", tmsID, err)
-		return nil
+		return nil, errors.Wrapf(err, "failed to get db for wallet [%s]", tmsID)
 	}
-	return c
-}
-
-// joinIOEIDs joins enrollment IDs of inputs and outputs
-func joinIOEIDs(record *token.AuditRecord) []string {
-	iEIDs := record.Inputs.EnrollmentIDs()
-	oEIDs := record.Outputs.EnrollmentIDs()
-	eIDs := append(iEIDs, oEIDs...)
-	eIDs = deduplicate(eIDs)
-	return eIDs
-}
-
-// deduplicate removes duplicate entries from a slice
-func deduplicate(source []string) []string {
-	support := make(map[string]bool)
-	var res []string
-	for _, item := range source {
-		if _, value := support[item]; !value {
-			support[item] = true
-			res = append(res, item)
-		}
-	}
-	return res
+	return c, nil
 }

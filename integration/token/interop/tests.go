@@ -112,8 +112,8 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
-	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
+	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "alice", "bob")
+	CheckAuditorDB(network, defaultTMSID, "auditor", "", func(errs []string) error {
 		if len(errs) != 2 {
 			return errors.Errorf("expected 2 errors, got [%d][%v][%s]", len(errs), errs, failedClaimTXID)
 		}
@@ -138,7 +138,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, token.TMSID{}, "auditor", "", func(errs []string) error {
+	CheckAuditorDB(network, defaultTMSID, "auditor", "", func(errs []string) error {
 		fmt.Printf("Got errors [%v]", errs)
 		if len(errs) != 6 {
 			return errors.Errorf("expected 6 errors, got [%d]", len(errs))

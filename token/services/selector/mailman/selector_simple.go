@@ -75,9 +75,9 @@ func (n *SimpleSelector) Select(ownerFilter token.OwnerFilter, q, tokenType stri
 	n.QuerySelector.UnlockIDs(tokens...)
 	err = errors.WithMessagef(
 		token.SelectorInsufficientFunds,
-		"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum, tokenType,
+		"token selection failed: insufficient funds, only [%s] tokens of type [%s] are available", sum.Decimal(), tokenType,
 	)
-	logger.Debugf("selector returns with error: ", err)
+	logger.Debugf("selector returns with error: [%s]", err)
 
 	return nil, nil, err
 }

@@ -21,7 +21,7 @@ type QueryEngine = driver.QueryEngine
 type TokenVault interface {
 	QueryEngine() QueryEngine
 	CertificationStorage() certification.Storage
-	DeleteTokens(ns string, ids ...*token.ID) error
+	DeleteTokens(toDelete ...*token.ID) error
 }
 
 type Provider interface {

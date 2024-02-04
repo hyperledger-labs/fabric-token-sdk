@@ -15,9 +15,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -26,7 +26,16 @@ import (
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
-	TransactionInfo(id string) (*ttx.TransactionInfo, error)
+}
+
+type TransactionIterator interface {
+	Close()
+	Next() (*TransactionRecord, error)
+}
+
+type QueryExecutor interface {
+	Transactions() (TransactionIterator, error)
+	Done()
 }
 
 type CheckTTXDB struct {
@@ -53,21 +62,22 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	l, err := net.Ledger()
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
-	var ttxDB TokenTransactionDB
-	var qe *ttxdb.QueryExecutor
+	var qe QueryExecutor
+	var tokenDB TokenTransactionDB
 	if m.Auditor {
 		auditorWallet := tms.WalletManager().AuditorWallet(m.AuditorWalletID)
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
-		db := ttx.NewAuditor(context, auditorWallet)
-		qe = db.NewQueryExecutor().QueryExecutor
-		ttxDB = db
+		db, err := ttx.NewAuditor(context, auditorWallet)
+		assert.NoError(err, "failed to get auditor instance")
+		qe = &AuditDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
+		tokenDB = db
 	} else {
 		db := ttx.NewOwner(context, tms)
-		qe = db.NewQueryExecutor().QueryExecutor
-		ttxDB = db
+		qe = &TTXDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
+		tokenDB = db
 	}
 	defer qe.Done()
-	it, err := qe.Transactions(owner.QueryTransactionsParams{})
+	it, err := qe.Transactions()
 	assert.NoError(err, "failed to get transaction iterators")
 	defer it.Close()
 	for {
@@ -88,17 +98,17 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", transactionRecord.TxID, transactionRecord.Status))
 		case vc == network.HasDependencies:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] has dependencies", transactionRecord.TxID))
-		case vc == network.Valid && transactionRecord.Status == ttxdb.Pending:
+		case vc == network.Valid && transactionRecord.Status == string(ttxdb.Pending):
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but pending for the db", transactionRecord.TxID))
-		case vc == network.Valid && transactionRecord.Status == ttxdb.Deleted:
+		case vc == network.Valid && transactionRecord.Status == string(ttxdb.Deleted):
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but deleted for the db", transactionRecord.TxID))
-		case vc == network.Invalid && transactionRecord.Status == ttxdb.Confirmed:
+		case vc == network.Invalid && transactionRecord.Status == string(ttxdb.Confirmed):
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but confirmed for the db", transactionRecord.TxID))
-		case vc == network.Invalid && transactionRecord.Status == ttxdb.Pending:
+		case vc == network.Invalid && transactionRecord.Status == string(ttxdb.Pending):
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but pending for the db", transactionRecord.TxID))
-		case vc == network.Busy && transactionRecord.Status == ttxdb.Confirmed:
+		case vc == network.Busy && transactionRecord.Status == string(ttxdb.Confirmed):
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but confirmed for the db", transactionRecord.TxID))
-		case vc == network.Busy && transactionRecord.Status == ttxdb.Deleted:
+		case vc == network.Busy && transactionRecord.Status == string(ttxdb.Deleted):
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but deleted for the db", transactionRecord.TxID))
 		}
 
@@ -111,14 +121,9 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			errorMessages = append(errorMessages, fmt.Sprintf("no metadata found for transaction record [%s]", transactionRecord.TxID))
 		}
 
-		txInfo, err := ttxDB.TransactionInfo(transactionRecord.TxID)
-		if err != nil {
-			errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction info for transaction record [%s]: [%s]", transactionRecord.TxID, err))
-		}
-		assert.NotEmpty(txInfo.TokenRequest, "token request not found in database")
-		tokenRequest, err := ttxDB.GetTokenRequest(transactionRecord.TxID)
+		tokenRequest, err := tokenDB.GetTokenRequest(transactionRecord.TxID)
 		assert.NoError(err, "failed to retrieve token request for [%s]", transactionRecord.TxID)
-		assert.Equal(txInfo.TokenRequest, tokenRequest, "token requests do not match")
+		assert.NotNil(tokenRequest, "token requests must not be nil")
 
 		// check the ledger
 		lVC, err := l.Status(transactionRecord.TxID)
@@ -132,7 +137,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		case vc == network.Invalid && lVC != network.Invalid:
-			if lVC != network.Unknown || transactionRecord.Status != ttxdb.Deleted {
+			if lVC != network.Unknown || transactionRecord.Status != string(ttxdb.Deleted) {
 				if err != nil {
 					errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 				}
@@ -299,4 +304,85 @@ func (c *CheckIfExistsInVaultViewFactory) NewView(in []byte) (view.View, error) 
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil
+}
+
+type AuditDBQueryExecutor struct {
+	*auditdb.QueryExecutor
+}
+
+func (a *AuditDBQueryExecutor) Transactions() (TransactionIterator, error) {
+	it, err := a.QueryExecutor.Transactions(auditdb.QueryTransactionsParams{})
+	if err != nil {
+		return nil, err
+	}
+	return &AuditDBTransactionIterator{TransactionIterator: it}, nil
+}
+
+func (a *AuditDBQueryExecutor) Done() {
+	a.QueryExecutor.Done()
+}
+
+type TTXDBQueryExecutor struct {
+	*ttxdb.QueryExecutor
+}
+
+func (a *TTXDBQueryExecutor) Transactions() (TransactionIterator, error) {
+	it, err := a.QueryExecutor.Transactions(auditdb.QueryTransactionsParams{})
+	if err != nil {
+		return nil, err
+	}
+	return &TTXDBTransactionIterator{TransactionIterator: it}, nil
+}
+
+func (a *TTXDBQueryExecutor) Done() {
+	a.QueryExecutor.Done()
+}
+
+type TransactionRecord struct {
+	TxID   string
+	Status string
+}
+
+type AuditDBTransactionIterator struct {
+	*auditdb.TransactionIterator
+}
+
+func (t *AuditDBTransactionIterator) Close() {
+	t.TransactionIterator.Close()
+}
+
+func (t *AuditDBTransactionIterator) Next() (*TransactionRecord, error) {
+	next, err := t.TransactionIterator.Next()
+	if err != nil {
+		return nil, err
+	}
+	if next == nil {
+		return nil, nil
+	}
+	return &TransactionRecord{
+		TxID:   next.TxID,
+		Status: string(next.Status),
+	}, nil
+}
+
+type TTXDBTransactionIterator struct {
+	*ttxdb.TransactionIterator
+}
+
+func (t *TTXDBTransactionIterator) Close() {
+	t.TransactionIterator.Close()
+}
+
+func (t *TTXDBTransactionIterator) Next() (*TransactionRecord, error) {
+	next, err := t.TransactionIterator.Next()
+	if err != nil {
+		return nil, err
+	}
+	if next == nil {
+		return nil, nil
+	}
+	return &TransactionRecord{
+		TxID:   next.TxID,
+		Status: string(next.Status),
+	}, nil
 }

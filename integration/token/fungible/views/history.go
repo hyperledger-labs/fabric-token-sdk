@@ -10,8 +10,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -66,7 +64,8 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Get query executor
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
 	it, err := aqe.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
@@ -102,7 +101,7 @@ type ListAcceptedTransactions struct {
 	From            *time.Time
 	To              *time.Time
 	ActionTypes     []ttxdb.ActionType
-	Statuses        []driver.TxStatus
+	Statuses        []ttxdb.TxStatus
 }
 
 type ListAcceptedTransactionsView struct {

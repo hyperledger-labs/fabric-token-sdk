@@ -1,0 +1,29 @@
+token:
+  enabled: true
+  tms:
+    pineapple:
+      network: pineapple
+      channel:
+      namespace:
+      tokendb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true
+            tablePrefix: tsdk
+            driver: sqlite
+            maxOpenConns: 10
+            dataSource: db.sqlite?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)
+    grapes:
+      network: grapes
+      channel:
+      namespace:
+      tokendb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true
+            tablePrefix: tsdk
+            driver: sqlite
+            maxOpenConns: 10
+            dataSource: db.sqlite?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)

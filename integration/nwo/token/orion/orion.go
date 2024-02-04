@@ -15,10 +15,10 @@ import (
 
 	math3 "github.com/IBM/mathlib"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
@@ -27,21 +27,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/gexec"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.integration.token.orion")
-
-type tokenPlatform interface {
-	TokenGen(keygen common.Command) (*gexec.Session, error)
-	PublicParametersFile(tms *topology2.TMS) string
-	GetContext() api2.Context
-	PublicParameters(tms *topology2.TMS) []byte
-	GetPublicParamsGenerators(driver string) generators.PublicParamsGenerator
-	PublicParametersDir() string
-	GetBuilder() api2.Builder
-	TokenDir() string
-}
 
 type orionPlatform interface {
 	CreateDBInstance() bcdb.BCDB
@@ -54,21 +42,21 @@ type Entry struct {
 }
 
 type NetworkHandler struct {
-	TokenPlatform            tokenPlatform
-	EventuallyTimeout        time.Duration
-	Entries                  map[string]*Entry
-	CryptoMaterialGenerators map[string]generators.CryptoMaterialGenerator
+	common2.NetworkHandler
+	Entries map[string]*Entry
 }
 
-func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *NetworkHandler {
+func NewNetworkHandler(tokenPlatform common2.TokenPlatform, builder api2.Builder) *NetworkHandler {
 	return &NetworkHandler{
-		TokenPlatform:     tokenPlatform,
-		EventuallyTimeout: 10 * time.Minute,
-		Entries:           map[string]*Entry{},
-		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-			"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
-			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+		NetworkHandler: common2.NetworkHandler{
+			TokenPlatform:     tokenPlatform,
+			EventuallyTimeout: 10 * time.Minute,
+			CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
+				"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+				"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+			},
 		},
+		Entries: map[string]*Entry{},
 	}
 }
 
@@ -114,6 +102,10 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(node))
+
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSID":   func() string { return tms.ID() },
 		"TMS":     func() *topology2.TMS { return tms },
@@ -128,6 +120,10 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"CustodianID": func() string {
 			return tms.BackendParams[Custodian].(*sfcnode.Node).Name
 		},
+		"SQLDataSource":       func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(node), tms) },
+		"TokensSQLDataSource": func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(node), tms) },
+		"AuditSQLDataSource":  func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(node), tms) },
+		"NodeKVSPath":         func() string { return p.FSCNodeKVSDir(node) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -171,7 +167,7 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 func (p *NetworkHandler) Cleanup() {
 }
 
-func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte) {
+func (p *NetworkHandler) UpdatePublicParams(tms *topology2.TMS, ppRaw []byte) {
 	panic("Should not be invoked")
 }
 

@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/context"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
@@ -35,10 +36,13 @@ const (
 	DefaultTokenGenPath = "github.com/hyperledger-labs/fabric-token-sdk/cmd/tokengen"
 )
 
+var logger = flogging.MustGetLogger("token-sdk.integration.token")
+
 type PF interface {
 	GetTopology() *Topology
 	GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
 	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string
+	DeleteDBs(tms *topology2.TMS, id string)
 }
 
 type NetworkHandler interface {
@@ -47,7 +51,8 @@ type NetworkHandler interface {
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
 	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string
-	UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte)
+	UpdatePublicParams(tms *topology2.TMS, ppRaw []byte)
+	DeleteDBs(node *sfcnode.Node)
 	Cleanup()
 }
 
@@ -240,18 +245,11 @@ func (p *Platform) SetPublicParamsGenerator(name string, gen generators.PublicPa
 
 func (p *Platform) UpdatePublicParams(tms *topology2.TMS, publicParams []byte) {
 	nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
-	nh.UpdateChaincodePublicParams(tms, publicParams)
+	nh.UpdatePublicParams(tms, publicParams)
 }
 
 func (p *Platform) GenerateExtension(node *sfcnode.Node) {
-	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
-	t, err := template.New("peer").Funcs(template.FuncMap{
-		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
-		"SQL":         func() bool { return p.Topology.SqlTTXDB },
-		"SQLDataSource": func() string {
-			return "file:" + p.TTXDBSQLDataSourceDir(node) + "db.sqlite?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
-		},
-	}).Parse(Extension)
+	t, err := template.New("peer").Funcs(template.FuncMap{}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
 	ext := bytes.NewBufferString("")
@@ -284,16 +282,20 @@ func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, err
 	)
 }
 
-func (p *Platform) FSCNodeKVSDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "kvs")
-}
-
-func (p *Platform) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.Context.RootDir(), "fsc", "nodes", peer.ID(), "ttxdb")
-}
-
 func (p *Platform) GetTopology() *Topology {
 	return p.Topology
+}
+
+func (p *Platform) DeleteDBs(tms *topology2.TMS, id string) {
+	logger.Infof("delete dbs for [%s:%s]", tms.ID(), id)
+	for _, node := range tms.FSCNodes {
+		if node.Name == id {
+			// get the network handler for this TMS
+			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
+			// delete dbs
+			nh.DeleteDBs(node)
+		}
+	}
 }
 
 func (p *Platform) nextColor() string {

@@ -31,8 +31,7 @@ type Topology struct {
 	TopologyName string `yaml:"name,omitempty"`
 	TopologyType string `yaml:"type,omitempty"`
 
-	TMSs     []*topology.TMS
-	SqlTTXDB bool
+	TMSs []*topology.TMS
 }
 
 func NewTopology() *Topology {
@@ -92,8 +91,4 @@ func (t *Topology) SetSDK(fscTopology *fsc.Topology, sdk api.SDK) {
 
 func (t *Topology) GetTMSs() []*topology.TMS {
 	return t.TMSs
-}
-
-func (t *Topology) EnableSqlTTXDB() {
-	t.SqlTTXDB = true
 }

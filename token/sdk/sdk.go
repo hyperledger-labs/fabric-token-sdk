@@ -23,26 +23,35 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/certification"
+	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
+	tmsinit "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault/rws"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/memory"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/badger"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	"github.com/pkg/errors"
+	_ "modernc.org/sqlite"
 )
 
 var logger = flogging.MustGetLogger("token-sdk")
@@ -55,7 +64,7 @@ type Registry interface {
 
 type SDK struct {
 	registry        Registry
-	postInitializer *tms.PostInitializer
+	postInitializer *tmsinit.PostInitializer
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -78,21 +87,26 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Set TMS TMSProvider")
 
-	vaultProvider := rws.NewVaultProvider(p.registry)
+	vaultProvider := db.NewVaultProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
 	// Network provider
 	networkProvider := network.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(networkProvider))
 
-	// Token Transaction DB and derivatives
-	ttxdbManager := ttxdb.NewManager(p.registry, "")
+	// Token and Transaction DBs, and derivatives
+	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type"))
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
+	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type"))
+	assert.NoError(p.registry.RegisterService(tokenDBManager))
+	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
+	assert.NoError(p.registry.RegisterService(auditDBManager))
+
 	ownerManager := owner.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
-	auditorManager := auditor.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(auditorManager))
-	p.postInitializer = tms.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
+	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
 
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
@@ -142,7 +156,7 @@ func (p *SDK) Install() error {
 
 	// Certification
 	assert.NoError(p.registry.RegisterService(
-		certification.NewTTXDBStorageProvider(ttxdbManager)),
+		certification.NewDBStorageProvider(tokenDBManager)),
 		"failed to register certification storage",
 	)
 

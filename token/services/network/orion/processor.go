@@ -123,7 +123,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		for _, id := range ids {
-			if err := r.tokenStore.DeleteToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
+			if err := r.tokenStore.DeleteToken(id.TxId, id.Index, tx.ID()); err != nil {
 				return err
 			}
 		}
@@ -193,7 +193,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
 			}
-			if err := r.tokenStore.DeleteToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
+			if err := r.tokenStore.DeleteToken(components[0], index, tx.ID()); err != nil {
 				return err
 			}
 			continue
@@ -223,7 +223,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
 			}
-			if err := r.tokenStore.StoreToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata, ids); err != nil {
+			if err := r.tokenStore.StoreToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, ids, pp.Precision()); err != nil {
 				return err
 			}
 		} else {
@@ -237,7 +237,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}
-			if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata); err != nil {
+			if err := r.tokenStore.StoreAuditToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, pp.Precision()); err != nil {
 				return err
 			}
 		}
@@ -246,7 +246,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata, issuer, pp.Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, issuer, pp.Precision()); err != nil {
 				return err
 			}
 		}

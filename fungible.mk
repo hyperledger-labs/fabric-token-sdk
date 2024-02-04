@@ -18,10 +18,6 @@ integration-tests-dlog-fabric-t2:
 integration-tests-dlog-fabric-t3:
 	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "T3" .
 
-.PHONY: integration-tests-dlog-fabric-t4
-integration-tests-dlog-fabric-t4:
-	cd ./integration/token/fungible/dlog; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) --focus "T4" .
-
 .PHONY: integration-tests-fabtoken-dlog-fabric
 integration-tests-fabtoken-dlog-fabric:
 	cd ./integration/token/fungible/mixed; export FAB_BINS=$(FAB_BINS); ginkgo $(GINKGO_TEST_OPTS) .

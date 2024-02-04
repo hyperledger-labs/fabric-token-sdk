@@ -6,13 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package translator
 
-import (
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
-)
-
 //go:generate counterfeiter -o mock/rwset.go -fake-name RWSet . RWSet
 
 // RWSet interface, used to read from, and write to, a rwset.
 type RWSet interface {
-	driver.RWSet
+	SetState(namespace string, key string, value []byte) error
+	GetState(namespace string, key string) ([]byte, error)
+	DeleteState(namespace string, key string) error
 }
