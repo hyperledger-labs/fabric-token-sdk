@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"strings"
 
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
@@ -160,7 +159,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 	return where, args
 }
 
-func certificationsQuerySql(ids []*token2.ID) (string, []any, error) {
+func certificationsQuerySql(ids []*token.ID) (string, []any, error) {
 	if len(ids) == 0 {
 		return ";", nil, nil
 	}

@@ -9,6 +9,7 @@ package sql
 import (
 	"context"
 	"fmt"
+	"os"
 	"path"
 	"testing"
 	"time"
@@ -32,7 +33,7 @@ func TestGetTableNames(t *testing.T) {
 		Requests:              "requests_5193a5",
 		Validations:           "validations_5193a5",
 		TransactionEndorseAck: "tea_5193a5",
-		Certifications:        "ertifications_5193a5",
+		Certifications:        "certifications_5193a5",
 		Ownership:             "ownership_5193a5",
 		Tokens:                "tokens_5193a5",
 		AuditTokens:           "audit_tokens_5193a5",
@@ -95,9 +96,9 @@ func initPostgres(t *testing.T, pgConnStr, key string) {
 // Note: Before running tests: docker pull postgres:16.0-alpine
 // Test may time out if image is not present on machine.
 func startPostgresContainer(t *testing.T) (func(), string) {
-	// if os.Getenv("TESTCONTAINERS") != "true" {
-	// 	t.Skip("set environment variable TESTCONTAINERS to true to include postgres test")
-	// }
+	if os.Getenv("TESTCONTAINERS") != "true" {
+		t.Skip("set environment variable TESTCONTAINERS to true to include postgres test")
+	}
 	if testing.Short() {
 		t.Skip("skipping postgres test in short mode")
 	}

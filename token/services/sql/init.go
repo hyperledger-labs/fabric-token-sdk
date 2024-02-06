@@ -19,14 +19,13 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.sql")
 
-var PublicParams *ParamsDB
 var Transactions *TransactionDB
 var Tokens *TokenDB
 
 func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
 	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
-	if Transactions != nil || PublicParams != nil || Tokens != nil {
-		// return errors.New("database can only be initialized once")
+	if Transactions != nil || Tokens != nil {
+		// return errors.New("database can only be initialized once") // TODO: how do we handle this?
 		panic("database can only be initialized once")
 	}
 
@@ -46,7 +45,6 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 	}
 	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
 
-	PublicParams = newPublicParamsDB(db, tables.PublicParams)
 	Transactions = newTransactionDB(db, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,
@@ -60,8 +58,8 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		Ownership:    tables.Ownership,
 		AuditTokens:  tables.AuditTokens,
 		IssuedTokens: tables.IssuedTokens,
+		PublicParams: tables.PublicParams,
 	})
-
 	if createSchema {
 		if err = initSchema(db); err != nil {
 			return err
@@ -79,7 +77,6 @@ func initSchema(db *sql.DB) error {
 	defer tx.Rollback()
 
 	for _, schema := range []string{
-		PublicParams.GetSchema(),
 		Transactions.GetSchema(),
 		Tokens.GetSchema(),
 	} {
@@ -113,7 +110,7 @@ func getTableNames(prefix, name string) (tableNames, error) {
 	if prefix != "" {
 		r := regexp.MustCompile("^[a-zA-Z_]+$")
 		if !r.MatchString(prefix) {
-			return tableNames{}, errors.New("Illegal character in table prefix, only letters and underscores allowed")
+			return tableNames{}, errors.New("illegal character in table prefix, only letters and underscores allowed")
 		}
 		prefix = prefix + "_"
 	}
@@ -132,7 +129,7 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		Requests:              fmt.Sprintf("%srequests%s", prefix, suffix),
 		Validations:           fmt.Sprintf("%svalidations%s", prefix, suffix),
 		TransactionEndorseAck: fmt.Sprintf("%stea%s", prefix, suffix),
-		Certifications:        fmt.Sprintf("%sertifications%s", prefix, suffix),
+		Certifications:        fmt.Sprintf("%scertifications%s", prefix, suffix),
 		Tokens:                fmt.Sprintf("%stokens%s", prefix, suffix),
 		Ownership:             fmt.Sprintf("%sownership%s", prefix, suffix),
 		AuditTokens:           fmt.Sprintf("%saudit_tokens%s", prefix, suffix),
@@ -155,7 +152,6 @@ func (db *TransactionDB) Close() error {
 
 	// TODO: this is not a clean solution
 	Transactions = nil
-	PublicParams = nil
 	Tokens = nil
 
 	return nil

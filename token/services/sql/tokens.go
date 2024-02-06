@@ -52,6 +52,7 @@ type tokenTables struct {
 	Ownership    string
 	AuditTokens  string
 	IssuedTokens string
+	PublicParams string
 }
 
 func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
@@ -481,6 +482,31 @@ func (db *TokenDB) WhoDeletedTokens(ns string, inputs ...*token.ID) ([]string, [
 	return spentBy, isSpent, rows.Err()
 }
 
+func (db *TokenDB) StorePublicParams(raw []byte) error {
+	now := time.Now().UTC()
+	query := fmt.Sprintf("INSERT INTO %s (raw, stored_at) VALUES ($1, $2)", db.table.PublicParams)
+	logger.Debug(query, fmt.Sprintf("(%d bytes), %v", len(raw), now))
+
+	_, err := db.db.Exec(query, raw, now)
+	return err
+}
+
+func (db *TokenDB) GetRawPublicParams() ([]byte, error) {
+	var params []byte
+	query := fmt.Sprintf("SELECT raw FROM %s ORDER BY stored_at DESC LIMIT 1;", db.table.PublicParams)
+	logger.Debug(query)
+
+	row := db.db.QueryRow(query)
+	err := row.Scan(&params)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, errors.Errorf("params not found")
+		}
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return params, nil
+}
+
 type UnspentTokensIterator struct {
 	txs *sql.Rows
 }
@@ -582,6 +608,13 @@ func (db *TokenDB) GetSchema() string {
 			enrollment_id TEXT NOT NULL,
 			PRIMARY KEY (tx_id, idx, ns, enrollment_id)
 		);
+
+		-- Public Parameters
+		CREATE TABLE IF NOT EXISTS %s (
+			raw BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL,
+			PRIMARY KEY (raw)
+		);
 		`,
 		db.table.Tokens,
 		db.table.Tokens,
@@ -589,5 +622,6 @@ func (db *TokenDB) GetSchema() string {
 		db.table.AuditTokens,
 		db.table.IssuedTokens,
 		db.table.Ownership,
+		db.table.PublicParams,
 	)
 }

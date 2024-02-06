@@ -61,6 +61,7 @@ var TokensCases = []struct {
 	{"ListAuditTokens", TListAuditTokens},
 	{"ListIssuedTokens", TListIssuedTokens},
 	{"DeleteMultiple", TDeleteMultiple},
+	{"PublicParams", TPublicParams},
 }
 
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
@@ -481,4 +482,26 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 	mine, err = db.IsMine(ns, "tx101", 1)
 	assert.NoError(t, err)
 	assert.True(t, mine, "expected existing token to be mine")
+}
+
+func TPublicParams(t *testing.T, db *TokenDB) {
+	b := []byte("test bytes")
+	b1 := []byte("test bytes1")
+
+	_, err := db.GetRawPublicParams()
+	assert.Error(t, err) // not found
+
+	err = db.StorePublicParams(b)
+	assert.NoError(t, err)
+
+	res, err := db.GetRawPublicParams()
+	assert.NoError(t, err) // not found
+	assert.Equal(t, res, b)
+
+	err = db.StorePublicParams(b1)
+	assert.NoError(t, err)
+
+	res, err = db.GetRawPublicParams()
+	assert.NoError(t, err) // not found
+	assert.Equal(t, res, b1)
 }
