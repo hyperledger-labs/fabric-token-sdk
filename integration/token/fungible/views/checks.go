@@ -63,15 +63,18 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
 	var qe QueryExecutor
+	var tokenDB TokenTransactionDB
 	if m.Auditor {
 		auditorWallet := tms.WalletManager().AuditorWallet(m.AuditorWalletID)
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db, err := ttx.NewAuditor(context, auditorWallet)
 		assert.NoError(err, "failed to get auditor instance")
 		qe = &AuditDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
+		tokenDB = db
 	} else {
 		db := ttx.NewOwner(context, tms)
 		qe = &TTXDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
+		tokenDB = db
 	}
 	defer qe.Done()
 	it, err := qe.Transactions()
@@ -118,14 +121,9 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			errorMessages = append(errorMessages, fmt.Sprintf("no metadata found for transaction record [%s]", transactionRecord.TxID))
 		}
 
-		//txInfo, err := ttxDB.TransactionInfo(transactionRecord.TxID)
-		//if err != nil {
-		//	errorMessages = append(errorMessages, fmt.Sprintf("failed to load transaction info for transaction record [%s]: [%s]", transactionRecord.TxID, err))
-		//}
-		//assert.NotEmpty(txInfo.TokenRequest, "token request not found in database")
-		//tokenRequest, err := ttxDB.GetTokenRequest(transactionRecord.TxID)
-		//assert.NoError(err, "failed to retrieve token request for [%s]", transactionRecord.TxID)
-		//assert.Equal(txInfo.TokenRequest, tokenRequest, "token requests do not match")
+		tokenRequest, err := tokenDB.GetTokenRequest(transactionRecord.TxID)
+		assert.NoError(err, "failed to retrieve token request for [%s]", transactionRecord.TxID)
+		assert.NotNil(tokenRequest, "token requests must not be nil")
 
 		// check the ledger
 		lVC, err := l.Status(transactionRecord.TxID)
