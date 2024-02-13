@@ -9,14 +9,13 @@ package fabric
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -99,7 +98,10 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 				Channel:   tx.Channel(),
 				Namespace: ns,
 			}, val); err != nil {
-				return errors.Wrapf(err, "failed updating public params ")
+				return errors.Wrapf(err, "failed updating public params")
+			}
+			if err := r.tokenStore.StorePublicParams(ns, val); err != nil {
+				return errors.Wrapf(err, "failed storing public params")
 			}
 			break
 		}

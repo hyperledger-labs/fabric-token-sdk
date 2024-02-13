@@ -4,12 +4,13 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package tms
+package db
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -19,9 +20,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/rws"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/pkg/errors"
 )
 
@@ -73,7 +74,15 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			Namespace: namespace,
 		}
 		logger.Debugf("register orion committer processor for [%s]", tmsID)
-		tokenStore, err := rws.NewTokenStore(p.sp, tmsID)
+		notifier, err := events.GetPublisher(p.sp)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get event publisher")
+		}
+		tokenDB, err := tokendb.GetByTMSId(p.sp, tmsID)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get token db")
+		}
+		tokenStore, err := db.NewTokenStore(notifier, tokenDB, tmsID)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get token store")
 		}
@@ -113,7 +122,15 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	tokenStore, err := rws.NewTokenStore(p.sp, tmsID)
+	notifier, err := events.GetPublisher(p.sp)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get event publisher")
+	}
+	tokenDB, err := tokendb.GetByTMSId(p.sp, tmsID)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get token db")
+	}
+	tokenStore, err := db.NewTokenStore(notifier, tokenDB, tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token store")
 	}
@@ -153,28 +170,4 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		}
 	}
 	return nil
-}
-
-type NetworkProvider interface {
-	GetNetwork(network string, channel string) (*network.Network, error)
-}
-
-type VaultProvider struct {
-	np NetworkProvider
-}
-
-func NewVaultProvider(np NetworkProvider) *VaultProvider {
-	return &VaultProvider{np: np}
-}
-
-func (v *VaultProvider) Vault(tms *token3.ManagementService) (mailman.Vault, mailman.QueryService, error) {
-	net, err := v.np.GetNetwork(tms.Network(), tms.Channel())
-	if err != nil {
-		return nil, nil, errors.Errorf("cannot get network for TMS [%s]", tms.ID())
-	}
-	vault, err := net.Vault(tms.Namespace())
-	if err != nil {
-		return nil, nil, errors.Errorf("cannot get network vault for TMS [%s]", tms.ID())
-	}
-	return vault, tms.Vault().NewQueryEngine(), nil
 }

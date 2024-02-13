@@ -26,6 +26,33 @@ token:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}{{ end }}
       {{ if Wallets }}
+      ttxdb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: ttx  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ SQLDataSource }}
+      tokendb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: tokens  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ TokensSQLDataSource }}
+      auditdb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: audit  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ AuditSQLDataSource }}
       # Wallets associated with this TMS
       wallets:
         defaultCacheSize: 3

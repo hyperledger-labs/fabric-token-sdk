@@ -96,13 +96,13 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 
 	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
-		return errors.Errorf("failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
+		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	defer it.Close()
 
-	v, err := net.Vault(tmsID.Channel)
+	v, err := net.Vault(tmsID.Namespace)
 	if err != nil {
-		return errors.Errorf("failed to get vault for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
+		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	var pendingTXs []string
 	type ToBeUpdated struct {
@@ -113,7 +113,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	for {
 		tr, err := it.Next()
 		if err != nil {
-			return errors.Errorf("failed to get next tx record for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
+			return errors.WithMessagef(err, "failed to get next tx record for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 		}
 		if tr == nil {
 			break

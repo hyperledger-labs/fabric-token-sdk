@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
@@ -67,52 +68,52 @@ var TokensCases = []struct {
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	for i := 0; i < 20; i++ {
 		owners := []string{"alice"}
-		tr := TokenRecord{
+		tr := driver.TokenRecord{
 			TxID:           fmt.Sprintf("tx%d", i),
 			Index:          0,
 			Namespace:      ns,
 			IssuerRaw:      []byte{},
 			OwnerRaw:       []byte{1, 2, 3},
-			LedgerMetadata: "",
+			LedgerMetadata: []byte{},
 			Quantity:       "0x02",
 			Type:           "TST",
 			Amount:         0,
 		}
 		assert.NoError(t, db.StoreOwnerToken(tr, owners))
 	}
-	tr := TokenRecord{
+	tr := driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100),
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"dan"}))
 
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100), // only txid + index + ns is unique together
 		Index:          1,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice", "bob"}))
 
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 101),
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
 		Amount:         0,
@@ -165,37 +166,37 @@ func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.Unspe
 }
 
 func TDeleteAndMine(t *testing.T, db *TokenDB) {
-	tr := TokenRecord{
+	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
@@ -229,34 +230,34 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 
 // // ListAuditTokens returns the audited tokens associated to the passed ids
 func TListAuditTokens(t *testing.T, db *TokenDB) {
-	tr := TokenRecord{
+	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
 		Namespace:      ns,
 		OwnerRaw:       []byte{1, 2},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreAuditToken(tr))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
 		Namespace:      ns,
 		OwnerRaw:       []byte{3, 4},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreAuditToken(tr))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
 		Namespace:      ns,
 		OwnerRaw:       []byte{5, 6},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
 		Type:           "ABC",
 		Amount:         0,
@@ -279,37 +280,37 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 }
 
 func TListIssuedTokens(t *testing.T, db *TokenDB) {
-	tr := TokenRecord{
+	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
 		Namespace:      ns,
 		OwnerRaw:       []byte{1, 2},
 		IssuerRaw:      []byte{11, 12},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreIssuedToken(tr))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
 		Namespace:      ns,
 		OwnerRaw:       []byte{3, 4},
 		IssuerRaw:      []byte{13, 14},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreIssuedToken(tr))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
 		Namespace:      ns,
 		OwnerRaw:       []byte{5, 6},
 		IssuerRaw:      []byte{15, 16},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
 		Type:           "DEF",
 		Amount:         0,
@@ -334,40 +335,40 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 // GetTokenInfos retrieves the token information for the passed ids.
 // For each id, the callback is invoked to unmarshal the token information
 func TGetTokenInfos(t *testing.T, db *TokenDB) {
-	tr := TokenRecord{
+	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		Ledger:         "tx101l",
-		LedgerMetadata: "tx101",
+		Ledger:         []byte("tx101l"),
+		LedgerMetadata: []byte("tx101"),
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		Ledger:         "tx102l",
-		LedgerMetadata: "tx102",
+		Ledger:         []byte("tx102l"),
+		LedgerMetadata: []byte("tx102"),
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          1,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		Ledger:         "tx102l",
-		LedgerMetadata: "tx102",
+		Ledger:         []byte("tx102l"),
+		LedgerMetadata: []byte("tx102"),
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
@@ -430,37 +431,37 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 }
 
 func TDeleteMultiple(t *testing.T, db *TokenDB) {
-	tr := TokenRecord{
+	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
 	}
 	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
-	tr = TokenRecord{
+	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
-		LedgerMetadata: "",
+		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,

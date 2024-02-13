@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -22,36 +23,44 @@ import (
 )
 
 // TxStatus is the status of a transaction
-type TxStatus = ttxdb.TxStatus
+type TxStatus = auditdb.TxStatus
 
 const (
 	// Unknown is the status of a transaction that is unknown
-	Unknown = ttxdb.Unknown
+	Unknown = auditdb.Unknown
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = ttxdb.Pending
+	Pending TxStatus = auditdb.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = ttxdb.Confirmed
+	Confirmed TxStatus = auditdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = ttxdb.Deleted
+	Deleted TxStatus = auditdb.Deleted
 )
 
 type TxAuditor struct {
 	sp                      view2.ServiceProvider
 	w                       *token.AuditorWallet
 	auditor                 *auditor.Auditor
-	db                      *ttxdb.DB
+	auditDB                 *auditdb.DB
 	transactionInfoProvider *TransactionInfoProvider
 }
 
-func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) *TxAuditor {
+func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
 	backend := auditor.New(sp, w)
+	auditDB, err := auditdb.GetByTMSId(sp, w.TMS().ID())
+	if err != nil {
+		return nil, err
+	}
+	ttxDB, err := ttxdb.GetByTMSId(sp, w.TMS().ID())
+	if err != nil {
+		return nil, err
+	}
 	return &TxAuditor{
 		sp:                      sp,
 		w:                       w,
 		auditor:                 backend,
-		db:                      ttxdb.Get(sp, w),
-		transactionInfoProvider: newTransactionInfoProvider(sp, w.TMS(), backend),
-	}
+		auditDB:                 auditDB,
+		transactionInfoProvider: newTransactionInfoProvider(sp, w.TMS(), ttxDB),
+	}, nil
 }
 
 func (a *TxAuditor) Validate(tx *Transaction) error {
@@ -76,12 +85,7 @@ func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *TxAuditor) SetStatus(txID string, status TxStatus) error {
-	return a.db.SetStatus(txID, status)
-}
-
-// TransactionInfo returns the transaction info for the given transaction ID.
-func (a *TxAuditor) TransactionInfo(txID string) (*TransactionInfo, error) {
-	return a.transactionInfoProvider.TransactionInfo(txID)
+	return a.auditDB.SetStatus(txID, status)
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {
@@ -172,17 +176,17 @@ func (a *AuditingViewInitiator) Call(context view.Context) (interface{}, error) 
 	}
 
 	validAuditing := false
-	for _, auditor := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
-		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditor)
+	for _, auditorID := range a.tx.TokenService().PublicParametersManager().PublicParameters().Auditors() {
+		v, err := a.tx.TokenService().SigService().AuditorVerifier(auditorID)
 		if err != nil {
-			logger.Debugf("Failed to get auditor verifier for %s", auditor.UniqueID())
+			logger.Debugf("Failed to get auditor verifier for %s", auditorID.UniqueID())
 			continue
 		}
 		if err := v.Verify(signed, msg.Payload); err != nil {
 			logger.Debugf("Failed verifying auditor signature [%s][%s]", hash.Hashable(signed).String(), a.tx.TokenRequest.Anchor)
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("Auditor signature verified [%s][%s]", auditor, base64.StdEncoding.EncodeToString(msg.Payload))
+				logger.Debugf("Auditor signature verified [%s][%s]", auditorID, base64.StdEncoding.EncodeToString(msg.Payload))
 			}
 			validAuditing = true
 			break

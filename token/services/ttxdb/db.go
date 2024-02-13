@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttxdb
 
 import (
-	"fmt"
 	"math/big"
 	"reflect"
 	"sort"
@@ -22,11 +21,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
-)
-
-const (
-	// PersistenceTypeConfigKey is the key for the persistence type in the config.
-	PersistenceTypeConfigKey = "token.ttxdb.persistence.type"
 )
 
 var (
@@ -249,7 +243,7 @@ func newDB(p driver.TokenTransactionDB) *DB {
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
 func (db *DB) Append(req *token.Request) error {
-	logger.Debugf("Appending new record... [%d]", db.counter)
+	logger.Debugf("Appending new record... [%v]", db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
@@ -258,6 +252,7 @@ func (db *DB) Append(req *token.Request) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
 	}
+	logger.Debugf("Appending new audit record... [%v]", record.Inputs, record.Outputs)
 
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
@@ -463,6 +458,7 @@ func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
 	eIDs := joinIOEIDs(record)
+	logger.Debugf("eIDs [%v]", eIDs)
 	tokenTypes := outputs.TokenTypes()
 
 	for _, eID := range eIDs {
@@ -473,11 +469,13 @@ func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 			if diff.Cmp(big.NewInt(0)) <= 0 {
 				continue
 			}
+			diff.Neg(diff)
 
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
 			if err := db.db.AddMovement(&driver.MovementRecord{
 				TxID:         record.Anchor,
 				EnrollmentID: eID,
-				Amount:       diff.Neg(diff),
+				Amount:       diff,
 				TokenType:    tokenType,
 				Status:       driver.Pending,
 			}); err != nil {
@@ -625,66 +623,59 @@ func (db *DB) rollback(err error) {
 	}
 }
 
+type Config interface {
+	DriverFor(tmsID token.TMSID) (string, error)
+}
+
 // Manager handles the databases
 type Manager struct {
 	sp     view.ServiceProvider
-	driver string
-	mutex  sync.Mutex
-	dbs    map[string]*DB
+	config Config
+
+	mutex sync.Mutex
+	dbs   map[string]*DB
 }
 
 // NewManager creates a new DB manager.
-// The driver is the name of the driver to use.
-// If the driver is not supported, an error is returned.
-// If the driver is not specified, the driver is taken from the configuration.
-// If the configuration is not specified, the default driver is used.
-func NewManager(sp view.ServiceProvider, driver string) *Manager {
-	if len(driver) == 0 {
-		driver = view.GetConfigService(sp).GetString(PersistenceTypeConfigKey)
-		if len(driver) == 0 {
-			driver = "memory"
-		}
-	}
-	logger.Debugf("instantiate ttxdb manager using driver [%s]", driver)
+func NewManager(sp view.ServiceProvider, config Config) *Manager {
 	return &Manager{
 		sp:     sp,
-		driver: driver,
+		config: config,
 		dbs:    map[string]*DB{},
 	}
 }
 
 // DB returns a DB for the given wallet
-func (cm *Manager) DB(w Wallet) (*DB, error) {
-	return cm.DBByID(w.TMS().ID().String() + w.ID())
+func (m *Manager) DB(w Wallet) (*DB, error) {
+	return m.DBByTMSId(w.TMS().ID())
 }
 
-func (cm *Manager) DBByIDs(tmsID token.TMSID, walletID string) (*DB, error) {
-	return cm.DBByID(tmsID.String() + walletID)
+func (m *Manager) DBByIDs(tmsID token.TMSID, walletID string) (*DB, error) {
+	return m.DBByTMSId(tmsID)
 }
 
 // DBByTMSId returns a DB for the given TMS id
-func (cm *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
-	return cm.DBByID(id.String() + fmt.Sprintf("%s-%s-%s", id.Network, id.Channel, id.Namespace))
-}
-
-// DBByID returns a DBByID for the given identifier
-func (cm *Manager) DBByID(id string) (*DB, error) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
+func (m *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := cm.dbs[id]
+	c, ok := m.dbs[id.String()]
 	if !ok {
-		d := drivers[cm.driver]
-		if d == nil {
-			return nil, errors.Errorf("no driver found for [%s]", cm.driver)
-		}
-		driverInstance, err := d.Open(cm.sp, id)
+		driverName, err := m.config.DriverFor(id)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", cm.driver)
+			return nil, errors.Wrapf(err, "no driver found for [%s]", id)
+		}
+		d := drivers[driverName]
+		if d == nil {
+			return nil, errors.Errorf("no driver found for [%s]", driverName)
+		}
+		driverInstance, err := d.Open(m.sp, id)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed instantiating ttxdb driver [%s]", driverName)
 		}
 		c = newDB(driverInstance)
-		cm.dbs[id] = c
+		m.dbs[id.String()] = c
 	}
 	return c, nil
 }
@@ -715,18 +706,16 @@ func Get(sp view.ServiceProvider, w Wallet) *DB {
 
 // GetByTMSId returns the DB for the given TMS id.
 // Nil might be returned if the wallet is not found or an error occurred.
-func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) *DB {
+func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
-		logger.Errorf("failed to get manager service: [%s]", err)
-		return nil
+		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
 	c, err := s.(*Manager).DBByTMSId(tmsID)
 	if err != nil {
-		logger.Errorf("failed to get db for wallet [%s]: [%s]", tmsID, err)
-		return nil
+		return nil, errors.Wrapf(err, "failed to get db for wallet [%s]", tmsID)
 	}
-	return c
+	return c, nil
 }
 
 // joinIOEIDs joins enrollment IDs of inputs and outputs

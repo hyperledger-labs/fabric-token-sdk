@@ -25,6 +25,7 @@ type TokenStore interface {
 	StoreToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string) error
 	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error
 	StoreAuditToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte) error
+	StorePublicParams(ns string, val []byte) error
 }
 
 const (

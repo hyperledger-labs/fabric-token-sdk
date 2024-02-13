@@ -41,7 +41,7 @@ func NewTokenStore(sp view2.ServiceProvider, tmsID token.TMSID) (*TokenStore, er
 	return &TokenStore{notifier: notifier, tmsID: tmsID}, nil
 }
 
-func (cts *TokenStore) DeleteToken(ns string, txID string, index uint64, rws processor.RWSet, deletedBy string) error {
+func (t *TokenStore) DeleteToken(ns string, txID string, index uint64, rws processor.RWSet, deletedBy string) error {
 	outputID, err := keys.CreateFabTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -76,7 +76,7 @@ func (cts *TokenStore) DeleteToken(ns string, txID string, index uint64, rws pro
 			}
 
 			logger.Debugf("post new delete-token event")
-			cts.Notify(processor.DeleteToken, cts.tmsID, id, token.Type, txID, index)
+			t.Notify(processor.DeleteToken, t.tmsID, id, token.Type, txID, index)
 
 			outputID, err := keys.CreateExtendedFabTokenKey(id, token.Type, txID, index)
 			if err != nil {
@@ -111,7 +111,7 @@ func (cts *TokenStore) DeleteToken(ns string, txID string, index uint64, rws pro
 	return nil
 }
 
-func (cts *TokenStore) StoreToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string) error {
+func (t *TokenStore) StoreToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string) error {
 	// Add a lookup key to identify quickly that this token belongs to this instance
 	mineTokenID, err := keys.CreateTokenMineKey(txID, index)
 	if err != nil {
@@ -177,13 +177,13 @@ func (cts *TokenStore) StoreToken(ns string, txID string, index uint64, tok *tok
 
 		// notify others
 		logger.Debugf("post new event!")
-		cts.Notify(processor.AddToken, cts.tmsID, id, tok.Type, txID, index)
+		t.Notify(processor.AddToken, t.tmsID, id, tok.Type, txID, index)
 	}
 
 	return nil
 }
 
-func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error {
+func (t *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error {
 	outputID, err := keys.CreateIssuedHistoryTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: [%s,%d]", txID, index)
@@ -227,7 +227,7 @@ func (cts *TokenStore) StoreIssuedHistoryToken(ns string, txID string, index uin
 	return nil
 }
 
-func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte) error {
+func (t *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok *token2.Token, rws processor.RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte) error {
 	outputID, err := keys.CreateAuditTokenKey(txID, index)
 	if err != nil {
 		return errors.Wrapf(err, "error creating output ID: %s", err)
@@ -250,8 +250,12 @@ func (cts *TokenStore) StoreAuditToken(ns string, txID string, index uint64, tok
 	return nil
 }
 
-func (cts *TokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
-	if cts.notifier == nil {
+func (t *TokenStore) StorePublicParams(ns string, val []byte) error {
+	return nil
+}
+
+func (t *TokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
+	if t.notifier == nil {
 		logger.Warnf("cannot notify others!")
 		return
 	}
@@ -265,5 +269,5 @@ func (cts *TokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenTy
 	})
 
 	logger.Debugf("Publish new event %v", e)
-	cts.notifier.Publish(e)
+	t.notifier.Publish(e)
 }

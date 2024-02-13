@@ -59,16 +59,17 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		AuditTokens:  tables.AuditTokens,
 		IssuedTokens: tables.IssuedTokens,
 		PublicParams: tables.PublicParams,
+		Ledger:       tables.Ledger,
 	})
 	if createSchema {
-		if err = initSchema(db); err != nil {
+		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema()); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func initSchema(db *sql.DB) error {
+func initSchema(db *sql.DB, schemas ...string) error {
 	logger.Info("creating tables")
 	tx, err := db.Begin()
 	if err != nil {
@@ -76,10 +77,7 @@ func initSchema(db *sql.DB) error {
 	}
 	defer tx.Rollback()
 
-	for _, schema := range []string{
-		Transactions.GetSchema(),
-		Tokens.GetSchema(),
-	} {
+	for _, schema := range schemas {
 		logger.Debug(schema)
 		if _, err := db.Exec(schema); err != nil {
 			return errors.Wrap(err, "error creating schema")
@@ -103,6 +101,7 @@ type tableNames struct {
 	AuditTokens           string
 	IssuedTokens          string
 	PublicParams          string
+	Ledger                string
 }
 
 // TODO get rid of the suffix
@@ -135,24 +134,6 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		AuditTokens:           fmt.Sprintf("%saudit_tokens%s", prefix, suffix),
 		IssuedTokens:          fmt.Sprintf("%sissued_tokens%s", prefix, suffix),
 		PublicParams:          fmt.Sprintf("%spublic_params%s", prefix, suffix),
+		Ledger:                fmt.Sprintf("%sledger%s", prefix, suffix),
 	}, nil
-}
-
-func (db *TransactionDB) Close() error {
-	logger.Info("closing database")
-	db.txnLock.Lock()
-	defer db.txnLock.Unlock()
-
-	db.txn = nil
-
-	err := db.db.Close()
-	if err != nil {
-		return errors.Wrap(err, "could not close DB")
-	}
-
-	// TODO: this is not a clean solution
-	Transactions = nil
-	Tokens = nil
-
-	return nil
 }

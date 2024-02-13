@@ -8,8 +8,10 @@ package orion
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"text/template"
 	"time"
 
@@ -114,6 +116,10 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(node))
+
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSID":   func() string { return tms.ID() },
 		"TMS":     func() *topology2.TMS { return tms },
@@ -128,6 +134,28 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"CustodianID": func() string {
 			return tms.BackendParams[Custodian].(*sfcnode.Node).Name
 		},
+		"SQLDataSource": func() string {
+			return "file:" +
+				filepath.Join(
+					p.TTXDBSQLDataSourceDir(node),
+					fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
+				) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+		},
+		"TokensSQLDataSource": func() string {
+			return "file:" +
+				filepath.Join(
+					p.TokensDBSQLDataSourceDir(node),
+					fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
+				) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+		},
+		"AuditSQLDataSource": func() string {
+			return "file:" +
+				filepath.Join(
+					p.AuditDBSQLDataSourceDir(node),
+					fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
+				) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+		},
+		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -171,7 +199,7 @@ func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {
 func (p *NetworkHandler) Cleanup() {
 }
 
-func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte) {
+func (p *NetworkHandler) UpdatePublicParams(tms *topology2.TMS, ppRaw []byte) {
 	panic("Should not be invoked")
 }
 
@@ -290,6 +318,15 @@ func (p *NetworkHandler) GenerateCryptoMaterial(cmGenerator generators.CryptoMat
 	}
 }
 
+func (p *NetworkHandler) DeleteDBs(node *sfcnode.Node) {
+	//logger.Infof("remove all [%s]", p.TTXDBSQLDataSourceDir(node))
+	//Expect(os.RemoveAll(p.TTXDBSQLDataSourceDir(node))).ToNot(HaveOccurred())
+	logger.Infof("remove all [%s]", p.TokensDBSQLDataSourceDir(node))
+	Expect(os.RemoveAll(p.TokensDBSQLDataSourceDir(node))).ToNot(HaveOccurred())
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
+}
+
 func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 	entry, ok := p.Entries[tms.Network+tms.Channel+tms.Namespace]
 	if !ok {
@@ -300,4 +337,20 @@ func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 		p.Entries[tms.Network+tms.Channel+tms.Namespace] = entry
 	}
 	return entry
+}
+
+func (p *NetworkHandler) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "ttxdb")
+}
+
+func (p *NetworkHandler) TokensDBSQLDataSourceDir(peer *sfcnode.Node) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "tokensdb")
+}
+
+func (p *NetworkHandler) AuditDBSQLDataSourceDir(peer *sfcnode.Node) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "auditdb")
+}
+
+func (p *NetworkHandler) FSCNodeKVSDir(peer *sfcnode.Node) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "kvs")
 }

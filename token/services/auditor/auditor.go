@@ -9,23 +9,23 @@ package auditor
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.auditor")
 
 // TxStatus is the status of a transaction
-type TxStatus = ttxdb.TxStatus
+type TxStatus = auditdb.TxStatus
 
 const (
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending = ttxdb.Pending
+	Pending = auditdb.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed = ttxdb.Confirmed
+	Confirmed = auditdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted = ttxdb.Deleted
+	Deleted = auditdb.Deleted
 )
 
 // Transaction models a generic token transaction
@@ -38,16 +38,16 @@ type Transaction interface {
 
 // QueryExecutor defines the interface for the query executor
 type QueryExecutor struct {
-	*ttxdb.QueryExecutor
+	*auditdb.QueryExecutor
 }
 
 // NewPaymentsFilter returns a filter for payments
-func (a *QueryExecutor) NewPaymentsFilter() *ttxdb.PaymentsFilter {
+func (a *QueryExecutor) NewPaymentsFilter() *auditdb.PaymentsFilter {
 	return a.QueryExecutor.NewPaymentsFilter()
 }
 
 // NewHoldingsFilter returns a filter for holdings
-func (a *QueryExecutor) NewHoldingsFilter() *ttxdb.HoldingsFilter {
+func (a *QueryExecutor) NewHoldingsFilter() *auditdb.HoldingsFilter {
 	return a.QueryExecutor.NewHoldingsFilter()
 }
 
@@ -63,7 +63,7 @@ type NetworkProvider interface {
 // Auditor is the interface for the auditor service
 type Auditor struct {
 	np NetworkProvider
-	db *ttxdb.DB
+	db *auditdb.DB
 }
 
 // Validate validates the passed token request
@@ -140,23 +140,19 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
 }
 
-func (a *Auditor) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
-	return a.db.GetTransactionEndorsementAcks(id)
-}
-
 type TxStatusChangesListener struct {
 	net *network.Network
-	db  *ttxdb.DB
+	db  *auditdb.DB
 }
 
 func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
-	var txStatus ttxdb.TxStatus
+	var txStatus auditdb.TxStatus
 	switch network.ValidationCode(status) {
 	case network.Valid:
-		txStatus = ttxdb.Confirmed
+		txStatus = auditdb.Confirmed
 	case network.Invalid:
-		txStatus = ttxdb.Deleted
+		txStatus = auditdb.Deleted
 	}
 	if err := t.db.SetStatus(txID, txStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)

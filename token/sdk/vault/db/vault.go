@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package rws
+package db
 
 import (
 	"sync"
@@ -12,13 +12,16 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/rws"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
-	rws2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws"
+	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/db"
 	"github.com/pkg/errors"
 )
 
@@ -53,11 +56,24 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 		return res, nil
 	}
 
-	tokenStore, err := rws.NewTokenStore(v.sp, token.TMSID{
+	notifier, err := events.GetPublisher(v.sp)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get event publisher")
+	}
+	tmsID := token.TMSID{
 		Network:   network,
 		Channel:   channel,
 		Namespace: namespace,
-	})
+	}
+	tokenDB, err := tokendb.GetByTMSId(v.sp, tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token db")
+	}
+	ttxDB, err := ttxdb.GetByTMSId(v.sp, tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token db")
+	}
+	tokenStore, err := db.NewTokenStore(notifier, tokenDB, tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store")
 	}
@@ -79,7 +95,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new storage")
 		}
-		res, err = rws2.NewVault(storage, tmsID, fabric2.NewVault(ch, tokenStore))
+		res, err = db2.NewVault(tmsID, storage, ttxDB, tokenDB, fabric2.NewVault(ch, tokenStore))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}
@@ -97,7 +113,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new storage")
 		}
-		res, err = rws2.NewVault(storage, tmsID, orion2.NewVault(ons, tokenStore))
+		res, err = db2.NewVault(tmsID, storage, ttxDB, tokenDB, orion2.NewVault(ons, tokenStore))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}

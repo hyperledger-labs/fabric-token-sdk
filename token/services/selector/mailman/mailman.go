@@ -11,7 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-var logger = flogging.MustGetLogger("mailman")
+var logger = flogging.MustGetLogger("token-sdk.selector.mailman")
 
 // Mailman implements a token selector service that is targeting high concurrent use
 type Mailman struct {

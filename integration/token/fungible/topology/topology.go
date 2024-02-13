@@ -17,7 +17,6 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology/sqlsdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -27,7 +26,6 @@ type Opts struct {
 	TokenSDKDriver  string
 	AuditorAsIssuer bool
 	Aries           bool
-	SqlTTXDB        bool
 }
 
 func Topology(opts Opts) []api.Topology {
@@ -50,8 +48,7 @@ func Topology(opts Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("token-sdk.core=debug:orion-sdk.rwset=debug:token-sdk.network.processor=debug:token-sdk.network.orion.custodian=debug:token-sdk.driver.identity=debug:token-sdk.driver.zkatdlog=debug:orion-sdk.vault=debug:orion-sdk.delivery=debug:orion-sdk.committer=debug:token-sdk.vault.processor=debug:info", "")
-	//fscTopology.SetLogging("token-sdk=debug:info", "")
+	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -311,12 +308,7 @@ func Topology(opts Opts) []api.Topology {
 		orionTopology.SetDefaultSDK(fscTopology)
 		fscTopology.SetBootstrapNode(custodian)
 	}
-	if opts.SqlTTXDB {
-		tokenTopology.EnableSqlTTXDB()
-		tokenTopology.SetSDK(fscTopology, &sqlsdk.SDK{})
-	} else {
-		tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
-	}
+	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms.AddAuditor(auditor)
 
 	if opts.Backend != "orion" {

@@ -38,7 +38,8 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	// Validate
 	logger.Debugf("AuditView: get auditor [%s]", tx.ID())
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 	logger.Debugf("AuditView: get auditor done [%s]", tx.ID())
 
@@ -229,7 +230,8 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	w := tms.WalletManager().AuditorWallet("")
 	assert.NotNil(w, "failed getting default auditor wallet")
 
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
@@ -268,7 +270,8 @@ func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
 	w := ttx.MyAuditorWallet(context, ServiceOpts(r.TMSID)...)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
@@ -306,7 +309,8 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 	w := ttx.MyAuditorWallet(context)
 	assert.NotNil(w, "failed getting default auditor wallet")
 
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 	assert.NoError(auditor.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	if r.Status == ttxdb.Deleted {

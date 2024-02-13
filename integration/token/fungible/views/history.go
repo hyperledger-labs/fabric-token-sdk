@@ -66,7 +66,8 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	assert.NotNil(w, "failed getting default auditor wallet")
 
 	// Get query executor
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 	aqe := auditor.NewQueryExecutor()
 	defer aqe.Done()
 	it, err := aqe.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})

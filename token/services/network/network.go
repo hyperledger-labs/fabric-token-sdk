@@ -510,17 +510,21 @@ func (np *Provider) GetNetwork(network string, channel string) (*Network, error)
 		}
 		np.networks[key] = service
 	}
+
+	logger.Debugf("GetNetwork: [%s:%s], returning...", network, channel)
+
 	return service, nil
 }
 
 func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
-	for _, d := range drivers {
+	for driverName, d := range drivers {
 		nw, err := d.New(np.sp, network, channel)
 		if err != nil {
 			logger.Warningf("failed to create network [%s:%s]: %s", network, channel, err)
 			continue
 		}
 		if nw != nil {
+			logger.Debugf("new network [%s:%s] with driver [%s]", network, channel, driverName)
 			return &Network{n: nw}, nil
 		}
 	}

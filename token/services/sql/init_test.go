@@ -39,6 +39,7 @@ func TestGetTableNames(t *testing.T) {
 		AuditTokens:           "audit_tokens_5193a5",
 		IssuedTokens:          "issued_tokens_5193a5",
 		PublicParams:          "public_params_5193a5",
+		Ledger:                "ledger_5193a5",
 	}, names)
 
 	names, err = getTableNames("valid_prefix", name)

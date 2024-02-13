@@ -171,10 +171,10 @@ func (o *OutputStream) TokenTypes() []string {
 
 // RevocationHandles returns the Revocation Handles of the owners of the outputs.
 // It might be empty, if not available.
-func (is *OutputStream) RevocationHandles() []string {
+func (o *OutputStream) RevocationHandles() []string {
 	duplicates := map[string]interface{}{}
 	var rIDs []string
-	for _, output := range is.outputs {
+	for _, output := range o.outputs {
 		if len(output.RevocationHandler) == 0 {
 			continue
 		}
@@ -187,6 +187,11 @@ func (is *OutputStream) RevocationHandles() []string {
 		}
 	}
 	return rIDs
+}
+
+// String returns a string representation of the input stream
+func (o *OutputStream) String() string {
+	return fmt.Sprintf("[%v]", o.outputs)
 }
 
 // InputStream models a stream over a set of inputs (Input).

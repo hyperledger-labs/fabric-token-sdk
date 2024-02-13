@@ -11,9 +11,12 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -28,10 +31,10 @@ func TestDB(t *testing.T) {
 	registry := registry.New()
 	assert.NoError(t, registry.RegisterService(cp))
 
-	manager := ttxdb.NewManager(registry, "sql")
-	db1, err := manager.DBByID("pineapple")
+	manager := ttxdb.NewManager(registry, db.NewConfig(cp, "ttxdb.persistence.type"))
+	db1, err := manager.DBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
-	db2, err := manager.DBByID("grapes")
+	db2, err := manager.DBByTMSId(token2.TMSID{Network: "grapes"})
 	assert.NoError(t, err)
 
 	TEndorserAcks(t, db1, db2)

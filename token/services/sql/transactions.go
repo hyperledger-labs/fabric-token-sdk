@@ -21,14 +21,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-type TransactionDB struct {
-	db    *sql.DB
-	table transactionTables
-
-	txn     *sql.Tx
-	txnLock sync.Mutex
-}
-
 type transactionTables struct {
 	Movements             string
 	Transactions          string
@@ -38,11 +30,41 @@ type transactionTables struct {
 	Certifications        string
 }
 
+type TransactionDB struct {
+	db    *sql.DB
+	table transactionTables
+
+	txn     *sql.Tx
+	txnLock sync.Mutex
+}
+
 func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
 	return &TransactionDB{
 		db:    db,
 		table: tables,
 	}
+}
+
+func NewTransactionDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*TransactionDB, error) {
+	tables, err := getTableNames(tablePrefix, name)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get table names")
+	}
+
+	transactionsDB := newTransactionDB(db, transactionTables{
+		Movements:             tables.Movements,
+		Transactions:          tables.Transactions,
+		Requests:              tables.Requests,
+		Validations:           tables.Validations,
+		TransactionEndorseAck: tables.TransactionEndorseAck,
+		Certifications:        tables.Certifications,
+	})
+	if createSchema {
+		if err = initSchema(db, transactionsDB.GetSchema()); err != nil {
+			return nil, err
+		}
+	}
+	return transactionsDB, nil
 }
 
 func (db *TransactionDB) BeginUpdate() error {
@@ -155,6 +177,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 			return res, err
 		}
 		r.Amount = big.NewInt(amount)
+		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
 
 		res = append(res, &r)
 	}
@@ -165,7 +188,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 }
 
 func (db *TransactionDB) AddMovement(r *driver.MovementRecord) error {
-	logger.Debugf("adding movement record [%s:%s:%s:%d:%s]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount, r.Status)
+	logger.Debugf("adding movement record [%s:%s:%s:%d:%s]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
 	if db.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
@@ -484,6 +507,25 @@ func (db *TransactionDB) GetCertifications(ids []*token.ID, callback func(*token
 			return errors.WithMessagef(err, "failed callback for [%s]", ids[i])
 		}
 	}
+
+	return nil
+}
+
+func (db *TransactionDB) Close() error {
+	logger.Info("closing database")
+	db.txnLock.Lock()
+	defer db.txnLock.Unlock()
+
+	db.txn = nil
+
+	err := db.db.Close()
+	if err != nil {
+		return errors.Wrap(err, "could not close DB")
+	}
+
+	// TODO: this is not a clean solution
+	Transactions = nil
+	Tokens = nil
 
 	return nil
 }

@@ -21,6 +21,33 @@ token:
         interactive:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}
+      ttxdb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: ttx  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ SQLDataSource }}
+      tokendb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: tokens  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ TokensSQLDataSource }}
+      auditdb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: audit  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ AuditSQLDataSource }}
       {{ if Wallets }}wallets:{{ if Wallets.Certifiers }}
         certifiers: {{ range Wallets.Certifiers }}
         - id: {{ .ID }}

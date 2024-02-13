@@ -14,6 +14,7 @@ import (
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -222,7 +223,10 @@ type QueryValidationRecordsParams struct {
 type TokenTransactionDB interface {
 	TransactionEndorsementAckDB
 	CertificationDB
+	TransactionDB
+}
 
+type TransactionDB interface {
 	// Close closes the database
 	Close() error
 
@@ -294,5 +298,5 @@ type CertificationDB interface {
 // Driver is the interface for a database driver
 type Driver interface {
 	// Open opens a database connection
-	Open(sp view2.ServiceProvider, name string) (TokenTransactionDB, error)
+	Open(sp view2.ServiceProvider, tmsID token2.TMSID) (TokenTransactionDB, error)
 }

@@ -28,6 +28,7 @@ type Vault interface {
 
 type ConfigProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
+	GetString(key string) string
 	IsSet(key string) bool
 	TranslatePath(path string) string
 }
@@ -223,7 +224,7 @@ func (m *TMSProvider) ppFromOpts(opts *driver.ServiceOptions) ([]byte, error) {
 	if len(opts.PublicParams) != 0 {
 		return opts.PublicParams, nil
 	}
-	return nil, errors.Errorf("public parameter not found in optionts")
+	return nil, errors.Errorf("public parameter not found in options")
 }
 
 func (m *TMSProvider) ppFromVault(opts *driver.ServiceOptions) ([]byte, error) {
