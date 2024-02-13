@@ -74,6 +74,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 			Namespace:      ns,
 			IssuerRaw:      []byte{},
 			OwnerRaw:       []byte{1, 2, 3},
+			Ledger:         []byte("ledger"),
 			LedgerMetadata: []byte{},
 			Quantity:       "0x02",
 			Type:           "TST",
@@ -87,6 +88,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST",
@@ -100,6 +102,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST",
@@ -113,6 +116,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
@@ -172,6 +176,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -184,6 +189,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -196,6 +202,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -235,6 +242,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Index:          0,
 		Namespace:      ns,
 		OwnerRaw:       []byte{1, 2},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -246,6 +254,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Index:          1,
 		Namespace:      ns,
 		OwnerRaw:       []byte{3, 4},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
@@ -257,6 +266,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Index:          0,
 		Namespace:      ns,
 		OwnerRaw:       []byte{5, 6},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
 		Type:           "ABC",
@@ -286,6 +296,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		OwnerRaw:       []byte{1, 2},
 		IssuerRaw:      []byte{11, 12},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -298,6 +309,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		OwnerRaw:       []byte{3, 4},
 		IssuerRaw:      []byte{13, 14},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
@@ -310,6 +322,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		OwnerRaw:       []byte{5, 6},
 		IssuerRaw:      []byte{15, 16},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
 		Type:           "DEF",
@@ -437,6 +450,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -449,6 +463,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -461,6 +476,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Namespace:      ns,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
@@ -489,13 +505,14 @@ func TPublicParams(t *testing.T, db *TokenDB) {
 	b := []byte("test bytes")
 	b1 := []byte("test bytes1")
 
-	_, err := db.GetRawPublicParams()
-	assert.Error(t, err) // not found
+	res, err := db.GetRawPublicParams()
+	assert.NoError(t, err) // not found
+	assert.Nil(t, res)
 
 	err = db.StorePublicParams(b)
 	assert.NoError(t, err)
 
-	res, err := db.GetRawPublicParams()
+	res, err = db.GetRawPublicParams()
 	assert.NoError(t, err) // not found
 	assert.Equal(t, res, b)
 

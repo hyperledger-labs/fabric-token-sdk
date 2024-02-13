@@ -24,6 +24,10 @@ type Driver struct {
 	*sql.Driver
 }
 
+func NewDriver() *Driver {
+	return &Driver{Driver: sql.NewDriver()}
+}
+
 // Open returns a pure go sqlite implementation in memory for testing purposes.
 func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.TokenTransactionDB, error) {
 	name := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
@@ -45,5 +49,5 @@ func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.Token
 }
 
 func init() {
-	ttxdb.Register("memory", &Driver{Driver: sql.NewDriver()})
+	ttxdb.Register("memory", NewDriver())
 }

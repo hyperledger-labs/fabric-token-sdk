@@ -87,7 +87,7 @@ func (db *TokenDB) storeToken(tr driver.TokenRecord, owners []string, table stri
 	query := fmt.Sprintf("INSERT INTO %s (ns, tx_id, idx, issuer_raw, owner_raw, ledger, ledger_metadata, token_type, quantity, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)", table)
 	logger.Debug(query, tr.Namespace, tr.TxID, tr.Index, len(tr.IssuerRaw), len(tr.OwnerRaw), len(tr.Ledger), len(tr.LedgerMetadata), tr.Type, tr.Quantity, tr.Amount, now)
 	if _, err := db.db.Exec(query, tr.Namespace, tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.Ledger, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now); err != nil {
-		logger.Errorf("error storing token [%s] in table [%s]: [%s]", tr.TxID, table, string(debug.Stack()))
+		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, table, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, table)
 	}
 
