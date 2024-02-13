@@ -96,8 +96,23 @@ func (db *TokenDB) storeToken(tr driver.TokenRecord, owners []string, table stri
 		query = fmt.Sprintf("INSERT INTO %s (ns, tx_id, idx, ledger, ledger_metadata) VALUES ($1, $2, $3, $4, $5)", db.table.Ledger)
 		logger.Debug(query, tr.Namespace, tr.TxID, tr.Index, len(tr.Ledger), len(tr.LedgerMetadata))
 		if _, err := db.db.Exec(query, tr.Namespace, tr.TxID, tr.Index, tr.Ledger, tr.LedgerMetadata); err != nil {
-			logger.Errorf("error storing ledger token [%s] in table [%s]", tr.TxID, db.table.Ledger, string(debug.Stack()))
-			return errors.Wrapf(err, "error storing ledger token [%s] in table [%s]", tr.TxID, db.table.Ledger)
+			// is the token already here?
+			ids := []*token.ID{{TxId: tr.TxID, Index: tr.Index}}
+			logger.Debugf("retrieve ledger tokens for [%s][%s]", tr.Namespace, ids)
+			args := make([]interface{}, 0)
+			where := whereTokenIDs(&args, tr.Namespace, ids)
+			query := fmt.Sprintf("SELECT tx_id, idx FROM %s WHERE %s", db.table.Ledger, where)
+			logger.Debug(query, args)
+			row := db.db.QueryRow(query, args...)
+			var txID string
+			var index int
+			if err2 := row.Scan(&txID, &index); err2 != nil {
+				if errors.Is(err2, sql.ErrNoRows) {
+					logger.Errorf("error storing ledger token [%s] in table [%s]: [%s][%s]", tr.TxID, db.table.Ledger, err2, string(debug.Stack()))
+					return errors.Wrapf(err, "error storing ledger token [%s] in table [%s]", tr.TxID, db.table.Ledger)
+				}
+			}
+			// this was already inserted, skip
 		}
 	}
 
