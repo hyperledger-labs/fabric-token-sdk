@@ -38,7 +38,22 @@ type TokenRecord struct {
 	Amount uint64
 }
 
+type CertificationDB interface {
+	// ExistsCertification returns true if a certification for the passed token exists,
+	// false otherwise
+	ExistsCertification(id *token.ID) bool
+
+	// StoreCertifications stores the passed certifications
+	StoreCertifications(certifications map[*token.ID][]byte) error
+
+	// GetCertifications returns the certifications of the passed tokens.
+	// For each token, the callback function is invoked.
+	// If a token doesn't have a certification, the function returns an error
+	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
+}
+
 type TokenDB interface {
+	CertificationDB
 	StoreOwnerToken(tr TokenRecord, owners []string) error
 	StoreIssuedToken(tr TokenRecord) error
 	StoreAuditToken(tr TokenRecord) error

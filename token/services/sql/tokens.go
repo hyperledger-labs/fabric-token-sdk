@@ -20,12 +20,13 @@ import (
 )
 
 type tokenTables struct {
-	Tokens       string
-	Ownership    string
-	AuditTokens  string
-	IssuedTokens string
-	PublicParams string
-	Ledger       string
+	Tokens         string
+	Ownership      string
+	AuditTokens    string
+	IssuedTokens   string
+	PublicParams   string
+	Ledger         string
+	Certifications string
 }
 
 type TokenDB struct {
@@ -47,12 +48,13 @@ func NewTokenDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*Token
 	}
 
 	tokenDB := newTokenDB(db, tokenTables{
-		Tokens:       tables.Tokens,
-		Ownership:    tables.Ownership,
-		AuditTokens:  tables.AuditTokens,
-		IssuedTokens: tables.IssuedTokens,
-		PublicParams: tables.PublicParams,
-		Ledger:       tables.Ledger,
+		Tokens:         tables.Tokens,
+		Ownership:      tables.Ownership,
+		AuditTokens:    tables.AuditTokens,
+		IssuedTokens:   tables.IssuedTokens,
+		PublicParams:   tables.PublicParams,
+		Ledger:         tables.Ledger,
+		Certifications: tables.Certifications,
 	})
 	if createSchema {
 		if err = initSchema(db, tokenDB.GetSchema()); err != nil {
@@ -752,6 +754,111 @@ func (db *TokenDB) GetRawPublicParams() ([]byte, error) {
 	return params, nil
 }
 
+func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) error {
+	now := time.Now().UTC()
+	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, tx_index, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
+
+	tx, err := db.db.Begin()
+	if err != nil {
+		return errors.New("failed starting a transaction")
+	}
+	defer tx.Rollback()
+	for tokenID, certification := range certifications {
+		if tokenID == nil {
+			return errors.Errorf("invalid token-id, cannot be nil")
+		}
+		tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
+		logger.Debug(query, tokenIDStr, fmt.Sprintf("(%d bytes)", len(certification)), now)
+		if _, err := tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
+			return errors.Wrapf(err, "failed to execute")
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		return errors.Wrap(err, "failed committing status update")
+	}
+	return nil
+}
+
+func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
+	if tokenID == nil {
+		return false
+	}
+	tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
+	query := fmt.Sprintf("SELECT certification FROM %s WHERE token_id=$1;", db.table.Certifications)
+	logger.Debug(query, tokenIDStr)
+
+	row := db.db.QueryRow(query, tokenIDStr)
+	var certification []byte
+	if err := row.Scan(&certification); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false
+		}
+		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenIDStr, err)
+		return false
+	}
+	result := len(certification) != 0
+	if !result {
+		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenIDStr)
+	}
+	return result
+}
+
+func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error {
+	if len(ids) == 0 {
+		// nothing to do here
+		return nil
+	}
+
+	// build query
+	conditions, tokenIDs, err := certificationsQuerySql(ids)
+	if err != nil {
+		return err
+	}
+	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications) + conditions
+
+	rows, err := db.db.Query(query, tokenIDs...)
+	if err != nil {
+		return errors.Wrapf(err, "failed to query")
+	}
+	defer rows.Close()
+
+	certifications := make([][]byte, len(ids))
+	counter := 0
+	for rows.Next() {
+		var certification []byte
+		var id token.ID
+		if err := rows.Scan(&id.TxId, &id.Index, &certification); err != nil {
+			return err
+		}
+		// the callback is expected to be called in order of the ids
+		if len(certification) == 0 {
+			return errors.Errorf("empty certification for [%s]", id.String())
+		}
+		for i := 0; i < len(ids); i++ {
+			if *ids[i] == id {
+				certifications[i] = certification
+				break
+			}
+		}
+		counter++
+	}
+
+	if err = rows.Err(); err != nil {
+		return err
+	}
+	if counter != len(ids) {
+		return errors.Errorf("not all tokens are certified")
+	}
+
+	for i, certification := range certifications {
+		if err := callback(ids[i], certification); err != nil {
+			return errors.WithMessagef(err, "failed callback for [%s]", ids[i])
+		}
+	}
+
+	return nil
+}
+
 type UnspentTokensIterator struct {
 	txs *sql.Rows
 }
@@ -873,6 +980,14 @@ func (db *TokenDB) GetSchema() string {
 			ledger_metadata BYTEA NOT NULL,
 			PRIMARY KEY (tx_id, idx, ns)
 		);
+
+		CREATE TABLE IF NOT EXISTS %s (
+			token_id TEXT NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL,
+			tx_index INT NOT NULL,
+			certification BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL
+		);
 		`,
 		db.table.Tokens,
 		db.table.Tokens,
@@ -882,5 +997,6 @@ func (db *TokenDB) GetSchema() string {
 		db.table.Ownership,
 		db.table.PublicParams,
 		db.table.Ledger,
+		db.table.Certifications,
 	)
 }

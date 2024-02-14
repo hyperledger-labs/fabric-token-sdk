@@ -15,7 +15,6 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // ActionType is the type of transaction
@@ -222,7 +221,6 @@ type QueryValidationRecordsParams struct {
 // TokenTransactionDB defines the interface for a token transactions database
 type TokenTransactionDB interface {
 	TransactionEndorsementAckDB
-	CertificationDB
 	TransactionDB
 }
 
@@ -279,20 +277,6 @@ type TransactionEndorsementAckDB interface {
 
 	// GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
 	GetTransactionEndorsementAcks(txID string) (map[string][]byte, error)
-}
-
-type CertificationDB interface {
-	// ExistsCertification returns true if a certification for the passed token exists,
-	// false otherwise
-	ExistsCertification(id *token.ID) bool
-
-	// StoreCertifications stores the passed certifications
-	StoreCertifications(certifications map[*token.ID][]byte) error
-
-	// GetCertifications returns the certifications of the passed tokens.
-	// For each token, the callback function is invoked.
-	// If a token doesn't have a certification, the function returns an error
-	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
 }
 
 // Driver is the interface for a database driver

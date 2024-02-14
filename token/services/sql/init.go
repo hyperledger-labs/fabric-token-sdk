@@ -51,15 +51,15 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		Requests:              tables.Requests,
 		Validations:           tables.Validations,
 		TransactionEndorseAck: tables.TransactionEndorseAck,
-		Certifications:        tables.Certifications,
 	})
 	Tokens = newTokenDB(db, tokenTables{
-		Tokens:       tables.Tokens,
-		Ownership:    tables.Ownership,
-		AuditTokens:  tables.AuditTokens,
-		IssuedTokens: tables.IssuedTokens,
-		PublicParams: tables.PublicParams,
-		Ledger:       tables.Ledger,
+		Tokens:         tables.Tokens,
+		Ownership:      tables.Ownership,
+		AuditTokens:    tables.AuditTokens,
+		IssuedTokens:   tables.IssuedTokens,
+		PublicParams:   tables.PublicParams,
+		Ledger:         tables.Ledger,
+		Certifications: tables.Certifications,
 	})
 	if createSchema {
 		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema()); err != nil {

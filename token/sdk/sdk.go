@@ -96,14 +96,14 @@ func (p *SDK) Install() error {
 	// Token and Transaction DBs, and derivatives
 	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type"))
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	tokendbManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type"))
-	assert.NoError(p.registry.RegisterService(tokendbManager))
-	auditdbManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
-	assert.NoError(p.registry.RegisterService(auditdbManager))
+	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type"))
+	assert.NoError(p.registry.RegisterService(tokenDBManager))
+	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
+	assert.NoError(p.registry.RegisterService(auditDBManager))
 
 	ownerManager := owner.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
-	auditorManager := auditor.NewManager(networkProvider, auditdbManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(auditorManager))
 	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
 
@@ -155,7 +155,7 @@ func (p *SDK) Install() error {
 
 	// Certification
 	assert.NoError(p.registry.RegisterService(
-		certification.NewTTXDBStorageProvider(ttxdbManager)),
+		certification.NewDBStorageProvider(tokenDBManager)),
 		"failed to register certification storage",
 	)
 

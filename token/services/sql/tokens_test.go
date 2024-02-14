@@ -8,10 +8,12 @@ package sql
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
 
@@ -63,6 +65,7 @@ var TokensCases = []struct {
 	{"ListIssuedTokens", TListIssuedTokens},
 	{"DeleteMultiple", TDeleteMultiple},
 	{"PublicParams", TPublicParams},
+	{"TCertification", TCertification},
 }
 
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
@@ -522,4 +525,62 @@ func TPublicParams(t *testing.T, db *TokenDB) {
 	res, err = db.GetRawPublicParams()
 	assert.NoError(t, err) // not found
 	assert.Equal(t, res, b1)
+}
+
+func TCertification(t *testing.T, db *TokenDB) {
+	wg := sync.WaitGroup{}
+	wg.Add(40)
+	for i := 0; i < 40; i++ {
+		go func(i int) {
+			tokenID := &token2.ID{
+				TxId:  fmt.Sprintf("tx_%d", i),
+				Index: 0,
+			}
+			assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
+				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
+			}))
+			assert.True(t, db.ExistsCertification(tokenID))
+			assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+				assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
+				return nil
+			}))
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	for i := 0; i < 40; i++ {
+		tokenID := &token2.ID{
+			TxId:  fmt.Sprintf("tx_%d", i),
+			Index: 0,
+		}
+		assert.True(t, db.ExistsCertification(tokenID))
+		assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+			assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
+			return nil
+		}))
+	}
+
+	// check the certification of a token that was never stored
+	tokenID := &token2.ID{
+		TxId:  "pineapple",
+		Index: 0,
+	}
+	assert.False(t, db.ExistsCertification(tokenID))
+	found := false
+	assert.Error(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+		found = true
+		return nil
+	}))
+	assert.False(t, found)
+
+	// store an empty certification and check that an error is returned
+	assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
+		tokenID: {},
+	}))
+	assert.Error(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+		found = true
+		return nil
+	}))
+	assert.False(t, found)
 }
