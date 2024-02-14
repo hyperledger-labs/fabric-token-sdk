@@ -2,6 +2,10 @@ module github.com/hyperledger-labs/fabric-token-sdk
 
 go 1.20
 
+// // replace github.com/hyperledger-labs/fabric-smart-client => /Users/arne/dev/cbdc/fabric-smart-client
+// replace github.com/hyperledger-labs/fabric-smart-client => github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240205200645-0261c9b2a7d8
+// //	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20231211140843-bcd3948aa9df
+
 require (
 	github.com/IBM/idemix v0.0.2-0.20231107110441-534ea4193b8f
 	github.com/IBM/idemix/bccsp/types v0.0.0-20231107110234-4cf31dd43660
@@ -27,8 +31,8 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/tedsuo/ifrit v0.0.0-20220120221754-dd274de71113
 	github.com/test-go/testify v1.1.4
-	github.com/testcontainers/testcontainers-go v0.26.0
-	github.com/testcontainers/testcontainers-go/modules/postgres v0.26.0
+	github.com/testcontainers/testcontainers-go v0.27.0
+	github.com/testcontainers/testcontainers-go/modules/postgres v0.27.0
 	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	go.uber.org/atomic v1.11.0
 	go.uber.org/zap v1.25.0
@@ -96,10 +100,10 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/flatbuffers v1.12.1 // indirect
-	github.com/google/go-cmp v0.5.9 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/pprof v0.0.0-20230817174616-7a8ec2ada47b // indirect
-	github.com/google/uuid v1.3.1 // indirect
+	github.com/google/uuid v1.4.0 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
@@ -197,7 +201,7 @@ require (
 	github.com/raulk/go-watchdog v1.3.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/sergi/go-diff v1.0.0 // indirect
-	github.com/shirou/gopsutil/v3 v3.23.9 // indirect
+	github.com/shirou/gopsutil/v3 v3.23.11 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/spaolacci/murmur3 v1.1.0 // indirect
