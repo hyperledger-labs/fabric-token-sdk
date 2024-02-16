@@ -7,13 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
-	math2 "math"
-	"strconv"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	math2 "math"
+	"strconv"
 )
 
 var _ = Describe("Range Proof", func() {
@@ -35,8 +34,8 @@ var _ = Describe("Range Proof", func() {
 				H := curve.GenG1.Mul(curve.NewRandomZr(rand))
 				G := curve.GenG1.Mul(curve.NewRandomZr(rand))
 				for i := 0; i < len(leftGens); i++ {
-					leftGens[i] = curve.HashToG1([]byte(strconv.Itoa(2 * i)))
-					rightGens[i] = curve.HashToG1([]byte(strconv.Itoa(2*i + 1)))
+					leftGens[i] = curve.HashToG1([]byte(strconv.Itoa(i)))
+					rightGens[i] = curve.HashToG1([]byte(strconv.Itoa(i + 1)))
 				}
 				bf := curve.NewRandomZr(rand)
 				com := G.Mul(curve.NewZrFromInt(115))
