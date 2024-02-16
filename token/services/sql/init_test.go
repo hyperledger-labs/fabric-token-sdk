@@ -8,6 +8,7 @@ package sql
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"path"
@@ -15,12 +16,63 @@ import (
 	"time"
 
 	_ "github.com/lib/pq"
+	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	_ "modernc.org/sqlite"
 )
+
+var Transactions *TransactionDB
+var Tokens *TokenDB
+
+func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
+	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
+	if Transactions != nil || Tokens != nil {
+		// return errors.New("database can only be initialized once") // TODO: how do we handle this?
+		panic("database can only be initialized once")
+	}
+
+	tables, err := getTableNames(tablePrefix, name)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get table names")
+	}
+
+	db, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return errors.Wrapf(err, "failed to open db [%s]", driverName)
+	}
+	db.SetMaxOpenConns(maxOpenConns)
+
+	if err = db.Ping(); err != nil {
+		return errors.Wrapf(err, "failed to ping db [%s]", driverName)
+	}
+	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
+
+	Transactions = newTransactionDB(db, transactionTables{
+		Movements:             tables.Movements,
+		Transactions:          tables.Transactions,
+		Requests:              tables.Requests,
+		Validations:           tables.Validations,
+		TransactionEndorseAck: tables.TransactionEndorseAck,
+	})
+	Tokens = newTokenDB(db, tokenTables{
+		Tokens:         tables.Tokens,
+		Ownership:      tables.Ownership,
+		AuditTokens:    tables.AuditTokens,
+		IssuedTokens:   tables.IssuedTokens,
+		PublicParams:   tables.PublicParams,
+		Ledger:         tables.Ledger,
+		Certifications: tables.Certifications,
+	})
+	if createSchema {
+		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema()); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 func TestGetTableNames(t *testing.T) {
 	const name = "default,mychannel,tokenchaincode"

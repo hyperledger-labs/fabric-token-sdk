@@ -21,7 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
-	db2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/db"
+	vaultdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/db"
 	"github.com/pkg/errors"
 )
 
@@ -95,7 +95,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new storage")
 		}
-		res, err = db2.NewVault(tmsID, storage, ttxDB, tokenDB, fabric2.NewVault(ch, tokenStore))
+		res, err = vaultdb.NewVault(tmsID, storage, ttxDB, tokenDB, fabric2.NewVault(ch, tokenStore))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}
@@ -113,7 +113,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new storage")
 		}
-		res, err = db2.NewVault(tmsID, storage, ttxDB, tokenDB, orion2.NewVault(ons, tokenStore))
+		res, err = vaultdb.NewVault(tmsID, storage, ttxDB, tokenDB, orion2.NewVault(ons, tokenStore))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}

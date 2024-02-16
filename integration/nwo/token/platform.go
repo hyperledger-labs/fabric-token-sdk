@@ -292,7 +292,7 @@ func (p *Platform) DeleteDBs(tms *topology2.TMS, id string) {
 		if node.Name == id {
 			// get the network handler for this TMS
 			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
-			// generate artifacts
+			// delete dbs
 			nh.DeleteDBs(node)
 		}
 	}

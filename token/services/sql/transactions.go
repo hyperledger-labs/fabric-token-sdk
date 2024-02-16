@@ -415,11 +415,68 @@ func (db *TransactionDB) Close() error {
 		return errors.Wrap(err, "could not close DB")
 	}
 
-	// TODO: this is not a clean solution
-	Transactions = nil
-	Tokens = nil
-
 	return nil
+}
+
+func (db *TransactionDB) GetSchema() string {
+	return fmt.Sprintf(`
+		CREATE TABLE IF NOT EXISTS %s (
+			id CHAR(36) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL,
+			action_type INT NOT NULL,
+			sender_eid TEXT NOT NULL,
+			recipient_eid TEXT NOT NULL,
+			token_type TEXT NOT NULL,
+			amount BIGINT NOT NULL,
+			stored_at TIMESTAMP NOT NULL,
+			status TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+
+		CREATE TABLE IF NOT EXISTS %s (
+			id CHAR(36) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL,
+			enrollment_id TEXT NOT NULL,
+			token_type TEXT NOT NULL,
+			amount BIGINT NOT NULL,
+			stored_at TIMESTAMP NOT NULL,
+			status TEXT NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+
+		CREATE TABLE IF NOT EXISTS %s (
+			tx_id TEXT NOT NULL PRIMARY KEY,
+			request BYTEA NOT NULL
+		);
+		CREATE TABLE IF NOT EXISTS %s (
+			tx_id TEXT NOT NULL PRIMARY KEY,
+			request BYTEA NOT NULL,
+			metadata BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL,
+			status TEXT NOT NULL
+		);
+
+		CREATE TABLE IF NOT EXISTS %s (
+			id CHAR(36) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL,
+			endorser BYTEA NOT NULL,
+            sigma BYTEA NOT NULL,
+			stored_at TIMESTAMP NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+		`,
+		db.table.Transactions,
+		db.table.Transactions,
+		db.table.Transactions,
+		db.table.Movements,
+		db.table.Movements,
+		db.table.Movements,
+		db.table.Requests,
+		db.table.Validations,
+		db.table.TransactionEndorseAck,
+		db.table.TransactionEndorseAck,
+		db.table.TransactionEndorseAck,
+	)
 }
 
 func marshal(in map[string][]byte) (string, error) {
@@ -514,65 +571,4 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	// Skipping this record causes a recursive call
 	// to this function to parse next record
 	return t.Next()
-}
-
-func (db *TransactionDB) GetSchema() string {
-	return fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
-			action_type INT NOT NULL,
-			sender_eid TEXT NOT NULL,
-			recipient_eid TEXT NOT NULL,
-			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			status TEXT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
-
-		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
-			enrollment_id TEXT NOT NULL,
-			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			status TEXT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
-
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY,
-			request BYTEA NOT NULL
-		);
-		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY,
-			request BYTEA NOT NULL,
-			metadata BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			status TEXT NOT NULL
-		);
-
-		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
-			endorser BYTEA NOT NULL,
-            sigma BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
-		`,
-		db.table.Transactions,
-		db.table.Transactions,
-		db.table.Transactions,
-		db.table.Movements,
-		db.table.Movements,
-		db.table.Movements,
-		db.table.Requests,
-		db.table.Validations,
-		db.table.TransactionEndorseAck,
-		db.table.TransactionEndorseAck,
-		db.table.TransactionEndorseAck,
-	)
 }

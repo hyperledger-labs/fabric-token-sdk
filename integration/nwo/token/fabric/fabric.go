@@ -8,7 +8,6 @@ package fabric
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -25,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
@@ -65,36 +65,33 @@ type tokenPlatform interface {
 type Entry struct {
 	TMS     *topology2.TMS
 	TCC     *TCC
-	CA      CA
+	CA      common2.CA
 	Wallets map[string]*generators.Wallets
 }
 
 type NetworkHandler struct {
-	TokenPlatform                     tokenPlatform
+	common2.NetworkHandler
 	TokenChaincodePath                string
 	TokenChaincodeParamsReplaceSuffix string
 	Entries                           map[string]*Entry
-	CryptoMaterialGenerators          map[string]generators.CryptoMaterialGenerator
-	CASupports                        map[string]CAFactory
-
-	EventuallyTimeout time.Duration
-	ColorIndex        int
 }
 
 func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *NetworkHandler {
 	return &NetworkHandler{
-		TokenPlatform:                     tokenPlatform,
-		EventuallyTimeout:                 10 * time.Minute,
+		NetworkHandler: common2.NetworkHandler{
+			TokenPlatform:     tokenPlatform,
+			EventuallyTimeout: 10 * time.Minute,
+			CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
+				"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+				"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+			},
+			CASupports: map[string]common2.CAFactory{
+				"dlog": common2.NewIdemixCASupport,
+			},
+		},
 		TokenChaincodePath:                DefaultTokenChaincode,
 		TokenChaincodeParamsReplaceSuffix: DefaultTokenChaincodeParamsReplaceSuffix,
 		Entries:                           map[string]*Entry{},
-		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-			"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
-			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
-		},
-		CASupports: map[string]CAFactory{
-			"dlog": NewIdemixCASupport,
-		},
 	}
 }
 
@@ -175,31 +172,13 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(node))
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
-		"TMSID":   func() string { return tms.ID() },
-		"TMS":     func() *topology2.TMS { return tms },
-		"Wallets": func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
-		"SQLDataSource": func() string {
-			return "file:" +
-				filepath.Join(
-					p.TTXDBSQLDataSourceDir(node),
-					fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
-				) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
-		},
-		"TokensSQLDataSource": func() string {
-			return "file:" +
-				filepath.Join(
-					p.TokensDBSQLDataSourceDir(node),
-					fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
-				) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
-		},
-		"AuditSQLDataSource": func() string {
-			return "file:" +
-				filepath.Join(
-					p.AuditDBSQLDataSourceDir(node),
-					fmt.Sprintf("%s_%s_%s", tms.Network, tms.Channel, tms.Namespace)+"_db.sqlite",
-				) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
-		},
-		"NodeKVSPath": func() string { return p.FSCNodeKVSDir(node) },
+		"TMSID":               func() string { return tms.ID() },
+		"TMS":                 func() *topology2.TMS { return tms },
+		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"SQLDataSource":       func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(node), tms) },
+		"TokensSQLDataSource": func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(node), tms) },
+		"AuditSQLDataSource":  func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(node), tms) },
+		"NodeKVSPath":         func() string { return p.FSCNodeKVSDir(node) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -322,15 +301,6 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 	return ""
 }
 
-func (p *NetworkHandler) DeleteDBs(node *sfcnode.Node) {
-	//logger.Infof("remove all [%s]", p.TTXDBSQLDataSourceDir(node))
-	//Expect(os.RemoveAll(p.TTXDBSQLDataSourceDir(node))).ToNot(HaveOccurred())
-	logger.Infof("remove all [%s]", p.TokensDBSQLDataSourceDir(node))
-	Expect(os.RemoveAll(p.TokensDBSQLDataSourceDir(node))).ToNot(HaveOccurred())
-	//Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
-	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
-}
-
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {
 	p.CryptoMaterialGenerators[driver] = generator
 }
@@ -430,20 +400,4 @@ func (p *NetworkHandler) GetEntry(tms *topology2.TMS) *Entry {
 		p.Entries[tms.Network+tms.Channel+tms.Namespace] = entry
 	}
 	return entry
-}
-
-func (p *NetworkHandler) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "ttxdb")
-}
-
-func (p *NetworkHandler) TokensDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "tokensdb")
-}
-
-func (p *NetworkHandler) AuditDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "auditdb")
-}
-
-func (p *NetworkHandler) FSCNodeKVSDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "kvs")
 }

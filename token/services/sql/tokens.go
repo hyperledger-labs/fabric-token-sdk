@@ -859,43 +859,6 @@ func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, [
 	return nil
 }
 
-type UnspentTokensIterator struct {
-	txs *sql.Rows
-}
-
-func (u *UnspentTokensIterator) Close() {
-	u.txs.Close()
-}
-
-func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
-	if !u.txs.Next() {
-		return nil, nil
-	}
-
-	var typ, quantity string
-	var owner []byte
-	var id token.ID
-	// tx_id, idx, owner_raw, token_type, quantity
-	err := u.txs.Scan(
-		&id.TxId,
-		&id.Index,
-		&owner,
-		&typ,
-		&quantity,
-	)
-	if err != nil {
-		return nil, err
-	}
-	return &token.UnspentToken{
-		Id: &id,
-		Owner: &token.Owner{
-			Raw: owner,
-		},
-		Type:     typ,
-		Quantity: quantity,
-	}, err
-}
-
 func (db *TokenDB) GetSchema() string {
 	// owner_raw is as1 encoded Type(string), Identity([]byte) (see token/core/identity/owner.go).
 	// If Type is "htlc", Identity is a json encoded Script.
@@ -999,4 +962,41 @@ func (db *TokenDB) GetSchema() string {
 		db.table.Ledger,
 		db.table.Certifications,
 	)
+}
+
+type UnspentTokensIterator struct {
+	txs *sql.Rows
+}
+
+func (u *UnspentTokensIterator) Close() {
+	u.txs.Close()
+}
+
+func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
+	if !u.txs.Next() {
+		return nil, nil
+	}
+
+	var typ, quantity string
+	var owner []byte
+	var id token.ID
+	// tx_id, idx, owner_raw, token_type, quantity
+	err := u.txs.Scan(
+		&id.TxId,
+		&id.Index,
+		&owner,
+		&typ,
+		&quantity,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return &token.UnspentToken{
+		Id: &id,
+		Owner: &token.Owner{
+			Raw: owner,
+		},
+		Type:     typ,
+		Quantity: quantity,
+	}, err
 }

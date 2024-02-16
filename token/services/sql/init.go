@@ -19,56 +19,6 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.sql")
 
-var Transactions *TransactionDB
-var Tokens *TokenDB
-
-func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
-	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
-	if Transactions != nil || Tokens != nil {
-		// return errors.New("database can only be initialized once") // TODO: how do we handle this?
-		panic("database can only be initialized once")
-	}
-
-	tables, err := getTableNames(tablePrefix, name)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get table names")
-	}
-
-	db, err := sql.Open(driverName, dataSourceName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to open db [%s]", driverName)
-	}
-	db.SetMaxOpenConns(maxOpenConns)
-
-	if err = db.Ping(); err != nil {
-		return errors.Wrapf(err, "failed to ping db [%s]", driverName)
-	}
-	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
-
-	Transactions = newTransactionDB(db, transactionTables{
-		Movements:             tables.Movements,
-		Transactions:          tables.Transactions,
-		Requests:              tables.Requests,
-		Validations:           tables.Validations,
-		TransactionEndorseAck: tables.TransactionEndorseAck,
-	})
-	Tokens = newTokenDB(db, tokenTables{
-		Tokens:         tables.Tokens,
-		Ownership:      tables.Ownership,
-		AuditTokens:    tables.AuditTokens,
-		IssuedTokens:   tables.IssuedTokens,
-		PublicParams:   tables.PublicParams,
-		Ledger:         tables.Ledger,
-		Certifications: tables.Certifications,
-	})
-	if createSchema {
-		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 func initSchema(db *sql.DB, schemas ...string) error {
 	logger.Info("creating tables")
 	tx, err := db.Begin()
@@ -104,7 +54,6 @@ type tableNames struct {
 	Ledger                string
 }
 
-// TODO get rid of the suffix
 func getTableNames(prefix, name string) (tableNames, error) {
 	if prefix != "" {
 		r := regexp.MustCompile("^[a-zA-Z_]+$")
