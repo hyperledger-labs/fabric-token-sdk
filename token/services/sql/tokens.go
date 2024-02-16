@@ -964,6 +964,10 @@ func (db *TokenDB) GetSchema() string {
 	)
 }
 
+func (db *TokenDB) Close() {
+	db.db.Close()
+}
+
 type UnspentTokensIterator struct {
 	txs *sql.Rows
 }

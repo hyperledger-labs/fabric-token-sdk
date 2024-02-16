@@ -29,9 +29,11 @@ var Tokens *TokenDB
 
 func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
 	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
-	if Transactions != nil || Tokens != nil {
-		// return errors.New("database can only be initialized once") // TODO: how do we handle this?
-		panic("database can only be initialized once")
+	if Transactions != nil {
+		Transactions.Close()
+	}
+	if Tokens != nil {
+		Tokens.Close()
 	}
 
 	tables, err := getTableNames(tablePrefix, name)
