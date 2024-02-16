@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const Seperator = "%%"
+
 // G1Array is an array of G1 elements
 type G1Array struct {
 	Elements []*math.G1
@@ -33,6 +35,7 @@ func (a *G1Array) Bytes() ([]byte, error) {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
 		bytes := e.Bytes()
+		raw = append(raw, []byte(Seperator)...)
 		raw = append(raw, bytes...)
 	}
 	return raw, nil
@@ -46,6 +49,7 @@ func (a *G2Array) Bytes() ([]byte, error) {
 			return nil, errors.Errorf("failed to marshal array of G2")
 		}
 		bytes := e.Bytes()
+		raw = append(raw, []byte(Seperator)...)
 		raw = append(raw, bytes...)
 	}
 	return raw, nil
@@ -59,6 +63,7 @@ func (a *GTArray) Bytes() ([]byte, error) {
 			return nil, errors.Errorf("failed to marshal array of G2")
 		}
 		bytes := e.Bytes()
+		raw = append(raw, []byte(Seperator)...)
 		raw = append(raw, bytes...)
 	}
 	return raw, nil
