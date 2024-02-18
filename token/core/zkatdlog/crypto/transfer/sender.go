@@ -8,6 +8,7 @@ package transfer
 
 import (
 	"encoding/json"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -100,8 +101,8 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
-		//toBesigned := append(raw, []byte(common.Separator)...)
-		//toBesigned = append(toBesigned, []byte(txID)...)
+		toBesigned := append(raw, []byte(common.Seperator)...)
+		toBesigned = append(toBesigned, []byte(txID)...)
 
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
@@ -212,7 +213,8 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 	return com
 }
 
-// IsGraphHiding returns false. zkatdlog is not graph hiding
+// IsGraphHiding returns false
+// zkatdlog is not graph hiding
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }

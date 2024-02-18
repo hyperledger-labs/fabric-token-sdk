@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package rp
 
 import (
-	"fmt"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/pkg/errors"
@@ -15,7 +14,7 @@ import (
 
 type RangeProver struct {
 	Commitment           *math.G1
-	Value                int
+	Value                uint64
 	CommitmentGenerators []*math.G1
 	BlindingFactor       *math.Zr
 	LeftGenerators       []*math.G1
@@ -66,7 +65,6 @@ func (p *RangeProver) Prove() (*RangeProof, error) {
 
 	com := commitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
 	rp.InnerProduct = innerProduct(left, right, p.Curve)
-	fmt.Printf("ip %s\n", rp.InnerProduct.String())
 	ipp := NewIPAProver(rp.InnerProduct, left, right, p.Q, p.LeftGenerators, rightGeneratorsPrime, com, p.NumberOfRounds, p.Curve)
 	rp.IPA, err = ipp.Prove()
 	if err != nil {
@@ -116,7 +114,6 @@ func (v *RangeVerifier) Verify(rp *RangeProof) error {
 	com.Sub(rp.T1.Mul(x))
 	com.Sub(rp.T2.Mul(xSquare))
 
-	fmt.Printf("zSquare %s\n", zSquare.String())
 	comPrime := v.Commitment.Mul(zSquare)
 	comPrime.Add(v.CommitmentGenerators[0].Mul(polEval))
 
@@ -132,7 +129,7 @@ func (v *RangeVerifier) Verify(rp *RangeProof) error {
 	return nil
 }
 
-func NewRangeProver(com *math.G1, value int, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *RangeProver {
+func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *RangeProver {
 	return &RangeProver{
 		Commitment:           com,
 		Value:                value,

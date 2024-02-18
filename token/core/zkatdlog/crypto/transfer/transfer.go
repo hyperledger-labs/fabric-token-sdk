@@ -66,7 +66,6 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 		values = append(values, outW[i].Value)
 		blindingFactors = append(blindingFactors, c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder))
 	}
-	// commit to the type of inputs and outputs
 	commitmentToType := pp.PedParams[0].Mul(c.HashToZr([]byte(inputWitness[0].Type)))
 	commitmentToType.Add(pp.PedParams[2].Mul(typeBF))
 
@@ -76,7 +75,6 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputWitness) != 1 || len(outputWitness) != 1 {
 		var coms []*math.G1
-		// The range prover takes as input commitments outputs[i]/commitmentToType
 		for i := 0; i < len(outputs); i++ {
 			out := outputs[i].Copy()
 			out.Sub(commitmentToType)
