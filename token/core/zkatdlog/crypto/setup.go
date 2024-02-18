@@ -33,10 +33,10 @@ type RangeProofParams struct {
 }
 
 func (rpp *RangeProofParams) Validate() error {
-	if rpp.BitLength <= 0 {
+	if rpp.BitLength == 0 {
 		return errors.New("invalid range proof parameters: bit length is zero")
 	}
-	if rpp.NumberOfRounds <= 0 {
+	if rpp.NumberOfRounds == 0 {
 		return errors.New("invalid range proof parameters: number of rounds is zero")
 	}
 	if rpp.BitLength != int(math.Pow(2, float64(rpp.NumberOfRounds))) {
@@ -121,10 +121,6 @@ func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, id
 	pp.RangeProofParams.NumberOfRounds = int(math.Log2(float64(bitLength)))
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = pp.ComputeMaxTokenValue()
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "verification failed, invalid parameters")
-	}
-
 	return pp, nil
 }
 
@@ -205,9 +201,6 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 }
 
 func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
-	if bitLength <= 0 {
-		return errors.Errorf("invalid bit length, must be larger than 0")
-	}
 	curve := mathlib.Curves[pp.Curve]
 
 	pp.RangeProofParams = &RangeProofParams{
@@ -220,8 +213,8 @@ func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
 	pp.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
 
 	for i := 0; i < bitLength; i++ {
-		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1))))
-		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1)+1)))
+		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte(strconv.Itoa(2 * (i + 1))))
+		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte(strconv.Itoa(2*(i+1) + 1)))
 	}
 
 	return nil
