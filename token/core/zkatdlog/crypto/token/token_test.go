@@ -22,7 +22,7 @@ var _ = Describe("Token", func() {
 
 	BeforeEach(func() {
 		var err error
-		pp, err = crypto.Setup(100, 2, nil, math.FP256BN_AMCL)
+		pp, err = crypto.Setup(100, nil, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		c := math.Curves[pp.Curve]
 		rand, err := c.Rand()

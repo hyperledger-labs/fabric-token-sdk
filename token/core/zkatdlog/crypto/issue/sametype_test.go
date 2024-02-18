@@ -8,32 +8,24 @@ package issue_test
 import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Issued Token Correctness", func() {
 	var (
-		verifier *issue.WellFormednessVerifier
-		prover   *issue.WellFormednessProver
+		verifier *issue.SameTypeVerifier
+		prover   *issue.SameTypeProver
 	)
 	BeforeEach(func() {
-		prover = GetITCPProver()
-		verifier = prover.WellFormednessVerifier
+		prover, verifier = GetSameTypeProverAndVerifier()
 	})
 	Describe("Prove", func() {
 		Context("parameters and witness are initialized correctly", func() {
 			It("Succeeds", func() {
-				raw, err := prover.Prove()
+				proof, err := prover.Prove()
 				Expect(err).NotTo(HaveOccurred())
-				Expect(raw).NotTo(BeNil())
-				proof := &issue.WellFormedness{}
-				err = proof.Deserialize(raw)
-				Expect(err).NotTo(HaveOccurred())
-				Expect(proof.Challenge).NotTo(BeNil())
-				Expect(len(proof.BlindingFactors)).To(Equal(2))
-				Expect(len(proof.Values)).To(Equal(2))
+				Expect(proof).NotTo(BeNil())
 			})
 		})
 	})
@@ -47,38 +39,39 @@ var _ = Describe("Issued Token Correctness", func() {
 	})
 })
 
-func PrepareTokenWitness(pp []*math.G1) ([]*token.TokenDataWitness, []*math.G1, []*math.Zr) {
+func prepareTokens(pp []*math.G1) []*math.G1 {
 	curve := math.Curves[1]
 	rand, err := curve.Rand()
 	Expect(err).NotTo(HaveOccurred())
 
-	bF := make([]*math.Zr, 2)
-	values := make([]*math.Zr, 2)
+	bf := make([]*math.Zr, 2)
+	values := make([]uint64, 2)
+
 	for i := 0; i < 2; i++ {
-		bF[i] = curve.NewRandomZr(rand)
+		bf[i] = curve.NewRandomZr(rand)
 	}
-	ttype := "ABC"
-	values[0] = curve.NewZrFromInt(100)
-	values[1] = curve.NewZrFromInt(50)
+	values[0] = 100
+	values[1] = 50
 
-	tokens := PrepareTokens(values, bF, ttype, pp)
-	return token.NewTokenDataWitness(ttype, values, bF), tokens, bF
-}
-
-func PrepareTokens(values, bf []*math.Zr, ttype string, pp []*math.G1) []*math.G1 {
-	curve := math.Curves[1]
 	tokens := make([]*math.G1, len(values))
 	for i := 0; i < len(values); i++ {
-		tokens[i] = NewToken(values[i], bf[i], ttype, pp, curve)
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp, curve)
 	}
 	return tokens
 }
 
-func GetITCPProver() *issue.WellFormednessProver {
+func GetSameTypeProverAndVerifier() (*issue.SameTypeProver, *issue.SameTypeVerifier) {
 	pp := preparePedersenParameters()
-	tw, tokens, _ := PrepareTokenWitness(pp)
+	curve := math.Curves[1]
 
-	return issue.NewWellFormednessProver(tw, tokens, false, pp, math.Curves[1])
+	rand, err := curve.Rand()
+	Expect(err).NotTo(HaveOccurred())
+	blindingFactor := curve.NewRandomZr(rand)
+	com := pp[0].Mul(curve.HashToZr([]byte("ABC")))
+	com.Add(pp[2].Mul(blindingFactor))
+
+	tokens := prepareTokens(pp)
+	return issue.NewSameTypeProver("ABC", blindingFactor, com, true, pp, math.Curves[1]), issue.NewSameTypeVerifier(tokens, true, pp, math.Curves[1])
 }
 
 func preparePedersenParameters() []*math.G1 {
