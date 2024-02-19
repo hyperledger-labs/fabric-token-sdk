@@ -18,8 +18,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	cryptodlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/pkg/errors"
 )
 
@@ -104,8 +104,8 @@ func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID) *DLogPublicParam
 }
 
 func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
-	if len(args) != 2 {
-		return nil, errors.Errorf("invalid number of arguments, expected 2, got %d", len(args))
+	if len(args) != 3 {
+		return nil, errors.Errorf("invalid number of arguments, expected 3, got %d", len(args))
 	}
 	// first argument is the idemix root path
 	idemixRootPath, ok := args[0].(string)
@@ -123,18 +123,23 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		curveID = math3.BLS12_381_BBS
 	}
 
-	bits := int64(64)
-	if len(args) > 1 {
-		baseArg, ok := args[1].(string)
-		if !ok {
-			return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
-		}
-		bits, err = strconv.ParseInt(baseArg, 10, 32)
-		if err != nil {
-			return nil, err
-		}
+	/*baseArg, ok := args[1].(string)
+	if !ok {
+		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
 	}
-	pp, err := cryptodlog.Setup(int(bits), ipkBytes, curveID)
+	base, err := strconv.ParseUint(baseArg, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	expArg, ok := args[2].(string)
+	if !ok {
+		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[2])
+	}
+	exp, err := strconv.ParseUint(expArg, 10, 32)
+	if err != nil {
+		return nil, err
+	}*/
+	pp, err := cryptodlog.Setup(64, ipkBytes, curveID)
 	if err != nil {
 		return nil, err
 	}
