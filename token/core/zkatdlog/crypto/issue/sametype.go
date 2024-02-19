@@ -52,8 +52,8 @@ type SameTypeRandomness struct {
 type SameTypeProver struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
-	// Confidential indicates if the type is hidden
-	Confidential bool
+	// Anonymous indicates if the issuance is anonymous, and therefore,  the type is hidden
+	Anonymous bool
 	// tokenType is the type of the tokens to be issued
 	tokenType string
 	// blindingFactor is the blinding factor in the CommitmentToType
@@ -67,13 +67,13 @@ type SameTypeProver struct {
 }
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
-func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, confidential bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
+func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
 
 	return &SameTypeProver{
 		tokenType:        ttype,
 		blindingFactor:   bf,
 		CommitmentToType: com,
-		Confidential:     confidential,
+		Anonymous:        anonymous,
 		PedParams:        pp,
 		Curve:            c,
 	}
@@ -82,7 +82,7 @@ func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, confidential boo
 // Prove returns a SameType proof
 func (p *SameTypeProver) Prove() (*SameType, error) {
 	tokenType := p.Curve.HashToZr([]byte(p.tokenType))
-	if p.Confidential {
+	if p.Anonymous {
 		// compute commitments used in the Schnorr proof
 		err := p.computeCommitment()
 		if err != nil {
@@ -137,24 +137,24 @@ type SameTypeVerifier struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
 	Tokens    []*math.G1
-	// Confidential indicates if the issuance is anonymous
-	Confidential bool
+	// anonymous indicates if the issuance is anonymous
+	anonymous bool
 }
 
 // NewSameTypeVerifier returns a SameTypeVerifier corresponding to the passed parameters
-func NewSameTypeVerifier(tokens []*math.G1, confidential bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
+func NewSameTypeVerifier(tokens []*math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
 	return &SameTypeVerifier{
-		Tokens:       tokens,
-		Confidential: confidential,
-		PedParams:    pp,
-		Curve:        c,
+		Tokens:    tokens,
+		anonymous: anonymous,
+		PedParams: pp,
+		Curve:     c,
 	}
 }
 
 // Verify returns an error if the serialized proof is an invalid SameType proof
 func (v *SameTypeVerifier) Verify(proof *SameType) error {
 	// recompute commitments used in ZK proofs
-	if v.Confidential {
+	if v.anonymous {
 		// recompute challenge and check proof validity
 		com := v.PedParams[0].Mul(proof.Type)
 		com.Add(v.PedParams[2].Mul(proof.BlindingFactor))
