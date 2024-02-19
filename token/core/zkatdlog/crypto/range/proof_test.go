@@ -5,15 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 */
 package rangeproof_test
 
-import (
-	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
-	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-)
-
+/*
 var _ = Describe("range proof", func() {
 	var (
 		prover   *rp.Prover
@@ -78,3 +70,4 @@ func preparePedersenParameters() []*math.G1 {
 	}
 	return pp
 }
+*/

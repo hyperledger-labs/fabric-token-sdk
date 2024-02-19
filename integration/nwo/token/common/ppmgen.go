@@ -123,7 +123,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		curveID = math3.BLS12_381_BBS
 	}
 
-	baseArg, ok := args[1].(string)
+	/*baseArg, ok := args[1].(string)
 	if !ok {
 		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
 	}
@@ -138,8 +138,8 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 	exp, err := strconv.ParseUint(expArg, 10, 32)
 	if err != nil {
 		return nil, err
-	}
-	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, curveID)
+	}*/
+	pp, err := cryptodlog.Setup(64, ipkBytes, curveID)
 	if err != nil {
 		return nil, err
 	}
