@@ -45,7 +45,7 @@ func getRangeProver() *rp.Prover {
 	tok.Add(pp[1].Mul(value))
 	tok.Add(pp[2].Mul(bf))
 
-	tw := &token.TokenDataWitness{Value: value, Type: "ABC", BlindingFactor: bf}
+	tw := &token.TokenDataWitness{Value: value, Type: "ABC", blindingFactor: bf}
 
 	prover := rp.NewProver([]*token.TokenDataWitness{tw}, []*math.G1{tok}, signatures, 2, pp, signer.PK, c.GenG1, signer.Q, c)
 
