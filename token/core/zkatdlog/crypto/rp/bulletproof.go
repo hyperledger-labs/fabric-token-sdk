@@ -12,20 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type RangeProver struct {
-	Commitment           *math.G1
-	Value                uint64
-	CommitmentGenerators []*math.G1
-	BlindingFactor       *math.Zr
-	LeftGenerators       []*math.G1
-	RightGenerators      []*math.G1
-	P                    *math.G1
-	Q                    *math.G1
-	NumberOfRounds       int
-	BitLength            int
-	Curve                *math.Curve
-}
-
+// RangeProof proves that a committed value < max
 type RangeProof struct {
 	T1           *math.G1
 	T2           *math.G1
@@ -37,19 +24,91 @@ type RangeProof struct {
 	IPA          *IPA
 }
 
-type RangeVerifier struct {
-	Commitment           *math.G1
+// rangeProver proves that a committed value < 2^BitLength.
+type rangeProver struct {
+	// value is the value committed in Commitment
+	value uint64
+	// blindingFactor is the randomness used to compute Commitment
+	blindingFactor *math.Zr
+	// Commitment is a hiding Pedersen commitment to value: Commitment = G^vH^r
+	Commitment *math.G1
+	// CommitmentGenerators are the generators (G, H) used to compute Commitment
 	CommitmentGenerators []*math.G1
-	LeftGenerators       []*math.G1
-	RightGenerators      []*math.G1
-	P                    *math.G1
-	Q                    *math.G1
-	NumberOfRounds       int
-	BitLength            int
-	Curve                *math.Curve
+	// LeftGenerators are the generators that will be used to commit to
+	// the bits (b_0,..., b_{BitLength-1}) of value
+	LeftGenerators []*math.G1
+	// RightGenerators are the generators that will be used to commit to (b_i-1)
+	RightGenerators []*math.G1
+	// P is a random generator of G1
+	P *math.G1
+	// Q is a random generator of G1
+	Q *math.G1
+	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
+	// number of rounds of the reduction protocol
+	NumberOfRounds int
+	// BitLength is the size of the binary representation of value
+	BitLength int
+	// Curve is the curve over which the computation is performed
+	Curve *math.Curve
 }
 
-func (p *RangeProver) Prove() (*RangeProof, error) {
+func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *rangeProver {
+	return &rangeProver{
+		Commitment:           com,
+		value:                value,
+		CommitmentGenerators: commitmentGen,
+		blindingFactor:       blindingFactor,
+		LeftGenerators:       leftGen,
+		RightGenerators:      rightGen,
+		P:                    P,
+		Q:                    Q,
+		NumberOfRounds:       numberOfRounds,
+		BitLength:            bitlength,
+		Curve:                curve,
+	}
+
+}
+
+// rangeVerifier verifies that a committed value < 2^BitLength.
+type rangeVerifier struct {
+	// Commitment is a hiding Pedersen commitment to value: Commitment = G^vH^r
+	Commitment *math.G1
+	// CommitmentGenerators are the generators (G, H) used to compute Commitment
+	CommitmentGenerators []*math.G1
+	// LeftGenerators are the generators that will be used to commit to
+	// the bits (b_0,..., b_{BitLength-1}) of value
+	LeftGenerators []*math.G1
+	// RightGenerators are the generators that will be used to commit to (b_i-1)
+	RightGenerators []*math.G1
+	// P is a random generator of G1
+	P *math.G1
+	// Q is a random generator of G1
+	Q *math.G1
+	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
+	// number of rounds of the reduction protocol
+	NumberOfRounds int
+	// BitLength is the size of the binary representation of value
+	BitLength int
+	// Curve is the curve over which the computation is performed
+	Curve *math.Curve
+}
+
+func NewRangeVerifier(com *math.G1, commitmentGen []*math.G1, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *rangeVerifier {
+	return &rangeVerifier{
+		Commitment:           com,
+		CommitmentGenerators: commitmentGen,
+		LeftGenerators:       leftGen,
+		RightGenerators:      rightGen,
+		P:                    P,
+		Q:                    Q,
+		NumberOfRounds:       numberOfRounds,
+		BitLength:            bitlength,
+		Curve:                curve,
+	}
+
+}
+
+func (p *rangeProver) Prove() (*RangeProof, error) {
 	left, right, y, rp, err := p.preprocess()
 	if err != nil {
 		return nil, err
@@ -74,7 +133,20 @@ func (p *RangeProver) Prove() (*RangeProof, error) {
 	return rp, nil
 }
 
-func (v *RangeVerifier) Verify(rp *RangeProof) error {
+func (v *rangeVerifier) Verify(rp *RangeProof) error {
+	// check that the proof is well-formed
+	if rp.InnerProduct == nil || rp.C == nil || rp.D == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	if rp.T1 == nil || rp.T2 == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	if rp.Tau == nil || rp.Delta == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
+	if rp.IPA == nil {
+		return errors.New("invalid range proof: nil elements")
+	}
 	array := common.GetG1Array([]*math.G1{rp.T1, rp.T2})
 	bytesToHash, err := array.Bytes()
 	if err != nil {
@@ -129,39 +201,7 @@ func (v *RangeVerifier) Verify(rp *RangeProof) error {
 	return nil
 }
 
-func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *RangeProver {
-	return &RangeProver{
-		Commitment:           com,
-		Value:                value,
-		CommitmentGenerators: commitmentGen,
-		BlindingFactor:       blindingFactor,
-		LeftGenerators:       leftGen,
-		RightGenerators:      rightGen,
-		P:                    P,
-		Q:                    Q,
-		NumberOfRounds:       numberOfRounds,
-		BitLength:            bitlength,
-		Curve:                curve,
-	}
-
-}
-
-func NewRangeVerifier(com *math.G1, commitmentGen []*math.G1, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *RangeVerifier {
-	return &RangeVerifier{
-		Commitment:           com,
-		CommitmentGenerators: commitmentGen,
-		LeftGenerators:       leftGen,
-		RightGenerators:      rightGen,
-		P:                    P,
-		Q:                    Q,
-		NumberOfRounds:       numberOfRounds,
-		BitLength:            bitlength,
-		Curve:                curve,
-	}
-
-}
-
-func (p *RangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProof, error) {
+func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProof, error) {
 	var left, right []*math.Zr
 	var randomLeft, randomRight []*math.Zr
 	rand, err := p.Curve.Rand()
@@ -171,7 +211,7 @@ func (p *RangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
 	for i := 0; i < p.BitLength; i++ {
-		b := 1 << uint(i) & p.Value
+		b := 1 << uint(i) & p.value
 		if b > 0 {
 			b = 1
 		}
@@ -243,7 +283,7 @@ func (p *RangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 
 	tau := p.Curve.ModMul(x, tau1, p.Curve.GroupOrder)
 	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(tau2, x.PowMod(p.Curve.NewZrFromInt(2)), p.Curve.GroupOrder), p.Curve.GroupOrder)
-	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(zSquare, p.BlindingFactor, p.Curve.GroupOrder), p.Curve.GroupOrder)
+	tau = p.Curve.ModAdd(tau, p.Curve.ModMul(zSquare, p.blindingFactor, p.Curve.GroupOrder), p.Curve.GroupOrder)
 
 	delta := p.Curve.ModAdd(rho, p.Curve.ModMul(eta, x, p.Curve.GroupOrder), p.Curve.GroupOrder)
 
@@ -259,7 +299,7 @@ func (p *RangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	return left, right, y, rp, nil
 }
 
-func (v *RangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, powy []*math.Zr, z, zSquare *math.Zr) error {
+func (v *rangeVerifier) verifyIPA(rp *RangeProof, x *math.Zr, powy []*math.Zr, z, zSquare *math.Zr) error {
 
 	com := rp.D.Mul(x)
 	com.Add(rp.C)
