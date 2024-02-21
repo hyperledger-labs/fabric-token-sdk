@@ -64,7 +64,7 @@ func NewRangeCorrectnessProver(coms []*math.G1, values []uint64, blindingFactors
 
 }
 
-// RangeCorrectnessVerifier verifies that a collection of committed values fall withing the authorized range
+// RangeCorrectnessVerifier verifies that a collection of committed values fall within the authorized range
 type RangeCorrectnessVerifier struct {
 	// Commitments is an array of hiding Pedersen commitments: Commitments[i] = G^{v_i}H^{r_}
 	Commitments []*math.G1

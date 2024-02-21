@@ -109,7 +109,7 @@ func (p *ipaProver) Prove() (*IPA, error) {
 	if err != nil {
 		return nil, err
 	}
-	bytesToHash = append(bytesToHash, []byte(common.Seperator)...)
+	bytesToHash = append(bytesToHash, []byte(common.Separator)...)
 	bytesToHash = append(bytesToHash, p.InnerProduct.Bytes()...)
 	// compute first challenge
 	x := p.Curve.HashToZr(bytesToHash)
@@ -144,7 +144,7 @@ func (v *ipaVerifier) Verify(proof *IPA) error {
 	if err != nil {
 		return err
 	}
-	bytesToHash = append(bytesToHash, []byte(common.Seperator)...)
+	bytesToHash = append(bytesToHash, []byte(common.Separator)...)
 	bytesToHash = append(bytesToHash, v.InnerProduct.Bytes()...)
 	x := v.Curve.HashToZr(bytesToHash)
 	// C is commitment to leftVector, rightVector and their inner product
