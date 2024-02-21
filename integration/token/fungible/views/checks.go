@@ -50,7 +50,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
 	v, err := net.Vault(tms.Namespace())
 	assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
-	l, err := net.Ledger(tms.Namespace())
+	l, err := net.Ledger()
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
 	var ttxDB TokenTransactionDB

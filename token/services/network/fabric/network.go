@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -362,14 +361,6 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	return &lm{
 		lm: n.n.LocalMembership(),
 	}
-}
-
-func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	ai := &idemix.AuditInfo{}
-	if err := ai.FromBytes(raw); err != nil {
-		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
-	}
-	return ai.EnrollmentID(), nil
 }
 
 func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {

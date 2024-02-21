@@ -96,9 +96,6 @@ type Network interface {
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership
 
-	// GetEnrollmentID returns the enrollment id of the passed identity
-	GetEnrollmentID(raw []byte) (string, error)
-
 	// SubscribeTxStatusChanges registers a listener for transaction status changes for the passed id
 	SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error
 

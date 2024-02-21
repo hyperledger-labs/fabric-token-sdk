@@ -428,11 +428,6 @@ func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
 }
 
-// GetEnrollmentID returns the enrollment ID bound to the passed marshalled audit info
-func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	return n.n.GetEnrollmentID(raw)
-}
-
 // SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
 func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
 	return n.n.SubscribeTxStatusChanges(txID, listener)
@@ -449,7 +444,7 @@ func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string,
 	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
 }
 
-func (n *Network) Ledger(namespace string) (*Ledger, error) {
+func (n *Network) Ledger() (*Ledger, error) {
 	l, err := n.n.Ledger()
 	if err != nil {
 		return nil, err
