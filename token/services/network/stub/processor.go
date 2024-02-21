@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package stub
 
 import (
 	"strconv"
@@ -13,7 +13,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
@@ -21,8 +20,6 @@ import (
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
 type net interface {
 	Name() string

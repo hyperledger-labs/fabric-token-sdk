@@ -8,16 +8,19 @@ package stub
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 )
 
+var logger = flogging.MustGetLogger("token-sdk.network.stub")
+
 type Driver struct{}
 
 func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.Network, error) {
-	// instantiate vault
+	// TODO instantiate or inject vault
 
-	return NewNetwork(sp, n, ch), nil
+	return NewNetwork(network, channel, nil), nil
 }
 
 func init() {

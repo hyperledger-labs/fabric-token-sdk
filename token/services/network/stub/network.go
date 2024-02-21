@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package fabric
+package stub
 
 import (
 	"context"
@@ -12,19 +12,16 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -37,11 +34,11 @@ const (
 	AreTokensSpent            = "areTokensSpent"
 )
 
-type NewVaultFunc = func(network, channel, namespace string) (vault.TokenVault, error)
-
 type lm struct {
 	lm *fabric.LocalMembership
 }
+
+// TODO: are these the signers of the envelope?
 
 func (n *lm) DefaultIdentity() view.Identity {
 	return []byte{}
@@ -55,7 +52,6 @@ func (n *lm) AnonymousIdentity() view.Identity {
 }
 
 type nv struct {
-	// v          *fabric.Vault
 	tokenVault driver.TokenVault
 }
 
@@ -74,6 +70,7 @@ func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
 func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 	// vc, _, err := v.v.Status(txID)
 	// return driver.ValidationCode(vc), err
+	panic("not implemented")
 }
 
 func (v *nv) GetLastTxID() (string, error) {
@@ -104,33 +101,23 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 
 func (v *nv) DiscardTx(txID string) error {
 	// set status to driver.Invalid
-	return v.v.DiscardTx(txID)
+	panic("not implemented")
 }
 
 type Network struct {
-	// n      *fabric.NetworkService
-	// ch     *fabric.Channel
 	network     string
 	channel     string
 	persistence *Persistence
-	sp          view2.ServiceProvider
-
-	vaultCacheLock sync.RWMutex
-	vaultCache     map[string]driver.Vault
-	NewVault       NewVaultFunc
-
-	listeners map[string]driver.TxStatusChangeListener
+	vault       driver.Vault
+	listeners   map[string]driver.TxStatusChangeListener
 }
 
-func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel, newVault NewVaultFunc) *Network {
+func NewNetwork(network, channel string, tokenVault driver.Vault) *Network {
 	return &Network{
-		// n:          n,
-		// ch:         ch,
+		network:     network,
+		channel:     channel,
 		persistence: new(Persistence),
-		sp:          sp,
-		// ledger:      &ledger{ch.Ledger()},
-		vaultCache: map[string]driver.Vault{},
-		NewVault:   newVault,
+		vault:       tokenVault,
 	}
 }
 
@@ -143,13 +130,8 @@ func (n *Network) Channel() string {
 }
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
-
-	tokenVault, err := n.NewVault(n.Name(), n.Channel(), namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token vault")
-	}
 	nv := &nv{
-		tokenVault: tokenVault,
+		tokenVault: n.vault,
 	}
 	return nv, nil
 }
@@ -183,7 +165,7 @@ func (p *Persistence) GetTransient(id string) (driver.TransientMap, error) {
 	return p.transient[id], nil
 }
 func (p *Persistence) GetPublicParams(namespace string) ([]byte, error) {
-	return os.ReadFile("file.txt")
+	return os.ReadFile("../zkat_dlog.json")
 }
 
 // to implement the ledger interface
@@ -231,11 +213,12 @@ func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error
 }
 
 func (n *Network) IsFinal(ctx context.Context, id string) error {
-	return nil // n.persistence.transactions[id].Status
+	// n.persistence.transactions[id].Status
+	return nil
 }
 
 func (n *Network) NewEnvelope() driver.Envelope {
-	return n.n.TransactionManager().NewEnvelope()
+	return NewEnvelope()
 }
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
@@ -277,6 +260,8 @@ func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
 }
 
 func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*token.ID) ([][]byte, error) {
+	// TODO store tokens
+
 	var tokens [][]byte
 	for _, id := range IDs {
 		s := id.String()
@@ -287,6 +272,8 @@ func (n *Network) QueryTokens(context view.Context, namespace string, IDs []*tok
 }
 
 func (n *Network) AreTokensSpent(c view.Context, namespace string, tokenIDs []*token.ID, meta []string) ([]bool, error) {
+	// TODO store tokens
+
 	sIDs := make([]string, len(tokenIDs))
 	var err error
 	for i, id := range tokenIDs {
@@ -340,17 +327,21 @@ func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatus
 
 	return nil
 	// Remote: /transaction/:id/subscribe
+	// should have reconnect option
+	// keep track of subscription
 }
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
 	n.listeners[txID] = nil
 	return nil
+	// Remove subscription / close connection
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
 	//transferMetadataKey, err := keys.CreateTransferActionMetadataKey(key)
 
 	// TODO: when adding tx to persistence, we have to store the transfer metadata too (see tcc)
+	return nil, nil
 }
 
 // Expose the 'Status(id)' function
@@ -359,6 +350,6 @@ func (n *Network) Ledger() (driver.Ledger, error) {
 }
 
 func (n *Network) ProcessNamespace(namespace string) error {
-	// Get updates from remote ledger
+	// Get updates from remote ledger (what's the starting point?)
 	return nil
 }
