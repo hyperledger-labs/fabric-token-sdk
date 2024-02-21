@@ -165,7 +165,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	}
 
 	// check unspent tokens
-	uit, err := v.UnspentTokensIterator()
+	uit, err := v.QueryEngine().UnspentTokensIterator()
 	assert.NoError(err, "failed to get unspent tokens")
 	defer uit.Close()
 	var unspentTokenIDs []*token2.ID
@@ -248,7 +248,7 @@ func (l *ListVaultUnspentTokensView) Call(context view.Context) (interface{}, er
 	vault, err := net.Vault(l.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", l.TMSID.Network, l.TMSID.Channel, l.TMSID.Namespace)
 
-	return vault.ListUnspentTokens()
+	return vault.QueryEngine().ListUnspentTokens()
 }
 
 type ListVaultUnspentTokensViewFactory struct{}

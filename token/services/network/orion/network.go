@@ -16,7 +16,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -279,20 +278,6 @@ func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
 
 func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
-}
-
-// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
-func (v *nv) UnspentTokensIteratorBy(id, typ string) (network.UnspentTokensIterator, error) {
-	return v.tokenVault.QueryEngine().UnspentTokensIteratorBy(id, typ)
-}
-
-// UnspentTokensIterator returns an iterator over all unspent tokens
-func (v *nv) UnspentTokensIterator() (network.UnspentTokensIterator, error) {
-	return v.tokenVault.QueryEngine().UnspentTokensIterator()
-}
-
-func (v *nv) ListUnspentTokens() (*token.UnspentTokens, error) {
-	return v.tokenVault.QueryEngine().ListUnspentTokens()
 }
 
 func (v *nv) Exists(id *token.ID) bool {

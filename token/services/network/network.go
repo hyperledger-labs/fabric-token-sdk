@@ -167,26 +167,6 @@ func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *Vault) UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error) {
-	return v.v.UnspentTokensIteratorBy(id, typ)
-}
-
-func (v *Vault) UnspentTokensIterator() (UnspentTokensIterator, error) {
-	return v.v.UnspentTokensIterator()
-}
-
-func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {
-	return v.v.ListUnspentTokens()
-}
-
-func (v *Vault) Exists(id *token2.ID) bool {
-	return v.v.Exists(id)
-}
-
-func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
-	return v.v.Store(certifications)
-}
-
 func (v *Vault) Status(id string) (ValidationCode, error) {
 	vc, err := v.v.Status(id)
 	return ValidationCode(vc), err
@@ -200,10 +180,11 @@ func (v *Vault) DiscardTx(id string) error {
 // Those that are not available are deleted.
 // The function returns the list of deleted token ids
 func (v *Vault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
-	it, err := v.UnspentTokensIterator()
+	it, err := v.QueryEngine().UnspentTokensIterator()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
 	}
+	defer it.Close()
 
 	var deleted []*token2.ID
 	tms := token.GetManagementService(context, token.WithTMS(v.n.Name(), v.n.Channel(), v.ns))

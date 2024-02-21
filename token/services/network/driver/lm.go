@@ -10,8 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
-type GetFunc func() (view.Identity, []byte, error)
-
 // LocalMembership models the local membership service
 type LocalMembership interface {
 	// DefaultIdentity returns the default FSC node identity
