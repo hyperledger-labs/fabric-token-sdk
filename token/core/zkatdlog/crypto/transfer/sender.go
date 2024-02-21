@@ -8,10 +8,10 @@ package transfer
 
 import (
 	"encoding/json"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
