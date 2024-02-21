@@ -74,6 +74,7 @@ var _ = Describe("Transfer", func() {
 			})
 			It("fails during proof generation", func() {
 				proof, err := prover.Prove()
+				Expect(err).NotTo(HaveOccurred())
 				Expect(proof).NotTo(BeNil())
 				err = verifier.Verify(proof)
 				Expect(err).To(HaveOccurred())
