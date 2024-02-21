@@ -46,11 +46,8 @@ type Network interface {
 	// the argument is ignored.
 	Vault(namespace string) (Vault, error)
 
-	// GetRWSet returns the read-write set for the passed id and marshalled set
-	GetRWSet(id string, results []byte) (RWSet, error)
-
 	// StoreEnvelope stores locally the passed envelope mapping it to the passed id
-	StoreEnvelope(id string, env []byte) error
+	StoreEnvelope(env Envelope) error
 
 	// EnvelopeExists returns true if an envelope exists for the passed id, false otherwise
 	EnvelopeExists(id string) bool

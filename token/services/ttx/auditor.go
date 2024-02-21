@@ -361,17 +361,7 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	}
 
 	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	rws, err := backend.GetRWSet(tx.ID(), env.Results())
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting rwset for tx [%s]", tx.ID())
-	}
-	rws.Done()
-
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return errors.WithMessagef(err, "failed marshalling tx env [%s]", tx.ID())
-	}
-	if err := backend.StoreEnvelope(env.TxID(), rawEnv); err != nil {
+	if err := backend.StoreEnvelope(env); err != nil {
 		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 

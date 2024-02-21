@@ -145,14 +145,6 @@ func (e *Envelope) String() string {
 	return e.e.String()
 }
 
-type RWSet struct {
-	rws driver.RWSet
-}
-
-func (s *RWSet) Done() {
-	s.rws.Done()
-}
-
 type Vault struct {
 	n  *Network
 	v  driver.Vault
@@ -329,18 +321,12 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	return &Vault{n: n, v: v, ns: namespace}, nil
 }
 
-// GetRWSet returns the read-write set unmarshalled from the given bytes and bound to the given id
-func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
-	rws, err := n.n.GetRWSet(id, results)
-	if err != nil {
-		return nil, err
-	}
-	return &RWSet{rws: rws}, nil
-}
-
 // StoreEnvelope stores locally the given transaction envelope and associated it with the given id
-func (n *Network) StoreEnvelope(id string, env []byte) error {
-	return n.n.StoreEnvelope(id, env)
+func (n *Network) StoreEnvelope(env *Envelope) error {
+	if env == nil {
+		return errors.Errorf("nil envelope")
+	}
+	return n.n.StoreEnvelope(env.e)
 }
 
 func (n *Network) ExistEnvelope(id string) bool {

@@ -103,16 +103,19 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	return nv, nil
 }
 
-func (n *Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
-	rws, err := n.n.Vault().GetRWSet(id, results)
+func (n *Network) StoreEnvelope(env driver.Envelope) error {
+	rws, err := n.n.Vault().GetRWSet(env.TxID(), env.Results())
 	if err != nil {
-		return nil, err
+		return errors.WithMessagef(err, "failed to get rwset")
 	}
-	return rws, nil
-}
+	rws.Done()
 
-func (n *Network) StoreEnvelope(id string, env []byte) error {
-	return n.n.Vault().StoreEnvelope(id, env)
+	rawEnv, err := env.Bytes()
+	if err != nil {
+		return errors.WithMessagef(err, "failed marshalling tx env [%s]", env.TxID())
+	}
+
+	return n.n.Vault().StoreEnvelope(env.TxID(), rawEnv)
 }
 
 func (n *Network) EnvelopeExists(id string) bool {
