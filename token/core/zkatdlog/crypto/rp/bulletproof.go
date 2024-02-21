@@ -328,7 +328,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	x := p.Curve.HashToZr(bytesToHash)
 
 	// compute vectors left and right against which an IPA will be produced
-	// if p.Value is withing the authorized range, then L_iR_i =0 and L_i-R_i-1 = 0
+	// if p.Value is within the authorized range, then L_iR_i =0 and L_i-R_i-1 = 0
 	// the inner product <left, right> = p.Value*z^2+t1x+t2x^2+f(z, y)
 	// f(z, y) = \sum (z-z^2)*y^i + z^3*2^i
 	for i := 0; i < len(left); i++ {

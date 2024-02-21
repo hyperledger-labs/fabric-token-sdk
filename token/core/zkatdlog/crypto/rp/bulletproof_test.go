@@ -7,12 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package rp_test
 
 import (
+	math2 "math"
+	"strconv"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	math2 "math"
-	"strconv"
 )
 
 var _ = Describe("Range Proof", func() {

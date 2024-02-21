@@ -11,7 +11,6 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -101,8 +100,8 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
-		toBesigned := append(raw, []byte(common.Seperator)...)
-		toBesigned = append(toBesigned, []byte(txID)...)
+		//toBesigned := append(raw, []byte(common.Separator)...)
+		//toBesigned = append(toBesigned, []byte(txID)...)
 
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
