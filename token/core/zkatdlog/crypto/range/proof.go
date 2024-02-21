@@ -194,7 +194,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	// value in token = \prod_{i=0}^Exponent com_i^{Base^i}
 	proof.EqualityProofs = &EqualityProofs{}
 	for k := 0; k < len(p.Tokens); k++ {
-		sp := &common.SchnorrProver{Challenge: proof.Challenge, Randomness: []*mathlib.Zr{randomness.values[k], randomness.tokensBlindingFactors[k], randomness.commitmentsToValueBlindingFactors[k]}, Witness: []*mathlib.Zr{p.tokenWitness[k].Value, p.tokenWitness[k].BlindingFactor, preProcessed.commitmentsToValuesBlindingFactors[k]}, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
+		sp := &common.SchnorrProver{Challenge: proof.Challenge, Randomness: []*mathlib.Zr{randomness.values[k], randomness.tokensBlindingFactors[k], randomness.commitmentsToValueBlindingFactors[k]}, Witness: []*mathlib.Zr{p.Curve.NewZrFromInt(int64(p.tokenWitness[k].Value)), p.tokenWitness[k].BlindingFactor, preProcessed.commitmentsToValuesBlindingFactors[k]}, SchnorrVerifier: &common.SchnorrVerifier{Curve: p.Curve}}
 		proofs, err := sp.Prove()
 		if err != nil {
 			return nil, err
@@ -304,10 +304,10 @@ func (p *Prover) preProcess() (*rangeProofWitness, error) {
 
 	for k := 0; k < len(p.tokenWitness); k++ {
 		values := make([]int, p.Exponent)
-		if p.tokenWitness[k] == nil || p.tokenWitness[k].Value == nil {
+		if p.tokenWitness[k] == nil {
 			return nil, errors.New("can't compute range proof: please provide valid token witness")
 		}
-		v, err := p.tokenWitness[k].Value.Int()
+		v := int64(p.tokenWitness[k].Value)
 		if err != nil {
 			return nil, err
 		}
