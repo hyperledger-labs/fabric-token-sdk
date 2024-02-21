@@ -212,8 +212,7 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 	return com
 }
 
-// IsGraphHiding returns false
-// zkatdlog is not graph hiding
+// IsGraphHiding returns false. zkatdlog is not graph hiding
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }
