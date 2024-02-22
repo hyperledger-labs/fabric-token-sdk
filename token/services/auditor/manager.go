@@ -49,8 +49,8 @@ func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider
 }
 
 // Auditor returns the Auditor for the given wallet
-func (cm *Manager) Auditor(w *token.AuditorWallet) (*Auditor, error) {
-	return cm.getAuditor(w.TMS().ID(), w.ID())
+func (cm *Manager) Auditor(tmsID token.TMSID) (*Auditor, error) {
+	return cm.getAuditor(tmsID, "")
 }
 
 func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
@@ -223,14 +223,19 @@ func Get(sp view.ServiceProvider, w *token.AuditorWallet) *Auditor {
 		logger.Debugf("no wallet provided")
 		return nil
 	}
+	return GetByTMSID(sp, w.TMS().ID())
+}
+
+// GetByTMSID returns the Auditor instance for the passed auditor wallet
+func GetByTMSID(sp view.ServiceProvider, tmsID token.TMSID) *Auditor {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).Auditor(w)
+	auditor, err := s.(*Manager).Auditor(tmsID)
 	if err != nil {
-		logger.Errorf("failed to get db for wallet [%s:%s]: [%s]", w.TMS().ID(), w.ID(), err)
+		logger.Errorf("failed to get db for tms [%s]: [%s]", tmsID, err)
 		return nil
 	}
 	return auditor

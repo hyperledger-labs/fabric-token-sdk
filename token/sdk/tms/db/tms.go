@@ -137,9 +137,18 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	if err := n.ProcessorManager().AddProcessor(
 		namespace,
 		fabric2.NewTokenRWSetProcessor(
-			n,
+			n.Name(),
 			namespace,
-			p.sp,
+			func() *token3.ManagementServiceProvider {
+				return token3.GetManagementServiceProvider(p.sp)
+			},
+			func(tms *token3.ManagementService, txID string) ([]byte, error) {
+				tr, err := owner.Get(p.sp, tms).GetTokenRequest(txID)
+				if err != nil || len(tr) == 0 {
+					return auditor.GetByTMSID(p.sp, tms.ID()).GetTokenRequest(txID)
+				}
+				return tr, nil
+			},
 			network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 			tokenStore,
