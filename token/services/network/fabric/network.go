@@ -15,13 +15,11 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -76,20 +74,6 @@ func (v *nv) Status(txID string) (driver.ValidationCode, error) {
 
 func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
-}
-
-// UnspentTokensIteratorBy returns an iterator over all unspent tokens by type and id
-func (v *nv) UnspentTokensIteratorBy(id, typ string) (network.UnspentTokensIterator, error) {
-	return v.tokenVault.QueryEngine().UnspentTokensIteratorBy(id, typ)
-}
-
-// UnspentTokensIterator returns an iterator over all unspent tokens
-func (v *nv) UnspentTokensIterator() (network.UnspentTokensIterator, error) {
-	return v.tokenVault.QueryEngine().UnspentTokensIterator()
-}
-
-func (v *nv) ListUnspentTokens() (*token.UnspentTokens, error) {
-	return v.tokenVault.QueryEngine().ListUnspentTokens()
 }
 
 func (v *nv) Exists(id *token.ID) bool {
@@ -193,16 +177,19 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	return nv, nil
 }
 
-func (n *Network) GetRWSet(id string, results []byte) (driver.RWSet, error) {
-	rws, err := n.ch.Vault().GetRWSet(id, results)
+func (n *Network) StoreEnvelope(env driver.Envelope) error {
+	rws, err := n.ch.Vault().GetRWSet(env.TxID(), env.Results())
 	if err != nil {
-		return nil, err
+		return errors.WithMessagef(err, "failed to get rwset")
 	}
-	return rws, nil
-}
+	rws.Done()
 
-func (n *Network) StoreEnvelope(id string, env []byte) error {
-	return n.ch.Vault().StoreEnvelope(id, env)
+	rawEnv, err := env.Bytes()
+	if err != nil {
+		return errors.WithMessagef(err, "failed marshalling tx env [%s]", env.TxID())
+	}
+
+	return n.ch.Vault().StoreEnvelope(env.TxID(), rawEnv)
 }
 
 func (n *Network) EnvelopeExists(id string) bool {
@@ -359,14 +346,6 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	return &lm{
 		lm: n.n.LocalMembership(),
 	}
-}
-
-func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	ai := &idemix.AuditInfo{}
-	if err := ai.FromBytes(raw); err != nil {
-		return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", raw)
-	}
-	return ai.EnrollmentID(), nil
 }
 
 func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {

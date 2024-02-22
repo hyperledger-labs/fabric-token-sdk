@@ -145,14 +145,6 @@ func (e *Envelope) String() string {
 	return e.e.String()
 }
 
-type RWSet struct {
-	rws driver.RWSet
-}
-
-func (s *RWSet) Done() {
-	s.rws.Done()
-}
-
 type Vault struct {
 	n  *Network
 	v  driver.Vault
@@ -175,26 +167,6 @@ func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *Vault) UnspentTokensIteratorBy(id, typ string) (UnspentTokensIterator, error) {
-	return v.v.UnspentTokensIteratorBy(id, typ)
-}
-
-func (v *Vault) UnspentTokensIterator() (UnspentTokensIterator, error) {
-	return v.v.UnspentTokensIterator()
-}
-
-func (v *Vault) ListUnspentTokens() (*token2.UnspentTokens, error) {
-	return v.v.ListUnspentTokens()
-}
-
-func (v *Vault) Exists(id *token2.ID) bool {
-	return v.v.Exists(id)
-}
-
-func (v *Vault) Store(certifications map[*token2.ID][]byte) error {
-	return v.v.Store(certifications)
-}
-
 func (v *Vault) Status(id string) (ValidationCode, error) {
 	vc, err := v.v.Status(id)
 	return ValidationCode(vc), err
@@ -208,10 +180,11 @@ func (v *Vault) DiscardTx(id string) error {
 // Those that are not available are deleted.
 // The function returns the list of deleted token ids
 func (v *Vault) PruneInvalidUnspentTokens(context view.Context) ([]*token2.ID, error) {
-	it, err := v.UnspentTokensIterator()
+	it, err := v.QueryEngine().UnspentTokensIterator()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get an iterator of unspent tokens")
 	}
+	defer it.Close()
 
 	var deleted []*token2.ID
 	tms := token.GetManagementService(context, token.WithTMS(v.n.Name(), v.n.Channel(), v.ns))
@@ -329,18 +302,12 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	return &Vault{n: n, v: v, ns: namespace}, nil
 }
 
-// GetRWSet returns the read-write set unmarshalled from the given bytes and bound to the given id
-func (n *Network) GetRWSet(id string, results []byte) (*RWSet, error) {
-	rws, err := n.n.GetRWSet(id, results)
-	if err != nil {
-		return nil, err
-	}
-	return &RWSet{rws: rws}, nil
-}
-
 // StoreEnvelope stores locally the given transaction envelope and associated it with the given id
-func (n *Network) StoreEnvelope(id string, env []byte) error {
-	return n.n.StoreEnvelope(id, env)
+func (n *Network) StoreEnvelope(env *Envelope) error {
+	if env == nil {
+		return errors.Errorf("nil envelope")
+	}
+	return n.n.StoreEnvelope(env.e)
 }
 
 func (n *Network) ExistEnvelope(id string) bool {
@@ -442,11 +409,6 @@ func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
 }
 
-// GetEnrollmentID returns the enrollment ID bound to the passed marshalled audit info
-func (n *Network) GetEnrollmentID(raw []byte) (string, error) {
-	return n.n.GetEnrollmentID(raw)
-}
-
 // SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
 func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
 	return n.n.SubscribeTxStatusChanges(txID, listener)
@@ -463,7 +425,7 @@ func (n *Network) LookupTransferMetadataKey(namespace, startingTxID, key string,
 	return n.n.LookupTransferMetadataKey(namespace, startingTxID, key, timeout)
 }
 
-func (n *Network) Ledger(namespace string) (*Ledger, error) {
+func (n *Network) Ledger() (*Ledger, error) {
 	l, err := n.n.Ledger()
 	if err != nil {
 		return nil, err
