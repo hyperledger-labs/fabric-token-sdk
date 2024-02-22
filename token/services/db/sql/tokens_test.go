@@ -486,21 +486,21 @@ func TPublicParams(t *testing.T, db *TokenDB) {
 	b := []byte("test bytes")
 	b1 := []byte("test bytes1")
 
-	res, err := db.GetPublicParams()
+	res, err := db.PublicParams()
 	assert.NoError(t, err) // not found
 	assert.Nil(t, res)
 
 	err = db.StorePublicParams(b)
 	assert.NoError(t, err)
 
-	res, err = db.GetPublicParams()
+	res, err = db.PublicParams()
 	assert.NoError(t, err) // not found
 	assert.Equal(t, res, b)
 
 	err = db.StorePublicParams(b1)
 	assert.NoError(t, err)
 
-	res, err = db.GetPublicParams()
+	res, err = db.PublicParams()
 	assert.NoError(t, err) // not found
 	assert.Equal(t, res, b1)
 }

@@ -8,7 +8,6 @@ package db
 
 import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
@@ -32,9 +31,8 @@ func NewVault(tmsID token2.TMSID, cs certification.Storage, ttxdb *ttxdb.DB, tok
 		tokenDB: tokenDB,
 		ttxdb:   ttxdb,
 		queryEngine: &QueryEngine{
-			ns:      tmsID.Namespace,
 			backend: backend,
-			tokenDB: tokenDB,
+			DB:      tokenDB,
 		},
 		certificationStorage: cs,
 	}, nil
@@ -53,9 +51,8 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 }
 
 type QueryEngine struct {
-	ns      string
+	*tokendb.DB
 	backend driver2.Vault
-	tokenDB *tokendb.DB
 }
 
 func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
@@ -67,49 +64,8 @@ func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
 }
 
 func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
-	return q.tokenDB.IsMine(id.TxId, id.Index)
-}
-
-func (q *QueryEngine) UnspentTokensIterator() (driver.UnspentTokensIterator, error) {
-	return q.tokenDB.UnspentTokensIterator()
-}
-
-func (q *QueryEngine) UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error) {
-	return q.tokenDB.UnspentTokensIteratorBy(id, typ)
-}
-
-func (q *QueryEngine) ListUnspentTokens() (*token.UnspentTokens, error) {
-	return q.tokenDB.ListUnspentTokens()
-}
-
-func (q *QueryEngine) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
-	return q.tokenDB.ListAuditTokens(ids...)
-}
-
-func (q *QueryEngine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
-	return q.tokenDB.ListHistoryIssuedTokens()
-}
-
-func (q *QueryEngine) PublicParams() ([]byte, error) {
-	return q.tokenDB.GetPublicParams()
-}
-
-func (q *QueryEngine) GetTokenInfos(ids []*token.ID, callback driver.QueryCallbackFunc) error {
-	return q.tokenDB.GetTokenInfos(ids, callback)
-}
-
-func (q *QueryEngine) GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error {
-	return q.tokenDB.GetTokenOutputs(ids, callback)
-}
-
-func (q *QueryEngine) GetTokenInfoAndOutputs(ids []*token.ID, callback driver.QueryCallback2Func) error {
-	return q.tokenDB.GetTokenInfoAndOutputs(ids, callback)
-}
-
-func (q *QueryEngine) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error) {
-	return q.tokenDB.GetTokens(inputs...)
-}
-
-func (q *QueryEngine) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error) {
-	return q.tokenDB.WhoDeletedTokens(inputs...)
+	if id == nil {
+		return false, nil
+	}
+	return q.DB.IsMine(id.TxId, id.Index)
 }

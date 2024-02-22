@@ -200,7 +200,7 @@ func in(args *[]interface{}, field string, searchFor []interface{}) (where strin
 	return fmt.Sprintf("(%s)", strings.Join(argnum, " OR "))
 }
 
-func whereTokenIDs(args *[]interface{}, ids []*token.ID) (where string) {
+func whereTokenIDs(args *[]interface{}, ids []*token.ID) string {
 	switch len(ids) {
 	case 0:
 		return ""
@@ -213,7 +213,7 @@ func whereTokenIDs(args *[]interface{}, ids []*token.ID) (where string) {
 		for i, id := range ids {
 			*args = append(*args, id.TxId, id.Index)
 			l := len(*args)
-			in[i] = fmt.Sprintf("(%s, %s)", fmt.Sprintf("$%d", l-1), fmt.Sprintf("$%d", l))
+			in[i] = fmt.Sprintf("($%d, $%d)", l-1, l)
 		}
 		return fmt.Sprintf("(tx_id, idx) IN ( %s )", strings.Join(in, ", "))
 	}

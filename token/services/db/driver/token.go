@@ -97,8 +97,8 @@ type TokenDB interface {
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
 	// StorePublicParams stores the public parameters
 	StorePublicParams(raw []byte) error
-	// GetPublicParams return the stored public parameters
-	GetPublicParams() ([]byte, error)
+	// PublicParams returns the stored public parameters
+	PublicParams() ([]byte, error)
 }
 
 // TokenDBDriver is the interface for a token database driver

@@ -744,7 +744,7 @@ func (db *TokenDB) StorePublicParams(raw []byte) error {
 	return err
 }
 
-func (db *TokenDB) GetPublicParams() ([]byte, error) {
+func (db *TokenDB) PublicParams() ([]byte, error) {
 	var params []byte
 	query := fmt.Sprintf("SELECT raw FROM %s ORDER BY stored_at DESC LIMIT 1;", db.table.PublicParams)
 	logger.Debug(query)
