@@ -9,9 +9,10 @@ package fabtoken
 import (
 	"encoding/json"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/x509"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -34,9 +35,9 @@ type Deserializer struct {
 // NewDeserializer returns a deserializer
 func NewDeserializer() *Deserializer {
 	return &Deserializer{
-		auditorDeserializer: &x509.MSPIdentityDeserializer{},
-		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(&x509.MSPIdentityDeserializer{})),
+		auditorDeserializer: &x5092.MSPIdentityDeserializer{},
+		issuerDeserializer:  &x5092.MSPIdentityDeserializer{},
+		ownerDeserializer:   htlc.NewDeserializer(identity.NewRawOwnerIdentityDeserializer(&x5092.MSPIdentityDeserializer{})),
 	}
 }
 
@@ -57,12 +58,12 @@ func (d *Deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, er
 
 // GetOwnerMatcher is not needed in fabtoken, as identities are in the clear
 func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	ai := &x509.AuditInfo{}
+	ai := &x5092.AuditInfo{}
 	err := ai.FromBytes(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal")
 	}
-	return &x509.AuditInfoDeserializer{CommonName: string(ai.EnrollmentId)}, nil
+	return &x5092.AuditInfoDeserializer{CommonName: string(ai.EnrollmentId)}, nil
 }
 
 // EnrollmentService returns enrollment IDs behind the owners of token
@@ -84,7 +85,7 @@ func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {
-			ai := &x509.AuditInfo{}
+			ai := &x5092.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
 				return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
 			}
@@ -94,7 +95,7 @@ func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
 		return "", nil
 	}
 
-	ai := &x509.AuditInfo{}
+	ai := &x5092.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
 		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
 	}
@@ -112,7 +113,7 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {
-			ai := &x509.AuditInfo{}
+			ai := &x5092.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
 				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
@@ -122,7 +123,7 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 		return "", nil
 	}
 
-	ai := &x509.AuditInfo{}
+	ai := &x5092.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
 		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
 	}

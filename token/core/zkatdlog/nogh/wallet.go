@@ -9,52 +9,59 @@ package nogh
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-type WalletServiceBacked interface {
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
-	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+type WalletRegistry interface {
+	WalletIDs() ([]string, error)
+	Lock()
+	Unlock()
+	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
+	RegisterWallet(id string, wallet driver.Wallet) error
+	RegisterIdentity(identity view.Identity, wID string, meta any) error
+	ContainsIdentity(i view.Identity, id string) bool
 }
 
 type WalletService struct {
 	SignerService        common.SignerService
 	identityProvider     driver.IdentityProvider
-	WalletServiceBacked  WalletServiceBacked
+	TokenVault           TokenVault
 	PPM                  PublicParametersManager
 	DeserializerProvider DeserializerProviderFunc
-	configManager        config.Manager
+	ConfigManager        config.Manager
 
-	OwnerWalletsRegistry   *identity.WalletsRegistry
-	IssuerWalletsRegistry  *identity.WalletsRegistry
-	AuditorWalletsRegistry *identity.WalletsRegistry
+	OwnerWalletsRegistry   WalletRegistry
+	IssuerWalletsRegistry  WalletRegistry
+	AuditorWalletsRegistry WalletRegistry
 }
 
 func NewWalletService(
 	SignerService common.SignerService,
 	identityProvider driver.IdentityProvider,
-	walletServiceBacked WalletServiceBacked,
+	tokenVault TokenVault,
 	PPM PublicParametersManager,
 	deserializerProvider DeserializerProviderFunc,
 	configManager config.Manager,
-	store identity.Storage,
+	OwnerWalletsRegistry WalletRegistry,
+	IssuerWalletsRegistry WalletRegistry,
+	AuditorWalletsRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
 		SignerService:          SignerService,
 		identityProvider:       identityProvider,
-		WalletServiceBacked:    walletServiceBacked,
+		TokenVault:             tokenVault,
 		PPM:                    PPM,
 		DeserializerProvider:   deserializerProvider,
-		configManager:          configManager,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(identityProvider, driver.OwnerRole, store),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(identityProvider, driver.IssuerRole, store),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(identityProvider, driver.AuditorRole, store),
+		ConfigManager:          configManager,
+		OwnerWalletsRegistry:   OwnerWalletsRegistry,
+		IssuerWalletsRegistry:  IssuerWalletsRegistry,
+		AuditorWalletsRegistry: AuditorWalletsRegistry,
 	}
 }
 
@@ -296,7 +303,7 @@ func newOwnerWallet(walletService *WalletService, id string, identityInfo driver
 	}
 
 	cacheSize := 0
-	tmsConfig := walletService.configManager.TMS()
+	tmsConfig := walletService.ConfigManager.TMS()
 	conf := tmsConfig.GetOwnerWallet(id)
 	if conf == nil {
 		cacheSize = tmsConfig.GetWalletDefaultCacheSize()
@@ -388,10 +395,10 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	if w.WalletService.WalletServiceBacked == nil {
+	if w.WalletService.TokenVault == nil {
 		return nil, errors.Errorf("no backend provided, cannot perform operation")
 	}
-	it, err := w.WalletService.WalletServiceBacked.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.WalletService.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -419,10 +426,10 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.Unspent
 
 func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	if w.WalletService.WalletServiceBacked == nil {
+	if w.WalletService.TokenVault == nil {
 		return nil, errors.Errorf("no backend provided, cannot perform operation")
 	}
-	it, err := w.WalletService.WalletServiceBacked.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.WalletService.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -477,10 +484,10 @@ func (w *issuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 
 func (w *issuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
 	logger.Debugf("issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
-	if w.walletService.WalletServiceBacked == nil {
+	if w.walletService.TokenVault == nil {
 		return nil, errors.Errorf("no backend provided, cannot perform operation")
 	}
-	source, err := w.walletService.WalletServiceBacked.ListHistoryIssuedTokens()
+	source, err := w.walletService.TokenVault.ListHistoryIssuedTokens()
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}

@@ -13,6 +13,8 @@ import (
 
 type TokenVault interface {
 	PublicParams() ([]byte, error)
+	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 }
 
 type VaultTokenLoader struct {

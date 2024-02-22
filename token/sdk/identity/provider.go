@@ -9,8 +9,8 @@ package identity
 import (
 	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 )
 
 type KVSStorageProvider struct {

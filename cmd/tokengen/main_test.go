@@ -12,10 +12,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/cmd/pp/common"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	. "github.com/onsi/gomega"
