@@ -4,23 +4,23 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package nogh
+package driver
 
 import (
 	"bytes"
-	"encoding/base64"
 	"encoding/json"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 
 	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
 
@@ -82,6 +82,50 @@ func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.auditDeserializer.GetOwnerMatcher(raw)
 }
 
+func (d *Deserializer) Recipients(raw []byte) ([]view.Identity, error) {
+	owner, err := identity.UnmarshallRawOwner(raw)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
+	}
+	if owner.Type == identity.SerializedIdentityType {
+		return []view.Identity{raw}, nil
+	}
+	_, recipient, err := htlc.GetScriptSenderAndRecipient(owner)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting script sender and recipient")
+	}
+	return []view.Identity{recipient}, nil
+}
+
+func (d *Deserializer) Match(id view.Identity, ai []byte) error {
+	matcher, err := d.GetOwnerMatcher(ai)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
+	}
+
+	// match identity and audit info
+	recipient, err := identity.UnmarshallRawOwner(id)
+	if err != nil {
+		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
+	}
+	if recipient.Type != identity.SerializedIdentityType {
+		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
+	}
+	err = matcher.Match(recipient.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", id, hash.Hashable(ai))
+	}
+	return nil
+}
+
+func (d *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	auditInfo, err := htlc.GetOwnerAuditInfo(raw, p)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
+	}
+	return [][]byte{auditInfo}, nil
+}
+
 // DeserializerProvider provides the deserializer matching zkatdlog public parameters
 type DeserializerProvider struct {
 	oldHash []byte
@@ -103,7 +147,7 @@ func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to compute the hash of the public params")
 	}
-	logger.Debugf("Deserialize: [%s][%s]", base64.StdEncoding.EncodeToString(newHash), base64.StdEncoding.EncodeToString(d.oldHash))
+	//logger.Debugf("Deserialize: [%s][%s]", base64.StdEncoding.EncodeToString(newHash), base64.StdEncoding.EncodeToString(d.oldHash))
 	if bytes.Equal(d.oldHash, newHash) {
 		return d.des, nil
 	}

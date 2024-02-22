@@ -67,30 +67,18 @@ func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
 	// recognize identity and register it
-	v, err := s.Deserializer.GetOwnerVerifier(data.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
-	}
-	matcher, err := s.Deserializer.GetOwnerMatcher(data.AuditInfo)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", data.Identity)
-	}
 
 	// match identity and audit info
-	recipient, err := identity.UnmarshallRawOwner(data.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal identity [%s]", data.Identity)
-	}
-	if recipient.Type != identity.SerializedIdentityType {
-		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
-	}
-	err = matcher.Match(recipient.Identity)
+	err := s.Deserializer.Match(data.Identity, data.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info
-
+	v, err := s.Deserializer.GetOwnerVerifier(data.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
+	}
 	if err := s.SignerService.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}

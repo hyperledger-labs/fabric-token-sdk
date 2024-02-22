@@ -175,6 +175,10 @@ type Matcher interface {
 	Match([]byte) error
 }
 
+type AuditInfoProvider interface {
+	GetAuditInfo(identity view.Identity) ([]byte, error)
+}
+
 // Deserializer models the deserializer of owner, issuer, and auditor identities to
 // get signature verifiers
 type Deserializer interface {
@@ -186,6 +190,12 @@ type Deserializer interface {
 	GetAuditorVerifier(id view.Identity) (Verifier, error)
 	// GetOwnerMatcher returns an identity matcher for the passed identity audit data.
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
+
+	Recipients(raw []byte) ([]view.Identity, error)
+
+	Match(identity view.Identity, info []byte) error
+
+	GetOwnerAuditInfo(raw []byte, p AuditInfoProvider) ([][]byte, error)
 }
 
 // Serializer models the serialization needs of the Token Service

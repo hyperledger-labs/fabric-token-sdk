@@ -11,15 +11,14 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -31,7 +30,7 @@ const (
 )
 
 type LocalMembership struct {
-	configManager          config.Manager
+	config                 config2.Config
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
 	binderService          common.BinderService
@@ -49,7 +48,7 @@ type LocalMembership struct {
 }
 
 func NewLocalMembership(
-	configManager config.Manager,
+	config config2.Config,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	binderService common.BinderService,
@@ -59,7 +58,7 @@ func NewLocalMembership(
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
-		configManager:            configManager,
+		config:                   config,
 		defaultNetworkIdentity:   defaultNetworkIdentity,
 		signerService:            signerService,
 		binderService:            binderService,
@@ -176,7 +175,7 @@ func (lm *LocalMembership) IDs() ([]string, error) {
 
 func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
-	translatedPath := lm.configManager.TranslatePath(c.Path)
+	translatedPath := lm.config.TranslatePath(c.Path)
 	if err := lm.registerProvider(c, translatedPath, setDefault); err != nil {
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerProviders(c, translatedPath); err != nil {

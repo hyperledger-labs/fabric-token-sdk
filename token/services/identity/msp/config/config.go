@@ -8,9 +8,19 @@ package config
 
 import (
 	config2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
+
+type Config interface {
+	// CacheSizeForOwnerID returns the cache size to be used for the given owner wallet.
+	// If not defined, the function returns -1
+	CacheSizeForOwnerID(id string) (int, error)
+	TranslatePath(path string) string
+	IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error)
+}
 
 // ToBCCSPOpts converts the passed opts to `config.BCCSP`
 func ToBCCSPOpts(opts interface{}) (*config2.BCCSP, error) {

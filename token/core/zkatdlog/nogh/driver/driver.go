@@ -51,7 +51,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.WithMessagef(err, "vault [%s:%s] does not exists", networkID, namespace)
 	}
 
-	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
+	cs := view.GetConfigService(sp)
+	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
@@ -68,10 +69,10 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
 	mspWalletFactory := msp2.NewWalletFactory(
-		networkID,                                // network ID
-		tmsConfig,                                // config manager
-		fscIdentity,                              // FSC identity
-		networkLocalMembership.DefaultIdentity(), // network default identity
+		networkID,                                  // network ID
+		config.NewIdentityConfig(cs, tmsConfig),    // config
+		fscIdentity,                                // FSC identity
+		networkLocalMembership.DefaultIdentity(),   // network default identity
 		msp2.NewSigService(view.GetSigService(sp)), // signer service
 		view.GetEndpointService(sp),                // endpoint service
 		storageProvider,
@@ -115,13 +116,19 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity2.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets)
+	ip := identity2.NewProvider(
+		view.GetSigService(sp),
+		view.GetEndpointService(sp),
+		fscIdentity,
+		NewEnrollmentIDDeserializer(),
+		wallets,
+	)
 	ws := zkatdlog.NewWalletService(
 		msp2.NewSigService(view.GetSigService(sp)),
 		ip,
 		qe,
 		ppm,
-		zkatdlog.NewDeserializerProvider().Deserialize,
+		NewDeserializerProvider().Deserialize,
 		tmsConfig,
 		identity2.NewWalletsRegistry(ip, driver.OwnerRole, identityStorage),
 		identity2.NewWalletsRegistry(ip, driver.IssuerRole, identityStorage),
@@ -132,8 +139,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		ppm,
 		&zkatdlog.VaultTokenLoader{TokenVault: qe},
 		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
-		identity2.NewProvider(view.GetSigService(sp), view.GetEndpointService(sp), fscIdentity, zkatdlog.NewEnrollmentIDDeserializer(), wallets),
-		zkatdlog.NewDeserializerProvider().Deserialize,
+		ip,
+		NewDeserializerProvider().Deserialize,
 		tmsConfig,
 	)
 	if err != nil {
@@ -151,7 +158,7 @@ func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator,
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	deserializer, err := zkatdlog.NewDeserializer(pp)
+	deserializer, err := NewDeserializer(pp)
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +179,8 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
 
-	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(networkID, channel, namespace)
+	cs := view.GetConfigService(sp)
+	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
@@ -189,10 +197,10 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
 	mspWalletFactory := msp2.NewWalletFactory(
-		networkID, // network ID
-		tmsConfig, // config manager
-		nil,       // FSC identity
-		nil,       // network default identity
+		networkID,                               // network ID
+		config.NewIdentityConfig(cs, tmsConfig), // config
+		nil,                                     // FSC identity
+		nil,                                     // network default identity
 		msp2.NewSigService(view.GetSigService(sp)), // signer service
 		nil, // endpoint service
 		storageProvider,
@@ -236,14 +244,20 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity2.NewProvider(view.GetSigService(sp), nil, nil, zkatdlog.NewEnrollmentIDDeserializer(), wallets)
+	ip := identity2.NewProvider(
+		view.GetSigService(sp),
+		nil,
+		nil,
+		NewEnrollmentIDDeserializer(),
+		wallets,
+	)
 	// wallet service
 	ws := zkatdlog.NewWalletService(
 		msp2.NewSigService(view.GetSigService(sp)),
 		ip,
 		nil,
 		publicParamsManager,
-		zkatdlog.NewDeserializerProvider().Deserialize,
+		NewDeserializerProvider().Deserialize,
 		tmsConfig,
 		identity2.NewWalletsRegistry(ip, driver.OwnerRole, identityStorage),
 		identity2.NewWalletsRegistry(ip, driver.IssuerRole, identityStorage),

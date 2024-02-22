@@ -31,3 +31,15 @@ func (s *Service) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
 func (s *Service) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return s.Deserializer.GetOwnerMatcher(raw)
 }
+
+func (s *Service) Recipients(raw []byte) ([]view.Identity, error) {
+	return s.Deserializer.Recipients(raw)
+}
+
+func (s *Service) Match(id view.Identity, ai []byte) error {
+	return s.Deserializer.Match(id, ai)
+}
+
+func (s *Service) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	return s.Deserializer.GetOwnerAuditInfo(raw, p)
+}

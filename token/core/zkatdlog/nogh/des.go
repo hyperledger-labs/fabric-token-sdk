@@ -16,7 +16,7 @@ import (
 func (s *Service) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
 	d, err := s.Deserializer()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get auditor verifier")
+		return nil, errors.Wrap(err, "failed to get deserializer")
 	}
 	return d.GetAuditorVerifier(id)
 }
@@ -25,7 +25,7 @@ func (s *Service) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) 
 func (s *Service) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
 	d, err := s.Deserializer()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get owner verifier")
+		return nil, errors.Wrap(err, "failed to get deserializer")
 	}
 	return d.GetOwnerVerifier(id)
 }
@@ -34,7 +34,7 @@ func (s *Service) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
 func (s *Service) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
 	d, err := s.Deserializer()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get issuer verifier")
+		return nil, errors.Wrap(err, "failed to get deserializer")
 	}
 	return d.GetIssuerVerifier(id)
 }
@@ -44,7 +44,31 @@ func (s *Service) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
 func (s *Service) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	d, err := s.Deserializer()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get owner matcher")
+		return nil, errors.Wrap(err, "failed to get deserializer")
 	}
 	return d.GetOwnerMatcher(raw)
+}
+
+func (s *Service) Recipients(raw []byte) ([]view.Identity, error) {
+	d, err := s.Deserializer()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get deserializer")
+	}
+	return d.Recipients(raw)
+}
+
+func (s *Service) Match(id view.Identity, ai []byte) error {
+	d, err := s.Deserializer()
+	if err != nil {
+		return errors.Wrap(err, "failed to get deserializer")
+	}
+	return d.Match(id, ai)
+}
+
+func (s *Service) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	d, err := s.Deserializer()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get deserializer")
+	}
+	return d.GetOwnerAuditInfo(raw, p)
 }

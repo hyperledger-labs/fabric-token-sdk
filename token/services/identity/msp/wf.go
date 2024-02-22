@@ -8,18 +8,16 @@ package msp
 
 import (
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.driver.identity.tms")
 
 const (
 	// OwnerMSPID is the default MSP ID for the owner wallet
@@ -43,7 +41,7 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 // WalletFactory is the factory for creating wallets, idemix and x509
 type WalletFactory struct {
 	NetworkID              string
-	ConfigManager          config.Manager
+	Config                 config2.Config
 	FSCIdentity            view2.Identity
 	NetworkDefaultIdentity view2.Identity
 	SignerService          common.SignerService
@@ -56,7 +54,7 @@ type WalletFactory struct {
 // NewWalletFactory creates a new WalletFactory
 func NewWalletFactory(
 	networkID string,
-	configManager config.Manager,
+	config config2.Config,
 	fscIdentity view2.Identity,
 	networkDefaultIdentity view2.Identity,
 	signerService common.SignerService,
@@ -67,7 +65,7 @@ func NewWalletFactory(
 ) *WalletFactory {
 	return &WalletFactory{
 		NetworkID:              networkID,
-		ConfigManager:          configManager,
+		Config:                 config,
 		FSCIdentity:            fscIdentity,
 		NetworkDefaultIdentity: networkDefaultIdentity,
 		SignerService:          signerService,
@@ -80,7 +78,7 @@ func NewWalletFactory(
 
 // NewIdemixWallet creates a new Idemix wallet
 func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity2.Wallet, error) {
-	identities, err := f.ConfigFor(role)
+	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
@@ -94,7 +92,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		return nil, errors.Wrapf(err, "failed to get new keystore")
 	}
 	lm := idemix2.NewLocalMembership(
-		f.ConfigManager,
+		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.DeserializerManager,
@@ -111,7 +109,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 
 // NewX509Wallet creates a new X509 wallet
 func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Wallet, error) {
-	identities, err := f.ConfigFor(role)
+	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
@@ -120,7 +118,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
 	lm := x5092.NewLocalMembership(
-		f.ConfigManager,
+		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.BinderService,
@@ -137,7 +135,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 
 // NewX509WalletIgnoreRemote creates a new X509 wallet treating the remote wallets as local
 func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (identity2.Wallet, error) {
-	identities, err := f.ConfigFor(role)
+	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
@@ -146,7 +144,7 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
 	lm := x5092.NewLocalMembership(
-		f.ConfigManager,
+		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.BinderService,
@@ -161,24 +159,7 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	return x5092.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
 }
 
-// ConfigFor returns the configured identities for the passed role
-func (f *WalletFactory) ConfigFor(role driver.IdentityRole) ([]*config.Identity, error) {
-	tmsConfig := f.ConfigManager.TMS()
-	if tmsConfig.Wallets == nil {
-		logger.Warnf("No wallets found in config")
-		tmsConfig.Wallets = &config.Wallets{}
-	}
-
-	switch role {
-	case driver.IssuerRole:
-		return tmsConfig.Wallets.Issuers, nil
-	case driver.AuditorRole:
-		return tmsConfig.Wallets.Auditors, nil
-	case driver.OwnerRole:
-		return tmsConfig.Wallets.Owners, nil
-	case driver.CertifierRole:
-		return tmsConfig.Wallets.Certifiers, nil
-	default:
-		return nil, errors.Errorf("unknown role [%d]", role)
-	}
+// IdentitiesForRole returns the configured identities for the passed role
+func (f *WalletFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
+	return f.Config.IdentitiesForRole(role)
 }
