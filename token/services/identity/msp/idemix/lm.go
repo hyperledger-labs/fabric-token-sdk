@@ -24,7 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger/fabric-protos-go/msp"
@@ -47,7 +47,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
 	deserializerManager    common.DeserializerManager
-	storage                identity.WalletPathStorage
+	storage                driver3.IdentityDB
 	keystore               keystore.KVS
 	mspID                  string
 	cacheSize              int
@@ -67,7 +67,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	deserializerManager common.DeserializerManager,
-	walletPathStorage identity.WalletPathStorage,
+	walletPathStorage driver3.IdentityDB,
 	keystore keystore.KVS,
 	mspID string,
 	cacheSize int,
@@ -156,7 +156,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if err := lm.storage.Add(identity.WalletPath{ID: id, Path: path}); err != nil {
+	if err := lm.storage.AddConfiguration(driver3.IdentityConfiguration{ID: id, URL: path}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
@@ -341,7 +341,7 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 }
 
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.storage.Iterator()
+	it, err := lm.storage.IteratorConfigurations()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
@@ -356,7 +356,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 		if lm.getResolver(id) != nil {
 			continue
 		}
-		if err := lm.registerIdentity(config.Identity{ID: id, Path: entry.Path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
+		if err := lm.registerIdentity(config.Identity{ID: id, Path: entry.URL, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
 			return err
 		}
 	}

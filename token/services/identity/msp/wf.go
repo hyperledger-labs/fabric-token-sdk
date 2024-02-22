@@ -9,6 +9,7 @@ package msp
 import (
 	math "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -40,7 +41,7 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 
 // WalletFactory is the factory for creating wallets, idemix and x509
 type WalletFactory struct {
-	NetworkID              string
+	TMSID                  token.TMSID
 	Config                 config2.Config
 	FSCIdentity            view2.Identity
 	NetworkDefaultIdentity view2.Identity
@@ -53,7 +54,7 @@ type WalletFactory struct {
 
 // NewWalletFactory creates a new WalletFactory
 func NewWalletFactory(
-	networkID string,
+	TMSID token.TMSID,
 	config config2.Config,
 	fscIdentity view2.Identity,
 	networkDefaultIdentity view2.Identity,
@@ -64,7 +65,7 @@ func NewWalletFactory(
 	ignoreRemote bool,
 ) *WalletFactory {
 	return &WalletFactory{
-		NetworkID:              networkID,
+		TMSID:                  TMSID,
 		Config:                 config,
 		FSCIdentity:            fscIdentity,
 		NetworkDefaultIdentity: networkDefaultIdentity,
@@ -83,7 +84,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 
-	walletPathStorage, err := f.StorageProvider.GetWalletPathStorage("idemix")
+	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "idemix")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -104,7 +105,7 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		identities,
 		f.ignoreRemote,
 	)
-	return idemix2.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
+	return idemix2.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
 // NewX509Wallet creates a new X509 wallet
@@ -113,7 +114,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	walletPathStorage, err := f.StorageProvider.GetWalletPathStorage("x509")
+	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "x509")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -130,7 +131,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
+	return x5092.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
 // NewX509WalletIgnoreRemote creates a new X509 wallet treating the remote wallets as local
@@ -139,7 +140,7 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	walletPathStorage, err := f.StorageProvider.GetWalletPathStorage("x509")
+	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "x509")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -156,7 +157,7 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewWallet(f.NetworkID, f.FSCIdentity, lm), nil
+	return x5092.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role

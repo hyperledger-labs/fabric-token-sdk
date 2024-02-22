@@ -69,7 +69,11 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
 	mspWalletFactory := msp2.NewWalletFactory(
-		networkID,                                  // network ID
+		token.TMSID{
+			Network:   networkID,
+			Channel:   channel,
+			Namespace: namespace,
+		},
 		config.NewIdentityConfig(cs, tmsConfig),    // config
 		fscIdentity,                                // FSC identity
 		networkLocalMembership.DefaultIdentity(),   // network default identity
@@ -112,7 +116,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return wallets.Reload(pp)
 	})
 	// wallet service
-	identityStorage, err := storageProvider.NewStorage(tmsID)
+	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
@@ -130,9 +134,9 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		ppm,
 		NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		identity2.NewWalletsRegistry(ip, driver.OwnerRole, identityStorage),
-		identity2.NewWalletsRegistry(ip, driver.IssuerRole, identityStorage),
-		identity2.NewWalletsRegistry(ip, driver.AuditorRole, identityStorage),
+		identity2.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
+		identity2.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
+		identity2.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
 	)
 	service, err := zkatdlog.NewTokenService(
 		ws,
@@ -197,7 +201,11 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
 	mspWalletFactory := msp2.NewWalletFactory(
-		networkID,                               // network ID
+		token.TMSID{
+			Network:   networkID,
+			Channel:   channel,
+			Namespace: namespace,
+		},
 		config.NewIdentityConfig(cs, tmsConfig), // config
 		nil,                                     // FSC identity
 		nil,                                     // network default identity
@@ -240,7 +248,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.WithMessage(err, "failed to load public parameters")
 	}
 
-	identityStorage, err := storageProvider.NewStorage(tmsID)
+	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
@@ -259,9 +267,9 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		publicParamsManager,
 		NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		identity2.NewWalletsRegistry(ip, driver.OwnerRole, identityStorage),
-		identity2.NewWalletsRegistry(ip, driver.IssuerRole, identityStorage),
-		identity2.NewWalletsRegistry(ip, driver.AuditorRole, identityStorage),
+		identity2.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
+		identity2.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
+		identity2.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
 	)
 
 	if err := wallets.Reload(pp); err != nil {

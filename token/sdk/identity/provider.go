@@ -9,7 +9,7 @@ package identity
 import (
 	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 )
 
@@ -21,12 +21,12 @@ func NewKVSStorageProvider(kvs kvs.KVS) *KVSStorageProvider {
 	return &KVSStorageProvider{kvs: kvs}
 }
 
-func (s *KVSStorageProvider) NewStorage(tmsID token.TMSID) (identity.Storage, error) {
+func (s *KVSStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
 	return kvs.NewIdentityStorage(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) GetWalletPathStorage(id string) (identity.WalletPathStorage, error) {
-	return kvs.NewWalletPathStorage(s.kvs, id), nil
+func (s *KVSStorageProvider) OpenIdentityDB(tmsID token.TMSID, id string) (driver.IdentityDB, error) {
+	return kvs.NewWalletPathStorage(s.kvs, tmsID.String()+id), nil
 }
 
 func (s *KVSStorageProvider) NewKeystore() (keystore.KVS, error) {
