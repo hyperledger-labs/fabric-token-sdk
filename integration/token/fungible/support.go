@@ -20,13 +20,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	platform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
 )
@@ -141,7 +140,7 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor strin
 	}
 }
 
-func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, statuses []driver.TxStatus, actionTypes ...ttxdb.ActionType) {
+func CheckAcceptedTransactions(network *integration.Infrastructure, id string, wallet string, expected []*ttxdb.TransactionRecord, start *time.Time, end *time.Time, statuses []ttxdb.TxStatus, actionTypes ...ttxdb.ActionType) {
 	eIDBoxed, err := network.Client(id).CallView("GetEnrollmentID", common.JSONMarshall(&views.GetEnrollmentID{
 		Wallet: wallet,
 	}))
@@ -729,6 +728,7 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 		Bob:             network.Identity(receiver),
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	Expect(network.Client(id).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 	Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 }
@@ -759,9 +759,10 @@ func CheckPublicParamsMatch(network *integration.Infrastructure, tmsId *token2.T
 }
 
 func GetTMS(network *integration.Infrastructure, networkName string) *topology.TMS {
+	tp := tplatform.GetPlatform(network.Ctx, "token")
+	Expect(tp).NotTo(BeNil())
 	var tms *topology.TMS
-	p := network.Ctx.PlatformsByName["token"]
-	for _, TMS := range p.(*platform.Platform).Topology.TMSs {
+	for _, TMS := range tp.GetTopology().TMSs {
 		if TMS.Network == networkName {
 			tms = TMS
 			break
@@ -773,7 +774,7 @@ func GetTMS(network *integration.Infrastructure, networkName string) *topology.T
 
 func UpdatePublicParams(network *integration.Infrastructure, publicParams []byte, tms *topology.TMS) {
 	p := network.Ctx.PlatformsByName["token"]
-	p.(*platform.Platform).UpdatePublicParams(tms, publicParams)
+	p.(*tplatform.Platform).UpdatePublicParams(tms, publicParams)
 }
 
 func GetPublicParams(network *integration.Infrastructure, id string) []byte {
@@ -881,7 +882,7 @@ func WhoDeletedToken(network *integration.Infrastructure, id string, tokenIDs []
 	common.JSONUnmarshal(boxed.([]byte), &result)
 	Expect(len(result.Deleted)).To(BeEquivalentTo(len(tokenIDs)))
 	for i, txID := range txIDs {
-		Expect(result.Deleted[i]).To(BeTrue())
+		Expect(result.Deleted[i]).To(BeTrue(), "expected token [%s] to be deleted", tokenIDs[i])
 		Expect(result.Who[i]).To(BeEquivalentTo(txID))
 	}
 	return result
@@ -944,6 +945,13 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 				} else {
 					Expect(false).To(BeTrue(), "neither fabric nor orion network found")
 				}
+			}
+
+			// delete token dbs as well
+			tokenPlatform := tplatform.GetPlatform(network.Ctx, "token")
+			Expect(tokenPlatform).ToNot(BeNil(), "cannot find token platform in context")
+			for _, tms := range tokenPlatform.GetTopology().TMSs {
+				tokenPlatform.DeleteDBs(tms, id)
 			}
 		}
 	}

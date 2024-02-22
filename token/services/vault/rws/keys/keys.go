@@ -7,11 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package keys
 
 import (
-	"fmt"
 	"strconv"
 	"unicode/utf8"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
@@ -20,68 +18,21 @@ const (
 	compositeKeyNamespace = "\x00"
 	MaxUnicodeRuneValue   = utf8.MaxRune // U+10FFFF - maximum (and unallocated) code point
 
-	numComponentsInKey         = 2 // 2 components: txid, index, excluding TokenKeyPrefix
-	numComponentsInExtendedKey = 4 // 2 components: id, type, txid, index, excluding TokenKeyPrefix
+	numComponentsInKey = 2 // 2 components: txid, index, excluding TokenKeyPrefix
 
-	TokenKeyPrefix              = "ztoken"
-	FabTokenKeyPrefix           = "token"
-	DeletedTokenKeyPrefix       = "deltoken"
-	FabTokenExtendedKeyPrefix   = "etoken"
-	AuditTokenKeyPrefix         = "audittoken"
-	TokenMineKeyPrefix          = "mine"
-	TokenSetupKeyPrefix         = "setup"
-	IssuedHistoryTokenKeyPrefix = "issued"
+	TokenKeyPrefix      = "ztoken"
+	TokenMineKeyPrefix  = "mine"
+	TokenSetupKeyPrefix = "setup"
 
-	Info                   = "info"
 	TokenRequestKeyPrefix  = "token_request"
 	SerialNumber           = "sn"
 	IssueActionMetadata    = "iam"
 	TransferActionMetadata = "tam"
 )
 
-func GetTokenIdFromKey(key string) (*token.ID, error) {
-	_, components, err := SplitCompositeKey(key)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
-	}
-
-	// 4 components in key: ownerType, ownerRaw, txid, index
-	if len(components) != numComponentsInKey {
-		return nil, errors.New(fmt.Sprintf("not enough components in output ID composite key; expected 2, received '%s'", components))
-	}
-
-	// txid and index are the last 2 components
-	txID := components[numComponentsInKey-2]
-	index, err := strconv.ParseUint(components[numComponentsInKey-1], 10, 64)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInKey-1], err))
-	}
-	return &token.ID{TxId: txID, Index: index}, nil
-}
-
-func GetTokenIdFromExtendedKey(key string) (*token.ID, error) {
-	_, components, err := SplitCompositeKey(key)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error splitting input composite key: '%s'", err))
-	}
-
-	// 4 components in key: ownerType, ownerRaw, txid, index
-	if len(components) != numComponentsInExtendedKey {
-		return nil, errors.New(fmt.Sprintf("not enough components in output ID composite key; expected 4, received '%s'", components))
-	}
-
-	// txid and index are the last 2 components
-	txID := components[numComponentsInExtendedKey-2]
-	index, err := strconv.ParseUint(components[numComponentsInExtendedKey-1], 10, 64)
-	if err != nil {
-		return nil, errors.New(fmt.Sprintf("error parsing output index '%s': '%s'", components[numComponentsInExtendedKey-1], err))
-	}
-	return &token.ID{TxId: txID, Index: index}, nil
-}
-
 func SplitCompositeKey(compositeKey string) (string, []string, error) {
 	componentIndex := 1
-	components := []string{}
+	var components []string
 	for i := 1; i < len(compositeKey); i++ {
 		if compositeKey[i] == minUnicodeRuneValue {
 			components = append(components, compositeKey[componentIndex:i])
@@ -105,32 +56,8 @@ func CreateSNKey(sn string) (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{SerialNumber, sn})
 }
 
-func CreateFabTokenKey(txID string, index uint64) (string, error) {
-	return CreateCompositeKey(FabTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
-}
-
-func CreateDeletedTokenKey(txID string, index uint64) (string, error) {
-	return CreateCompositeKey(DeletedTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
-}
-
-func CreateExtendedFabTokenKey(id string, typ string, txID string, index uint64) (string, error) {
-	return CreateCompositeKey(FabTokenExtendedKeyPrefix, []string{id, typ, txID, strconv.FormatUint(index, 10)})
-}
-
-func CreateAuditTokenKey(txID string, index uint64) (string, error) {
-	return CreateCompositeKey(AuditTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
-}
-
-func CreateTokenMineKey(txID string, index uint64) (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TokenMineKeyPrefix, txID, strconv.FormatUint(index, 10)})
-}
-
 func CreateSetupKey() (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{TokenSetupKeyPrefix})
-}
-
-func CreateSetupBundleKey() (string, error) {
-	return CreateCompositeKey(TokenKeyPrefix, []string{TokenSetupKeyPrefix, "bundle"})
 }
 
 func CreateTokenRequestKey(txID string) (string, error) {
@@ -191,8 +118,4 @@ func ValidateCompositeKeyAttribute(str string) error {
 		}
 	}
 	return nil
-}
-
-func CreateIssuedHistoryTokenKey(txID string, index uint64) (string, error) {
-	return CreateCompositeKey(IssuedHistoryTokenKeyPrefix, []string{txID, strconv.FormatUint(index, 10)})
 }

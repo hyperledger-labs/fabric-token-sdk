@@ -15,6 +15,7 @@ import (
 
 type configProvider interface {
 	UnmarshalKey(key string, rawVal interface{}) error
+	GetString(key string) string
 	IsSet(key string) bool
 	TranslatePath(path string) string
 }
@@ -43,6 +44,10 @@ func (m *TMS) TranslatePath(path string) string {
 // UnmarshalKey takes a single key and unmarshals it into a Struct
 func (m *TMS) UnmarshalKey(key string, rawVal interface{}) error {
 	return m.cp.UnmarshalKey("token.tms."+m.id+"."+key, rawVal)
+}
+
+func (m *TMS) GetString(key string) string {
+	return m.cp.GetString("token.tms." + m.id + "." + key)
 }
 
 func (m *TMS) IsSet(key string) bool {

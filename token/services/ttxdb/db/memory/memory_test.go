@@ -9,6 +9,7 @@ package memory
 import (
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/dbtest"
 )
 
@@ -19,10 +20,10 @@ func (sp MockServiceProvider) GetService(v interface{}) (interface{}, error) {
 }
 
 func TestMemory(t *testing.T) {
-	d := new(Driver)
+	d := NewDriver()
 
 	for _, c := range dbtest.Cases {
-		db, err := d.Open(new(MockServiceProvider), c.Name)
+		db, err := d.Open(new(MockServiceProvider), token.TMSID{Network: c.Name})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -159,8 +159,8 @@ func (v *Vault) CertificationStorage() api2.CertificationStorage {
 	return v.v.CertificationStorage()
 }
 
-func (v *Vault) DeleteTokens(ns string, ids ...*token2.ID) error {
-	return v.v.DeleteTokens(ns, ids...)
+func (v *Vault) DeleteTokens(ids ...*token2.ID) error {
+	return v.v.DeleteTokens(ids...)
 }
 
 func (v *Vault) GetLastTxID() (string, error) {
@@ -247,7 +247,7 @@ func (v *Vault) deleteTokens(context view.Context, tms *token.ManagementService,
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
-	if err := v.v.DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+	if err := v.v.DeleteTokens(toDelete...); err != nil {
 		return nil, errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 
@@ -472,17 +472,21 @@ func (np *Provider) GetNetwork(network string, channel string) (*Network, error)
 		}
 		np.networks[key] = service
 	}
+
+	logger.Debugf("GetNetwork: [%s:%s], returning...", network, channel)
+
 	return service, nil
 }
 
 func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
-	for _, d := range drivers {
+	for driverName, d := range drivers {
 		nw, err := d.New(np.sp, network, channel)
 		if err != nil {
 			logger.Warningf("failed to create network [%s:%s]: %s", network, channel, err)
 			continue
 		}
 		if nw != nil {
+			logger.Debugf("new network [%s:%s] with driver [%s]", network, channel, driverName)
 			return &Network{n: nw}, nil
 		}
 	}

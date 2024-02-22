@@ -9,14 +9,13 @@ package fabric
 import (
 	"strconv"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -99,7 +98,10 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 				Channel:   tx.Channel(),
 				Namespace: ns,
 			}, val); err != nil {
-				return errors.Wrapf(err, "failed updating public params ")
+				return errors.Wrapf(err, "failed updating public params")
+			}
+			if err := r.tokenStore.StorePublicParams(val); err != nil {
+				return errors.Wrapf(err, "failed storing public params")
 			}
 			break
 		}
@@ -159,15 +161,14 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		return err
 	}
 
-	wrappedRWS := &rwsWrapper{RWSet: rws}
-
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
 		ids := metadata.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		for _, id := range ids {
-			if err := r.tokenStore.DeleteToken(ns, id.TxId, id.Index, wrappedRWS, tx.ID()); err != nil {
+			if err := r.tokenStore.DeleteToken(id.TxId, id.Index, tx.ID()); err != nil {
 				return err
 			}
 		}
@@ -230,7 +231,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
 			}
-			if err := r.tokenStore.DeleteToken(ns, components[0], index, wrappedRWS, tx.ID()); err != nil {
+			if err := r.tokenStore.DeleteToken(components[0], index, tx.ID()); err != nil {
 				return err
 			}
 			continue
@@ -260,7 +261,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
 			}
-			if err := r.tokenStore.StoreToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata, ids); err != nil {
+			if err := r.tokenStore.StoreToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, ids, precision); err != nil {
 				return err
 			}
 		} else {
@@ -274,7 +275,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
 			}
-			if err := r.tokenStore.StoreAuditToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata); err != nil {
+			if err := r.tokenStore.StoreAuditToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, precision); err != nil {
 				return err
 			}
 		}
@@ -283,7 +284,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(ns, txID, index, tok, wrappedRWS, tokenOnLedger, tokenOnLedgerMetadata, issuer, tms.PublicParametersManager().PublicParameters().Precision()); err != nil {
+			if err := r.tokenStore.StoreIssuedHistoryToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, issuer, precision); err != nil {
 				return err
 			}
 		}
@@ -297,28 +298,4 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	}
 
 	return nil
-}
-
-type rwsWrapper struct {
-	*fabric.RWSet
-}
-
-func (r *rwsWrapper) SetState(namespace string, key string, value []byte) error {
-	return r.RWSet.SetState(namespace, key, value)
-}
-
-func (r *rwsWrapper) GetState(namespace string, key string) ([]byte, error) {
-	return r.RWSet.GetState(namespace, key, fabric.FromStorage)
-}
-
-func (r *rwsWrapper) GetStateMetadata(namespace, key string) (map[string][]byte, error) {
-	return r.RWSet.GetStateMetadata(namespace, key, fabric.FromStorage)
-}
-
-func (r *rwsWrapper) DeleteState(namespace string, key string) error {
-	return r.RWSet.DeleteState(namespace, key)
-}
-
-func (r *rwsWrapper) SetStateMetadata(namespace, key string, metadata map[string][]byte) error {
-	return r.RWSet.SetStateMetadata(namespace, key, metadata)
 }

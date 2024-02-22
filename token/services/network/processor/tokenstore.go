@@ -21,10 +21,11 @@ type RWSet interface {
 }
 
 type TokenStore interface {
-	DeleteToken(ns string, txID string, index uint64, rws RWSet, deletedBy string) error
-	StoreToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string) error
-	StoreIssuedHistoryToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error
-	StoreAuditToken(ns string, txID string, index uint64, tok *token.Token, rws RWSet, tokenOnLedger []byte, tokenOnLedgerMetadata []byte) error
+	DeleteToken(txID string, index uint64, deletedBy string) error
+	StoreToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string, precision uint64) error
+	StoreIssuedHistoryToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error
+	StoreAuditToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, precision uint64) error
+	StorePublicParams(val []byte) error
 }
 
 const (

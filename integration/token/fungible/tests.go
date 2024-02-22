@@ -583,6 +583,8 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "alice", "", "EUR", 2210, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "EUR", 2000, auditor)
 	TransferCash(network, "alice", "", "EUR", 210, "bob", auditor, "payment limit reached", "alice", "[EUR][210]")
+	CheckBalanceAndHolding(network, "alice", "", "EUR", 2210, auditor)
+	CheckBalanceAndHolding(network, "charlie", "", "EUR", 2000, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 

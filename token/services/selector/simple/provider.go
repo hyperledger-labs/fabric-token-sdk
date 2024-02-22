@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.selector")
+var logger = flogging.MustGetLogger("token-sdk.selector.simple")
 
 type Transaction interface {
 	ID() string

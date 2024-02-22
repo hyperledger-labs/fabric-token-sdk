@@ -17,7 +17,11 @@ type ID struct {
 	Index uint64 `protobuf:"varint,2,opt,name=index,proto3" json:"index,omitempty"`
 }
 
-func (id *ID) String() string {
+func (id ID) Equal(right ID) bool {
+	return id.TxId == right.TxId && id.Index == right.Index
+}
+
+func (id ID) String() string {
 	return fmt.Sprintf("[%s:%d]", id.TxId, id.Index)
 }
 

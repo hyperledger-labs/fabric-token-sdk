@@ -13,6 +13,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -23,14 +24,14 @@ type TokenManagementServiceProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
-type TTXDBProvider interface {
-	DBByIDs(tmsID token.TMSID, walletID string) (*ttxdb.DB, error)
+type AuditDBProvider interface {
+	DBByTMSId(id token.TMSID) (*auditdb.DB, error)
 }
 
 // Manager handles the databases
 type Manager struct {
 	networkProvider NetworkProvider
-	ttxdbProvider   TTXDBProvider
+	auditDBProvider AuditDBProvider
 
 	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
@@ -38,11 +39,11 @@ type Manager struct {
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(networkProvider NetworkProvider, ttxdbProvider TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		networkProvider: networkProvider,
 		storage:         storage,
-		ttxdbProvider:   ttxdbProvider,
+		auditDBProvider: auditDBProvider,
 		auditors:        map[string]*Auditor{},
 	}
 }
@@ -88,7 +89,7 @@ func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, err
 	defer cm.mutex.Unlock()
 
 	id := tmsID.String() + walletID
-	logger.Debugf("get ttxdb for [%s]", id)
+	logger.Debugf("get auditdb for [%s]", id)
 	c, ok := cm.auditors[id]
 	if !ok {
 		// add an entry
@@ -96,7 +97,7 @@ func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, err
 			return nil, errors.Wrapf(err, "failed to store auditor entry [%s:%s]", tmsID, walletID)
 		}
 		var err error
-		c, err = cm.newAuditor(tmsID, walletID)
+		c, err = cm.newAuditor(tmsID)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to instantiate auditor for wallet [%s:%s]", tmsID, walletID)
 		}
@@ -105,10 +106,10 @@ func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, err
 	return c, nil
 }
 
-func (cm *Manager) newAuditor(tmsID token.TMSID, walletID string) (*Auditor, error) {
-	db, err := cm.ttxdbProvider.DBByIDs(tmsID, walletID)
+func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
+	db, err := cm.auditDBProvider.DBByTMSId(tmsID)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", walletID)
+		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
 	}
 	auditor := &Auditor{np: cm.networkProvider, db: db}
 	_, err = cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
@@ -132,18 +133,18 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	qe := auditor.NewQueryExecutor()
 	defer qe.Done()
 
-	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{})
+	it, err := qe.Transactions(auditdb.QueryTransactionsParams{})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s]", tmsID, walletID)
 	}
 	defer it.Close()
-	v, err := net.Vault(tmsID.Channel)
+	v, err := net.Vault(tmsID.Namespace)
 	if err != nil {
 		return errors.Errorf("failed to get vault for [%s:%s]", tmsID, walletID)
 	}
 	type ToBeUpdated struct {
 		TxID   string
-		Status ttxdb.TxStatus
+		Status auditdb.TxStatus
 	}
 	var toBeUpdated []ToBeUpdated
 	var pendingTXs []string
@@ -175,12 +176,12 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 				continue
 			}
 
-			var txStatus ttxdb.TxStatus
+			var txStatus auditdb.TxStatus
 			switch status {
 			case network.Valid:
-				txStatus = ttxdb.Confirmed
+				txStatus = auditdb.Confirmed
 			case network.Invalid:
-				txStatus = ttxdb.Deleted
+				txStatus = auditdb.Deleted
 			default:
 				pendingTXs = append(pendingTXs, tr.TxID)
 				continue

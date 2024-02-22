@@ -253,7 +253,7 @@ func (m *Manager) Unlock(txID string) error {
 }
 
 func (m *Manager) UnlockIDs(tokenIDs ...*token2.ID) []*token2.ID {
-	logger.Debugf("Call unlock with tokenIds=%v", tokenIDs)
+	logger.Debugf("call unlock with tokenIds [%v]", tokenIDs)
 
 	// TODO get locked tokens from context
 	// TODO make this more efficient ... looking up the space for each tokenID is super expensive
@@ -262,8 +262,10 @@ func (m *Manager) UnlockIDs(tokenIDs ...*token2.ID) []*token2.ID {
 	// Can we assume that the output returned, has the same order as the function args?
 	tokens, err := m.qs.GetTokens(tokenIDs...)
 	if err != nil {
+		logger.Errorf("failed to find tokens [%v], cannot return them", tokenIDs)
 		return nil
 	}
+	logger.Debugf("unlock tokens [%v]", tokens)
 	spaces := make(map[string][]update, len(tokenIDs))
 	for i, t := range tokens {
 		walletID := m.walletIDByRawIdentity(t.Owner.Raw)
@@ -274,6 +276,7 @@ func (m *Manager) UnlockIDs(tokenIDs ...*token2.ID) []*token2.ID {
 		} else {
 			spaces[k] = append(ids, update{op: Add, tokenID: *tokenIDs[i]})
 		}
+		logger.Debugf("push back [%s:%v]", k, tokenIDs[i])
 	}
 
 	for k, ups := range spaces {

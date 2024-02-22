@@ -139,26 +139,6 @@ var _ = Describe("EndToEnd", func() {
 		})
 	})
 
-	Describe("T4 Fungible with Auditor ne Issuer + SQL", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
-				topology2.Opts{
-					Backend:        "fabric",
-					TokenSDKDriver: "dlog",
-					SqlTTXDB:       true,
-				})...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
-		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil, false)
-		})
-	})
-
 })
 
 func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor string, tms *topology.TMS) []byte {

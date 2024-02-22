@@ -24,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	sfcnode "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
@@ -64,36 +65,33 @@ type tokenPlatform interface {
 type Entry struct {
 	TMS     *topology2.TMS
 	TCC     *TCC
-	CA      CA
+	CA      common2.CA
 	Wallets map[string]*generators.Wallets
 }
 
 type NetworkHandler struct {
-	TokenPlatform                     tokenPlatform
+	common2.NetworkHandler
 	TokenChaincodePath                string
 	TokenChaincodeParamsReplaceSuffix string
 	Entries                           map[string]*Entry
-	CryptoMaterialGenerators          map[string]generators.CryptoMaterialGenerator
-	CASupports                        map[string]CAFactory
-
-	EventuallyTimeout time.Duration
-	ColorIndex        int
 }
 
 func NewNetworkHandler(tokenPlatform tokenPlatform, builder api2.Builder) *NetworkHandler {
 	return &NetworkHandler{
-		TokenPlatform:                     tokenPlatform,
-		EventuallyTimeout:                 10 * time.Minute,
+		NetworkHandler: common2.NetworkHandler{
+			TokenPlatform:     tokenPlatform,
+			EventuallyTimeout: 10 * time.Minute,
+			CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
+				"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
+				"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
+			},
+			CASupports: map[string]common2.CAFactory{
+				"dlog": common2.NewIdemixCASupport,
+			},
+		},
 		TokenChaincodePath:                DefaultTokenChaincode,
 		TokenChaincodeParamsReplaceSuffix: DefaultTokenChaincodeParamsReplaceSuffix,
 		Entries:                           map[string]*Entry{},
-		CryptoMaterialGenerators: map[string]generators.CryptoMaterialGenerator{
-			"fabtoken": fabtoken.NewCryptoMaterialGenerator(tokenPlatform, builder),
-			"dlog":     dlog.NewCryptoMaterialGenerator(tokenPlatform, math3.BN254, builder),
-		},
-		CASupports: map[string]CAFactory{
-			"dlog": NewIdemixCASupport,
-		},
 	}
 }
 
@@ -169,10 +167,18 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 }
 
 func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(node))
+
 	t, err := template.New("peer").Funcs(template.FuncMap{
-		"TMSID":   func() string { return tms.ID() },
-		"TMS":     func() *topology2.TMS { return tms },
-		"Wallets": func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"TMSID":               func() string { return tms.ID() },
+		"TMS":                 func() *topology2.TMS { return tms },
+		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"SQLDataSource":       func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(node), tms) },
+		"TokensSQLDataSource": func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(node), tms) },
+		"AuditSQLDataSource":  func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(node), tms) },
+		"NodeKVSPath":         func() string { return p.FSCNodeKVSDir(node) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -203,7 +209,7 @@ func (p *NetworkHandler) Cleanup() {
 	}
 }
 
-func (p *NetworkHandler) UpdateChaincodePublicParams(tms *topology2.TMS, ppRaw []byte) {
+func (p *NetworkHandler) UpdatePublicParams(tms *topology2.TMS, ppRaw []byte) {
 	var cc *topology.ChannelChaincode
 	for _, chaincode := range p.Fabric(tms).Topology().Chaincodes {
 		if chaincode.Chaincode.Name == tms.Namespace {

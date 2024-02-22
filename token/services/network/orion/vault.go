@@ -9,10 +9,11 @@ package orion
 import (
 	"runtime/debug"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -26,23 +27,7 @@ func NewVault(ons *orion.NetworkService, tokenStore processor.TokenStore) *Vault
 	return &Vault{ons: ons, tokenStore: tokenStore}
 }
 
-func (v *Vault) NewQueryExecutor() (driver.Executor, error) {
-	qe, err := v.ons.Vault().NewQueryExecutor()
-	if err != nil {
-		return nil, err
-	}
-	return &Executor{qe: qe}, nil
-}
-
-func (v *Vault) NewRWSet(txID string) (driver.RWSet, error) {
-	rws, err := v.ons.Vault().NewRWSet(txID)
-	if err != nil {
-		return nil, err
-	}
-	return NewRWSWrapper(rws), nil
-}
-
-func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
+func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 	// prepare a rws with deletes
 	id, err := uuid.GenerateUUID()
 	if err != nil {
@@ -54,9 +39,8 @@ func (v *Vault) DeleteTokens(ns string, ids ...*token.ID) error {
 		return err
 	}
 
-	wrappedRWS := &rwsWrapper{RWSet: rws}
 	for _, id := range ids {
-		if err := v.tokenStore.DeleteToken(ns, id.TxId, id.Index, wrappedRWS, string(debug.Stack())); err != nil {
+		if err := v.tokenStore.DeleteToken(id.TxId, id.Index, string(debug.Stack())); err != nil {
 			return errors.Wrapf(err, "failed to append deletion of [%s]", id)
 		}
 	}
@@ -84,36 +68,4 @@ func (e *Executor) Done() {
 
 func (e *Executor) GetState(namespace string, key string) ([]byte, error) {
 	return e.qe.GetState(namespace, key)
-}
-
-func (e *Executor) GetStateRangeScanIterator(namespace string, start string, end string) (driver.Iterator, error) {
-	it, err := e.qe.GetStateRangeScanIterator(namespace, start, end)
-	if err != nil {
-		return nil, err
-	}
-	return &Iterator{it: it}, nil
-}
-
-func (e *Executor) GetStateMetadata(namespace string, id string) (map[string][]byte, error) {
-	r, _, _, err := e.qe.GetStateMetadata(namespace, id)
-	return r, err
-}
-
-type Iterator struct {
-	it *orion.ResultsIterator
-}
-
-func (i *Iterator) Close() {
-	i.it.Close()
-}
-
-func (i *Iterator) Next() (driver.Entry, error) {
-	r, err := i.it.Next()
-	if err != nil {
-		return nil, err
-	}
-	if r == nil {
-		return nil, nil
-	}
-	return r, nil
 }

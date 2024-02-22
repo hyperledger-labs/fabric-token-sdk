@@ -21,7 +21,7 @@ import (
 )
 
 type Vault interface {
-	DeleteTokens(namespace string, toDelete ...*token2.ID) error
+	DeleteTokens(toDelete ...*token2.ID) error
 }
 
 type QueryEngine interface {
@@ -30,7 +30,7 @@ type QueryEngine interface {
 }
 
 type TokenVault interface {
-	DeleteTokens(ns string, ids ...*token2.ID) error
+	DeleteTokens(toDelete ...*token2.ID) error
 }
 
 // OwnerWallet is a combination of a wallet and a query service
@@ -262,7 +262,7 @@ func (w *OwnerWallet) deleteTokens(context view.Context, tokens []*token2.Unspen
 			logger.Debugf("token [%s] is not spent", tok.Id)
 		}
 	}
-	if err := w.vault.DeleteTokens(tms.Namespace(), toDelete...); err != nil {
+	if err := w.vault.DeleteTokens(toDelete...); err != nil {
 		return errors.WithMessagef(err, "failed to remove token ids [%v]", toDelete)
 	}
 

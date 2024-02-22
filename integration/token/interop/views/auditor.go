@@ -32,7 +32,8 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 
 	w := ttx.MyAuditorWallet(context, token.WithTMSID(tx.TokenService().ID()))
 	assert.NotNil(w, "failed getting default auditor wallet")
-	auditor := ttx.NewAuditor(context, w)
+	auditor, err := ttx.NewAuditor(context, w)
+	assert.NoError(err, "failed to get auditor instance")
 	assert.NoError(auditor.Validate(tx), "failed auditing verification")
 
 	// Check limits

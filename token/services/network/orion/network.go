@@ -272,8 +272,8 @@ func (v *nv) CertificationStorage() api2.CertificationStorage {
 	return v.tokenVault.CertificationStorage()
 }
 
-func (v *nv) DeleteTokens(ns string, ids ...*token.ID) error {
-	return v.tokenVault.DeleteTokens(ns, ids...)
+func (v *nv) DeleteTokens(ids ...*token.ID) error {
+	return v.tokenVault.DeleteTokens(ids...)
 }
 
 func (v *nv) GetLastTxID() (string, error) {

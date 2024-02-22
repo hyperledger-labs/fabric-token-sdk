@@ -80,4 +80,5 @@ type Manager interface {
 	TranslatePath(path string) string
 	IsSet(key string) bool
 	UnmarshalKey(key string, rawVal interface{}) error
+	GetString(key string) string
 }
