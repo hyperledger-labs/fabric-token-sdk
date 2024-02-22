@@ -36,6 +36,7 @@ type TokenRecord struct {
 	Amount uint64
 }
 
+// CertificationDB defines a database to manager token certifications
 type CertificationDB interface {
 	// ExistsCertification returns true if a certification for the passed token exists,
 	// false otherwise
@@ -50,6 +51,7 @@ type CertificationDB interface {
 	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
 }
 
+// TokenDB defines a database to store token related info
 type TokenDB interface {
 	CertificationDB
 	// StoreOwnerToken stores the passed owner token record in relation to the passed owner identifiers

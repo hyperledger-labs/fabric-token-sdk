@@ -30,7 +30,7 @@ func NewDriver() *Driver {
 
 // Open returns a pure go sqlite implementation in memory for testing purposes.
 func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.TokenTransactionDB, error) {
-	name := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	name := sqldb.DatasourceName(tmsID)
 	h := sha256.New()
 	if _, err := h.Write([]byte(name)); err != nil {
 		return nil, err

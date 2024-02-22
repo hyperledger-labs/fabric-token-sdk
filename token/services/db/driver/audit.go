@@ -11,7 +11,7 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-// AuditTransactionDB defines the interface for a token transactions database
+// AuditTransactionDB defines the interface for a database to store the audit records of token transactions.
 type AuditTransactionDB interface {
 	// Close closes the database
 	Close() error
@@ -47,9 +47,6 @@ type AuditTransactionDB interface {
 
 	// QueryValidations returns a list of validation  records
 	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
-
-	// AddValidationRecord adds a new validation records for the given params
-	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
 	AddTokenRequest(txID string, tr []byte) error

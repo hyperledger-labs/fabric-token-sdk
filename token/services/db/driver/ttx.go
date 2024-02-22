@@ -12,7 +12,8 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
-// TokenTransactionDB defines the interface for a token transactions database
+// TokenTransactionDB defines the interface for a token transaction database.
+// This database is used to store records related to the processed token transactions.
 type TokenTransactionDB interface {
 	TransactionDB
 	TransactionEndorsementAckDB

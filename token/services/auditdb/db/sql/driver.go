@@ -60,7 +60,7 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.AuditT
 		panic(fmt.Sprintf("%s.driver not set. See https://github.com/golang/go/wiki/SQLDrivers", OptsKey))
 	}
 
-	name := fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	name := sqldb.DatasourceName(tmsID)
 	dataSourceName := os.Getenv(EnvVarKey)
 	if dataSourceName == "" {
 		dataSourceName = opts.DataSource
