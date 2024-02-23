@@ -57,15 +57,15 @@ type rangeProver struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds int
+	NumberOfRounds uint
 	// BitLength is the size of the binary representation of value
-	BitLength int
+	BitLength uint
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
 
 // NewRangeProver returns a rangeProver based on  the passed arguments
-func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *rangeProver {
+func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength uint, curve *math.Curve) *rangeProver {
 	return &rangeProver{
 		Commitment:           com,
 		value:                value,
@@ -99,15 +99,15 @@ type rangeVerifier struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds int
+	NumberOfRounds uint
 	// BitLength is the size of the binary representation of value
-	BitLength int
+	BitLength uint
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
 
 // NewRangeVerifier returns a rangeVerifier based on the passed arguments
-func NewRangeVerifier(com *math.G1, commitmentGen []*math.G1, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength int, curve *math.Curve) *rangeVerifier {
+func NewRangeVerifier(com *math.G1, commitmentGen []*math.G1, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength uint, curve *math.Curve) *rangeVerifier {
 	return &rangeVerifier{
 		Commitment:           com,
 		CommitmentGenerators: commitmentGen,
@@ -244,7 +244,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	}
 	rho := p.Curve.NewRandomZr(rand)
 	eta := p.Curve.NewRandomZr(rand)
-	for i := 0; i < p.BitLength; i++ {
+	for i := 0; i < int(p.BitLength); i++ {
 		b := 1 << uint(i) & p.value
 		if b > 0 {
 			b = 1
