@@ -62,6 +62,17 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 }
 
 func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) error {
+	GetTMSProvider := func() *token3.ManagementServiceProvider {
+		return token3.GetManagementServiceProvider(p.sp)
+	}
+	GetTokenRequest := func(tms *token3.ManagementService, txID string) ([]byte, error) {
+		tr, err := owner.Get(p.sp, tms).GetTokenRequest(txID)
+		if err != nil || len(tr) == 0 {
+			return auditor.GetByTMSID(p.sp, tms.ID()).GetTokenRequest(txID)
+		}
+		return tr, nil
+	}
+
 	n := fabric.GetFabricNetworkService(p.sp, networkID)
 	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
 		// ORION
@@ -91,16 +102,8 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			orion2.NewTokenRWSetProcessor(
 				ons.Name(),
 				namespace,
-				func() *token3.ManagementServiceProvider {
-					return token3.GetManagementServiceProvider(p.sp)
-				},
-				func(tms *token3.ManagementService, txID string) ([]byte, error) {
-					tr, err := owner.Get(p.sp, tms).GetTokenRequest(txID)
-					if err != nil || len(tr) == 0 {
-						return auditor.GetByTMSID(p.sp, tms.ID()).GetTokenRequest(txID)
-					}
-					return tr, nil
-				},
+				GetTMSProvider,
+				GetTokenRequest,
 				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 				tokenStore,
@@ -148,16 +151,8 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		fabric2.NewTokenRWSetProcessor(
 			n.Name(),
 			namespace,
-			func() *token3.ManagementServiceProvider {
-				return token3.GetManagementServiceProvider(p.sp)
-			},
-			func(tms *token3.ManagementService, txID string) ([]byte, error) {
-				tr, err := owner.Get(p.sp, tms).GetTokenRequest(txID)
-				if err != nil || len(tr) == 0 {
-					return auditor.GetByTMSID(p.sp, tms.ID()).GetTokenRequest(txID)
-				}
-				return tr, nil
-			},
+			GetTMSProvider,
+			GetTokenRequest,
 			network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
 			tokenStore,
