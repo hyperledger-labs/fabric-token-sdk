@@ -101,7 +101,7 @@ func (db *TokenDB) OwnersOf(txID string, index uint64) (*token.Token, []string, 
 	where := whereTokenIDs(&args, tokenIDs)
 
 	// select token
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false", db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", db.table.Tokens, where)
 	logger.Debug(query, args)
 	row := db.db.QueryRow(query, args...)
 	var tokenOwner []byte
@@ -842,7 +842,7 @@ func (db *TokenDB) GetSchema() string {
 			issuer BOOL NOT NULL DEFAULT false,
 			PRIMARY KEY (tx_id, idx)
 		);
-		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted );
+		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );
 
 		-- Ownership
 		CREATE TABLE IF NOT EXISTS %s (
@@ -867,12 +867,15 @@ func (db *TokenDB) GetSchema() string {
 			certification BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
+		CREATE INDEX IF NOT EXISTS exists_%s ON %s ( token_id );
 		`,
 		db.table.Tokens,
 		db.table.Tokens,
 		db.table.Tokens,
 		db.table.Ownership,
 		db.table.PublicParams,
+		db.table.Certifications,
+		db.table.Certifications,
 		db.table.Certifications,
 	)
 }
