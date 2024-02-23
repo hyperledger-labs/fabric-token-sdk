@@ -53,6 +53,25 @@ func (t *TokenStore) DeleteToken(txID string, index uint64, deletedBy string) er
 	return nil
 }
 
+func (t *TokenStore) AppendToken(txID string, index uint64, tok *token2.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string, issuer view.Identity, precision uint64, flags processor.Flags) error {
+	if flags.Mine {
+		if err := t.StoreToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, ids, precision); err != nil {
+			return err
+		}
+	}
+	if flags.Auditor {
+		if err := t.StoreAuditToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, precision); err != nil {
+			return err
+		}
+	}
+	if flags.Issuer {
+		if err := t.StoreIssuedHistoryToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, issuer, precision); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t *TokenStore) StoreToken(txID string, index uint64, tok *token2.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string, precision uint64) error {
 	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {

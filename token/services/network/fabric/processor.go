@@ -164,6 +164,13 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		}
 	}
 
+	auditorFlag := r.ownership.AmIAnAuditor(tms)
+	if auditorFlag {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], I must be the auditor", txID)
+		}
+	}
+
 	for i := 0; i < rws.NumWrites(ns); i++ {
 		key, tokenOnLedger, err := rws.GetWriteAt(ns, i)
 		if err != nil {
@@ -246,37 +253,37 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		}
 
+		issuerFlag := !issuer.IsNone() && r.issued.Issued(tms, issuer, tok)
 		ids, mine := r.ownership.IsMine(tms, tok)
-		if mine {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			if mine {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
-			}
-			if err := r.tokenStore.StoreToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, ids, precision); err != nil {
-				return err
-			}
-		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
+			} else {
 				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
 			}
 		}
-
-		// if I'm an auditor, store the audit entry
-		if r.ownership.AmIAnAuditor(tms) {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
-			}
-			if err := r.tokenStore.StoreAuditToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, precision); err != nil {
-				return err
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			if issuerFlag {
+				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
 		}
 
-		if !issuer.IsNone() && r.issued.Issued(tms, issuer, tok) {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
-			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, issuer, precision); err != nil {
-				return err
-			}
+		if err := r.tokenStore.AppendToken(
+			txID,
+			index,
+			tok,
+			tokenOnLedger,
+			tokenOnLedgerMetadata,
+			ids,
+			issuer,
+			precision,
+			processor.Flags{
+				Mine:    mine,
+				Auditor: auditorFlag,
+				Issuer:  issuerFlag,
+			},
+		); err != nil {
+			return err
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
