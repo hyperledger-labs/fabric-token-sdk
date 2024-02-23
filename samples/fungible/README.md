@@ -652,7 +652,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fabricTopology, tokenSDKDriver)
-	tms.SetNamespace([]string{"Org1"}, "100", "2")
+	tms.SetNamespace([]string{"Org1"}, "16")
     tms.AddAuditor(auditor)
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}

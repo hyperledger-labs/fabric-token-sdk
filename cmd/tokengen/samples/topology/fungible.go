@@ -101,7 +101,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	tokenTopology.SetSDK(fscTopology, &tokenSDK.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	fabric2.SetOrgs(tms, "Org1")
-	tms.SetTokenGenPublicParams("100", "2")
+	tms.SetTokenGenPublicParams("16")
 	tms.AddAuditor(auditor)
 
 	// Add Fabric SDK to FSC Nodes

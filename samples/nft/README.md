@@ -306,7 +306,7 @@ func Fabric(tokenSDKDriver string) []api.Topology {
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	tms.SetTokenGenPublicParams("16")
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 

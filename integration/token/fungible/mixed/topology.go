@@ -157,12 +157,12 @@ func Topology() []api.Topology {
 	dlogTms := tokenTopology.AddTMS([]*node.Node{issuer1, auditor1, alice, bob}, backendNetwork, backendChannel, DLogDriver)
 	dlogTms.SetNamespace(DLogNamespace)
 	// max token value is 100^2 - 1 = 9999
-	dlogTms.SetTokenGenPublicParams("100", "2")
+	dlogTms.SetTokenGenPublicParams("16")
 	fabric2.SetOrgs(dlogTms, "Org1")
 
 	fabTokenTms := tokenTopology.AddTMS([]*node.Node{issuer2, auditor2, alice, bob}, backendNetwork, backendChannel, FabtokenDriver)
 	fabTokenTms.SetNamespace(FabTokenNamespace)
-	fabTokenTms.SetTokenGenPublicParams("9998")
+	fabTokenTms.SetTokenGenPublicParams("65536")
 	fabric2.SetOrgs(fabTokenTms, "Org2")
 
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

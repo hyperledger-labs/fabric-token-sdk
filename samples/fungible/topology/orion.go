@@ -90,7 +90,7 @@ func Orion(tokenSDKDriver string) []api.Topology {
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
-	tms.SetTokenGenPublicParams("100", "2")
+	tms.SetTokenGenPublicParams("16")
 	orion2.SetCustodian(tms, custodian)
 
 	// Enable orion sdk on each FSC node

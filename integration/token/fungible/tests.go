@@ -727,10 +727,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	// Test Max Token Value
-	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
-	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
-	TransferCash(network, "charlie", "", "MAX", 10000, "alice", auditor, "cannot create output with value [10000], max [9999]")
-	IssueCash(network, "", "MAX", 10000, "charlie", auditor, true, "issuer", "q is larger than max token value [9999]")
+	IssueCash(network, "", "MAX", 65535, "charlie", auditor, true, "issuer")
+	IssueCash(network, "", "MAX", 65535, "charlie", auditor, true, "issuer")
+	TransferCash(network, "charlie", "", "MAX", 65536, "alice", auditor, "cannot create output with value [65536], max [65535]")
+	IssueCash(network, "", "MAX", 65536, "charlie", auditor, true, "issuer", "q is larger than max token value [65535]")
 
 	// Check consistency
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
