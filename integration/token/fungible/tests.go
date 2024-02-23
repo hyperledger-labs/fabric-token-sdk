@@ -897,8 +897,8 @@ func TestMixed(network *integration.Infrastructure) {
 	// Try to spend on dlog coins from fabtoken
 	TransferCashForTMSID(network, "alice", "", "USD", 120, "bob", "auditor2", fabTokenId, "")
 	// Try to issue more coins than the max
-	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor1", true, "issuer1", dlogId)
-	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [9998]")
+	IssueCashForTMSID(network, "", "MAX", 65535, "bob", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "MAX", 65536, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [65535]")
 
 	// Shut down one auditor and try to issue cash for both chaincodes
 	Restart(network, true, "auditor2")
