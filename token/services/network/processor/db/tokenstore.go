@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.network.processor")
+var logger = flogging.MustGetLogger("token-sdk.network.processor.db")
 
 type TokenStore struct {
 	notifier events.Publisher

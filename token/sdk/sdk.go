@@ -46,6 +46,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
@@ -106,6 +107,8 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(ownerManager))
 	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(auditorManager))
+	tokensManager := tokens.NewManager(networkProvider, tokenDBManager, storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(tokensManager))
 	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
 
 	tmsProvider := tms2.NewTMSProvider(

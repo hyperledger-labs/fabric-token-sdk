@@ -479,18 +479,17 @@ func (np *Provider) GetNetwork(network string, channel string) (*Network, error)
 }
 
 func (np *Provider) newNetwork(network string, channel string) (*Network, error) {
+	var errs []error
 	for driverName, d := range drivers {
 		nw, err := d.New(np.sp, network, channel)
 		if err != nil {
-			logger.Warningf("failed to create network [%s:%s]: %s", network, channel, err)
+			errs = append(errs, errors.WithMessagef(err, "failed to create network [%s:%s]", network, channel))
 			continue
 		}
-		if nw != nil {
-			logger.Debugf("new network [%s:%s] with driver [%s]", network, channel, driverName)
-			return &Network{n: nw}, nil
-		}
+		logger.Debugf("new network [%s:%s] with driver [%s]", network, channel, driverName)
+		return &Network{n: nw}, nil
 	}
-	return nil, errors.Errorf("no network driver found for [%s:%s]", network, channel)
+	return nil, errors.Errorf("no network driver found for [%s:%s], errs [%v]", network, channel, errs)
 }
 
 // GetInstance returns a network instance for the given network and channel

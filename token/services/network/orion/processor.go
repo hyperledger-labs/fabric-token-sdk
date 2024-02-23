@@ -8,6 +8,7 @@ package orion
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -141,7 +142,7 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Parsing write key [%s]", key)
 		}
-		prefix, components, err := keys.SplitCompositeKey(key)
+		prefix, components, err := keys.SplitCompositeKey(strings.ReplaceAll(key, "~", string(rune(0))))
 		if err != nil {
 			return errors.WithMessagef(err, "failed to split key [%s]", key)
 		}

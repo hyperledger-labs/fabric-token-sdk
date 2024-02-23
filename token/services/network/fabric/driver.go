@@ -20,7 +20,7 @@ type Driver struct{}
 func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.Network, error) {
 	n := fabric.GetFabricNetworkService(sp, network)
 	if n == nil {
-		return nil, errors.Errorf("fabric network %s not found", network)
+		return nil, errors.Errorf("fabric network [%s] not found", network)
 	}
 	ch, err := n.Channel(channel)
 	if err != nil {
