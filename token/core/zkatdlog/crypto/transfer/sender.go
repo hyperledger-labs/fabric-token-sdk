@@ -67,7 +67,7 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 
 		intw[i] = &token.TokenDataWitness{Value: uint64(v), Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
 	}
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedParams, math.Curves[s.PublicParams.Curve])
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedersenGenerators, math.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}

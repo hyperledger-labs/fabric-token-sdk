@@ -82,10 +82,8 @@ type PublicParams struct {
 	Label string
 	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
 	Curve mathlib.CurveID
-	// PedGen is the generator of the Pedersen commitment group.
-	PedGen *mathlib.G1
-	// PedParams contains the public parameters for the Pedersen commitment scheme.
-	PedParams []*mathlib.G1
+	// PedersenGenerators contains the public parameters for the Pedersen commitment scheme.
+	PedersenGenerators []*mathlib.G1
 	// RangeProofParams contains the public parameters for the range proof scheme.
 	RangeProofParams *RangeProofParams
 	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
@@ -191,11 +189,10 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
-	pp.PedGen = curve.GenG1.Mul(curve.NewRandomZr(rand))
-	pp.PedParams = make([]*mathlib.G1, 3)
+	pp.PedersenGenerators = make([]*mathlib.G1, 3)
 
-	for i := 0; i < len(pp.PedParams); i++ {
-		pp.PedParams[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
+	for i := 0; i < len(pp.PedersenGenerators); i++ {
+		pp.PedersenGenerators[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
 	return nil
 }
@@ -263,14 +260,11 @@ func (pp *PublicParams) Validate() error {
 	if int(pp.IdemixCurveID) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
 	}
-	if pp.PedGen == nil {
-		return errors.New("invalid public parameters: nil Pedersen generator")
+	if len(pp.PedersenGenerators) != 3 {
+		return errors.Errorf("invalid public parameters: length mismatch in Pedersen parameters [%d vs. 3]", len(pp.PedersenGenerators))
 	}
-	if len(pp.PedParams) != 3 {
-		return errors.Errorf("invalid public parameters: length mismatch in Pedersen parameters [%d vs. 3]", len(pp.PedParams))
-	}
-	for i := 0; i < len(pp.PedParams); i++ {
-		if pp.PedParams[i] == nil {
+	for i := 0; i < len(pp.PedersenGenerators); i++ {
+		if pp.PedersenGenerators[i] == nil {
 			return errors.Errorf("invalid public parameters: nil Pedersen parameter at index %d", i)
 		}
 	}

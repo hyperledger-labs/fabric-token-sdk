@@ -13,15 +13,12 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/interop/htlc"
+	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
@@ -64,9 +61,9 @@ func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType string, v
 			OwnerInfo: ownerInfo,
 		},
 		Data: &TokenDataOpening{
-			TokenType: tokenType,
-			Value:     value,
-			BF:        bf,
+			TokenType:      tokenType,
+			Value:          value,
+			BlindingFactor: bf,
 		},
 	}, nil
 }
@@ -74,9 +71,9 @@ func NewAuditableToken(token *token.Token, ownerInfo []byte, tokenType string, v
 // TokenDataOpening contains the opening of the TokenData.
 // TokenData is a Pedersen commitment to token type and Value.
 type TokenDataOpening struct {
-	TokenType string
-	Value     *math.Zr
-	BF        *math.Zr
+	TokenType      string
+	Value          *math.Zr
+	BlindingFactor *math.Zr
 }
 
 // OwnerOpening contains the information that allows the auditor to identify the owner.
@@ -148,7 +145,7 @@ func (a *Auditor) Check(tokenRequest *driver.TokenRequest, tokenRequestMetadata 
 	if err != nil {
 		return errors.Wrapf(err, "failed checking issues for [%s]", txID)
 	}
-	// De-odfuscate transfer requests
+	// De-obfuscate transfer requests
 	auditableInputs, outputsFromTransfer, err := a.GetAuditInfoForTransfersFunc(tokenRequest.Transfers, tokenRequestMetadata.Transfers, inputTokens)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting audit info for transfers for [%s]", txID)
@@ -208,16 +205,13 @@ func (a *Auditor) InspectOutputs(tokens []*AuditableToken) error {
 // InspectOutput verifies that the commitments in an output token of a given index
 // match the information provided in the clear.
 func (a *Auditor) InspectOutput(output *AuditableToken, index int) error {
-	if len(a.PedersenParams) != 3 {
-		return errors.Errorf("length of Pedersen basis != 3")
-	}
 	if output == nil || output.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
-	tokenComm, err := common.ComputePedersenCommitment([]*math.Zr{a.Curve.HashToZr([]byte(output.Data.TokenType)), output.Data.Value, output.Data.BF}, a.PedersenParams, a.Curve)
-	if err != nil {
-		return err
+	if output.Data.Value == nil || output.Data.BlindingFactor == nil {
+		return errors.Errorf("invalid output at index [%d]", index)
 	}
+	tokenComm := commit([]*math.Zr{a.Curve.HashToZr([]byte(output.Data.TokenType)), output.Data.Value, output.Data.BlindingFactor}, a.PedersenParams, a.Curve)
 	if output.Token == nil || output.Token.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
@@ -258,12 +252,11 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	if len(token.Owner.OwnerInfo) == 0 {
 		return errors.Errorf("failed to inspect owner at index [%d]: owner info is nil", index)
 	}
-	ro, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
+	ro, err := identity.UnmarshallRawOwner(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
-	switch ro.Type {
-	case msp.IdemixIdentity:
+	if ro.Type == identity.SerializedIdentityType {
 		matcher, err := des.GetOwnerMatcher(token.Owner.OwnerInfo)
 		if err != nil {
 			return errors.Errorf("failed to get owner matcher for output [%d]", index)
@@ -272,16 +265,12 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 		}
 		return nil
-	case htlc2.ScriptType:
-		return inspectTokenOwnerOfScript(des, token, index)
-	default:
-		return errors.Errorf("identity type [%s] not recognized", ro.Type)
 	}
-
+	return inspectTokenOwnerOfScript(des, token, index)
 }
 
 func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
-	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
+	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
 	}
@@ -298,7 +287,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
 	}
-	ro, err := identity.UnmarshalTypedIdentity(scriptSender)
+	ro, err := identity.UnmarshallRawOwner(scriptSender)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve raw owner from sender in script")
 	}
@@ -310,7 +299,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
 	}
-	ro, err = identity.UnmarshalTypedIdentity(scriptRecipient)
+	ro, err = identity.UnmarshallRawOwner(scriptRecipient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in script")
 	}
@@ -329,7 +318,7 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 	}
 	outputs := make([][]*AuditableToken, len(issues))
 	for k, md := range metadata {
-		ia := &issue.IssueAction{}
+		ia := &issue2.IssueAction{}
 		err := json.Unmarshal(issues[k], ia)
 		if err != nil {
 			return nil, err
@@ -412,4 +401,12 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		}
 	}
 	return auditableInputs, outputs, nil
+}
+
+func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
+	com := c.NewG1()
+	for i := range vector {
+		com.Add(generators[i].Mul(vector[i]))
+	}
+	return com
 }

@@ -75,7 +75,7 @@ var _ = Describe("validator", func() {
 		asigner, _ := prepareECDSASigner()
 		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, asigner, c)
+		auditor = audit.NewAuditor(des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -480,7 +480,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	ids[0] = "0"
 	ids[1] = "1"
 
-	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedParams, c)
+	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 	tokens := make([]*tokn.Token, 2)
 	tokens[0] = &tokn.Token{Data: inputs[0], Owner: id}
 	tokens[1] = &tokn.Token{Data: inputs[1], Owner: id}

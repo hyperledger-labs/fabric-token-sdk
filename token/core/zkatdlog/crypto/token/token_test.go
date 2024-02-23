@@ -34,9 +34,9 @@ var _ = Describe("Token", func() {
 		}
 		token = &token2.Token{}
 		token.Data = c.NewG1()
-		token.Data.Add(pp.PedParams[1].Mul(inf.Value))
-		token.Data.Add(pp.PedParams[2].Mul(inf.BlindingFactor))
-		token.Data.Add(pp.PedParams[0].Mul(c.HashToZr([]byte("ABC"))))
+		token.Data.Add(pp.PedersenGenerators[1].Mul(inf.Value))
+		token.Data.Add(pp.PedersenGenerators[2].Mul(inf.BlindingFactor))
+		token.Data.Add(pp.PedersenGenerators[0].Mul(c.HashToZr([]byte("ABC"))))
 	})
 	Describe("get token in the clear", func() {
 		When("token is computed correctly", func() {

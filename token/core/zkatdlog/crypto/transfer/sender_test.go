@@ -72,7 +72,7 @@ var _ = Describe("Sender", func() {
 		ids[1] = "1"
 		ids[2] = "3"
 
-		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedParams, c)
+		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 		tokens = make([]*token.Token, 3)
 
 		tokens[0] = &token.Token{Data: inputs[0], Owner: []byte("alice-1")}

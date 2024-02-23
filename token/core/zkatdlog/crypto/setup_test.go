@@ -37,8 +37,7 @@ func TestSerialization(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, pp.IdemixIssuerPK, pp2.IdemixIssuerPK)
-	assert.Equal(t, pp.PedGen, pp2.PedGen)
-	assert.Equal(t, pp.PedParams, pp2.PedParams)
+	assert.Equal(t, pp.PedersenGenerators, pp2.PedersenGenerators)
 	assert.Equal(t, pp.RangeProofParams, pp2.RangeProofParams)
 
 	assert.Equal(t, pp, pp2)

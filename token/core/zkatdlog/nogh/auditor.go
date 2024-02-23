@@ -36,7 +36,7 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 	if pp == nil {
 		return errors.Errorf("public parameters not inizialized")
 	}
-	if err := audit.NewAuditor(des, pp.PedParams, pp.IdemixIssuerPK, nil, math.Curves[pp.Curve]).Check(
+	if err := audit.NewAuditor(des, pp.PedersenGenerators, pp.IdemixIssuerPK, nil, math.Curves[pp.Curve]).Check(
 		tokenRequest,
 		tokenRequestMetadata,
 		inputTokens,

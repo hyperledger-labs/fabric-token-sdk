@@ -49,7 +49,7 @@ func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness
 
 	tokens := make([]*math.G1, len(values))
 	for i := 0; i < len(values); i++ {
-		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedParams, curve)
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
 	}
 	return token.NewTokenDataWitness("ABC", values, bf), tokens
 }
