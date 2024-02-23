@@ -43,15 +43,23 @@ type NetworkHandler struct {
 }
 
 func (p *NetworkHandler) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "ttxdb")
+	return p.dbsqlDataSourceDir(peer, "ttxdb")
 }
 
 func (p *NetworkHandler) TokensDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "tokensdb")
+	return p.dbsqlDataSourceDir(peer, "tokensdb")
 }
 
 func (p *NetworkHandler) AuditDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "auditdb")
+	return p.dbsqlDataSourceDir(peer, "auditdb")
+}
+
+func (p *NetworkHandler) IdentityDBSQLDataSourceDir(peer *sfcnode.Node) string {
+	return p.dbsqlDataSourceDir(peer, "identitydb")
+}
+
+func (p *NetworkHandler) dbsqlDataSourceDir(peer *sfcnode.Node, dirName string) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), dirName)
 }
 
 func (p *NetworkHandler) DBPath(root string, tms *topology2.TMS) string {

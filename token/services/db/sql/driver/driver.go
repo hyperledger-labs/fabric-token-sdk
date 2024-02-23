@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	auditdbd "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
@@ -73,6 +74,22 @@ func (d *Driver) OpenAuditTransactionDB(sp view.ServiceProvider, tmsID token.TMS
 	}
 
 	return sql2.NewTransactionDB(sqlDB, "audit", name, opts.CreateSchema)
+}
+
+func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
+	sqlDB, opts, name, err := d.open(sp, tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
+	}
+	return sql2.NewWalletDB(sqlDB, "wallet", name, opts.CreateSchema)
+}
+
+func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID, id string) (auditdbd.IdentityDB, error) {
+	sqlDB, opts, name, err := d.open(sp, tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
+	}
+	return sql2.NewIdentityDB(sqlDB, "id_"+id, name, opts.CreateSchema)
 }
 
 func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, string, error) {
@@ -162,9 +179,23 @@ func (t *AUDITDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditd
 	return t.OpenAuditTransactionDB(sp, tmsID)
 }
 
+type IdentityDBDriver struct {
+	*Driver
+}
+
+func (t *IdentityDBDriver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
+	return t.Driver.OpenWalletDB(sp, tmsID)
+}
+
+func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID, id string) (auditdbd.IdentityDB, error) {
+	return t.Driver.OpenIdentityDB(sp, tmsID, id)
+}
+
 func init() {
 	root := NewDriver()
 	ttxdb.Register("unity", &TTXDBDriver{Driver: root})
 	tokendb.Register("unity", &TOKENDBDriver{Driver: root})
 	auditdb.Register("unity", &AUDITDBDriver{Driver: root})
+	identitydb.Register("unity", &IdentityDBDriver{Driver: root})
+
 }

@@ -33,6 +33,15 @@ token:
             driver: sqlite    
             maxOpenConns: 10
             dataSource: {{ SQLDataSource }}
+      identitydb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            tablePrefix: identity  
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: {{ IdentitySQLDataSource }}
       ttxdb:
         persistence:
           type: unity

@@ -24,7 +24,6 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/certification"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
-	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
@@ -38,6 +37,8 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
+	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
@@ -81,7 +82,10 @@ func (p *SDK) Install() error {
 	}
 	logger.Infof("Token platform enabled, installing...")
 
-	identityStorageProvider := identity2.NewKVSStorageProvider(kvs.GetService(p.registry))
+	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type"))
+	identityStorageProvider := identitydb.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
+	assert.NoError(p.registry.RegisterService(identityStorageProvider))
+
 	assert.NoError(
 		p.registry.RegisterService(identityStorageProvider),
 		"failed to register identity storage",
