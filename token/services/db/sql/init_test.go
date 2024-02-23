@@ -62,10 +62,7 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 	Tokens = newTokenDB(db, tokenTables{
 		Tokens:         tables.Tokens,
 		Ownership:      tables.Ownership,
-		AuditTokens:    tables.AuditTokens,
-		IssuedTokens:   tables.IssuedTokens,
 		PublicParams:   tables.PublicParams,
-		Ledger:         tables.Ledger,
 		Certifications: tables.Certifications,
 	})
 	if createSchema {
@@ -90,10 +87,7 @@ func TestGetTableNames(t *testing.T) {
 		Certifications:        "certifications_5193a5",
 		Ownership:             "ownership_5193a5",
 		Tokens:                "tokens_5193a5",
-		AuditTokens:           "audit_tokens_5193a5",
-		IssuedTokens:          "issued_tokens_5193a5",
 		PublicParams:          "public_params_5193a5",
-		Ledger:                "ledger_5193a5",
 	}, names)
 
 	names, err = getTableNames("valid_prefix", name)

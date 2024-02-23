@@ -81,8 +81,11 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 			Quantity:       "0x02",
 			Type:           "TST",
 			Amount:         0,
+			Owner:          true,
+			Auditor:        false,
+			Issuer:         false,
 		}
-		assert.NoError(t, db.StoreOwnerToken(tr, owners))
+		assert.NoError(t, db.StoreToken(tr, owners))
 	}
 	tr := driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100),
@@ -94,8 +97,11 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Quantity:       "0x02",
 		Type:           "TST",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"dan"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"dan"}))
 
 	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100), // only txid + index + ns is unique together
@@ -107,8 +113,11 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Quantity:       "0x02",
 		Type:           "TST",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice", "bob"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice", "bob"}))
 
 	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 101),
@@ -120,8 +129,11 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Quantity:       "0x02",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 
 	tok, err := db.ListUnspentTokens()
 	assert.NoError(t, err)
@@ -129,6 +141,10 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	assert.Equal(t, 23, tok.Count())
 	assert.Equal(t, "46", tok.Sum(64).Decimal(), "expect sum to be 2*23")
 	assert.Len(t, tok.ByType("TST").Tokens, 22, "expect filter on type to work")
+	for _, token := range tok.Tokens {
+		assert.NotNil(t, token.Owner, "expected owner to not be nil")
+		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+	}
 
 	tokens := getTokensBy(t, db, "alice", "")
 	assert.NoError(t, err)
@@ -179,8 +195,11 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -191,8 +210,11 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -203,8 +225,11 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	assert.NoError(t, db.Delete("tx101", 0, "tx103"))
 
 	tok, err := db.ListUnspentTokens()
@@ -242,8 +267,11 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          false,
+		Auditor:        true,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreAuditToken(tr))
+	assert.NoError(t, db.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -253,8 +281,11 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Quantity:       "0x02",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          false,
+		Auditor:        true,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreAuditToken(tr))
+	assert.NoError(t, db.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -264,8 +295,11 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Quantity:       "0x03",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          false,
+		Auditor:        true,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreAuditToken(tr))
+	assert.NoError(t, db.StoreToken(tr, nil))
 
 	tid := []*token.ID{
 		{TxId: "tx101", Index: 0},
@@ -276,6 +310,10 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 	assert.Len(t, tok, 2)
 	assert.Equal(t, "0x01", tok[0].Quantity, "expected tx101-0 to be returned")
 	assert.Equal(t, "0x02", tok[1].Quantity, "expected tx101-1 to be returned")
+	for _, token := range tok {
+		assert.NotNil(t, token.Owner, "expected owner to not be nil")
+		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+	}
 
 	tok, err = db.ListAuditTokens()
 	assert.NoError(t, err)
@@ -293,8 +331,11 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          false,
+		Auditor:        false,
+		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreIssuedToken(tr))
+	assert.NoError(t, db.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -305,8 +346,11 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Quantity:       "0x02",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          false,
+		Auditor:        false,
+		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreIssuedToken(tr))
+	assert.NoError(t, db.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -317,8 +361,11 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Quantity:       "0x03",
 		Type:           "DEF",
 		Amount:         0,
+		Owner:          false,
+		Auditor:        false,
+		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreIssuedToken(tr))
+	assert.NoError(t, db.StoreToken(tr, nil))
 
 	tok, err := db.ListHistoryIssuedTokens()
 	if err != nil {
@@ -329,10 +376,22 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 	assert.Equal(t, "0x01", tok.Tokens[0].Quantity, "expected tx101-0 to be returned")
 	assert.Equal(t, "0x02", tok.Tokens[1].Quantity, "expected tx101-1 to be returned")
 	assert.Equal(t, "0x03", tok.Tokens[2].Quantity, "expected tx102-0 to be returned")
+	for _, token := range tok.Tokens {
+		assert.NotNil(t, token.Issuer, "expected issuer to not be nil")
+		assert.NotEmpty(t, token.Issuer.Raw, "expected issuer raw to not be empty")
+		assert.NotNil(t, token.Owner, "expected owner to not be nil")
+		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+	}
 
 	tok, err = db.ListHistoryIssuedTokens()
 	assert.NoError(t, err)
 	assert.Len(t, tok.ByType("DEF").Tokens, 1, "expected tx102-0 to be filtered")
+	for _, token := range tok.Tokens {
+		assert.NotNil(t, token.Issuer, "expected issuer to not be nil")
+		assert.NotEmpty(t, token.Issuer.Raw, "expected issuer raw to not be empty")
+		assert.NotNil(t, token.Owner, "expected owner to not be nil")
+		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
+	}
 }
 
 // GetTokenInfos retrieves the token information for the passed ids.
@@ -348,8 +407,11 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -360,8 +422,11 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          1,
@@ -372,8 +437,11 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 
 	ids := []*token.ID{
 		{TxId: "tx101", Index: 0},
@@ -441,8 +509,11 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -453,8 +524,11 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"bob"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -465,8 +539,11 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Quantity:       "0x01",
 		Type:           "ABC",
 		Amount:         0,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreOwnerToken(tr, []string{"alice"}))
+	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	assert.NoError(t, db.DeleteTokens(&token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
 
 	tok, err := db.ListUnspentTokens()

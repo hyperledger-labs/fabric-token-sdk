@@ -34,6 +34,12 @@ type TokenRecord struct {
 	Type string
 	// Amount is the Quantity converted to decimal
 	Amount uint64
+	// Owner is used to mark the token as owned by this node
+	Owner bool
+	// Auditor is used to mark this token as audited by this node
+	Auditor bool
+	// Issuer issued to mark this token as issued by this node
+	Issuer bool
 }
 
 // CertificationDB defines a database to manager token certifications
@@ -54,12 +60,8 @@ type CertificationDB interface {
 // TokenDB defines a database to store token related info
 type TokenDB interface {
 	CertificationDB
-	// StoreOwnerToken stores the passed owner token record in relation to the passed owner identifiers
-	StoreOwnerToken(tr TokenRecord, owners []string) error
-	// StoreIssuedToken store the issued token record
-	StoreIssuedToken(tr TokenRecord) error
-	// StoreAuditToken store the audited token record
-	StoreAuditToken(tr TokenRecord) error
+	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
+	StoreToken(tr TokenRecord, owners []string) error
 	// OwnersOf returns the list of owner of a given token
 	OwnersOf(txID string, index uint64) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier
@@ -91,7 +93,7 @@ type TokenDB interface {
 	GetTokenInfoAndOutputs(ids []*token.ID, callback driver.QueryCallback2Func) error
 	// GetAllTokenInfos returns the token metadata for the passed ids
 	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
-	// GetTokens returns the tokens and their identifier keys for the passed ids.
+	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
 	// WhoDeletedTokens for each id, the function return if it was deleted and by who as per the Delete function
 	WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error)
