@@ -49,13 +49,21 @@ type ipaProver struct {
 	Commitment *mathlib.G1
 	// NumberOfRounds is the number of rounds in the reduction protocol.
 	// It corresponds to log_2(len(rightVector)) = log_2(len(leftVector))
-	NumberOfRounds uint
+	NumberOfRounds int
 	// Curve is the curve over which the computations are performed
 	Curve *mathlib.Curve
 }
 
 // NewIPAProver returns an ipaProver as a function of the passed arguments
-func NewIPAProver(innerProduct *mathlib.Zr, leftVector, rightVector []*mathlib.Zr, Q *mathlib.G1, leftGens, rightGens []*mathlib.G1, Commitment *mathlib.G1, rounds uint, c *mathlib.Curve) *ipaProver {
+func NewIPAProver(
+	innerProduct *mathlib.Zr,
+	leftVector, rightVector []*mathlib.Zr,
+	Q *mathlib.G1,
+	leftGens, rightGens []*mathlib.G1,
+	Commitment *mathlib.G1,
+	rounds int,
+	c *mathlib.Curve,
+) *ipaProver {
 	return &ipaProver{
 		InnerProduct:    innerProduct,
 		rightVector:     rightVector,
@@ -84,13 +92,13 @@ type ipaVerifier struct {
 	Commitment *mathlib.G1
 	// NumberOfRounds is the number of rounds in the reduction protocol.
 	// It corresponds to log_2(len(rightVector)) = log_2(len(leftVector))
-	NumberOfRounds uint
+	NumberOfRounds int
 	// Curve is the curve over which the computations are performed
 	Curve *mathlib.Curve
 }
 
 // NewIPAVerifier returns an ipaVerifier as a function of the passed arguments
-func NewIPAVerifier(innerProduct *mathlib.Zr, Q *mathlib.G1, leftGens, rightGens []*mathlib.G1, Commitment *mathlib.G1, rounds uint, c *mathlib.Curve) *ipaVerifier {
+func NewIPAVerifier(innerProduct *mathlib.Zr, Q *mathlib.G1, leftGens, rightGens []*mathlib.G1, Commitment *mathlib.G1, rounds int, c *mathlib.Curve) *ipaVerifier {
 	return &ipaVerifier{
 		InnerProduct:    innerProduct,
 		RightGenerators: rightGens,
