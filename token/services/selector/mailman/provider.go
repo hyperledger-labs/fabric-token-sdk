@@ -87,7 +87,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 	if err != nil {
 		return nil, errors.Errorf("cannot get ntwork vault for TMS [%s]", tms.ID())
 	}
-	newManager := NewManager(
+	newManager, err := NewManager(
 		tms.ID(),
 		vault,
 		qs,
@@ -96,6 +96,9 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 		pp.Precision(),
 		s.subscribe,
 	)
+	if err != nil {
+		return nil, err
+	}
 	newManager.Start()
 	s.managers[key] = newManager
 	return newManager, nil

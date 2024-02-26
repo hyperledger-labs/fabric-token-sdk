@@ -20,11 +20,15 @@ type RWSet interface {
 	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
 }
 
+type Flags struct {
+	Mine    bool
+	Auditor bool
+	Issuer  bool
+}
+
 type TokenStore interface {
 	DeleteToken(txID string, index uint64, deletedBy string) error
-	StoreToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string, precision uint64) error
-	StoreIssuedHistoryToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error
-	StoreAuditToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, precision uint64) error
+	AppendToken(txID string, index uint64, tok *token.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string, issuer view.Identity, precision uint64, flags Flags) error
 	StorePublicParams(val []byte) error
 }
 

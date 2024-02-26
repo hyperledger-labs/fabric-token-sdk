@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.network.processor")
+var logger = flogging.MustGetLogger("token-sdk.network.processor.db")
 
 type TokenStore struct {
 	notifier events.Publisher
@@ -53,45 +53,22 @@ func (t *TokenStore) DeleteToken(txID string, index uint64, deletedBy string) er
 	return nil
 }
 
-func (t *TokenStore) StoreToken(txID string, index uint64, tok *token2.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, ids []string, precision uint64) error {
+func (t *TokenStore) AppendToken(
+	txID string,
+	index uint64,
+	tok *token2.Token,
+	tokenOnLedger []byte,
+	tokenOnLedgerMetadata []byte,
+	ids []string,
+	issuer view.Identity,
+	precision uint64,
+	flags processor.Flags,
+) error {
 	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
 	}
-	err = t.tokenDB.StoreOwnerToken(
-		tokendb.TokenRecord{
-			TxID:           txID,
-			Index:          index,
-			IssuerRaw:      nil,
-			OwnerRaw:       tok.Owner.Raw,
-			Ledger:         tokenOnLedger,
-			LedgerMetadata: tokenOnLedgerMetadata,
-			Quantity:       tok.Quantity,
-			Type:           tok.Type,
-			Amount:         q.ToBigInt().Uint64(),
-		},
-		ids,
-	)
-	if err != nil {
-		return err
-	}
-
-	for _, id := range ids {
-		if len(id) == 0 {
-			continue
-		}
-		t.Notify(processor.AddToken, t.tmsID, id, tok.Type, txID, index)
-	}
-
-	return nil
-}
-
-func (t *TokenStore) StoreIssuedHistoryToken(txID string, index uint64, tok *token2.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, issuer view.Identity, precision uint64) error {
-	q, err := token2.ToQuantity(tok.Quantity, precision)
-	if err != nil {
-		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
-	}
-	return t.tokenDB.StoreIssuedToken(
+	err = t.tokenDB.StoreToken(
 		tokendb.TokenRecord{
 			TxID:           txID,
 			Index:          index,
@@ -102,28 +79,24 @@ func (t *TokenStore) StoreIssuedHistoryToken(txID string, index uint64, tok *tok
 			Quantity:       tok.Quantity,
 			Type:           tok.Type,
 			Amount:         q.ToBigInt().Uint64(),
+			Owner:          flags.Mine,
+			Auditor:        flags.Auditor,
+			Issuer:         flags.Issuer,
 		},
+		ids,
 	)
-}
-
-func (t *TokenStore) StoreAuditToken(txID string, index uint64, tok *token2.Token, tokenOnLedger []byte, tokenOnLedgerMetadata []byte, precision uint64) error {
-	q, err := token2.ToQuantity(tok.Quantity, precision)
 	if err != nil {
-		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
+		return errors.Wrapf(err, "cannot store token in db")
 	}
-	return t.tokenDB.StoreAuditToken(
-		tokendb.TokenRecord{
-			TxID:           txID,
-			Index:          index,
-			IssuerRaw:      nil,
-			OwnerRaw:       tok.Owner.Raw,
-			Ledger:         tokenOnLedger,
-			LedgerMetadata: tokenOnLedgerMetadata,
-			Quantity:       tok.Quantity,
-			Type:           tok.Type,
-			Amount:         q.ToBigInt().Uint64(),
-		},
-	)
+
+	for _, id := range ids {
+		if len(id) == 0 {
+			continue
+		}
+		t.Notify(processor.AddToken, t.tmsID, id, tok.Type, txID, index)
+	}
+
+	return nil
 }
 
 func (t *TokenStore) StorePublicParams(val []byte) error {

@@ -141,7 +141,7 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 	err := row.Scan(&tokenrequest)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, errors.Errorf("not found: [%s]", txID)
+			return nil, nil
 		}
 		return nil, errors.Wrapf(err, "error querying db")
 	}

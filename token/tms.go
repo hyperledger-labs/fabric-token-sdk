@@ -205,6 +205,11 @@ func (t *ManagementService) NewRequestFromBytes(anchor string, actions []byte, m
 	return NewRequestFromBytes(t, anchor, actions, meta)
 }
 
+// NewFullRequestFromBytes returns a new Token Request for the serialized version
+func (t *ManagementService) NewFullRequestFromBytes(tr []byte) (*Request, error) {
+	return NewFullRequestFromBytes(t, tr)
+}
+
 // NewMetadataFromBytes unmarshals the passed bytes into a Metadata object
 func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) {
 	tokenRequestMetadata := &driver.TokenRequestMetadata{}

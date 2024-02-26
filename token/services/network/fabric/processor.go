@@ -10,12 +10,10 @@ import (
 	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -23,28 +21,28 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
-type net interface {
-	Name() string
-	Channel(id string) (*fabric.Channel, error)
-}
+type GetTMSProviderFunc = func() *token.ManagementServiceProvider
+type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 
 type RWSetProcessor struct {
-	network    net
-	nss        []string
-	sp         view2.ServiceProvider
-	ownership  network.Authorization
-	issued     network.Issued
-	tokenStore processor.TokenStore
+	network         string
+	nss             []string
+	GetTMSProvider  GetTMSProviderFunc
+	GetTokenRequest GetTokenRequestFunc
+	ownership       network.Authorization
+	issued          network.Issued
+	tokenStore      processor.TokenStore
 }
 
-func NewTokenRWSetProcessor(network net, ns string, sp view2.ServiceProvider, ownership network.Authorization, issued network.Issued, tokenStore processor.TokenStore) *RWSetProcessor {
+func NewTokenRWSetProcessor(network string, ns string, GetTMSProvider GetTMSProviderFunc, GetTokenRequest GetTokenRequestFunc, ownership network.Authorization, issued network.Issued, tokenStore processor.TokenStore) *RWSetProcessor {
 	return &RWSetProcessor{
-		network:    network,
-		nss:        []string{ns},
-		sp:         sp,
-		ownership:  ownership,
-		issued:     issued,
-		tokenStore: tokenStore,
+		network:         network,
+		nss:             []string{ns},
+		GetTMSProvider:  GetTMSProvider,
+		GetTokenRequest: GetTokenRequest,
+		ownership:       ownership,
+		issued:          issued,
+		tokenStore:      tokenStore,
 	}
 }
 
@@ -62,8 +60,8 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	}
 
 	// Match the network name
-	if tx.Network() != r.network.Name() {
-		logger.Debugf("tx's network [%s]!=[%s]", tx.Network(), r.network.Name())
+	if tx.Network() != r.network {
+		logger.Debugf("tx's network [%s]!=[%s]", tx.Network(), r.network)
 		return nil
 	}
 
@@ -79,7 +77,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 
 // init when invoked extracts the public params from rwset and updates the local version
 func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
-	tsmProvider := token.GetManagementServiceProvider(r.sp)
+	tsmProvider := r.GetTMSProvider()
 	setUpKey, err := keys.CreateSetupKey()
 	if err != nil {
 		return errors.Errorf("failed creating setup key")
@@ -112,52 +110,44 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
 	txID := tx.ID()
 
-	ch, err := r.network.Channel(tx.Channel())
-	if err != nil {
-		return errors.Wrapf(err, "failed getting channel [%s]", tx.Channel())
-	}
-	if !ch.MetadataService().Exists(txID) {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s] is not known to this node, no need to extract tokens", txID)
-		}
-		return nil
-	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s] is known, extract tokens", txID)
-		logger.Debugf("transaction [%s], parsing writes [%d]", txID, rws.NumWrites(ns))
-	}
-	transientMap, err := ch.MetadataService().LoadTransient(txID)
-	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], failed getting transient map", txID)
-		}
-		return err
-	}
-	if !transientMap.Exists(ttx.TokenRequestMetadata) {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], no transient map found", txID)
-		}
-		return nil
-	}
-
-	tms := token.GetManagementService(
-		r.sp,
+	tms, err := r.GetTMSProvider().GetManagementService(
 		token.WithNetwork(tx.Network()),
 		token.WithChannel(tx.Channel()),
 		token.WithNamespace(ns),
 	)
-	if tms == nil {
-		return errors.Errorf("failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	metadata, err := tms.NewMetadataFromBytes(transientMap.Get(ttx.TokenRequestMetadata))
+	trRaw, err := r.GetTokenRequest(tms, txID)
+	if err != nil {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], failed getting token request [%s]", txID, err)
+		}
+		return errors.WithMessagef(err, "failed to get token request for [%s]", txID)
+	}
+	if len(trRaw) == 0 {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], no token request found, skip it", txID)
+		}
+		return nil
+	}
+	request, err := tms.NewFullRequestFromBytes(trRaw)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
 		}
+		return err
+	}
+	if request.Metadata == nil {
+		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
+		return nil
+	}
+	metadata, err := request.GetMetadata()
+	if err != nil {
+		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
 		return err
 	}
 
@@ -171,6 +161,13 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			if err := r.tokenStore.DeleteToken(id.TxId, id.Index, tx.ID()); err != nil {
 				return err
 			}
+		}
+	}
+
+	auditorFlag := r.ownership.AmIAnAuditor(tms)
+	if auditorFlag {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], I must be the auditor", txID)
 		}
 	}
 
@@ -256,37 +253,37 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			continue
 		}
 
+		issuerFlag := !issuer.IsNone() && r.issued.Issued(tms, issuer, tok)
 		ids, mine := r.ownership.IsMine(tms, tok)
-		if mine {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			if mine {
 				logger.Debugf("transaction [%s], found a token and it is mine", txID)
-			}
-			if err := r.tokenStore.StoreToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, ids, precision); err != nil {
-				return err
-			}
-		} else {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
+			} else {
 				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
 			}
 		}
-
-		// if I'm an auditor, store the audit entry
-		if r.ownership.AmIAnAuditor(tms) {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], found a token and I must be the auditor", txID)
-			}
-			if err := r.tokenStore.StoreAuditToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, precision); err != nil {
-				return err
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			if issuerFlag {
+				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
 		}
 
-		if !issuer.IsNone() && r.issued.Issued(tms, issuer, tok) {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
-			}
-			if err := r.tokenStore.StoreIssuedHistoryToken(txID, index, tok, tokenOnLedger, tokenOnLedgerMetadata, issuer, precision); err != nil {
-				return err
-			}
+		if err := r.tokenStore.AppendToken(
+			txID,
+			index,
+			tok,
+			tokenOnLedger,
+			tokenOnLedgerMetadata,
+			ids,
+			issuer,
+			precision,
+			processor.Flags{
+				Mine:    mine,
+				Auditor: auditorFlag,
+				Issuer:  issuerFlag,
+			},
+		); err != nil {
+			return err
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {

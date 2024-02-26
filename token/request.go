@@ -198,6 +198,15 @@ func NewRequestFromBytes(tokenService *ManagementService, anchor string, actions
 	}, nil
 }
 
+// NewFullRequestFromBytes creates a new request from the given byte representation
+func NewFullRequestFromBytes(tokenService *ManagementService, tr []byte) (*Request, error) {
+	request := NewRequest(tokenService, "")
+	if err := request.FromBytes(tr); err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal request")
+	}
+	return request, nil
+}
+
 // ID returns the anchor of the request
 func (r *Request) ID() string {
 	return r.Anchor

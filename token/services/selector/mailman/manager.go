@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -60,11 +61,11 @@ type Manager struct {
 
 type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
 
-func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) *Manager {
+func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) (*Manager, error) {
 	// pre-populate mailman instances
 	iter, err := qs.UnspentTokensIterator()
 	if err != nil {
-		return nil
+		return nil, errors.WithMessagef(err, "failed to get unspent tokens")
 	}
 	defer iter.Close()
 
@@ -131,7 +132,7 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 		}
 	}
 
-	return m
+	return m, nil
 }
 
 func (m *Manager) OnReceive(event events.Event) {
