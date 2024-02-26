@@ -226,6 +226,10 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 			return shim.Error("failed to write token action: " + err.Error())
 		}
 	}
+	err = w.AddPublicParamsDependency()
+	if err != nil {
+		return shim.Error("failed to add public params dependency:" + err.Error())
+	}
 	err = w.CommitTokenRequest(raw, false)
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())

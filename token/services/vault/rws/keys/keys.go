@@ -20,9 +20,10 @@ const (
 
 	numComponentsInKey = 2 // 2 components: txid, index, excluding TokenKeyPrefix
 
-	TokenKeyPrefix      = "ztoken"
-	TokenMineKeyPrefix  = "mine"
-	TokenSetupKeyPrefix = "setup"
+	TokenKeyPrefix          = "ztoken"
+	TokenMineKeyPrefix      = "mine"
+	TokenSetupKeyPrefix     = "setup"
+	TokenSetupHashKeyPrefix = "setup.hash"
 
 	TokenRequestKeyPrefix  = "token_request"
 	SerialNumber           = "sn"
@@ -58,6 +59,10 @@ func CreateSNKey(sn string) (string, error) {
 
 func CreateSetupKey() (string, error) {
 	return CreateCompositeKey(TokenKeyPrefix, []string{TokenSetupKeyPrefix})
+}
+
+func CreateSetupHashKey() (string, error) {
+	return CreateCompositeKey(TokenKeyPrefix, []string{TokenSetupHashKeyPrefix})
 }
 
 func CreateTokenRequestKey(txID string) (string, error) {
