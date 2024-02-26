@@ -73,6 +73,8 @@ var _ = Describe("ccvalidator", func() {
 				Expect(err).NotTo(HaveOccurred())
 				fakestub.GetArgsReturns(args)
 				fakestub.GetTransientReturns(map[string][]byte{"token_request": []byte("token request")}, nil)
+				fakestub.GetStateReturnsOnCall(0, []byte("pp"), nil)
+				fakestub.GetStateReturnsOnCall(1, nil, nil)
 				fakeValidator.UnmarshallAndVerifyReturns([]interface{}{}, nil)
 			})
 			It("succeeds", func() {
