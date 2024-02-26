@@ -183,7 +183,19 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, 
 		coms = append(coms, token)
 	}
 	// range prover takes commitments tokens[i]/commitmentToType
-	p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedParams[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+	p.RangeCorrectness = rp.NewRangeCorrectnessProver(
+		coms,
+		values,
+		blindingFactors,
+		pp.PedParams[1:],
+		pp.RangeProofParams.LeftGenerators,
+		pp.RangeProofParams.RightGenerators,
+		pp.RangeProofParams.P,
+		pp.RangeProofParams.Q,
+		pp.RangeProofParams.BitLength,
+		pp.RangeProofParams.NumberOfRounds,
+		math.Curves[pp.Curve],
+	)
 
 	return p, nil
 }
@@ -220,7 +232,16 @@ type Verifier struct {
 func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
 	v.SameType = NewSameTypeVerifier(tokens, anonymous, pp.PedParams, math.Curves[pp.Curve])
-	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedParams[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(
+		pp.PedParams[1:],
+		pp.RangeProofParams.LeftGenerators,
+		pp.RangeProofParams.RightGenerators,
+		pp.RangeProofParams.P,
+		pp.RangeProofParams.Q,
+		pp.RangeProofParams.BitLength,
+		pp.RangeProofParams.NumberOfRounds,
+		math.Curves[pp.Curve],
+	)
 	return v
 }
 

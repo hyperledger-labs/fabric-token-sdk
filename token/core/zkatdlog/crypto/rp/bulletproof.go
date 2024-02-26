@@ -57,15 +57,25 @@ type rangeProver struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds uint
+	NumberOfRounds int
 	// BitLength is the size of the binary representation of value
-	BitLength uint
+	BitLength int
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
 
 // NewRangeProver returns a rangeProver based on  the passed arguments
-func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindingFactor *math.Zr, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength uint, curve *math.Curve) *rangeProver {
+func NewRangeProver(
+	com *math.G1,
+	value uint64,
+	commitmentGen []*math.G1,
+	blindingFactor *math.Zr,
+	leftGen []*math.G1,
+	rightGen []*math.G1,
+	P, Q *math.G1,
+	numberOfRounds, bitLength int,
+	curve *math.Curve,
+) *rangeProver {
 	return &rangeProver{
 		Commitment:           com,
 		value:                value,
@@ -76,7 +86,7 @@ func NewRangeProver(com *math.G1, value uint64, commitmentGen []*math.G1, blindi
 		P:                    P,
 		Q:                    Q,
 		NumberOfRounds:       numberOfRounds,
-		BitLength:            bitlength,
+		BitLength:            bitLength,
 		Curve:                curve,
 	}
 
@@ -99,15 +109,23 @@ type rangeVerifier struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds uint
+	NumberOfRounds int
 	// BitLength is the size of the binary representation of value
-	BitLength uint
+	BitLength int
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
 
 // NewRangeVerifier returns a rangeVerifier based on the passed arguments
-func NewRangeVerifier(com *math.G1, commitmentGen []*math.G1, leftGen []*math.G1, rightGen []*math.G1, P, Q *math.G1, numberOfRounds, bitlength uint, curve *math.Curve) *rangeVerifier {
+func NewRangeVerifier(
+	com *math.G1,
+	commitmentGen []*math.G1,
+	leftGen []*math.G1,
+	rightGen []*math.G1,
+	P, Q *math.G1,
+	numberOfRounds, bitLength int,
+	curve *math.Curve,
+) *rangeVerifier {
 	return &rangeVerifier{
 		Commitment:           com,
 		CommitmentGenerators: commitmentGen,
@@ -116,7 +134,7 @@ func NewRangeVerifier(com *math.G1, commitmentGen []*math.G1, leftGen []*math.G1
 		P:                    P,
 		Q:                    Q,
 		NumberOfRounds:       numberOfRounds,
-		BitLength:            bitlength,
+		BitLength:            bitLength,
 		Curve:                curve,
 	}
 
@@ -147,7 +165,17 @@ func (p *rangeProver) Prove() (*RangeProof, error) {
 	com := commitVector(left, right, p.LeftGenerators, rightGeneratorsPrime, p.Curve)
 	rp.InnerProduct = innerProduct(left, right, p.Curve)
 	// produce the IPA
-	ipp := NewIPAProver(rp.InnerProduct, left, right, p.Q, p.LeftGenerators, rightGeneratorsPrime, com, p.NumberOfRounds, p.Curve)
+	ipp := NewIPAProver(
+		rp.InnerProduct,
+		left,
+		right,
+		p.Q,
+		p.LeftGenerators,
+		rightGeneratorsPrime,
+		com,
+		p.NumberOfRounds,
+		p.Curve,
+	)
 	rp.IPA, err = ipp.Prove()
 	if err != nil {
 		return nil, err

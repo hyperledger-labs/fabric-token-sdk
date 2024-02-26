@@ -39,15 +39,23 @@ type RangeCorrectnessProver struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds uint
+	NumberOfRounds int
 	// BitLength is the size of the binary representation of value
-	BitLength uint
+	BitLength int
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
 
 // NewRangeCorrectnessProver returns a RangeCorrectnessProver as a function of the passed arguments
-func NewRangeCorrectnessProver(coms []*math.G1, values []uint64, blindingFactors []*math.Zr, pedersenParameters, leftGenerators, rightGenerators []*math.G1, P, Q *math.G1, bitLength, rounds uint, c *math.Curve) *RangeCorrectnessProver {
+func NewRangeCorrectnessProver(
+	coms []*math.G1,
+	values []uint64,
+	blindingFactors []*math.Zr,
+	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
+	P, Q *math.G1,
+	bitLength, rounds int,
+	c *math.Curve,
+) *RangeCorrectnessProver {
 	return &RangeCorrectnessProver{
 		Commitments:        coms,
 		values:             values,
@@ -81,15 +89,20 @@ type RangeCorrectnessVerifier struct {
 	Q *math.G1
 	// NumberOfRounds correspond to log_2(BitLength). It corresponds to the
 	// number of rounds of the reduction protocol
-	NumberOfRounds uint
+	NumberOfRounds int
 	// BitLength is the size of the binary representation of value
-	BitLength uint
+	BitLength int
 	// Curve is the curve over which the computation is performed
 	Curve *math.Curve
 }
 
 // NewRangeCorrectnessVerifier returns a RangeCorrectnessVerifier as a function of the passed arguments
-func NewRangeCorrectnessVerifier(pedersenParameters, leftGenerators, rightGenerators []*math.G1, P, Q *math.G1, bitLength, rounds uint, curve *math.Curve) *RangeCorrectnessVerifier {
+func NewRangeCorrectnessVerifier(
+	pedersenParameters, leftGenerators, rightGenerators []*math.G1,
+	P, Q *math.G1,
+	bitLength, rounds int,
+	curve *math.Curve,
+) *RangeCorrectnessVerifier {
 	return &RangeCorrectnessVerifier{
 		PedersenGenerators: pedersenParameters,
 		LeftGenerators:     leftGenerators,
@@ -108,7 +121,19 @@ func NewRangeCorrectnessVerifier(pedersenParameters, leftGenerators, rightGenera
 func (p *RangeCorrectnessProver) Prove() (*RangeCorrectness, error) {
 	rc := &RangeCorrectness{}
 	for i := 0; i < len(p.Commitments); i++ {
-		rp := NewRangeProver(p.Commitments[i], p.values[i], p.PedersenGenerators, p.blindingFactors[i], p.LeftGenerators, p.RightGenerators, p.P, p.Q, p.NumberOfRounds, p.BitLength, p.Curve)
+		rp := NewRangeProver(
+			p.Commitments[i],
+			p.values[i],
+			p.PedersenGenerators,
+			p.blindingFactors[i],
+			p.LeftGenerators,
+			p.RightGenerators,
+			p.P,
+			p.Q,
+			p.NumberOfRounds,
+			p.BitLength,
+			p.Curve,
+		)
 		proof, err := rp.Prove()
 		if err != nil {
 			return nil, err
@@ -130,7 +155,17 @@ func (v *RangeCorrectnessVerifier) Verify(rc *RangeCorrectness) error {
 		if rc.Proofs[i] == nil {
 			return errors.Errorf("invalid range proof: nil proof at index %d", i)
 		}
-		rv := NewRangeVerifier(v.Commitments[i], v.PedersenGenerators, v.LeftGenerators, v.RightGenerators, v.P, v.Q, v.NumberOfRounds, v.BitLength, v.Curve)
+		rv := NewRangeVerifier(
+			v.Commitments[i],
+			v.PedersenGenerators,
+			v.LeftGenerators,
+			v.RightGenerators,
+			v.P,
+			v.Q,
+			v.NumberOfRounds,
+			v.BitLength,
+			v.Curve,
+		)
 		err := rv.Verify(rc.Proofs[i])
 		if err != nil {
 			return errors.Wrapf(err, "invalid range proof at index %d", i)
