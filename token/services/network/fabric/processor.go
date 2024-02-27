@@ -11,10 +11,11 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -24,17 +25,32 @@ var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 
+// Authorization is an interface that defines method to check the relation between a token or TMS
+// and wallets (owner, auditor, etc.)
+type Authorization interface {
+	// IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
+	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
+	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
+	// defined in the public parameters of the passed TMS.
+	AmIAnAuditor(tms *token.ManagementService) bool
+}
+
+type Issued interface {
+	// Issued returns true if the passed issuer issued the passed token
+	Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool
+}
+
 type RWSetProcessor struct {
 	network         string
 	nss             []string
 	GetTMSProvider  GetTMSProviderFunc
 	GetTokenRequest GetTokenRequestFunc
-	ownership       network.Authorization
-	issued          network.Issued
-	tokenStore      processor.TokenStore
+	ownership       Authorization
+	issued          Issued
+	tokenStore      tokens.TokenStore
 }
 
-func NewTokenRWSetProcessor(network string, ns string, GetTMSProvider GetTMSProviderFunc, GetTokenRequest GetTokenRequestFunc, ownership network.Authorization, issued network.Issued, tokenStore processor.TokenStore) *RWSetProcessor {
+func NewTokenRWSetProcessor(network string, ns string, GetTMSProvider GetTMSProviderFunc, GetTokenRequest GetTokenRequestFunc, ownership Authorization, issued Issued, tokenStore tokens.TokenStore) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:         network,
 		nss:             []string{ns},
@@ -277,7 +293,7 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 			ids,
 			issuer,
 			precision,
-			processor.Flags{
+			tokens.Flags{
 				Mine:    mine,
 				Auditor: auditorFlag,
 				Issuer:  issuerFlag,

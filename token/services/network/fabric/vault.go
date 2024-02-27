@@ -9,20 +9,21 @@ package fabric
 import (
 	"runtime/debug"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type Vault struct {
 	ch         *fabric.Channel
-	tokenStore processor.TokenStore
+	tokenStore tokens.TokenStore
 }
 
-func NewVault(ch *fabric.Channel, tokenStore processor.TokenStore) *Vault {
+func NewVault(ch *fabric.Channel, tokenStore tokens.TokenStore) *Vault {
 	return &Vault{
 		ch:         ch,
 		tokenStore: tokenStore,

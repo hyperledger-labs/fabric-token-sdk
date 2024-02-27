@@ -14,14 +14,14 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 )
@@ -93,7 +93,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get token db")
 		}
-		tokenStore, err := db.NewTokenStore(notifier, tokenDB, tmsID)
+		tokenStore, err := tokens2.NewTokenStore(notifier, tokenDB, tmsID)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get token store")
 		}
@@ -104,8 +104,8 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 				namespace,
 				GetTMSProvider,
 				GetTokenRequest,
-				network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
-				network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
+				tokens.NewAuthorizationMultiplexer(&tokens.TMSAuthorization{}, &htlc.ScriptOwnership{}),
+				tokens.NewIssuedMultiplexer(&tokens.WalletIssued{}),
 				tokenStore,
 			),
 		); err != nil {
@@ -142,7 +142,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token db")
 	}
-	tokenStore, err := db.NewTokenStore(notifier, tokenDB, tmsID)
+	tokenStore, err := tokens2.NewTokenStore(notifier, tokenDB, tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token store")
 	}
@@ -153,8 +153,8 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			namespace,
 			GetTMSProvider,
 			GetTokenRequest,
-			network2.NewAuthorizationMultiplexer(&network2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
-			network2.NewIssuedMultiplexer(&network2.WalletIssued{}),
+			tokens.NewAuthorizationMultiplexer(&tokens.TMSAuthorization{}, &htlc.ScriptOwnership{}),
+			tokens.NewIssuedMultiplexer(&tokens.WalletIssued{}),
 			tokenStore,
 		),
 	); err != nil {

@@ -520,6 +520,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 			RevocationHandler: rID,
 			Type:              tok.Type,
 			Quantity:          q,
+			LedgerOutput:      raw,
 		})
 		counter++
 
@@ -576,6 +577,10 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			return nil, errors.Wrapf(err, "failed getting quantity [%d,%d]", i, j)
 		}
 
+		var ledgerOutput []byte
+		if !output.IsRedeem() {
+			ledgerOutput = raw
+		}
 		outputs = append(outputs, &Output{
 			ActionIndex:       i,
 			Index:             counter,
@@ -585,6 +590,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			RevocationHandler: rID,
 			Type:              tok.Type,
 			Quantity:          q,
+			LedgerOutput:      ledgerOutput,
 		})
 		counter++
 	}

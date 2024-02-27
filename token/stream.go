@@ -38,6 +38,8 @@ type Output struct {
 	Type string
 	// Quantity is the quantity of tokens
 	Quantity token2.Quantity
+
+	LedgerOutput []byte
 }
 
 func (o Output) ID(txID string) *token2.ID {

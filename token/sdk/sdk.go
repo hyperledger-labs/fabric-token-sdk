@@ -10,6 +10,12 @@ import (
 	"context"
 	"time"
 
+	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -145,6 +151,17 @@ func (p *SDK) Install() error {
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
+	publishir, err := events.GetPublisher(p.registry)
+	assert.NoError(err, "failed to get publisher")
+	tokensManager := tokens.NewManager(
+		tmsp,
+		tokenDBManager,
+		publishir,
+		tokens2.NewAuthorizationMultiplexer(&tokens2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
+		tokens2.NewIssuedMultiplexer(&tokens2.WalletIssued{}),
+		storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)),
+	)
+	assert.NoError(p.registry.RegisterService(tokensManager))
 
 	enabled, err := orion.IsCustodian(configProvider)
 	assert.NoError(err, "failed to get custodian status")
