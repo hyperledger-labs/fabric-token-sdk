@@ -88,7 +88,7 @@ func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
 		return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)
 	}
 
-	ts, err := NewTokenStore(cm.notifier, db, tmsID)
+	storage, err := NewDBStorage(cm.notifier, db, tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
 	}
@@ -96,7 +96,7 @@ func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
 		TMSProvider: cm.tmsProvider,
 		Ownership:   cm.authorization,
 		Issued:      cm.issued,
-		TokenStore:  ts,
+		Storage:     storage,
 	}
 	return tokens, nil
 }
@@ -106,16 +106,14 @@ var (
 )
 
 // Get returns the Tokens instance for the passed TMS
-func Get(sp view.ServiceProvider, tmsID token.TMSID) *Tokens {
+func Get(sp view.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
-		logger.Errorf("failed to get manager service: [%s]", err)
-		return nil
+		return nil, err
 	}
 	tokens, err := s.(*Manager).Tokens(tmsID)
 	if err != nil {
-		logger.Errorf("failed to get db for TMS [%s]: [%s]", tmsID, err)
-		return nil
+		return nil, err
 	}
-	return tokens
+	return tokens, nil
 }

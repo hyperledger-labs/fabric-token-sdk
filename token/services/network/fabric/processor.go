@@ -18,7 +18,7 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
-type GetTokensFunc = func() *tokens.Tokens
+type GetTokensFunc = func() (*tokens.Tokens, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 
@@ -92,7 +92,11 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			}, val); err != nil {
 				return errors.Wrapf(err, "failed updating public params")
 			}
-			if err := r.GetTokens().StorePublicParams(val); err != nil {
+			tokens, err := r.GetTokens()
+			if err != nil {
+				return err
+			}
+			if err := tokens.StorePublicParams(val); err != nil {
 				return errors.Wrapf(err, "failed storing public params")
 			}
 			break
@@ -139,7 +143,11 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
-	return r.GetTokens().AppendTransaction(&Transaction{
+	tokens, err := r.GetTokens()
+	if err != nil {
+		return err
+	}
+	return tokens.AppendTransaction(&Transaction{
 		id:        txID,
 		network:   tms.Network(),
 		channel:   tms.Channel(),

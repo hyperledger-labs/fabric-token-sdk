@@ -53,9 +53,21 @@ func Drivers() []string {
 
 type TokenRecord = driver.TokenRecord
 
+type Transaction struct {
+	driver.TokenDBTransaction
+}
+
 // DB is a database that stores token transactions related information
 type DB struct {
 	driver.TokenDB
+}
+
+func (d *DB) NewTransaction() (*Transaction, error) {
+	tx, err := d.TokenDB.NewTokenDBTransaction()
+	if err != nil {
+		return nil, err
+	}
+	return &Transaction{TokenDBTransaction: tx}, nil
 }
 
 func newDB(p driver.TokenDB) *DB {

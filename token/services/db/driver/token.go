@@ -57,6 +57,18 @@ type CertificationDB interface {
 	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
 }
 
+type TokenDBTransaction interface {
+	// OwnersOf returns the list of owner of a given token
+	OwnersOf(txID string, index uint64) (*token.Token, []string, error)
+	// Delete marks the passed token as deleted by a given identifier
+	Delete(txID string, index uint64, deletedBy string) error
+	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
+	StoreToken(tr TokenRecord, owners []string) error
+
+	Commit() error
+	Rollback() error
+}
+
 // TokenDB defines a database to store token related info
 type TokenDB interface {
 	CertificationDB
@@ -101,6 +113,8 @@ type TokenDB interface {
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters
 	PublicParams() ([]byte, error)
+
+	NewTokenDBTransaction() (TokenDBTransaction, error)
 }
 
 // TokenDBDriver is the interface for a token database driver
