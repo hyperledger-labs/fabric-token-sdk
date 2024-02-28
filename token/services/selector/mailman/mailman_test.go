@@ -59,7 +59,7 @@ func TestMail(t *testing.T) {
 }
 
 func setupKVS() *testutils.MockQueryService {
-	wallet := &token2.Owner{Raw: []byte(fmt.Sprintf("wallet0"))}
+	wallet := &token2.Owner{Raw: []byte("wallet0")}
 
 	qs := testutils.NewMockQueryService()
 	for i := 0; i < NumTokens; i++ {

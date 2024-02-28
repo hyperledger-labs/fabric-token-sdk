@@ -182,25 +182,8 @@ func createTransferWithBogusOutput(pp *crypto.PublicParams) (*transfer2.Transfer
 	return transfer, metadata, tokns
 }
 
-func getIssuers(N, index int, pk *math.G1, pp []*math.G1, curve *math.Curve) []*math.G1 {
-	rand, err := curve.Rand()
-	Expect(err).NotTo(HaveOccurred())
-	issuers := make([]*math.G1, N)
-	issuers[index] = pk
-	for i := 0; i < N; i++ {
-		if i != index {
-			sk := curve.NewRandomZr(rand)
-			t := curve.NewRandomZr(rand)
-			issuers[i] = pp[0].Mul(sk)
-			issuers[i].Add(pp[1].Mul(t))
-		}
-	}
-	return issuers
-}
-
 type fakeProv struct {
-	typ  string
-	path string
+	typ string
 }
 
 func (f *fakeProv) GetString(key string) string {
@@ -245,7 +228,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 
 func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	registry := registry2.New()
-	registry.RegisterService(&fakeProv{typ: "memory"})
+	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
 
 	kvss, err := kvs.New(registry, "memory", "")
 	Expect(err).NotTo(HaveOccurred())

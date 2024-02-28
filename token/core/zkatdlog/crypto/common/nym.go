@@ -136,7 +136,7 @@ func (v *NymVerifier) Verify(message []byte, signature []byte) error {
 	}
 	// compute challenge
 	if v.Curve == nil {
-		errors.Errorf("failed to verify nym signature: please initialize curve")
+		return errors.Errorf("failed to verify nym signature: please initialize curve")
 	}
 	chal := v.Curve.HashToZr(append(message, raw...))
 	// check challenge equality

@@ -82,7 +82,7 @@ func (p *WellFormednessProver) Prove() ([]byte, error) {
 	// compute challenge for proof
 	raw, err := common.GetG1Array(p.Commitments, p.Tokens).Bytes()
 	if err != nil {
-		errors.Wrapf(err, "The computation of the issue proof failed")
+		return nil, errors.Wrapf(err, "The computation of the issue proof failed")
 	}
 	// compute proof
 	wf, err := p.computeProof(p.Curve.HashToZr(raw))

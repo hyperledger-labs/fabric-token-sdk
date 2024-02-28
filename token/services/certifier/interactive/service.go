@@ -44,10 +44,10 @@ func NewCertificationService(responderRegistry ResponderRegistry, mp metrics.Pro
 	}
 }
 
-func (c *CertificationService) Start() error {
+func (c *CertificationService) Start() (err error) {
 	logger.Debugf("starting certifier service...")
 	(&sync.Once{}).Do(func() {
-		c.ResponderRegistry.RegisterResponder(c, &CertificationRequestView{})
+		err = c.ResponderRegistry.RegisterResponder(c, &CertificationRequestView{})
 	})
 	logger.Debugf("starting certifier service...done")
 	return nil

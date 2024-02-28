@@ -69,7 +69,11 @@ func (db *TokenDB) storeToken(tr driver.TokenRecord, owners []string, table stri
 	if err != nil {
 		return errors.New("failed starting a db transaction")
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		}
+	}()
 
 	// Store token
 	now := time.Now().UTC()
@@ -722,7 +726,11 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) erro
 	if err != nil {
 		return errors.New("failed starting a transaction")
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		}
+	}()
 	for tokenID, certification := range certifications {
 		if tokenID == nil {
 			return errors.Errorf("invalid token-id, cannot be nil")

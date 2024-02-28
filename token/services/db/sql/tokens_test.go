@@ -17,8 +17,6 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-var ns = "testing"
-
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
