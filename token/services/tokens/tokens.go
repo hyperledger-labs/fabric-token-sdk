@@ -147,21 +147,19 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 			} else {
 				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
 			}
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			if issuerFlag {
 				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
 			}
+			logger.Debugf("store token [%s:%d][%s]", txID, output.Index, hash.Hashable(output.LedgerOutput))
 		}
 
 		if !mine && !auditorFlag && !issuerFlag {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s], discarding token", txID)
+				logger.Debugf("transaction [%s], discarding token, not mine, not an auditor, not an issuer", txID)
 			}
 			continue
 		}
 
-		logger.Debugf("store token [%s:%d][%s]", txID, output.Index, hash.Hashable(output.LedgerOutput))
 		if err := t.TokenStore.AppendToken(
 			txID,
 			output.Index,

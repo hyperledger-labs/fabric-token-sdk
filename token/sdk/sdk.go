@@ -151,12 +151,12 @@ func (p *SDK) Install() error {
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
-	publishir, err := events.GetPublisher(p.registry)
+	publisher, err := events.GetPublisher(p.registry)
 	assert.NoError(err, "failed to get publisher")
 	tokensManager := tokens.NewManager(
 		tmsp,
 		tokenDBManager,
-		publishir,
+		publisher,
 		tokens2.NewAuthorizationMultiplexer(&tokens2.TMSAuthorization{}, &htlc.ScriptOwnership{}),
 		tokens2.NewIssuedMultiplexer(&tokens2.WalletIssued{}),
 		storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)),
