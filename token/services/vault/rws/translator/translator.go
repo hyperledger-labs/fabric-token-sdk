@@ -115,6 +115,21 @@ func (w *Translator) ReadSetupParameters() ([]byte, error) {
 	return raw, nil
 }
 
+func (w *Translator) AddPublicParamsDependency() error {
+	setupKey, err := keys.CreateSetupHashKey()
+	if err != nil {
+		return errors.Wrapf(err, "failed to create setup key")
+	}
+	h, err := w.RWSet.GetState(w.namespace, setupKey)
+	if err != nil {
+		return errors.Wrapf(err, "failed to get setup parameters")
+	}
+	if len(h) == 0 {
+		return errors.Errorf("not public parameters available")
+	}
+	return nil
+}
+
 func (w *Translator) QueryTokens(ids []*token.ID) ([][]byte, error) {
 	var res [][]byte
 	var errs []error
@@ -277,6 +292,26 @@ func (w *Translator) commitSetupAction(setup SetupAction) error {
 	if err != nil {
 		return err
 	}
+
+	setupHashKey, err := keys.CreateSetupHashKey()
+	if err != nil {
+		return err
+	}
+	hash := sha256.New()
+	n, err := hash.Write(raw)
+	if n != len(raw) {
+		panic("hash failure")
+	}
+	if err != nil {
+		panic(err)
+	}
+	digest := hash.Sum(nil)
+
+	err = w.RWSet.SetState(w.namespace, setupHashKey, digest)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
