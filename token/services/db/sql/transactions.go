@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -248,7 +249,11 @@ func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus) error {
 	if err != nil {
 		return errors.New("failed starting a transaction")
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		}
+	}()
 
 	if err := db.setStatusIfExists(tx, db.table.Movements, txID, status); err != nil {
 		return err
@@ -364,7 +369,11 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view
 	if err != nil {
 		return errors.New("failed starting a transaction")
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		}
+	}()
 	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
 		return errors.Wrapf(err, "failed to execute")
 	}

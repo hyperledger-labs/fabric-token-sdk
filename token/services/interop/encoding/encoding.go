@@ -79,16 +79,23 @@ func RegisterEncoding(e Encoding, f func() EncodingFunc) error {
 
 func init() {
 	noneEncoding := &noneEncoding{}
-	RegisterEncoding(None, func() EncodingFunc {
+	if err := RegisterEncoding(None, func() EncodingFunc {
 		return noneEncoding
-	})
-	RegisterEncoding(Base64, func() EncodingFunc {
+	}); err != nil {
+		panic(err)
+	}
+
+	if err := RegisterEncoding(Base64, func() EncodingFunc {
 		return base64.StdEncoding
-	})
+	}); err != nil {
+		panic(err)
+	}
 	hexEncoding := &hexEncoding{}
-	RegisterEncoding(Hex, func() EncodingFunc {
+	if err := RegisterEncoding(Hex, func() EncodingFunc {
 		return hexEncoding
-	})
+	}); err != nil {
+		panic(err)
+	}
 }
 
 type hexEncoding struct{}

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -211,7 +210,7 @@ func TestGenFailure(t *testing.T) {
 		testGenRunWithError(gt, tokengen, test.Args, test.ErrMsg)
 	}
 
-	tempOutput, err := ioutil.TempDir("", "tokengen-test")
+	tempOutput, err := os.MkdirTemp("", "tokengen-test")
 	gt.Expect(err).NotTo(HaveOccurred())
 
 	defer os.RemoveAll(tempOutput)

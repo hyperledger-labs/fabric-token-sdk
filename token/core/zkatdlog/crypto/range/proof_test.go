@@ -62,7 +62,7 @@ func getRangeProver() *rp.Prover {
 
 func getSigner(length int) *pssign.Signer {
 	s := pssign.NewSigner(nil, nil, nil, math.Curves[1])
-	s.KeyGen(length)
+	Expect(s.KeyGen(length)).ToNot(HaveOccurred())
 	return s
 }
 

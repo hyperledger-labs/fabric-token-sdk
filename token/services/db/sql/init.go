@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"regexp"
+	"runtime/debug"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
@@ -25,7 +26,11 @@ func initSchema(db *sql.DB, schemas ...string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		}
+	}()
 
 	for _, schema := range schemas {
 		logger.Debug(schema)

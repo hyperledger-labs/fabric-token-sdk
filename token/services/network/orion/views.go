@@ -12,13 +12,27 @@ import (
 
 func InstallViews(sp view.ServiceProvider) error {
 	logger.Debugf("Installing custodian views...")
-	view.GetRegistry(sp).RegisterResponder(&PublicParamsRequestResponderView{}, &PublicParamsRequestView{})
-	view.GetRegistry(sp).RegisterResponder(&RequestApprovalResponderView{}, &RequestApprovalView{})
-	view.GetRegistry(sp).RegisterResponder(&BroadcastResponderView{}, &BroadcastView{})
-	view.GetRegistry(sp).RegisterResponder(&LookupKeyRequestRespondView{}, &LookupKeyRequestView{})
-	view.GetRegistry(sp).RegisterResponder(&RequestTxStatusResponderView{}, &RequestTxStatusView{})
-	view.GetRegistry(sp).RegisterResponder(&RequestSpentTokensResponderView{}, &RequestSpentTokensView{})
-	view.GetRegistry(sp).RegisterResponder(&RequestQueryTokensResponderView{}, &RequestQueryTokensView{})
+	if err := view.GetRegistry(sp).RegisterResponder(&PublicParamsRequestResponderView{}, &PublicParamsRequestView{}); err != nil {
+		return err
+	}
+	if err := view.GetRegistry(sp).RegisterResponder(&RequestApprovalResponderView{}, &RequestApprovalView{}); err != nil {
+		return err
+	}
+	if err := view.GetRegistry(sp).RegisterResponder(&BroadcastResponderView{}, &BroadcastView{}); err != nil {
+		return err
+	}
+	if err := view.GetRegistry(sp).RegisterResponder(&LookupKeyRequestRespondView{}, &LookupKeyRequestView{}); err != nil {
+		return err
+	}
+	if err := view.GetRegistry(sp).RegisterResponder(&RequestTxStatusResponderView{}, &RequestTxStatusView{}); err != nil {
+		return err
+	}
+	if err := view.GetRegistry(sp).RegisterResponder(&RequestSpentTokensResponderView{}, &RequestSpentTokensView{}); err != nil {
+		return err
+	}
+	if err := view.GetRegistry(sp).RegisterResponder(&RequestQueryTokensResponderView{}, &RequestQueryTokensView{}); err != nil {
+		return err
+	}
 
 	return nil
 }

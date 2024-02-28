@@ -67,6 +67,6 @@ func getPedersenParameters(length int, curve *math.Curve) []*math.G1 {
 
 func getSigner(length int, curve *math.Curve) *pssign.Signer {
 	s := pssign.NewSigner(nil, nil, nil, curve)
-	s.KeyGen(length)
+	Expect(s.KeyGen(length)).ToNot(HaveOccurred())
 	return s
 }

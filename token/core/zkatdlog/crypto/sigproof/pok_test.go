@@ -83,6 +83,6 @@ func prepareWitness(s *pssign.Signer) *sigproof.POKWitness {
 
 func getSigner(length int, curve *math.Curve) *pssign.Signer {
 	s := &pssign.Signer{SignVerifier: &pssign.SignVerifier{Curve: curve}}
-	s.KeyGen(length)
+	Expect(s.KeyGen(length)).NotTo(HaveOccurred())
 	return s
 }

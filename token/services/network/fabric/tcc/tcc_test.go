@@ -7,15 +7,13 @@ package tcc_test
 
 import (
 	"encoding/base64"
-	"io/ioutil"
 	"os"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 
 	chaincode2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc/mock"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/pkg/errors"
 )
 
 var _ = Describe("ccvalidator", func() {
@@ -41,7 +39,7 @@ var _ = Describe("ccvalidator", func() {
 		// public parameters.
 		pp := base64.StdEncoding.EncodeToString([]byte("public parameters"))
 		var err error
-		ppFile, err = ioutil.TempFile("", "pp")
+		ppFile, err = os.CreateTemp("", "pp")
 		Expect(err).NotTo(HaveOccurred())
 		_, err = ppFile.WriteString(pp)
 		Expect(err).NotTo(HaveOccurred())

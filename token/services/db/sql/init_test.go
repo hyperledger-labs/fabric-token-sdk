@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"runtime/debug"
 	"testing"
 	"time"
 
@@ -169,5 +170,9 @@ func startPostgresContainer(t *testing.T) (func(), string) {
 		t.Fatal(err)
 	}
 
-	return func() { pg.Terminate(ctx) }, pgConnStr
+	return func() {
+		if err := pg.Terminate(ctx); err != nil {
+			logger.Errorf("failed to terminate [%s][%s]", err, debug.Stack())
+		}
+	}, pgConnStr
 }

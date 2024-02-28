@@ -68,9 +68,24 @@ func (f *FabTokenPublicParamsGenerator) Generate(tms *topology.TMS, wallets *gen
 		}
 	}
 
-	//lint:ignore SA9003 To-Do pending
 	if len(tms.Issuers) != 0 {
-		// TODO:
+		if len(wallets.Issuers) == 0 {
+			return nil, errors.Errorf("no issuer wallets provided")
+		}
+		for _, issuer := range wallets.Issuers {
+			// Build an MSP Identity
+			provider, err := x509.NewProviderWithBCCSPConfig(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed to create x509 provider")
+			}
+			id, _, err := provider.Identity(nil)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed to get identity")
+			}
+			if tms.Issuers[0] == issuer.ID {
+				pp.AddIssuer(id)
+			}
+		}
 	}
 
 	ppRaw, err := pp.Serialize()
@@ -152,9 +167,24 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		}
 	}
 
-	//lint:ignore SA9003 To-Do pending
 	if len(tms.Issuers) != 0 {
-		// TODO
+		if len(wallets.Issuers) == 0 {
+			return nil, errors.Errorf("no issuer wallets provided")
+		}
+		for _, issuer := range wallets.Issuers {
+			// Build an MSP Identity
+			provider, err := x509.NewProviderWithBCCSPConfig(issuer.Path, "", msp2.AuditorMSPID, nil, issuer.Opts)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed to create x509 provider")
+			}
+			id, _, err := provider.Identity(nil)
+			if err != nil {
+				return nil, errors.WithMessage(err, "failed to get identity")
+			}
+			if tms.Issuers[0] == issuer.ID {
+				pp.AddIssuer(id)
+			}
+		}
 	}
 
 	ppRaw, err := pp.Serialize()
