@@ -9,6 +9,8 @@ package db
 import (
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -16,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
@@ -73,7 +74,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token db")
 	}
-	tokenStore, err := db.NewTokenStore(notifier, tokenDB, tmsID)
+	tokenStore, err := tokens.NewTokenStore(notifier, tokenDB, tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store")
 	}

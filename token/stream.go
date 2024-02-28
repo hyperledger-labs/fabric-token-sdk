@@ -38,6 +38,8 @@ type Output struct {
 	Type string
 	// Quantity is the quantity of tokens
 	Quantity token2.Quantity
+
+	LedgerOutput []byte
 }
 
 func (o Output) ID(txID string) *token2.ID {
@@ -345,6 +347,11 @@ func (is *InputStream) Sum() *big.Int {
 		sum = sum.Add(sum, input.Quantity.ToBigInt())
 	}
 	return sum
+}
+
+// Inputs returns the inputs in this InputStream.
+func (is *InputStream) Inputs() []*Input {
+	return is.inputs
 }
 
 type OwnerStream struct {

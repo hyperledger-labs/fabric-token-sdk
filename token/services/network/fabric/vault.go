@@ -12,17 +12,20 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-type Vault struct {
-	ch         *fabric.Channel
-	tokenStore processor.TokenStore
+type TokenStore interface {
+	DeleteToken(txID string, index uint64, deletedBy string) error
 }
 
-func NewVault(ch *fabric.Channel, tokenStore processor.TokenStore) *Vault {
+type Vault struct {
+	ch         *fabric.Channel
+	tokenStore TokenStore
+}
+
+func NewVault(ch *fabric.Channel, tokenStore TokenStore) *Vault {
 	return &Vault{
 		ch:         ch,
 		tokenStore: tokenStore,

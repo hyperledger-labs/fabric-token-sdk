@@ -826,12 +826,13 @@ func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, []
 	}
 
 	// Set the envelope
+	request := s.tx.TokenRequest
 	s.tx = tx
-
 	raw, err := tx.Bytes()
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting bytes for transaction %s", tx.ID())
 	}
+	s.tx.TokenRequest = request
 	return tx, raw, nil
 }
 

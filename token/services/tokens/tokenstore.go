@@ -4,21 +4,13 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package processor
+package tokens
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
-
-type RWSet interface {
-	SetState(namespace string, key string, value []byte) error
-	GetState(namespace string, key string) ([]byte, error)
-	GetStateMetadata(namespace, key string) (map[string][]byte, error)
-	DeleteState(namespace string, key string) error
-	SetStateMetadata(namespace, key string, metadata map[string][]byte) error
-}
 
 type Flags struct {
 	Mine    bool

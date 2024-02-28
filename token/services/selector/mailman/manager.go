@@ -11,12 +11,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -107,8 +108,8 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 
 	// define events and mailman actions
 	eventOperationMap := make(map[string]Op)
-	eventOperationMap[processor.AddToken] = Add
-	eventOperationMap[processor.DeleteToken] = Del
+	eventOperationMap[tokens.AddToken] = Add
+	eventOperationMap[tokens.DeleteToken] = Del
 
 	m := &Manager{
 		tmsID:                  tmsID,
@@ -136,7 +137,7 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 }
 
 func (m *Manager) OnReceive(event events.Event) {
-	t, ok := event.Message().(processor.TokenMessage)
+	t, ok := event.Message().(tokens.TokenMessage)
 	if !ok {
 		logger.Warnf("cannot cast to TokenMessage %v", event.Message())
 		// drop this event
