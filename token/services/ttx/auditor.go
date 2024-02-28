@@ -22,20 +22,6 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// TxStatus is the status of a transaction
-type TxStatus = auditdb.TxStatus
-
-const (
-	// Unknown is the status of a transaction that is unknown
-	Unknown = auditdb.Unknown
-	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = auditdb.Pending
-	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = auditdb.Confirmed
-	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = auditdb.Deleted
-)
-
 type TxAuditor struct {
 	sp                      view2.ServiceProvider
 	w                       *token.AuditorWallet
@@ -85,7 +71,7 @@ func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *TxAuditor) SetStatus(txID string, status TxStatus) error {
-	return a.auditDB.SetStatus(txID, status)
+	return a.auditDB.SetStatus(txID, auditdb.TxStatus(status))
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {

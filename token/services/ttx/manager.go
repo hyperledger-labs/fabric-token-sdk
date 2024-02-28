@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package owner
+package ttx
 
 import (
 	"reflect"
@@ -18,32 +18,32 @@ import (
 	"github.com/pkg/errors"
 )
 
-type TTXDBProvider interface {
+type DBProvider interface {
 	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
 }
 
 // Manager handles the databases
 type Manager struct {
 	networkProvider NetworkProvider
-	ttxdbProvider   TTXDBProvider
+	ttxdbProvider   DBProvider
 
 	storage storage.DBEntriesStorage
 	mutex   sync.Mutex
-	owners  map[string]*Owner
+	owners  map[string]*DB
 }
 
-// NewManager creates a new Owner manager.
-func NewManager(np NetworkProvider, ttxdbManager TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
+// NewManager creates a new DB manager.
+func NewManager(np NetworkProvider, ttxdbManager DBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		networkProvider: np,
 		storage:         storage,
 		ttxdbProvider:   ttxdbManager,
-		owners:          map[string]*Owner{},
+		owners:          map[string]*DB{},
 	}
 }
 
-// Owner returns the Owner for the given TMS
-func (cm *Manager) Owner(tmsID token.TMSID) (*Owner, error) {
+// DB returns the DB for the given TMS
+func (cm *Manager) DB(tmsID token.TMSID) (*DB, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
@@ -65,12 +65,12 @@ func (cm *Manager) Owner(tmsID token.TMSID) (*Owner, error) {
 	return c, nil
 }
 
-func (cm *Manager) newOwner(tmsID token.TMSID) (*Owner, error) {
+func (cm *Manager) newOwner(tmsID token.TMSID) (*DB, error) {
 	db, err := cm.ttxdbProvider.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
-	owner := &Owner{
+	owner := &DB{
 		networkProvider: cm.networkProvider,
 		db:              db,
 	}
@@ -87,7 +87,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	owner, err := cm.Owner(tmsID)
+	owner, err := cm.DB(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get owner for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
@@ -179,8 +179,8 @@ var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
-// Get returns the Owner instance for the passed TMS
-func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
+// Get returns the DB instance for the passed TMS
+func Get(sp view.ServiceProvider, tms *token.ManagementService) *DB {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
 		return nil
@@ -190,7 +190,7 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).Owner(tms.ID())
+	auditor, err := s.(*Manager).DB(tms.ID())
 	if err != nil {
 		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
 		return nil
@@ -198,7 +198,7 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 	return auditor
 }
 
-// New returns the Owner instance for the passed TMS
-func New(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
+// New returns the DB instance for the passed TMS
+func New(sp view.ServiceProvider, tms *token.ManagementService) *DB {
 	return Get(sp, tms)
 }
