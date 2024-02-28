@@ -40,7 +40,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
@@ -102,7 +101,7 @@ func (p *SDK) Install() error {
 	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
 
-	ownerManager := owner.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
+	ownerManager := ttx.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
 	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(auditorManager))

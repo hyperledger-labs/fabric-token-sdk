@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
 type SetTransactionOwnerStatus struct {
@@ -31,7 +30,7 @@ func (r *SetTransactionOwnerStatusView) Call(context view.Context) (interface{},
 	owner := ttx.NewOwner(context, token.GetManagementService(context))
 	assert.NoError(owner.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
-	if r.Status == ttxdb.Deleted {
+	if r.Status == ttx.Deleted {
 		tms := token.GetManagementService(context)
 		assert.NotNil(tms, "failed to get default tms")
 		net := network.GetInstance(context, tms.Network(), tms.Channel())

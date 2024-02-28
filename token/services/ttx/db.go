@@ -4,41 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package owner
+package ttx
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.owner")
-
 type QueryTransactionsParams = ttxdb.QueryTransactionsParams
-
-// TxStatus is the status of a transaction
-type TxStatus = ttxdb.TxStatus
-
-const (
-	Unknown = ttxdb.Unknown
-	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending = ttxdb.Pending
-	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed = ttxdb.Confirmed
-	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted = ttxdb.Deleted
-)
-
-// Transaction models a token transaction
-type Transaction interface {
-	ID() string
-	Network() string
-	Channel() string
-	Request() *token.Request
-}
 
 // QueryExecutor defines the interface for the query executor
 type QueryExecutor struct {
@@ -49,19 +24,19 @@ type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
 
-// Owner is the interface for the owner service
-type Owner struct {
+// DB is the interface for the owner service
+type DB struct {
 	networkProvider NetworkProvider
 	db              *ttxdb.DB
 }
 
 // NewQueryExecutor returns a new query executor
-func (a *Owner) NewQueryExecutor() *QueryExecutor {
+func (a *DB) NewQueryExecutor() *QueryExecutor {
 	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
 }
 
 // Append adds the passed transaction to the database
-func (a *Owner) Append(tx Transaction) error {
+func (a *DB) Append(tx *Transaction) error {
 	// append request to the db
 	if err := a.db.AppendTransactionRecord(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
@@ -81,26 +56,30 @@ func (a *Owner) Append(tx Transaction) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Owner) SetStatus(txID string, status TxStatus) error {
-	return a.db.SetStatus(txID, status)
+func (a *DB) SetStatus(txID string, status TxStatus) error {
+	return a.db.SetStatus(txID, ttxdb.TxStatus(status))
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *Owner) GetStatus(txID string) (TxStatus, error) {
-	return a.db.GetStatus(txID)
+func (a *DB) GetStatus(txID string) (TxStatus, error) {
+	st, err := a.db.GetStatus(txID)
+	if err != nil {
+		return "", err
+	}
+	return TxStatus(st), nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (a *Owner) GetTokenRequest(txID string) ([]byte, error) {
+func (a *DB) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
 }
 
-func (a *Owner) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
+func (a *DB) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
 	return a.db.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
-func (a *Owner) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
+func (a *DB) GetTransactionEndorsementAcks(id string) (map[string][]byte, error) {
 	return a.db.GetTransactionEndorsementAcks(id)
 }
 

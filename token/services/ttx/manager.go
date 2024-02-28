@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package owner
+package ttx
 
 import (
 	"reflect"
@@ -18,59 +18,59 @@ import (
 	"github.com/pkg/errors"
 )
 
-type TTXDBProvider interface {
+type DBProvider interface {
 	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
 }
 
 // Manager handles the databases
 type Manager struct {
 	networkProvider NetworkProvider
-	ttxdbProvider   TTXDBProvider
+	dbProvider      DBProvider
 
 	storage storage.DBEntriesStorage
 	mutex   sync.Mutex
-	owners  map[string]*Owner
+	dbs     map[string]*DB
 }
 
-// NewManager creates a new Owner manager.
-func NewManager(np NetworkProvider, ttxdbManager TTXDBProvider, storage storage.DBEntriesStorage) *Manager {
+// NewManager creates a new DB manager.
+func NewManager(np NetworkProvider, dbProvider DBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		networkProvider: np,
 		storage:         storage,
-		ttxdbProvider:   ttxdbManager,
-		owners:          map[string]*Owner{},
+		dbProvider:      dbProvider,
+		dbs:             map[string]*DB{},
 	}
 }
 
-// Owner returns the Owner for the given TMS
-func (cm *Manager) Owner(tmsID token.TMSID) (*Owner, error) {
+// DB returns the DB for the given TMS
+func (cm *Manager) DB(tmsID token.TMSID) (*DB, error) {
 	cm.mutex.Lock()
 	defer cm.mutex.Unlock()
 
 	id := tmsID.String()
 	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := cm.owners[id]
+	c, ok := cm.dbs[id]
 	if !ok {
 		// add an entry
 		if err := cm.storage.Put(tmsID, ""); err != nil {
 			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tmsID)
 		}
 		var err error
-		c, err = cm.newOwner(tmsID)
+		c, err = cm.newDB(tmsID)
 		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to instantiate owner for wallet [%s]", tmsID)
+			return nil, errors.WithMessagef(err, "failed to instantiate db for TMS [%s]", tmsID)
 		}
-		cm.owners[id] = c
+		cm.dbs[id] = c
 	}
 	return c, nil
 }
 
-func (cm *Manager) newOwner(tmsID token.TMSID) (*Owner, error) {
-	db, err := cm.ttxdbProvider.DBByTMSId(tmsID)
+func (cm *Manager) newDB(tmsID token.TMSID) (*DB, error) {
+	db, err := cm.dbProvider.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
-	owner := &Owner{
+	wrapper := &DB{
 		networkProvider: cm.networkProvider,
 		db:              db,
 	}
@@ -78,7 +78,7 @@ func (cm *Manager) newOwner(tmsID token.TMSID) (*Owner, error) {
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
-	return owner, nil
+	return wrapper, nil
 }
 
 func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
@@ -87,11 +87,11 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	owner, err := cm.Owner(tmsID)
+	db, err := cm.DB(tmsID)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get owner for [%s:%s]", tmsID.Network, tmsID.Channel)
+		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
-	qe := owner.NewQueryExecutor()
+	qe := db.NewQueryExecutor()
 	defer qe.Done()
 
 	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{})
@@ -158,7 +158,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	qe.Done()
 
 	for _, updated := range toBeUpdated {
-		if err := owner.db.SetStatus(updated.TxID, updated.Status); err != nil {
+		if err := db.db.SetStatus(updated.TxID, updated.Status); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
 		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
@@ -167,7 +167,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("ttxdb [%s:%s], found [%d] pending transactions", tmsID.Network, tmsID.Channel, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
-		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, owner.db}); err != nil {
+		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, db.db}); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, txID)
 		}
 	}
@@ -179,8 +179,8 @@ var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
-// Get returns the Owner instance for the passed TMS
-func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
+// Get returns the DB instance for the passed TMS
+func Get(sp view.ServiceProvider, tms *token.ManagementService) *DB {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
 		return nil
@@ -190,7 +190,7 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 		logger.Errorf("failed to get manager service: [%s]", err)
 		return nil
 	}
-	auditor, err := s.(*Manager).Owner(tms.ID())
+	auditor, err := s.(*Manager).DB(tms.ID())
 	if err != nil {
 		logger.Errorf("failed to get db for TMS [%s]: [%s]", tms.ID(), err)
 		return nil
@@ -198,7 +198,7 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
 	return auditor
 }
 
-// New returns the Owner instance for the passed TMS
-func New(sp view.ServiceProvider, tms *token.ManagementService) *Owner {
+// New returns the DB instance for the passed TMS
+func New(sp view.ServiceProvider, tms *token.ManagementService) *DB {
 	return Get(sp, tms)
 }

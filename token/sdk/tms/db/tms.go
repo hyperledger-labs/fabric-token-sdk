@@ -21,8 +21,8 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/processor/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/owner"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
 )
 
@@ -31,11 +31,11 @@ var logger = flogging.MustGetLogger("token-sdk")
 type PostInitializer struct {
 	sp              view.ServiceProvider
 	networkProvider *network.Provider
-	ownerManager    *owner.Manager
+	ownerManager    *ttx.Manager
 	auditorManager  *auditor.Manager
 }
 
-func NewPostInitializer(sp view.ServiceProvider, networkProvider *network.Provider, ownerManager *owner.Manager, auditorManager *auditor.Manager) *PostInitializer {
+func NewPostInitializer(sp view.ServiceProvider, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) *PostInitializer {
 	return &PostInitializer{
 		sp:              sp,
 		networkProvider: networkProvider,
@@ -66,7 +66,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		return token3.GetManagementServiceProvider(p.sp)
 	}
 	GetTokenRequest := func(tms *token3.ManagementService, txID string) ([]byte, error) {
-		tr, err := owner.Get(p.sp, tms).GetTokenRequest(txID)
+		tr, err := ttx.Get(p.sp, tms).GetTokenRequest(txID)
 		if err != nil || len(tr) == 0 {
 			return auditor.GetByTMSID(p.sp, tms.ID()).GetTokenRequest(txID)
 		}
