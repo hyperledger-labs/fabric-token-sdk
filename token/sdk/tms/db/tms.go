@@ -134,28 +134,16 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		Channel:   channel,
 		Namespace: namespace,
 	}
-	notifier, err := events.GetPublisher(p.sp)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get event publisher")
-	}
-	tokenDB, err := tokendb.GetByTMSId(p.sp, tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get token db")
-	}
-	tokenStore, err := tokens2.NewTokenStore(notifier, tokenDB, tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get token store")
-	}
 	if err := n.ProcessorManager().AddProcessor(
 		namespace,
 		fabric2.NewTokenRWSetProcessor(
 			n.Name(),
 			namespace,
+			func() *tokens2.Tokens {
+				return tokens2.Get(p.sp, tmsID)
+			},
 			GetTMSProvider,
 			GetTokenRequest,
-			tokens.NewAuthorizationMultiplexer(&tokens.TMSAuthorization{}, &htlc.ScriptOwnership{}),
-			tokens.NewIssuedMultiplexer(&tokens.WalletIssued{}),
-			tokenStore,
 		),
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)

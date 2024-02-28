@@ -371,11 +371,11 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "bob", "", BobAcceptedTransactions[:4], nil, nil, nil)
 	ut := ListUnspentTokens(network, "alice", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0))
+	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(9))).To(BeEquivalentTo(0), "got [%d], expected 9", ut.Sum(64).ToBigInt())
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
 	ut = ListUnspentTokens(network, "bob", "", "USD")
 	Expect(ut.Count() > 0).To(BeTrue())
-	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(BeEquivalentTo(0))
+	Expect(ut.Sum(64).ToBigInt().Cmp(big.NewInt(111))).To(BeEquivalentTo(0), "got [%d], expected 111", ut.Sum(64).ToBigInt())
 	Expect(ut.ByType("USD").Count()).To(BeEquivalentTo(ut.Count()))
 
 	RedeemCash(network, "bob", "", "USD", 11, auditor)
@@ -408,6 +408,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "bob", "", "LIRA", 2, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "LIRA", 3, auditor)
 	CheckAuditedTransactions(network, auditor, AuditedTransactions[:], &t0, &t16)
+	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
 
 	IssueCash(network, "", "USD", 1, "alice", auditor, true, "issuer")
 

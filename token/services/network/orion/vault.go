@@ -9,22 +9,23 @@ package orion
 import (
 	"runtime/debug"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-type Vault struct {
-	ons        *orion.NetworkService
-	tokenStore tokens.TokenStore
+type TokenStore interface {
+	DeleteToken(txID string, index uint64, deletedBy string) error
 }
 
-func NewVault(ons *orion.NetworkService, tokenStore tokens.TokenStore) *Vault {
+type Vault struct {
+	ons        *orion.NetworkService
+	tokenStore TokenStore
+}
+
+func NewVault(ons *orion.NetworkService, tokenStore TokenStore) *Vault {
 	return &Vault{ons: ons, tokenStore: tokenStore}
 }
 

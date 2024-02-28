@@ -349,6 +349,11 @@ func (is *InputStream) Sum() *big.Int {
 	return sum
 }
 
+// Inputs returns the inputs in this InputStream.
+func (is *InputStream) Inputs() []*Input {
+	return is.inputs
+}
+
 type OwnerStream struct {
 	owners []string
 }

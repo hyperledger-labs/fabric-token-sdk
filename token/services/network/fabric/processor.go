@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
-	"strconv"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -22,6 +20,7 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
+type GetTokensFunc = func() *tokens.Tokens
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 
@@ -43,22 +42,18 @@ type Issued interface {
 type RWSetProcessor struct {
 	network         string
 	nss             []string
+	GetTokens       GetTokensFunc
 	GetTMSProvider  GetTMSProviderFunc
 	GetTokenRequest GetTokenRequestFunc
-	ownership       Authorization
-	issued          Issued
-	tokenStore      tokens.TokenStore
 }
 
-func NewTokenRWSetProcessor(network string, ns string, GetTMSProvider GetTMSProviderFunc, GetTokenRequest GetTokenRequestFunc, ownership Authorization, issued Issued, tokenStore tokens.TokenStore) *RWSetProcessor {
+func NewTokenRWSetProcessor(network string, ns string, GetTokens GetTokensFunc, GetTMSProvider GetTMSProviderFunc, GetTokenRequest GetTokenRequestFunc) *RWSetProcessor {
 	return &RWSetProcessor{
 		network:         network,
 		nss:             []string{ns},
+		GetTokens:       GetTokens,
 		GetTMSProvider:  GetTMSProvider,
 		GetTokenRequest: GetTokenRequest,
-		ownership:       ownership,
-		issued:          issued,
-		tokenStore:      tokenStore,
 	}
 }
 
@@ -114,7 +109,7 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 			}, val); err != nil {
 				return errors.Wrapf(err, "failed updating public params")
 			}
-			if err := r.tokenStore.StorePublicParams(val); err != nil {
+			if err := r.GetTokens().StorePublicParams(val); err != nil {
 				return errors.Wrapf(err, "failed storing public params")
 			}
 			break
@@ -161,154 +156,39 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
-	metadata, err := request.GetMetadata()
-	if err != nil {
-		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
-		return err
-	}
+	return r.GetTokens().AppendTransaction(&Transaction{
+		id:        txID,
+		network:   tms.Network(),
+		channel:   tms.Channel(),
+		namespace: tms.Namespace(),
+		request:   request,
+	})
+}
 
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
-	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
-		ids := metadata.SpentTokenID()
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
-		}
-		for _, id := range ids {
-			if err := r.tokenStore.DeleteToken(id.TxId, id.Index, tx.ID()); err != nil {
-				return err
-			}
-		}
-	}
+type Transaction struct {
+	id        string
+	network   string
+	channel   string
+	namespace string
+	request   *token.Request
+}
 
-	auditorFlag := r.ownership.AmIAnAuditor(tms)
-	if auditorFlag {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], I must be the auditor", txID)
-		}
-	}
+func (t *Transaction) ID() string {
+	return t.id
+}
 
-	for i := 0; i < rws.NumWrites(ns); i++ {
-		key, tokenOnLedger, err := rws.GetWriteAt(ns, i)
-		if err != nil {
-			return err
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Parsing write key [%s]", key)
-		}
-		prefix, components, err := keys.SplitCompositeKey(key)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to split key [%s]", key)
-		}
-		if prefix != keys.TokenKeyPrefix {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected prefix [%s], got [%s], skipping", keys.TokenKeyPrefix, prefix)
-			}
-			continue
-		}
-		switch components[0] {
-		case keys.TokenMineKeyPrefix:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the mine prefix, skipping")
-			}
-			continue
-		case keys.TokenRequestKeyPrefix:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the token request prefix, skipping")
-			}
-			continue
-		case keys.SerialNumber:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the serial number prefix, skipping")
-			}
-			continue
-		case keys.IssueActionMetadata:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the issue action metadata, skipping")
-			}
-			continue
-		case keys.TransferActionMetadata:
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("expected key without the transfer action metadata, skipping")
-			}
-			continue
-		}
+func (t *Transaction) Network() string {
+	return t.network
+}
 
-		index, err := strconv.ParseUint(components[1], 10, 64)
-		if err != nil {
-			logger.Errorf("invalid output index for key [%s]", key)
-			return errors.Wrapf(err, "invalid output index for key [%s]", key)
-		}
+func (t *Transaction) Channel() string {
+	return t.channel
+}
 
-		// This is a delete op, delete it from the token store
-		if len(tokenOnLedger) == 0 {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s] without graph hiding, delete input [%s:%d]", txID, components[0], index)
-			}
-			if err := r.tokenStore.DeleteToken(components[0], index, tx.ID()); err != nil {
-				return err
-			}
-			continue
-		}
+func (t *Transaction) Namespace() string {
+	return t.namespace
+}
 
-		if components[0] != txID {
-			logger.Errorf("invalid output, must refer to tx id [%s], got [%s]", txID, components[0])
-			return errors.Errorf("invalid output, must refer to tx id [%s], got [%s]", txID, components[0])
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], found a token...", txID)
-		}
-
-		// get token in the clear
-		tok, issuer, tokenOnLedgerMetadata, err := metadata.GetToken(tokenOnLedger)
-		if err != nil {
-			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
-			continue
-		}
-		if tok == nil {
-			logger.Warnf("failed getting token in the clear for key [%s, %s]", key, string(tokenOnLedger))
-			continue
-		}
-
-		issuerFlag := !issuer.IsNone() && r.issued.Issued(tms, issuer, tok)
-		ids, mine := r.ownership.IsMine(tms, tok)
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			if mine {
-				logger.Debugf("transaction [%s], found a token and it is mine", txID)
-			} else {
-				logger.Debugf("transaction [%s], found a token and it is NOT mine", txID)
-			}
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			if issuerFlag {
-				logger.Debugf("transaction [%s], found a token and I have issued it", txID)
-			}
-		}
-
-		if err := r.tokenStore.AppendToken(
-			txID,
-			index,
-			tok,
-			tokenOnLedger,
-			tokenOnLedgerMetadata,
-			ids,
-			issuer,
-			precision,
-			tokens.Flags{
-				Mine:    mine,
-				Auditor: auditorFlag,
-				Issuer:  issuerFlag,
-			},
-		); err != nil {
-			return err
-		}
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("Done parsing write key [%s]", key)
-		}
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s] is known, extract tokens, done!", txID)
-	}
-
-	return nil
+func (t *Transaction) Request() *token.Request {
+	return t.request
 }

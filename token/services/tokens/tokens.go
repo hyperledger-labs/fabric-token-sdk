@@ -8,6 +8,7 @@ package tokens
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -95,12 +96,27 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 		}
 	}
 
-	// parse the outputs
-	os, err := request.Outputs()
+	is, os, err := request.InputsAndOutputs()
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get request's outputs")
 	}
 
+	// parse the inputs
+	for _, input := range is.Inputs() {
+		if input.Id == nil {
+			logger.Infof("transaction [%s] found an input that is not mine, skip it", tx.ID())
+			continue
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s] delete input [%s]", tx.ID(), input.Id)
+		}
+		if err := t.TokenStore.DeleteToken(input.Id.TxId, input.Id.Index, tx.ID()); err != nil {
+			return err
+		}
+		continue
+	}
+
+	// parse the outputs
 	for _, output := range os.Outputs() {
 		// get token in the clear
 		tok, issuer, tokenOnLedgerMetadata, err := metadata.GetToken(output.LedgerOutput)
@@ -138,6 +154,14 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 			}
 		}
 
+		if !mine && !auditorFlag && !issuerFlag {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s], discarding token", txID)
+			}
+			continue
+		}
+
+		logger.Debugf("store token [%s:%d][%s]", txID, output.Index, hash.Hashable(output.LedgerOutput))
 		if err := t.TokenStore.AppendToken(
 			txID,
 			output.Index,
@@ -162,4 +186,8 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 	}
 
 	return nil
+}
+
+func (t *Tokens) StorePublicParams(raw []byte) error {
+	return t.TokenStore.StorePublicParams(raw)
 }

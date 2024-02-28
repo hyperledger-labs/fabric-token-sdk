@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -463,7 +464,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 		if err := rows.Scan(&id.TxId, &id.Index, &tok); err != nil {
 			return nil, err
 		}
-		logger.Debugf("found ledger token [%s:%d] [%v]", id.TxId, id.Index, tok)
+		logger.Debugf("found ledger token [%s:%d] [%s]", id.TxId, id.Index, hash.Hashable(tok))
 		// the result is expected to be in order of the ids
 		found := false
 		for i := 0; i < len(ids); i++ {
