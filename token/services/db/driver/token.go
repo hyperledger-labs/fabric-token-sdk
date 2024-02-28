@@ -64,8 +64,9 @@ type TokenDBTransaction interface {
 	Delete(txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
 	StoreToken(tr TokenRecord, owners []string) error
-
+	// Commit commits this transaction
 	Commit() error
+	// Rollback rollbacks this transaction
 	Rollback() error
 }
 
@@ -113,7 +114,7 @@ type TokenDB interface {
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters
 	PublicParams() ([]byte, error)
-
+	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction() (TokenDBTransaction, error)
 }
 
