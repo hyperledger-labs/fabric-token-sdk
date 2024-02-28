@@ -10,12 +10,6 @@ import (
 	"context"
 	"time"
 
-	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -35,6 +29,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
 	tmsinit "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms/db"
+	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -43,6 +38,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
@@ -51,6 +47,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/memory"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb/db/sql"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/memory"
