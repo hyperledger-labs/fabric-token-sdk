@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
@@ -86,9 +87,9 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			orion2.NewTokenRWSetProcessor(
 				ons.Name(),
 				namespace,
-				func() *tokens2.Tokens {
+				common.NewLazyGetter[*tokens2.Tokens](func() *tokens2.Tokens {
 					return tokens2.Get(p.sp, tmsID)
-				},
+				}).Get,
 				GetTMSProvider,
 				GetTokenRequest,
 			),
@@ -123,9 +124,9 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		fabric2.NewTokenRWSetProcessor(
 			n.Name(),
 			namespace,
-			func() *tokens2.Tokens {
+			common.NewLazyGetter[*tokens2.Tokens](func() *tokens2.Tokens {
 				return tokens2.Get(p.sp, tmsID)
-			},
+			}).Get,
 			GetTMSProvider,
 			GetTokenRequest,
 		),
