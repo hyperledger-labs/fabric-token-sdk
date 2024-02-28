@@ -10,17 +10,13 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/pkg/errors"
@@ -85,28 +81,16 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			Namespace: namespace,
 		}
 		logger.Debugf("register orion committer processor for [%s]", tmsID)
-		notifier, err := events.GetPublisher(p.sp)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get event publisher")
-		}
-		tokenDB, err := tokendb.GetByTMSId(p.sp, tmsID)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get token db")
-		}
-		tokenStore, err := tokens2.NewTokenStore(notifier, tokenDB, tmsID)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get token store")
-		}
 		if err := ons.ProcessorManager().AddProcessor(
 			namespace,
 			orion2.NewTokenRWSetProcessor(
 				ons.Name(),
 				namespace,
+				func() *tokens2.Tokens {
+					return tokens2.Get(p.sp, tmsID)
+				},
 				GetTMSProvider,
 				GetTokenRequest,
-				tokens.NewAuthorizationMultiplexer(&tokens.TMSAuthorization{}, &htlc.ScriptOwnership{}),
-				tokens.NewIssuedMultiplexer(&tokens.WalletIssued{}),
-				tokenStore,
 			),
 		); err != nil {
 			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", tmsID)

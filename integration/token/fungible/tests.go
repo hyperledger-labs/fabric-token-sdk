@@ -765,7 +765,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 		// We should expect 6 errors, 3 records (Alice->Bob, Alice->Charlie, Alice-Alice (the rest) * 2 (envelope non found, no match in vault)
 		// each error should contain failedTransferTxID
 		if len(errs) != 6 {
-			return errors.Errorf("expected only 1 error, got [%d]", len(errs))
+			return errors.Errorf("expected only 6 error, got [%d][%s]", len(errs), errs)
 		}
 		for _, err := range errs {
 			if !strings.Contains(err, failedTransferTxID) {
