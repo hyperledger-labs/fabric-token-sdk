@@ -132,7 +132,11 @@ func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err := tx.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s]", err)
+		}
+	}()
 	if err := tx.Delete(txID, index, deletedBy); err != nil {
 		return err
 	}
