@@ -12,7 +12,6 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -226,7 +225,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
+func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo) {
 	registry := registry2.New()
 	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
 
@@ -241,7 +240,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix2.NewProviderWithEidRhNymPolicy(config, registry)
+	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 

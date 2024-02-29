@@ -11,7 +11,6 @@ import (
 	"github.com/IBM/idemix/bccsp/keystore"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/pkg/errors"
 )
 
@@ -20,16 +19,16 @@ import (
 func NewKVSBCCSP(kvsStore keystore.KVS, curveID math.CurveID) (bccsp.BCCSP, error) {
 	if curveID == math.BLS12_381_BBS {
 		logger.Debugf("new aries KVS-based BCCSP")
-		return idemix.NewKSVBCCSP(kvsStore, curveID, true)
+		return NewKSVBCCSP(kvsStore, curveID, true)
 	}
 	logger.Debugf("new dlog KVS-based BCCSP")
-	return idemix.NewKSVBCCSP(kvsStore, curveID, false)
+	return NewKSVBCCSP(kvsStore, curveID, false)
 }
 
 // NewAriesBCCSP returns an instance of the idemix BCCSP for the given curve based on aries
 func NewAriesBCCSP() (bccsp.BCCSP, error) {
 	logger.Infof("new aries no-KeyStore BCCSP")
-	curve, tr, err := idemix.GetCurveAndTranslator(math.BLS12_381_BBS)
+	curve, tr, err := GetCurveAndTranslator(math.BLS12_381_BBS)
 	if err != nil {
 		return nil, err
 	}

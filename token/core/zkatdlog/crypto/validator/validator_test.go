@@ -13,7 +13,6 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -360,7 +359,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.SigningIdentity) {
+func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo, driver.SigningIdentity) {
 	registry := registry2.New()
 	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
 
@@ -375,7 +374,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo, driver.Signin
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix2.NewProviderWithEidRhNymPolicy(config, registry)
+	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
@@ -448,7 +447,7 @@ func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRe
 	return ir, issueMetadata
 }
 
-func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix2.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
+func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, auditor *audit.Auditor, auditInfo *idemix.AuditInfo, id []byte, owners [][]byte) (*transfer.Sender, *driver.TokenRequest, *driver.TokenRequestMetadata, []*tokn.Token) {
 
 	signers := make([]driver.Signer, 2)
 	signers[0] = signer
