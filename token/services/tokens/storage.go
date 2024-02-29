@@ -154,6 +154,10 @@ func (t *transaction) Commit() error {
 	return t.tx.Commit()
 }
 
+func (t *transaction) TransactionExists(id string) (bool, error) {
+	return t.tx.TransactionExists(id)
+}
+
 type TokenProcessorEvent struct {
 	topic   string
 	message TokenMessage

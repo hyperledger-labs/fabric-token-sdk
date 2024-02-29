@@ -52,6 +52,9 @@ type Tokens struct {
 	Storage     *DBStorage
 }
 
+// AppendTransaction appends the content of the passed transaction to the token db.
+// If the transaction is already in there, nothing more happens.
+// The operation is atomic.
 func (t *Tokens) AppendTransaction(tx Transaction) error {
 	txID := tx.ID()
 	tms, err := t.TMSProvider.GetManagementService(
@@ -84,6 +87,13 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 			logger.Errorf("failed to rollback [%s]", err)
 		}
 	}()
+	exists, err := ts.TransactionExists(tx.ID())
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
 
 	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	md, err := request.GetMetadata()
@@ -203,10 +213,13 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 	return nil
 }
 
+// StorePublicParams stores the passed public parameters in the token db
 func (t *Tokens) StorePublicParams(raw []byte) error {
 	return t.Storage.StorePublicParams(raw)
 }
 
+// DeleteToken marks the entries corresponding to the passed token ids as deleted.
+// The deletion is attributed to the passed deletedBy argument.
 func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) error {
 	ts, err := t.Storage.NewTransaction()
 	if err != nil {

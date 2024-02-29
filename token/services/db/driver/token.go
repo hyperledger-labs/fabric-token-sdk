@@ -58,6 +58,8 @@ type CertificationDB interface {
 }
 
 type TokenDBTransaction interface {
+	// TransactionExists returns true if a token with that transaction id exists in the db
+	TransactionExists(id string) (bool, error)
 	// OwnersOf returns the list of owner of a given token
 	OwnersOf(txID string, index uint64) (*token.Token, []string, error)
 	// Delete marks the passed token as deleted by a given identifier

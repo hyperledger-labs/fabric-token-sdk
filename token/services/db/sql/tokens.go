@@ -837,6 +837,7 @@ func (db *TokenDB) GetSchema() string {
 			PRIMARY KEY (tx_id, idx)
 		);
 		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 
 		-- Ownership
 		CREATE TABLE IF NOT EXISTS %s (
@@ -863,8 +864,8 @@ func (db *TokenDB) GetSchema() string {
 		);
 		CREATE INDEX IF NOT EXISTS exists_%s ON %s ( token_id );
 		`,
-		db.table.Tokens,
-		db.table.Tokens,
+		db.table.Tokens, db.table.Tokens,
+		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens,
 		db.table.Ownership,
 		db.table.PublicParams,
@@ -889,6 +890,27 @@ func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
 type TokenTransaction struct {
 	db *TokenDB
 	tx *sql.Tx
+}
+
+func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
+	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1;", t.db.table.Tokens)
+	logger.Debug(query, id)
+
+	row := t.tx.QueryRow(query, id)
+	var certification []byte
+	if err := row.Scan(&certification); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
+		return false, err
+	}
+	result := len(certification) != 0
+	if !result {
+		logger.Warnf("tried to check transaction existence for id %s, got nothing", id)
+	}
+	return result, nil
+
 }
 
 func (t *TokenTransaction) OwnersOf(txID string, index uint64) (*token.Token, []string, error) {
