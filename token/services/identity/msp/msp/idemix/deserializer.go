@@ -11,7 +11,6 @@ import (
 
 	msp "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
-	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -20,15 +19,6 @@ import (
 
 type Deserializer struct {
 	*Idemix
-}
-
-// NewDeserializer returns a new deserializer for the best effort strategy
-func NewDeserializer(ipk []byte) (*Deserializer, error) {
-	bccsp, err := NewBCCSP(math.FP256BN_AMCL)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to instantiate bccsp")
-	}
-	return NewDeserializerWithBCCSP(ipk, csp.BestEffort, nil, bccsp)
 }
 
 func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID []byte, cryptoProvider csp.BCCSP) (*Deserializer, error) {
