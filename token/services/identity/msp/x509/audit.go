@@ -10,7 +10,7 @@ import "encoding/json"
 
 type AuditInfo struct {
 	EnrollmentId     string
-	RevocationHandle string
+	RevocationHandle []byte
 }
 
 func (a *AuditInfo) Bytes() ([]byte, error) {

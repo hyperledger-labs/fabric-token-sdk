@@ -10,7 +10,6 @@ import (
 	ecdsa2 "crypto/ecdsa"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -51,7 +50,7 @@ func (a *AuditInfoDeserializer) Match(id []byte) error {
 		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	cert, err := x509.PemDecodeCert(si.IdBytes)
+	cert, err := PemDecodeCert(si.IdBytes)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode certificate")
 	}

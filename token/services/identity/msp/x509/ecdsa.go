@@ -15,12 +15,11 @@ import (
 	"crypto/x509"
 	"encoding/asn1"
 	"encoding/pem"
-	"fmt"
 	"math/big"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp/utils"
 	"github.com/pkg/errors"
@@ -206,7 +205,7 @@ func PemDecodeKey(keyBytes []byte) (interface{}, error) {
 func IsLowS(k *ecdsa.PublicKey, s *big.Int) (bool, error) {
 	halfOrder, ok := curveHalfOrders[k.Curve]
 	if !ok {
-		return false, fmt.Errorf("curve not recognized [%s]", k.Curve)
+		return false, errors.Errorf("curve not recognized [%s]", k.Curve)
 	}
 
 	return s.Cmp(halfOrder) != 1, nil

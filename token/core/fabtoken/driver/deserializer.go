@@ -161,7 +161,7 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 			if err := ai.FromBytes(si.Recipient); err != nil {
 				return "", errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
-			return ai.RevocationHandle, nil
+			return string(ai.RevocationHandle), nil
 		}
 
 		return "", nil
@@ -171,5 +171,5 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 	if err := ai.FromBytes(auditInfo); err != nil {
 		return "", errors.Wrapf(err, "failed unmarshalling audit info [%s]", auditInfo)
 	}
-	return ai.RevocationHandle, nil
+	return string(ai.RevocationHandle), nil
 }
