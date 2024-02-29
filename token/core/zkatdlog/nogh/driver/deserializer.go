@@ -13,13 +13,13 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )

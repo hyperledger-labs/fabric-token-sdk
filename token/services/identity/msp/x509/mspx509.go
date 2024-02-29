@@ -10,10 +10,10 @@ import (
 	ecdsa2 "crypto/ecdsa"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/msp/x509"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )

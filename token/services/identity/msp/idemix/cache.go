@@ -9,9 +9,9 @@ package idemix
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/msp/idemix"
 	"go.uber.org/zap/zapcore"
 )
 

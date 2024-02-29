@@ -12,7 +12,6 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -27,6 +26,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/msp/idemix"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
