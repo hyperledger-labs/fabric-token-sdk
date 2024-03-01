@@ -14,8 +14,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
@@ -54,27 +54,27 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 
 	// Prepare wallets
-	storageProvider, err := identity2.GetStorageProvider(sp)
+	storageProvider, err := identity.GetStorageProvider(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
-	wallets := identity2.NewWallets()
+	wallets := identity.NewWallets()
 	dsManager, err := common.GetDeserializerManager(sp)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
-	mspWalletFactory := msp2.NewWalletFactory(
+	mspWalletFactory := msp.NewWalletFactory(
 		token.TMSID{
 			Network:   networkID,
 			Channel:   channel,
 			Namespace: namespace,
 		},
-		config.NewIdentityConfig(cs, tmsConfig),    // config
-		fscIdentity,                                // FSC identity
-		networkLocalMembership.DefaultIdentity(),   // network default identity
-		msp2.NewSigService(view.GetSigService(sp)), // signer service
-		view.GetEndpointService(sp),                // endpoint service
+		config.NewIdentityConfig(cs, tmsConfig),   // config
+		fscIdentity,                               // FSC identity
+		networkLocalMembership.DefaultIdentity(),  // network default identity
+		msp.NewSigService(view.GetSigService(sp)), // signer service
+		view.GetEndpointService(sp),               // endpoint service
 		storageProvider,
 		dsManager,
 		false,
@@ -110,7 +110,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity2.NewProvider(
+	ip := identity.NewProvider(
 		view.GetSigService(sp),
 		view.GetEndpointService(sp),
 		fscIdentity,
@@ -118,13 +118,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		wallets,
 	)
 	ws := fabtoken.NewWalletService(
-		msp2.NewSigService(view.GetSigService(sp)),
+		msp.NewSigService(view.GetSigService(sp)),
 		ip,
 		qe,
 		NewDeserializer(),
-		identity2.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
-		identity2.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
-		identity2.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
+		identity.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
+		identity.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
+		identity.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
 	)
 
 	service := fabtoken.NewService(
@@ -169,16 +169,16 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 
 	// Prepare wallets
-	storageProvider, err := identity2.GetStorageProvider(sp)
+	storageProvider, err := identity.GetStorageProvider(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	wallets := identity2.NewWallets()
+	wallets := identity.NewWallets()
 	dsManager, err := common.GetDeserializerManager(sp)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get deserializer manager")
 	}
-	mspWalletFactory := msp2.NewWalletFactory(
+	mspWalletFactory := msp.NewWalletFactory(
 		token.TMSID{
 			Network:   networkID,
 			Channel:   channel,
@@ -187,7 +187,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		config.NewIdentityConfig(cs, tmsConfig), // config
 		nil,                                     // FSC identity
 		nil,                                     // network default identity
-		msp2.NewSigService(view.GetSigService(sp)), // signer service
+		msp.NewSigService(view.GetSigService(sp)), // signer service
 		nil, // endpoint service
 		storageProvider,
 		dsManager,
@@ -225,7 +225,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity2.NewProvider(
+	ip := identity.NewProvider(
 		view.GetSigService(sp),
 		nil,
 		nil,
@@ -233,13 +233,13 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		wallets,
 	)
 	ws := fabtoken.NewWalletService(
-		msp2.NewSigService(view.GetSigService(sp)),
+		msp.NewSigService(view.GetSigService(sp)),
 		ip,
 		nil,
 		NewDeserializer(),
-		identity2.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
-		identity2.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
-		identity2.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
+		identity.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
+		identity.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
+		identity.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
 	)
 
 	return ws, nil

@@ -175,7 +175,9 @@ type Matcher interface {
 	Match([]byte) error
 }
 
+// AuditInfoProvider models a provider of audit information
 type AuditInfoProvider interface {
+	// GetAuditInfo returns the audit information for the given identity, if available.
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 }
 

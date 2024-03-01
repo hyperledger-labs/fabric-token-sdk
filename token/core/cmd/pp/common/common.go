@@ -13,9 +13,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	msp3 "github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 )

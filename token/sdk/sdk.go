@@ -82,15 +82,6 @@ func (p *SDK) Install() error {
 	}
 	logger.Infof("Token platform enabled, installing...")
 
-	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type"))
-	identityStorageProvider := identitydb.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
-	assert.NoError(p.registry.RegisterService(identityStorageProvider))
-
-	assert.NoError(
-		p.registry.RegisterService(identityStorageProvider),
-		"failed to register identity storage",
-	)
-
 	logger.Infof("Set TMS TMSProvider")
 
 	vaultProvider := db.NewVaultProvider(p.registry)
@@ -107,6 +98,11 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
 	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
+	identityStorageProvider := identitydb.NewDBStorageProvider(
+		kvs.GetService(p.registry),
+		identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type")),
+	)
+	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
 
 	ownerManager := ttx.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
