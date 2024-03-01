@@ -88,7 +88,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 				ons.Name(),
 				namespace,
 				common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-					return tokens2.Get(p.sp, tmsID)
+					return tokens2.GetService(p.sp, tmsID)
 				}).Get,
 				GetTMSProvider,
 				GetTokenRequest,
@@ -125,7 +125,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			n.Name(),
 			namespace,
 			common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-				return tokens2.Get(p.sp, tmsID)
+				return tokens2.GetService(p.sp, tmsID)
 			}).Get,
 			GetTMSProvider,
 			GetTokenRequest,

@@ -80,54 +80,6 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 	return nil
 }
 
-func (db *TokenDB) OwnersOf(txID string, index uint64) (*token.Token, []string, error) {
-	args := make([]interface{}, 0)
-	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
-	where := whereTokenIDs(&args, tokenIDs)
-
-	// select token
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", db.table.Tokens, where)
-	logger.Debug(query, args)
-	row := db.db.QueryRow(query, args...)
-	var tokenOwner []byte
-	var tokenType string
-	var quantity string
-	if err := row.Scan(&tokenOwner, &tokenType, &quantity); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, nil
-		}
-		return nil, nil, err
-	}
-
-	// select owners
-	query = fmt.Sprintf("SELECT enrollment_id FROM %s WHERE %s", db.table.Ownership, where)
-	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-
-	var owners []string
-	for rows.Next() {
-		var owner string
-		if err := rows.Scan(&owner); err != nil {
-			return nil, nil, err
-		}
-		owners = append(owners, owner)
-	}
-	if rows.Err() != nil {
-		return nil, nil, rows.Err()
-	}
-	return &token.Token{
-		Owner: &token.Owner{
-			Raw: tokenOwner,
-		},
-		Type:     tokenType,
-		Quantity: quantity,
-	}, owners, nil
-}
-
 // Delete is called when spending a token
 func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) (err error) {
 	tx, err := db.NewTokenDBTransaction()
@@ -899,7 +851,7 @@ type TokenTransaction struct {
 }
 
 func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
-	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1;", t.db.table.Tokens)
+	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", t.db.table.Tokens)
 	logger.Debug(query, id)
 
 	row := t.tx.QueryRow(query, id)
@@ -919,7 +871,7 @@ func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
 
 }
 
-func (t *TokenTransaction) OwnersOf(txID string, index uint64) (*token.Token, []string, error) {
+func (t *TokenTransaction) GetToken(txID string, index uint64) (*token.Token, error) {
 	args := make([]interface{}, 0)
 	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
 	where := whereTokenIDs(&args, tokenIDs)
@@ -933,30 +885,9 @@ func (t *TokenTransaction) OwnersOf(txID string, index uint64) (*token.Token, []
 	var quantity string
 	if err := row.Scan(&tokenOwner, &tokenType, &quantity); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, nil
+			return nil, nil
 		}
-		return nil, nil, err
-	}
-
-	// select owners
-	query = fmt.Sprintf("SELECT enrollment_id FROM %s WHERE %s", t.db.table.Ownership, where)
-	logger.Debug(query, args)
-	rows, err := t.tx.Query(query, args...)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-
-	var owners []string
-	for rows.Next() {
-		var owner string
-		if err := rows.Scan(&owner); err != nil {
-			return nil, nil, err
-		}
-		owners = append(owners, owner)
-	}
-	if rows.Err() != nil {
-		return nil, nil, rows.Err()
+		return nil, err
 	}
 	return &token.Token{
 		Owner: &token.Owner{
@@ -964,7 +895,36 @@ func (t *TokenTransaction) OwnersOf(txID string, index uint64) (*token.Token, []
 		},
 		Type:     tokenType,
 		Quantity: quantity,
-	}, owners, nil
+	}, nil
+}
+
+func (t *TokenTransaction) OwnersOf(txID string, index uint64) ([]string, error) {
+	args := make([]interface{}, 0)
+	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
+	where := whereTokenIDs(&args, tokenIDs)
+	query := fmt.Sprintf("SELECT enrollment_id FROM %s WHERE %s", t.db.table.Ownership, where)
+	logger.Debug(query, args)
+	rows, err := t.tx.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var owners []string
+	for rows.Next() {
+		var owner string
+		if err := rows.Scan(&owner); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		owners = append(owners, owner)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return owners, nil
 }
 
 func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {

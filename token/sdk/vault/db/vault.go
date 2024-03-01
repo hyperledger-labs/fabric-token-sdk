@@ -68,7 +68,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token db")
 	}
-	tokens, err := tokens.Get(v.sp, tmsID)
+	tokens, err := tokens.GetService(v.sp, tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store")
 	}

@@ -105,8 +105,8 @@ var (
 	managerType = reflect.TypeOf((*Manager)(nil))
 )
 
-// Get returns the Tokens instance for the passed TMS
-func Get(sp view.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
+// GetService returns the Tokens instance for the passed TMS
+func GetService(sp view.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, err
