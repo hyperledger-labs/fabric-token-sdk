@@ -72,7 +72,8 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 		}
 	}()
 	if err = tx.StoreToken(tr, owners); err != nil {
-		return err
+
+		return
 	}
 	if err = tx.Commit(); err != nil {
 		return err
@@ -687,7 +688,7 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err
 	if err = tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
 	}
-	return nil
+	return
 }
 
 func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {

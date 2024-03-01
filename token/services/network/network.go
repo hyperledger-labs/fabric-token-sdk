@@ -314,10 +314,6 @@ func (n *Network) ExistEnvelope(id string) bool {
 	return n.n.EnvelopeExists(id)
 }
 
-func (n *Network) ExistTransient(id string) bool {
-	return n.n.TransientExists(id)
-}
-
 // Broadcast sends the given blob to the network
 func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 	switch b := blob.(type) {
@@ -349,20 +345,6 @@ func (n *Network) AnonymousIdentity() view.Identity {
 // NewEnvelope creates a new envelope
 func (n *Network) NewEnvelope() *Envelope {
 	return &Envelope{e: n.n.NewEnvelope()}
-}
-
-// StoreTransient stores locally the given transient data and associated it with the given id
-func (n *Network) StoreTransient(id string, transient TransientMap) error {
-	return n.n.StoreTransient(id, driver.TransientMap(transient))
-}
-
-// GetTransient retrieves the transient map bound to the passed id
-func (n *Network) GetTransient(id string) (TransientMap, error) {
-	tm, err := n.n.GetTransient(id)
-	if err != nil {
-		return nil, err
-	}
-	return TransientMap(tm), nil
 }
 
 // RequestApproval requests approval for the given token request

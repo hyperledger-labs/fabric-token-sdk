@@ -20,28 +20,30 @@ import (
 
 var logger = flogging.MustGetLogger("token-sdk.sql")
 
-func initSchema(db *sql.DB, schemas ...string) error {
+func initSchema(db *sql.DB, schemas ...string) (err error) {
 	logger.Info("creating tables")
 	tx, err := db.Begin()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
 
 	for _, schema := range schemas {
 		logger.Debug(schema)
-		if _, err := db.Exec(schema); err != nil {
+		if _, err = db.Exec(schema); err != nil {
 			return errors.Wrap(err, "error creating schema")
 		}
 	}
 	if err = tx.Commit(); err != nil {
 		return err
 	}
-	return nil
+	return
 }
 
 type tableNames struct {

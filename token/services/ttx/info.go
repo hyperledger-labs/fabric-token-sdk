@@ -9,8 +9,8 @@ package ttx
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type TokenTransactionDB interface {
@@ -46,16 +46,15 @@ func (a *TransactionInfoProvider) TransactionInfo(txID string) (*TransactionInfo
 		return nil, errors.WithMessagef(err, "failed to load endorsement acks for [%s]", txID)
 	}
 
-	applicationMetadata, err := a.loadTransient(txID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to load transient for [%s]", txID)
-	}
-
 	tr, err := a.ttxDB.GetTokenRequest(txID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load token request for [%s]", txID)
 	}
 
+	applicationMetadata, err := a.loadTransient(tr, txID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to load transient for [%s]", txID)
+	}
 	return &TransactionInfo{
 		EndorsementAcks:     endorsementAcks,
 		ApplicationMetadata: applicationMetadata,
@@ -63,20 +62,23 @@ func (a *TransactionInfoProvider) TransactionInfo(txID string) (*TransactionInfo
 	}, nil
 }
 
-func (a *TransactionInfoProvider) loadTransient(txID string) (map[string][]byte, error) {
-	tm, err := network.GetInstance(a.sp, a.tms.Network(), a.tms.Channel()).GetTransient(txID)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to load transient for [%s]", txID)
-	}
-	if !tm.Exists(TokenRequestMetadata) {
+func (a *TransactionInfoProvider) loadTransient(trRaw []byte, txID string) (map[string][]byte, error) {
+	if len(trRaw) == 0 {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], no token request found, skip it", txID)
+		}
 		return nil, nil
 	}
-	raw := tm.Get(TokenRequestMetadata)
-
-	metadata, err := a.tms.NewMetadataFromBytes(raw)
+	request, err := a.tms.NewFullRequestFromBytes(trRaw)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to unmarshal transient for [%s]", txID)
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
+		}
+		return nil, err
 	}
-
-	return metadata.TokenRequestMetadata.Application, nil
+	if request.Metadata == nil {
+		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
+		return nil, nil
+	}
+	return request.Metadata.Application, nil
 }

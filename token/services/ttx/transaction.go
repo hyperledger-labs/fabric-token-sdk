@@ -282,22 +282,6 @@ func (t *Transaction) TMSID() token.TMSID {
 	return t.TokenRequest.TokenService.ID()
 }
 
-func (t *Transaction) storeTransient() error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Storing transient for [%s]", t.ID())
-	}
-	raw, err := t.TokenRequest.MetadataToBytes()
-	if err != nil {
-		return err
-	}
-
-	if err := t.Payload.Transient.Set(TokenRequestMetadata, raw); err != nil {
-		return err
-	}
-
-	return network.GetInstance(t.SP, t.Network(), t.Channel()).StoreTransient(t.ID(), t.Payload.Transient)
-}
-
 func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
 	if len(envelope.Nonce()) != 0 {
 		networkTxID := &network.TxID{
