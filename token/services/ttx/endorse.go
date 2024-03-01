@@ -72,12 +72,6 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
 	metrics := GetMetrics(context)
 
-	// Store transient
-	err := c.tx.storeTransient()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed storing transient")
-	}
-
 	externalWallets := make(map[string]ExternalWalletSigner)
 	// 1. First collect signatures on the token request
 	issueSigmas, err := c.requestSignaturesOnIssues(context, externalWallets)
@@ -764,11 +758,6 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed sending signature back")
 		}
-	}
-
-	// Store transient
-	if err := s.tx.storeTransient(); err != nil {
-		return nil, errors.Wrapf(err, "failed storing transient")
 	}
 
 	// Receive transaction with envelope

@@ -68,15 +68,6 @@ type Network interface {
 	// NewEnvelope returns a new instance of an envelope
 	NewEnvelope() Envelope
 
-	// StoreTransient stores the passed transient map and maps it to the passed id
-	StoreTransient(id string, transient TransientMap) error
-
-	// TransientExists returns true if a transient map exists for the passed id, false otherwise
-	TransientExists(id string) bool
-
-	// GetTransient retrieves the transient map bound to the passed id
-	GetTransient(id string) (TransientMap, error)
-
 	// RequestApproval requests approval for the passed request and returns the returned envelope
 	RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID TxID) (Envelope, error)
 

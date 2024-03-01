@@ -46,12 +46,6 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 		return nil, errors.Errorf("expected fabric envelope")
 	}
 
-	// Store transient
-	err = s.tx.storeTransient()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed storing transient")
-	}
-
 	// Store envelope
 	if !s.options.SkipApproval {
 		if err := StoreEnvelope(context, s.tx); err != nil {

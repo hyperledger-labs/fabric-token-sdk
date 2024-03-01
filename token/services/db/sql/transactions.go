@@ -243,33 +243,35 @@ func (db *TransactionDB) AddTransaction(r *driver.TransactionRecord) error {
 	return err
 }
 
-func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus) error {
+func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus) (err error) {
 	logger.Debugf("setting [%s] status to [%s]", txID, status)
 	tx, err := db.db.Begin()
 	if err != nil {
 		return errors.New("failed starting a transaction")
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
 
-	if err := db.setStatusIfExists(tx, db.table.Movements, txID, status); err != nil {
+	if err = db.setStatusIfExists(tx, db.table.Movements, txID, status); err != nil {
 		return err
 	}
-	if err := db.setStatusIfExists(tx, db.table.Transactions, txID, status); err != nil {
+	if err = db.setStatusIfExists(tx, db.table.Transactions, txID, status); err != nil {
 		return err
 	}
-	if err := db.setStatusIfExists(tx, db.table.Validations, txID, status); err != nil {
+	if err = db.setStatusIfExists(tx, db.table.Validations, txID, status); err != nil {
 		return err
 	}
 
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
 	}
 
-	return nil
+	return
 }
 
 // setStatusIfExists checks if the record exists before updating it, because some sql drivers return an
@@ -354,7 +356,7 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 	return &ValidationRecordsIterator{txs: rows, filter: params.Filter}, nil
 }
 
-func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) error {
+func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) (err error) {
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
 	now := time.Now().UTC()
@@ -370,17 +372,19 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view
 		return errors.New("failed starting a transaction")
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
-	if _, err := tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
+	if _, err = tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
 		return errors.Wrapf(err, "failed to execute")
 	}
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
 	}
-	return nil
+	return
 }
 
 func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {

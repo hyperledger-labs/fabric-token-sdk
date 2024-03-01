@@ -292,11 +292,6 @@ func (a *AuditApproveView) signAndSendBack(context view.Context) error {
 		return errors.WithMessagef(err, "failed getting signing identity for auditor identity [%s]", context.Me())
 	}
 
-	err = a.tx.storeTransient()
-	if err != nil {
-		return errors.Wrapf(err, "failed storing transient for [%s]", a.tx.ID())
-	}
-
 	logger.Debug("signer at auditor", signer, aid)
 
 	raw, err := a.tx.MarshallToAudit()
