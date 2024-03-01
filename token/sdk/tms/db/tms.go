@@ -87,8 +87,8 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			orion2.NewTokenRWSetProcessor(
 				ons.Name(),
 				namespace,
-				common.NewLazyGetter[*tokens2.Tokens](func() *tokens2.Tokens {
-					return tokens2.Get(p.sp, tmsID)
+				common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+					return tokens2.GetService(p.sp, tmsID)
 				}).Get,
 				GetTMSProvider,
 				GetTokenRequest,
@@ -124,8 +124,8 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		fabric2.NewTokenRWSetProcessor(
 			n.Name(),
 			namespace,
-			common.NewLazyGetter[*tokens2.Tokens](func() *tokens2.Tokens {
-				return tokens2.Get(p.sp, tmsID)
+			common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+				return tokens2.GetService(p.sp, tmsID)
 			}).Get,
 			GetTMSProvider,
 			GetTokenRequest,

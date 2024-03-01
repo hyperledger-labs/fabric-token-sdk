@@ -15,26 +15,63 @@ import (
 	"github.com/pkg/errors"
 )
 
-type tokenStore struct {
+const (
+	AddToken    = "store-token"
+	DeleteToken = "delete-token"
+)
+
+type Flags struct {
+	Mine    bool
+	Auditor bool
+	Issuer  bool
+}
+
+type DBStorage struct {
 	notifier events.Publisher
 	tokenDB  *tokendb.DB
 	tmsID    token.TMSID
 }
 
-func NewTokenStore(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TMSID) (*tokenStore, error) {
-	return &tokenStore{
+func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
+	return &DBStorage{notifier: notifier, tokenDB: tokenDB, tmsID: tmsID}, nil
+}
+
+func (d *DBStorage) NewTransaction() (*transaction, error) {
+	tx, err := d.tokenDB.NewTransaction()
+	if err != nil {
+		return nil, err
+	}
+	return NewTransaction(d.notifier, tx, d.tmsID)
+}
+
+func (d *DBStorage) StorePublicParams(raw []byte) error {
+	return d.tokenDB.StorePublicParams(raw)
+}
+
+type transaction struct {
+	notifier events.Publisher
+	tx       *tokendb.Transaction
+	tmsID    token.TMSID
+}
+
+func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
+	return &transaction{
 		notifier: notifier,
-		tokenDB:  tokenDB,
+		tx:       tx,
 		tmsID:    tmsID,
 	}, nil
 }
 
-func (t *tokenStore) DeleteToken(txID string, index uint64, deletedBy string) error {
-	tok, owners, err := t.tokenDB.OwnersOf(txID, index)
+func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
+	tok, err := t.tx.GetToken(txID, index)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
+	}
+	owners, err := t.tx.OwnersOf(txID, index)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get owners for token [%s:%d]", txID, index)
 	}
-	err = t.tokenDB.Delete(txID, index, deletedBy)
+	err = t.tx.Delete(txID, index, deletedBy)
 	if err != nil {
 		if tok == nil {
 			logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
@@ -49,7 +86,16 @@ func (t *tokenStore) DeleteToken(txID string, index uint64, deletedBy string) er
 	return nil
 }
 
-func (t *tokenStore) AppendToken(
+func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
+	for _, id := range ids {
+		if err := t.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (t *transaction) AppendToken(
 	txID string,
 	index uint64,
 	tok *token2.Token,
@@ -64,7 +110,7 @@ func (t *tokenStore) AppendToken(
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
 	}
-	err = t.tokenDB.StoreToken(
+	err = t.tx.StoreToken(
 		tokendb.TokenRecord{
 			TxID:           txID,
 			Index:          index,
@@ -95,11 +141,7 @@ func (t *tokenStore) AppendToken(
 	return nil
 }
 
-func (t *tokenStore) StorePublicParams(val []byte) error {
-	return t.tokenDB.StorePublicParams(val)
-}
-
-func (t *tokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
+func (t *transaction) Notify(topic string, tmsID token.TMSID, walletID, tokenType, txID string, index uint64) {
 	if t.notifier == nil {
 		logger.Warnf("cannot notify others!")
 		return
@@ -115,4 +157,44 @@ func (t *tokenStore) Notify(topic string, tmsID token.TMSID, walletID, tokenType
 
 	logger.Debugf("Publish new event %v", e)
 	t.notifier.Publish(e)
+}
+
+func (t *transaction) Rollback() error {
+	return t.tx.Rollback()
+}
+
+func (t *transaction) Commit() error {
+	return t.tx.Commit()
+}
+
+func (t *transaction) TransactionExists(id string) (bool, error) {
+	return t.tx.TransactionExists(id)
+}
+
+type TokenProcessorEvent struct {
+	topic   string
+	message TokenMessage
+}
+
+func NewTokenProcessorEvent(topic string, message *TokenMessage) *TokenProcessorEvent {
+	return &TokenProcessorEvent{
+		topic:   topic,
+		message: *message,
+	}
+}
+
+type TokenMessage struct {
+	TMSID     token.TMSID
+	WalletID  string
+	TokenType string
+	TxID      string
+	Index     uint64
+}
+
+func (t *TokenProcessorEvent) Topic() string {
+	return t.topic
+}
+
+func (t *TokenProcessorEvent) Message() interface{} {
+	return t.message
 }

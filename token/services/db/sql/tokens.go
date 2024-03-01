@@ -59,117 +59,58 @@ func NewTokenDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*Token
 	return tokenDB, nil
 }
 
-func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) error {
-	return db.storeToken(tr, owners, db.table.Tokens)
-}
-
-func (db *TokenDB) storeToken(tr driver.TokenRecord, owners []string, table string) error {
-	logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, table)
-	tx, err := db.db.Begin()
+func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
+	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
-		return errors.New("failed starting a db transaction")
+		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
-
-	// Store token
-	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", table)
-	logger.Debug(query, tr.TxID, tr.Index, len(tr.IssuerRaw), len(tr.OwnerRaw), len(tr.Ledger), len(tr.LedgerMetadata), tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer)
-	if _, err := db.db.Exec(query, tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.Ledger, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer); err != nil {
-		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, table, err, string(debug.Stack()))
-		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, table)
+	if err = tx.StoreToken(tr, owners); err != nil {
+		return err
 	}
-
-	// Store ownership
-	for _, eid := range owners {
-		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)", db.table.Ownership)
-		logger.Debug(query, tr.TxID, tr.Index, eid)
-		if _, err := db.db.Exec(query, tr.TxID, tr.Index, eid); err != nil {
-			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
-		}
+	if err = tx.Commit(); err != nil {
+		return err
 	}
-
-	if err := tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed committing token storage")
-	}
-
-	return err
-}
-
-func (db *TokenDB) OwnersOf(txID string, index uint64) (*token.Token, []string, error) {
-	args := make([]interface{}, 0)
-	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
-	where := whereTokenIDs(&args, tokenIDs)
-
-	// select token
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", db.table.Tokens, where)
-	logger.Debug(query, args)
-	row := db.db.QueryRow(query, args...)
-	var tokenOwner []byte
-	var tokenType string
-	var quantity string
-	if err := row.Scan(&tokenOwner, &tokenType, &quantity); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil, nil
-		}
-		return nil, nil, err
-	}
-
-	// select owners
-	query = fmt.Sprintf("SELECT enrollment_id FROM %s WHERE %s", db.table.Ownership, where)
-	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer rows.Close()
-
-	var owners []string
-	for rows.Next() {
-		var owner string
-		if err := rows.Scan(&owner); err != nil {
-			return nil, nil, err
-		}
-		owners = append(owners, owner)
-	}
-	if rows.Err() != nil {
-		return nil, nil, rows.Err()
-	}
-	return &token.Token{
-		Owner: &token.Owner{
-			Raw: tokenOwner,
-		},
-		Type:     tokenType,
-		Quantity: quantity,
-	}, owners, nil
+	return nil
 }
 
 // Delete is called when spending a token
-func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) error {
-	logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
-	// We don't delete audit tokens, and we keep the 'ownership' relation.
-	now := time.Now().UTC()
-	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", db.table.Tokens)
-	logger.Debug(query, deletedBy, now, txID, index)
-	if _, err := db.db.Exec(query, deletedBy, now, txID, index); err != nil {
-		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
+func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) (err error) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
+		}
+	}()
+	if err = tx.Delete(txID, index, deletedBy); err != nil {
+		return err
+	}
+	if err = tx.Commit(); err != nil {
+		return err
 	}
 	return nil
 }
 
 // DeleteTokens delete multiple tokens at the same time (e.g. when invalid or expired)
-func (db *TokenDB) DeleteTokens(ids ...*token.ID) error {
+func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	logger.Debugf("delete tokens [%s:%v]", ids)
 	if len(ids) == 0 {
 		return nil
 	}
 	now := time.Now().UTC()
 
-	args := []interface{}{"", now}
+	args := []interface{}{deletedBy, now}
 	where := whereTokenIDs(&args, ids)
 
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
@@ -718,7 +659,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 	return params, nil
 }
 
-func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) error {
+func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, tx_index, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
 
@@ -727,8 +668,10 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) erro
 		return errors.New("failed starting a transaction")
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
 	for tokenID, certification := range certifications {
@@ -737,11 +680,11 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) erro
 		}
 		tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
 		logger.Debug(query, tokenIDStr, fmt.Sprintf("(%d bytes)", len(certification)), now)
-		if _, err := tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
+		if _, err = tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
 			return errors.Wrapf(err, "failed to execute")
 		}
 	}
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
 	}
 	return nil
@@ -852,6 +795,7 @@ func (db *TokenDB) GetSchema() string {
 			PRIMARY KEY (tx_id, idx)
 		);
 		CREATE INDEX IF NOT EXISTS idx_spent_%s ON %s ( is_deleted, owner );
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 
 		-- Ownership
 		CREATE TABLE IF NOT EXISTS %s (
@@ -878,8 +822,8 @@ func (db *TokenDB) GetSchema() string {
 		);
 		CREATE INDEX IF NOT EXISTS exists_%s ON %s ( token_id );
 		`,
-		db.table.Tokens,
-		db.table.Tokens,
+		db.table.Tokens, db.table.Tokens,
+		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens,
 		db.table.Ownership,
 		db.table.PublicParams,
@@ -891,6 +835,144 @@ func (db *TokenDB) GetSchema() string {
 
 func (db *TokenDB) Close() {
 	db.db.Close()
+}
+
+func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
+	tx, err := db.db.Begin()
+	if err != nil {
+		return nil, errors.New("failed starting a db transaction")
+	}
+	return NewTokenTransaction(db, tx), nil
+}
+
+type TokenTransaction struct {
+	db *TokenDB
+	tx *sql.Tx
+}
+
+func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
+	query := fmt.Sprintf("SELECT tx_id FROM %s WHERE tx_id=$1 LIMIT 1;", t.db.table.Tokens)
+	logger.Debug(query, id)
+
+	row := t.tx.QueryRow(query, id)
+	var certification []byte
+	if err := row.Scan(&certification); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
+		return false, err
+	}
+	result := len(certification) != 0
+	if !result {
+		logger.Warnf("tried to check transaction existence for id %s, got nothing", id)
+	}
+	return result, nil
+
+}
+
+func (t *TokenTransaction) GetToken(txID string, index uint64) (*token.Token, error) {
+	args := make([]interface{}, 0)
+	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
+	where := whereTokenIDs(&args, tokenIDs)
+
+	// select token
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", t.db.table.Tokens, where)
+	logger.Debug(query, args)
+	row := t.tx.QueryRow(query, args...)
+	var tokenOwner []byte
+	var tokenType string
+	var quantity string
+	if err := row.Scan(&tokenOwner, &tokenType, &quantity); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &token.Token{
+		Owner: &token.Owner{
+			Raw: tokenOwner,
+		},
+		Type:     tokenType,
+		Quantity: quantity,
+	}, nil
+}
+
+func (t *TokenTransaction) OwnersOf(txID string, index uint64) ([]string, error) {
+	args := make([]interface{}, 0)
+	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
+	where := whereTokenIDs(&args, tokenIDs)
+	query := fmt.Sprintf("SELECT enrollment_id FROM %s WHERE %s", t.db.table.Ownership, where)
+	logger.Debug(query, args)
+	rows, err := t.tx.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var owners []string
+	for rows.Next() {
+		var owner string
+		if err := rows.Scan(&owner); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, nil
+			}
+			return nil, err
+		}
+		owners = append(owners, owner)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+	return owners, nil
+}
+
+func (t *TokenTransaction) Delete(txID string, index uint64, deletedBy string) error {
+	logger.Debugf("delete token [%s:%d:%s]", txID, index, deletedBy)
+	// We don't delete audit tokens, and we keep the 'ownership' relation.
+	now := time.Now().UTC()
+	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE tx_id = $3 AND idx = $4;", t.db.table.Tokens)
+	logger.Debug(query, deletedBy, now, txID, index)
+	if _, err := t.tx.Exec(query, deletedBy, now, txID, index); err != nil {
+		return errors.Wrapf(err, "error setting token to deleted [%s]", txID)
+	}
+	return nil
+}
+
+func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) error {
+	logger.Debugf("store record [%s:%d,%v] in table [%s]", tr.TxID, tr.Index, owners, t.db.table.Tokens)
+
+	// Store token
+	now := time.Now().UTC()
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", t.db.table.Tokens)
+	logger.Debug(query, tr.TxID, tr.Index, len(tr.IssuerRaw), len(tr.OwnerRaw), len(tr.Ledger), len(tr.LedgerMetadata), tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer)
+	if _, err := t.tx.Exec(query, tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.Ledger, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer); err != nil {
+		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.db.table.Tokens, err, string(debug.Stack()))
+		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.db.table.Tokens)
+	}
+
+	// Store ownership
+	for _, eid := range owners {
+		query = fmt.Sprintf("INSERT INTO %s (tx_id, idx, enrollment_id) VALUES ($1, $2, $3)", t.db.table.Ownership)
+		logger.Debug(query, tr.TxID, tr.Index, eid)
+		if _, err := t.tx.Exec(query, tr.TxID, tr.Index, eid); err != nil {
+			return errors.Wrapf(err, "error storing token ownership [%s]", tr.TxID)
+		}
+	}
+
+	return nil
+}
+
+func (t *TokenTransaction) Commit() error {
+	return t.tx.Commit()
+}
+
+func (t *TokenTransaction) Rollback() error {
+	return t.tx.Rollback()
+}
+
+func NewTokenTransaction(db *TokenDB, tx *sql.Tx) *TokenTransaction {
+	return &TokenTransaction{db: db, tx: tx}
 }
 
 type UnspentTokensIterator struct {

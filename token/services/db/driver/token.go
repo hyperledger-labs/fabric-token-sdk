@@ -57,17 +57,28 @@ type CertificationDB interface {
 	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
 }
 
+type TokenDBTransaction interface {
+	// TransactionExists returns true if a token with that transaction id exists in the db
+	TransactionExists(id string) (bool, error)
+	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
+	GetToken(txID string, index uint64) (*token.Token, error)
+	// OwnersOf returns the list of owner of a given token
+	OwnersOf(txID string, index uint64) ([]string, error)
+	// Delete marks the passed token as deleted by a given identifier
+	Delete(txID string, index uint64, deletedBy string) error
+	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
+	StoreToken(tr TokenRecord, owners []string) error
+	// Commit commits this transaction
+	Commit() error
+	// Rollback rollbacks this transaction
+	Rollback() error
+}
+
 // TokenDB defines a database to store token related info
 type TokenDB interface {
 	CertificationDB
-	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
-	StoreToken(tr TokenRecord, owners []string) error
-	// OwnersOf returns the list of owner of a given token
-	OwnersOf(txID string, index uint64) (*token.Token, []string, error)
-	// Delete marks the passed token as deleted by a given identifier
-	Delete(txID string, index uint64, deletedBy string) error
-	// DeleteTokens permanently deletes the passsed tokens
-	DeleteTokens(toDelete ...*token.ID) error
+	// DeleteTokens marks the passsed tokens as deleted
+	DeleteTokens(deletedBy string, toDelete ...*token.ID) error
 	// IsMine return true if the passed token was stored before
 	IsMine(txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens
@@ -101,6 +112,8 @@ type TokenDB interface {
 	StorePublicParams(raw []byte) error
 	// PublicParams returns the stored public parameters
 	PublicParams() ([]byte, error)
+	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
+	NewTokenDBTransaction() (TokenDBTransaction, error)
 }
 
 // TokenDBDriver is the interface for a token database driver

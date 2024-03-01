@@ -19,7 +19,7 @@ type ONS interface {
 	MetadataService() *orion.MetadataService
 }
 
-type GetTokensFunc = func() *tokens.Tokens
+type GetTokensFunc = func() (*tokens.Tokens, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
 type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 
@@ -100,7 +100,11 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
-	return r.GetTokens().AppendTransaction(&Transaction{
+	tokens, err := r.GetTokens()
+	if err != nil {
+		return err
+	}
+	return tokens.AppendTransaction(&Transaction{
 		id:        txID,
 		network:   tms.Network(),
 		channel:   tms.Channel(),

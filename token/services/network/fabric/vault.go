@@ -17,7 +17,7 @@ import (
 )
 
 type TokenStore interface {
-	DeleteToken(txID string, index uint64, deletedBy string) error
+	DeleteToken(deletedBy string, ids ...*token.ID) error
 }
 
 type Vault struct {
@@ -43,11 +43,9 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 	if err != nil {
 		return err
 	}
-
-	for _, id := range ids {
-		if err := v.tokenStore.DeleteToken(id.TxId, id.Index, string(debug.Stack())); err != nil {
-			return errors.Wrapf(err, "failed to append deletion of [%s]", id)
-		}
+	defer rws.Done()
+	if err := v.tokenStore.DeleteToken(string(debug.Stack()), ids...); err != nil {
+		return errors.Wrapf(err, "failed to delete tokens")
 	}
 	rws.Done()
 

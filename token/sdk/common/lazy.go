@@ -10,17 +10,18 @@ import "sync"
 
 type LazyGetter[V any] struct {
 	v        V
-	provider func() V
+	err      error
+	provider func() (V, error)
 	once     sync.Once
 }
 
-func NewLazyGetter[V any](provider func() V) *LazyGetter[V] {
+func NewLazyGetter[V any](provider func() (V, error)) *LazyGetter[V] {
 	return &LazyGetter[V]{provider: provider}
 }
 
-func (g *LazyGetter[V]) Get() V {
+func (g *LazyGetter[V]) Get() (V, error) {
 	g.once.Do(func() {
-		g.v = g.provider()
+		g.v, g.err = g.provider()
 	})
-	return g.v
+	return g.v, g.err
 }

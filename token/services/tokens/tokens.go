@@ -49,9 +49,12 @@ type Tokens struct {
 	TMSProvider TMSProvider
 	Ownership   Authorization
 	Issued      Issued
-	TokenStore  TokenStore
+	Storage     *DBStorage
 }
 
+// AppendTransaction appends the content of the passed transaction to the token db.
+// If the transaction is already in there, nothing more happens.
+// The operation is atomic.
 func (t *Tokens) AppendTransaction(tx Transaction) error {
 	txID := tx.ID()
 	tms, err := t.TMSProvider.GetManagementService(
@@ -66,26 +69,45 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
 	request := tx.Request()
+	if request == nil {
+		logger.Debugf("transaction [%s], no request found, skip it", txID)
+		return nil
+	}
 	if request.Metadata == nil {
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
-	metadata, err := request.GetMetadata()
+
+	ts, err := t.Storage.NewTransaction()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := ts.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s]", err)
+		}
+	}()
+	exists, err := ts.TransactionExists(tx.ID())
+	if err != nil {
+		return err
+	}
+	if exists {
+		return nil
+	}
+
+	precision := tms.PublicParametersManager().PublicParameters().Precision()
+	md, err := request.GetMetadata()
 	if err != nil {
 		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
 		return err
 	}
-
-	precision := tms.PublicParametersManager().PublicParameters().Precision()
 	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
-		ids := metadata.SpentTokenID()
+		ids := md.SpentTokenID()
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
-		for _, id := range ids {
-			if err := t.TokenStore.DeleteToken(id.TxId, id.Index, txID); err != nil {
-				return err
-			}
+		if err := ts.DeleteTokens(txID, ids); err != nil {
+			return err
 		}
 	}
 
@@ -110,7 +132,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] delete input [%s]", tx.ID(), input.Id)
 		}
-		if err := t.TokenStore.DeleteToken(input.Id.TxId, input.Id.Index, tx.ID()); err != nil {
+		if err := ts.DeleteToken(input.Id.TxId, input.Id.Index, tx.ID()); err != nil {
 			return err
 		}
 		continue
@@ -119,7 +141,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 	// parse the outputs
 	for _, output := range os.Outputs() {
 		// get token in the clear
-		tok, issuer, tokenOnLedgerMetadata, err := metadata.GetToken(output.LedgerOutput)
+		tok, issuer, tokenOnLedgerMetadata, err := md.GetToken(output.LedgerOutput)
 		if err != nil {
 			logger.Errorf("transaction [%s], found a token but failed getting the clear version, skipping it [%s]", txID, err)
 			continue
@@ -133,7 +155,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
 			}
-			if err := t.TokenStore.DeleteToken(tx.ID(), output.Index, tx.ID()); err != nil {
+			if err := ts.DeleteToken(tx.ID(), output.Index, tx.ID()); err != nil {
 				return err
 			}
 			continue
@@ -160,7 +182,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 			continue
 		}
 
-		if err := t.TokenStore.AppendToken(
+		if err := ts.AppendToken(
 			txID,
 			output.Index,
 			tok,
@@ -183,9 +205,39 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 		}
 	}
 
+	if err := ts.Commit(); err != nil {
+		return err
+	}
 	return nil
 }
 
+// StorePublicParams stores the passed public parameters in the token db
 func (t *Tokens) StorePublicParams(raw []byte) error {
-	return t.TokenStore.StorePublicParams(raw)
+	return t.Storage.StorePublicParams(raw)
+}
+
+// DeleteToken marks the entries corresponding to the passed token ids as deleted.
+// The deletion is attributed to the passed deletedBy argument.
+func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) error {
+	ts, err := t.Storage.NewTransaction()
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if err := ts.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s]", err)
+		}
+	}()
+
+	for _, id := range ids {
+		if id != nil {
+			if err := ts.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
+				return errors.WithMessagef(err, "failed to delete [%s] by [%s]", id, deletedBy)
+			}
+		}
+	}
+	if err := ts.Commit(); err != nil {
+		return err
+	}
+	return nil
 }
