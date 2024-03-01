@@ -542,7 +542,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
-	assert.NoError(t, db.DeleteTokens(&token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
+	assert.NoError(t, db.DeleteTokens("", &token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
 
 	tok, err := db.ListUnspentTokens()
 	assert.NoError(t, err)

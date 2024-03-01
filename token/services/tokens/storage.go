@@ -82,6 +82,15 @@ func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) e
 	return nil
 }
 
+func (t *transaction) DeleteTokens(deletedBy string, ids []*token2.ID) error {
+	for _, id := range ids {
+		if err := t.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (t *transaction) AppendToken(
 	txID string,
 	index uint64,

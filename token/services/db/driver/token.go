@@ -82,7 +82,7 @@ type TokenDB interface {
 	// Delete marks the passed token as deleted by a given identifier
 	Delete(txID string, index uint64, deletedBy string) error
 	// DeleteTokens marks the passsed tokens as deleted
-	DeleteTokens(toDelete ...*token.ID) error
+	DeleteTokens(deletedBy string, toDelete ...*token.ID) error
 	// IsMine return true if the passed token was stored before
 	IsMine(txID string, index uint64) (bool, error)
 	// UnspentTokensIterator returns an iterator over all owned tokens

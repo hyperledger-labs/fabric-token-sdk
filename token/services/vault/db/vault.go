@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
+	"runtime/debug"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -47,7 +49,7 @@ func (v *Vault) CertificationStorage() certification.Storage {
 }
 
 func (v *Vault) DeleteTokens(ids ...*token.ID) error {
-	return v.tokenDB.DeleteTokens(ids...)
+	return v.tokenDB.DeleteTokens(string(debug.Stack()), ids...)
 }
 
 type QueryEngine struct {

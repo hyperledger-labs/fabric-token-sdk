@@ -59,20 +59,22 @@ func NewTokenDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*Token
 	return tokenDB, nil
 }
 
-func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) error {
+func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
-	if err := tx.StoreToken(tr, owners); err != nil {
+	if err = tx.StoreToken(tr, owners); err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return err
 	}
 	return nil
@@ -127,34 +129,36 @@ func (db *TokenDB) OwnersOf(txID string, index uint64) (*token.Token, []string, 
 }
 
 // Delete is called when spending a token
-func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) error {
+func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) (err error) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
 		return err
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s]", err)
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
-	if err := tx.Delete(txID, index, deletedBy); err != nil {
+	if err = tx.Delete(txID, index, deletedBy); err != nil {
 		return err
 	}
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return err
 	}
 	return nil
 }
 
 // DeleteTokens delete multiple tokens at the same time (e.g. when invalid or expired)
-func (db *TokenDB) DeleteTokens(ids ...*token.ID) error {
+func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	logger.Debugf("delete tokens [%s:%v]", ids)
 	if len(ids) == 0 {
 		return nil
 	}
 	now := time.Now().UTC()
 
-	args := []interface{}{"", now}
+	args := []interface{}{deletedBy, now}
 	where := whereTokenIDs(&args, ids)
 
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
@@ -703,7 +707,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 	return params, nil
 }
 
-func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) error {
+func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
 	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, tx_index, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
 
@@ -712,8 +716,10 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) erro
 		return errors.New("failed starting a transaction")
 	}
 	defer func() {
-		if err := tx.Rollback(); err != nil {
-			logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
 		}
 	}()
 	for tokenID, certification := range certifications {
@@ -722,11 +728,11 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) erro
 		}
 		tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
 		logger.Debug(query, tokenIDStr, fmt.Sprintf("(%d bytes)", len(certification)), now)
-		if _, err := tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
+		if _, err = tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
 			return errors.Wrapf(err, "failed to execute")
 		}
 	}
-	if err := tx.Commit(); err != nil {
+	if err = tx.Commit(); err != nil {
 		return errors.Wrap(err, "failed committing status update")
 	}
 	return nil

@@ -106,10 +106,8 @@ func (t *Tokens) AppendTransaction(tx Transaction) error {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
-		for _, id := range ids {
-			if err := ts.DeleteToken(id.TxId, id.Index, txID); err != nil {
-				return err
-			}
+		if err := ts.DeleteTokens(txID, ids); err != nil {
+			return err
 		}
 	}
 

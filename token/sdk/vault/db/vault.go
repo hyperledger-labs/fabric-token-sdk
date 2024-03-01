@@ -9,8 +9,6 @@ package db
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -18,6 +16,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
