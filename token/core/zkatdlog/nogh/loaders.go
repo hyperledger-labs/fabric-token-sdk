@@ -21,6 +21,8 @@ type TokenVault interface {
 	IsPending(id *token3.ID) (bool, error)
 	GetTokenInfoAndOutputs(ids []*token3.ID, callback driver.QueryCallback2Func) error
 	GetTokenOutputs(ids []*token3.ID, callback driver.QueryCallbackFunc) error
+	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
+	ListHistoryIssuedTokens() (*token3.IssuedTokens, error)
 }
 
 type VaultTokenCommitmentLoader struct {

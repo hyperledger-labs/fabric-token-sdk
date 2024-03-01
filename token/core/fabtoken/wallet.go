@@ -9,82 +9,76 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-type WalletServiceBacked interface {
-	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
-	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+type WalletRegistry interface {
+	WalletIDs() ([]string, error)
+	Lock()
+	Unlock()
+	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
+	RegisterWallet(id string, wallet driver.Wallet) error
+	RegisterIdentity(identity view.Identity, wID string, meta any) error
 }
 
 type WalletService struct {
-	SignerService       common.SignerService
-	identityProvider    driver.IdentityProvider
-	WalletServiceBacked WalletServiceBacked
-	Deserializer        driver.Deserializer
+	SignerService    common.SignerService
+	IdentityProvider driver.IdentityProvider
+	TokenVault       TokenVault
+	Deserializer     driver.Deserializer
 
-	OwnerWalletsRegistry   *identity.WalletsRegistry
-	IssuerWalletsRegistry  *identity.WalletsRegistry
-	AuditorWalletsRegistry *identity.WalletsRegistry
+	OwnerWalletsRegistry   WalletRegistry
+	IssuerWalletsRegistry  WalletRegistry
+	AuditorWalletsRegistry WalletRegistry
 }
 
 func NewWalletService(
 	SignerService common.SignerService,
 	identityProvider driver.IdentityProvider,
-	walletServiceBacked WalletServiceBacked,
+	tokenVault TokenVault,
 	Deserializer driver.Deserializer,
-	store identity.Storage,
+	OwnerWalletsRegistry WalletRegistry,
+	IssuerWalletsRegistry WalletRegistry,
+	AuditorWalletsRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
 		SignerService:          SignerService,
-		identityProvider:       identityProvider,
-		WalletServiceBacked:    walletServiceBacked,
+		IdentityProvider:       identityProvider,
+		TokenVault:             tokenVault,
 		Deserializer:           Deserializer,
-		OwnerWalletsRegistry:   identity.NewWalletsRegistry(identityProvider, driver.OwnerRole, store),
-		IssuerWalletsRegistry:  identity.NewWalletsRegistry(identityProvider, driver.IssuerRole, store),
-		AuditorWalletsRegistry: identity.NewWalletsRegistry(identityProvider, driver.AuditorRole, store),
+		OwnerWalletsRegistry:   OwnerWalletsRegistry,
+		IssuerWalletsRegistry:  IssuerWalletsRegistry,
+		AuditorWalletsRegistry: AuditorWalletsRegistry,
 	}
 }
 
 func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.identityProvider.RegisterOwnerWallet(id, path)
+	return s.IdentityProvider.RegisterOwnerWallet(id, path)
 }
 
 func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.identityProvider.RegisterIssuerWallet(id, path)
+	return s.IdentityProvider.RegisterIssuerWallet(id, path)
 }
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
 	// recognize identity and register it
-	v, err := s.Deserializer.GetOwnerVerifier(data.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
-	}
-	matcher, err := s.Deserializer.GetOwnerMatcher(data.AuditInfo)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", data.Identity)
-	}
 
 	// match identity and audit info
-	recipient, err := identity.UnmarshallRawOwner(data.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal identity [%s]", data.Identity)
-	}
-	if recipient.Type != identity.SerializedIdentityType {
-		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
-	}
-	err = matcher.Match(recipient.Identity)
+	err := s.Deserializer.Match(data.Identity, data.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info
-
+	v, err := s.Deserializer.GetOwnerVerifier(data.Identity)
+	if err != nil {
+		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
+	}
 	if err := s.SignerService.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
@@ -107,11 +101,11 @@ func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
 }
 
 func (s *WalletService) GetEnrollmentID(auditInfo []byte) (string, error) {
-	return s.identityProvider.GetEnrollmentID(auditInfo)
+	return s.IdentityProvider.GetEnrollmentID(auditInfo)
 }
 
 func (s *WalletService) GetRevocationHandler(auditInfo []byte) (string, error) {
-	return s.identityProvider.GetRevocationHandler(auditInfo)
+	return s.IdentityProvider.GetRevocationHandler(auditInfo)
 }
 
 func (s *WalletService) Wallet(identity view.Identity) driver.Wallet {
@@ -265,7 +259,7 @@ func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, err
 	if err != nil {
 		return nil, err
 	}
-	if err := s.identityProvider.Bind(raw, id); err != nil {
+	if err := s.IdentityProvider.Bind(raw, id); err != nil {
 		return nil, err
 	}
 	return raw, nil
@@ -306,7 +300,7 @@ func (w *ownerWallet) GetRecipientIdentity() (view.Identity, error) {
 }
 
 func (w *ownerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
-	return w.tokenService.identityProvider.GetAuditInfo(id)
+	return w.tokenService.IdentityProvider.GetAuditInfo(id)
 }
 
 func (w *ownerWallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
@@ -322,7 +316,7 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
 	}
 
-	si, err := w.tokenService.identityProvider.GetSigner(w.wrappedID)
+	si, err := w.tokenService.IdentityProvider.GetSigner(w.wrappedID)
 	if err != nil {
 		return nil, err
 	}
@@ -331,7 +325,7 @@ func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	it, err := w.tokenService.WalletServiceBacked.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.tokenService.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -359,7 +353,7 @@ func (w *ownerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.Unspent
 
 func (w *ownerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
 	logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	it, err := w.tokenService.WalletServiceBacked.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.tokenService.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -413,7 +407,7 @@ func (w *issuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 	if !w.Contains(identity) {
 		return nil, errors.Errorf("failed getting signer, the passed identity [%s] does not belong to this wallet [%s]", identity, w.ID())
 	}
-	si, err := w.tokenService.identityProvider.GetSigner(identity)
+	si, err := w.tokenService.IdentityProvider.GetSigner(identity)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting issuer signer for identity [%s] in wallet [%s]", identity, w.identity)
 	}
@@ -422,7 +416,7 @@ func (w *issuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 
 func (w *issuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
 	logger.Debugf("issuer wallet [%s]: history tokens, type [%d]", w.ID(), opts.TokenType)
-	source, err := w.tokenService.WalletServiceBacked.ListHistoryIssuedTokens()
+	source, err := w.tokenService.TokenVault.ListHistoryIssuedTokens()
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -482,7 +476,7 @@ func (w *auditorWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", id.String())
 	}
 
-	si, err := w.tokenService.identityProvider.GetSigner(w.identity)
+	si, err := w.tokenService.IdentityProvider.GetSigner(w.identity)
 	if err != nil {
 		return nil, err
 	}

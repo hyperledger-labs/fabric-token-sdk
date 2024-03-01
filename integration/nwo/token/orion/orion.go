@@ -105,6 +105,7 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
 	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
 	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(node))
+	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(node))
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSID":   func() string { return tms.ID() },
@@ -120,10 +121,11 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 		"CustodianID": func() string {
 			return tms.BackendParams[Custodian].(*sfcnode.Node).Name
 		},
-		"SQLDataSource":       func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(node), tms) },
-		"TokensSQLDataSource": func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(node), tms) },
-		"AuditSQLDataSource":  func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(node), tms) },
-		"NodeKVSPath":         func() string { return p.FSCNodeKVSDir(node) },
+		"SQLDataSource":         func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(node), tms) },
+		"TokensSQLDataSource":   func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(node), tms) },
+		"AuditSQLDataSource":    func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(node), tms) },
+		"IdentitySQLDataSource": func() string { return p.DBPath(p.IdentityDBSQLDataSourceDir(node), tms) },
+		"NodeKVSPath":           func() string { return p.FSCNodeKVSDir(node) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 

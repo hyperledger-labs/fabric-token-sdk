@@ -54,6 +54,8 @@ type tableNames struct {
 	Tokens                string
 	Ownership             string
 	PublicParams          string
+	Identities            string
+	Wallets               string
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
@@ -83,5 +85,7 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		Tokens:                fmt.Sprintf("%stokens%s", prefix, suffix),
 		Ownership:             fmt.Sprintf("%sownership%s", prefix, suffix),
 		PublicParams:          fmt.Sprintf("%spublic_params%s", prefix, suffix),
+		Identities:            fmt.Sprintf("%sdentity%s", prefix, suffix),
+		Wallets:               fmt.Sprintf("%swallet%s", prefix, suffix),
 	}, nil
 }

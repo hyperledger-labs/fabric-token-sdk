@@ -89,6 +89,8 @@ func TestGetTableNames(t *testing.T) {
 		Ownership:             "ownership_5193a5",
 		Tokens:                "tokens_5193a5",
 		PublicParams:          "public_params_5193a5",
+		Identities:            "dentity_5193a5",
+		Wallets:               "wallet_5193a5",
 	}, names)
 
 	names, err = getTableNames("valid_prefix", name)

@@ -22,11 +22,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -43,11 +43,11 @@ type PublicParametersWithIdemixSupport interface {
 }
 
 type LocalMembership struct {
-	configManager          config.Manager
+	config                 config2.Config
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
 	deserializerManager    common.DeserializerManager
-	storage                identity.WalletPathStorage
+	storage                driver3.IdentityDB
 	keystore               keystore.KVS
 	mspID                  string
 	cacheSize              int
@@ -63,11 +63,11 @@ type LocalMembership struct {
 }
 
 func NewLocalMembership(
-	configManager config.Manager,
+	config config2.Config,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	deserializerManager common.DeserializerManager,
-	walletPathStorage identity.WalletPathStorage,
+	walletPathStorage driver3.IdentityDB,
 	keystore keystore.KVS,
 	mspID string,
 	cacheSize int,
@@ -76,7 +76,7 @@ func NewLocalMembership(
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
-		configManager:           configManager,
+		config:                  config,
 		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,
 		deserializerManager:     deserializerManager,
@@ -156,7 +156,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if err := lm.storage.Add(identity.WalletPath{ID: id, Path: path}); err != nil {
+	if err := lm.storage.AddConfiguration(driver3.IdentityConfiguration{ID: id, URL: path}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
@@ -224,7 +224,7 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 
 func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID math3.CurveID) error {
 	// Try to register the MSP provider
-	identity.Path = lm.configManager.TranslatePath(identity.Path)
+	identity.Path = lm.config.TranslatePath(identity.Path)
 	if err := lm.registerProvider(identity, curveID); err != nil {
 		logger.Warnf("failed to load idemix msp provider at [%s]:[%s]", identity.Path, err)
 		// Does path correspond to a holder containing multiple MSP identities?
@@ -329,27 +329,19 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
-	tmss, err := config2.NewTokenSDK(lm.configManager).GetTMSs()
+	cacheSize, err := lm.config.CacheSizeForOwnerID(id)
 	if err != nil {
 		return 0, errors.WithMessage(err, "failed to obtain token management system instances")
 	}
-
-	for _, tms := range tmss {
-		for _, owner := range tms.TMS().Wallets.Owners {
-			if owner.ID == id {
-				logger.Debugf("Cache size for %s is set to be %d", id, owner.CacheSize)
-				return owner.CacheSize, nil
-			}
-		}
+	if cacheSize == -1 {
+		logger.Debugf("cache size for %s not configured, using default (%d)", id, lm.cacheSize)
+		cacheSize = lm.cacheSize
 	}
-
-	logger.Debugf("cache size for %s not configured, using default (%d)", id, lm.cacheSize)
-
-	return lm.cacheSize, nil
+	return cacheSize, nil
 }
 
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.storage.Iterator()
+	it, err := lm.storage.IteratorConfigurations()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
@@ -364,7 +356,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 		if lm.getResolver(id) != nil {
 			continue
 		}
-		if err := lm.registerIdentity(config.Identity{ID: id, Path: entry.Path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
+		if err := lm.registerIdentity(config.Identity{ID: id, Path: entry.URL, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
 			return err
 		}
 	}

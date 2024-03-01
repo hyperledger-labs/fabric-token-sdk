@@ -14,11 +14,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
 	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/common"
-	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -30,12 +30,12 @@ const (
 )
 
 type LocalMembership struct {
-	configManager          config.Manager
+	config                 config2.Config
 	defaultNetworkIdentity view.Identity
 	signerService          common.SignerService
 	binderService          common.BinderService
 	deserializerManager    common.DeserializerManager
-	walletPathStorage      identity.WalletPathStorage
+	walletPathStorage      driver2.IdentityDB
 	mspID                  string
 
 	resolversMutex           sync.RWMutex
@@ -48,17 +48,17 @@ type LocalMembership struct {
 }
 
 func NewLocalMembership(
-	configManager config.Manager,
+	config config2.Config,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SignerService,
 	binderService common.BinderService,
 	deserializerManager common.DeserializerManager,
-	walletPathStorage identity.WalletPathStorage,
+	walletPathStorage driver2.IdentityDB,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
-		configManager:            configManager,
+		config:                   config,
 		defaultNetworkIdentity:   defaultNetworkIdentity,
 		signerService:            signerService,
 		binderService:            binderService,
@@ -156,7 +156,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	if err := lm.walletPathStorage.Add(identity.WalletPath{ID: id, Path: path}); err != nil {
+	if err := lm.walletPathStorage.AddConfiguration(driver2.IdentityConfiguration{ID: id, URL: path}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(&config.Identity{
@@ -175,7 +175,7 @@ func (lm *LocalMembership) IDs() ([]string, error) {
 
 func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
-	translatedPath := lm.configManager.TranslatePath(c.Path)
+	translatedPath := lm.config.TranslatePath(c.Path)
 	if err := lm.registerProvider(c, translatedPath, setDefault); err != nil {
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerProviders(c, translatedPath); err != nil {
@@ -318,7 +318,7 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.walletPathStorage.Iterator()
+	it, err := lm.walletPathStorage.IteratorConfigurations()
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
@@ -332,7 +332,7 @@ func (lm *LocalMembership) loadFromKVS() error {
 		if lm.getResolver(id) != nil {
 			continue
 		}
-		if err := lm.registerIdentity(&config.Identity{ID: id, Path: entry.Path}, lm.GetDefaultIdentifier() == ""); err != nil {
+		if err := lm.registerIdentity(&config.Identity{ID: id, Path: entry.URL}, lm.GetDefaultIdentifier() == ""); err != nil {
 			return err
 		}
 	}

@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -23,14 +24,14 @@ type WalletsRegistry struct {
 	ID               token.TMSID
 	IdentityProvider driver.IdentityProvider
 	IdentityRole     driver.IdentityRole
-	Storage          Storage
+	Storage          db.WalletDB
 
 	sync.RWMutex
 	Wallets map[string]driver.Wallet
 }
 
 // NewWalletsRegistry returns a new wallets registry for the passed parameters
-func NewWalletsRegistry(identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, storage Storage) *WalletsRegistry {
+func NewWalletsRegistry(identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, storage db.WalletDB) *WalletsRegistry {
 	return &WalletsRegistry{
 		IdentityProvider: identityProvider,
 		IdentityRole:     identityRole,
@@ -183,7 +184,7 @@ func (r *WalletsRegistry) ContainsIdentity(identity view.Identity, wID string) b
 	return r.Storage.IdentityExists(identity, wID)
 }
 
-// WalletIDs returns the list of owner wallet identifiers
+// WalletIDs returns the list of wallet identifiers
 func (r *WalletsRegistry) WalletIDs() ([]string, error) {
 	walletIDs, err := r.IdentityProvider.WalletIDs(r.IdentityRole)
 	if err != nil {

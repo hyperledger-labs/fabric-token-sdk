@@ -11,7 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/identity/kvs"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )

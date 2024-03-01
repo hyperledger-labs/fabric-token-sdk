@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 )
 
 // OutputStream models a stream over a set of outputs
