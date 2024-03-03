@@ -47,8 +47,8 @@ func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache) *Id
 	}
 }
 
-func NewIdentityDB(db *sql.DB, tablePrefix, name string, createSchema bool, singerInfoCache cache) (*IdentityDB, error) {
-	tables, err := getTableNames(tablePrefix, name)
+func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfoCache cache) (*IdentityDB, error) {
+	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -57,7 +57,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix, name string, createSchema bool, sing
 		IdentityConfigurations: tables.IdentityConfigurations,
 		AuditInfo:              tables.AuditInfo,
 		Signers:                tables.Signers,
-	}, singerInfoCache)
+	}, signerInfoCache)
 	if createSchema {
 		if err = initSchema(db, identityDB.GetSchema()); err != nil {
 			return nil, err

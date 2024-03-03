@@ -8,15 +8,9 @@ package sql
 
 import (
 	"database/sql"
-	"fmt"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 )
-
-func DatasourceName(tmsID token.TMSID) string {
-	return fmt.Sprintf("%s-%s-%s", tmsID.Network, tmsID.Channel, tmsID.Namespace)
-}
 
 func QueryUnique[T any](db *sql.DB, query string, args ...any) (T, error) {
 	logger.Debug(query, args)

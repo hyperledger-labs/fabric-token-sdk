@@ -44,12 +44,11 @@ func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
 	}
 }
 
-func NewTransactionDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*TransactionDB, error) {
-	tables, err := getTableNames(tablePrefix, name)
+func NewTransactionDB(db *sql.DB, tablePrefix string, createSchema bool) (*TransactionDB, error) {
+	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
-
 	transactionsDB := newTransactionDB(db, transactionTables{
 		Movements:             tables.Movements,
 		Transactions:          tables.Transactions,

@@ -57,10 +57,9 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.TokenD
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
 	if opts.Driver == "" {
-		panic(fmt.Sprintf("%s.driver not set. See https://github.com/golang/go/wiki/SQLDrivers", OptsKey))
+		panic(fmt.Sprintf("%s.driver not set", OptsKey))
 	}
 
-	name := sqldb.DatasourceName(tmsID)
 	dataSourceName := os.Getenv(EnvVarKey)
 	if dataSourceName == "" {
 		dataSourceName = opts.DataSource
@@ -76,7 +75,7 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.TokenD
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
 
-	return sqldb.NewTokenDB(sqlDB, opts.TablePrefix, name, opts.CreateSchema)
+	return sqldb.NewTokenDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
 func (d *Driver) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
