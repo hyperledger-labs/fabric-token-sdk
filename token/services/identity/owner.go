@@ -14,10 +14,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	SerializedIdentityType = "si"
-)
-
 // RawOwner encodes an owner of an identity
 type RawOwner struct {
 	// Type encodes the type of the owner (currently it can only be a SerializedIdentity)
@@ -39,6 +35,14 @@ func MarshallRawOwner(o *RawOwner) (view.Identity, error) {
 	raw, err := asn1.Marshal(*o)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to RawOwner")
+	}
+	return raw, nil
+}
+
+func WrapOwnerIdentity(idType string, id view.Identity) (view.Identity, error) {
+	raw, err := MarshallRawOwner(&RawOwner{Type: idType, Identity: id})
+	if err != nil {
+		return nil, err
 	}
 	return raw, nil
 }

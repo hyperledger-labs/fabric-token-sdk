@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
@@ -71,7 +72,7 @@ func (d *Deserializer) Recipients(raw []byte) ([]view.Identity, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
 	}
-	if owner.Type == identity.SerializedIdentityType {
+	if owner.Type == msp.X509Identity {
 		return []view.Identity{raw}, nil
 	}
 	_, recipient, err := htlc.GetScriptSenderAndRecipient(owner)
@@ -92,7 +93,7 @@ func (d *Deserializer) Match(id view.Identity, ai []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
 	}
-	if recipient.Type != identity.SerializedIdentityType {
+	if recipient.Type != msp.X509Identity {
 		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
 	}
 	err = matcher.Match(recipient.Identity)

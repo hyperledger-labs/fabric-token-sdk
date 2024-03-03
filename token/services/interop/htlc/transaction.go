@@ -245,10 +245,10 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	if err != nil {
 		return err
 	}
-	script := &Script{}
 	if owner.Type != ScriptType {
 		return errors.New("invalid owner type, expected htlc script")
 	}
+	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
 		return errors.New("failed to unmarshal RawOwner as an htlc script")
 	}

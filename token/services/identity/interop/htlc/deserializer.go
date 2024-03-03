@@ -33,13 +33,10 @@ func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, e
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal RawOwner")
 	}
-	if si.Type == identity.SerializedIdentityType {
-		return d.OwnerDeserializer.DeserializeVerifier(id)
-	}
 	if si.Type == htlc.ScriptType {
 		return d.getHTLCVerifier(si.Identity)
 	}
-	return nil, errors.Errorf("failed to deserialize RawOwner: Unknown owner type %s", si.Type)
+	return d.OwnerDeserializer.DeserializeVerifier(id)
 }
 
 func (d *Deserializer) getHTLCVerifier(raw []byte) (driver.Verifier, error) {

@@ -20,6 +20,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
+	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
@@ -260,7 +262,8 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	if err != nil {
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
-	if ro.Type == identity.SerializedIdentityType {
+	switch ro.Type {
+	case msp.IdemixIdentity:
 		matcher, err := des.GetOwnerMatcher(token.Owner.OwnerInfo)
 		if err != nil {
 			return errors.Errorf("failed to get owner matcher for output [%d]", index)
@@ -269,8 +272,12 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 			return errors.Wrapf(err, "owner at index [%d] does not match the provided opening", index)
 		}
 		return nil
+	case htlc2.ScriptType:
+		return inspectTokenOwnerOfScript(des, token, index)
+	default:
+		return errors.Errorf("identity type [%s] not recognized", ro.Type)
 	}
-	return inspectTokenOwnerOfScript(des, token, index)
+
 }
 
 func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {

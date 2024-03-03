@@ -43,6 +43,9 @@ func (i *Input) Script() (*Script, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
+	if owner.Type != ScriptType {
+		return nil, errors.Errorf("invalid identity type, expected [%s], got [%s]", ScriptType, owner.Type)
+	}
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
@@ -79,6 +82,9 @@ func (o *Output) Script() (*Script, error) {
 	owner, err := identity.UnmarshallRawOwner(o.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
+	}
+	if owner.Type != ScriptType {
+		return nil, errors.Errorf("invalid identity type, expected [%s], got [%s]", ScriptType, owner.Type)
 	}
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)

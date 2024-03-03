@@ -26,6 +26,7 @@ import (
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
@@ -255,7 +256,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix2.AuditInfo) {
 	err = auditInfo.Match(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	id, err = identity.MarshallRawOwner(&identity.RawOwner{Identity: id, Type: identity.SerializedIdentityType})
+	id, err = identity.WrapOwnerIdentity(msp.IdemixIdentity, id)
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo
