@@ -114,7 +114,7 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "x509")
+	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "cert")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -140,7 +140,7 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "x509")
+	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID, "cert")
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
