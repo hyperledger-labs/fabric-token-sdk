@@ -9,17 +9,21 @@ package identity
 import (
 	"reflect"
 
-	"github.com/IBM/idemix/bccsp/keystore"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
 
+type KVS interface {
+	Put(id string, state interface{}) error
+	Get(id string, state interface{}) error
+}
+
 type StorageProvider interface {
 	OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error)
 	OpenIdentityDB(tmsID token.TMSID, id string) (driver.IdentityDB, error)
-	NewKeystore() (keystore.KVS, error)
+	NewKeystore() (KVS, error)
 }
 
 var (

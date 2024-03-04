@@ -34,6 +34,9 @@ func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htl
 	if err != nil {
 		return nil, None, err
 	}
+	if sender.Type != htlc.ScriptType {
+		return nil, None, errors.Errorf("invalid identity type, expected [%s], got [%s]", htlc.ScriptType, sender.Type)
+	}
 	script := &htlc.Script{}
 	err = json.Unmarshal(sender.Identity, script)
 	if err != nil {

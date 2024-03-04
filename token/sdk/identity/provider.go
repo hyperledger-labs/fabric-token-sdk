@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
-	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 )
 
 type KVSStorageProvider struct {
@@ -29,6 +30,27 @@ func (s *KVSStorageProvider) OpenIdentityDB(tmsID token.TMSID, id string) (drive
 	return kvs.NewWalletPathStorage(s.kvs, tmsID.String()+id), nil
 }
 
-func (s *KVSStorageProvider) NewKeystore() (keystore.KVS, error) {
+func (s *KVSStorageProvider) NewKeystore() (identity.KVS, error) {
+	return s.kvs, nil
+}
+
+type DBStorageProvider struct {
+	kvs     kvs.KVS
+	manager *identitydb.Manager
+}
+
+func NewDBStorageProvider(kvs kvs.KVS, manager *identitydb.Manager) *DBStorageProvider {
+	return &DBStorageProvider{kvs: kvs, manager: manager}
+}
+
+func (s *DBStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
+	return s.manager.WalletDBByTMSId(tmsID)
+}
+
+func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID, id identitydb.IdType) (driver.IdentityDB, error) {
+	return s.manager.IdentityDBByTMSId(tmsID, id)
+}
+
+func (s *DBStorageProvider) NewKeystore() (identity.KVS, error) {
 	return s.kvs, nil
 }

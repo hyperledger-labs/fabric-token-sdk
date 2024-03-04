@@ -30,34 +30,36 @@ func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
 	}
-	if owner.Type == identity.SerializedIdentityType {
-		auditInfo, err := s.GetAuditInfo(raw)
+
+	if owner.Type == htlc.ScriptType {
+		sender, recipient, err := GetScriptSenderAndRecipient(owner)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
+			return nil, errors.Wrapf(err, "failed getting script sender and recipient")
 		}
-		return auditInfo, nil
+
+		auditInfo := &ScriptInfo{}
+		auditInfo.Sender, err = s.GetAuditInfo(sender)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", view.Identity(raw).String())
+		}
+
+		auditInfo.Recipient, err = s.GetAuditInfo(recipient)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed getting audit info for script [%s]", view.Identity(raw).String())
+		}
+		raw, err = json.Marshal(auditInfo)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed marshaling audit info for script")
+		}
+		return raw, nil
 	}
 
-	sender, recipient, err := GetScriptSenderAndRecipient(owner)
+	// delegate
+	auditInfo, err := s.GetAuditInfo(raw)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting script sender and recipient")
+		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
 	}
-
-	auditInfo := &ScriptInfo{}
-	auditInfo.Sender, err = s.GetAuditInfo(sender)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", view.Identity(raw).String())
-	}
-
-	auditInfo.Recipient, err = s.GetAuditInfo(recipient)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for script [%s]", view.Identity(raw).String())
-	}
-	raw, err = json.Marshal(auditInfo)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed marshaling audit info for script")
-	}
-	return raw, nil
+	return auditInfo, nil
 }
 
 // ScriptInfo includes info about the sender and the recipient

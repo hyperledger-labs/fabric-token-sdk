@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -98,7 +100,7 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
 	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
-	identityStorageProvider := identitydb.NewDBStorageProvider(
+	identityStorageProvider := identity.NewDBStorageProvider(
 		kvs.GetService(p.registry),
 		identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type")),
 	)

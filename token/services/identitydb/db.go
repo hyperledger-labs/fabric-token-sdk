@@ -10,11 +10,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/pkg/errors"
 )
 
@@ -53,6 +51,8 @@ func Drivers() []string {
 type Config interface {
 	DriverFor(tmsID token.TMSID) (string, error)
 }
+
+type IdType = string
 
 // Manager handles the databases
 type Manager struct {
@@ -124,35 +124,4 @@ func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletDB, error) {
 	m.walletDBs[tmsID.String()] = walletDB
 
 	return walletDB, nil
-}
-
-type DBStorageProvider struct {
-	kvs     kvs.KVS
-	manager *Manager
-}
-
-type IdType = string
-
-var idMap = map[IdType]string{
-	"idemix": "i",
-	"x509":   "x",
-}
-
-func NewDBStorageProvider(kvs kvs.KVS, manager *Manager) *DBStorageProvider {
-	return &DBStorageProvider{kvs: kvs, manager: manager}
-}
-
-func (s *DBStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
-	return s.manager.WalletDBByTMSId(tmsID)
-}
-
-func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID, id IdType) (driver.IdentityDB, error) {
-	if mapped, ok := idMap[id]; ok {
-		id = mapped // Tables are not allowed to have numbers in their names, so x509 is invalid
-	}
-	return s.manager.IdentityDBByTMSId(tmsID, id)
-}
-
-func (s *DBStorageProvider) NewKeystore() (keystore.KVS, error) {
-	return s.kvs, nil
 }
