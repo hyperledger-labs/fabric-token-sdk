@@ -11,6 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
@@ -23,6 +24,7 @@ import (
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
@@ -66,17 +68,18 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 	wallets := identity.NewWallets()
 	deserializerManager := common.NewMultiplexDeserializer()
+	sigService := sig.NewSigService(deserializerManager, kvs.GetService(sp))
 	mspWalletFactory := msp.NewWalletFactory(
 		token.TMSID{
 			Network:   networkID,
 			Channel:   channel,
 			Namespace: namespace,
 		},
-		config2.NewIdentityConfig(cs, tmsConfig),  // config
-		fscIdentity,                               // FSC identity
-		networkLocalMembership.DefaultIdentity(),  // network default identity
-		msp.NewSigService(view.GetSigService(sp)), // signer service
-		view.GetEndpointService(sp),               // endpoint service
+		config2.NewIdentityConfig(cs, tmsConfig), // config
+		fscIdentity,                              // FSC identity
+		networkLocalMembership.DefaultIdentity(), // network default identity
+		sigService,                               // signer service
+		view.GetEndpointService(sp),              // endpoint service
 		storageProvider,
 		deserializerManager,
 		false,
@@ -120,7 +123,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 
 	ip := identity.NewProvider(
-		view.GetSigService(sp),
+		sigService,
 		view.GetEndpointService(sp),
 		fscIdentity,
 		NewEnrollmentIDDeserializer(),
@@ -128,7 +131,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		deserializerManager,
 	)
 	ws := zkatdlog.NewWalletService(
-		msp.NewSigService(view.GetSigService(sp)),
+		sigService,
 		ip,
 		qe,
 		ppm,
@@ -197,6 +200,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 
 	wallets := identity.NewWallets()
 	deserializerManager := common.NewMultiplexDeserializer()
+	sigService := sig.NewSigService(deserializerManager, kvs.GetService(sp))
 	mspWalletFactory := msp.NewWalletFactory(
 		token.TMSID{
 			Network:   networkID,
@@ -206,8 +210,8 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		nil,                                      // FSC identity
 		nil,                                      // network default identity
-		msp.NewSigService(view.GetSigService(sp)), // signer service
-		nil, // endpoint service
+		sigService,                               // signer service
+		nil,                                      // endpoint service
 		storageProvider,
 		deserializerManager,
 		true,
@@ -250,7 +254,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	ip := identity.NewProvider(
-		view.GetSigService(sp),
+		sigService,
 		nil,
 		nil,
 		NewEnrollmentIDDeserializer(),
@@ -259,7 +263,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	)
 	// wallet service
 	ws := zkatdlog.NewWalletService(
-		msp.NewSigService(view.GetSigService(sp)),
+		sigService,
 		ip,
 		nil,
 		publicParamsManager,

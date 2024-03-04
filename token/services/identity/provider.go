@@ -10,7 +10,6 @@ import (
 	"runtime/debug"
 	"sync"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -36,12 +35,12 @@ type EnrollmentIDUnmarshaler interface {
 }
 
 type SigService interface {
-	GetAuditInfo(identity view.Identity) ([]byte, error)
-	RegisterSigner(identity view.Identity, signer view2.Signer, verifier view2.Verifier) error
 	IsMe(identity view.Identity) bool
-	GetSigner(identity view.Identity) (view2.Signer, error)
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
 	RegisterAuditInfo(identity view.Identity, info []byte) error
-	GetVerifier(identity view.Identity) (view2.Verifier, error)
+	GetAuditInfo(identity view.Identity) ([]byte, error)
+	GetSigner(identity view.Identity) (driver.Signer, error)
+	GetVerifier(identity view.Identity) (driver.Verifier, error)
 }
 
 type Binder interface {
