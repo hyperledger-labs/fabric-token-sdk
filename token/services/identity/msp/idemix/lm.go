@@ -17,7 +17,6 @@ import (
 	"github.com/IBM/idemix/idemixmsp"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -143,7 +142,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 		r.EnrollmentID,
 		r.Remote,
 		func() (view.Identity, []byte, error) {
-			return r.GetIdentity(&driver2.IdentityOptions{
+			return r.GetIdentity(&common.IdentityOptions{
 				EIDExtension: true,
 				AuditInfo:    auditInfo,
 			})
@@ -259,14 +258,14 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 		return err
 	}
 
-	var getIdentityFunc func(opts *driver2.IdentityOptions) (view.Identity, []byte, error)
+	var getIdentityFunc func(opts *common.IdentityOptions) (view.Identity, []byte, error)
 	lm.deserializerManager.AddDeserializer(provider)
 	if provider.IsRemote() {
-		getIdentityFunc = func(opts *driver2.IdentityOptions) (view.Identity, []byte, error) {
+		getIdentityFunc = func(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
-		getIdentityFunc = NewIdentityCache(provider.Identity, cacheSize, &driver2.IdentityOptions{}).Identity
+		getIdentityFunc = NewIdentityCache(provider.Identity, cacheSize, &common.IdentityOptions{}).Identity
 	}
 	lm.addResolver(identity.ID, provider.EnrollmentID(), provider.IsRemote(), identity.Default, getIdentityFunc)
 	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identity.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())

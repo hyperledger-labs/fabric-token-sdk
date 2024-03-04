@@ -11,21 +11,20 @@ import (
 	"reflect"
 	"strconv"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/IBM/idemix/idemixmsp"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -212,7 +211,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 	}, nil
 }
 
-func (p *Provider) Identity(opts *driver2.IdentityOptions) (view.Identity, []byte, error) {
+func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 	// Derive NymPublicKey
 	nymKey, err := p.Csp.KeyDeriv(
 		p.userKey,

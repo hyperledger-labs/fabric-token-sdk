@@ -6,6 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
+type FullIdentity interface {
+	SigningIdentity
+	Verifier
+}
+
 // SigningIdentity models a signing identity
 type SigningIdentity interface {
 	// Sign signs message bytes and returns the signature or an error on failure.

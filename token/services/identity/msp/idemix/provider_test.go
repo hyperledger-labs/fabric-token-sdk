@@ -12,12 +12,12 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	msp2 "github.com/hyperledger/fabric/msp"
 	"github.com/stretchr/testify/assert"
@@ -90,7 +90,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(&driver2.IdentityOptions{EIDExtension: true})
+	id, audit, err = p.Identity(&common.IdentityOptions{EIDExtension: true})
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)
@@ -266,8 +266,7 @@ func TestProvider_DeserializeSigner(t *testing.T) {
 	assert.NoError(t, err)
 
 	// this must work
-	des, err := sig2.NewMultiplexDeserializer(registry)
-	assert.NoError(t, err)
+	des := common.NewMultiplexDeserializer()
 	des.AddDeserializer(p)
 	des.AddDeserializer(p2)
 	signer, err = des.DeserializeSigner(id)
@@ -390,7 +389,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	id, audit, err = p.Identity(&driver2.IdentityOptions{EIDExtension: true})
+	id, audit, err = p.Identity(&common.IdentityOptions{EIDExtension: true})
 	assert.NoError(t, err)
 	assert.NotNil(t, id)
 	assert.NotNil(t, audit)

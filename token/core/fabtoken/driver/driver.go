@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -60,23 +61,20 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
 	wallets := identity.NewWallets()
-	dsManager, err := common.GetDeserializerManager(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get deserializer manager")
-	}
+	deserializerManager := common.NewMultiplexDeserializer()
 	mspWalletFactory := msp.NewWalletFactory(
 		token.TMSID{
 			Network:   networkID,
 			Channel:   channel,
 			Namespace: namespace,
 		},
-		config.NewIdentityConfig(cs, tmsConfig),   // config
+		config2.NewIdentityConfig(cs, tmsConfig),  // config
 		fscIdentity,                               // FSC identity
 		networkLocalMembership.DefaultIdentity(),  // network default identity
 		msp.NewSigService(view.GetSigService(sp)), // signer service
 		view.GetEndpointService(sp),               // endpoint service
 		storageProvider,
-		dsManager,
+		deserializerManager,
 		false,
 	)
 	wallet, err := mspWalletFactory.NewX509Wallet(driver.OwnerRole)
@@ -116,6 +114,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		fscIdentity,
 		NewEnrollmentIDDeserializer(),
 		wallets,
+		deserializerManager,
 	)
 	ws := fabtoken.NewWalletService(
 		msp.NewSigService(view.GetSigService(sp)),
@@ -174,23 +173,20 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	wallets := identity.NewWallets()
-	dsManager, err := common.GetDeserializerManager(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get deserializer manager")
-	}
+	deserializerManager := common.NewMultiplexDeserializer()
 	mspWalletFactory := msp.NewWalletFactory(
 		token.TMSID{
 			Network:   networkID,
 			Channel:   channel,
 			Namespace: namespace,
 		},
-		config.NewIdentityConfig(cs, tmsConfig), // config
-		nil,                                     // FSC identity
-		nil,                                     // network default identity
+		config2.NewIdentityConfig(cs, tmsConfig), // config
+		nil,                                      // FSC identity
+		nil,                                      // network default identity
 		msp.NewSigService(view.GetSigService(sp)), // signer service
 		nil, // endpoint service
 		storageProvider,
-		dsManager,
+		deserializerManager,
 		true,
 	)
 	wallet, err := mspWalletFactory.NewX509WalletIgnoreRemote(driver.OwnerRole)
@@ -231,6 +227,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		nil,
 		NewEnrollmentIDDeserializer(),
 		wallets,
+		deserializerManager,
 	)
 	ws := fabtoken.NewWalletService(
 		msp.NewSigService(view.GetSigService(sp)),

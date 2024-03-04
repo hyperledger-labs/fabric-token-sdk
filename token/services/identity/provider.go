@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -54,20 +55,27 @@ type Provider struct {
 	DefaultFSCIdentity view.Identity
 
 	wallets                 Wallets
-	deserializers           []Deserializer
+	deserializerManager     common.DeserializerManager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
 }
 
 // NewProvider creates a new identity provider
-func NewProvider(sigService SigService, binder Binder, defaultFSCIdentity view.Identity, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, wallets Wallets) *Provider {
+func NewProvider(
+	sigService SigService,
+	binder Binder,
+	defaultFSCIdentity view.Identity,
+	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
+	wallets Wallets,
+	deserializerManager common.DeserializerManager,
+) *Provider {
 	return &Provider{
 		SigService:              sigService,
 		Binder:                  binder,
 		DefaultFSCIdentity:      defaultFSCIdentity,
 		wallets:                 wallets,
-		deserializers:           []Deserializer{},
+		deserializerManager:     deserializerManager,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
 	}
@@ -270,18 +278,8 @@ func (p *Provider) WalletIDs(role driver.IdentityRole) ([]string, error) {
 	return wallet.IDs()
 }
 
-func (p *Provider) AddDeserializer(d Deserializer) {
-	p.deserializers = append(p.deserializers, d)
-}
-
 func (p *Provider) tryDeserialization(id view.Identity) (driver.Signer, error) {
-	for _, d := range p.deserializers {
-		signer, err := d.DeserializeSigner(id)
-		if err == nil {
-			return signer, nil
-		}
-	}
-	return nil, errors.Errorf("deserialization failed")
+	return p.deserializerManager.DeserializeSigner(id)
 }
 
 // Info wraps a driver.IdentityInfo to further register the audit info,

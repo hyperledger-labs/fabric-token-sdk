@@ -11,8 +11,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
-	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
@@ -214,11 +212,11 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 	}
 
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
-	provider, err := x509.NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, &FabricSigner{SignerService: lm.signerService}, opts)
+	provider, err := NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, &FabricSigner{SignerService: lm.signerService}, opts)
 	if err != nil {
 		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
 		// Try with "msp"
-		provider, err = x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, &FabricSigner{SignerService: lm.signerService}, opts)
+		provider, err = NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, &FabricSigner{SignerService: lm.signerService}, opts)
 		if err != nil {
 			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
 				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
@@ -343,6 +341,6 @@ type FabricSigner struct {
 	common.SignerService
 }
 
-func (f *FabricSigner) RegisterSigner(identity view.Identity, signer fdriver.Signer, verifier fdriver.Verifier) error {
+func (f *FabricSigner) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
 	return f.SignerService.RegisterSigner(identity, signer, verifier)
 }

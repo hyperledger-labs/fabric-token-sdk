@@ -13,11 +13,11 @@ import (
 	"os"
 	"path/filepath"
 
-	pkcs112 "github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/pkcs11"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
+	pkcs112 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/pkcs11"
 	msp2 "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/pkcs11"
@@ -33,7 +33,7 @@ const (
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
-func GetSigningIdentity(mspConfigPath, keyStorePath, mspID string, bccspConfig *config.BCCSP) (driver.SigningIdentity, error) {
+func GetSigningIdentity(mspConfigPath, keyStorePath, mspID string, bccspConfig *config.BCCSP) (driver.FullIdentity, error) {
 	mspInstance, err := LoadLocalMSPAt(mspConfigPath, keyStorePath, mspID, BCCSPType, bccspConfig)
 	if err != nil {
 		return nil, err
