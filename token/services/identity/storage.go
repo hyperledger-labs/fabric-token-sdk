@@ -22,7 +22,7 @@ type KVS interface {
 
 type StorageProvider interface {
 	OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error)
-	OpenIdentityDB(tmsID token.TMSID, id string) (driver.IdentityDB, error)
+	OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error)
 	NewKeystore() (KVS, error)
 }
 

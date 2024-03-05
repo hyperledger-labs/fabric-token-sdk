@@ -8,7 +8,6 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
@@ -17,8 +16,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
@@ -63,14 +62,19 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
 	wallets := identity.NewWallets()
-	deserializerManager := common.NewMultiplexDeserializer()
-	sigService := sig.NewSigService(deserializerManager, kvs.GetService(sp))
+	deserializerManager := deserializer.NewMultiplexDeserializer()
+	tmsID := token.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
+	}
+	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
+	}
+	sigService := sig.NewService(deserializerManager, identityDB)
 	mspWalletFactory := msp.NewWalletFactory(
-		token.TMSID{
-			Network:   networkID,
-			Channel:   channel,
-			Namespace: namespace,
-		},
+		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		fscIdentity,                              // FSC identity
 		networkLocalMembership.DefaultIdentity(), // network default identity
@@ -102,11 +106,6 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	wallets.Put(driver.CertifierRole, wallet)
 
 	// Instantiate the token service
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
@@ -176,14 +175,19 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	wallets := identity.NewWallets()
-	deserializerManager := common.NewMultiplexDeserializer()
-	sigService := sig.NewSigService(deserializerManager, kvs.GetService(sp))
+	deserializerManager := deserializer.NewMultiplexDeserializer()
+	tmsID := token.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
+	}
+	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
+	}
+	sigService := sig.NewService(deserializerManager, identityDB)
 	mspWalletFactory := msp.NewWalletFactory(
-		token.TMSID{
-			Network:   networkID,
-			Channel:   channel,
-			Namespace: namespace,
-		},
+		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		nil,                                      // FSC identity
 		nil,                                      // network default identity
@@ -215,11 +219,6 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	wallets.Put(driver.CertifierRole, wallet)
 
 	// Instantiate the token service
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
 	// wallet service
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {

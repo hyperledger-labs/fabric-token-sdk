@@ -14,6 +14,7 @@ import (
 
 	"github.com/IBM/idemix"
 	"github.com/IBM/idemix/bccsp/keystore"
+	"github.com/IBM/idemix/bccsp/types"
 	"github.com/IBM/idemix/idemixmsp"
 	math3 "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
@@ -23,6 +24,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger/fabric-protos-go/msp"
@@ -34,7 +36,7 @@ const (
 	SignerConfigFull = "SignerConfigFull"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.msp.idemix")
+var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
 type PublicParametersWithIdemixSupport interface {
 	IdemixCurve() math3.CurveID
@@ -43,8 +45,8 @@ type PublicParametersWithIdemixSupport interface {
 type LocalMembership struct {
 	config                 config2.Config
 	defaultNetworkIdentity view.Identity
-	signerService          common.SignerService
-	deserializerManager    common.DeserializerManager
+	signerService          common.SigService
+	deserializerManager    deserializer.Manager
 	storage                driver3.IdentityDB
 	keystore               keystore.KVS
 	mspID                  string
@@ -63,8 +65,8 @@ type LocalMembership struct {
 func NewLocalMembership(
 	config config2.Config,
 	defaultNetworkIdentity view.Identity,
-	signerService common.SignerService,
-	deserializerManager common.DeserializerManager,
+	signerService common.SigService,
+	deserializerManager deserializer.Manager,
 	walletPathStorage driver3.IdentityDB,
 	keystore keystore.KVS,
 	mspID string,
@@ -154,7 +156,11 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if err := lm.storage.AddConfiguration(driver3.IdentityConfiguration{ID: id, URL: path}); err != nil {
+	if err := lm.storage.AddConfiguration(driver3.IdentityConfiguration{
+		ID:   id,
+		Type: "idemix",
+		URL:  path,
+	}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
@@ -198,8 +204,8 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 
 	// load identity from KVS
 	logger.Debugf("load identity from KVS")
-	if err := lm.loadFromKVS(); err != nil {
-		return errors.Wrapf(err, "failed to load identity from KVS")
+	if err := lm.loadFromStorage(); err != nil {
+		return errors.Wrapf(err, "failed to load identity from storage")
 	}
 	logger.Debugf("load identity from KVS done")
 
@@ -243,12 +249,11 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identity.Path)
 		}
 	}
-	// TODO: remove the need for ServiceProvider
 	cryptoProvider, err := NewKVSBCCSP(lm.keystore, curveID)
 	if err != nil {
 		return errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
-	provider, err := NewProvider(conf, lm.signerService, Any, cryptoProvider)
+	provider, err := NewProvider(conf, lm.signerService, types.EidNymRhNym, cryptoProvider)
 	if err != nil {
 		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identity.Path)
 	}
@@ -338,8 +343,8 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 	return cacheSize, nil
 }
 
-func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.storage.IteratorConfigurations()
+func (lm *LocalMembership) loadFromStorage() error {
+	it, err := lm.storage.IteratorConfigurations("idemix")
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

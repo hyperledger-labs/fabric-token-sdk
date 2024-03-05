@@ -10,15 +10,19 @@ import (
 	"sort"
 	"sync"
 
+	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/pkg/errors"
 )
 
 var (
 	driversMu sync.RWMutex
 	drivers   = make(map[string]driver.IdentityDBDriver)
+	logger    = flogging.MustGetLogger("token-sdk.services.identitydb")
 )
 
 // Register makes a DB driver available by the provided name.
@@ -75,14 +79,18 @@ func NewManager(sp view.ServiceProvider, config Config) *Manager {
 }
 
 // IdentityDBByTMSId returns a DB for the given TMS id
-func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID, id string) (driver.IdentityDB, error) {
+func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID) (driver.IdentityDB, error) {
+	logger.Debugf("get identity db for [%s]", tmsID)
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	logger.Debugf("lock acquired for identity db for [%s]", tmsID)
 
-	c, ok := m.identityDBs[tmsID.String()+"_"+id]
+	c, ok := m.identityDBs[tmsID.String()]
 	if ok {
+		logger.Debugf("identity db for [%s] found, return it", tmsID)
 		return c, nil
 	}
+	logger.Debugf("identity db for [%s] not found, instantiate it", tmsID)
 	driverName, err := m.config.DriverFor(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "no driver found for [%s]", tmsID)
@@ -91,24 +99,28 @@ func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID, id string) (driver.Identi
 	if d == nil {
 		return nil, errors.Errorf("no driver found for [%s]", driverName)
 	}
-	identityDB, err := d.OpenIdentityDB(m.sp, tmsID, id)
+	identityDB, err := d.OpenIdentityDB(m.sp, tmsID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed instantiating identitydb driver [%s] for id [%s]", driverName, id)
+		return nil, errors.Wrapf(err, "failed instantiating identitydb driver [%s] for id [%s]", driverName, tmsID)
 	}
-	m.identityDBs[tmsID.String()+"_"+id] = identityDB
+	m.identityDBs[tmsID.String()] = identityDB
 
 	return identityDB, nil
 }
 
 // WalletDBByTMSId returns a DB for the given TMS id
 func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletDB, error) {
+	logger.Debugf("get wallet db for [%s]", tmsID)
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
+	logger.Debugf("lock acquired for wallet db for [%s]", tmsID)
 
 	c, ok := m.walletDBs[tmsID.String()]
 	if ok {
+		logger.Debugf("wallet db for [%s] found, return it", tmsID)
 		return c, nil
 	}
+	logger.Debugf("wallet db for [%s] not found, instantiate it", tmsID)
 	driverName, err := m.config.DriverFor(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "no driver found for [%s]", tmsID)
@@ -124,4 +136,25 @@ func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletDB, error) {
 	m.walletDBs[tmsID.String()] = walletDB
 
 	return walletDB, nil
+}
+
+type DBStorageProvider struct {
+	kvs     kvs.KVS
+	manager *Manager
+}
+
+func NewDBStorageProvider(kvs kvs.KVS, manager *Manager) *DBStorageProvider {
+	return &DBStorageProvider{kvs: kvs, manager: manager}
+}
+
+func (s *DBStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
+	return s.manager.WalletDBByTMSId(tmsID)
+}
+
+func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
+	return s.manager.IdentityDBByTMSId(tmsID)
+}
+
+func (s *DBStorageProvider) NewKeystore() (keystore.KVS, error) {
+	return s.kvs, nil
 }

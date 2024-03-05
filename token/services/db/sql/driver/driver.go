@@ -84,12 +84,12 @@ func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (audit
 	return sql2.NewWalletDB(sqlDB, "wallet", name, opts.CreateSchema)
 }
 
-func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID, id string) (auditdbd.IdentityDB, error) {
+func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
 	sqlDB, opts, name, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewIdentityDB(sqlDB, "id_"+id, name, opts.CreateSchema)
+	return sql2.NewIdentityDB(sqlDB, "id", name, opts.CreateSchema)
 }
 
 func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, string, error) {
@@ -187,8 +187,8 @@ func (t *IdentityDBDriver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMS
 	return t.Driver.OpenWalletDB(sp, tmsID)
 }
 
-func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID, id string) (auditdbd.IdentityDB, error) {
-	return t.Driver.OpenIdentityDB(sp, tmsID, id)
+func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
+	return t.Driver.OpenIdentityDB(sp, tmsID)
 }
 
 func init() {

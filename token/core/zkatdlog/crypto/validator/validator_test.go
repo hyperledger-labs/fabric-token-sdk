@@ -13,11 +13,11 @@ import (
 	"time"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
@@ -30,8 +30,11 @@ import (
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	msp2 "github.com/hyperledger/fabric/msp"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -369,7 +372,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo, driver.Signing
 	err = registry.RegisterService(kvss)
 	Expect(err).NotTo(HaveOccurred())
 
-	sigService := sig.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	err = registry.RegisterService(sigService)
 	Expect(err).NotTo(HaveOccurred())
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")

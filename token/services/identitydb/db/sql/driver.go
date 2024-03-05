@@ -28,12 +28,12 @@ func NewDriver() *Driver {
 	return &Driver{DBOpener: sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)}
 }
 
-func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID, id string) (driver.IdentityDB, error) {
+func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (driver.IdentityDB, error) {
 	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
 	if err != nil {
 		return nil, err
 	}
-	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix+"_"+id, sqldb.DatasourceName(tmsID), opts.CreateSchema)
+	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix, sqldb.DatasourceName(tmsID), opts.CreateSchema)
 }
 
 func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (driver.WalletDB, error) {

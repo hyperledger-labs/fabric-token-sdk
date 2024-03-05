@@ -45,6 +45,9 @@ func NewWalletsRegistry(identityProvider driver.IdentityProvider, identityRole d
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id.
 // The identity info can be nil meaning that nothing has been found bound to the passed identifier
 func (r *WalletsRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error) {
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("looked-up identifier [%v]", id)
+	}
 	var walletIdentifiers []string
 
 	identity, walletID, err := r.IdentityProvider.LookupIdentifier(r.IdentityRole, id)

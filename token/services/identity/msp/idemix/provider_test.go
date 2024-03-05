@@ -12,13 +12,16 @@ import (
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	sig2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs/mock"
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	msp2 "github.com/hyperledger/fabric/msp"
 	"github.com/stretchr/testify/assert"
 )
@@ -29,7 +32,7 @@ func TestProvider(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
@@ -54,7 +57,7 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
@@ -119,7 +122,7 @@ func TestIdentityStandard(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
@@ -186,7 +189,7 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
@@ -228,7 +231,7 @@ func TestProvider_DeserializeSigner(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/sameissuer/idemix", nil, "idemix", "idemix")
@@ -266,7 +269,7 @@ func TestProvider_DeserializeSigner(t *testing.T) {
 	assert.NoError(t, err)
 
 	// this must work
-	des := common.NewMultiplexDeserializer()
+	des := deserializer.NewMultiplexDeserializer()
 	des.AddDeserializer(p)
 	des.AddDeserializer(p2)
 	signer, err = des.DeserializeSigner(id)
@@ -284,7 +287,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := idemix.GetLocalMspConfigWithType("./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
@@ -351,7 +354,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	kvss, err := kvs.NewWithConfig(registry, "memory", "", &mock.ConfigProvider{})
 	assert.NoError(t, err)
 	assert.NoError(t, registry.RegisterService(kvss))
-	sigService := sig2.NewSignService(registry, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
 	config, err := idemix.GetLocalMspConfigWithType("./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)

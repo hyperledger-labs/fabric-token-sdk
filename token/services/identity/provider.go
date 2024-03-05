@@ -13,12 +13,12 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.driver.identity")
+var logger = flogging.MustGetLogger("token-sdk.services.identity")
 
 // Deserializer is an interface for deserializing identities
 type Deserializer interface {
@@ -34,7 +34,7 @@ type EnrollmentIDUnmarshaler interface {
 	GetRevocationHandler(auditInfo []byte) (string, error)
 }
 
-type SigService interface {
+type sigService interface {
 	IsMe(identity view.Identity) bool
 	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
 	RegisterAuditInfo(identity view.Identity, info []byte) error
@@ -49,12 +49,12 @@ type Binder interface {
 
 // Provider implements the driver.IdentityProvider interface
 type Provider struct {
-	SigService         SigService
+	SigService         sigService
 	Binder             Binder
 	DefaultFSCIdentity view.Identity
 
 	wallets                 Wallets
-	deserializerManager     common.DeserializerManager
+	deserializerManager     deserializer.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
@@ -62,12 +62,12 @@ type Provider struct {
 
 // NewProvider creates a new identity provider
 func NewProvider(
-	sigService SigService,
+	sigService sigService,
 	binder Binder,
 	defaultFSCIdentity view.Identity,
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
 	wallets Wallets,
-	deserializerManager common.DeserializerManager,
+	deserializerManager deserializer.Manager,
 ) *Provider {
 	return &Provider{
 		SigService:              sigService,

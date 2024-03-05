@@ -7,12 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/IBM/idemix/common/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.msp")
 
 // Resolver contains information about an identity and how to retrieve it.
 type Resolver struct {
@@ -23,7 +20,7 @@ type Resolver struct {
 	Remote       bool
 }
 
-type SignerService interface {
+type SigService interface {
 	IsMe(view.Identity) bool
 	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
 	RegisterVerifier(identity view.Identity, v driver.Verifier) error

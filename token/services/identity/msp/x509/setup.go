@@ -149,7 +149,7 @@ func GetPKCS11BCCSP(conf *config.BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
 	p11Opts := *conf.PKCS11
 	ks := sw.NewDummyKeyStore()
 	mapper := skiMapper(p11Opts)
-	csp, err := pkcs11.New(*pkcs112.ToPKCS11Opts(&p11Opts), ks, pkcs11.WithKeyMapper(mapper))
+	csp, err := pkcs11.New(*pkcs112.ToOpts(&p11Opts), ks, pkcs11.WithKeyMapper(mapper))
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "Failed initializing PKCS11 library with config [%+v]", p11Opts)
 	}

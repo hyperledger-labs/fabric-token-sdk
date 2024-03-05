@@ -47,17 +47,19 @@ func initSchema(db *sql.DB, schemas ...string) (err error) {
 }
 
 type tableNames struct {
-	Movements             string
-	Transactions          string
-	Requests              string
-	Validations           string
-	TransactionEndorseAck string
-	Certifications        string
-	Tokens                string
-	Ownership             string
-	PublicParams          string
-	Identities            string
-	Wallets               string
+	Movements              string
+	Transactions           string
+	Requests               string
+	Validations            string
+	TransactionEndorseAck  string
+	Certifications         string
+	Tokens                 string
+	Ownership              string
+	PublicParams           string
+	Wallets                string
+	IdentityConfigurations string
+	AuditInfo              string
+	Signers                string
 }
 
 func getTableNames(prefix, name string) (tableNames, error) {
@@ -78,16 +80,18 @@ func getTableNames(prefix, name string) (tableNames, error) {
 	suffix := "_" + hex.EncodeToString(h.Sum(nil)[:3])
 
 	return tableNames{
-		Transactions:          fmt.Sprintf("%stransactions%s", prefix, suffix),
-		Movements:             fmt.Sprintf("%smovements%s", prefix, suffix),
-		Requests:              fmt.Sprintf("%srequests%s", prefix, suffix),
-		Validations:           fmt.Sprintf("%svalidations%s", prefix, suffix),
-		TransactionEndorseAck: fmt.Sprintf("%stea%s", prefix, suffix),
-		Certifications:        fmt.Sprintf("%scertifications%s", prefix, suffix),
-		Tokens:                fmt.Sprintf("%stokens%s", prefix, suffix),
-		Ownership:             fmt.Sprintf("%sownership%s", prefix, suffix),
-		PublicParams:          fmt.Sprintf("%spublic_params%s", prefix, suffix),
-		Identities:            fmt.Sprintf("%sdentity%s", prefix, suffix),
-		Wallets:               fmt.Sprintf("%swallet%s", prefix, suffix),
+		Movements:              fmt.Sprintf("%smovements%s", prefix, suffix),
+		Transactions:           fmt.Sprintf("%stransactions%s", prefix, suffix),
+		Requests:               fmt.Sprintf("%srequests%s", prefix, suffix),
+		Validations:            fmt.Sprintf("%svalidations%s", prefix, suffix),
+		TransactionEndorseAck:  fmt.Sprintf("%stea%s", prefix, suffix),
+		Certifications:         fmt.Sprintf("%scertifications%s", prefix, suffix),
+		Tokens:                 fmt.Sprintf("%stokens%s", prefix, suffix),
+		Ownership:              fmt.Sprintf("%sownership%s", prefix, suffix),
+		PublicParams:           fmt.Sprintf("%spublic_params%s", prefix, suffix),
+		Wallets:                fmt.Sprintf("%swallet%s", prefix, suffix),
+		IdentityConfigurations: fmt.Sprintf("%sdentity%s", prefix, suffix),
+		AuditInfo:              fmt.Sprintf("%saudit_info%s", prefix, suffix),
+		Signers:                fmt.Sprintf("%ssigners%s", prefix, suffix),
 	}, nil
 }

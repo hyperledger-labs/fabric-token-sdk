@@ -23,20 +23,20 @@ type KVS interface {
 	GetByPartialCompositeID(prefix string, attrs []string) (kvs.Iterator, error)
 }
 
-type IdentityStorage struct {
+type WalletDB struct {
 	kvs   KVS
 	tmsID token.TMSID
 }
 
-func NewIdentityStorage(kvs KVS, tmsID token.TMSID) *IdentityStorage {
-	return &IdentityStorage{kvs: kvs, tmsID: tmsID}
+func NewWalletDB(kvs KVS, tmsID token.TMSID) *WalletDB {
+	return &WalletDB{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *IdentityStorage) StoreWalletID(wID driver.WalletID) error {
+func (s *WalletDB) StoreWalletID(wID driver.WalletID) error {
 	return s.kvs.Put(kvs.CreateCompositeKeyOrPanic("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace, wID}), wID)
 }
 
-func (s *IdentityStorage) GetWalletID(id view.Identity) (driver.WalletID, error) {
+func (s *WalletDB) GetWalletID(id view.Identity) (driver.WalletID, error) {
 	var wID driver.WalletID
 	if err := s.kvs.Get(id.Hash(), &wID); err != nil {
 		return "", err
@@ -44,7 +44,7 @@ func (s *IdentityStorage) GetWalletID(id view.Identity) (driver.WalletID, error)
 	return wID, nil
 }
 
-func (s *IdentityStorage) GetWalletIDs() ([]driver.WalletID, error) {
+func (s *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
 	it, err := s.kvs.GetByPartialCompositeID("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
@@ -60,7 +60,7 @@ func (s *IdentityStorage) GetWalletIDs() ([]driver.WalletID, error) {
 	return walletIDs, nil
 }
 
-func (s *IdentityStorage) StoreIdentity(identity view.Identity, wID driver.WalletID, meta any) error {
+func (s *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, meta any) error {
 	idHash := identity.Hash()
 	if err := s.kvs.Put(idHash, wID); err != nil {
 		return errors.WithMessagef(err, "failed to store identity's wallet [%s]", identity)
@@ -76,48 +76,103 @@ func (s *IdentityStorage) StoreIdentity(identity view.Identity, wID driver.Walle
 	return nil
 }
 
-func (s *IdentityStorage) LoadMeta(identity view.Identity, meta any) error {
+func (s *WalletDB) LoadMeta(identity view.Identity, meta any) error {
 	return s.kvs.Get("meta"+identity.Hash(), meta)
 }
 
-func (s *IdentityStorage) IdentityExists(identity view.Identity, wID driver.WalletID) bool {
+func (s *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID) bool {
 	return s.kvs.Exists(s.walletPrefix(wID) + identity.Hash())
 }
 
-func (s *IdentityStorage) walletPrefix(wID driver.WalletID) string {
+func (s *WalletDB) walletPrefix(wID driver.WalletID) string {
 	return fmt.Sprintf("%s-%s-%s-%s", s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace, wID)
 }
 
-type WalletPathStorage struct {
-	kvs    KVS
-	prefix string
+type IdentityDB struct {
+	kvs   KVS
+	tmsID token.TMSID
 }
 
-func NewWalletPathStorage(kvs KVS, prefix string) *WalletPathStorage {
-	return &WalletPathStorage{kvs: kvs, prefix: prefix}
+func NewIdentityDB(kvs KVS, tmsID token.TMSID) *IdentityDB {
+	return &IdentityDB{kvs: kvs, tmsID: tmsID}
 }
 
-func (w *WalletPathStorage) AddConfiguration(wp driver.IdentityConfiguration) error {
-	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", w.prefix, "registeredIdentity", wp.ID})
+func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", wp.Type, wp.ID})
 	if err != nil {
 		return errors.Wrapf(err, "failed to create identity key")
 	}
-	return w.kvs.Put(k, wp.URL)
+	return s.kvs.Put(k, wp.URL)
 }
 
-func (w *WalletPathStorage) IteratorConfigurations() (driver.Iterator[driver.IdentityConfiguration], error) {
-	it, err := w.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", w.prefix, "registeredIdentity"})
+func (s *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
+	it, err := s.kvs.GetByPartialCompositeID("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", configurationType})
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
-	return &WalletPathStorageIterator{Iterator: it}, nil
+	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }
 
-type WalletPathStorageIterator struct {
+func (s *IdentityDB) StoreAuditInfo(identity, info []byte) error {
+	k := kvs.CreateCompositeKeyOrPanic(
+		"fsc.platform.view.sig",
+		[]string{
+			view.Identity(identity).String(),
+		},
+	)
+	if err := s.kvs.Put(k, info); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *IdentityDB) GetAuditInfo(identity []byte) ([]byte, error) {
+	k := kvs.CreateCompositeKeyOrPanic(
+		"fsc.platform.view.sig",
+		[]string{
+			view.Identity(identity).String(),
+		},
+	)
+	if !s.kvs.Exists(k) {
+		return nil, nil
+	}
+	var res []byte
+	if err := s.kvs.Get(k, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
+	idHash := view.Identity(id).UniqueID()
+	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
+	if err != nil {
+		return errors.Wrap(err, "failed to create composite key to store entry in kvs")
+	}
+	err = s.kvs.Put(k, info)
+	if err != nil {
+		return errors.Wrap(err, "failed to store entry in kvs for the passed signer")
+	}
+	return nil
+}
+
+func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
+	idHash := view.Identity(id).UniqueID()
+	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
+	if err != nil {
+		return false, err
+	}
+	if s.kvs.Exists(k) {
+		return true, nil
+	}
+	return false, nil
+}
+
+type IdentityConfigurationsIterator struct {
 	kvs.Iterator
 }
 
-func (w *WalletPathStorageIterator) Next() (driver.IdentityConfiguration, error) {
+func (w *IdentityConfigurationsIterator) Next() (driver.IdentityConfiguration, error) {
 	var path string
 	k, err := w.Iterator.Next(&path)
 	if err != nil {

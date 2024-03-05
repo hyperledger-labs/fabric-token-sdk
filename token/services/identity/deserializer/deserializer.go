@@ -4,15 +4,18 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package common
+package deserializer
 
 import (
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.services.identity.deserializer")
 
 type Deserializer interface {
 	DeserializeVerifier(raw []byte) (driver.Verifier, error)
@@ -20,7 +23,7 @@ type Deserializer interface {
 	Info(raw []byte, auditInfo []byte) (string, error)
 }
 
-type DeserializerManager interface {
+type Manager interface {
 	AddDeserializer(deserializer Deserializer)
 	DeserializeSigner(raw []byte) (driver.Signer, error)
 }
