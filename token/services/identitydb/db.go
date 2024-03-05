@@ -10,12 +10,10 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/IBM/idemix/bccsp/keystore"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/pkg/errors"
 )
 
@@ -136,25 +134,4 @@ func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletDB, error) {
 	m.walletDBs[tmsID.String()] = walletDB
 
 	return walletDB, nil
-}
-
-type DBStorageProvider struct {
-	kvs     kvs.KVS
-	manager *Manager
-}
-
-func NewDBStorageProvider(kvs kvs.KVS, manager *Manager) *DBStorageProvider {
-	return &DBStorageProvider{kvs: kvs, manager: manager}
-}
-
-func (s *DBStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error) {
-	return s.manager.WalletDBByTMSId(tmsID)
-}
-
-func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
-	return s.manager.IdentityDBByTMSId(tmsID)
-}
-
-func (s *DBStorageProvider) NewKeystore() (keystore.KVS, error) {
-	return s.kvs, nil
 }

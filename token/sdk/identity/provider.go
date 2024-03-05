@@ -47,8 +47,8 @@ func (s *DBStorageProvider) OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, er
 	return s.manager.WalletDBByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID, id identitydb.IdType) (driver.IdentityDB, error) {
-	return s.manager.IdentityDBByTMSId(tmsID, id)
+func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error) {
+	return s.manager.IdentityDBByTMSId(tmsID)
 }
 
 func (s *DBStorageProvider) NewKeystore() (identity.KVS, error) {
