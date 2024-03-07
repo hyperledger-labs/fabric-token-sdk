@@ -18,43 +18,18 @@ token:
       network: default # the name of the network this TMS refers to (Fabric, Orion, etc)
       channel: testchannel # the name of the network's channel this TMS refers to, if applicable
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
-      # sections dedicated to the databases definitions.
-      # These databases are used to keep track of transactions, tokens, and audit records where it applies.  
-      # Three databases are available:
-      # ttxdb: store records of transactions 
-      # tokendb: store information about the available tokens
-      # auditdb: store audit records about the audited transactions
-      # The databases can be instantiated in isolation. a different backend for each db, or with a shared backend, depending on the driver used.
-      # In the following example, we have ttxdb and auditdb using the same backed, via the `unity` dirver, and the tokendb having its own separated backed
 
-      # configuration for the unity db driver. It uses the `sql` driver as backend
-      unitydb:
+      # sections dedicated to the database configuration.
+      # This database is used to keep track of transactions, tokens, and audit records where it applies.  
+      db:
         persistence:
+          # configuration for the unity db driver. It uses sql as backend
+          type: unity
           opts:
             createSchema: true
             driver: sqlite
             maxOpenConns: 10
             dataSource: /some/path/unitydb
-      ttxdb:
-        persistence:
-          type: unity
-      auditdb:
-        persistence:
-          type: unity
-      tokendb:
-        persistence:
-          # The sql driver uses golangs database/sql package internally.
-          # In theory you can use any driver if you import it in your application;
-          # for instance `import _ "github.com/mattn/go-sqlite3"` for the cgo version of sqlite.
-          # See https://github.com/golang/go/wiki/SQLDrivers. We only tested with github.com/lib/pq
-          # and modernc.org/sqlite, and it's likely that other drivers don't work exactly the same.
-          # To try a new sql driver, add a test here: token/services/db/sql/transactions_test.go.
-          type: sql # type can be one of unity, sql or memory.
-          opts:
-            createSchema: true # create tables programmatically
-            driver: sqlite # in the application, `import _ "modernc.org/sqlite"`
-            maxOpenConns: 10 # by default this is 0 (unlimited), sets the maximum number of open connections to the database
-            dataSource: /some/path/tokendb
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that support caching

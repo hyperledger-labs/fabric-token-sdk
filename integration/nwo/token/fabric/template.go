@@ -26,22 +26,14 @@ token:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}{{ end }}
       {{ if Wallets }}
-      unitydb:
+      db:
         persistence:
+          type: unity
           opts:
             createSchema: true 
             driver: sqlite    
             maxOpenConns: 10
             dataSource: {{ SQLDataSource }}
-      identitydb:
-        persistence:
-          type: unity
-      ttxdb:
-        persistence:
-          type: unity
-      auditdb:
-        persistence:
-          type: unity
       tokendb:
         persistence:
           type: sql

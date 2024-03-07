@@ -10,8 +10,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
-
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -26,6 +24,7 @@ import (
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/certification"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
@@ -94,13 +93,13 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(networkProvider))
 
 	// Token and Transaction DBs, and derivatives
-	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type"))
+	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type"))
+	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
-	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type"))
+	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
-	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type"))
+	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(identityDBManager))
 	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
 	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")

@@ -31,7 +31,7 @@ var logger = flogging.MustGetLogger("token-sdk.sql")
 
 const (
 	// OptsKey is the key for the opts in the config
-	OptsKey   = "unitydb.persistence.opts"
+	OptsKey   = "db.persistence.opts"
 	EnvVarKey = "UNITYDB_DATASOURCE"
 )
 
@@ -199,5 +199,4 @@ func init() {
 	tokendb.Register("unity", &TOKENDBDriver{Driver: root})
 	auditdb.Register("unity", &AUDITDBDriver{Driver: root})
 	identitydb.Register("unity", &IdentityDBDriver{Driver: root})
-
 }
