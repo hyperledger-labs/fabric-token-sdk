@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/sig"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
@@ -21,6 +20,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/certification"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	. "github.com/onsi/gomega"
 )
 
@@ -108,13 +110,10 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", user))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(configProvider)).ToNot(HaveOccurred())
-	dm, err := sig.NewMultiplexDeserializer(sp)
-	Expect(err).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(dm)).ToNot(HaveOccurred())
 	kvss, err := kvs.NewWithConfig(sp, "memory", "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
-	sigService := sig.NewSignService(sp, nil, kvss)
+	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	Expect(sp.RegisterService(sigService)).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(identity2.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(certification.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())

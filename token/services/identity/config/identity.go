@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package config
 
 import (
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
@@ -18,10 +19,10 @@ type Config interface {
 
 type IdentityConfig struct {
 	Config Config
-	TMS    *TMS
+	TMS    *config2.TMS
 }
 
-func NewIdentityConfig(Config Config, TMS *TMS) *IdentityConfig {
+func NewIdentityConfig(Config Config, TMS *config2.TMS) *IdentityConfig {
 	return &IdentityConfig{Config: Config, TMS: TMS}
 }
 

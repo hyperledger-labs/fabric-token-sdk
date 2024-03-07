@@ -11,21 +11,20 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/config"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/driver"
-	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
 type SignerService interface {
-	RegisterSigner(identity view.Identity, signer fdriver.Signer, verifier fdriver.Verifier) error
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
 }
 
 type Provider struct {
-	sID          driver2.SigningIdentity
+	sID          driver.SigningIdentity
 	id           []byte
 	enrollmentID string
 }
@@ -67,6 +66,7 @@ func newProvider(mspConfigPath, keyStorePath, mspID string, signerService Signer
 		return nil, err
 	}
 	if signerService != nil {
+		logger.Debugf("register signer [%s][%s]", mspID, view.Identity(idRaw))
 		err = signerService.RegisterSigner(idRaw, sID, sID)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
@@ -84,7 +84,7 @@ func (p *Provider) IsRemote() bool {
 	return p.sID == nil
 }
 
-func (p *Provider) Identity(opts *fdriver.IdentityOptions) (view.Identity, []byte, error) {
+func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 	revocationHandle, err := GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
@@ -142,7 +142,7 @@ func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
 	return fmt.Sprintf("MSP.x509: [%s][%s][%s]", view.Identity(raw).UniqueID(), si.Mspid, cert.Subject.CommonName), nil
 }
 
-func (p *Provider) SerializedIdentity() (driver2.SigningIdentity, error) {
+func (p *Provider) SerializedIdentity() (driver.SigningIdentity, error) {
 	return p.sID, nil
 }
 

@@ -27,7 +27,7 @@ type WalletRegistry interface {
 }
 
 type WalletService struct {
-	SignerService    common.SignerService
+	SignerService    common.SigService
 	IdentityProvider driver.IdentityProvider
 	TokenVault       TokenVault
 	Deserializer     driver.Deserializer
@@ -38,7 +38,7 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	SignerService common.SignerService,
+	SignerService common.SigService,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	Deserializer driver.Deserializer,

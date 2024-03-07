@@ -8,24 +8,19 @@ package idemix
 
 import (
 	"fmt"
-	"reflect"
 	"strconv"
-
-	"go.uber.org/zap/zapcore"
 
 	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/IBM/idemix/idemixmsp"
-	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 const (
@@ -41,14 +36,6 @@ type SignerService interface {
 	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
 }
 
-func GetSignerService(ctx view2.ServiceProvider) SignerService {
-	s, err := ctx.GetService(reflect.TypeOf((*SignerService)(nil)))
-	if err != nil {
-		panic(err)
-	}
-	return s.(SignerService)
-}
-
 type Provider struct {
 	*Idemix
 	userKey       bccsp.Key
@@ -57,42 +44,6 @@ type Provider struct {
 
 	sigType bccsp.SignatureType
 	verType bccsp.VerificationType
-}
-
-func NewProviderWithEidRhNymPolicy(conf1 *m.MSPConfig, sp view2.ServiceProvider) (*Provider, error) {
-	return NewProviderWithSigType(conf1, sp, bccsp.EidNymRhNym)
-}
-
-func NewProviderWithStandardPolicy(conf1 *m.MSPConfig, sp view2.ServiceProvider) (*Provider, error) {
-	return NewProviderWithSigType(conf1, sp, bccsp.Standard)
-}
-
-func NewProviderWithAnyPolicy(conf1 *m.MSPConfig, sp view2.ServiceProvider) (*Provider, error) {
-	return NewProviderWithSigType(conf1, sp, Any)
-}
-
-func NewProviderWithAnyPolicyAndCurve(conf1 *m.MSPConfig, sp view2.ServiceProvider, curveID math.CurveID) (*Provider, error) {
-	cryptoProvider, err := NewKSVBCCSP(kvs.GetService(sp), curveID, false)
-	if err != nil {
-		return nil, err
-	}
-	return NewProvider(conf1, GetSignerService(sp), Any, cryptoProvider)
-}
-
-func NewProviderWithSigType(conf1 *m.MSPConfig, sp view2.ServiceProvider, sigType bccsp.SignatureType) (*Provider, error) {
-	cryptoProvider, err := NewKSVBCCSP(kvs.GetService(sp), math.FP256BN_AMCL, false)
-	if err != nil {
-		return nil, err
-	}
-	return NewProvider(conf1, GetSignerService(sp), sigType, cryptoProvider)
-}
-
-func NewProviderWithSigTypeAncCurve(conf1 *m.MSPConfig, sp view2.ServiceProvider, sigType bccsp.SignatureType, curveID math.CurveID) (*Provider, error) {
-	cryptoProvider, err := NewKSVBCCSP(kvs.GetService(sp), curveID, false)
-	if err != nil {
-		return nil, err
-	}
-	return NewProvider(conf1, GetSignerService(sp), sigType, cryptoProvider)
 }
 
 func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.SignatureType, cryptoProvider bccsp.BCCSP) (*Provider, error) {
@@ -212,7 +163,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 	}, nil
 }
 
-func (p *Provider) Identity(opts *driver2.IdentityOptions) (view.Identity, []byte, error) {
+func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 	// Derive NymPublicKey
 	nymKey, err := p.Csp.KeyDeriv(
 		p.userKey,

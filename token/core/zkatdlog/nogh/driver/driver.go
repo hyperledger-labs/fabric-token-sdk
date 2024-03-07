@@ -20,8 +20,10 @@ import (
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
@@ -64,23 +66,26 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	wallets := identity.NewWallets()
-	dsManager, err := common.GetDeserializerManager(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get deserializer manager")
+	deserializerManager := deserializer.NewMultiplexDeserializer()
+	tmsID := token.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
 	}
+	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
+	}
+	sigService := sig.NewService(deserializerManager, identityDB)
 	mspWalletFactory := msp.NewWalletFactory(
-		token.TMSID{
-			Network:   networkID,
-			Channel:   channel,
-			Namespace: namespace,
-		},
-		config.NewIdentityConfig(cs, tmsConfig),   // config
-		fscIdentity,                               // FSC identity
-		networkLocalMembership.DefaultIdentity(),  // network default identity
-		msp.NewSigService(view.GetSigService(sp)), // signer service
-		view.GetEndpointService(sp),               // endpoint service
+		tmsID,
+		config2.NewIdentityConfig(cs, tmsConfig), // config
+		fscIdentity,                              // FSC identity
+		networkLocalMembership.DefaultIdentity(), // network default identity
+		sigService,                               // signer service
+		view.GetEndpointService(sp),              // endpoint service
 		storageProvider,
-		dsManager,
+		deserializerManager,
 		false,
 	)
 	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BLS12_381_BBS)
@@ -105,11 +110,6 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	wallets.Put(driver.CertifierRole, wallet)
 
 	// Instantiate the token service
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
 	qe := v.QueryEngine()
 	ppm := ppm.NewPublicParamsManager(crypto.DLogPublicParameters, qe)
 	ppm.AddCallback(func(pp driver.PublicParameters) error {
@@ -120,15 +120,17 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
+
 	ip := identity.NewProvider(
-		view.GetSigService(sp),
+		sigService,
 		view.GetEndpointService(sp),
 		fscIdentity,
 		NewEnrollmentIDDeserializer(),
 		wallets,
+		deserializerManager,
 	)
 	ws := zkatdlog.NewWalletService(
-		msp.NewSigService(view.GetSigService(sp)),
+		sigService,
 		ip,
 		qe,
 		ppm,
@@ -196,23 +198,26 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 
 	wallets := identity.NewWallets()
-	dsManager, err := common.GetDeserializerManager(sp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to get deserializer manager")
+	deserializerManager := deserializer.NewMultiplexDeserializer()
+	tmsID := token.TMSID{
+		Network:   networkID,
+		Channel:   channel,
+		Namespace: namespace,
 	}
+	identityDB, err := storageProvider.OpenIdentityDB(tmsID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
+	}
+	sigService := sig.NewService(deserializerManager, identityDB)
 	mspWalletFactory := msp.NewWalletFactory(
-		token.TMSID{
-			Network:   networkID,
-			Channel:   channel,
-			Namespace: namespace,
-		},
-		config.NewIdentityConfig(cs, tmsConfig), // config
-		nil,                                     // FSC identity
-		nil,                                     // network default identity
-		msp.NewSigService(view.GetSigService(sp)), // signer service
-		nil, // endpoint service
+		tmsID,
+		config2.NewIdentityConfig(cs, tmsConfig), // config
+		nil,                                      // FSC identity
+		nil,                                      // network default identity
+		sigService,                               // signer service
+		nil,                                      // endpoint service
 		storageProvider,
-		dsManager,
+		deserializerManager,
 		true,
 	)
 	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BN254)
@@ -237,11 +242,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	wallets.Put(driver.CertifierRole, wallet)
 
 	// Instantiate the token service
-	tmsID := token.TMSID{
-		Network:   networkID,
-		Channel:   channel,
-		Namespace: namespace,
-	}
+
 	// public parameters manager
 	publicParamsManager, err := ppm.NewFromParams(pp)
 	if err != nil {
@@ -253,15 +254,16 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	ip := identity.NewProvider(
-		view.GetSigService(sp),
+		sigService,
 		nil,
 		nil,
 		NewEnrollmentIDDeserializer(),
 		wallets,
+		deserializerManager,
 	)
 	// wallet service
 	ws := zkatdlog.NewWalletService(
-		msp.NewSigService(view.GetSigService(sp)),
+		sigService,
 		ip,
 		nil,
 		publicParamsManager,

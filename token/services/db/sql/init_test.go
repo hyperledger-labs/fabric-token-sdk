@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
@@ -27,6 +28,7 @@ import (
 
 var Transactions *TransactionDB
 var Tokens *TokenDB
+var Identity *IdentityDB
 
 func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
 	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
@@ -66,8 +68,13 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		PublicParams:   tables.PublicParams,
 		Certifications: tables.Certifications,
 	})
+	Identity = newIdentityDB(db, identityTables{
+		IdentityConfigurations: tables.IdentityConfigurations,
+		AuditInfo:              tables.AuditInfo,
+		Signers:                tables.Signers,
+	}, secondcache.New(1000))
 	if createSchema {
-		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema()); err != nil {
+		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema(), Identity.GetSchema()); err != nil {
 			return err
 		}
 	}
@@ -80,17 +87,19 @@ func TestGetTableNames(t *testing.T) {
 	names, err := getTableNames("", name)
 	assert.NoError(t, err)
 	assert.Equal(t, tableNames{
-		Transactions:          "transactions_5193a5",
-		Movements:             "movements_5193a5",
-		Requests:              "requests_5193a5",
-		Validations:           "validations_5193a5",
-		TransactionEndorseAck: "tea_5193a5",
-		Certifications:        "certifications_5193a5",
-		Ownership:             "ownership_5193a5",
-		Tokens:                "tokens_5193a5",
-		PublicParams:          "public_params_5193a5",
-		Identities:            "dentity_5193a5",
-		Wallets:               "wallet_5193a5",
+		Movements:              "movements_5193a5",
+		Transactions:           "transactions_5193a5",
+		Requests:               "requests_5193a5",
+		Validations:            "validations_5193a5",
+		TransactionEndorseAck:  "tea_5193a5",
+		Certifications:         "certifications_5193a5",
+		Tokens:                 "tokens_5193a5",
+		Ownership:              "ownership_5193a5",
+		PublicParams:           "public_params_5193a5",
+		Wallets:                "wallet_5193a5",
+		IdentityConfigurations: "dentity_5193a5",
+		AuditInfo:              "audit_info_5193a5",
+		Signers:                "signers_5193a5",
 	}, names)
 
 	names, err = getTableNames("valid_prefix", name)

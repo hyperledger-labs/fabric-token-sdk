@@ -321,9 +321,12 @@ func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{
 		}
 
 		w := ts.WalletManager().OwnerWallet(f.Wallet)
+		if w == nil {
+			return nil, errors.WithMessagef(err, "failed getting wallet [%s]", f.Wallet)
+		}
 		me, err := w.GetRecipientIdentity()
 		if err != nil {
-			return nil, err
+			return nil, errors.WithMessagef(err, "failed getting recipient identity, wallet [%s]", w.ID())
 		}
 		auditInfo, err := w.GetAuditInfo(me)
 		if err != nil {

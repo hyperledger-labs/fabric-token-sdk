@@ -11,12 +11,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"go.uber.org/zap/zapcore"
 )
 
-type IdentityCacheBackendFunc func(opts *driver.IdentityOptions) (view.Identity, []byte, error)
+type IdentityCacheBackendFunc func(opts *common.IdentityOptions) (view.Identity, []byte, error)
 
 type identityCacheEntry struct {
 	Identity view.Identity
@@ -27,10 +27,10 @@ type IdentityCache struct {
 	once   sync.Once
 	backed IdentityCacheBackendFunc
 	cache  chan identityCacheEntry
-	opts   *driver.IdentityOptions
+	opts   *common.IdentityOptions
 }
 
-func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *driver.IdentityOptions) *IdentityCache {
+func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *common.IdentityOptions) *IdentityCache {
 	ci := &IdentityCache{
 		backed: backed,
 		cache:  make(chan identityCacheEntry, size),
@@ -40,7 +40,7 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *driver.Id
 	return ci
 }
 
-func (c *IdentityCache) Identity(opts *driver.IdentityOptions) (view.Identity, []byte, error) {
+func (c *IdentityCache) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 	if opts != nil {
 		return c.fetchIdentityFromBackend(opts)
 	}
@@ -62,7 +62,7 @@ func (c *IdentityCache) Identity(opts *driver.IdentityOptions) (view.Identity, [
 
 }
 
-func (c *IdentityCache) fetchIdentityFromCache(opts *driver.IdentityOptions) (view.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 	var identity view.Identity
 	var audit []byte
 
@@ -101,7 +101,7 @@ func (c *IdentityCache) fetchIdentityFromCache(opts *driver.IdentityOptions) (vi
 	return identity, audit, nil
 }
 
-func (c *IdentityCache) fetchIdentityFromBackend(opts *driver.IdentityOptions) (view.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromBackend(opts *common.IdentityOptions) (view.Identity, []byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("fetching identity from backend")
 	}

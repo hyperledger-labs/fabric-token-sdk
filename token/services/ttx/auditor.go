@@ -351,7 +351,7 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	}
 
 	var sigma []byte
-	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
+	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting signing identity for [%s]", view2.GetIdentityProvider(context).DefaultIdentity())

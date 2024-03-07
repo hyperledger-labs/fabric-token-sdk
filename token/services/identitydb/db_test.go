@@ -27,7 +27,7 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, registry.RegisterService(cp))
 
 	manager := identitydb.NewManager(registry, db.NewConfig(cp, "identitydb.persistence.type"))
-	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"}, "one")
+	_, err = manager.IdentityDBByTMSId(token2.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	_, err = manager.WalletDBByTMSId(token2.TMSID{Network: "grapes"})
 	assert.NoError(t, err)

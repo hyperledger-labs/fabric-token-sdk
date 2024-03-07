@@ -112,8 +112,7 @@ func (d *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider)
 }
 
 // EnrollmentService returns enrollment IDs behind the owners of token
-type EnrollmentService struct {
-}
+type EnrollmentService struct{}
 
 // NewEnrollmentIDDeserializer returns an enrollmentService
 func NewEnrollmentIDDeserializer() *EnrollmentService {

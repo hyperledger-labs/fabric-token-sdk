@@ -11,12 +11,11 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/x509"
-	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/pkg/errors"
@@ -24,17 +23,18 @@ import (
 )
 
 const (
-	KeystoreFullFolder = "keystoreFull"
-	PrivateKeyFileName = "priv_sk"
-	KeystoreFolder     = "keystore"
+	KeystoreFullFolder        = "keystoreFull"
+	PrivateKeyFileName        = "priv_sk"
+	KeystoreFolder            = "keystore"
+	IdentityConfigurationType = "x509"
 )
 
 type LocalMembership struct {
 	config                 config2.Config
 	defaultNetworkIdentity view.Identity
-	signerService          common.SignerService
+	signerService          common.SigService
 	binderService          common.BinderService
-	deserializerManager    common.DeserializerManager
+	deserializerManager    deserializer.Manager
 	walletPathStorage      driver2.IdentityDB
 	mspID                  string
 
@@ -50,9 +50,9 @@ type LocalMembership struct {
 func NewLocalMembership(
 	config config2.Config,
 	defaultNetworkIdentity view.Identity,
-	signerService common.SignerService,
+	signerService common.SigService,
 	binderService common.BinderService,
-	deserializerManager common.DeserializerManager,
+	deserializerManager deserializer.Manager,
 	walletPathStorage driver2.IdentityDB,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,
@@ -84,8 +84,8 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	}
 
 	// load identity from KVS
-	if err := lm.loadFromKVS(); err != nil {
-		return errors.Wrapf(err, "failed to load identity from KVS")
+	if err := lm.loadFromStorage(); err != nil {
+		return errors.Wrapf(err, "failed to load identity from storage")
 	}
 
 	// if no default identity, use the first one
@@ -156,7 +156,11 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	if err := lm.walletPathStorage.AddConfiguration(driver2.IdentityConfiguration{ID: id, URL: path}); err != nil {
+	if err := lm.walletPathStorage.AddConfiguration(driver2.IdentityConfiguration{
+		ID:   id,
+		Type: IdentityConfigurationType,
+		URL:  path,
+	}); err != nil {
 		return err
 	}
 	return lm.registerIdentity(&config.Identity{
@@ -214,11 +218,11 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 	}
 
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
-	provider, err := x509.NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, &FabricSigner{SignerService: lm.signerService}, opts)
+	provider, err := NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
 	if err != nil {
 		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
 		// Try with "msp"
-		provider, err = x509.NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, &FabricSigner{SignerService: lm.signerService}, opts)
+		provider, err = NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
 		if err != nil {
 			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
 				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
@@ -317,8 +321,8 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 	return nil
 }
 
-func (lm *LocalMembership) loadFromKVS() error {
-	it, err := lm.walletPathStorage.IteratorConfigurations()
+func (lm *LocalMembership) loadFromStorage() error {
+	it, err := lm.walletPathStorage.IteratorConfigurations(IdentityConfigurationType)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
@@ -337,12 +341,4 @@ func (lm *LocalMembership) loadFromKVS() error {
 		}
 	}
 	return nil
-}
-
-type FabricSigner struct {
-	common.SignerService
-}
-
-func (f *FabricSigner) RegisterSigner(identity view.Identity, signer fdriver.Signer, verifier fdriver.Verifier) error {
-	return f.SignerService.RegisterSigner(identity, signer, verifier)
 }

@@ -10,15 +10,15 @@ import (
 	"runtime/debug"
 	"sync"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.driver.identity")
+var logger = flogging.MustGetLogger("token-sdk.services.identity")
 
 // Deserializer is an interface for deserializing identities
 type Deserializer interface {
@@ -34,13 +34,13 @@ type EnrollmentIDUnmarshaler interface {
 	GetRevocationHandler(auditInfo []byte) (string, error)
 }
 
-type SigService interface {
-	GetAuditInfo(identity view.Identity) ([]byte, error)
-	RegisterSigner(identity view.Identity, signer view2.Signer, verifier view2.Verifier) error
+type sigService interface {
 	IsMe(identity view.Identity) bool
-	GetSigner(identity view.Identity) (view2.Signer, error)
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
 	RegisterAuditInfo(identity view.Identity, info []byte) error
-	GetVerifier(identity view.Identity) (view2.Verifier, error)
+	GetAuditInfo(identity view.Identity) ([]byte, error)
+	GetSigner(identity view.Identity) (driver.Signer, error)
+	GetVerifier(identity view.Identity) (driver.Verifier, error)
 }
 
 type Binder interface {
@@ -49,25 +49,32 @@ type Binder interface {
 
 // Provider implements the driver.IdentityProvider interface
 type Provider struct {
-	SigService         SigService
+	SigService         sigService
 	Binder             Binder
 	DefaultFSCIdentity view.Identity
 
 	wallets                 Wallets
-	deserializers           []Deserializer
+	deserializerManager     deserializer.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
 }
 
 // NewProvider creates a new identity provider
-func NewProvider(sigService SigService, binder Binder, defaultFSCIdentity view.Identity, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, wallets Wallets) *Provider {
+func NewProvider(
+	sigService sigService,
+	binder Binder,
+	defaultFSCIdentity view.Identity,
+	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
+	wallets Wallets,
+	deserializerManager deserializer.Manager,
+) *Provider {
 	return &Provider{
 		SigService:              sigService,
 		Binder:                  binder,
 		DefaultFSCIdentity:      defaultFSCIdentity,
 		wallets:                 wallets,
-		deserializers:           []Deserializer{},
+		deserializerManager:     deserializerManager,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
 	}
@@ -270,18 +277,8 @@ func (p *Provider) WalletIDs(role driver.IdentityRole) ([]string, error) {
 	return wallet.IDs()
 }
 
-func (p *Provider) AddDeserializer(d Deserializer) {
-	p.deserializers = append(p.deserializers, d)
-}
-
 func (p *Provider) tryDeserialization(id view.Identity) (driver.Signer, error) {
-	for _, d := range p.deserializers {
-		signer, err := d.DeserializeSigner(id)
-		if err == nil {
-			return signer, nil
-		}
-	}
-	return nil, errors.Errorf("deserialization failed")
+	return p.deserializerManager.DeserializeSigner(id)
 }
 
 // Info wraps a driver.IdentityInfo to further register the audit info,

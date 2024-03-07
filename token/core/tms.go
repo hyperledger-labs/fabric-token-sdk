@@ -207,7 +207,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) (*driver.Ser
 	}
 
 	if len(ppRaw) == 0 {
-		logger.Errorf("cannot retrive public params for [%s]: [%s]", opts, debug.Stack())
+		logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, debug.Stack())
 		return nil, errors.Errorf("cannot retrive public params for [%s]", opts)
 	}
 
@@ -264,6 +264,7 @@ func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error)
 		if len(ppRaw) == 0 {
 			return nil, errors.Errorf("no public parames found in vault")
 		}
+		opts.PublicParams = ppRaw
 		return ppRaw, nil
 	}
 	return nil, errors.Errorf("no public params fetched available")

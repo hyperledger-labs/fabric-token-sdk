@@ -6,8 +6,6 @@ require (
 	github.com/IBM/idemix v0.0.2-0.20231107110441-534ea4193b8f
 	github.com/IBM/idemix/bccsp/types v0.0.0-20231107110234-4cf31dd43660
 	github.com/IBM/mathlib v0.0.3-0.20231011094432-44ee0eb539da
-	github.com/dgraph-io/badger/v3 v3.2103.2
-	github.com/dgraph-io/ristretto v0.1.0
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
 	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20231211140843-bcd3948aa9df
@@ -70,6 +68,8 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/davidlazar/go-crypto v0.0.0-20200604182044-b73af7476f6c // indirect
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.2.0 // indirect
+	github.com/dgraph-io/badger/v3 v3.2103.2 // indirect
+	github.com/dgraph-io/ristretto v0.1.0 // indirect
 	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/docker/docker v24.0.7+incompatible // indirect
 	github.com/docker/go-connections v0.4.0 // indirect

@@ -30,7 +30,7 @@ type WalletRegistry interface {
 }
 
 type WalletService struct {
-	SignerService        common.SignerService
+	SignerService        common.SigService
 	identityProvider     driver.IdentityProvider
 	TokenVault           TokenVault
 	PPM                  PublicParametersManager
@@ -43,7 +43,7 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	SignerService common.SignerService,
+	SignerService common.SigService,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	PPM PublicParametersManager,
@@ -211,19 +211,24 @@ func (s *WalletService) AuditorWalletByIdentity(identity view.Identity) (driver.
 }
 
 func (s *WalletService) auditorWallet(id interface{}) (driver.AuditorWallet, error) {
+	logger.Debugf("get auditor wallet for [%v]", id)
 	s.AuditorWalletsRegistry.Lock()
 	defer s.AuditorWalletsRegistry.Unlock()
+	logger.Debugf("get auditor wallet for [%v], lock acquired", id)
 
 	// check if there is already a wallet
 	w, idInfo, wID, err := s.AuditorWalletsRegistry.Lookup(id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup identity for auditor wallet [%v]", id)
 	}
+	logger.Debugf("lookup finished, wallet id is [%s]", wID)
 	if w != nil {
+		logger.Debugf("existing auditor wallet, return it [%s]", wID)
 		return w.(driver.AuditorWallet), nil
 	}
 
 	// Create the wallet
+	logger.Debugf("no wallet found, create it [%s]", wID)
 	idInfoIdentity, _, err := idInfo.Get()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s:%s]", wID, id)

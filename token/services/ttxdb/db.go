@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -221,7 +223,9 @@ func newDB(p driver.TokenTransactionDB) *DB {
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
 func (db *DB) AppendTransactionRecord(req *token.Request) error {
-	logger.Debugf("Appending new transaction record... [%d]", db.counter)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("Appending new transaction record... [%s][%d]", req.Anchor, db.counter)
+	}
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")

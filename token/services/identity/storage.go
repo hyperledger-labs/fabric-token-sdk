@@ -15,15 +15,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type KVS interface {
+type Keystore interface {
 	Put(id string, state interface{}) error
 	Get(id string, state interface{}) error
 }
 
 type StorageProvider interface {
 	OpenWalletDB(tmsID token.TMSID) (driver.WalletDB, error)
-	OpenIdentityDB(tmsID token.TMSID, id string) (driver.IdentityDB, error)
-	NewKeystore() (KVS, error)
+	OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB, error)
+	NewKeystore() (Keystore, error)
 }
 
 var (

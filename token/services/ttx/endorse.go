@@ -410,7 +410,7 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s]?", party.UniqueID())
 		}
-		isMe := c.tx.TokenService().SigService().IsMe(party)
+		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
 		if !isMe {
 			// check if there is a wallet that contains that identity
 			isMe = c.tx.TokenService().WalletManager().OwnerWalletByIdentity(party) != nil
@@ -466,7 +466,7 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 
 	// check the auditors
 	for _, party := range auditors {
-		isMe := c.tx.TokenService().SigService().IsMe(party)
+		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to auditor [%s], it is me [%v].", party.UniqueID(), isMe)
 		}
@@ -735,15 +735,11 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			return nil, errors.Wrap(err, "failed unmarshalling signature request")
 		}
 
-		tms := token.GetManagementService(context, token.WithTMS(s.tx.Network(), s.tx.Channel(), s.tx.Namespace()))
-		if tms == nil {
-			return nil, errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
-		}
-
-		if !tms.WalletManager().IsMe(signatureRequest.Signer) {
+		sigService := s.tx.TokenService().SigService()
+		if !sigService.IsMe(signatureRequest.Signer) {
 			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
-		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)
+		signer, err := sigService.GetSigner(signatureRequest.Signer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
 		}
@@ -778,8 +774,7 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Send the ack")
-		logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
