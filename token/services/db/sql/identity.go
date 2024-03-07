@@ -123,14 +123,22 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, info) VALUES ($1, $2, $3)", db.table.Signers)
 	h := view.Identity(id).String()
-	logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
-	_, err := db.db.Exec(query, h, id, info)
-	if err == nil {
-		db.singerInfoCacheMutex.Lock()
-		db.singerInfoCache.Add(h, true)
-		db.singerInfoCacheMutex.Unlock()
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	}
-	return err
+	_, err := db.db.Exec(query, h, id, info)
+	if err != nil {
+		if exists, err2 := db.SignerInfoExists(id); err2 == nil && exists {
+			logger.Debugf("signer info [%s] exists, no error to return", h)
+		} else {
+			return err
+		}
+	}
+
+	db.singerInfoCacheMutex.Lock()
+	db.singerInfoCache.Add(h, true)
+	db.singerInfoCacheMutex.Unlock()
+	return nil
 }
 
 func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
