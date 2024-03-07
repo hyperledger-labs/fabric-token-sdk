@@ -10,12 +10,20 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
+
+type cache interface {
+	Get(key string) (interface{}, bool)
+	Add(key string, value interface{})
+	Delete(key string)
+}
 
 type identityTables struct {
 	IdentityConfigurations string
@@ -26,16 +34,20 @@ type identityTables struct {
 type IdentityDB struct {
 	db    *sql.DB
 	table identityTables
+
+	singerInfoCacheMutex sync.RWMutex
+	singerInfoCache      cache
 }
 
-func newIdentityDB(db *sql.DB, tables identityTables) *IdentityDB {
+func newIdentityDB(db *sql.DB, tables identityTables, singerInfoCache cache) *IdentityDB {
 	return &IdentityDB{
-		db:    db,
-		table: tables,
+		db:              db,
+		table:           tables,
+		singerInfoCache: singerInfoCache,
 	}
 }
 
-func NewIdentityDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*IdentityDB, error) {
+func NewIdentityDB(db *sql.DB, tablePrefix, name string, createSchema bool, singerInfoCache cache) (*IdentityDB, error) {
 	tables, err := getTableNames(tablePrefix, name)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
@@ -45,7 +57,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*Id
 		IdentityConfigurations: tables.IdentityConfigurations,
 		AuditInfo:              tables.AuditInfo,
 		Signers:                tables.Signers,
-	})
+	}, singerInfoCache)
 	if createSchema {
 		if err = initSchema(db, identityDB.GetSchema()); err != nil {
 			return nil, err
@@ -110,15 +122,59 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 
 func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
 	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, info) VALUES ($1, $2, $3)", db.table.Signers)
-	logger.Debug(query)
-
 	h := view.Identity(id).String()
+	logger.Debugf("store signer info [%s]: [%s][%s]", query, h, hash.Hashable(info))
 	_, err := db.db.Exec(query, h, id, info)
+	if err == nil {
+		db.singerInfoCacheMutex.Lock()
+		db.singerInfoCache.Add(h, true)
+		db.singerInfoCacheMutex.Unlock()
+	}
 	return err
 }
 
 func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 	h := view.Identity(id).String()
+
+	// is in cache?
+	db.singerInfoCacheMutex.RLock()
+	v, ok := db.singerInfoCache.Get(h)
+	if ok {
+		db.singerInfoCacheMutex.RUnlock()
+		return v != nil && v.(bool), nil
+	}
+	db.singerInfoCacheMutex.RUnlock()
+
+	// get from store
+	db.singerInfoCacheMutex.Lock()
+	defer db.singerInfoCacheMutex.Unlock()
+
+	// is in cache, first?
+	v, ok = db.singerInfoCache.Get(h)
+	if ok {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("hit the cache, len state [%b]", v.(bool))
+		}
+		return v != nil && v.(bool), nil
+	}
+
+	// get from store and store in cache
+	exists, err := db.signerInfoExists(h)
+	if err != nil {
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting state [%s]", h)
+		}
+		db.singerInfoCache.Delete(h)
+		return false, err
+	}
+	db.singerInfoCache.Add(h, exists)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("signer info [%s] exists [%v]", h, exists)
+	}
+	return exists, nil
+}
+
+func (db *IdentityDB) signerInfoExists(h string) (bool, error) {
 	query := fmt.Sprintf("SELECT info FROM %s WHERE identity_hash = $1", db.table.Signers)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)

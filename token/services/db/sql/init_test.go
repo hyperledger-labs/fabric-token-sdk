@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	_ "github.com/lib/pq"
 	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
@@ -71,7 +72,7 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		IdentityConfigurations: tables.IdentityConfigurations,
 		AuditInfo:              tables.AuditInfo,
 		Signers:                tables.Signers,
-	})
+	}, secondcache.New(1000))
 	if createSchema {
 		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema(), Identity.GetSchema()); err != nil {
 			return err

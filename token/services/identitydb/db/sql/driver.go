@@ -8,6 +8,7 @@ package sql
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
@@ -33,7 +34,7 @@ func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (dri
 	if err != nil {
 		return nil, err
 	}
-	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix, sqldb.DatasourceName(tmsID), opts.CreateSchema)
+	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix, sqldb.DatasourceName(tmsID), opts.CreateSchema, secondcache.New(1000))
 }
 
 func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (driver.WalletDB, error) {

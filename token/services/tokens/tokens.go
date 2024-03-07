@@ -130,7 +130,9 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	// parse the inputs
 	for _, input := range is.Inputs() {
 		if input.Id == nil {
-			logger.Infof("transaction [%s] found an input that is not mine, skip it", tx.ID())
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("transaction [%s] found an input that is not mine, skip it", tx.ID())
+			}
 			continue
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {

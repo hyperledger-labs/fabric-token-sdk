@@ -60,10 +60,8 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 
 	// Send back an acknowledgement
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("send back ack")
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
-
-	logger.Debugf("signing ack response: %s", hash.Hashable(rawRequest))
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
@@ -148,7 +146,7 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 			return errors.Errorf("failed getting TMS for [%s:%s:%s]", s.tx.Network(), s.tx.Channel(), s.tx.Namespace())
 		}
 
-		if !tms.WalletManager().IsMe(signatureRequest.Signer) {
+		if !tms.SigService().IsMe(signatureRequest.Signer) {
 			return errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
 		signer, err := s.tx.TokenService().SigService().GetSigner(signatureRequest.Signer)

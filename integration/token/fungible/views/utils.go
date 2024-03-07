@@ -23,7 +23,7 @@ func AssertTokensInVault(vault *network.Vault, tx *ttx.Transaction, outputs *tok
 	qe := vault.QueryEngine()
 	for _, output := range outputs.Outputs() {
 		tokenID := output.ID(tx.ID())
-		if output.Owner.Equal(id) || tx.TokenService().WalletManager().IsMe(output.Owner) {
+		if output.Owner.Equal(id) || tx.TokenService().SigService().IsMe(output.Owner) {
 			// check it exists
 			_, toks, err := qe.GetTokens(tokenID)
 			assert.NoError(err, "failed to retrieve token [%s]", tokenID)

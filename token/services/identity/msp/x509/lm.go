@@ -217,11 +217,11 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 	}
 
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
-	provider, err := NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, &FabricSigner{SigService: lm.signerService}, opts)
+	provider, err := NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
 	if err != nil {
 		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
 		// Try with "msp"
-		provider, err = NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, &FabricSigner{SigService: lm.signerService}, opts)
+		provider, err = NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
 		if err != nil {
 			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
 				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
@@ -340,12 +340,4 @@ func (lm *LocalMembership) loadFromStorage() error {
 		}
 	}
 	return nil
-}
-
-type FabricSigner struct {
-	common.SigService
-}
-
-func (f *FabricSigner) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
-	return f.SigService.RegisterSigner(identity, signer, verifier)
 }

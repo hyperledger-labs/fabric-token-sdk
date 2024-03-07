@@ -61,6 +61,9 @@ func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, v
 	}
 
 	idHash := identity.UniqueID()
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("register signer and verifier [%s]:[%s][%s]", idHash, GetIdentifier(signer), GetIdentifier(verifier))
+	}
 	o.viewsSync.RLock()
 	s, ok := o.signers[idHash]
 	o.viewsSync.RUnlock()
@@ -85,10 +88,13 @@ func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, v
 	o.viewsSync.Unlock()
 
 	if verifier != nil {
-		return o.RegisterVerifier(identity, verifier)
+		if err := o.RegisterVerifier(identity, verifier); err != nil {
+			return err
+		}
 	}
+
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signer for [%s][%s] registered, no verifier passed", idHash, GetIdentifier(signer))
+		logger.Debugf("register signer and verifier [%s]:[%s][%s], done", idHash, GetIdentifier(signer), GetIdentifier(verifier))
 	}
 	return nil
 }
@@ -117,7 +123,6 @@ func (o *Service) RegisterVerifier(identity view.Identity, verifier driver.Verif
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("register verifier to [%s]:[%s]", idHash, GetIdentifier(verifier))
 	}
-
 	return nil
 }
 

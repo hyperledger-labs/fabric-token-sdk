@@ -66,6 +66,7 @@ func newProvider(mspConfigPath, keyStorePath, mspID string, signerService Signer
 		return nil, err
 	}
 	if signerService != nil {
+		logger.Debugf("register signer [%s][%s]", mspID, view.Identity(idRaw))
 		err = signerService.RegisterSigner(idRaw, sID, sID)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")

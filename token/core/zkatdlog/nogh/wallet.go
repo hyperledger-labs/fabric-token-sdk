@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"runtime/debug"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -216,7 +214,7 @@ func (s *WalletService) auditorWallet(id interface{}) (driver.AuditorWallet, err
 	logger.Debugf("get auditor wallet for [%v]", id)
 	s.AuditorWalletsRegistry.Lock()
 	defer s.AuditorWalletsRegistry.Unlock()
-	logger.Debugf("get auditor wallet for [%v], lock acquired [%s]", id, debug.Stack())
+	logger.Debugf("get auditor wallet for [%v], lock acquired", id)
 
 	// check if there is already a wallet
 	w, idInfo, wID, err := s.AuditorWalletsRegistry.Lookup(id)

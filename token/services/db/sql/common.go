@@ -26,6 +26,5 @@ func QueryUnique[T any](db *sql.DB, query string, args ...any) (T, error) {
 	if err = row.Scan(&result); err != nil && errors.Is(err, sql.ErrNoRows) {
 		return result, nil
 	}
-	logger.Infof("Got result: [%v]", result)
 	return result, err
 }

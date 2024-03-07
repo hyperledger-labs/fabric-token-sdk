@@ -12,6 +12,8 @@ import (
 	"os"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -89,7 +91,7 @@ func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (aud
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewIdentityDB(sqlDB, "id", name, opts.CreateSchema)
+	return sql2.NewIdentityDB(sqlDB, "id", name, opts.CreateSchema, secondcache.New(1000))
 }
 
 func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, string, error) {

@@ -108,11 +108,11 @@ var _ = Describe("EndToEnd", func() {
 			network.Start()
 		})
 
-		It("succeeded", func() {
+		It("T2.1 succeeded", func() {
 			fungible.TestAll(network, "issuer", nil, true)
 		})
 
-		It("Update public params", func() {
+		It("T2.2 Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
 			fungible.TestPublicParamsUpdate(network, "newIssuer", PrepareUpdatedPublicParams(network, "newIssuer", tms), tms, true)
 		})

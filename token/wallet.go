@@ -36,11 +36,6 @@ type WalletManager struct {
 	managementService *ManagementService
 }
 
-func (wm *WalletManager) IsMe(id view.Identity) bool {
-	s, err := wm.managementService.tms.IdentityProvider().GetSigner(id)
-	return err == nil && s != nil
-}
-
 // RegisterOwnerWallet registers a new owner wallet with the passed id
 func (wm *WalletManager) RegisterOwnerWallet(id string, path string) error {
 	return wm.walletService.RegisterOwnerWallet(id, path)
