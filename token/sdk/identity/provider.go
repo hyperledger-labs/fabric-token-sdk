@@ -30,7 +30,7 @@ func (s *KVSStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityD
 	return kvs.NewIdentityDB(s.kvs, tmsID), nil
 }
 
-func (s *KVSStorageProvider) NewKeystore() (identity.KVS, error) {
+func (s *KVSStorageProvider) NewKeystore() (identity.Keystore, error) {
 	return s.kvs, nil
 }
 
@@ -51,6 +51,6 @@ func (s *DBStorageProvider) OpenIdentityDB(tmsID token.TMSID) (driver.IdentityDB
 	return s.manager.IdentityDBByTMSId(tmsID)
 }
 
-func (s *DBStorageProvider) NewKeystore() (identity.KVS, error) {
+func (s *DBStorageProvider) NewKeystore() (identity.Keystore, error) {
 	return s.kvs, nil
 }

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/IBM/idemix/bccsp/types"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -38,15 +39,17 @@ func TestProvider(t *testing.T) {
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
 	assert.NoError(t, err)
 
-	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	p, err = idemix.NewProviderWithSigType(config, registry, bccsp.Standard)
+	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
-	p, err = idemix.NewProviderWithSigType(config, registry, bccsp.EidNymRhNym)
+	p, err = idemix.NewProvider(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 }
@@ -63,7 +66,9 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
 	assert.NoError(t, err)
 
-	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -89,7 +94,9 @@ func TestIdentityWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	p, err = idemix.NewProviderWithAnyPolicy(config, registry)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -128,7 +135,9 @@ func TestIdentityStandard(t *testing.T) {
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
 	assert.NoError(t, err)
 
-	p, err := idemix.NewProviderWithSigType(config, registry, bccsp.Standard)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -146,7 +155,9 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	p, err = idemix.NewProviderWithStandardPolicy(config, registry)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -164,7 +175,9 @@ func TestIdentityStandard(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	p, err = idemix.NewProviderWithAnyPolicy(config, registry)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -194,13 +207,17 @@ func TestAuditWithEidRhNymPolicy(t *testing.T) {
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/idemix", nil, "idemix", "idemix")
 	assert.NoError(t, err)
-	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
 	config, err = msp2.GetLocalMspConfigWithType("./testdata/idemix2", nil, "idemix", "idemix")
 	assert.NoError(t, err)
-	p2, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p2, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -236,13 +253,15 @@ func TestProvider_DeserializeSigner(t *testing.T) {
 
 	config, err := msp2.GetLocalMspConfigWithType("./testdata/sameissuer/idemix", nil, "idemix", "idemix")
 	assert.NoError(t, err)
-	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
 	config, err = msp2.GetLocalMspConfigWithType("./testdata/sameissuer/idemix2", nil, "idemix", "idemix")
 	assert.NoError(t, err)
-	p2, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	p2, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p2)
 
@@ -293,7 +312,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	config, err := idemix.GetLocalMspConfigWithType("./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
-	p, err := idemix.NewProviderWithSigTypeAncCurve(config, registry, bccsp.Standard, math.BN254)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.BN254, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -311,7 +332,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	p, err = idemix.NewProviderWithSigTypeAncCurve(config, registry, bccsp.Standard, math.BN254)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.BN254, false)
+	assert.NoError(t, err)
+	p, err = idemix.NewProvider(config, sigService, bccsp.Standard, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -329,7 +352,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	p, err = idemix.NewProviderWithSigTypeAncCurve(config, registry, idemix.Any, math.BN254)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.BN254, false)
+	assert.NoError(t, err)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -360,7 +385,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	config, err := idemix.GetLocalMspConfigWithType("./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
-	p, err := idemix.NewProviderWithSigTypeAncCurve(config, registry, bccsp.EidNymRhNym, math.BN254)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.BN254, false)
+	assert.NoError(t, err)
+	p, err := idemix.NewProvider(config, sigService, bccsp.EidNymRhNym, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 
@@ -388,7 +415,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, verifier.Verify([]byte("hello world!!!"), sigma))
 
-	p, err = idemix.NewProviderWithAnyPolicyAndCurve(config, registry, math.BN254)
+	cryptoProvider, err = idemix.NewKSVBCCSP(kvss, math.BN254, false)
+	assert.NoError(t, err)
+	p, err = idemix.NewProvider(config, sigService, idemix.Any, cryptoProvider)
 	assert.NoError(t, err)
 	assert.NotNil(t, p)
 

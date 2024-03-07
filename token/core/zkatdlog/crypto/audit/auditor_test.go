@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/IBM/idemix/bccsp/types"
+
 	math "github.com/IBM/mathlib"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
@@ -244,7 +246,9 @@ func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo) {
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	p, err := idemix.NewProviderWithEidRhNymPolicy(config, registry)
+	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.FP256BN_AMCL, false)
+	Expect(err).NotTo(HaveOccurred())
+	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(p).NotTo(BeNil())
 
