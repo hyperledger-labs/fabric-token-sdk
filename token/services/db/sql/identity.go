@@ -225,6 +225,8 @@ func (db *IdentityDB) GetSchema() string {
             type TEXT NOT NULL,  
 			url TEXT NOT NULL
 		);
+		CREATE INDEX IF NOT EXISTS idx_ic_type_%s ON %s ( type );
+
 		-- AuditInfo
 		CREATE TABLE IF NOT EXISTS %s (
             identity_hash TEXT NOT NULL PRIMARY KEY,
@@ -242,6 +244,7 @@ func (db *IdentityDB) GetSchema() string {
 		CREATE INDEX IF NOT EXISTS idx_signers_%s ON %s ( identity_hash );
 		`,
 		db.table.IdentityConfigurations,
+		db.table.IdentityConfigurations, db.table.IdentityConfigurations,
 		db.table.AuditInfo,
 		db.table.AuditInfo, db.table.AuditInfo,
 		db.table.Signers,

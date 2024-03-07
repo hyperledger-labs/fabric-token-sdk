@@ -33,7 +33,8 @@ import (
 )
 
 const (
-	SignerConfigFull = "SignerConfigFull"
+	SignerConfigFull          = "SignerConfigFull"
+	IdentityConfigurationType = "idemix"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
@@ -158,7 +159,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 
 	if err := lm.storage.AddConfiguration(driver3.IdentityConfiguration{
 		ID:   id,
-		Type: "idemix",
+		Type: IdentityConfigurationType,
 		URL:  path,
 	}); err != nil {
 		return err
@@ -344,7 +345,7 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 }
 
 func (lm *LocalMembership) loadFromStorage() error {
-	it, err := lm.storage.IteratorConfigurations("idemix")
+	it, err := lm.storage.IteratorConfigurations(IdentityConfigurationType)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

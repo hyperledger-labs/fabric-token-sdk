@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	KeystoreFullFolder = "keystoreFull"
-	PrivateKeyFileName = "priv_sk"
-	KeystoreFolder     = "keystore"
+	KeystoreFullFolder        = "keystoreFull"
+	PrivateKeyFileName        = "priv_sk"
+	KeystoreFolder            = "keystore"
+	IdentityConfigurationType = "x509"
 )
 
 type LocalMembership struct {
@@ -157,7 +158,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	if err := lm.walletPathStorage.AddConfiguration(driver2.IdentityConfiguration{
 		ID:   id,
-		Type: "x509",
+		Type: IdentityConfigurationType,
 		URL:  path,
 	}); err != nil {
 		return err
@@ -321,7 +322,7 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) loadFromStorage() error {
-	it, err := lm.walletPathStorage.IteratorConfigurations("x509")
+	it, err := lm.walletPathStorage.IteratorConfigurations(IdentityConfigurationType)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
