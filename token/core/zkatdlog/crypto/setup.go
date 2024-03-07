@@ -220,8 +220,8 @@ func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
 	pp.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
 
 	for i := 0; i < bitLength; i++ {
-		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte(strconv.Itoa(2 * (i + 1))))
-		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte(strconv.Itoa(2*(i+1) + 1)))
+		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1))))
+		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1)+1)))
 	}
 
 	return nil
