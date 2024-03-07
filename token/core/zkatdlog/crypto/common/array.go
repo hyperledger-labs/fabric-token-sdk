@@ -18,14 +18,13 @@ import (
 const Separator = "||"
 
 // G1Array is an array of G1 elements
-type G1Array struct {
-	Elements []*math.G1
-}
+type G1Array []*math.G1
 
 // Bytes serialize an array of G1 elements
 func (a *G1Array) Bytes() ([]byte, error) {
+
 	var raw []byte
-	for _, e := range a.Elements {
+	for _, e := range []*math.G1(*a) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
@@ -39,9 +38,10 @@ func (a *G1Array) Bytes() ([]byte, error) {
 
 // GetG1Array takes a series of G1 elements and returns the corresponding array
 func GetG1Array(elements ...[]*math.G1) *G1Array {
-	array := &G1Array{}
+	var array []*math.G1
 	for _, e := range elements {
-		array.Elements = append(array.Elements, e...)
+		array = append(array, e...)
 	}
-	return array
+	a := G1Array(array)
+	return &a
 }

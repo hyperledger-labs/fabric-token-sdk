@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package o2omp
 
 import (
@@ -100,9 +101,6 @@ func (p *Proof) Deserialize(raw []byte) error {
 
 // Prove produces a one-out-of-many proof
 func (p *Prover) Prove() ([]byte, error) {
-	if len(p.PedersenParams) != 2 {
-		return nil, errors.Errorf("length of Pedersen parameters != 2")
-	}
 	if len(p.Commitments) != 1<<p.BitLength {
 		return nil, errors.Errorf("number of commitments is not a power of 2, [%d][%d]", len(p.Commitments), 1<<p.BitLength)
 	}
@@ -131,7 +129,7 @@ func (p *Prover) Prove() ([]byte, error) {
 		return nil, err
 	}
 	// compute challenge
-	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, p.Commitments, p.PedersenParams)
+	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, p.Commitments)
 	bytes, err := publicInput.Bytes()
 	if err != nil {
 		return nil, err
@@ -147,13 +145,6 @@ func (p *Prover) Prove() ([]byte, error) {
 
 // Verify checks the validity of a serialized one-out-of-many proof
 func (v *Verifier) Verify(p []byte) error {
-	if v.Curve == nil || v.Curve.GroupOrder == nil {
-		return errors.New("cannot verify one-out-of-many proof: please initialize curve")
-	}
-	if len(v.PedersenParams) != 2 {
-		return errors.Errorf("cannot verify one-out-of-many proof: length of Pedersen parameters != 2")
-	}
-
 	if len(v.Commitments) != 1<<v.BitLength {
 		return errors.Errorf("cannot verify one-out-of-many proof: the number of commitments is not 2^bitlength [%v != %v]", len(v.Commitments), 1<<v.BitLength)
 	}
@@ -172,7 +163,7 @@ func (v *Verifier) Verify(p []byte) error {
 	if len(proof.Values.L) != v.BitLength || len(proof.Values.A) != v.BitLength || len(proof.Values.B) != v.BitLength {
 		return errors.Errorf("the size of the proofs in one out of many proof is not a multiple of %d", v.BitLength)
 	}
-	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, v.Commitments, v.PedersenParams)
+	publicInput := common.GetG1Array(proof.Commitments.L, proof.Commitments.A, proof.Commitments.B, proof.Commitments.D, v.Commitments)
 	bytes, err := publicInput.Bytes() // Bytes() returns an error if one of the elements in publicInput is nil
 	if err != nil {
 		return errors.Wrap(err, "invalid one-out-of-many proof")

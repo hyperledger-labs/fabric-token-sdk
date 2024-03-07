@@ -88,7 +88,7 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't prove type during the issue")
 		}
-		array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment}, p.PedParams)
+		array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment})
 		var toHash []byte
 		toHash, err = array.Bytes()
 		if err != nil {
@@ -161,7 +161,7 @@ func (v *SameTypeVerifier) Verify(proof *SameType) error {
 		com.Sub(proof.CommitmentToType.Mul(proof.Challenge))
 
 		// recompute challenge
-		raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}, v.PedParams).Bytes()
+		raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}).Bytes()
 		if err != nil {
 			return errors.Wrapf(err, "failed to verify same type proof")
 		}

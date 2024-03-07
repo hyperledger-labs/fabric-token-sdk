@@ -75,6 +75,7 @@ var _ = Describe("Transfer", func() {
 			It("fails during proof generation", func() {
 				proof, err := prover.Prove()
 				Expect(proof).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				err = verifier.Verify(proof)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid range proof at index 0: invalid range proof"))
