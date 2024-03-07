@@ -209,7 +209,7 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	xSquare := x.PowMod(v.Curve.NewZrFromInt(2))
 
 	// compute y and z
-	array = common.GetG1Array([]*math.G1{rp.C, rp.D})
+	array = common.GetG1Array([]*math.G1{rp.C, rp.D, v.Commitment})
 	bytesToHash, err = array.Bytes()
 	if err != nil {
 		return err
@@ -223,17 +223,23 @@ func (v *rangeVerifier) Verify(rp *RangeProof) error {
 	yPow := make([]*math.Zr, len(v.RightGenerators))
 	ipy := v.Curve.NewZrFromInt(0)
 	ip2 := v.Curve.NewZrFromInt(0)
+	// 2^i
+	var power2 *math.Zr
 	for i := 0; i < len(yPow); i++ {
 		// y^i
-		yPow[i] = y.PowMod(v.Curve.NewZrFromInt(int64(i)))
-		// 2^i
-		power2 := v.Curve.NewZrFromInt(2).PowMod(v.Curve.NewZrFromInt(int64(i)))
+		if i == 0 {
+			yPow[0] = v.Curve.NewZrFromInt(1)
+			power2 = v.Curve.NewZrFromInt(1)
+		} else {
+			yPow[i] = v.Curve.ModMul(y, yPow[i-1], v.Curve.GroupOrder)
+			power2 = v.Curve.ModMul(v.Curve.NewZrFromInt(2), power2, v.Curve.GroupOrder)
+		}
 		// ipy = \sum y^i
 		ipy = v.Curve.ModAdd(ipy, yPow[i], v.Curve.GroupOrder)
 		// ip2 = sum 2^i
 		ip2 = v.Curve.ModAdd(ip2, power2, v.Curve.GroupOrder)
 	}
-	// polEval = (z -z^)\sum y^i + z^3\sum 2^i
+	// polEval = (z -z^)\sum y^i - z^3\sum 2^i
 	polEval := v.Curve.ModSub(z, zSquare, v.Curve.GroupOrder)
 	polEval = v.Curve.ModMul(polEval, ipy, v.Curve.GroupOrder)
 	zCube = v.Curve.ModMul(zCube, ip2, v.Curve.GroupOrder)
@@ -296,7 +302,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	// D is a hiding commitment thanks to eta
 	D.Add(p.P.Mul(eta))
 
-	array := common.GetG1Array([]*math.G1{C, D})
+	array := common.GetG1Array([]*math.G1{C, D, p.Commitment})
 	// compute challenges y and z
 	bytesToHash, err := array.Bytes()
 	if err != nil {
@@ -313,14 +319,18 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	zPrime := make([]*math.Zr, len(left))
 	// z^2
 	zSquare := z.PowMod(p.Curve.NewZrFromInt(2))
-
+	var y2i *math.Zr
 	for i := 0; i < len(left); i++ {
 		// compute L_i - z
 		leftPrime[i] = p.Curve.ModSub(left[i], z, p.Curve.GroupOrder)
 		// compute R_i + z
 		rightPrime[i] = p.Curve.ModAdd(right[i], z, p.Curve.GroupOrder)
 		// compute y^i
-		y2i := y.PowMod(p.Curve.NewZrFromInt(int64(i)))
+		if i == 0 {
+			y2i = p.Curve.NewZrFromInt(1)
+		} else {
+			y2i = p.Curve.ModMul(y, y2i, p.Curve.GroupOrder)
+		}
 		// compute (R_i+z)y^i
 		rightPrime[i] = p.Curve.ModMul(rightPrime[i], y2i, p.Curve.GroupOrder)
 		// compute V_iy^i
@@ -358,7 +368,7 @@ func (p *rangeProver) preprocess() ([]*math.Zr, []*math.Zr, *math.Zr, *RangeProo
 	// compute vectors left and right against which an IPA will be produced
 	// if p.Value is within the authorized range, then L_iR_i =0 and L_i-R_i-1 = 0
 	// the inner product <left, right> = p.Value*z^2+t1x+t2x^2+f(z, y)
-	// f(z, y) = \sum (z-z^2)*y^i + z^3*2^i
+	// f(z, y) = \sum (z-z^2)*y^i - z^3*2^i
 	for i := 0; i < len(left); i++ {
 		// compute (L_i-z) + xU_i
 		left[i] = p.Curve.ModAdd(leftPrime[i], p.Curve.ModMul(x, randomLeft[i], p.Curve.GroupOrder), p.Curve.GroupOrder)
