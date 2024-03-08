@@ -4,8 +4,7 @@
 [![Go](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/tests.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/go.yml)
 [![CodeQL](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/codeql-analysis.yml/badge.svg)](https://github.com/hyperledger-labs/fabric-token-sdk/actions/workflows/codeql-analysis.yml)
 
-The `Fabric Token SDK` is a set of API and services that let developers create 
-token-based distributed application on Hyperledger Fabric.
+The `Fabric Token SDK` provides a collection of APIs and services that streamline development for token-based distributed applications.
 
 # Disclaimer
 
@@ -15,7 +14,8 @@ The project will be subject to rapid changes to complete the open-sourcing proce
 # Useful Links
 
 - [`Documentation`](./docs/design.md): Discover the design principles of the Fabric Token SDK.
-- [`Samples`](./samples/README.md): A collection of sample applications that demonstrate the use of the Fabric Token SDK.
+- [`Fabric Samples`](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
+  quickest way to get a full network running with a REST API to issue, transfer and redeem tokens right away.
 - `Feedback`: Your help is the key to the success of the Fabric Token SDK. 
   - Submit your issues [`here`][`fabric-token-sdk` Issues]. 
   - Found a bug? Need help to fix an issue? You have a great idea for a new feature? Talk to us! You can reach us on
@@ -23,9 +23,7 @@ The project will be subject to rapid changes to complete the open-sourcing proce
   
 - [`Fabric Smart Client`](https://github.com/hyperledger-labs/fabric-smart-client): The Token SDK leverages the 
   `Fabric Smart Client` for transaction orchestration, storing tokens and wallets, and more. Check it out.
-- [Fabric Samples](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk) Token SDK sample application is the
-  quickest way to get a full network running with a REST API to issue, transfer and redeem tokens right away.
-
+- 
 # Getting started
 
 Clone the code and make sure it is on your `$GOPATH`.
@@ -81,33 +79,41 @@ If you want to provide your own versions of the fabric binaries then just set `F
   In this comprehensive guide, we'll walk you through two essential aspects of the Fabric Token-SDK. Firstly, you'll learn how to develop a straightforward token application to manage a currency. You'll grasp the fundamentals of creating tokens, and implementing transaction logic using the Fabric Token-SDK. Once you've mastered the application development, we'll then show you how to effortlessly deploy it in your existing Fabric network, ensuring a seamless integration with your blockchain infrastructure. By the end of this tutorial, you'll be equipped with the skills to expand your blockchain capabilities and unleash the true potential of decentralized currency management. (Refers to [Fabric Samples](https://github.com/hyperledger/fabric-samples/tree/main/token-sdk))
 
 
-<!-- markdown-link-check-disable -->
 # Motivation
 
-[Hyperledger Fabric]('https://wiki.hyperledger.org/display/fabric') is a permissioned, modular, and extensible open-source DLT platform. Fabric architecture follows a novel `execute-order-validate` paradigm that supports distributed execution of untrusted code in an untrusted environment. Indeed, Fabric-based distributed applications can be written in any general-purpose programming language.  
-Fabric does not depend on a native cryptocurrency as it happens for existing blockchain platforms that require “smart-contracts” to be written in domain-specific languages or rely on a cryptocurrency.
+**Hyperledger Fabric: Blockchain Built for Business**
 
-Blockchain technologies are accelerating the shifting towards a decentralised economy. Cryptocurrencies are reshaping the financial landscape to the extent that even central banks are now testing the technology to propose what is known as the `central bank digital currency`. But it is more than this. Real-world assets are being tokenised as fungible or non-fungible assets represented by tokens on a blockchain. Thus enabling business opportunities to extract more value.
+Hyperledger Fabric ([https://hyperledger-fabric.readthedocs.io/](https://hyperledger-fabric.readthedocs.io/)) is an open-source platform designed for permissioned blockchain networks. It offers a modular and extensible architecture, allowing for customization and future growth.  Unlike traditional blockchains, Fabric applications can be written in any general-purpose programming language, making them more accessible to developers.
 
-Developing token-based applications for Hyperledger Fabric is not easy. Fabric does not provide an out-of-the-box SDK that let developers create tokens that represents any kind of asset. Developers are left on their own and this exposes them to useless duplication of code and security vulnerabilities.
+**Beyond Cryptocurrencies: Tokenizing the World**
 
-What would happen if the developers could use a `Fabric Token SDK` that let:
-- Create tokens that represents any kind of asset (baked by a real-world asset or virtual);
-- Choose the privacy level that best fits the use-case without changing the application logic;
-- Orchestrate token transaction in a peer-to-peer fashion;
-- Perform atomic swaps;
-- Audit transactions before they get committed;
-- Interoperate with token systems in other blockchain networks;
-- Add a token layer to existing Fabric distributed application?
+While blockchain is often associated with cryptocurrencies, its potential extends far beyond. Fabric allows for the creation of tokens that represent real-world assets, both fungible (like loyalty points) and non-fungible (like unique digital artwork). This opens doors for new business models and unlocks additional value from existing assets.
 
-Developing Enterprise Token-based distributed applications would become simpler and more secure.
-<!-- markdown-link-check-disable -->
+**The Challenge: Building Tokenized Applications**
+
+Developing applications that leverage tokens on Hyperledger Fabric can be complex. Fabric lacked a built-in SDK for creating and managing tokens, forcing developers to build solutions from scratch.  This not only led to wasted effort with duplicated code, but also exposed applications to potential security vulnerabilities.
+
+**Introducing the Fabric Token SDK: Streamlining Tokenized Development (and Beyond)**
+
+The Fabric Token SDK has evolved beyond its initial focus on Hyperledger Fabric. It now empowers developers with the following capabilities across various platforms, including permissioned blockchains like Fabric and even centralized systems like Orion:
+
+* **Tokenization Made Easy:** Create tokens representing any type of asset, be it physical or digital.
+* **Privacy by Design:** Select the appropriate privacy level for your specific use case, without modifying your application logic.
+* **Peer-to-Peer Transactions:** Orchestrate token transfers directly between users, streamlining the process.
+* **Atomic Swaps:** Facilitate secure exchanges of different tokens without relying on intermediaries.
+* **Transaction Auditing:** Review transactions before they are finalized, ensuring accuracy and compliance.
+* **Interoperability:** Connect with token systems on other blockchain networks, fostering broader ecosystems.
+* **Seamless Integration:** Add a token layer to existing applications, regardless of platform, with minimal effort.
+
+With a robust Fabric Token SDK, developing secure and efficient enterprise-grade tokenized applications becomes a reality, offering flexibility for developers to choose the platform that best suits their needs.
 
 # Testing Philosophy
 
 [Write tests. Not too many. Mostly Integration](https://kentcdodds.com/blog/write-tests)
 
 We also believe that when developing new functions running tests is preferable than running the application to verify the code is working as expected.
+
+For more information about our integration tests, look [`here`](./docs/itests.md).
 
 # Versioning
 

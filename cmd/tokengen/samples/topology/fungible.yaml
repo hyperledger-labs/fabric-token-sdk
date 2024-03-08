@@ -126,7 +126,7 @@ topologies:
         github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
           original: sdk
           alias: sdk1
-        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views:
           original: views
           alias: views
         github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
@@ -134,7 +134,7 @@ topologies:
           alias: sdk
       Imports:
       - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
-      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views
       - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
       Factories:
       - id: issue
@@ -168,7 +168,7 @@ topologies:
         github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
           original: sdk
           alias: sdk1
-        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views:
           original: views
           alias: views
         github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
@@ -176,7 +176,7 @@ topologies:
           alias: sdk
       Imports:
       - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
-      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views
       - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
       Factories:
       - id: register
@@ -203,7 +203,7 @@ topologies:
         github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
           original: sdk
           alias: sdk1
-        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views:
           original: views
           alias: views
         github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
@@ -211,7 +211,7 @@ topologies:
           alias: sdk
       Imports:
       - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
-      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views
       - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
       Factories:
       - id: transfer
@@ -253,7 +253,7 @@ topologies:
         github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
           original: sdk
           alias: sdk1
-        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views:
           original: views
           alias: views
         github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
@@ -261,7 +261,7 @@ topologies:
           alias: sdk
       Imports:
       - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
-      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views
       - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
       Factories:
       - id: transfer
@@ -305,7 +305,7 @@ topologies:
         github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk:
           original: sdk
           alias: sdk1
-        github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views:
+        github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views:
           original: views
           alias: views
         github.com/hyperledger-labs/fabric-token-sdk/token/sdk:
@@ -313,7 +313,7 @@ topologies:
           alias: sdk
       Imports:
       - github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk
-      - github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views
+      - github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views
       - github.com/hyperledger-labs/fabric-token-sdk/token/sdk
       Factories:
       - id: transfer

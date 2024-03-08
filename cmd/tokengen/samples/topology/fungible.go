@@ -14,7 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/artifactgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/samples/fungible/views"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	tokenSDK "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 

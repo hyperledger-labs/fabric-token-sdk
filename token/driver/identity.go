@@ -44,6 +44,8 @@ type IdentityProvider interface {
 	// RegisterAuditInfo binds the audit information to the passed identity
 	RegisterAuditInfo(id view.Identity, auditInfo []byte) error
 
+	WalletIDs(role IdentityRole) ([]string, error)
+
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 
