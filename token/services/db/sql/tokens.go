@@ -809,8 +809,7 @@ func (db *TokenDB) GetSchema() string {
 		-- Public Parameters
 		CREATE TABLE IF NOT EXISTS %s (
 			raw BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			PRIMARY KEY (raw)
+			stored_at TIMESTAMP NOT NULL PRIMARY KEY
 		);
 
 		-- Certifications

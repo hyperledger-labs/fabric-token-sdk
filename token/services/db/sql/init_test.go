@@ -29,6 +29,7 @@ import (
 var Transactions *TransactionDB
 var Tokens *TokenDB
 var Identity *IdentityDB
+var Wallet *WalletDB
 
 func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
 	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
@@ -73,8 +74,13 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		AuditInfo:              tables.AuditInfo,
 		Signers:                tables.Signers,
 	}, secondcache.New(1000))
+	Wallet, err = NewWalletDB(db, tablePrefix, "test", true)
+	if err != nil {
+		return err
+	}
+
 	if createSchema {
-		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema(), Identity.GetSchema()); err != nil {
+		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema(), Identity.GetSchema(), Wallet.GetSchema()); err != nil {
 			return err
 		}
 	}
