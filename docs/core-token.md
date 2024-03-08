@@ -19,8 +19,17 @@ token:
       channel: testchannel # the name of the network's channel this TMS refers to, if applicable
       namespace: tns # the name of the channel's namespace this TMS refers to, if applicable
 
-      # sections dedicated to the database configuration.
-      # This database is used to keep track of transactions, tokens, and audit records where it applies.  
+      # sections dedicated to the definition of the storage.
+      # The Token-SDK uses multiple databases to keep track of transactions, tokens, identities, and audit records where it applies.  
+      # These are the available databases:
+      # ttxdb: store records of transactions 
+      # tokendb: store information about the available tokens
+      # auditdb: store audit records about the audited transactions
+      # identitydb: store information about wallets and identities
+      # The databases can be instantiated in isolation, a different backend for each db, or with a shared backend, depending on the driver used.
+      # In the following example, we have all databases using the same backed but tokendb.
+
+      # shared db configuration. The `unity` driver is used as provider.  
       db:
         persistence:
           # configuration for the unity db driver. It uses sql as backend
@@ -30,6 +39,15 @@ token:
             driver: sqlite
             maxOpenConns: 10
             dataSource: /some/path/unitydb
+      tokendb:
+        persistence:
+          type: sql
+          opts:
+            createSchema: true 
+            driver: sqlite    
+            maxOpenConns: 10
+            dataSource: /some/path/tokendb
+
       # sections dedicated to the definition of the wallets
       wallets:
         # Default cache size reference that can be used by any wallet that support caching
