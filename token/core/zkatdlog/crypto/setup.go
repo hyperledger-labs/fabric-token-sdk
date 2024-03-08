@@ -10,10 +10,10 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"math"
+	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/pssign"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -24,35 +24,46 @@ const (
 )
 
 type RangeProofParams struct {
-	SignPK       []*mathlib.G2
-	SignedValues []*pssign.Signature
-	Q            *mathlib.G2
-	Exponent     uint
+	LeftGenerators  []*mathlib.G1
+	RightGenerators []*mathlib.G1
+	P               *mathlib.G1
+	Q               *mathlib.G1
+	BitLength       int
+	NumberOfRounds  int
 }
 
 func (rpp *RangeProofParams) Validate() error {
-	if len(rpp.SignPK) != 3 {
-		return errors.Errorf("invalid range proof parameters: signature public key should be 3, instead it is %d", len(rpp.SignPK))
+	if rpp.BitLength <= 0 {
+		return errors.New("invalid range proof parameters: bit length is zero")
 	}
-	if len(rpp.SignedValues) < 2 {
-		return errors.New("invalid range proof parameters: signed values should be > 2")
+	if rpp.NumberOfRounds <= 0 {
+		return errors.New("invalid range proof parameters: number of rounds is zero")
+	}
+	if rpp.BitLength != int(math.Pow(2, float64(rpp.NumberOfRounds))) {
+		return errors.Errorf("invalid range proof parameters: bit length should be %d\n", int(math.Pow(2, float64(rpp.NumberOfRounds))))
+	}
+	if len(rpp.LeftGenerators) != len(rpp.RightGenerators) {
+		return errors.Errorf("invalid range proof parameters: the size of the left generators does not match the size of the right generators [%d vs, %d]", len(rpp.LeftGenerators), len(rpp.RightGenerators))
+	}
+	if len(rpp.LeftGenerators) != rpp.BitLength {
+		return errors.Errorf("invalid range proof parameters: the size of the generators does not match the provided bit length [%d vs %d]", len(rpp.LeftGenerators), rpp.BitLength)
 	}
 	if rpp.Q == nil {
 		return errors.New("invalid range proof parameters: generator Q is nil")
 	}
-	if rpp.Exponent == 0 {
-		return errors.New("invalid range proof parameters: exponent is 0")
+	if rpp.P == nil {
+		return errors.New("invalid range proof parameters: generator P is nil")
 	}
-	for i := 0; i < len(rpp.SignedValues); i++ {
-		if rpp.SignedValues[i] == nil {
-			return errors.Errorf("invalid range proof parameters: signed value at index %d is nil", i)
+
+	for i := 0; i < len(rpp.LeftGenerators); i++ {
+		if rpp.LeftGenerators[i] == nil {
+			return errors.Errorf("invalid range proof parameters: left generator at index %d is nil", i)
+		}
+		if rpp.RightGenerators[i] == nil {
+			return errors.Errorf("invalid range proof parameters: right generator at index %d is nil", i)
 		}
 	}
-	for i := 0; i < len(rpp.SignPK); i++ {
-		if rpp.SignPK[i] == nil {
-			return errors.Errorf("invalid range proof parameters: public key at index %d is nil", i)
-		}
-	}
+
 	return nil
 }
 
@@ -91,29 +102,29 @@ type PublicParams struct {
 	QuantityPrecision uint64
 }
 
-func Setup(base uint, exponent uint, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(base, exponent, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
+func Setup(bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(base uint, exponent uint, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	signer := pssign.NewSigner(nil, nil, nil, mathlib.Curves[mathlib.BN254])
-	err := signer.KeyGen(1)
-	if err != nil {
-		return nil, err
-	}
+func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	pp := &PublicParams{Curve: mathlib.BN254}
 	pp.Label = label
 	if err := pp.GeneratePedersenParameters(); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated pedersen parameters")
 	}
-	if err := pp.GenerateRangeProofParameters(signer, base); err != nil {
+	if err := pp.GenerateRangeProofParameters(bitLength); err != nil {
 		return nil, errors.Wrapf(err, "failed to generated range-proof parameters")
 	}
 	pp.IdemixIssuerPK = idemixIssuerPK
 	pp.IdemixCurveID = idemixCurveID
-	pp.RangeProofParams.Exponent = exponent
+	pp.RangeProofParams.BitLength = bitLength
+	pp.RangeProofParams.NumberOfRounds = int(math.Log2(float64(bitLength)))
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = pp.ComputeMaxTokenValue()
+	if err := pp.Validate(); err != nil {
+		return nil, errors.Wrapf(err, "verification failed, invalid parameters")
+	}
+
 	return pp, nil
 }
 
@@ -193,19 +204,24 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 	return nil
 }
 
-func (pp *PublicParams) GenerateRangeProofParameters(signer *pssign.Signer, maxValue uint) error {
+func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
+	if bitLength <= 0 {
+		return errors.Errorf("invalid bit length, must be larger than 0")
+	}
 	curve := mathlib.Curves[pp.Curve]
-	pp.RangeProofParams = &RangeProofParams{Q: signer.Q, SignPK: signer.PK}
 
-	pp.RangeProofParams.SignedValues = make([]*pssign.Signature, maxValue)
-	for i := 0; i < len(pp.RangeProofParams.SignedValues); i++ {
-		var err error
-		m := make([]*mathlib.Zr, 1)
-		m[0] = curve.NewZrFromInt(int64(i))
-		pp.RangeProofParams.SignedValues[i], err = signer.Sign(m)
-		if err != nil {
-			return errors.Errorf("failed to generate public parameters: cannot sign range")
-		}
+	pp.RangeProofParams = &RangeProofParams{
+		P:              curve.HashToG1([]byte(strconv.Itoa(0))),
+		Q:              curve.HashToG1([]byte(strconv.Itoa(1))),
+		BitLength:      bitLength,
+		NumberOfRounds: int(math.Log2(float64(bitLength))),
+	}
+	pp.RangeProofParams.LeftGenerators = make([]*mathlib.G1, bitLength)
+	pp.RangeProofParams.RightGenerators = make([]*mathlib.G1, bitLength)
+
+	for i := 0; i < bitLength; i++ {
+		pp.RangeProofParams.LeftGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1))))
+		pp.RangeProofParams.RightGenerators[i] = curve.HashToG1([]byte("RangeProof." + strconv.Itoa(2*(i+1)+1)))
 	}
 
 	return nil
@@ -236,7 +252,7 @@ func (pp *PublicParams) ComputeHash() ([]byte, error) {
 }
 
 func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
-	return uint64(math.Pow(float64(len(pp.RangeProofParams.SignedValues)), float64(pp.RangeProofParams.Exponent))) - 1
+	return uint64(math.Pow(2, float64(pp.RangeProofParams.BitLength))) - 1
 }
 
 func (pp *PublicParams) String() string {

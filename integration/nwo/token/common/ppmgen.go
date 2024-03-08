@@ -104,8 +104,8 @@ func NewDLogPublicParamsGenerator(defaultCurveID math3.CurveID) *DLogPublicParam
 }
 
 func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generators.Wallets, args ...interface{}) ([]byte, error) {
-	if len(args) != 3 {
-		return nil, errors.Errorf("invalid number of arguments, expected 3, got %d", len(args))
+	if len(args) != 2 {
+		return nil, errors.Errorf("invalid number of arguments, expected 2, got %d", len(args))
 	}
 	// first argument is the idemix root path
 	idemixRootPath, ok := args[0].(string)
@@ -123,23 +123,18 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 		curveID = math3.BLS12_381_BBS
 	}
 
-	baseArg, ok := args[1].(string)
-	if !ok {
-		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
+	bits := int64(64)
+	if len(args) > 1 {
+		baseArg, ok := args[1].(string)
+		if !ok {
+			return nil, errors.Errorf("invalid argument type, expected string, got %T", args[1])
+		}
+		bits, err = strconv.ParseInt(baseArg, 10, 32)
+		if err != nil {
+			return nil, err
+		}
 	}
-	base, err := strconv.ParseUint(baseArg, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	expArg, ok := args[2].(string)
-	if !ok {
-		return nil, errors.Errorf("invalid argument type, expected string, got %T", args[2])
-	}
-	exp, err := strconv.ParseUint(expArg, 10, 32)
-	if err != nil {
-		return nil, err
-	}
-	pp, err := cryptodlog.Setup(uint(base), uint(exp), ipkBytes, curveID)
+	pp, err := cryptodlog.Setup(int(bits), ipkBytes, curveID)
 	if err != nil {
 		return nil, err
 	}

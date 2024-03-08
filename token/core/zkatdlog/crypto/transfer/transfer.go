@@ -12,7 +12,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	rangeproof "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/pkg/errors"
 )
@@ -22,75 +22,82 @@ type Proof struct {
 	// proof that inputs and outputs in a Transfer Action are well-formed
 	// inputs and outputs have the same total value
 	// inputs and outputs have the same type
-	WellFormedness []byte
+	TypeAndSum *TypeAndSumProof
 	// Proof that the outputs have value in the authorized range
-	RangeCorrectness []byte
+	RangeCorrectness *rp.RangeCorrectness
 }
 
 // Verifier verifies if a TransferAction is valid
 type Verifier struct {
-	WellFormedness   *WellFormednessVerifier
-	RangeCorrectness *rangeproof.Verifier
+	TypeAndSum       *TypeAndSumVerifier
+	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
 // Prover produces a proof that a TransferAction is valid
 type Prover struct {
-	WellFormedness   *WellFormednessProver
-	RangeCorrectness *rangeproof.Prover
+	TypeAndSum       *TypeAndSumProver
+	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
 // NewProver returns a TransferAction Prover that corresponds to the passed arguments
-func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, outputs []*math.G1, pp *crypto.PublicParams) *Prover {
+func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, outputs []*math.G1, pp *crypto.PublicParams) (*Prover, error) {
+	c := math.Curves[pp.Curve]
 	p := &Prover{}
-
 	inW := make([]*token.TokenDataWitness, len(inputWitness))
 	outW := make([]*token.TokenDataWitness, len(outputWitness))
-
 	for i := 0; i < len(inputWitness); i++ {
+		if inputWitness[i] == nil || inputWitness[i].BlindingFactor == nil {
+			return nil, errors.New("invalid token witness")
+		}
 		inW[i] = inputWitness[i].Clone()
 	}
-
-	for i := 0; i < len(outputWitness); i++ {
-		outW[i] = outputWitness[i].Clone()
+	var values []uint64
+	var blindingFactors []*math.Zr
+	rand, err := c.Rand()
+	if err != nil {
+		return nil, err
 	}
+	typeBF := c.NewRandomZr(rand)
+	for i := 0; i < len(outputWitness); i++ {
+		if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
+			return nil, errors.New("invalid token witness")
+		}
+		outW[i] = outputWitness[i].Clone()
+		values = append(values, outW[i].Value)
+		blindingFactors = append(blindingFactors, c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder))
+	}
+	// commit to the type of inputs and outputs
+	commitmentToType := pp.PedParams[0].Mul(c.HashToZr([]byte(inputWitness[0].Type)))
+	commitmentToType.Add(pp.PedParams[2].Mul(typeBF))
+
+	p.TypeAndSum = NewTypeAndSumProver(NewTypeAndSumWitness(typeBF, inW, outW, c), pp.PedParams, inputs, outputs, commitmentToType, c)
+
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputWitness) != 1 || len(outputWitness) != 1 {
-		p.RangeCorrectness = rangeproof.NewProver(
-			outW,
-			outputs,
-			pp.RangeProofParams.SignedValues,
-			int(pp.RangeProofParams.Exponent),
-			pp.PedParams,
-			pp.RangeProofParams.SignPK,
-			pp.PedGen,
-			pp.RangeProofParams.Q,
-			math.Curves[pp.Curve],
-		)
+		var coms []*math.G1
+		// The range prover takes as input commitments outputs[i]/commitmentToType
+		for i := 0; i < len(outputs); i++ {
+			out := outputs[i].Copy()
+			out.Sub(commitmentToType)
+			coms = append(coms, out)
+		}
+		p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedParams[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+
 	}
-	wfw := NewWellFormednessWitness(inW, outW)
-	p.WellFormedness = NewWellFormednessProver(wfw, pp.PedParams, inputs, outputs, math.Curves[pp.Curve])
-	return p
+	return p, nil
 }
 
 // NewVerifier returns a TransferAction Verifier as a function of the passed parameters
 func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
+	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedParams, inputs, outputs, math.Curves[pp.Curve])
+
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputs) != 1 || len(outputs) != 1 {
-		v.RangeCorrectness = rangeproof.NewVerifier(
-			outputs,
-			uint64(len(pp.RangeProofParams.SignedValues)),
-			int(pp.RangeProofParams.Exponent),
-			pp.PedParams,
-			pp.RangeProofParams.SignPK,
-			pp.PedGen,
-			pp.RangeProofParams.Q,
-			math.Curves[pp.Curve],
-		)
+		v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedParams[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 	}
-	v.WellFormedness = NewWellFormednessVerifier(pp.PedParams, inputs, outputs, math.Curves[pp.Curve])
 
 	return v
 }
@@ -110,8 +117,9 @@ func (p *Prover) Prove() ([]byte, error) {
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	var wfProof, rangeProof []byte
-	var wfErr, rangeErr error
+	var tsProof *TypeAndSumProof
+	var rangeProof *rp.RangeCorrectness
+	var tsErr, rangeErr error
 
 	go func() {
 		defer wg.Done()
@@ -120,12 +128,12 @@ func (p *Prover) Prove() ([]byte, error) {
 		}
 	}()
 
-	wfProof, wfErr = p.WellFormedness.Prove()
+	tsProof, tsErr = p.TypeAndSum.Prove()
 
 	wg.Wait()
 
-	if wfErr != nil {
-		return nil, errors.Wrapf(wfErr, "failed to generate transfer proof")
+	if tsErr != nil {
+		return nil, errors.Wrapf(tsErr, "failed to generate transfer proof")
 	}
 
 	if rangeErr != nil {
@@ -133,7 +141,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	}
 
 	proof := &Proof{
-		WellFormedness:   wfProof,
+		TypeAndSum:       tsProof,
 		RangeCorrectness: rangeProof,
 	}
 
@@ -147,27 +155,42 @@ func (v *Verifier) Verify(proof []byte) error {
 	if err != nil {
 		return errors.Wrap(err, "invalid transfer proof")
 	}
+	if tp.TypeAndSum == nil {
+		return errors.New("invalid transfer proof")
+	}
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 
-	var wfErr, rangeErr error
+	var tspErr, rangeErr error
 
 	// verify well-formedness of inputs and outputs
-	wfErr = v.WellFormedness.Verify(tp.WellFormedness)
+	tspErr = v.TypeAndSum.Verify(tp.TypeAndSum)
 
 	go func() {
 		defer wg.Done()
 		// verify range proof
 		if v.RangeCorrectness != nil {
-			rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
+			if tp.RangeCorrectness == nil {
+				rangeErr = errors.New("invalid transfer proof")
+			} else {
+				commitmentToType := tp.TypeAndSum.CommitmentToType.Copy()
+				var coms []*math.G1
+				for i := 0; i < len(v.TypeAndSum.Outputs); i++ {
+					out := v.TypeAndSum.Outputs[i].Copy()
+					out.Sub(commitmentToType)
+					coms = append(coms, out)
+				}
+				v.RangeCorrectness.Commitments = coms
+				rangeErr = v.RangeCorrectness.Verify(tp.RangeCorrectness)
+			}
 		}
 	}()
 
 	wg.Wait()
 
-	if wfErr != nil {
-		return errors.Wrap(wfErr, "invalid transfer proof")
+	if tspErr != nil {
+		return errors.Wrap(tspErr, "invalid transfer proof")
 	}
 
 	return rangeErr

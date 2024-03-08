@@ -3,12 +3,19 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package common
 
 import (
+	"encoding/hex"
+
 	math "github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
+
+// Separator is used to delimit to end an array of bytes.
+// The bytes are the bytes of hex-encoded string.
+const Separator = "||"
 
 // G1Array is an array of G1 elements
 type G1Array struct {
@@ -32,8 +39,10 @@ func (a *G1Array) Bytes() ([]byte, error) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G1")
 		}
-		bytes := e.Bytes()
-		raw = append(raw, bytes...)
+		st := hex.EncodeToString(e.Bytes())
+		raw = append(raw, []byte(Separator)...)
+		raw = append(raw, []byte(st)...)
+
 	}
 	return raw, nil
 }
@@ -45,8 +54,9 @@ func (a *G2Array) Bytes() ([]byte, error) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G2")
 		}
-		bytes := e.Bytes()
-		raw = append(raw, bytes...)
+		st := hex.EncodeToString(e.Bytes())
+		raw = append(raw, []byte(Separator)...)
+		raw = append(raw, []byte(st)...)
 	}
 	return raw, nil
 }
@@ -58,8 +68,9 @@ func (a *GTArray) Bytes() ([]byte, error) {
 		if e == nil {
 			return nil, errors.Errorf("failed to marshal array of G2")
 		}
-		bytes := e.Bytes()
-		raw = append(raw, bytes...)
+		st := hex.EncodeToString(e.Bytes())
+		raw = append(raw, []byte(Separator)...)
+		raw = append(raw, []byte(st)...)
 	}
 	return raw, nil
 }

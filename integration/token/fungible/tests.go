@@ -727,10 +727,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	PruneInvalidUnspentTokens(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
 
 	// Test Max Token Value
-	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
-	IssueCash(network, "", "MAX", 9999, "charlie", auditor, true, "issuer")
-	TransferCash(network, "charlie", "", "MAX", 10000, "alice", auditor, "cannot create output with value [10000], max [9999]")
-	IssueCash(network, "", "MAX", 10000, "charlie", auditor, true, "issuer", "q is larger than max token value [9999]")
+	IssueCash(network, "", "MAX", 65535, "charlie", auditor, true, "issuer")
+	IssueCash(network, "", "MAX", 65535, "charlie", auditor, true, "issuer")
+	TransferCash(network, "charlie", "", "MAX", 65536, "alice", auditor, "cannot create output with value [65536], max [65535]")
+	IssueCash(network, "", "MAX", 65536, "charlie", auditor, true, "issuer", "q is larger than max token value [65535]")
 
 	// Check consistency
 	CheckPublicParams(network, "issuer", auditor, "alice", "bob", "charlie", "manager")
@@ -897,8 +897,8 @@ func TestMixed(network *integration.Infrastructure) {
 	// Try to spend on dlog coins from fabtoken
 	TransferCashForTMSID(network, "alice", "", "USD", 120, "bob", "auditor2", fabTokenId, "")
 	// Try to issue more coins than the max
-	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor1", true, "issuer1", dlogId)
-	IssueCashForTMSID(network, "", "MAX", 9999, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [9998]")
+	IssueCashForTMSID(network, "", "MAX", 65535, "bob", "auditor1", true, "issuer1", dlogId)
+	IssueCashForTMSID(network, "", "MAX", 65536, "bob", "auditor2", true, "issuer2", fabTokenId, "q is larger than max token value [65535]")
 
 	// Shut down one auditor and try to issue cash for both chaincodes
 	Restart(network, true, "auditor2")

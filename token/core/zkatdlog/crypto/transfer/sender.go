@@ -59,13 +59,21 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 		if s.InputInformation[0].Type != s.InputInformation[i].Type {
 			return nil, nil, errors.New("cannot generate transfer: please choose inputs of the same token type")
 		}
-		intw[i] = &token.TokenDataWitness{Value: s.InputInformation[i].Value, Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
+		v, err := s.InputInformation[i].Value.Int()
+		if err != nil {
+			return nil, nil, errors.New("cannot generate transfer: invalid value")
+		}
+
+		intw[i] = &token.TokenDataWitness{Value: uint64(v), Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
 	}
 	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedParams, math.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
-	prover := NewProver(intw, outtw, in, out, s.PublicParams)
+	prover, err := NewProver(intw, outtw, in, out, s.PublicParams)
+	if err != nil {
+		return nil, nil, errors.New("cannot generate transfer")
+	}
 	proof, err := prover.Prove()
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate zero-knowledge proof for transfer")
@@ -79,7 +87,7 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 	for i := 0; i < len(inf); i++ {
 		inf[i] = &token.Metadata{
 			Type:           s.InputInformation[0].Type,
-			Value:          outtw[i].Value,
+			Value:          math.Curves[s.PublicParams.Curve].NewZrFromInt(int64(outtw[i].Value)),
 			BlindingFactor: outtw[i].BlindingFactor,
 			Owner:          owners[i],
 		}
@@ -92,6 +100,9 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
+		//toBesigned := append(raw, []byte(common.Separator)...)
+		//toBesigned = append(toBesigned, []byte(txID)...)
+
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign token requests")
@@ -201,8 +212,7 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 	return com
 }
 
-// IsGraphHiding returns false
-// zkatdlog is not graph hiding
+// IsGraphHiding returns false. zkatdlog is not graph hiding
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }

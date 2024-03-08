@@ -17,17 +17,18 @@ import (
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
-// signing identity
 type SigningIdentity interface {
 	driver.SigningIdentity
 }
 
+// Issuer is the entity that issues tokens
 type Issuer struct {
 	Signer       SigningIdentity
 	PublicParams *crypto.PublicParams
 	Type         string
 }
 
+// New returns an Issuer as a function of the passed parameters
 func (i *Issuer) New(ttype string, signer common.SigningIdentity, pp *crypto.PublicParams) {
 	i.Signer = signer
 	i.Type = ttype
@@ -46,7 +47,10 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 		return nil, nil, err
 	}
 
-	prover := issue2.NewProver(tw, tokens, false, i.PublicParams)
+	prover, err := issue2.NewProver(tw, tokens, false, i.PublicParams)
+	if err != nil {
+		return nil, nil, err
+	}
 	proof, err := prover.Prove()
 	if err != nil {
 		return nil, nil, errors.Errorf("failed to generate zero knwoledge proof for issue")
@@ -69,7 +73,7 @@ func (i *Issuer) GenerateZKIssue(values []uint64, owners [][]byte) (*issue2.Issu
 	for j := 0; j < len(inf); j++ {
 		inf[j] = &token.Metadata{
 			Type:           i.Type,
-			Value:          tw[j].Value,
+			Value:          math.Curves[i.PublicParams.Curve].NewZrFromInt(int64(tw[j].Value)),
 			BlindingFactor: tw[j].BlindingFactor,
 			Owner:          owners[j],
 			Issuer:         signerRaw,

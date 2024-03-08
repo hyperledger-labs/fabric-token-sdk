@@ -108,7 +108,12 @@ func (p *Prover) Prove() ([]byte, error) {
 	}
 	indexBits := make([]int, p.BitLength)
 	for i := 0; i < p.BitLength; i++ {
-		indexBits[i] = (1 << uint(i)) & p.witness.index
+		b := (1 << uint(i)) & p.witness.index
+		if b > 0 {
+			indexBits[i] = 1
+		} else {
+			indexBits[i] = 0
+		}
 	}
 
 	// generate randomness

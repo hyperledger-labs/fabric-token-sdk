@@ -11,7 +11,7 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/range"
+	rp "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/rp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -19,7 +19,7 @@ import (
 
 // IssueAction specifies an issue of one or more tokens
 type IssueAction struct {
-	// Identity of issuer
+	// Issuer is the identity of issuer
 	Issuer []byte
 	// OutputTokens are the newly issued tokens
 	OutputTokens []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
@@ -122,13 +122,12 @@ func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, ano
 	}, nil
 }
 
-// Proof poves that an IssueAction is valid
+// Proof proves that an IssueAction is valid
 type Proof struct {
-	// proof that issued tokens are well-formed
-	// tokens contain a commitment to type and value
-	WellFormedness []byte
-	// proof that issued tokens have value in the authorized range
-	RangeCorrectness []byte
+	// SameType is the proof that a bridge commitment is of type G_0^typeH^r
+	SameType *SameType
+	// RangeCorrectness is the proof that issued tokens have value in the authorized range
+	RangeCorrectness *rp.RangeCorrectness
 }
 
 // Serialize marshals Proof
@@ -136,47 +135,75 @@ func (p *Proof) Serialize() ([]byte, error) {
 	return json.Marshal(p)
 }
 
-// Deserialize unmarshals Proof
+// Deserialize un-marshals Proof
 func (p *Proof) Deserialize(bytes []byte) error {
 	return json.Unmarshal(bytes, p)
 }
 
 // Prover produces a proof of validity of an IssueAction
 type Prover struct {
-	// WellFormedness encodes the WellFormedness Prover
-	WellFormedness *WellFormednessProver
+	// SameType encodes the SameType Prover
+	SameType *SameTypeProver
 	// RangeCorrectness encodes the range proof Prover
-	RangeCorrectness *rp.Prover
+	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
-func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Prover {
+func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
-	p.WellFormedness = NewWellFormednessProver(tw, tokens, anonymous, pp.PedParams, c)
+	tokenType := c.HashToZr([]byte(tw[0].Type))
+	commitmentToType := pp.PedParams[0].Mul(tokenType)
+	if anonymous {
+		rand, err := c.Rand()
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot get issue prover")
+		}
+		typeBF := c.NewRandomZr(rand)
+		commitmentToType.Add(pp.PedParams[2].Mul(typeBF))
+		p.SameType = NewSameTypeProver(tw[0].Type, typeBF, commitmentToType, anonymous, pp.PedParams, c)
 
-	p.RangeCorrectness = rp.NewProver(
-		tw,
-		tokens,
-		pp.RangeProofParams.SignedValues,
-		int(pp.RangeProofParams.Exponent),
-		pp.PedParams,
-		pp.RangeProofParams.SignPK,
-		pp.PedGen,
+	} else {
+		p.SameType = NewSameTypeProver(tw[0].Type, c.NewZrFromInt(0), commitmentToType, anonymous, pp.PedParams, c)
+
+	}
+	var values []uint64
+	var blindingFactors []*math.Zr
+	for i := 0; i < len(tw); i++ {
+		if tw[i] == nil || tw[i].BlindingFactor == nil {
+			return nil, errors.New("invalid token witness")
+		}
+		tw[i] = tw[i].Clone()
+		values = append(values, tw[i].Value)
+		blindingFactors = append(blindingFactors, c.ModSub(tw[i].BlindingFactor, p.SameType.blindingFactor, c.GroupOrder))
+	}
+	var coms []*math.G1
+	for i := 0; i < len(tokens); i++ {
+		token := tokens[i].Copy()
+		token.Sub(commitmentToType)
+		coms = append(coms, token)
+	}
+	// range prover takes commitments tokens[i]/commitmentToType
+	p.RangeCorrectness = rp.NewRangeCorrectnessProver(
+		coms,
+		values,
+		blindingFactors,
+		pp.PedParams[1:],
+		pp.RangeProofParams.LeftGenerators,
+		pp.RangeProofParams.RightGenerators,
+		pp.RangeProofParams.P,
 		pp.RangeProofParams.Q,
+		pp.RangeProofParams.BitLength,
+		pp.RangeProofParams.NumberOfRounds,
 		math.Curves[pp.Curve],
 	)
 
-	return p
+	return p, nil
 }
 
 // Prove produces a Proof for an IssueAction
 func (p *Prover) Prove() ([]byte, error) {
-	// checks
-	if p.WellFormedness == nil || p.RangeCorrectness == nil {
-		return nil, errors.New("please initialize issue action prover correctly")
-	}
-	// WellFormedness proof
-	wf, err := p.WellFormedness.Prove()
+	// TypeAndSum proof
+	st, err := p.SameType.Prove()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate issue proof")
 	}
@@ -188,7 +215,7 @@ func (p *Prover) Prove() ([]byte, error) {
 	}
 
 	proof := &Proof{
-		WellFormedness:   wf,
+		SameType:         st,
 		RangeCorrectness: rc,
 	}
 	return proof.Serialize()
@@ -196,23 +223,23 @@ func (p *Prover) Prove() ([]byte, error) {
 
 // Verifier checks if Proof is valid
 type Verifier struct {
-	// WellFormedness encodes the WellFormedness Verifier
-	WellFormedness *WellFormednessVerifier
+	// SameType encodes the SameType Verifier
+	SameType *SameTypeVerifier
 	// RangeCorrectness encodes the range proof verifier
-	RangeCorrectness *rp.Verifier
+	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
 func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.WellFormedness = NewWellFormednessVerifier(tokens, anonymous, pp.PedParams, math.Curves[pp.Curve])
-	v.RangeCorrectness = rp.NewVerifier(
-		tokens,
-		uint64(len(pp.RangeProofParams.SignedValues)),
-		int(pp.RangeProofParams.Exponent),
-		pp.PedParams,
-		pp.RangeProofParams.SignPK,
-		pp.PedGen,
+	v.SameType = NewSameTypeVerifier(tokens, anonymous, pp.PedParams, math.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(
+		pp.PedParams[1:],
+		pp.RangeProofParams.LeftGenerators,
+		pp.RangeProofParams.RightGenerators,
+		pp.RangeProofParams.P,
 		pp.RangeProofParams.Q,
+		pp.RangeProofParams.BitLength,
+		pp.RangeProofParams.NumberOfRounds,
 		math.Curves[pp.Curve],
 	)
 	return v
@@ -220,22 +247,27 @@ func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Ve
 
 // Verify returns an error if Proof of an IssueAction is invalid
 func (v *Verifier) Verify(proof []byte) error {
-	if v.RangeCorrectness == nil || v.WellFormedness == nil {
-		return errors.New("please initialize issue action verifier correctly")
-	}
-	ip := &Proof{}
+	tp := &Proof{}
 	// unmarshal proof
-	err := ip.Deserialize(proof)
+	err := tp.Deserialize(proof)
 	if err != nil {
 		return err
 	}
-	// verify WellFormedness proof
-	err = v.WellFormedness.Verify(ip.WellFormedness)
+	// verify TypeAndSum proof
+	err = v.SameType.Verify(tp.SameType)
 	if err != nil {
 		return errors.Wrapf(err, "invalid issue proof")
 	}
 	// verify RangeCorrectness proof
-	err = v.RangeCorrectness.Verify(ip.RangeCorrectness)
+	commitmentToType := tp.SameType.CommitmentToType.Copy()
+	var coms []*math.G1
+	for i := 0; i < len(v.SameType.Tokens); i++ {
+		token := v.SameType.Tokens[i].Copy()
+		token.Sub(commitmentToType)
+		coms = append(coms, token)
+	}
+	v.RangeCorrectness.Commitments = coms
+	err = v.RangeCorrectness.Verify(tp.RangeCorrectness)
 	if err != nil {
 		return errors.Wrapf(err, "invalid issue proof")
 	}

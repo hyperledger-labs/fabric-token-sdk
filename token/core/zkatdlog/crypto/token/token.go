@@ -65,8 +65,8 @@ func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*mat
 	tokens := make([]*math.G1, len(tw))
 	var err error
 	for i := 0; i < len(tw); i++ {
-		typehash := c.HashToZr([]byte(tw[i].Type))
-		tokens[i], err = common.ComputePedersenCommitment([]*math.Zr{typehash, tw[i].Value, tw[i].BlindingFactor}, pp, c)
+		hash := c.HashToZr([]byte(tw[i].Type))
+		tokens[i], err = common.ComputePedersenCommitment([]*math.Zr{hash, c.NewZrFromInt(int64(tw[i].Value)), tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token [%d]", i)
 		}
@@ -85,10 +85,11 @@ func GetTokensWithWitness(values []uint64, ttype string, pp []*math.G1, c *math.
 	}
 	tw := make([]*TokenDataWitness, len(values))
 	for i, v := range values {
-		tw[i] = &TokenDataWitness{}
-		tw[i].BlindingFactor = c.NewRandomZr(rand)
-		tw[i].Value = c.NewZrFromInt(int64(v))
-		tw[i].Type = ttype
+		tw[i] = &TokenDataWitness{
+			BlindingFactor: c.NewRandomZr(rand),
+			Value:          v,
+			Type:           ttype,
+		}
 	}
 	tokens, err := computeTokens(tw, pp, c)
 	if err != nil {
@@ -124,7 +125,7 @@ func (m *Metadata) Serialize() ([]byte, error) {
 // TokenDataWitness contains the opening of Data in Token
 type TokenDataWitness struct {
 	Type           string
-	Value          *math.Zr
+	Value          uint64
 	BlindingFactor *math.Zr
 }
 
@@ -132,13 +133,13 @@ type TokenDataWitness struct {
 func (tdw *TokenDataWitness) Clone() *TokenDataWitness {
 	return &TokenDataWitness{
 		Type:           tdw.Type,
-		Value:          tdw.Value.Copy(),
+		Value:          tdw.Value,
 		BlindingFactor: tdw.BlindingFactor.Copy(),
 	}
 }
 
 // NewTokenDataWitness returns an array of TokenDataWitness that corresponds to the passed arguments
-func NewTokenDataWitness(ttype string, values, bfs []*math.Zr) []*TokenDataWitness {
+func NewTokenDataWitness(ttype string, values []uint64, bfs []*math.Zr) []*TokenDataWitness {
 	witness := make([]*TokenDataWitness, len(values))
 	for i, v := range values {
 		witness[i] = &TokenDataWitness{Value: v, BlindingFactor: bfs[i]}

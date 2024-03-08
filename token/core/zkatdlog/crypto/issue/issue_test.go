@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package issue_test
 
 import (
@@ -36,28 +37,31 @@ var _ = Describe("Issue Correctness", func() {
 })
 
 func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness, []*math.G1) {
-	values := make([]*math.Zr, 2)
-	values[0] = math.Curves[pp.Curve].NewZrFromInt(120)
-	values[1] = math.Curves[pp.Curve].NewZrFromInt(190)
-
-	rand, _ := math.Curves[pp.Curve].Rand()
-	bF := make([]*math.Zr, len(values))
+	values := make([]uint64, 2)
+	values[0] = 120
+	values[1] = 190
+	curve := math.Curves[pp.Curve]
+	rand, _ := curve.Rand()
+	bf := make([]*math.Zr, len(values))
 	for i := 0; i < len(values); i++ {
-		bF[i] = math.Curves[pp.Curve].NewRandomZr(rand)
+		bf[i] = math.Curves[pp.Curve].NewRandomZr(rand)
 	}
-	ttype := "ABC"
 
-	tokens := PrepareTokens(values, bF, ttype, pp.PedParams)
-	return token.NewTokenDataWitness(ttype, values, bF), tokens
+	tokens := make([]*math.G1, len(values))
+	for i := 0; i < len(values); i++ {
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedParams, curve)
+	}
+	return token.NewTokenDataWitness("ABC", values, bf), tokens
 }
 
 func prepareZKIssue() (*issue.Prover, *issue.Verifier) {
-	pp, err := crypto.Setup(100, 2, nil, math.BN254)
+	pp, err := crypto.Setup(32, []byte("issuerPK"), math.BN254)
 	Expect(err).NotTo(HaveOccurred())
 
 	tw, tokens := prepareInputsForZKIssue(pp)
 
-	prover := issue.NewProver(tw, tokens, true, pp)
+	prover, err := issue.NewProver(tw, tokens, true, pp)
+	Expect(err).NotTo(HaveOccurred())
 	verifier := issue.NewVerifier(tokens, true, pp)
 
 	return prover, verifier
