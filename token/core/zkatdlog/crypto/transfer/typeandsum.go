@@ -85,6 +85,7 @@ func NewTypeAndSumWitness(bf *math.Zr, in, out []*token.TokenDataWitness, c *mat
 
 // TypeAndSumProver produces a TypeAndSumProof proof
 type TypeAndSumProver struct {
+	IsTypeHidden bool
 	// PedParams corresponds to the generators used to compute Pedersen commitments
 	// (g_1, g_2, h)
 	PedParams []*math.G1
@@ -113,6 +114,7 @@ func NewTypeAndSumVerifier(pp []*math.G1, inputs []*math.G1, outputs []*math.G1,
 
 // TypeAndSumVerifier checks the validity of TypeAndSumProof
 type TypeAndSumVerifier struct {
+	IsTypeHidden bool
 	// PedParams corresponds to the generators used to compute Pedersen commitments
 	// (g_1, g_2, h)
 	PedParams []*math.G1

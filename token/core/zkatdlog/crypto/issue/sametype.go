@@ -22,7 +22,7 @@ type SameType struct {
 	// Proof of randomness used to compute the commitment to type and value in the issued tokens
 	// i^th proof is for the randomness  used to compute the i^th token
 	BlindingFactor *math.Zr
-	// only when issue is not anonymous
+	// only when the type is not hidden
 	TypeInTheClear string
 	// Challenge computed using the Fiat-Shamir Heuristic
 	Challenge *math.Zr
@@ -52,8 +52,8 @@ type SameTypeRandomness struct {
 type SameTypeProver struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
-	// Confidential indicates if the type is hidden
-	Confidential bool
+	// IsTypeHidden indicates if the type is hidden
+	IsTypeHidden bool
 	// tokenType is the type of the tokens to be issued
 	tokenType string
 	// blindingFactor is the blinding factor in the CommitmentToType
@@ -67,13 +67,13 @@ type SameTypeProver struct {
 }
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
-func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, confidential bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
+func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, isTypeHidden bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
 
 	return &SameTypeProver{
 		tokenType:        ttype,
 		blindingFactor:   bf,
 		CommitmentToType: com,
-		Confidential:     confidential,
+		IsTypeHidden:     isTypeHidden,
 		PedParams:        pp,
 		Curve:            c,
 	}
@@ -82,7 +82,7 @@ func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, confidential boo
 // Prove returns a SameType proof
 func (p *SameTypeProver) Prove() (*SameType, error) {
 	tokenType := p.Curve.HashToZr([]byte(p.tokenType))
-	if p.Confidential {
+	if p.IsTypeHidden {
 		// compute commitments used in the Schnorr proof
 		err := p.computeCommitment()
 		if err != nil {
@@ -137,15 +137,15 @@ type SameTypeVerifier struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
 	Tokens    []*math.G1
-	// Confidential indicates if the issuance is anonymous
-	Confidential bool
+	// IsTypeHidden indicates if the issuance is anonymous
+	IsTypeHidden bool
 }
 
 // NewSameTypeVerifier returns a SameTypeVerifier corresponding to the passed parameters
-func NewSameTypeVerifier(tokens []*math.G1, confidential bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
+func NewSameTypeVerifier(tokens []*math.G1, isTypeHidden bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
 	return &SameTypeVerifier{
 		Tokens:       tokens,
-		Confidential: confidential,
+		IsTypeHidden: isTypeHidden,
 		PedParams:    pp,
 		Curve:        c,
 	}
@@ -154,7 +154,7 @@ func NewSameTypeVerifier(tokens []*math.G1, confidential bool, pp []*math.G1, c 
 // Verify returns an error if the serialized proof is an invalid SameType proof
 func (v *SameTypeVerifier) Verify(proof *SameType) error {
 	// recompute commitments used in ZK proofs
-	if v.Confidential {
+	if v.IsTypeHidden {
 		// recompute challenge and check proof validity
 		com := v.PedParams[0].Mul(proof.Type)
 		com.Add(v.PedParams[2].Mul(proof.BlindingFactor))

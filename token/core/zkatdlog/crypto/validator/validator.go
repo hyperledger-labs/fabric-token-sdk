@@ -216,7 +216,6 @@ func (v *Validator) verifyIssue(issue driver.IssueAction) error {
 	}
 	return issue2.NewVerifier(
 		commitments,
-		action.IsAnonymous(),
 		v.pp).Verify(action.GetProof())
 }
 

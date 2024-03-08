@@ -85,7 +85,7 @@ var _ = Describe("Transfer", func() {
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(32, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(true, 32, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
@@ -98,7 +98,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(32, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(true, 32, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(pp)
@@ -111,7 +111,7 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(8, nil, math.FP256BN_AMCL)
+	pp, err := crypto.Setup(true, 8, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
@@ -214,17 +214,4 @@ func prepareInputsForOwnershipTransfer(pp *crypto.PublicParams) ([]*token.TokenD
 		outtw[i] = &token.TokenDataWitness{BlindingFactor: outBF, Value: outValue, Type: ttype}
 	}
 	return intw, outtw, in, out
-}
-
-func prepareOwnershipTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(32, nil, math.FP256BN_AMCL)
-	Expect(err).NotTo(HaveOccurred())
-
-	intw, outtw, in, out := prepareInputsForOwnershipTransfer(pp)
-
-	prover, err := transfer.NewProver(intw, outtw, in, out, pp)
-	Expect(err).NotTo(HaveOccurred())
-	verifier := transfer.NewVerifier(in, out, pp)
-
-	return prover, verifier
 }

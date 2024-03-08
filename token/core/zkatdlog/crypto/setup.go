@@ -98,13 +98,16 @@ type PublicParams struct {
 	MaxToken uint64
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
+	// IsTypeHidden is a Boolean that indicates that issuance does not reveal
+	// the type
+	IsTypeHidden bool
 }
 
-func Setup(bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
+func Setup(confidential bool, bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(confidential, bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func SetupWithCustomLabel(typeHidden bool, bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	pp := &PublicParams{Curve: mathlib.BN254}
 	pp.Label = label
 	if err := pp.GeneratePedersenParameters(); err != nil {
@@ -119,6 +122,7 @@ func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, id
 	pp.RangeProofParams.NumberOfRounds = int(math.Log2(float64(bitLength)))
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = pp.ComputeMaxTokenValue()
+	pp.IsTypeHidden = typeHidden
 	return pp, nil
 }
 

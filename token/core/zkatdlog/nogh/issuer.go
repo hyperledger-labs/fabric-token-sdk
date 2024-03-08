@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -39,7 +38,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 	if pp == nil {
 		return nil, nil, errors.Errorf("public parameters not inizialized")
 	}
-	issuer := &nonanonym.Issuer{}
+	issuer := &issue.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
@@ -91,7 +90,6 @@ func (s *Service) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) e
 	// todo check tokenInfo
 	return issue.NewVerifier(
 		coms,
-		action.IsAnonymous(),
 		pp).Verify(action.GetProof())
 }
 
