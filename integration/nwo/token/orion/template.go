@@ -21,7 +21,7 @@ token:
         interactive:
           ids: {{ range TMS.Certifiers }}
           - {{ . }}{{ end }}
-      unitydb:
+      db:
         persistence:
           opts:
             createSchema: true 

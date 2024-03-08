@@ -91,7 +91,7 @@ Depending on the nature of the wallet, additional information can be extracted l
     - An Issuer Wallet gives access to the list of issued tokens;
     - An Owner Wallet gives access to the list of owned unspent tokens;
 
-The Wallet Manager (`token.WalletManager`) helps managing these wallets.
+The Wallet Manager (`token.WalletManager`) helps to manage these wallets.
 
 Developers can access the Wallet Manager of a given TMS as follows:
 ```go

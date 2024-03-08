@@ -20,12 +20,12 @@ type ConfigProvider interface {
 }
 
 type Config struct {
-	configProvider ConfigProvider
-	key            string
+	configProvider    ConfigProvider
+	configurationKeys []string
 }
 
-func NewConfig(configProvider ConfigProvider, key string) *Config {
-	return &Config{configProvider: configProvider, key: key}
+func NewConfig(configProvider ConfigProvider, configurationKeys ...string) *Config {
+	return &Config{configProvider: configProvider, configurationKeys: configurationKeys}
 }
 
 func (c *Config) DriverFor(tmsID token.TMSID) (string, error) {
@@ -33,5 +33,10 @@ func (c *Config) DriverFor(tmsID token.TMSID) (string, error) {
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
 	}
-	return tmsConfig.GetString(c.key), nil
+	for _, key := range c.configurationKeys {
+		if tmsConfig.IsSet(key) {
+			return tmsConfig.GetString(key), nil
+		}
+	}
+	return "", errors.Errorf("configuration not found")
 }
