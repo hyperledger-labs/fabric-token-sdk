@@ -8,7 +8,6 @@ package auditor
 
 import (
 	"reflect"
-	"runtime/debug"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -55,33 +54,19 @@ func (cm *Manager) Auditor(tmsID token.TMSID) (*Auditor, error) {
 
 func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("restore audit dbs...")
-	it, err := cm.storage.Iterator()
+	dbs, err := cm.storage.ByTMS(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to list existing auditors")
 	}
-	defer func(it storage.Iterator[*storage.DBEntry]) {
-		err := it.Close()
-		if err != nil {
-			logger.Warnf("failed to close iterator [%s][%s]", err, debug.Stack())
+	for _, db := range dbs {
+		logger.Infof("restore audit dbs for entry [%s:%s]...", db.TMSID, db.WalletID)
+		if err := cm.restore(db.TMSID, db.WalletID); err != nil {
+			return errors.Wrapf(err, "cannot bootstrap auditdb for [%s:%s]", db.TMSID, db.WalletID)
 		}
-	}(it)
-	for {
-		if !it.HasNext() {
-			logger.Infof("restore audit dbs...done")
-			return nil
-		}
-		entry, err := it.Next()
-		if err != nil {
-			return errors.Wrapf(err, "failed to get next entry for [%s:%s]...", entry.TMSID, entry.WalletID)
-		}
-		if entry.TMSID.Equal(tmsID) {
-			logger.Infof("restore audit dbs for entry [%s:%s]...", entry.TMSID, entry.WalletID)
-			if err := cm.restore(entry.TMSID, entry.WalletID); err != nil {
-				return errors.Wrapf(err, "cannot bootstrap auditdb for [%s:%s]", entry.TMSID, entry.WalletID)
-			}
-			logger.Infof("restore audit dbs for entry [%s:%s]...done", entry.TMSID, entry.WalletID)
-		}
+		logger.Infof("restore audit dbs for entry [%s:%s]...done", db.TMSID, db.WalletID)
 	}
+	logger.Infof("restore audit dbs...done")
+	return nil
 }
 
 func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, error) {
