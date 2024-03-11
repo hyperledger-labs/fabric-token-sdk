@@ -99,7 +99,7 @@ func (s *ScriptOwnership) AmIAnAuditor(tms *token.ManagementService) bool {
 
 // IsMine returns true if one is either a sender or a recipient of an htlc script
 func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token) ([]string, bool) {
-	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	owner, err := identity.UnmarshallTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 		return nil, false

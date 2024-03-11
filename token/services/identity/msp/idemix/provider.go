@@ -403,7 +403,7 @@ func (p *Provider) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentit
 		return nil, errors.Wrap(err, "cannot deserialize the OU of the identity")
 	}
 
-	// Role
+	// RoleAttribute
 	role := &m.MSPRole{}
 	err = proto.Unmarshal(serialized.Role, role)
 	if err != nil {

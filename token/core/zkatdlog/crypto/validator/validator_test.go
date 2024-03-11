@@ -399,7 +399,7 @@ func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo, driver.Signing
 	signer, err := p.DeserializeSigningIdentity(id)
 	Expect(err).NotTo(HaveOccurred())
 
-	id, err = identity.WrapOwnerIdentity(msp.IdemixIdentity, id)
+	id, err = identity.WrapWithType(msp.IdemixIdentity, id)
 	Expect(err).NotTo(HaveOccurred())
 
 	return id, auditInfo, signer

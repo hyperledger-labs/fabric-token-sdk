@@ -191,7 +191,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
-	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	owner, err := identity.UnmarshallTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	script := &Script{}
 	err = json.Unmarshal(owner.Identity, script)
 	if err != nil {
-		return errors.Errorf("failed to unmarshal RawOwner as an htlc script")
+		return errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
 
 	// Register the signer for the reclaim
@@ -241,7 +241,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
 
-	owner, err := identity.UnmarshallRawOwner(tok.Owner.Raw)
+	owner, err := identity.UnmarshallTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		return err
 	}
@@ -250,7 +250,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 	}
 	script := &Script{}
 	if err := json.Unmarshal(owner.Identity, script); err != nil {
-		return errors.New("failed to unmarshal RawOwner as an htlc script")
+		return errors.New("failed to unmarshal TypedIdentity as an htlc script")
 	}
 
 	image, err := script.HashInfo.Image(preImage)
@@ -345,11 +345,11 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 	if err != nil {
 		return nil, nil, nil, err
 	}
-	ro := &identity.RawOwner{
+	ro := &identity.TypedIdentity{
 		Type:     ScriptType,
 		Identity: rawScript,
 	}
-	raw, err := identity.MarshallRawOwner(ro)
+	raw, err := identity.MarshallTypedIdentity(ro)
 	if err != nil {
 		return nil, nil, nil, err
 	}

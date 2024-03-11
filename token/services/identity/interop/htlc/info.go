@@ -26,7 +26,7 @@ func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
 		return nil, nil
 	}
 
-	owner, err := identity.UnmarshallRawOwner(raw)
+	owner, err := identity.UnmarshallTypedIdentity(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
 	}
@@ -77,7 +77,7 @@ func (si *ScriptInfo) Unarshal(raw []byte) error {
 }
 
 // GetScriptSenderAndRecipient returns the script's sender and recipient according to the type of the given owner
-func GetScriptSenderAndRecipient(ro *identity.RawOwner) (sender, recipient view.Identity, err error) {
+func GetScriptSenderAndRecipient(ro *identity.TypedIdentity) (sender, recipient view.Identity, err error) {
 	if ro.Type == htlc.ScriptType {
 		script := &htlc.Script{}
 		err = json.Unmarshal(ro.Identity, script)

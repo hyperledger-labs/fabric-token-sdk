@@ -24,25 +24,35 @@ const (
 	CertifierRole
 )
 
-// IdentityInfo models an Identity inside the Identity Provider
+// IdentityInfo models a long-term identity inside the Identity Provider.
+// An identity has an identifier (ID) and an Enrollment ID, unique identifier.
+// An identity can be remote, meaning that the corresponding secret key is remotely available.
 type IdentityInfo interface {
-	// ID returns the ID of the Identity
+	// ID returns the identifier of the Identity
 	ID() string
 	// EnrollmentID returns the enrollment ID of the Identity
 	EnrollmentID() string
+	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
+	Remote() bool
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
 	Get() (view.Identity, []byte, error)
-	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
-	Remote() bool
 }
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.
 type IdentityProvider interface {
-	LookupIdentifier(role IdentityRole, v interface{}) (view.Identity, string, error)
+	// MapToID returns the long-term identity and its identifier for the given role and index.
+	// The index can be an identity or a label (string).
+	MapToID(role IdentityRole, v interface{}) (view.Identity, string, error)
 
-	// GetIdentityInfo returns the long-term identity info associated to the passed id, nil if not found.
+	// GetIdentityInfo returns the long-term identity info associated to the passed id
 	GetIdentityInfo(role IdentityRole, id string) (IdentityInfo, error)
+
+	// RegisterIdentity register the passed identity for the given role.
+	RegisterIdentity(roleID IdentityRole, id string, path string) error
+
+	// IDs returns the identifiers of the long-term identities registered to the given role
+	IDs(role IdentityRole) ([]string, error)
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)
@@ -68,12 +78,4 @@ type IdentityProvider interface {
 
 	// RegisterRecipientIdentity register the passed identity as a third-pary recipient identity.
 	RegisterRecipientIdentity(id view.Identity) error
-
-	// RegisterOwnerWallet registers the passed wallet as the owner wallet of the passed identity.
-	RegisterOwnerWallet(id string, path string) error
-
-	// RegisterIssuerWallet registers the passed wallet ad the issuer wallet of the passed identity.
-	RegisterIssuerWallet(id string, path string) error
-
-	WalletIDs(role IdentityRole) ([]string, error)
 }

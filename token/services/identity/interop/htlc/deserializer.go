@@ -29,9 +29,9 @@ func NewDeserializer(ownerDeserializer VerifierDES) *Deserializer {
 }
 
 func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := identity.UnmarshallRawOwner(id)
+	si, err := identity.UnmarshallTypedIdentity(id)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal RawOwner")
+		return nil, errors.Wrap(err, "failed to unmarshal TypedIdentity")
 	}
 	if si.Type == htlc.ScriptType {
 		return d.getHTLCVerifier(si.Identity)
@@ -43,7 +43,7 @@ func (d *Deserializer) getHTLCVerifier(raw []byte) (driver.Verifier, error) {
 	script := &htlc.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
-		return nil, errors.Errorf("failed to unmarshal RawOwner as an htlc script")
+		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
 	v := &htlc.Verifier{}
 	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)

@@ -40,8 +40,8 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 	driver.CertifierRole: CertifierMSPID,
 }
 
-// WalletFactory is the factory for creating wallets, idemix and x509
-type WalletFactory struct {
+// RoleFactory is the factory for creating wallets, idemix and x509
+type RoleFactory struct {
 	TMSID                  token.TMSID
 	Config                 config2.Config
 	FSCIdentity            view2.Identity
@@ -53,8 +53,8 @@ type WalletFactory struct {
 	ignoreRemote           bool
 }
 
-// NewWalletFactory creates a new WalletFactory
-func NewWalletFactory(
+// NewRoleFactory creates a new RoleFactory
+func NewRoleFactory(
 	TMSID token.TMSID,
 	config config2.Config,
 	fscIdentity view2.Identity,
@@ -64,8 +64,8 @@ func NewWalletFactory(
 	storageProvider identity2.StorageProvider,
 	deserializerManager deserializer.Manager,
 	ignoreRemote bool,
-) *WalletFactory {
-	return &WalletFactory{
+) *RoleFactory {
+	return &RoleFactory{
 		TMSID:                  TMSID,
 		Config:                 config,
 		FSCIdentity:            fscIdentity,
@@ -78,8 +78,8 @@ func NewWalletFactory(
 	}
 }
 
-// NewIdemixWallet creates a new Idemix wallet
-func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity2.Wallet, error) {
+// NewIdemix creates a new Idemix-based role
+func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity2.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -106,11 +106,11 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		identities,
 		f.ignoreRemote,
 	)
-	return idemix2.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return idemix2.NewRole(f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
-// NewX509Wallet creates a new X509 wallet
-func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Wallet, error) {
+// NewX509 creates a new X509-based role
+func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity2.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -132,11 +132,11 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
-// NewX509WalletIgnoreRemote creates a new X509 wallet treating the remote wallets as local
-func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (identity2.Wallet, error) {
+// NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
+func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity2.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -158,10 +158,10 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
-func (f *WalletFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
+func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
 	return f.Config.IdentitiesForRole(role)
 }

@@ -42,27 +42,27 @@ func NewWalletService(
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	Deserializer driver.Deserializer,
-	OwnerWalletsRegistry WalletRegistry,
-	IssuerWalletsRegistry WalletRegistry,
-	AuditorWalletsRegistry WalletRegistry,
+	OwnerWalletRegistry WalletRegistry,
+	IssuerWalletRegistry WalletRegistry,
+	AuditorWalletRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
 		SignerService:          SignerService,
 		IdentityProvider:       identityProvider,
 		TokenVault:             tokenVault,
 		Deserializer:           Deserializer,
-		OwnerWalletsRegistry:   OwnerWalletsRegistry,
-		IssuerWalletsRegistry:  IssuerWalletsRegistry,
-		AuditorWalletsRegistry: AuditorWalletsRegistry,
+		OwnerWalletsRegistry:   OwnerWalletRegistry,
+		IssuerWalletsRegistry:  IssuerWalletRegistry,
+		AuditorWalletsRegistry: AuditorWalletRegistry,
 	}
 }
 
 func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.IdentityProvider.RegisterOwnerWallet(id, path)
+	return s.IdentityProvider.RegisterIdentity(driver.OwnerRole, id, path)
 }
 
 func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.IdentityProvider.RegisterIssuerWallet(id, path)
+	return s.IdentityProvider.RegisterIdentity(driver.IssuerRole, id, path)
 }
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
@@ -256,7 +256,7 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 }
 
 func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	raw, err := identity.WrapOwnerIdentity(msp.X509Identity, id)
+	raw, err := identity.WrapWithType(msp.X509Identity, id)
 	if err != nil {
 		return nil, err
 	}

@@ -49,9 +49,9 @@ func NewWalletService(
 	PPM PublicParametersManager,
 	deserializerProvider DeserializerProviderFunc,
 	configManager config.Manager,
-	OwnerWalletsRegistry WalletRegistry,
-	IssuerWalletsRegistry WalletRegistry,
-	AuditorWalletsRegistry WalletRegistry,
+	OwnerWalletRegistry WalletRegistry,
+	IssuerWalletRegistry WalletRegistry,
+	AuditorWalletRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
 		SignerService:          SignerService,
@@ -60,18 +60,18 @@ func NewWalletService(
 		PPM:                    PPM,
 		DeserializerProvider:   deserializerProvider,
 		ConfigManager:          configManager,
-		OwnerWalletsRegistry:   OwnerWalletsRegistry,
-		IssuerWalletsRegistry:  IssuerWalletsRegistry,
-		AuditorWalletsRegistry: AuditorWalletsRegistry,
+		OwnerWalletsRegistry:   OwnerWalletRegistry,
+		IssuerWalletsRegistry:  IssuerWalletRegistry,
+		AuditorWalletsRegistry: AuditorWalletRegistry,
 	}
 }
 
 func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.identityProvider.RegisterOwnerWallet(id, path)
+	return s.identityProvider.RegisterIdentity(driver.OwnerRole, id, path)
 }
 
 func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.identityProvider.RegisterIssuerWallet(id, path)
+	return s.identityProvider.RegisterIdentity(driver.IssuerRole, id, path)
 }
 
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
@@ -258,7 +258,7 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 }
 
 func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	raw, err := identity.WrapOwnerIdentity(msp.IdemixIdentity, id)
+	raw, err := identity.WrapWithType(msp.IdemixIdentity, id)
 	if err != nil {
 		return nil, err
 	}
