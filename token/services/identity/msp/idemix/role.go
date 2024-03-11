@@ -25,7 +25,7 @@ type localMembership interface {
 	Reload(pp driver.PublicParameters) error
 }
 
-// Role maps an identifier to an idemix identity
+// Role is a container of idemix-based long-term identities.
 type Role struct {
 	networkID       string
 	nodeIdentity    view.Identity

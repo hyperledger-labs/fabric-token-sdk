@@ -24,12 +24,9 @@ import (
 )
 
 const (
-	EIDIndex = 2
-	RHIndex  = 3
-)
-
-const (
-	Any bccsp.SignatureType = 100
+	EIDIndex                     = 2
+	RHIndex                      = 3
+	Any      bccsp.SignatureType = 100
 )
 
 type SignerService interface {

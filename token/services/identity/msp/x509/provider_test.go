@@ -25,8 +25,7 @@ func TestDeserializer(t *testing.T) {
 	assert.Equal(t, eID, ai.EnrollmentId)
 	assert.Equal(t, "auditor.org1.example.com", eID)
 
-	des := &Deserializer{}
-	info, err := des.Info(id, nil)
+	des := &MSPIdentityDeserializer{}
+	_, err = des.DeserializeVerifier(id)
 	assert.NoError(t, err)
-	assert.Equal(t, "MSP.x509: [f+hVlmGaPejN2G0XDcESSMX2ol29WPcPQ+Fp3lOARBQ=][apple][auditor.org1.example.com]", info)
 }

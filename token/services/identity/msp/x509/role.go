@@ -23,7 +23,7 @@ type localMembership interface {
 	IDs() ([]string, error)
 }
 
-// role maps an identifier to an identity
+// Role is a container of x509-based long-term identities.
 type Role struct {
 	networkID       string
 	nodeIdentity    view.Identity
