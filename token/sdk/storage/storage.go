@@ -47,6 +47,29 @@ func (s *DBEntriesStorage) Iterator() (storage.Iterator[*storage.DBEntry], error
 	return &DBEntriesStorageIterator{Iterator: it}, nil
 }
 
+func (s *DBEntriesStorage) ByTMS(tmsID token.TMSID) ([]*storage.DBEntry, error) {
+	itr, err := s.kvs.GetByPartialCompositeID(s.prefix, nil)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get db list iterator")
+	}
+	it := DBEntriesStorageIterator{Iterator: itr}
+	defer it.Close()
+
+	entries := []*storage.DBEntry{}
+	for {
+		if !it.HasNext() {
+			return entries, nil
+		}
+		entry, err := it.Next()
+		if err != nil {
+			return entries, errors.Wrapf(err, "failed to get next entry for [%s:%s]...", entry.TMSID, entry.WalletID)
+		}
+		if entry.TMSID.Equal(tmsID) {
+			entries = append(entries, entry)
+		}
+	}
+}
+
 type DBEntriesStorageIterator struct {
 	kvs.Iterator
 }

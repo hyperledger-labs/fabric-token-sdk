@@ -56,7 +56,7 @@ func (db *WalletDB) GetWalletID(id view.Identity) (driver.WalletID, error) {
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
 	}
-	logger.Debugf("Found wallet id for identity [%v]: %v", idHash, result)
+	logger.Debugf("found wallet id for identity [%v]: %v", idHash, result)
 	return result, nil
 }
 
@@ -79,24 +79,28 @@ func (db *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
 	if rows.Err() != nil {
 		return nil, rows.Err()
 	}
-	logger.Debugf("Found %d wallet ids: [%v]", len(walletIDs), walletIDs)
+	logger.Debugf("found %d wallet ids: [%v]", len(walletIDs), walletIDs)
 	return walletIDs, nil
 }
 
 func (db *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, meta any) error {
-	query := fmt.Sprintf("INSERT INTO %s (identity_id, meta, wallet_id) VALUES ($1, $2, $3)", db.table.Wallets)
-	logger.Debug(query)
+	if db.IdentityExists(identity, wID) {
+		return nil
+	}
+
 	metaEncoded, err := json.Marshal(meta)
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal metadata")
 	}
-
 	idHash := identity.Hash()
+
+	query := fmt.Sprintf("INSERT INTO %s (identity_id, meta, wallet_id) VALUES ($1, $2, $3)", db.table.Wallets)
+	logger.Debug(query, len(idHash), metaEncoded, wID)
 	_, err = db.db.Exec(query, idHash, metaEncoded, wID)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
 	}
-	logger.Debugf("Stored wallet [%v] for identity [%v]", wID, idHash)
+	logger.Debugf("stored wallet [%v] for identity [%v]", wID, idHash)
 	return nil
 }
 
@@ -122,21 +126,18 @@ func (db *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID) 
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
-	logger.Debugf("Found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
+	logger.Debugf("found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
 
 	return result != ""
 }
 
 func (db *WalletDB) GetSchema() string {
-	// We can also ignore instead of replacing duplicates, because the duplicates are always identical.
-	// The relationship wallet_id -> identity_id is ONE TO MANY.
 	return fmt.Sprintf(`
 		-- Wallets
 		CREATE TABLE IF NOT EXISTS %s (
-			identity_id TEXT NOT NULL PRIMARY KEY,
+			identity_id BYTEA NOT NULL PRIMARY KEY,
 			wallet_id TEXT NOT NULL,
-			meta TEXT NOT NULL DEFAULT '',
-			UNIQUE(identity_id) ON CONFLICT REPLACE
+			meta TEXT NOT NULL DEFAULT ''
 		)
 		`,
 		db.table.Wallets,

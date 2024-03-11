@@ -16,4 +16,5 @@ type DBEntry struct {
 type DBEntriesStorage interface {
 	Put(tmsID token.TMSID, walletID string) error
 	Iterator() (Iterator[*DBEntry], error)
+	ByTMS(tmsID token.TMSID) ([]*DBEntry, error)
 }
