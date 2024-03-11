@@ -22,7 +22,7 @@ type TypedIdentity struct {
 	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 }
 
-func UnmarshallTypedIdentity(id view.Identity) (*TypedIdentity, error) {
+func UnmarshalTypedIdentity(id view.Identity) (*TypedIdentity, error) {
 	si := &TypedIdentity{}
 	_, err := asn1.Unmarshal(id, si)
 	if err != nil {
@@ -63,7 +63,7 @@ func NewTypedIdentityDeserializer(dvp DeserializeVerifierProvider) *TypedIdentit
 }
 
 func (d *TypedIdentityDeserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := UnmarshallTypedIdentity(id)
+	si, err := UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}

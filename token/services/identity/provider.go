@@ -189,7 +189,7 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	// give it a second chance
 
 	// is the identity wrapped in TypedIdentity?
-	ro, err2 := UnmarshallTypedIdentity(identity)
+	ro, err2 := UnmarshalTypedIdentity(identity)
 	if err2 != nil {
 		// No
 		signer, err := p.tryDeserialization(identity)

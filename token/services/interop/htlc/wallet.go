@@ -357,7 +357,7 @@ func (f *FilteredIterator) Next() (*token2.UnspentToken, error) {
 			logger.Debugf("no more tokens!")
 			return nil, nil
 		}
-		owner, err := identity.UnmarshallTypedIdentity(tok.Owner.Raw)
+		owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 		if err != nil {
 			logger.Debugf("Is Mine [%s,%s,%s]? No, failed unmarshalling [%s]", view.Identity(tok.Owner.Raw), tok.Type, tok.Quantity, err)
 			continue

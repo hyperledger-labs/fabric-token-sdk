@@ -26,7 +26,7 @@ func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
 		return nil, nil
 	}
 
-	owner, err := identity.UnmarshallTypedIdentity(raw)
+	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
 	}

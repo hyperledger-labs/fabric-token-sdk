@@ -68,7 +68,7 @@ func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 }
 
 func (d *Deserializer) Recipients(raw []byte) ([]view.Identity, error) {
-	owner, err := identity.UnmarshallTypedIdentity(raw)
+	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
 	}
@@ -89,7 +89,7 @@ func (d *Deserializer) Match(id view.Identity, ai []byte) error {
 	}
 
 	// match identity and audit info
-	recipient, err := identity.UnmarshallTypedIdentity(id)
+	recipient, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
 	}

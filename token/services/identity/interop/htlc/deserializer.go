@@ -29,7 +29,7 @@ func NewDeserializer(ownerDeserializer VerifierDES) *Deserializer {
 }
 
 func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := identity.UnmarshallTypedIdentity(id)
+	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal TypedIdentity")
 	}

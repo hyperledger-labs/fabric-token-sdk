@@ -191,7 +191,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 	if err != nil {
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
-	owner, err := identity.UnmarshallTypedIdentity(tok.Owner.Raw)
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return errors.Wrapf(err, "failed to convert quantity [%s]", tok.Quantity)
 	}
 
-	owner, err := identity.UnmarshallTypedIdentity(tok.Owner.Raw)
+	owner, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		return err
 	}
