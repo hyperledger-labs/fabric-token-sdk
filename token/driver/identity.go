@@ -41,18 +41,10 @@ type IdentityInfo interface {
 
 // IdentityProvider handles the long-term identities on top of which wallets are defined.
 type IdentityProvider interface {
-	// MapToID returns the long-term identity and its identifier for the given role and index.
-	// The index can be an identity or a label (string).
-	MapToID(role IdentityRole, v interface{}) (view.Identity, string, error)
-
-	// GetIdentityInfo returns the long-term identity info associated to the passed id
-	GetIdentityInfo(role IdentityRole, id string) (IdentityInfo, error)
-
 	// RegisterIdentity register the passed identity for the given role.
 	RegisterIdentity(roleID IdentityRole, id string, path string) error
 
-	// IDs returns the identifiers of the long-term identities registered to the given role
-	IDs(role IdentityRole) ([]string, error)
+	RegisterVerifier(identity view.Identity, v Verifier) error
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)
@@ -78,4 +70,6 @@ type IdentityProvider interface {
 
 	// RegisterRecipientIdentity register the passed identity as a third-pary recipient identity.
 	RegisterRecipientIdentity(id view.Identity) error
+
+	RegisterAuditInfo(id view.Identity, auditInfo []byte) error
 }

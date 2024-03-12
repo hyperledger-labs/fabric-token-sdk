@@ -37,6 +37,7 @@ type EnrollmentIDUnmarshaler interface {
 type sigService interface {
 	IsMe(identity view.Identity) bool
 	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterVerifier(identity view.Identity, v driver.Verifier) error
 	RegisterAuditInfo(identity view.Identity, info []byte) error
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 	GetSigner(identity view.Identity) (driver.Signer, error)
@@ -82,35 +83,8 @@ func NewProvider(
 	}
 }
 
-func (p *Provider) MapToID(roleID driver.IdentityRole, v interface{}) (view.Identity, string, error) {
-	role, ok := p.roles[roleID]
-	if !ok {
-		return nil, "", errors.Errorf("role not found [%d]", roleID)
-	}
-	id, label, err := role.MapToID(v)
-	if err != nil {
-		return nil, "", err
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, toString(label))
-	}
-	return id, label, nil
-}
-
-// GetIdentityInfo returns the long-term identity info associated to the passed id.
-// When IdentityInfo#Get function is invoked, two things happen:
-// 1. The relative audit-info are stored.
-// 2. The identity is bound to the long-term identity of the network node this stack is running on.
-func (p *Provider) GetIdentityInfo(roleID driver.IdentityRole, id string) (driver.IdentityInfo, error) {
-	role, ok := p.roles[roleID]
-	if !ok {
-		return nil, errors.Errorf("role not found [%d]", roleID)
-	}
-	info := role.GetIdentityInfo(id)
-	if info == nil {
-		return nil, errors.Errorf("identity info not found for id [%s]", id)
-	}
-	return &Info{IdentityInfo: info, Provider: p}, nil
+func (p *Provider) RegisterVerifier(identity view.Identity, v driver.Verifier) error {
+	return p.SigService.RegisterVerifier(identity, v)
 }
 
 func (p *Provider) RegisterIdentity(roleID driver.IdentityRole, id string, path string) error {
@@ -120,14 +94,6 @@ func (p *Provider) RegisterIdentity(roleID driver.IdentityRole, id string, path 
 		return role.RegisterIdentity(id, path)
 	}
 	return errors.Errorf("cannot find role [%d]", roleID)
-}
-
-func (p *Provider) IDs(roleID driver.IdentityRole) ([]string, error) {
-	role, ok := p.roles[roleID]
-	if !ok {
-		return nil, errors.Errorf("role not found [%d]", roleID)
-	}
-	return role.IDs()
 }
 
 func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
@@ -284,38 +250,4 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 
 func (p *Provider) tryDeserialization(id view.Identity) (driver.Signer, error) {
 	return p.deserializerManager.DeserializeSigner(id)
-}
-
-// Info wraps a driver.IdentityInfo to further register the audit info,
-// and binds the new identity to the default FSC node identity
-type Info struct {
-	driver.IdentityInfo
-	Provider *Provider
-}
-
-func (i *Info) ID() string {
-	return i.IdentityInfo.ID()
-}
-
-func (i *Info) EnrollmentID() string {
-	return i.IdentityInfo.EnrollmentID()
-}
-
-func (i *Info) Get() (view.Identity, []byte, error) {
-	// get the identity
-	id, ai, err := i.IdentityInfo.Get()
-	if err != nil {
-		return nil, nil, err
-	}
-	// register the audit info
-	if err := i.Provider.RegisterAuditInfo(id, ai); err != nil {
-		return nil, nil, err
-	}
-	// bind the identity to the default FSC node identity
-	if i.Provider.Binder != nil {
-		if err := i.Provider.Binder.Bind(i.Provider.DefaultFSCIdentity, id); err != nil {
-			return nil, nil, err
-		}
-	}
-	return id, ai, nil
 }

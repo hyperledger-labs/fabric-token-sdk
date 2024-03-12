@@ -18,7 +18,7 @@ type Role interface {
 	// The index can be an identity or a label (string).
 	MapToID(v interface{}) (view.Identity, string, error)
 	// GetIdentityInfo returns the long-term identity info associated to the passed id
-	GetIdentityInfo(id string) driver.IdentityInfo
+	GetIdentityInfo(id string) (driver.IdentityInfo, error)
 	// RegisterIdentity registers the given identity
 	RegisterIdentity(id string, path string) error
 	// IDs returns the identifiers contained in this role

@@ -41,7 +41,7 @@ func NewRole(networkID string, nodeIdentity view.Identity, localMembership local
 }
 
 // GetIdentityInfo returns the identity information for the given identity identifier
-func (w *Role) GetIdentityInfo(id string) driver.IdentityInfo {
+func (w *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("[%s] getting info for [%s]", w.networkID, id)
 	}
@@ -51,9 +51,9 @@ func (w *Role) GetIdentityInfo(id string) driver.IdentityInfo {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[%s] failed to get anonymous identity for [%s]: %s", w.networkID, id, err)
 		}
-		return nil
+		return nil, nil
 	}
-	return info
+	return info, nil
 }
 
 // MapToID returns the identity for the given argument

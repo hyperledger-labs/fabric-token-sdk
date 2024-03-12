@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -30,7 +29,6 @@ type WalletRegistry interface {
 }
 
 type WalletService struct {
-	SignerService        common.SigService
 	identityProvider     driver.IdentityProvider
 	TokenVault           TokenVault
 	PPM                  PublicParametersManager
@@ -43,7 +41,6 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	SignerService common.SigService,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	PPM PublicParametersManager,
@@ -54,7 +51,6 @@ func NewWalletService(
 	AuditorWalletRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
-		SignerService:          SignerService,
 		identityProvider:       identityProvider,
 		TokenVault:             tokenVault,
 		PPM:                    PPM,
@@ -109,10 +105,10 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
 	}
-	if err := s.SignerService.RegisterVerifier(data.Identity, v); err != nil {
+	if err := s.identityProvider.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := s.SignerService.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+	if err := s.identityProvider.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 

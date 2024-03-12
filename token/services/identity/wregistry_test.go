@@ -15,7 +15,6 @@ import (
 	registry2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/stretchr/testify/assert"
@@ -30,7 +29,7 @@ func TestGetWallet(t *testing.T) {
 
 	alice := view.Identity("alice")
 	meta := "meta"
-	wr := identity.NewWalletRegistry(nil, driver.OwnerRole, kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
+	wr := identity.NewWalletRegistry(nil, kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
 	assert.NoError(t, wr.RegisterWallet("hello", nil))
 	assert.NoError(t, wr.RegisterIdentity(alice, "hello", meta))
 	wID, err := wr.GetWalletID(alice)

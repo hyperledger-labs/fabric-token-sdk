@@ -106,7 +106,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		identities,
 		f.ignoreRemote,
 	)
-	return idemix2.NewRole(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return &BindingRole{Role: idemix2.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Provider: f}, nil
 }
 
 // NewX509 creates a new X509-based role
@@ -132,7 +132,7 @@ func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity2.Role, error) 
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Provider: f}, nil
 }
 
 // NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
@@ -158,10 +158,57 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity2.R
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Provider: f}, nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
 func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
 	return f.Config.IdentitiesForRole(role)
+}
+
+type BindingRole struct {
+	identity2.Role
+	Provider *RoleFactory
+}
+
+func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+	info, err := r.Role.GetIdentityInfo(id)
+	if err != nil {
+		return nil, err
+	}
+	return &Info{IdentityInfo: info, Provider: r.Provider}, nil
+}
+
+// Info wraps a driver.IdentityInfo to further register the audit info,
+// and binds the new identity to the default FSC node identity
+type Info struct {
+	driver.IdentityInfo
+	Provider *RoleFactory
+}
+
+func (i *Info) ID() string {
+	return i.IdentityInfo.ID()
+}
+
+func (i *Info) EnrollmentID() string {
+	return i.IdentityInfo.EnrollmentID()
+}
+
+func (i *Info) Get() (view2.Identity, []byte, error) {
+	// get the identity
+	id, ai, err := i.IdentityInfo.Get()
+	if err != nil {
+		return nil, nil, err
+	}
+	// register the audit info
+	if err := i.Provider.SignerService.RegisterAuditInfo(id, ai); err != nil {
+		return nil, nil, err
+	}
+	// bind the identity to the default FSC node identity
+	if i.Provider.BinderService != nil {
+		if err := i.Provider.BinderService.Bind(i.Provider.FSCIdentity, id); err != nil {
+			return nil, nil, err
+		}
+	}
+	return id, ai, nil
 }

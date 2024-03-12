@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -27,7 +26,6 @@ type WalletRegistry interface {
 }
 
 type WalletService struct {
-	SignerService    common.SigService
 	IdentityProvider driver.IdentityProvider
 	TokenVault       TokenVault
 	Deserializer     driver.Deserializer
@@ -38,7 +36,6 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	SignerService common.SigService,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	Deserializer driver.Deserializer,
@@ -47,7 +44,6 @@ func NewWalletService(
 	AuditorWalletRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
-		SignerService:          SignerService,
 		IdentityProvider:       identityProvider,
 		TokenVault:             tokenVault,
 		Deserializer:           Deserializer,
@@ -80,10 +76,10 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
 	}
-	if err := s.SignerService.RegisterVerifier(data.Identity, v); err != nil {
+	if err := s.IdentityProvider.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := s.SignerService.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+	if err := s.IdentityProvider.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 
@@ -91,14 +87,14 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 }
 
 func (s *WalletService) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := s.SignerService.RegisterAuditInfo(id, auditInfo); err != nil {
+	if err := s.IdentityProvider.RegisterAuditInfo(id, auditInfo); err != nil {
 		return err
 	}
 	return nil
 }
 
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
-	return s.SignerService.GetAuditInfo(id)
+	return s.IdentityProvider.GetAuditInfo(id)
 }
 
 func (s *WalletService) GetEnrollmentID(auditInfo []byte) (string, error) {

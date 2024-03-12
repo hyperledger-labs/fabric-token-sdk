@@ -21,9 +21,8 @@ import (
 
 // WalletRegistry manages wallets whose long-term identities have a given role.
 type WalletRegistry struct {
-	IdentityProvider driver.IdentityProvider
-	IdentityRole     driver.IdentityRole
-	Storage          db.WalletDB
+	Role    Role
+	Storage db.WalletDB
 
 	sync.RWMutex
 	Wallets map[string]driver.Wallet
@@ -32,12 +31,11 @@ type WalletRegistry struct {
 // NewWalletRegistry returns a new registry for the passed parameters.
 // A registry is bound to a given role, and it is persistent.
 // Long-term identities are provided by the passed identity provider
-func NewWalletRegistry(identityProvider driver.IdentityProvider, identityRole driver.IdentityRole, storage db.WalletDB) *WalletRegistry {
+func NewWalletRegistry(role Role, storage db.WalletDB) *WalletRegistry {
 	return &WalletRegistry{
-		IdentityProvider: identityProvider,
-		IdentityRole:     identityRole,
-		Storage:          storage,
-		Wallets:          map[string]driver.Wallet{},
+		Role:    role,
+		Storage: storage,
+		Wallets: map[string]driver.Wallet{},
 	}
 }
 
@@ -50,7 +48,7 @@ func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityI
 	}
 	var walletIdentifiers []string
 
-	identity, walletID, err := r.IdentityProvider.MapToID(r.IdentityRole, id)
+	identity, walletID, err := r.Role.MapToID(id)
 	if err != nil {
 		fail := true
 		// give it a second change
@@ -125,7 +123,7 @@ func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityI
 		}
 		// give it a second chance
 		var idInfo driver.IdentityInfo
-		idInfo, err = r.IdentityProvider.GetIdentityInfo(r.IdentityRole, id)
+		idInfo, err = r.Role.GetIdentityInfo(id)
 		if err == nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("identity info found at [%s]", toString(id))
@@ -166,7 +164,7 @@ func (r *WalletRegistry) ContainsIdentity(identity view.Identity, wID string) bo
 
 // WalletIDs returns the list of wallet identifiers
 func (r *WalletRegistry) WalletIDs() ([]string, error) {
-	walletIDs, err := r.IdentityProvider.IDs(r.IdentityRole)
+	walletIDs, err := r.Role.IDs()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet identifiers from identity provider")
 	}
