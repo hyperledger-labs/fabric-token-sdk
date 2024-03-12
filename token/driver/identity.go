@@ -39,7 +39,7 @@ type IdentityInfo interface {
 	Get() (view.Identity, []byte, error)
 }
 
-// IdentityProvider handles the long-term identities on top of which wallets are defined.
+// IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type IdentityProvider interface {
 	// RegisterIdentity register the passed identity for the given role.
 	RegisterIdentity(roleID IdentityRole, id string, path string) error

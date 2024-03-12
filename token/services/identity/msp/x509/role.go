@@ -46,10 +46,7 @@ func (w *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 
 	info, err := w.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[%s] failed to get long term identity for [%s]: %s", w.networkID, id, err)
-		}
-		return nil, nil
+		return nil, errors.WithMessagef(err, "[%s] failed to get long term identity for [%s]", w.networkID, id)
 	}
 	return info, nil
 }
