@@ -51,9 +51,8 @@ type Binder interface {
 // Provider implements the driver.IdentityProvider interface.
 // Provider handles the long-term identities on top of which wallets are defined.
 type Provider struct {
-	SigService         sigService
-	Binder             Binder
-	DefaultFSCIdentity view.Identity
+	SigService sigService
+	Binder     Binder
 
 	deserializerManager     deserializer.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
@@ -63,17 +62,10 @@ type Provider struct {
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
 // The Provider handles the long-term identities on top of which wallets are defined.
-func NewProvider(
-	sigService sigService,
-	binder Binder,
-	defaultFSCIdentity view.Identity,
-	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
-	deserializerManager deserializer.Manager,
-) *Provider {
+func NewProvider(sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, deserializerManager deserializer.Manager) *Provider {
 	return &Provider{
 		SigService:              sigService,
 		Binder:                  binder,
-		DefaultFSCIdentity:      defaultFSCIdentity,
 		deserializerManager:     deserializerManager,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
@@ -190,8 +182,6 @@ func (p *Provider) GetRevocationHandler(auditInfo []byte) (string, error) {
 }
 
 func (p *Provider) Bind(id view.Identity, to view.Identity) error {
-	sigService := p.SigService
-
 	setSV := true
 	signer, err := p.GetSigner(to)
 	if err != nil {
@@ -200,7 +190,7 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 		}
 		setSV = false
 	}
-	verifier, err := sigService.GetVerifier(to)
+	verifier, err := p.SigService.GetVerifier(to)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed getting verifier for [%s][%s][%s]", to, err, debug.Stack())
@@ -209,7 +199,7 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	}
 
 	setAI := true
-	auditInfo, err := sigService.GetAuditInfo(to)
+	auditInfo, err := p.SigService.GetAuditInfo(to)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed getting audit info for [%s][%s]", to, err)
@@ -218,12 +208,12 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	}
 
 	if setSV {
-		if err := sigService.RegisterSigner(id, signer, verifier); err != nil {
+		if err := p.SigService.RegisterSigner(id, signer, verifier); err != nil {
 			return err
 		}
 	}
 	if setAI {
-		if err := sigService.RegisterAuditInfo(id, auditInfo); err != nil {
+		if err := p.SigService.RegisterAuditInfo(id, auditInfo); err != nil {
 			return err
 		}
 	}

@@ -84,7 +84,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		deserializerManager,
 		false,
 	)
-	role, err := roleFactory.NewX509(driver.OwnerRole)
+	role, err := roleFactory.NewWrappedX509(driver.OwnerRole)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
@@ -110,7 +110,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), fscIdentity, NewEnrollmentIDDeserializer(), deserializerManager)
+	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
 	ws := fabtoken.NewWalletService(
 		ip,
 		qe,
@@ -189,7 +189,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		deserializerManager,
 		true,
 	)
-	role, err := roleFactory.NewX509IgnoreRemote(driver.OwnerRole)
+	role, err := roleFactory.NewX509IgnoreRemote(driver.OwnerRole, "")
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
@@ -216,7 +216,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, nil, nil, NewEnrollmentIDDeserializer(), deserializerManager)
+	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
 	ws := fabtoken.NewWalletService(
 		ip,
 		nil,

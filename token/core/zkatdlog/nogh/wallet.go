@@ -11,8 +11,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -254,17 +252,6 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
-func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	raw, err := identity.WrapWithType(msp.IdemixIdentity, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.identityProvider.Bind(raw, id); err != nil {
-		return nil, err
-	}
-	return raw, nil
-}
-
 func (s *WalletService) Deserializer() (driver.Deserializer, error) {
 	pp := s.PPM.PublicParams()
 	if pp == nil {
@@ -330,11 +317,6 @@ func (w *ownerWallet) getRecipientIdentity() (view.Identity, error) {
 	pseudonym, _, err := w.identityInfo.Get()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
-	}
-
-	pseudonym, err = w.WalletService.wrapWalletIdentity(pseudonym)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed wrapping recipient identity from wallet [%s]", w.ID())
 	}
 
 	// Register the pseudonym

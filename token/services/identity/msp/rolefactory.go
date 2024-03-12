@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
@@ -106,11 +107,19 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		identities,
 		f.ignoreRemote,
 	)
-	return &BindingRole{Role: idemix2.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Provider: f}, nil
+	return &BindingRole{Role: idemix2.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: IdemixIdentity}, nil
 }
 
 // NewX509 creates a new X509-based role
 func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity2.Role, error) {
+	return f.NewX509WithType(role, "")
+}
+
+func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole) (identity2.Role, error) {
+	return f.NewX509WithType(role, X509Identity)
+}
+
+func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType string) (identity2.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -132,11 +141,11 @@ func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity2.Role, error) 
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Provider: f}, nil
+	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
 }
 
 // NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
-func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity2.Role, error) {
+func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole, identityType string) (identity2.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -158,7 +167,7 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity2.R
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Provider: f}, nil
+	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
@@ -168,7 +177,8 @@ func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Ide
 
 type BindingRole struct {
 	identity2.Role
-	Provider *RoleFactory
+	IdentityType string
+	Support      *RoleFactory
 }
 
 func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
@@ -176,14 +186,15 @@ func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Info{IdentityInfo: info, Provider: r.Provider}, nil
+	return &Info{IdentityInfo: info, Support: r.Support, IdentityType: r.IdentityType}, nil
 }
 
 // Info wraps a driver.IdentityInfo to further register the audit info,
 // and binds the new identity to the default FSC node identity
 type Info struct {
 	driver.IdentityInfo
-	Provider *RoleFactory
+	Support      *RoleFactory
+	IdentityType string
 }
 
 func (i *Info) ID() string {
@@ -201,14 +212,30 @@ func (i *Info) Get() (view2.Identity, []byte, error) {
 		return nil, nil, err
 	}
 	// register the audit info
-	if err := i.Provider.SignerService.RegisterAuditInfo(id, ai); err != nil {
+	if err := i.Support.SignerService.RegisterAuditInfo(id, ai); err != nil {
 		return nil, nil, err
 	}
 	// bind the identity to the default FSC node identity
-	if i.Provider.BinderService != nil {
-		if err := i.Provider.BinderService.Bind(i.Provider.FSCIdentity, id); err != nil {
+	if i.Support.BinderService != nil {
+		if err := i.Support.BinderService.Bind(i.Support.FSCIdentity, id); err != nil {
 			return nil, nil, err
 		}
+	}
+	// wrap the backend identity, and bind it
+	if len(i.IdentityType) != 0 {
+		raw, err := identity.WrapWithType(i.IdentityType, id)
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := i.Support.SignerService.RegisterAuditInfo(raw, ai); err != nil {
+			return nil, nil, err
+		}
+		if i.Support.BinderService != nil {
+			if err := i.Support.BinderService.Bind(i.Support.FSCIdentity, raw); err != nil {
+				return nil, nil, err
+			}
+		}
+		id = raw
 	}
 	return id, ai, nil
 }

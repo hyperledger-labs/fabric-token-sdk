@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	idemix2 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/msp/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
@@ -194,7 +193,7 @@ func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, erro
 	return ai.RevocationHandle(), nil
 }
 
-func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix2.AuditInfo, error) {
+func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix.AuditInfo, error) {
 	if len(auditInfo) == 0 {
 		return nil, nil
 	}
@@ -204,7 +203,7 @@ func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix2.AuditInfo, 
 	err := json.Unmarshal(auditInfo, si)
 	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
 		if len(si.Recipient) != 0 {
-			ai := &idemix2.AuditInfo{}
+			ai := &idemix.AuditInfo{}
 			if err := ai.FromBytes(si.Recipient); err != nil {
 				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 			}
@@ -214,7 +213,7 @@ func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix2.AuditInfo, 
 		return nil, nil
 	}
 
-	ai := &idemix2.AuditInfo{}
+	ai := &idemix.AuditInfo{}
 	if err := ai.FromBytes(auditInfo); err != nil {
 		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
 	}

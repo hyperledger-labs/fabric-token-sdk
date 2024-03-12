@@ -121,7 +121,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 
-	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), fscIdentity, NewEnrollmentIDDeserializer(), deserializerManager)
+	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
 	ws := zkatdlog.NewWalletService(
 		ip,
 		qe,
@@ -245,7 +245,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, nil, nil, NewEnrollmentIDDeserializer(), deserializerManager)
+	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
 	// role service
 	ws := zkatdlog.NewWalletService(
 		ip,

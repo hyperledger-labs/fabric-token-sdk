@@ -10,8 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -141,17 +139,13 @@ func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, err
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get owner wallet identity for [%s]", wID)
 	}
-	wrappedID, err := s.wrapWalletIdentity(idInfoIdentity)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to wrap owner wallet identity for [%s]", wID)
-	}
 
-	newWallet := newOwnerWallet(s, idInfoIdentity, wrappedID, wID, idInfo)
+	newWallet := newOwnerWallet(s, idInfoIdentity, idInfoIdentity, wID, idInfo)
 	if err := s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register rwallet [%s]", wID)
 	}
-	if err := s.OwnerWalletsRegistry.BindIdentity(wrappedID, wID, nil); err != nil {
-		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wrappedID)
+	if err := s.OwnerWalletsRegistry.BindIdentity(idInfoIdentity, wID, nil); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", idInfoIdentity)
 	}
 	logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, wID)
 	return newWallet, nil
@@ -243,17 +237,6 @@ func (s *WalletService) CertifierWalletByIdentity(identity view.Identity) (drive
 // SpentIDs returns the spend ids for the passed token ids
 func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
-}
-
-func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	raw, err := identity.WrapWithType(msp.X509Identity, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.IdentityProvider.Bind(raw, id); err != nil {
-		return nil, err
-	}
-	return raw, nil
 }
 
 type ownerWallet struct {
