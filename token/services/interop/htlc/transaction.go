@@ -349,7 +349,7 @@ func (t *Transaction) recipientAsScript(sender, recipient view.Identity, deadlin
 		Type:     ScriptType,
 		Identity: rawScript,
 	}
-	raw, err := identity.MarshallTypedIdentity(ro)
+	raw, err := ro.Bytes()
 	if err != nil {
 		return nil, nil, nil, err
 	}

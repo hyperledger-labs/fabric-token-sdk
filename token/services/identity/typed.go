@@ -22,6 +22,10 @@ type TypedIdentity struct {
 	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 }
 
+func (i TypedIdentity) Bytes() ([]byte, error) {
+	return asn1.Marshal(i)
+}
+
 func UnmarshalTypedIdentity(id view.Identity) (*TypedIdentity, error) {
 	si := &TypedIdentity{}
 	_, err := asn1.Unmarshal(id, si)
@@ -31,16 +35,8 @@ func UnmarshalTypedIdentity(id view.Identity) (*TypedIdentity, error) {
 	return si, nil
 }
 
-func MarshallTypedIdentity(o *TypedIdentity) (view.Identity, error) {
-	raw, err := asn1.Marshal(*o)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
-	}
-	return raw, nil
-}
-
 func WrapWithType(idType string, id view.Identity) (view.Identity, error) {
-	raw, err := MarshallTypedIdentity(&TypedIdentity{Type: idType, Identity: id})
+	raw, err := (&TypedIdentity{Type: idType, Identity: id}).Bytes()
 	if err != nil {
 		return nil, err
 	}

@@ -87,13 +87,6 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	return nil
 }
 
-func (s *WalletService) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := s.IdentityProvider.RegisterAuditInfo(id, auditInfo); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
 	return s.IdentityProvider.GetAuditInfo(id)
 }
