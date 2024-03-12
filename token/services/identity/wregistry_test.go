@@ -31,7 +31,7 @@ func TestGetWallet(t *testing.T) {
 	meta := "meta"
 	wr := identity.NewWalletRegistry(nil, kvs2.NewWalletDB(kvsStorage, token.TMSID{Network: "testnetwork", Channel: "testchannel", Namespace: "tns"}))
 	assert.NoError(t, wr.RegisterWallet("hello", nil))
-	assert.NoError(t, wr.RegisterIdentity(alice, "hello", meta))
+	assert.NoError(t, wr.BindIdentity(alice, "hello", meta))
 	wID, err := wr.GetWalletID(alice)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", wID)

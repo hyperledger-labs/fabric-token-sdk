@@ -41,16 +41,17 @@ type IdentityInfo interface {
 
 // IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type IdentityProvider interface {
-	// RegisterIdentity register the passed identity for the given role.
-	RegisterIdentity(roleID IdentityRole, id string, path string) error
-
-	RegisterVerifier(identity view.Identity, v Verifier) error
+	// RegisterAuditInfo binds the audit information to the passed identity
+	RegisterAuditInfo(id view.Identity, auditInfo []byte) error
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 
 	// GetSigner returns a Signer for passed identity.
 	GetSigner(identity view.Identity) (Signer, error)
+
+	// RegisterVerifier registers a Verifier for passed identity.
+	RegisterVerifier(identity view.Identity, v Verifier) error
 
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
 	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
@@ -70,6 +71,4 @@ type IdentityProvider interface {
 
 	// RegisterRecipientIdentity register the passed identity as a third-pary recipient identity.
 	RegisterRecipientIdentity(id view.Identity) error
-
-	RegisterAuditInfo(id view.Identity, auditInfo []byte) error
 }

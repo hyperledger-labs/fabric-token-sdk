@@ -55,7 +55,6 @@ type Provider struct {
 	Binder             Binder
 	DefaultFSCIdentity view.Identity
 
-	roles                   Roles
 	deserializerManager     deserializer.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
@@ -69,14 +68,12 @@ func NewProvider(
 	binder Binder,
 	defaultFSCIdentity view.Identity,
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
-	roles Roles,
 	deserializerManager deserializer.Manager,
 ) *Provider {
 	return &Provider{
 		SigService:              sigService,
 		Binder:                  binder,
 		DefaultFSCIdentity:      defaultFSCIdentity,
-		roles:                   roles,
 		deserializerManager:     deserializerManager,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
@@ -85,15 +82,6 @@ func NewProvider(
 
 func (p *Provider) RegisterVerifier(identity view.Identity, v driver.Verifier) error {
 	return p.SigService.RegisterVerifier(identity, v)
-}
-
-func (p *Provider) RegisterIdentity(roleID driver.IdentityRole, id string, path string) error {
-	role, ok := p.roles[roleID]
-	if ok {
-		logger.Debugf("register identity [role:%d][%s:%s]", roleID, id, path)
-		return role.RegisterIdentity(id, path)
-	}
-	return errors.Errorf("cannot find role [%d]", roleID)
 }
 
 func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {

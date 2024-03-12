@@ -20,9 +20,10 @@ type WalletRegistry interface {
 	WalletIDs() ([]string, error)
 	Lock()
 	Unlock()
+	RegisterIdentity(id string, path string) error
 	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
-	RegisterIdentity(identity view.Identity, wID string, meta any) error
+	BindIdentity(identity view.Identity, wID string, meta any) error
 }
 
 type WalletService struct {
@@ -54,11 +55,11 @@ func NewWalletService(
 }
 
 func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.IdentityProvider.RegisterIdentity(driver.OwnerRole, id, path)
+	return s.OwnerWalletsRegistry.RegisterIdentity(id, path)
 }
 
 func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.IdentityProvider.RegisterIdentity(driver.IssuerRole, id, path)
+	return s.IssuerWalletsRegistry.RegisterIdentity(id, path)
 }
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
@@ -156,7 +157,7 @@ func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, err
 	if err := s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register rwallet [%s]", wID)
 	}
-	if err := s.OwnerWalletsRegistry.RegisterIdentity(wrappedID, wID, nil); err != nil {
+	if err := s.OwnerWalletsRegistry.BindIdentity(wrappedID, wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wrappedID)
 	}
 	logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, wID)
@@ -194,7 +195,7 @@ func (s *WalletService) issuerWallet(id interface{}) (driver.IssuerWallet, error
 	if err := s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register issuer wallet [%s]", wID)
 	}
-	if err := s.IssuerWalletsRegistry.RegisterIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.IssuerWalletsRegistry.BindIdentity(idInfoIdentity, wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
 	logger.Debugf("created issuer wallet [%s]", wID)
@@ -231,7 +232,7 @@ func (s *WalletService) auditorWallet(id interface{}) (driver.AuditorWallet, err
 	if err := s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register auditor wallet [%s]", wID)
 	}
-	if err := s.AuditorWalletsRegistry.RegisterIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.AuditorWalletsRegistry.BindIdentity(idInfoIdentity, wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
 	logger.Debugf("created auditor wallet [%s]", wID)

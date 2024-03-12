@@ -39,6 +39,11 @@ func NewWalletRegistry(role Role, storage db.WalletDB) *WalletRegistry {
 	}
 }
 
+func (r *WalletRegistry) RegisterIdentity(id string, path string) error {
+	logger.Debugf("register identity [%s:%s]", id, path)
+	return r.Role.RegisterIdentity(id, path)
+}
+
 // Lookup searches the wallet corresponding to the passed id.
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
@@ -147,9 +152,9 @@ func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
 	return nil
 }
 
-// RegisterIdentity binds the passed identity to the passed wallet identifier.
+// BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
-func (r *WalletRegistry) RegisterIdentity(identity view.Identity, wID string, meta any) error {
+func (r *WalletRegistry) BindIdentity(identity view.Identity, wID string, meta any) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
