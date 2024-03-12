@@ -22,12 +22,8 @@ type TypeAndSumProof struct {
 	CommitmentToType *math.G1
 	// proof of knowledge of the randomness used in Pedersen commitments in the inputs
 	InputBlindingFactors []*math.Zr
-	// proof of knowledge of the randomness used in Pedersen commitments in the outputs
-	OutputBlindingFactors []*math.Zr
 	// proof of knowledge of the values encoded in the Pedersen commitments in the inputs
 	InputValues []*math.Zr
-	// proof of knowledge of the values encoded in the Pedersen commitments in the outputs
-	OutputValues []*math.Zr
 	// proof of knowledge of the token type encoded in both inputs and outputs
 	Type *math.Zr
 	// proof of knowledge of blinding factor used to compute the commitment to type
@@ -129,19 +125,16 @@ type TypeAndSumVerifier struct {
 
 // TypeAndSumProofRandomness is the randomness used in the generation of TypeAndSumProof
 type TypeAndSumProofRandomness struct {
-	inValues  []*math.Zr
-	inBF      []*math.Zr
-	outValues []*math.Zr
-	outBF     []*math.Zr
-	ttype     *math.Zr
-	typeBF    *math.Zr
-	sumBF     *math.Zr
+	inValues []*math.Zr
+	inBF     []*math.Zr
+	ttype    *math.Zr
+	typeBF   *math.Zr
+	sumBF    *math.Zr
 }
 
 // TypeAndSumProofCommitments are commitments to the randomness used in TypeAndSumProof
 type TypeAndSumProofCommitments struct {
 	Inputs           []*math.G1
-	Outputs          []*math.G1
 	Sum              *math.G1
 	CommitmentToType *math.G1
 }
@@ -154,7 +147,9 @@ func (p *TypeAndSumProver) Prove() (*TypeAndSumProof, error) {
 		return nil, err
 	}
 	var inputs, outputs []*math.G1
-	sum := p.Curve.NewG1() // sum = \prod (inputs[i]/commitmentToType)/ \prod (outputs[i]/commitmentToType)
+	// sum = \prod (inputs[i]/commitmentToType)/ \prod (outputs[i]/commitmentToType)
+	// sum = G_2^r
+	sum := p.Curve.NewG1()
 	for i := 0; i < len(p.Inputs); i++ {
 		// compute in = inputs[i]/commitmentToType
 		in := p.Inputs[i].Copy()
@@ -171,7 +166,7 @@ func (p *TypeAndSumProver) Prove() (*TypeAndSumProof, error) {
 	}
 
 	// serialize public information
-	raw, err := crypto.GetG1Array(commitments.Inputs, commitments.Outputs, []*math.G1{commitments.CommitmentToType, commitments.Sum}, inputs, outputs, []*math.G1{p.CommitmentToType, sum}).Bytes()
+	raw, err := crypto.GetG1Array(commitments.Inputs, []*math.G1{commitments.CommitmentToType, commitments.Sum}, inputs, outputs, []*math.G1{p.CommitmentToType, sum}).Bytes()
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot compute sum and type proof")
 	}
@@ -195,7 +190,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	var inputs, outputs []*math.G1
 	sum := v.Curve.NewG1()
 
-	var inComs, outComs []*math.G1
+	var inComs []*math.G1
 
 	for i := 0; i < len(v.Inputs); i++ {
 		if stp.InputValues[i] == nil {
@@ -214,19 +209,12 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	}
 
 	for i := 0; i < len(v.Outputs); i++ {
-		if stp.OutputValues[i] == nil {
-			return errors.New("invalid sum and type proof")
-		}
 		out := v.Outputs[i].Copy()
 		out.Sub(stp.CommitmentToType)
 		outputs = append(outputs, out)
 
 		sum.Sub(out)
 
-		outC := v.PedParams[1].Mul(stp.OutputValues[i])
-		outC.Add(v.PedParams[2].Mul(stp.OutputBlindingFactors[i]))
-		outC.Sub(out.Mul(stp.Challenge))
-		outComs = append(outComs, outC)
 	}
 	sumCom := v.PedParams[2].Mul(stp.EqualityOfSum)
 	sumCom.Sub(sum.Mul(stp.Challenge))
@@ -235,7 +223,7 @@ func (v *TypeAndSumVerifier) Verify(stp *TypeAndSumProof) error {
 	typeCom.Add(v.PedParams[2].Mul(stp.TypeBlindingFactor))
 	typeCom.Sub(stp.CommitmentToType.Mul(stp.Challenge))
 
-	raw, err := crypto.GetG1Array(inComs, outComs, []*math.G1{typeCom, sumCom}, inputs, outputs, []*math.G1{stp.CommitmentToType, sum}).Bytes()
+	raw, err := crypto.GetG1Array(inComs, []*math.G1{typeCom, sumCom}, inputs, outputs, []*math.G1{stp.CommitmentToType, sum}).Bytes()
 	if err != nil {
 		return errors.Wrap(err, "cannot verify sum and type proof")
 	}
@@ -272,17 +260,10 @@ func (p *TypeAndSumProver) computeProof(randomness *TypeAndSumProofRandomness, c
 		sumBF = p.Curve.ModAdd(sumBF, t, p.Curve.GroupOrder)
 	}
 
-	// generate zk proof for output values and corresponding blinding factors
+	// we don't generate proof that outputs[i]/commitmentToType = G_1^vG_2^r as this is taken care of by
+	// range proofs
 	for i := 0; i < len(p.Outputs); i++ {
-		v := p.Curve.ModMul(chal, p.witness.outValues[i], p.Curve.GroupOrder)
-		v = p.Curve.ModAdd(v, randomness.outValues[i], p.Curve.GroupOrder)
-		stp.OutputValues = append(stp.OutputValues, v)
-
 		t := p.Curve.ModSub(p.witness.outBlindingFactors[i], p.witness.typeBlindingFactor, p.Curve.GroupOrder)
-		bf := p.Curve.ModMul(chal, t, p.Curve.GroupOrder)
-		bf = p.Curve.ModAdd(bf, randomness.outBF[i], p.Curve.GroupOrder)
-		stp.OutputBlindingFactors = append(stp.OutputBlindingFactors, bf)
-
 		sumBF = p.Curve.ModSub(sumBF, t, p.Curve.GroupOrder)
 	}
 
@@ -324,20 +305,6 @@ func (p *TypeAndSumProver) computeCommitments() (*TypeAndSumProofCommitments, *T
 		// compute corresponding commitments
 		commitments.Inputs[i] = p.PedParams[1].Mul(randomness.inValues[i])
 		commitments.Inputs[i].Add(p.PedParams[2].Mul(randomness.inBF[i]))
-	}
-	// for outputs
-	randomness.outValues = make([]*math.Zr, len(p.Outputs))
-	randomness.outBF = make([]*math.Zr, len(p.Outputs))
-	commitments.Outputs = make([]*math.G1, len(p.Outputs))
-
-	for i := 0; i < len(p.Outputs); i++ {
-		// randomness to prove output values
-		randomness.outValues[i] = p.Curve.NewRandomZr(rand)
-		// randomness to prove output blinding factors
-		randomness.outBF[i] = p.Curve.NewRandomZr(rand)
-		// compute corresponding commitments
-		commitments.Outputs[i] = p.PedParams[1].Mul(randomness.outValues[i])
-		commitments.Outputs[i].Add(p.PedParams[2].Mul(randomness.outBF[i]))
 	}
 
 	// for sum

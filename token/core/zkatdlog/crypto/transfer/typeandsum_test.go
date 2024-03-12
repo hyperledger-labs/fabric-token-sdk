@@ -44,8 +44,6 @@ var _ = Describe("Input/Output well formedness", func() {
 				Expect(proof.EqualityOfSum).NotTo(BeNil())
 				Expect(proof.Type).NotTo(BeNil())
 				Expect(len(proof.InputBlindingFactors)).To(Equal(2))
-				Expect(len(proof.OutputBlindingFactors)).To(Equal(3))
-				Expect(len(proof.OutputValues)).To(Equal(3))
 				Expect(len(proof.InputValues)).To(Equal(2))
 			})
 		})

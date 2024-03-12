@@ -100,9 +100,6 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
-		//toBesigned := append(raw, []byte(common.Separator)...)
-		//toBesigned = append(toBesigned, []byte(txID)...)
-
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign token requests")
