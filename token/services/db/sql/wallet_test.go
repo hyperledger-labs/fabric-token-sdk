@@ -59,14 +59,14 @@ var WalletCases = []struct {
 func TDuplicate(t *testing.T, db *WalletDB) {
 	id := []byte{254, 0, 155, 1}
 
-	err := db.StoreIdentity(id, "duplicate", 0, []byte("meta"))
+	err := db.StoreIdentity(id, "eID", "duplicate", 0, []byte("meta"))
 	assert.NoError(t, err)
 
 	meta, err := db.LoadMeta(id, "duplicate", 0)
 	assert.NoError(t, err)
 	assert.Equal(t, "meta", string(meta))
 
-	err = db.StoreIdentity(id, "duplicate", 0, nil)
+	err = db.StoreIdentity(id, "eID", "duplicate", 0, nil)
 	assert.NoError(t, err)
 
 	meta, err = db.LoadMeta(id, "duplicate", 0)
@@ -75,10 +75,10 @@ func TDuplicate(t *testing.T, db *WalletDB) {
 }
 
 func TWalletIdentities(t *testing.T, db *WalletDB) {
-	assert.NoError(t, db.StoreIdentity([]byte("alice"), "alice_wallet", 0, nil))
-	assert.NoError(t, db.StoreIdentity([]byte("alice"), "alice_wallet", 1, nil))
-	assert.NoError(t, db.StoreIdentity([]byte("bob"), "bob_wallet", 0, nil))
-	assert.NoError(t, db.StoreIdentity([]byte("alice"), "alice_wallet", 0, nil))
+	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
+	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 1, nil))
+	assert.NoError(t, db.StoreIdentity([]byte("bob"), "eID", "bob_wallet", 0, nil))
+	assert.NoError(t, db.StoreIdentity([]byte("alice"), "eID", "alice_wallet", 0, nil))
 
 	ids, err := db.GetWalletIDs(0)
 	assert.NoError(t, err)

@@ -32,7 +32,7 @@ func NewWalletDB(kvs KVS, tmsID token.TMSID) *WalletDB {
 	return &WalletDB{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, roleID int, meta []byte) error {
+func (s *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
 	idHash := identity.UniqueID()
 	if meta != nil {
 		k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})

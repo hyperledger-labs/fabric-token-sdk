@@ -152,7 +152,7 @@ func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
 
 // BindIdentity binds the passed identity to the passed wallet identifier.
 // Additional metadata can be bound to the identity.
-func (r *WalletRegistry) BindIdentity(identity view.Identity, wID string, meta any) error {
+func (r *WalletRegistry) BindIdentity(identity view.Identity, eID string, wID string, meta any) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
@@ -160,7 +160,7 @@ func (r *WalletRegistry) BindIdentity(identity view.Identity, wID string, meta a
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal metadata")
 	}
-	return r.Storage.StoreIdentity(identity, wID, int(r.Role.ID()), metaEncoded)
+	return r.Storage.StoreIdentity(identity, eID, wID, int(r.Role.ID()), metaEncoded)
 }
 
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,

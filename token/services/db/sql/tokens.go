@@ -662,7 +662,7 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 
 func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, tx_index, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
+	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, idx, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
 
 	tx, err := db.db.Begin()
 	if err != nil {
@@ -726,7 +726,7 @@ func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, [
 	if err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SELECT tx_id, tx_index, certification FROM %s WHERE ", db.table.Certifications) + conditions
+	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE ", db.table.Certifications) + conditions
 
 	rows, err := db.db.Query(query, tokenIDs...)
 	if err != nil {
@@ -816,7 +816,7 @@ func (db *TokenDB) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			token_id TEXT NOT NULL PRIMARY KEY,
 			tx_id TEXT NOT NULL,
-			tx_index INT NOT NULL,
+			idx INT NOT NULL,
 			certification BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);

@@ -21,7 +21,7 @@ type WalletRegistry interface {
 	RegisterIdentity(id string, path string) error
 	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
-	BindIdentity(identity view.Identity, wID string, meta any) error
+	BindIdentity(identity view.Identity, eID string, wID string, meta any) error
 }
 
 type WalletService struct {
@@ -144,7 +144,7 @@ func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, err
 	if err := s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register rwallet [%s]", wID)
 	}
-	if err := s.OwnerWalletsRegistry.BindIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.OwnerWalletsRegistry.BindIdentity(idInfoIdentity, idInfo.EnrollmentID(), wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", idInfoIdentity)
 	}
 	logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, wID)
@@ -182,7 +182,7 @@ func (s *WalletService) issuerWallet(id interface{}) (driver.IssuerWallet, error
 	if err := s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register issuer wallet [%s]", wID)
 	}
-	if err := s.IssuerWalletsRegistry.BindIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.IssuerWalletsRegistry.BindIdentity(idInfoIdentity, idInfo.EnrollmentID(), wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
 	logger.Debugf("created issuer wallet [%s]", wID)
@@ -219,7 +219,7 @@ func (s *WalletService) auditorWallet(id interface{}) (driver.AuditorWallet, err
 	if err := s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register auditor wallet [%s]", wID)
 	}
-	if err := s.AuditorWalletsRegistry.BindIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.AuditorWalletsRegistry.BindIdentity(idInfoIdentity, idInfo.EnrollmentID(), wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
 	logger.Debugf("created auditor wallet [%s]", wID)
