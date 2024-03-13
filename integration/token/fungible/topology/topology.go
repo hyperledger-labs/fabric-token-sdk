@@ -48,7 +48,7 @@ func Topology(opts Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
+	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
