@@ -9,7 +9,6 @@ package sql
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/stretchr/testify/assert"
 )
@@ -53,27 +52,26 @@ var WalletCases = []struct {
 	Name string
 	Fn   func(*testing.T, *WalletDB)
 }{
-	{"Duplicate", TDuplicate},
+	{"TDuplicate", TDuplicate},
 	{"TWalletIdentities", TWalletIdentities},
 }
 
 func TDuplicate(t *testing.T, db *WalletDB) {
-	id := view.Identity([]byte{254, 0, 155, 1})
+	id := []byte{254, 0, 155, 1}
 
-	err := db.StoreIdentity(id, "duplicate", "meta")
+	err := db.StoreIdentity(id, "duplicate", 0, []byte("meta"))
 	assert.NoError(t, err)
 
-	var meta string
-	err = db.LoadMeta(id, &meta)
+	meta, err := db.LoadMeta(id, "duplicate", 0)
 	assert.NoError(t, err)
-	assert.Equal(t, "meta", meta)
+	assert.Equal(t, "meta", string(meta))
 
-	err = db.StoreIdentity(id, "duplicate", "")
+	err = db.StoreIdentity(id, "duplicate", 0, nil)
 	assert.NoError(t, err)
 
-	err = db.LoadMeta(id, &meta)
+	meta, err = db.LoadMeta(id, "duplicate", 0)
 	assert.NoError(t, err)
-	assert.Equal(t, "meta", meta)
+	assert.Equal(t, "meta", string(meta))
 }
 
 func TWalletIdentities(t *testing.T, db *WalletDB) {

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package identity
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"sync"
@@ -145,9 +146,6 @@ func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityI
 
 // RegisterWallet binds the passed wallet to the passed id
 func (r *WalletRegistry) RegisterWallet(id string, w driver.Wallet) error {
-	if err := r.Storage.StoreWalletID(id); err != nil {
-		return errors.WithMessagef(err, "failed to store wallet entry [%s]", id)
-	}
 	r.Wallets[id] = w
 	return nil
 }
@@ -158,13 +156,17 @@ func (r *WalletRegistry) BindIdentity(identity view.Identity, wID string, meta a
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
-	return r.Storage.StoreIdentity(identity, wID, int(r.Role.ID()), meta)
+	metaEncoded, err := json.Marshal(meta)
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal metadata")
+	}
+	return r.Storage.StoreIdentity(identity, wID, int(r.Role.ID()), metaEncoded)
 }
 
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
 // false otherwise
 func (r *WalletRegistry) ContainsIdentity(identity view.Identity, wID string) bool {
-	return r.Storage.IdentityExists(identity, wID)
+	return r.Storage.IdentityExists(identity, wID, int(r.Role.ID()))
 }
 
 // WalletIDs returns the list of wallet identifiers
@@ -197,15 +199,16 @@ func (r *WalletRegistry) GetIdentityMetadata(identity view.Identity, wID string,
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("get recipient identity metadata [%s]->[%s]", identity, wID)
 	}
-	if err := r.Storage.LoadMeta(identity, meta); err != nil {
+	raw, err := r.Storage.LoadMeta(identity, wID, int(r.Role.ID()))
+	if err != nil {
 		return errors.WithMessagef(err, "failed to retrieve identity's metadata [%s]", identity)
 	}
-	return nil
+	return json.Unmarshal(raw, &meta)
 }
 
 // GetWalletID returns the wallet identifier bound to the passed identity
 func (r *WalletRegistry) GetWalletID(identity view.Identity) (string, error) {
-	wID, err := r.Storage.GetWalletID(identity)
+	wID, err := r.Storage.GetWalletID(identity, int(r.Role.ID()))
 	if err != nil {
 		return "", nil
 	}
