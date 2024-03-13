@@ -67,16 +67,16 @@ func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) e
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
+	if tok == nil {
+		logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
+		return nil
+	}
 	owners, err := t.tx.OwnersOf(txID, index)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get owners for token [%s:%d]", txID, index)
 	}
 	err = t.tx.Delete(txID, index, deletedBy)
 	if err != nil {
-		if tok == nil {
-			logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
-			return nil
-		}
 		return errors.WithMessagef(err, "failed to delete token [%s:%d]", txID, index)
 	}
 	for _, id := range owners {
