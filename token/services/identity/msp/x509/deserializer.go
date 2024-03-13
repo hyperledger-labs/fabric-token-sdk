@@ -7,21 +7,21 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"crypto/ecdsa"
-	"fmt"
+	ecdsa2 "crypto/ecdsa"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
 
-type Deserializer struct{}
+// MSPIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
+type MSPIdentityDeserializer struct{}
 
-func (i *Deserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
+func (deserializer *MSPIdentityDeserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
 	si := &msp.SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
+	err := proto.Unmarshal(id, si)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
@@ -29,31 +29,32 @@ func (i *Deserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) 
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing received public key")
 	}
-	publicKey, ok := genericPublicKey.(*ecdsa.PublicKey)
+	publicKey, ok := genericPublicKey.(*ecdsa2.PublicKey)
 	if !ok {
 		return nil, errors.New("expected *ecdsa.PublicKey")
 	}
-
-	return NewVerifier(publicKey), nil
+	return NewECDSAVerifier(publicKey), nil
 }
 
-func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return nil, errors.New("not supported")
+type AuditInfoDeserializer struct {
+	CommonName string
 }
 
-func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
+func (a *AuditInfoDeserializer) Match(id []byte) error {
 	si := &msp.SerializedIdentity{}
-	err := proto.Unmarshal(raw, si)
+	err := proto.Unmarshal(id, si)
 	if err != nil {
-		return "", err
+		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
+
 	cert, err := PemDecodeCert(si.IdBytes)
 	if err != nil {
-		return "", err
+		return errors.Wrap(err, "failed to decode certificate")
 	}
-	return fmt.Sprintf("MSP.x509: [%s][%s][%s]", view.Identity(raw).UniqueID(), si.Mspid, cert.Subject.CommonName), nil
-}
 
-func (i *Deserializer) String() string {
-	return "Generic X509 Verifier Deserializer"
+	if cert.Subject.CommonName != a.CommonName {
+		return errors.Errorf("expected [%s], got [%s]", a.CommonName, cert.Subject.CommonName)
+	}
+
+	return nil
 }

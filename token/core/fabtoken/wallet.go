@@ -10,9 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -21,13 +18,13 @@ type WalletRegistry interface {
 	WalletIDs() ([]string, error)
 	Lock()
 	Unlock()
+	RegisterIdentity(id string, path string) error
 	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
-	RegisterIdentity(identity view.Identity, wID string, meta any) error
+	BindIdentity(identity view.Identity, eID string, wID string, meta any) error
 }
 
 type WalletService struct {
-	SignerService    common.SigService
 	IdentityProvider driver.IdentityProvider
 	TokenVault       TokenVault
 	Deserializer     driver.Deserializer
@@ -38,31 +35,29 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	SignerService common.SigService,
 	identityProvider driver.IdentityProvider,
 	tokenVault TokenVault,
 	Deserializer driver.Deserializer,
-	OwnerWalletsRegistry WalletRegistry,
-	IssuerWalletsRegistry WalletRegistry,
-	AuditorWalletsRegistry WalletRegistry,
+	OwnerWalletRegistry WalletRegistry,
+	IssuerWalletRegistry WalletRegistry,
+	AuditorWalletRegistry WalletRegistry,
 ) *WalletService {
 	return &WalletService{
-		SignerService:          SignerService,
 		IdentityProvider:       identityProvider,
 		TokenVault:             tokenVault,
 		Deserializer:           Deserializer,
-		OwnerWalletsRegistry:   OwnerWalletsRegistry,
-		IssuerWalletsRegistry:  IssuerWalletsRegistry,
-		AuditorWalletsRegistry: AuditorWalletsRegistry,
+		OwnerWalletsRegistry:   OwnerWalletRegistry,
+		IssuerWalletsRegistry:  IssuerWalletRegistry,
+		AuditorWalletsRegistry: AuditorWalletRegistry,
 	}
 }
 
 func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.IdentityProvider.RegisterOwnerWallet(id, path)
+	return s.OwnerWalletsRegistry.RegisterIdentity(id, path)
 }
 
 func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.IdentityProvider.RegisterIssuerWallet(id, path)
+	return s.IssuerWalletsRegistry.RegisterIdentity(id, path)
 }
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
@@ -80,25 +75,18 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
 	}
-	if err := s.SignerService.RegisterVerifier(data.Identity, v); err != nil {
+	if err := s.IdentityProvider.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := s.SignerService.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+	if err := s.IdentityProvider.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 
 	return nil
 }
 
-func (s *WalletService) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := s.SignerService.RegisterAuditInfo(id, auditInfo); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
-	return s.SignerService.GetAuditInfo(id)
+	return s.IdentityProvider.GetAuditInfo(id)
 }
 
 func (s *WalletService) GetEnrollmentID(auditInfo []byte) (string, error) {
@@ -151,17 +139,13 @@ func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, err
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get owner wallet identity for [%s]", wID)
 	}
-	wrappedID, err := s.wrapWalletIdentity(idInfoIdentity)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to wrap owner wallet identity for [%s]", wID)
-	}
 
-	newWallet := newOwnerWallet(s, idInfoIdentity, wrappedID, wID, idInfo)
+	newWallet := newOwnerWallet(s, idInfoIdentity, wID, idInfo)
 	if err := s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register rwallet [%s]", wID)
 	}
-	if err := s.OwnerWalletsRegistry.RegisterIdentity(wrappedID, wID, nil); err != nil {
-		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wrappedID)
+	if err := s.OwnerWalletsRegistry.BindIdentity(idInfoIdentity, idInfo.EnrollmentID(), wID, nil); err != nil {
+		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", idInfoIdentity)
 	}
 	logger.Debugf("created owner wallet [%s:%s]", idInfo.ID, wID)
 	return newWallet, nil
@@ -198,7 +182,7 @@ func (s *WalletService) issuerWallet(id interface{}) (driver.IssuerWallet, error
 	if err := s.IssuerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register issuer wallet [%s]", wID)
 	}
-	if err := s.IssuerWalletsRegistry.RegisterIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.IssuerWalletsRegistry.BindIdentity(idInfoIdentity, idInfo.EnrollmentID(), wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
 	logger.Debugf("created issuer wallet [%s]", wID)
@@ -235,7 +219,7 @@ func (s *WalletService) auditorWallet(id interface{}) (driver.AuditorWallet, err
 	if err := s.AuditorWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register auditor wallet [%s]", wID)
 	}
-	if err := s.AuditorWalletsRegistry.RegisterIdentity(idInfoIdentity, wID, nil); err != nil {
+	if err := s.AuditorWalletsRegistry.BindIdentity(idInfoIdentity, idInfo.EnrollmentID(), wID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register recipient identity [%s]", wID)
 	}
 	logger.Debugf("created auditor wallet [%s]", wID)
@@ -255,31 +239,18 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
-func (s *WalletService) wrapWalletIdentity(id view.Identity) (view.Identity, error) {
-	raw, err := identity.WrapOwnerIdentity(msp.X509Identity, id)
-	if err != nil {
-		return nil, err
-	}
-	if err := s.IdentityProvider.Bind(raw, id); err != nil {
-		return nil, err
-	}
-	return raw, nil
-}
-
 type ownerWallet struct {
 	tokenService *WalletService
 	id           string
 	identityInfo driver.IdentityInfo
 	identity     view.Identity
-	wrappedID    view.Identity
 }
 
-func newOwnerWallet(tokenService *WalletService, identity, wrappedID view.Identity, id string, identityInfo driver.IdentityInfo) *ownerWallet {
+func newOwnerWallet(tokenService *WalletService, identity view.Identity, id string, identityInfo driver.IdentityInfo) *ownerWallet {
 	return &ownerWallet{
 		tokenService: tokenService,
 		id:           id,
 		identity:     identity,
-		wrappedID:    wrappedID,
 		identityInfo: identityInfo,
 	}
 }
@@ -289,7 +260,7 @@ func (w *ownerWallet) ID() string {
 }
 
 func (w *ownerWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity) || w.wrappedID.Equal(identity)
+	return w.identity.Equal(identity)
 }
 
 func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
@@ -297,7 +268,7 @@ func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *ownerWallet) GetRecipientIdentity() (view.Identity, error) {
-	return w.wrappedID, nil
+	return w.identity, nil
 }
 
 func (w *ownerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
@@ -313,11 +284,11 @@ func (w *ownerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error
 }
 
 func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
-	if !w.wrappedID.Equal(identity) {
+	if !w.identity.Equal(identity) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
 	}
 
-	si, err := w.tokenService.IdentityProvider.GetSigner(w.wrappedID)
+	si, err := w.tokenService.IdentityProvider.GetSigner(w.identity)
 	if err != nil {
 		return nil, err
 	}

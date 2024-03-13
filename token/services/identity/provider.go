@@ -37,6 +37,7 @@ type EnrollmentIDUnmarshaler interface {
 type sigService interface {
 	IsMe(identity view.Identity) bool
 	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterVerifier(identity view.Identity, v driver.Verifier) error
 	RegisterAuditInfo(identity view.Identity, info []byte) error
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 	GetSigner(identity view.Identity) (driver.Signer, error)
@@ -47,64 +48,32 @@ type Binder interface {
 	Bind(longTerm view.Identity, ephemeral view.Identity) error
 }
 
-// Provider implements the driver.IdentityProvider interface
+// Provider implements the driver.IdentityProvider interface.
+// Provider handles the long-term identities on top of which wallets are defined.
 type Provider struct {
-	SigService         sigService
-	Binder             Binder
-	DefaultFSCIdentity view.Identity
+	SigService sigService
+	Binder     Binder
 
-	wallets                 Wallets
 	deserializerManager     deserializer.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
 }
 
-// NewProvider creates a new identity provider
-func NewProvider(
-	sigService sigService,
-	binder Binder,
-	defaultFSCIdentity view.Identity,
-	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler,
-	wallets Wallets,
-	deserializerManager deserializer.Manager,
-) *Provider {
+// NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
+// The Provider handles the long-term identities on top of which wallets are defined.
+func NewProvider(sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, deserializerManager deserializer.Manager) *Provider {
 	return &Provider{
 		SigService:              sigService,
 		Binder:                  binder,
-		DefaultFSCIdentity:      defaultFSCIdentity,
-		wallets:                 wallets,
 		deserializerManager:     deserializerManager,
 		enrollmentIDUnmarshaler: enrollmentIDUnmarshaler,
 		isMeCache:               make(map[string]bool),
 	}
 }
 
-func (p *Provider) GetIdentityInfo(role driver.IdentityRole, id string) (driver.IdentityInfo, error) {
-	wallet, ok := p.wallets[role]
-	if !ok {
-		return nil, errors.Errorf("wallet not found for role [%d]", role)
-	}
-	info := wallet.GetIdentityInfo(id)
-	if info == nil {
-		return nil, errors.Errorf("identity info not found for id [%s]", id)
-	}
-	return &Info{IdentityInfo: info, Provider: p}, nil
-}
-
-func (p *Provider) LookupIdentifier(role driver.IdentityRole, v interface{}) (view.Identity, string, error) {
-	wallet, ok := p.wallets[role]
-	if !ok {
-		return nil, "", errors.Errorf("wallet not found for role [%d]", role)
-	}
-	id, label, err := wallet.MapToID(v)
-	if err != nil {
-		return nil, "", err
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("identifier for [%v] is [%s,%s]", v, id, walletIDToString(label))
-	}
-	return id, label, nil
+func (p *Provider) RegisterVerifier(identity view.Identity, v driver.Verifier) error {
+	return p.SigService.RegisterVerifier(identity, v)
 }
 
 func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
@@ -165,8 +134,8 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 
 	// give it a second chance
 
-	// is the identity wrapped in RawOwner?
-	ro, err2 := UnmarshallRawOwner(identity)
+	// is the identity wrapped in TypedIdentity?
+	ro, err2 := UnmarshalTypedIdentity(identity)
 	if err2 != nil {
 		// No
 		signer, err := p.tryDeserialization(identity)
@@ -212,19 +181,7 @@ func (p *Provider) GetRevocationHandler(auditInfo []byte) (string, error) {
 	return p.enrollmentIDUnmarshaler.GetRevocationHandler(auditInfo)
 }
 
-func (p *Provider) RegisterOwnerWallet(id string, path string) error {
-	logger.Debugf("register owner wallet [%s:%s]", id, path)
-	return p.wallets[driver.OwnerRole].RegisterIdentity(id, path)
-}
-
-func (p *Provider) RegisterIssuerWallet(id string, path string) error {
-	logger.Debugf("register issuer wallet [%s:%s]", id, path)
-	return p.wallets[driver.IssuerRole].RegisterIdentity(id, path)
-}
-
 func (p *Provider) Bind(id view.Identity, to view.Identity) error {
-	sigService := p.SigService
-
 	setSV := true
 	signer, err := p.GetSigner(to)
 	if err != nil {
@@ -233,7 +190,7 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 		}
 		setSV = false
 	}
-	verifier, err := sigService.GetVerifier(to)
+	verifier, err := p.SigService.GetVerifier(to)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed getting verifier for [%s][%s][%s]", to, err, debug.Stack())
@@ -242,7 +199,7 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	}
 
 	setAI := true
-	auditInfo, err := sigService.GetAuditInfo(to)
+	auditInfo, err := p.SigService.GetAuditInfo(to)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed getting audit info for [%s][%s]", to, err)
@@ -251,12 +208,12 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	}
 
 	if setSV {
-		if err := sigService.RegisterSigner(id, signer, verifier); err != nil {
+		if err := p.SigService.RegisterSigner(id, signer, verifier); err != nil {
 			return err
 		}
 	}
 	if setAI {
-		if err := sigService.RegisterAuditInfo(id, auditInfo); err != nil {
+		if err := p.SigService.RegisterAuditInfo(id, auditInfo); err != nil {
 			return err
 		}
 	}
@@ -269,48 +226,6 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	return nil
 }
 
-func (p *Provider) WalletIDs(role driver.IdentityRole) ([]string, error) {
-	wallet, ok := p.wallets[role]
-	if !ok {
-		return nil, errors.Errorf("wallet not found for role [%d]", role)
-	}
-	return wallet.IDs()
-}
-
 func (p *Provider) tryDeserialization(id view.Identity) (driver.Signer, error) {
 	return p.deserializerManager.DeserializeSigner(id)
-}
-
-// Info wraps a driver.IdentityInfo to further register the audit info,
-// and binds the new identity to the default FSC node identity
-type Info struct {
-	driver.IdentityInfo
-	Provider *Provider
-}
-
-func (i *Info) ID() string {
-	return i.IdentityInfo.ID()
-}
-
-func (i *Info) EnrollmentID() string {
-	return i.IdentityInfo.EnrollmentID()
-}
-
-func (i *Info) Get() (view.Identity, []byte, error) {
-	// get the identity
-	id, ai, err := i.IdentityInfo.Get()
-	if err != nil {
-		return nil, nil, err
-	}
-	// register the audit info
-	if err := i.Provider.RegisterAuditInfo(id, ai); err != nil {
-		return nil, nil, err
-	}
-	// bind the identity to the default FSC node identity
-	if i.Provider.Binder != nil {
-		if err := i.Provider.Binder.Bind(i.Provider.DefaultFSCIdentity, id); err != nil {
-			return nil, nil, err
-		}
-	}
-	return id, ai, nil
 }

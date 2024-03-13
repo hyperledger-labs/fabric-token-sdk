@@ -128,6 +128,9 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	}
 
 	// parse the inputs
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), tx.ID())
+	}
 	for _, input := range is.Inputs() {
 		if input.Id == nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {

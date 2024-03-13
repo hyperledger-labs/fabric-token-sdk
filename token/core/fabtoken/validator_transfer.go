@@ -108,7 +108,7 @@ func TransferHTLCValidate(ctx *Context) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {
-		owner, err := identity.UnmarshallRawOwner(in.Owner.Raw)
+		owner, err := identity.UnmarshalTypedIdentity(in.Owner.Raw)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
@@ -160,7 +160,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 
 		// if it is an htlc script then the deadline must still be valid
-		owner, err := identity.UnmarshallRawOwner(out.Output.Owner.Raw)
+		owner, err := identity.UnmarshalTypedIdentity(out.Output.Owner.Raw)
 		if err != nil {
 			return err
 		}

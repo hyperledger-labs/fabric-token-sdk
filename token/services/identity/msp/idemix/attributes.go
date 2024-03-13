@@ -10,42 +10,28 @@ import (
 	m "github.com/hyperledger/fabric-protos-go/msp"
 )
 
-// Role : Represents a IdemixRole
-type Role int32
+// RoleAttribute : Represents a IdemixRole
+type RoleAttribute int32
 
 // The expected roles are 4; We can combine them using a bitmask
 const (
-	MEMBER Role = 1
-	ADMIN  Role = 2
-	CLIENT Role = 4
-	PEER   Role = 8
+	MEMBER RoleAttribute = 1
+	ADMIN  RoleAttribute = 2
+	CLIENT RoleAttribute = 4
+	PEER   RoleAttribute = 8
 	// Next role values: 16, 32, 64 ...
 )
 
-func (role Role) getValue() int {
+func (role RoleAttribute) getValue() int {
 	return int(role)
 }
 
 // CheckRole Prove that the desired role is contained or not in the bitmask
-func CheckRole(bitmask int, role Role) bool {
+func CheckRole(bitmask int, role RoleAttribute) bool {
 	return (bitmask & role.getValue()) == role.getValue()
 }
 
-// GetRoleMaskFromIdemixRoles Receive a list of roles to combine in a single bitmask
-func GetRoleMaskFromIdemixRoles(roles []Role) int {
-	mask := 0
-	for _, role := range roles {
-		mask = mask | role.getValue()
-	}
-	return mask
-}
-
-// GetRoleMaskFromIdemixRole return a bitmask for one role
-func GetRoleMaskFromIdemixRole(role Role) int {
-	return GetRoleMaskFromIdemixRoles([]Role{role})
-}
-
-// GetIdemixRoleFromMSPRole gets a MSP Role type and returns the integer value
+// GetIdemixRoleFromMSPRole gets a MSP RoleAttribute type and returns the integer value
 func GetIdemixRoleFromMSPRole(role *m.MSPRole) int {
 	return GetIdemixRoleFromMSPRoleType(role.GetRole())
 }

@@ -258,7 +258,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 	if len(token.Owner.OwnerInfo) == 0 {
 		return errors.Errorf("failed to inspect owner at index [%d]: owner info is nil", index)
 	}
-	ro, err := identity.UnmarshallRawOwner(token.Token.Owner)
+	ro, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("owner at index [%d] cannot be unwrapped", index)
 	}
@@ -281,7 +281,7 @@ func InspectTokenOwner(des Deserializer, token *AuditableToken, index int) error
 }
 
 func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index int) error {
-	owner, err := identity.UnmarshallRawOwner(token.Token.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(token.Token.Owner)
 	if err != nil {
 		return errors.Errorf("input owner at index [%d] cannot be unmarshalled", index)
 	}
@@ -298,7 +298,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script sender [%s]", string(scriptInf.Sender))
 	}
-	ro, err := identity.UnmarshallRawOwner(scriptSender)
+	ro, err := identity.UnmarshalTypedIdentity(scriptSender)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve raw owner from sender in script")
 	}
@@ -310,7 +310,7 @@ func inspectTokenOwnerOfScript(des Deserializer, token *AuditableToken, index in
 	if err != nil {
 		return errors.Wrapf(err, "failed to unmarshal audit info from script recipient [%s]", string(scriptInf.Recipient))
 	}
-	ro, err = identity.UnmarshallRawOwner(scriptRecipient)
+	ro, err = identity.UnmarshalTypedIdentity(scriptRecipient)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve raw owner from recipien in script")
 	}

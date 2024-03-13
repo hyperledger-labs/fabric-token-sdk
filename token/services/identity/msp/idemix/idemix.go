@@ -72,7 +72,7 @@ func (c *Idemix) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID
 		return nil, errors.Wrap(err, "cannot deserialize the OU of the identity")
 	}
 
-	// Role
+	// RoleAttribute
 	role := &m.MSPRole{}
 	err = proto.Unmarshal(serialized.Role, role)
 	if err != nil {

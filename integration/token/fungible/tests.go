@@ -298,6 +298,14 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3, nil)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
+	h := ListIssuerHistory(network, "", "USD", "issuer")
+	Expect(h.Count() > 0).To(BeTrue())
+	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0), "expected [%d]=[120]", h.Sum(64).ToBigInt().Int64())
+	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
+
+	h = ListIssuerHistory(network, "", "EUR", "issuer")
+	Expect(h.Count()).To(BeEquivalentTo(0))
+
 	Restart(network, true, auditor)
 	RegisterAuditor(network, auditor, onAuditorRestart)
 
@@ -310,9 +318,9 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[:2], &t0, &t3, nil)
 	CheckAcceptedTransactions(network, "alice", "", AliceAcceptedTransactions[1:2], &t2, &t3, nil)
 
-	h := ListIssuerHistory(network, "", "USD", "issuer")
+	h = ListIssuerHistory(network, "", "USD", "issuer")
 	Expect(h.Count() > 0).To(BeTrue())
-	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0))
+	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(120))).To(BeEquivalentTo(0), "expected [%d]=[120]", h.Sum(64).ToBigInt().Int64())
 	Expect(h.ByType("USD").Count()).To(BeEquivalentTo(h.Count()))
 
 	h = ListIssuerHistory(network, "", "EUR", "issuer")

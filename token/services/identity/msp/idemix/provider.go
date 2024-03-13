@@ -24,12 +24,9 @@ import (
 )
 
 const (
-	EIDIndex = 2
-	RHIndex  = 3
-)
-
-const (
-	Any bccsp.SignatureType = 100
+	EIDIndex                     = 2
+	RHIndex                      = 3
+	Any      bccsp.SignatureType = 100
 )
 
 type SignerService interface {
@@ -403,7 +400,7 @@ func (p *Provider) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentit
 		return nil, errors.Wrap(err, "cannot deserialize the OU of the identity")
 	}
 
-	// Role
+	// RoleAttribute
 	role := &m.MSPRole{}
 	err = proto.Unmarshal(serialized.Role, role)
 	if err != nil {

@@ -34,8 +34,10 @@ func initSchema(db *sql.DB, schemas ...string) (err error) {
 		}
 	}()
 
+	fmt.Println("schema")
 	for _, schema := range schemas {
 		logger.Debug(schema)
+		fmt.Println(schema)
 		if _, err = db.Exec(schema); err != nil {
 			return errors.Wrap(err, "error creating schema")
 		}
@@ -90,7 +92,7 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		Ownership:              fmt.Sprintf("%sownership%s", prefix, suffix),
 		PublicParams:           fmt.Sprintf("%spublic_params%s", prefix, suffix),
 		Wallets:                fmt.Sprintf("%swallet%s", prefix, suffix),
-		IdentityConfigurations: fmt.Sprintf("%sdentity%s", prefix, suffix),
+		IdentityConfigurations: fmt.Sprintf("%s%sd_configs%s", prefix, "i", suffix),
 		AuditInfo:              fmt.Sprintf("%saudit_info%s", prefix, suffix),
 		Signers:                fmt.Sprintf("%ssigners%s", prefix, suffix),
 	}, nil

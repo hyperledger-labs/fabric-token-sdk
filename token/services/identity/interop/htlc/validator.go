@@ -30,7 +30,7 @@ type Action interface {
 
 // VerifyOwner validates the owners of the transfer in the htlc script
 func VerifyOwner(senderRawOwner []byte, outRawOwner []byte, now time.Time) (*htlc.Script, OperationType, error) {
-	sender, err := identity.UnmarshallRawOwner(senderRawOwner)
+	sender, err := identity.UnmarshalTypedIdentity(senderRawOwner)
 	if err != nil {
 		return nil, None, err
 	}

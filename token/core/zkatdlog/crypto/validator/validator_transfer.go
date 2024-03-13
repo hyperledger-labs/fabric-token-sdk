@@ -101,7 +101,7 @@ func TransferHTLCValidate(ctx *Context) error {
 	now := time.Now()
 
 	for i, in := range ctx.InputTokens {
-		owner, err := identity.UnmarshallRawOwner(in.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(in.Owner)
 		if err != nil {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
@@ -138,7 +138,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		if out.IsRedeem() {
 			continue
 		}
-		owner, err := identity.UnmarshallRawOwner(out.Owner)
+		owner, err := identity.UnmarshalTypedIdentity(out.Owner)
 		if err != nil {
 			return err
 		}

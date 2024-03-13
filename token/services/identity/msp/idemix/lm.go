@@ -435,7 +435,7 @@ func GetFabricCAIdemixMspConfig(dir string, ID string) (*msp.MSPConfig, error) {
 		return nil, errors.Wrapf(err, "failed to read issuer public key file at [%s]", path)
 	}
 
-	path = filepath.Join(dir, IdemixConfigFileRevocationPublicKey)
+	path = filepath.Join(dir, ConfigFileRevocationPublicKey)
 	revocationPkBytes, err := ReadFile(path)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read revocation public key file at [%s]", path)

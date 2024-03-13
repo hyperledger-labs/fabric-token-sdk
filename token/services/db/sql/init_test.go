@@ -74,11 +74,7 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		AuditInfo:              tables.AuditInfo,
 		Signers:                tables.Signers,
 	}, secondcache.New(1000))
-	Wallet, err = NewWalletDB(db, tablePrefix, "test", true)
-	if err != nil {
-		return err
-	}
-
+	Wallet = newWalletDB(db, walletTables{Wallets: tables.Wallets})
 	if createSchema {
 		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema(), Identity.GetSchema(), Wallet.GetSchema()); err != nil {
 			return err
@@ -103,7 +99,7 @@ func TestGetTableNames(t *testing.T) {
 		Ownership:              "ownership_5193a5",
 		PublicParams:           "public_params_5193a5",
 		Wallets:                "wallet_5193a5",
-		IdentityConfigurations: "dentity_5193a5",
+		IdentityConfigurations: "id_configs_5193a5",
 		AuditInfo:              "audit_info_5193a5",
 		Signers:                "signers_5193a5",
 	}, names)

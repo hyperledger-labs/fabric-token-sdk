@@ -60,12 +60,12 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 
 	fscIdentity := view.GetIdentityProvider(sp).DefaultIdentity()
-	// Prepare wallets
+	// Prepare roles
 	storageProvider, err := identity.GetStorageProvider(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	wallets := identity.NewWallets()
+	roles := identity.NewRoles()
 	deserializerManager := deserializer.NewMultiplexDeserializer()
 	tmsID := token.TMSID{
 		Network:   networkID,
@@ -77,7 +77,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	mspWalletFactory := msp.NewWalletFactory(
+	roleFactory := msp.NewRoleFactory(
 		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		fscIdentity,                              // FSC identity
@@ -88,32 +88,32 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		deserializerManager,
 		false,
 	)
-	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BLS12_381_BBS)
+	role, err := roleFactory.NewIdemix(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BLS12_381_BBS)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create owner wallet")
+		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
-	wallets.Put(driver.OwnerRole, wallet)
-	wallet, err = mspWalletFactory.NewX509Wallet(driver.IssuerRole)
+	roles.Register(driver.OwnerRole, role)
+	role, err = roleFactory.NewX509(driver.IssuerRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create issuer wallet")
+		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
-	wallets.Put(driver.IssuerRole, wallet)
-	wallet, err = mspWalletFactory.NewX509Wallet(driver.AuditorRole)
+	roles.Register(driver.IssuerRole, role)
+	role, err = roleFactory.NewX509(driver.AuditorRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create auditor wallet")
+		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
-	wallets.Put(driver.AuditorRole, wallet)
-	wallet, err = mspWalletFactory.NewX509Wallet(driver.CertifierRole)
+	roles.Register(driver.AuditorRole, role)
+	role, err = roleFactory.NewX509(driver.CertifierRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create certifier wallet")
+		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}
-	wallets.Put(driver.CertifierRole, wallet)
+	roles.Register(driver.CertifierRole, role)
 
 	// Instantiate the token service
 	qe := v.QueryEngine()
 	ppm := ppm.NewPublicParamsManager(crypto.DLogPublicParameters, qe)
 	ppm.AddCallback(func(pp driver.PublicParameters) error {
-		return wallets.Reload(pp)
+		return roles.Reload(pp)
 	})
 	// wallet service
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
@@ -121,24 +121,16 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 
-	ip := identity.NewProvider(
-		sigService,
-		view.GetEndpointService(sp),
-		fscIdentity,
-		NewEnrollmentIDDeserializer(),
-		wallets,
-		deserializerManager,
-	)
+	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
 	ws := zkatdlog.NewWalletService(
-		sigService,
 		ip,
 		qe,
 		ppm,
 		NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		identity.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
-		identity.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
-		identity.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
+		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
+		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
+		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 	)
 	service, err := zkatdlog.NewTokenService(
 		ws,
@@ -191,13 +183,13 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.WithMessage(err, "failed to create config manager")
 	}
 
-	// Prepare wallets
+	// Prepare roles
 	storageProvider, err := identity.GetStorageProvider(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 
-	wallets := identity.NewWallets()
+	roles := identity.NewRoles()
 	deserializerManager := deserializer.NewMultiplexDeserializer()
 	tmsID := token.TMSID{
 		Network:   networkID,
@@ -209,7 +201,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
-	mspWalletFactory := msp.NewWalletFactory(
+	roleFactory := msp.NewRoleFactory(
 		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		nil,                                      // FSC identity
@@ -220,26 +212,26 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		deserializerManager,
 		true,
 	)
-	wallet, err := mspWalletFactory.NewIdemixWallet(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BN254)
+	role, err := roleFactory.NewIdemix(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BN254)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create owner wallet")
+		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
-	wallets.Put(driver.OwnerRole, wallet)
-	wallet, err = mspWalletFactory.NewX509Wallet(driver.IssuerRole)
+	roles.Register(driver.OwnerRole, role)
+	role, err = roleFactory.NewX509(driver.IssuerRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create issuer wallet")
+		return nil, errors.WithMessage(err, "failed to create issuer role")
 	}
-	wallets.Put(driver.IssuerRole, wallet)
-	wallet, err = mspWalletFactory.NewX509Wallet(driver.AuditorRole)
+	roles.Register(driver.IssuerRole, role)
+	role, err = roleFactory.NewX509(driver.AuditorRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create auditor wallet")
+		return nil, errors.WithMessage(err, "failed to create auditor role")
 	}
-	wallets.Put(driver.AuditorRole, wallet)
-	wallet, err = mspWalletFactory.NewX509Wallet(driver.CertifierRole)
+	roles.Register(driver.AuditorRole, role)
+	role, err = roleFactory.NewX509(driver.CertifierRole)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to create certifier wallet")
+		return nil, errors.WithMessage(err, "failed to create certifier role")
 	}
-	wallets.Put(driver.CertifierRole, wallet)
+	roles.Register(driver.CertifierRole, role)
 
 	// Instantiate the token service
 
@@ -253,29 +245,21 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(
-		sigService,
-		nil,
-		nil,
-		NewEnrollmentIDDeserializer(),
-		wallets,
-		deserializerManager,
-	)
-	// wallet service
+	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
+	// role service
 	ws := zkatdlog.NewWalletService(
-		sigService,
 		ip,
 		nil,
 		publicParamsManager,
 		NewDeserializerProvider().Deserialize,
 		tmsConfig,
-		identity.NewWalletsRegistry(ip, driver.OwnerRole, walletDB),
-		identity.NewWalletsRegistry(ip, driver.IssuerRole, walletDB),
-		identity.NewWalletsRegistry(ip, driver.AuditorRole, walletDB),
+		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
+		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
+		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 	)
 
-	if err := wallets.Reload(pp); err != nil {
-		return nil, errors.WithMessage(err, "failed to load wallets")
+	if err := roles.Reload(pp); err != nil {
+		return nil, errors.WithMessage(err, "failed to load roles")
 	}
 
 	return ws, nil

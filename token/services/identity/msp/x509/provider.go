@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
@@ -18,6 +19,8 @@ import (
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.x509")
 
 type SignerService interface {
 	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
@@ -122,7 +125,7 @@ func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 
 	// TODO: check the validity of the identity against the msp
 
-	return NewVerifier(publicKey), nil
+	return NewECDSAVerifier(publicKey), nil
 }
 
 func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
