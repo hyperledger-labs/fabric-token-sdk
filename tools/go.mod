@@ -10,7 +10,7 @@ require (
 	github.com/maxbrunsfeld/counterfeiter/v6 v6.5.0
 	github.com/onsi/ginkgo/v2 v2.1.4
 	golang.org/x/tools v0.4.1-0.20221208213631-3f74d914ae6d
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.33.0
 	honnef.co/go/tools v0.4.3
 )
 
