@@ -140,7 +140,7 @@ func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, err
 		return nil, errors.WithMessagef(err, "failed to get owner wallet identity for [%s]", wID)
 	}
 
-	newWallet := newOwnerWallet(s, idInfoIdentity, idInfoIdentity, wID, idInfo)
+	newWallet := newOwnerWallet(s, idInfoIdentity, wID, idInfo)
 	if err := s.OwnerWalletsRegistry.RegisterWallet(wID, newWallet); err != nil {
 		return nil, errors.WithMessagef(err, "failed to register rwallet [%s]", wID)
 	}
@@ -244,15 +244,13 @@ type ownerWallet struct {
 	id           string
 	identityInfo driver.IdentityInfo
 	identity     view.Identity
-	wrappedID    view.Identity
 }
 
-func newOwnerWallet(tokenService *WalletService, identity, wrappedID view.Identity, id string, identityInfo driver.IdentityInfo) *ownerWallet {
+func newOwnerWallet(tokenService *WalletService, identity view.Identity, id string, identityInfo driver.IdentityInfo) *ownerWallet {
 	return &ownerWallet{
 		tokenService: tokenService,
 		id:           id,
 		identity:     identity,
-		wrappedID:    wrappedID,
 		identityInfo: identityInfo,
 	}
 }
@@ -262,7 +260,7 @@ func (w *ownerWallet) ID() string {
 }
 
 func (w *ownerWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity) || w.wrappedID.Equal(identity)
+	return w.identity.Equal(identity)
 }
 
 func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
@@ -270,7 +268,7 @@ func (w *ownerWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *ownerWallet) GetRecipientIdentity() (view.Identity, error) {
-	return w.wrappedID, nil
+	return w.identity, nil
 }
 
 func (w *ownerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
@@ -286,11 +284,11 @@ func (w *ownerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error
 }
 
 func (w *ownerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
-	if !w.wrappedID.Equal(identity) {
+	if !w.identity.Equal(identity) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
 	}
 
-	si, err := w.tokenService.IdentityProvider.GetSigner(w.wrappedID)
+	si, err := w.tokenService.IdentityProvider.GetSigner(w.identity)
 	if err != nil {
 		return nil, err
 	}

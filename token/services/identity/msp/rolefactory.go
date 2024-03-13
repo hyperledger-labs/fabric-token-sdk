@@ -144,7 +144,7 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 }
 
 // NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
-func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole, identityType string) (identity.Role, error) {
+func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -166,7 +166,7 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole, identityType
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
+	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: X509Identity}, nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role

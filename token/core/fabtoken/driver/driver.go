@@ -189,7 +189,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		deserializerManager,
 		true,
 	)
-	role, err := roleFactory.NewX509IgnoreRemote(driver.OwnerRole, "")
+	role, err := roleFactory.NewX509IgnoreRemote(driver.OwnerRole)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
