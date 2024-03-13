@@ -14,6 +14,8 @@ import (
 // Role is a container of long-term identities.
 // A long-term identity is then used to construct a wallet.
 type Role interface {
+	// ID returns the identifier of this role
+	ID() driver.IdentityRole
 	// MapToID returns the long-term identity and its identifier for the given index.
 	// The index can be an identity or a label (string).
 	MapToID(v interface{}) (view.Identity, string, error)
@@ -21,8 +23,8 @@ type Role interface {
 	GetIdentityInfo(id string) (driver.IdentityInfo, error)
 	// RegisterIdentity registers the given identity
 	RegisterIdentity(id string, path string) error
-	// IDs returns the identifiers contained in this role
-	IDs() ([]string, error)
+	// IdentityIDs returns the identifiers contained in this role
+	IdentityIDs() ([]string, error)
 	// Reload the roles with the respect to the passed public parameters
 	Reload(pp driver.PublicParameters) error
 }

@@ -13,7 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
@@ -49,7 +48,7 @@ type RoleFactory struct {
 	NetworkDefaultIdentity view2.Identity
 	SignerService          common.SigService
 	BinderService          common.BinderService
-	StorageProvider        identity2.StorageProvider
+	StorageProvider        identity.StorageProvider
 	DeserializerManager    deserializer.Manager
 	ignoreRemote           bool
 }
@@ -62,7 +61,7 @@ func NewRoleFactory(
 	networkDefaultIdentity view2.Identity,
 	signerService common.SigService,
 	binderService common.BinderService,
-	storageProvider identity2.StorageProvider,
+	storageProvider identity.StorageProvider,
 	deserializerManager deserializer.Manager,
 	ignoreRemote bool,
 ) *RoleFactory {
@@ -80,7 +79,7 @@ func NewRoleFactory(
 }
 
 // NewIdemix creates a new Idemix-based role
-func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity2.Role, error) {
+func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -107,19 +106,19 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		identities,
 		f.ignoreRemote,
 	)
-	return &BindingRole{Role: idemix2.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: IdemixIdentity}, nil
+	return &BindingRole{Role: idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: IdemixIdentity}, nil
 }
 
 // NewX509 creates a new X509-based role
-func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity2.Role, error) {
+func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity.Role, error) {
 	return f.NewX509WithType(role, "")
 }
 
-func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole) (identity2.Role, error) {
+func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole) (identity.Role, error) {
 	return f.NewX509WithType(role, X509Identity)
 }
 
-func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType string) (identity2.Role, error) {
+func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType string) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -141,11 +140,11 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
+	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
 }
 
 // NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
-func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole, identityType string) (identity2.Role, error) {
+func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole, identityType string) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -167,7 +166,7 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole, identityType
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
+	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
@@ -176,7 +175,7 @@ func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Ide
 }
 
 type BindingRole struct {
-	identity2.Role
+	identity.Role
 	IdentityType string
 	Support      *RoleFactory
 }

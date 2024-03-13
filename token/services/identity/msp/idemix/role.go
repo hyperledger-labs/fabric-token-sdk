@@ -27,46 +27,52 @@ type localMembership interface {
 
 // Role is a container of idemix-based long-term identities.
 type Role struct {
+	roleID          driver.IdentityRole
 	networkID       string
 	nodeIdentity    view.Identity
 	localMembership localMembership
 }
 
-func NewRole(networkID string, nodeIdentity view.Identity, localMembership localMembership) *Role {
+func NewRole(roleID driver.IdentityRole, networkID string, nodeIdentity view.Identity, localMembership localMembership) *Role {
 	return &Role{
+		roleID:          roleID,
 		networkID:       networkID,
 		nodeIdentity:    nodeIdentity,
 		localMembership: localMembership,
 	}
 }
 
+func (r *Role) ID() driver.IdentityRole {
+	return r.roleID
+}
+
 // GetIdentityInfo returns the identity information for the given identity identifier
-func (w *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+func (r *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] getting info for [%s]", w.networkID, id)
+		logger.Debugf("[%s] getting info for [%s]", r.networkID, id)
 	}
 
-	info, err := w.localMembership.GetIdentityInfo(id, nil)
+	info, err := r.localMembership.GetIdentityInfo(id, nil)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "[%s] failed to get anonymous identity for [%s]", w.networkID, id)
+		return nil, errors.WithMessagef(err, "[%s] failed to get anonymous identity for [%s]", r.networkID, id)
 	}
 	return info, nil
 }
 
 // MapToID returns the identity for the given argument
-func (w *Role) MapToID(v interface{}) (view.Identity, string, error) {
-	defaultID := w.localMembership.DefaultNetworkIdentity()
-	defaultIdentifier := w.localMembership.GetDefaultIdentifier()
+func (r *Role) MapToID(v interface{}) (view.Identity, string, error) {
+	defaultID := r.localMembership.DefaultNetworkIdentity()
+	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
 	switch vv := v.(type) {
 	case view.Identity:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[AnonymousIdentity] [%s] mapping view.Identity identifier for [%s,%s], default identities [%s:%s]",
-				w.networkID,
+				r.networkID,
 				v,
 				vv.String(),
 				defaultID.String(),
-				w.nodeIdentity.String(),
+				r.nodeIdentity.String(),
 			)
 		}
 
@@ -87,12 +93,12 @@ func (w *Role) MapToID(v interface{}) (view.Identity, string, error) {
 				logger.Debugf("[AnonymousIdentity] passed 'idemix' identity")
 			}
 			return nil, defaultIdentifier, nil
-		case id.Equal(w.nodeIdentity):
+		case id.Equal(r.nodeIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is the node identity (same bytes)")
 			}
 			return nil, defaultIdentifier, nil
-		case w.localMembership.IsMe(id):
+		case r.localMembership.IsMe(id):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed identity is me")
 			}
@@ -103,7 +109,7 @@ func (w *Role) MapToID(v interface{}) (view.Identity, string, error) {
 			logger.Debugf("[AnonymousIdentity] looking up identifier for identity as label [%s]", hash.Hashable(label))
 		}
 
-		if idIdentifier, err := w.localMembership.GetIdentifier(id); err == nil {
+		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return nil, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -113,11 +119,11 @@ func (w *Role) MapToID(v interface{}) (view.Identity, string, error) {
 	case string:
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("[AnonymousIdentity] [%s] mapping string identifier for [%s,%s], default identities [%s:%s]",
-				w.networkID,
+				r.networkID,
 				v,
 				hash.Hashable(vv).String(),
 				defaultID.String(),
-				w.nodeIdentity.String(),
+				r.nodeIdentity.String(),
 			)
 		}
 
@@ -149,19 +155,19 @@ func (w *Role) MapToID(v interface{}) (view.Identity, string, error) {
 				logger.Debugf("[AnonymousIdentity] passed default identity as view identity")
 			}
 			return nil, defaultIdentifier, nil
-		case w.nodeIdentity.Equal(viewIdentity):
+		case r.nodeIdentity.Equal(viewIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed node identity as view identity")
 			}
 			return nil, defaultIdentifier, nil
-		case w.localMembership.IsMe(viewIdentity):
+		case r.localMembership.IsMe(viewIdentity):
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("[AnonymousIdentity] passed a local member")
 			}
 			return nil, defaultIdentifier, nil
 		}
 
-		if idIdentifier, err := w.localMembership.GetIdentifier(viewIdentity); err == nil {
+		if idIdentifier, err := r.localMembership.GetIdentifier(viewIdentity); err == nil {
 			return nil, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -174,16 +180,16 @@ func (w *Role) MapToID(v interface{}) (view.Identity, string, error) {
 }
 
 // RegisterIdentity registers the given identity
-func (w *Role) RegisterIdentity(id string, path string) error {
+func (r *Role) RegisterIdentity(id string, path string) error {
 	logger.Debugf("register idemix identity [%s:%s]", id, path)
-	return w.localMembership.RegisterIdentity(id, path)
+	return r.localMembership.RegisterIdentity(id, path)
 }
 
-func (w *Role) IDs() ([]string, error) {
-	return w.localMembership.IDs()
+func (r *Role) IdentityIDs() ([]string, error) {
+	return r.localMembership.IDs()
 }
 
-func (w *Role) Reload(pp driver.PublicParameters) error {
+func (r *Role) Reload(pp driver.PublicParameters) error {
 	logger.Debugf("reload idemix wallets...")
-	return w.localMembership.Reload(pp)
+	return r.localMembership.Reload(pp)
 }

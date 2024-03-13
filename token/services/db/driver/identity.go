@@ -32,9 +32,9 @@ type WalletDB interface {
 	// GetWalletID fetches a walletID that is bound to the identity passed
 	GetWalletID(identity view.Identity) (WalletID, error)
 	// GetWalletIDs fetches all walletID's that have been stored so far without duplicates
-	GetWalletIDs() ([]WalletID, error)
+	GetWalletIDs(roleID int) ([]WalletID, error)
 	// StoreIdentity binds an identity to a walletID and its metadata
-	StoreIdentity(identity view.Identity, wID WalletID, meta any) error
+	StoreIdentity(identity view.Identity, wID WalletID, roleID int, meta any) error
 	// IdentityExists checks whether an identity-wallet binding has already been stored
 	IdentityExists(identity view.Identity, wID WalletID) bool
 	// LoadMeta returns the metadata stored for a specific identity

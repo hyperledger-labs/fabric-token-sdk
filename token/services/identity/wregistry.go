@@ -158,7 +158,7 @@ func (r *WalletRegistry) BindIdentity(identity view.Identity, wID string, meta a
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("put recipient identity [%s]->[%s]", identity, wID)
 	}
-	return r.Storage.StoreIdentity(identity, wID, meta)
+	return r.Storage.StoreIdentity(identity, wID, int(r.Role.ID()), meta)
 }
 
 // ContainsIdentity returns true if the passed identity belongs to the passed wallet,
@@ -169,7 +169,7 @@ func (r *WalletRegistry) ContainsIdentity(identity view.Identity, wID string) bo
 
 // WalletIDs returns the list of wallet identifiers
 func (r *WalletRegistry) WalletIDs() ([]string, error) {
-	walletIDs, err := r.Role.IDs()
+	walletIDs, err := r.Role.IdentityIDs()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet identifiers from identity provider")
 	}
@@ -178,7 +178,7 @@ func (r *WalletRegistry) WalletIDs() ([]string, error) {
 		duplicates[id] = true
 	}
 
-	ids, err := r.Storage.GetWalletIDs()
+	ids, err := r.Storage.GetWalletIDs(int(r.Role.ID()))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get roles iterator")
 	}

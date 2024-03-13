@@ -44,7 +44,7 @@ func (s *WalletDB) GetWalletID(id view.Identity) (driver.WalletID, error) {
 	return wID, nil
 }
 
-func (s *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
+func (s *WalletDB) GetWalletIDs(int) ([]driver.WalletID, error) {
 	it, err := s.kvs.GetByPartialCompositeID("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
@@ -60,7 +60,7 @@ func (s *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
 	return walletIDs, nil
 }
 
-func (s *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, meta any) error {
+func (s *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, roleID int, meta any) error {
 	idHash := identity.Hash()
 	if err := s.kvs.Put(idHash, wID); err != nil {
 		return errors.WithMessagef(err, "failed to store identity's wallet [%s]", identity)
