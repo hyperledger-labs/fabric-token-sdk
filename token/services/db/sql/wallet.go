@@ -8,12 +8,13 @@ package sql
 
 import (
 	"database/sql"
-	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 type walletTables struct {
@@ -25,16 +26,20 @@ type WalletDB struct {
 	table walletTables
 }
 
+func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
+	return &WalletDB{
+		db:    db,
+		table: tables,
+	}
+}
+
 func NewWalletDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*WalletDB, error) {
 	tables, err := getTableNames(tablePrefix, name)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names for prefix [%s] and name [%s]", tablePrefix, name)
 	}
 
-	walletDB := &WalletDB{
-		db:    db,
-		table: walletTables{Wallets: tables.Wallets},
-	}
+	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
 	if createSchema {
 		if err = initSchema(db, walletDB.GetSchema()); err != nil {
 			return nil, errors.Wrapf(err, "failed to create schema")
@@ -43,15 +48,11 @@ func NewWalletDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*Wall
 	return walletDB, nil
 }
 
-func (db *WalletDB) StoreWalletID(driver.WalletID) error {
-	return nil
-}
-
-func (db *WalletDB) GetWalletID(id view.Identity) (driver.WalletID, error) {
-	idHash := id.Hash()
+func (db *WalletDB) GetWalletID(identity view.Identity, roleID int) (driver.WalletID, error) {
+	idHash := identity.Hash()
 	result, err := QueryUnique[driver.WalletID](db.db,
-		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_id=$1", db.table.Wallets),
-		idHash,
+		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND role_id=$2", db.table.Wallets),
+		idHash, roleID,
 	)
 	if err != nil {
 		return "", errors.Wrapf(err, "failed getting wallet id for identity [%v]", idHash)
@@ -60,10 +61,10 @@ func (db *WalletDB) GetWalletID(id view.Identity) (driver.WalletID, error) {
 	return result, nil
 }
 
-func (db *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
-	query := fmt.Sprintf("SELECT DISTINCT wallet_id FROM %s", db.table.Wallets)
+func (db *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
+	query := fmt.Sprintf("SELECT DISTINCT wallet_id FROM %s WHERE role_id = $1", db.table.Wallets)
 	logger.Debug(query)
-	rows, err := db.db.Query(query)
+	rows, err := db.db.Query(query, roleID)
 	if err != nil {
 		return nil, err
 	}
@@ -83,20 +84,16 @@ func (db *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
 	return walletIDs, nil
 }
 
-func (db *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, meta any) error {
-	if db.IdentityExists(identity, wID) {
+func (db *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+	if db.IdentityExists(identity, wID, roleID) {
 		return nil
 	}
 
-	metaEncoded, err := json.Marshal(meta)
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal metadata")
-	}
-	idHash := identity.Hash()
+	query := fmt.Sprintf("INSERT INTO %s (identity_hash, meta, wallet_id, role_id, created_at, enrollment_id) VALUES ($1, $2, $3, $4, $5, $6)", db.table.Wallets)
+	logger.Debug(query)
 
-	query := fmt.Sprintf("INSERT INTO %s (identity_id, meta, wallet_id) VALUES ($1, $2, $3)", db.table.Wallets)
-	logger.Debug(query, len(idHash), metaEncoded, wID)
-	_, err = db.db.Exec(query, idHash, metaEncoded, wID)
+	idHash := identity.Hash()
+	_, err := db.db.Exec(query, idHash, meta, wID, roleID, time.Now().UTC(), eID)
 	if err != nil {
 		return errors.Wrapf(err, "failed storing wallet [%v] for identity [%v]", wID, idHash)
 	}
@@ -104,29 +101,31 @@ func (db *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, m
 	return nil
 }
 
-func (db *WalletDB) LoadMeta(identity view.Identity, meta any) error {
+func (db *WalletDB) LoadMeta(identity view.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
 	idHash := identity.Hash()
-	result, err := QueryUnique[string](db.db,
-		fmt.Sprintf("SELECT meta FROM %s WHERE identity_id=$1", db.table.Wallets),
-		idHash,
+	result, err := QueryUnique[[]byte](db.db,
+		fmt.Sprintf("SELECT meta FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
+		idHash, wID, roleID,
 	)
 	if err != nil {
-		return errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
+		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
 	logger.Debugf("Loaded meta for id [%v, %v]: %v", identity, idHash, result)
-	return json.Unmarshal([]byte(result), &meta)
+	return result, nil
 }
 
-func (db *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID) bool {
+func (db *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID, roleID int) bool {
 	idHash := identity.Hash()
 	result, err := QueryUnique[driver.WalletID](db.db,
-		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_id=$1 AND wallet_id=$2", db.table.Wallets),
-		idHash, wID,
+		fmt.Sprintf("SELECT wallet_id FROM %s WHERE identity_hash=$1 AND wallet_id=$2 AND role_id=$3", db.table.Wallets),
+		idHash, wID, roleID,
 	)
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
-	logger.Debugf("found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("found identity for wallet-identity [%v-%v-%d]: %v", wID, idHash, roleID, result)
+	}
 
 	return result != ""
 }
@@ -135,11 +134,23 @@ func (db *WalletDB) GetSchema() string {
 	return fmt.Sprintf(`
 		-- Wallets
 		CREATE TABLE IF NOT EXISTS %s (
-			identity_id BYTEA NOT NULL PRIMARY KEY,
+			identity_hash BYTEA NOT NULL,
 			wallet_id TEXT NOT NULL,
-			meta TEXT NOT NULL DEFAULT ''
-		)
+			meta TEXT DEFAULT '',
+            role_id INT NOT NULL,
+			enrollment_id TEXT NOT NULL,	
+			created_at TIMESTAMP,
+			PRIMARY KEY(identity_hash, wallet_id, role_id)
+		);
+		CREATE INDEX IF NOT EXISTS idx_identity_hash_%s ON %s ( identity_hash );
+		CREATE INDEX IF NOT EXISTS idx_identity_hash_and_wallet_and_role%s ON %s ( identity_hash, wallet_id, role_id );
+		CREATE INDEX IF NOT EXISTS idx_identity_hash_and__role%s ON %s ( identity_hash, role_id );
+		CREATE INDEX IF NOT EXISTS idx_role_id_%s ON %s ( role_id )
 		`,
 		db.table.Wallets,
+		db.table.Wallets, db.table.Wallets,
+		db.table.Wallets, db.table.Wallets,
+		db.table.Wallets, db.table.Wallets,
+		db.table.Wallets, db.table.Wallets,
 	)
 }

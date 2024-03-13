@@ -20,7 +20,7 @@ type Input struct {
 }
 
 func ToInput(i *token.Input) (*Input, error) {
-	owner, err := identity.UnmarshallRawOwner(i.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(i.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
@@ -39,7 +39,7 @@ func (i *Input) Script() (*Script, error) {
 		return nil, errors.New("this input does not refer to an HTLC script")
 	}
 
-	owner, err := identity.UnmarshallRawOwner(i.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(i.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
@@ -60,7 +60,7 @@ type Output struct {
 }
 
 func ToOutput(i *token.Output) (*Output, error) {
-	owner, err := identity.UnmarshallRawOwner(i.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(i.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}
@@ -79,7 +79,7 @@ func (o *Output) Script() (*Script, error) {
 		return nil, errors.New("this output does not refer to an HTLC script")
 	}
 
-	owner, err := identity.UnmarshallRawOwner(o.Owner)
+	owner, err := identity.UnmarshalTypedIdentity(o.Owner)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal owner")
 	}

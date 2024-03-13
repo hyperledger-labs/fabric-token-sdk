@@ -24,31 +24,34 @@ const (
 	CertifierRole
 )
 
-// IdentityInfo models an Identity inside the Identity Provider
+// IdentityInfo models a long-term identity inside the Identity Provider.
+// An identity has an identifier (ID) and an Enrollment ID, unique identifier.
+// An identity can be remote, meaning that the corresponding secret key is remotely available.
 type IdentityInfo interface {
-	// ID returns the ID of the Identity
+	// ID returns the identifier of the Identity
 	ID() string
 	// EnrollmentID returns the enrollment ID of the Identity
 	EnrollmentID() string
+	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
+	Remote() bool
 	// Get returns the identity and it is audit info.
 	// Get might return a different identity at each call depending on the implementation.
 	Get() (view.Identity, []byte, error)
-	// Remote is true if this identity info refers to an identify whose corresponding secret key is not known, it is external/remote
-	Remote() bool
 }
 
-// IdentityProvider handles the long-term identities on top of which wallets are defined.
+// IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type IdentityProvider interface {
-	LookupIdentifier(role IdentityRole, v interface{}) (view.Identity, string, error)
-
-	// GetIdentityInfo returns the long-term identity info associated to the passed id, nil if not found.
-	GetIdentityInfo(role IdentityRole, id string) (IdentityInfo, error)
+	// RegisterAuditInfo binds the audit information to the passed identity
+	RegisterAuditInfo(id view.Identity, auditInfo []byte) error
 
 	// GetAuditInfo returns the audit information associated to the passed identity, nil otherwise
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 
 	// GetSigner returns a Signer for passed identity.
 	GetSigner(identity view.Identity) (Signer, error)
+
+	// RegisterVerifier registers a Verifier for passed identity.
+	RegisterVerifier(identity view.Identity, v Verifier) error
 
 	// RegisterSigner registers a Signer and a Verifier for passed identity.
 	RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error
@@ -68,12 +71,4 @@ type IdentityProvider interface {
 
 	// RegisterRecipientIdentity register the passed identity as a third-pary recipient identity.
 	RegisterRecipientIdentity(id view.Identity) error
-
-	// RegisterOwnerWallet registers the passed wallet as the owner wallet of the passed identity.
-	RegisterOwnerWallet(id string, path string) error
-
-	// RegisterIssuerWallet registers the passed wallet ad the issuer wallet of the passed identity.
-	RegisterIssuerWallet(id string, path string) error
-
-	WalletIDs(role IdentityRole) ([]string, error)
 }

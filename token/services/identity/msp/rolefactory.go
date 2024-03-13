@@ -12,7 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
@@ -40,32 +40,32 @@ var RoleToMSPID = map[driver.IdentityRole]string{
 	driver.CertifierRole: CertifierMSPID,
 }
 
-// WalletFactory is the factory for creating wallets, idemix and x509
-type WalletFactory struct {
+// RoleFactory is the factory for creating wallets, idemix and x509
+type RoleFactory struct {
 	TMSID                  token.TMSID
 	Config                 config2.Config
 	FSCIdentity            view2.Identity
 	NetworkDefaultIdentity view2.Identity
 	SignerService          common.SigService
 	BinderService          common.BinderService
-	StorageProvider        identity2.StorageProvider
+	StorageProvider        identity.StorageProvider
 	DeserializerManager    deserializer.Manager
 	ignoreRemote           bool
 }
 
-// NewWalletFactory creates a new WalletFactory
-func NewWalletFactory(
+// NewRoleFactory creates a new RoleFactory
+func NewRoleFactory(
 	TMSID token.TMSID,
 	config config2.Config,
 	fscIdentity view2.Identity,
 	networkDefaultIdentity view2.Identity,
 	signerService common.SigService,
 	binderService common.BinderService,
-	storageProvider identity2.StorageProvider,
+	storageProvider identity.StorageProvider,
 	deserializerManager deserializer.Manager,
 	ignoreRemote bool,
-) *WalletFactory {
-	return &WalletFactory{
+) *RoleFactory {
+	return &RoleFactory{
 		TMSID:                  TMSID,
 		Config:                 config,
 		FSCIdentity:            fscIdentity,
@@ -78,8 +78,8 @@ func NewWalletFactory(
 	}
 }
 
-// NewIdemixWallet creates a new Idemix wallet
-func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity2.Wallet, error) {
+// NewIdemix creates a new Idemix-based role
+func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -106,11 +106,19 @@ func (f *WalletFactory) NewIdemixWallet(role driver.IdentityRole, cacheSize int,
 		identities,
 		f.ignoreRemote,
 	)
-	return idemix2.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return &BindingRole{Role: idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: IdemixIdentity}, nil
 }
 
-// NewX509Wallet creates a new X509 wallet
-func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Wallet, error) {
+// NewX509 creates a new X509-based role
+func (f *RoleFactory) NewX509(role driver.IdentityRole) (identity.Role, error) {
+	return f.NewX509WithType(role, "")
+}
+
+func (f *RoleFactory) NewWrappedX509(role driver.IdentityRole) (identity.Role, error) {
+	return f.NewX509WithType(role, X509Identity)
+}
+
+func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType string) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -132,11 +140,11 @@ func (f *WalletFactory) NewX509Wallet(role driver.IdentityRole) (identity2.Walle
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
 }
 
-// NewX509WalletIgnoreRemote creates a new X509 wallet treating the remote wallets as local
-func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (identity2.Wallet, error) {
+// NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
+func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -158,10 +166,75 @@ func (f *WalletFactory) NewX509WalletIgnoreRemote(role driver.IdentityRole) (ide
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return x5092.NewWallet(f.TMSID.Network, f.FSCIdentity, lm), nil
+	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: X509Identity}, nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
-func (f *WalletFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
+func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Identity, error) {
 	return f.Config.IdentitiesForRole(role)
+}
+
+type BindingRole struct {
+	identity.Role
+	IdentityType string
+	Support      *RoleFactory
+}
+
+func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
+	info, err := r.Role.GetIdentityInfo(id)
+	if err != nil {
+		return nil, err
+	}
+	return &Info{IdentityInfo: info, Support: r.Support, IdentityType: r.IdentityType}, nil
+}
+
+// Info wraps a driver.IdentityInfo to further register the audit info,
+// and binds the new identity to the default FSC node identity
+type Info struct {
+	driver.IdentityInfo
+	Support      *RoleFactory
+	IdentityType string
+}
+
+func (i *Info) ID() string {
+	return i.IdentityInfo.ID()
+}
+
+func (i *Info) EnrollmentID() string {
+	return i.IdentityInfo.EnrollmentID()
+}
+
+func (i *Info) Get() (view2.Identity, []byte, error) {
+	// get the identity
+	id, ai, err := i.IdentityInfo.Get()
+	if err != nil {
+		return nil, nil, err
+	}
+	// register the audit info
+	if err := i.Support.SignerService.RegisterAuditInfo(id, ai); err != nil {
+		return nil, nil, err
+	}
+	// bind the identity to the default FSC node identity
+	if i.Support.BinderService != nil {
+		if err := i.Support.BinderService.Bind(i.Support.FSCIdentity, id); err != nil {
+			return nil, nil, err
+		}
+	}
+	// wrap the backend identity, and bind it
+	if len(i.IdentityType) != 0 {
+		raw, err := identity.WrapWithType(i.IdentityType, id)
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := i.Support.SignerService.RegisterAuditInfo(raw, ai); err != nil {
+			return nil, nil, err
+		}
+		if i.Support.BinderService != nil {
+			if err := i.Support.BinderService.Bind(i.Support.FSCIdentity, raw); err != nil {
+				return nil, nil, err
+			}
+		}
+		id = raw
+	}
+	return id, ai, nil
 }

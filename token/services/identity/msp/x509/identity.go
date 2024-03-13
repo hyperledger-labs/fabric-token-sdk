@@ -16,14 +16,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func Serialize(mspID string, certPath string) ([]byte, error) {
-	raw, err := readPemFile(certPath)
-	if err != nil {
-		return nil, err
-	}
-	return SerializeRaw(mspID, raw)
-}
-
 func SerializeRaw(mspID string, raw []byte) ([]byte, error) {
 	cert, err := getCertFromPem(raw)
 	if err != nil {

@@ -12,10 +12,9 @@ import (
 	msp "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
@@ -155,7 +154,7 @@ type DeserializerWrapper struct {
 	*Deserializer
 }
 
-func (d *DeserializerWrapper) DeserializeVerifier(id view.Identity) (driver2.Verifier, error) {
+func (d *DeserializerWrapper) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
 	return d.Deserializer.DeserializeVerifier(id)
 }
 
@@ -163,6 +162,6 @@ func (d *DeserializerWrapper) DeserializeVerifierAgainstNymEID(id view.Identity,
 	return d.Deserializer.DeserializeVerifierAgainstNymEID(id, nymEID)
 }
 
-func (d *DeserializerWrapper) GetOwnerMatcher(raw []byte) (driver2.Matcher, error) {
+func (d *DeserializerWrapper) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.Deserializer.DeserializeAuditInfo(raw)
 }

@@ -33,10 +33,10 @@ type SignerConfig struct {
 }
 
 const (
-	ConfigDirUser                       = "user"
-	ConfigFileIssuerPublicKey           = "IssuerPublicKey"
-	IdemixConfigFileRevocationPublicKey = "IssuerRevocationPublicKey"
-	ConfigFileSigner                    = "SignerConfig"
+	ConfigDirUser                 = "user"
+	ConfigFileIssuerPublicKey     = "IssuerPublicKey"
+	ConfigFileRevocationPublicKey = "IssuerRevocationPublicKey"
+	ConfigFileSigner              = "SignerConfig"
 )
 
 func ReadFile(file string) ([]byte, error) {

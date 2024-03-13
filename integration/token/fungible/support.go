@@ -1059,6 +1059,7 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 		} else {
 			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 		}
+		Expect(network.Client(IssuerId).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
 		return common.JSONUnmarshalString(txid)
 	}
 

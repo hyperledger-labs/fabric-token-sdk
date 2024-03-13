@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package kvs
 
 import (
-	"fmt"
+	"strconv"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -32,20 +32,59 @@ func NewWalletDB(kvs KVS, tmsID token.TMSID) *WalletDB {
 	return &WalletDB{kvs: kvs, tmsID: tmsID}
 }
 
-func (s *WalletDB) StoreWalletID(wID driver.WalletID) error {
-	return s.kvs.Put(kvs.CreateCompositeKeyOrPanic("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace, wID}), wID)
+func (s *WalletDB) StoreIdentity(identity view.Identity, eID string, wID driver.WalletID, roleID int, meta []byte) error {
+	idHash := identity.UniqueID()
+	if meta != nil {
+		k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
+		if err != nil {
+			return errors.Wrapf(err, "failed to create key")
+		}
+		if err := s.kvs.Put(k, meta); err != nil {
+			return errors.WithMessagef(err, "failed to store identity's metadata [%s]", identity)
+		}
+	}
+	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create key")
+	}
+	if err := s.kvs.Put(k, wID); err != nil {
+		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
+	}
+
+	k, err = kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash})
+	if err != nil {
+		return errors.Wrapf(err, "failed to create key")
+	}
+	if err := s.kvs.Put(k, wID); err != nil {
+		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
+	}
+	return nil
 }
 
-func (s *WalletDB) GetWalletID(id view.Identity) (driver.WalletID, error) {
+func (s *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID, roleID int) bool {
+	idHash := identity.UniqueID()
+	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID})
+	if err != nil {
+		return false
+	}
+	return s.kvs.Exists(k)
+}
+
+func (s *WalletDB) GetWalletID(identity view.Identity, roleID int) (driver.WalletID, error) {
+	idHash := identity.UniqueID()
+	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash})
+	if err != nil {
+		return "", errors.Wrapf(err, "failed to create key")
+	}
 	var wID driver.WalletID
-	if err := s.kvs.Get(id.Hash(), &wID); err != nil {
+	if err := s.kvs.Get(k, &wID); err != nil {
 		return "", err
 	}
 	return wID, nil
 }
 
-func (s *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
-	it, err := s.kvs.GetByPartialCompositeID("wallets", []string{s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace})
+func (s *WalletDB) GetWalletIDs(roleID int) ([]driver.WalletID, error) {
+	it, err := s.kvs.GetByPartialCompositeID("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID)})
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallets iterator")
 	}
@@ -55,37 +94,30 @@ func (s *WalletDB) GetWalletIDs() ([]driver.WalletID, error) {
 		if _, err := it.Next(&wID); err != nil {
 			return nil, errors.Wrapf(err, "failed to get next wallets from iterator")
 		}
-		walletIDs = append(walletIDs, wID)
+		found := false
+		for _, walletID := range walletIDs {
+			if walletID == wID {
+				found = true
+			}
+		}
+		if !found {
+			walletIDs = append(walletIDs, wID)
+		}
 	}
 	return walletIDs, nil
 }
 
-func (s *WalletDB) StoreIdentity(identity view.Identity, wID driver.WalletID, meta any) error {
-	idHash := identity.Hash()
-	if err := s.kvs.Put(idHash, wID); err != nil {
-		return errors.WithMessagef(err, "failed to store identity's wallet [%s]", identity)
+func (s *WalletDB) LoadMeta(identity view.Identity, wID driver.WalletID, roleID int) ([]byte, error) {
+	idHash := identity.UniqueID()
+	k, err := kvs.CreateCompositeKey("walletDB", []string{s.tmsID.String(), strconv.Itoa(roleID), idHash, wID, "meta"})
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to create key")
 	}
-	if meta != nil {
-		if err := s.kvs.Put("meta"+idHash, meta); err != nil {
-			return errors.WithMessagef(err, "failed to store identity's metadata [%s]", identity)
-		}
+	var meta []byte
+	if err := s.kvs.Get(k, &meta); err != nil {
+		return nil, err
 	}
-	if err := s.kvs.Put(s.walletPrefix(wID)+idHash, wID); err != nil {
-		return errors.WithMessagef(err, "failed to store identity's wallet reference[%s]", identity)
-	}
-	return nil
-}
-
-func (s *WalletDB) LoadMeta(identity view.Identity, meta any) error {
-	return s.kvs.Get("meta"+identity.Hash(), meta)
-}
-
-func (s *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID) bool {
-	return s.kvs.Exists(s.walletPrefix(wID) + identity.Hash())
-}
-
-func (s *WalletDB) walletPrefix(wID driver.WalletID) string {
-	return fmt.Sprintf("%s-%s-%s-%s", s.tmsID.Network, s.tmsID.Channel, s.tmsID.Namespace, wID)
+	return meta, nil
 }
 
 type IdentityDB struct {
@@ -100,7 +132,7 @@ func NewIdentityDB(kvs KVS, tmsID token.TMSID) *IdentityDB {
 func (s *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", wp.Type, wp.ID})
 	if err != nil {
-		return errors.Wrapf(err, "failed to create identity key")
+		return errors.Wrapf(err, "failed to create key")
 	}
 	return s.kvs.Put(k, wp.URL)
 }

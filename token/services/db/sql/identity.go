@@ -67,7 +67,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix, name string, createSchema bool, sing
 }
 
 func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
-	query := fmt.Sprintf("INSERT INTO %s (identity_id, type, url) VALUES ($1, $2, $3)", db.table.IdentityConfigurations)
+	query := fmt.Sprintf("INSERT INTO %s (id, type, url) VALUES ($1, $2, $3)", db.table.IdentityConfigurations)
 	logger.Debug(query)
 
 	_, err := db.db.Exec(query, wp.ID, wp.Type, wp.URL)
@@ -75,7 +75,7 @@ func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
 }
 
 func (db *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
-	query := fmt.Sprintf("SELECT identity_id, url FROM %s WHERE type = $1", db.table.IdentityConfigurations)
+	query := fmt.Sprintf("SELECT id, url FROM %s WHERE type = $1", db.table.IdentityConfigurations)
 	logger.Debug(query)
 	rows, err := db.db.Query(query, configurationType)
 	if err != nil {
@@ -221,7 +221,7 @@ func (db *IdentityDB) GetSchema() string {
 	return fmt.Sprintf(`
 		-- IdentityConfigurations
 		CREATE TABLE IF NOT EXISTS %s (
-			identity_id TEXT NOT NULL PRIMARY KEY,
+			id TEXT NOT NULL PRIMARY KEY,
             type TEXT NOT NULL,  
 			url TEXT NOT NULL
 		);
