@@ -233,10 +233,8 @@ func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
 		return err
 	}
 	defer func() {
-		if err != nil && ts != nil {
-			if err := ts.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
+		if err := ts.Rollback(); err != nil {
+			logger.Errorf("failed to rollback [%s]", err)
 		}
 	}()
 

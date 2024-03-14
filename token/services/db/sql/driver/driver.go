@@ -40,6 +40,7 @@ type Opts struct {
 	DataSource   string
 	CreateSchema bool
 	MaxOpenConns int
+	TablePrefix  string
 }
 
 type Driver struct {
@@ -52,78 +53,74 @@ func NewDriver() *Driver {
 }
 
 func (d *Driver) OpenTokenTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
-	sqlDB, opts, name, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-
-	return sql2.NewTransactionDB(sqlDB, "ttx", name, opts.CreateSchema)
+	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
 func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
-	sqlDB, opts, name, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-
-	return sql2.NewTokenDB(sqlDB, "tokens", name, opts.CreateSchema)
+	return sql2.NewTokenDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
 func (d *Driver) OpenAuditTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
-	sqlDB, opts, name, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-
-	return sql2.NewTransactionDB(sqlDB, "audit", name, opts.CreateSchema)
+	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix+"aud_", opts.CreateSchema)
 }
 
 func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
-	sqlDB, opts, name, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewWalletDB(sqlDB, "wallet", name, opts.CreateSchema)
+	return sql2.NewWalletDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
 func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
-	sqlDB, opts, name, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewIdentityDB(sqlDB, "id", name, opts.CreateSchema, secondcache.New(1000))
+	return sql2.NewIdentityDB(sqlDB, opts.TablePrefix, opts.CreateSchema, secondcache.New(1000))
 }
 
-func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, string, error) {
+func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
 	opts := &Opts{}
 	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
-		return nil, nil, "", errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
+		return nil, nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
 	}
 	if err := tmsConfig.UnmarshalKey(OptsKey, opts); err != nil {
-		return nil, nil, "", errors.Wrapf(err, "failed getting opts for vault")
+		return nil, nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
 	if opts.Driver == "" {
-		panic(fmt.Sprintf("%s.driver not set. See https://github.com/golang/go/wiki/SQLDrivers", OptsKey))
+		panic(fmt.Sprintf("%s.driver not set", OptsKey))
 	}
 
-	name := sql2.DatasourceName(tmsID)
 	dataSourceName := os.Getenv(EnvVarKey)
 	if dataSourceName == "" {
 		dataSourceName = opts.DataSource
 	}
 	if dataSourceName == "" {
-		return nil, nil, "", errors.Errorf("either %s.dataSource in core.yaml or %s"+
+		return nil, nil, errors.Errorf("either %s.dataSource in core.yaml or %s"+
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			OptsKey, EnvVarKey, opts.Driver)
 	}
 
 	sqlDB, err := d.openSQLDB(opts.Driver, opts.DataSource, opts.MaxOpenConns)
 	if err != nil {
-		return nil, nil, "", errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
+		return nil, nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
 
-	return sqlDB, opts, name, nil
+	return sqlDB, opts, nil
 }
 
 func (d *Driver) openSQLDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {

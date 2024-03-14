@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type walletTables struct {
@@ -33,10 +32,10 @@ func newWalletDB(db *sql.DB, tables walletTables) *WalletDB {
 	}
 }
 
-func NewWalletDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*WalletDB, error) {
-	tables, err := getTableNames(tablePrefix, name)
+func NewWalletDB(db *sql.DB, tablePrefix string, createSchema bool) (*WalletDB, error) {
+	tables, err := getTableNames(tablePrefix)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names for prefix [%s] and name [%s]", tablePrefix, name)
+		return nil, errors.Wrapf(err, "failed to get table names [%s]", tablePrefix)
 	}
 
 	walletDB := newWalletDB(db, walletTables{Wallets: tables.Wallets})
@@ -110,7 +109,7 @@ func (db *WalletDB) LoadMeta(identity view.Identity, wID driver.WalletID, roleID
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed loading meta for id [%v]", idHash)
 	}
-	logger.Debugf("Loaded meta for id [%v, %v]: %v", identity, idHash, result)
+	logger.Debugf("loaded meta for id [%v, %v]: %v", identity, idHash, result)
 	return result, nil
 }
 
@@ -123,9 +122,7 @@ func (db *WalletDB) IdentityExists(identity view.Identity, wID driver.WalletID, 
 	if err != nil {
 		logger.Errorf("failed looking up wallet-identity [%s-%s]: %w", wID, idHash, err)
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("found identity for wallet-identity [%v-%v-%d]: %v", wID, idHash, roleID, result)
-	}
+	logger.Debugf("found identity for wallet-identity [%v-%v]: %v", wID, idHash, result)
 
 	return result != ""
 }
@@ -144,7 +141,7 @@ func (db *WalletDB) GetSchema() string {
 		);
 		CREATE INDEX IF NOT EXISTS idx_identity_hash_%s ON %s ( identity_hash );
 		CREATE INDEX IF NOT EXISTS idx_identity_hash_and_wallet_and_role%s ON %s ( identity_hash, wallet_id, role_id );
-		CREATE INDEX IF NOT EXISTS idx_identity_hash_and__role%s ON %s ( identity_hash, role_id );
+		CREATE INDEX IF NOT EXISTS idx_identity_hash_and_role%s ON %s ( identity_hash, role_id );
 		CREATE INDEX IF NOT EXISTS idx_role_id_%s ON %s ( role_id )
 		`,
 		db.table.Wallets,

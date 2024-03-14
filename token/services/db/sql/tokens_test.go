@@ -7,34 +7,70 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"database/sql"
 	"fmt"
+	"path"
 	"sync"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
 )
 
+func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
+	db, err := sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
+	}
+	db.SetMaxOpenConns(maxOpenConns)
+
+	if err = db.Ping(); err != nil {
+		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
+	}
+	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
+
+	tables, err := getTableNames(tablePrefix)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get table names")
+	}
+	tokens := newTokenDB(db, tokenTables{
+		Tokens:         tables.Tokens,
+		Ownership:      tables.Ownership,
+		PublicParams:   tables.PublicParams,
+		Certifications: tables.Certifications,
+	})
+	if err = initSchema(db, tokens.GetSchema()); err != nil {
+		return tokens, err
+	}
+	return tokens, nil
+}
+
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
-
 	for _, c := range TokensCases {
-		initSqlite(t, tempDir, c.Name)
+		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close() // TODO
-			c.Fn(xt, Tokens)
+			defer db.Close()
+			c.Fn(xt, db)
 		})
 	}
 }
 
 func TestTokensSqliteMemory(t *testing.T) {
 	for _, c := range TokensCases {
-		initSqliteMemory(t, c.Name)
+		db, err := initTokenDB("sqlite", "file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close()
-			c.Fn(xt, Tokens)
+			defer db.Close()
+			c.Fn(xt, db)
 		})
 	}
 }
@@ -44,10 +80,13 @@ func TestTokensPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range TokensCases {
-		initPostgres(t, pgConnStr, c.Name)
+		db, err := initTokenDB("postgres", pgConnStr, c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close()
-			c.Fn(xt, Tokens)
+			defer db.Close()
+			c.Fn(xt, db)
 		})
 	}
 }

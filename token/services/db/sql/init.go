@@ -7,9 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"crypto/sha256"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"regexp"
 	"runtime/debug"
@@ -33,11 +31,8 @@ func initSchema(db *sql.DB, schemas ...string) (err error) {
 			}
 		}
 	}()
-
-	fmt.Println("schema")
 	for _, schema := range schemas {
 		logger.Debug(schema)
-		fmt.Println(schema)
 		if _, err = db.Exec(schema); err != nil {
 			return errors.Wrap(err, "error creating schema")
 		}
@@ -64,7 +59,7 @@ type tableNames struct {
 	Signers                string
 }
 
-func getTableNames(prefix, name string) (tableNames, error) {
+func getTableNames(prefix string) (tableNames, error) {
 	if prefix != "" {
 		r := regexp.MustCompile("^[a-zA-Z_]+$")
 		if !r.MatchString(prefix) {
@@ -73,27 +68,19 @@ func getTableNames(prefix, name string) (tableNames, error) {
 		prefix = prefix + "_"
 	}
 
-	// name is usually something like "default,testchannel,token-chaincode",
-	// so we shorten it to the first 6 hex characters of the hash.
-	h := sha256.New()
-	if _, err := h.Write([]byte(name)); err != nil {
-		return tableNames{}, errors.Wrapf(err, "error hashing name [%s]", name)
-	}
-	suffix := "_" + hex.EncodeToString(h.Sum(nil)[:3])
-
 	return tableNames{
-		Movements:              fmt.Sprintf("%smovements%s", prefix, suffix),
-		Transactions:           fmt.Sprintf("%stransactions%s", prefix, suffix),
-		Requests:               fmt.Sprintf("%srequests%s", prefix, suffix),
-		Validations:            fmt.Sprintf("%svalidations%s", prefix, suffix),
-		TransactionEndorseAck:  fmt.Sprintf("%stea%s", prefix, suffix),
-		Certifications:         fmt.Sprintf("%scertifications%s", prefix, suffix),
-		Tokens:                 fmt.Sprintf("%stokens%s", prefix, suffix),
-		Ownership:              fmt.Sprintf("%sownership%s", prefix, suffix),
-		PublicParams:           fmt.Sprintf("%spublic_params%s", prefix, suffix),
-		Wallets:                fmt.Sprintf("%swallet%s", prefix, suffix),
-		IdentityConfigurations: fmt.Sprintf("%s%sd_configs%s", prefix, "i", suffix),
-		AuditInfo:              fmt.Sprintf("%saudit_info%s", prefix, suffix),
-		Signers:                fmt.Sprintf("%ssigners%s", prefix, suffix),
+		Movements:              fmt.Sprintf("%smovements", prefix),
+		Transactions:           fmt.Sprintf("%stransactions", prefix),
+		Requests:               fmt.Sprintf("%srequests", prefix),
+		Validations:            fmt.Sprintf("%svalidations", prefix),
+		TransactionEndorseAck:  fmt.Sprintf("%stea", prefix),
+		Certifications:         fmt.Sprintf("%scertifications", prefix),
+		Tokens:                 fmt.Sprintf("%stokens", prefix),
+		Ownership:              fmt.Sprintf("%sownership", prefix),
+		PublicParams:           fmt.Sprintf("%spublic_params", prefix),
+		Wallets:                fmt.Sprintf("%swallet", prefix),
+		IdentityConfigurations: fmt.Sprintf("%sid_configs", prefix),
+		AuditInfo:              fmt.Sprintf("%saudit_info", prefix),
+		Signers:                fmt.Sprintf("%ssigners", prefix),
 	}, nil
 }
