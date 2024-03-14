@@ -35,7 +35,7 @@ type LocalMembership struct {
 	signerService          common.SigService
 	binderService          common.BinderService
 	deserializerManager    deserializer.Manager
-	walletPathStorage      driver2.IdentityDB
+	identityDB             driver2.IdentityDB
 	mspID                  string
 
 	resolversMutex           sync.RWMutex
@@ -53,7 +53,7 @@ func NewLocalMembership(
 	signerService common.SigService,
 	binderService common.BinderService,
 	deserializerManager deserializer.Manager,
-	walletPathStorage driver2.IdentityDB,
+	identityDB driver2.IdentityDB,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
@@ -63,7 +63,7 @@ func NewLocalMembership(
 		signerService:            signerService,
 		binderService:            binderService,
 		deserializerManager:      deserializerManager,
-		walletPathStorage:        walletPathStorage,
+		identityDB:               identityDB,
 		mspID:                    mspID,
 		bccspResolversByIdentity: map[string]*common.Resolver{},
 		resolversByEnrollmentID:  map[string]*common.Resolver{},
@@ -156,7 +156,7 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	if err := lm.walletPathStorage.AddConfiguration(driver2.IdentityConfiguration{
+	if err := lm.identityDB.AddConfiguration(driver2.IdentityConfiguration{
 		ID:   id,
 		Type: IdentityConfigurationType,
 		URL:  path,
@@ -322,7 +322,7 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 }
 
 func (lm *LocalMembership) loadFromStorage() error {
-	it, err := lm.walletPathStorage.IteratorConfigurations(IdentityConfigurationType)
+	it, err := lm.identityDB.IteratorConfigurations(IdentityConfigurationType)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}
