@@ -53,17 +53,19 @@ Each role acts as a container for long-term identities, which are then used to c
 // Role is a container of long-term identities.
 // A long-term identity is then used to construct a wallet.
 type Role interface {
-   // MapToID returns the long-term identity and its identifier for the given index.
-   // The index can be an identity or a label (string).
-   MapToID(v interface{}) (view.Identity, string, error)
-   // GetIdentityInfo returns the long-term identity info associated to the passed id
-   GetIdentityInfo(id string) driver.IdentityInfo
-   // RegisterIdentity registers the given identity
-   RegisterIdentity(id string, path string) error
-   // IDs returns the identifiers contained in this role
-   IDs() ([]string, error)
-   // Reload the roles with the respect to the passed public parameters
-   Reload(pp driver.PublicParameters) error
+	// ID returns the identifier of this role
+	ID() driver.IdentityRole
+	// MapToID returns the long-term identity and its identifier for the given index.
+	// The index can be an identity or a label (string).
+	MapToID(v interface{}) (view.Identity, string, error)
+	// GetIdentityInfo returns the long-term identity info associated to the passed id
+	GetIdentityInfo(id string) (driver.IdentityInfo, error)
+	// RegisterIdentity registers the given identity
+	RegisterIdentity(id string, path string) error
+	// IdentityIDs returns the identifiers contained in this role
+	IdentityIDs() ([]string, error)
+	// Reload the roles with the respect to the passed public parameters
+	Reload(pp driver.PublicParameters) error
 }
 ```
 
@@ -74,8 +76,8 @@ For example, a role could even encompass identities based on various cryptograph
 The identity service conveniently provides two built-in implementations of the Role interface. 
 Both implementations leverage the concept of Hyperledger Fabric MSP ([https://hyperledger-fabric.readthedocs.io/en/latest/msp.html](https://hyperledger-fabric.readthedocs.io/en/latest/msp.html)):
 
-* **MSP X.509:** This implementation retrieves long-term identities from local folders adhering to the X.509-based MSP format.
-* **MSP Idemix:** This implementation loads long-term identities from local folders that follow the Idemix-based MSP format.
+* [**MSP X.509:**](./../../token/services/identity/msp/x509) This implementation retrieves long-term identities from local folders adhering to the X.509-based MSP format.
+* [**MSP Idemix:**](./../../token/services/identity/msp/idemix) This implementation loads long-term identities from local folders that follow the Idemix-based MSP format.
 
 ## Using the Identity Service in a Token Driver
 
@@ -83,9 +85,10 @@ If you want to use the Identity Service in your Token Driver, then here is what 
 
 First, instantiate your roles. The identity service come equipped with two `Role` implementation.
 One is based on X.509 certificates, the other one is based on Idemix. 
-Both requires the identities to be stored following the Hyperledger Fabric MSP prescriptions. 
+Both requires the identities to be stored on the filesystem following the Hyperledger Fabric MSP prescriptions. 
 
 High level, these are the steps to follow:
 1. Instantiate the roles your driver will support.
-2. Instantiate the Identity Provider passing the constructed roles.
-3. Instantiate the Wallet Registries for each role.
+2. Instantiate the Wallet Registries for each role.
+
+Let see an example taken from the [`fabtoken`](./../../token/core/fabtoken/driver) driver.
