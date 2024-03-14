@@ -17,7 +17,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.fabtoken")
+var logger = flogging.MustGetLogger("token-sdk.driver.fabtoken")
 
 type Vault interface {
 	// PublicParams returns the public parameters
