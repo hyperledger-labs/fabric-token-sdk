@@ -138,10 +138,11 @@ func NewDeserializerProvider() *DeserializerProvider {
 }
 
 // Deserialize returns the deserializer matching the passed public parameters
-func (d *DeserializerProvider) Deserialize(params *crypto.PublicParams) (driver.Deserializer, error) {
+func (d *DeserializerProvider) Deserialize(p driver.PublicParameters) (driver.Deserializer, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
+	params := p.(*crypto.PublicParams)
 	newHash, err := params.ComputeHash()
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to compute the hash of the public params")

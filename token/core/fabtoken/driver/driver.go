@@ -128,6 +128,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		func(params driver.PublicParameters) (driver.Deserializer, error) {
 			return deserializer, nil
 		},
+		nil,
 		&fabtoken.WalletFactory{},
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
@@ -245,6 +246,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		func(params driver.PublicParameters) (driver.Deserializer, error) {
 			return deserializer, nil
 		},
+		nil,
 		&fabtoken.WalletFactory{},
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),

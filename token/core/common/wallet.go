@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package common
 
 import (
@@ -5,6 +11,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -43,6 +50,7 @@ type WalletService struct {
 	TokenVault           TokenVault
 	PublicParamsManager  driver.PublicParamsManager
 	DeserializerProvider DeserializerProviderFunc
+	ConfigManager        config.Manager
 
 	WalletFactory            WalletFactory
 	OwnerWalletsRegistry     WalletRegistry
@@ -57,6 +65,7 @@ func NewWalletService(
 	tokenVault TokenVault,
 	PPM driver.PublicParamsManager,
 	deserializerProvider DeserializerProviderFunc,
+	ConfigManager config.Manager,
 	walletFactory WalletFactory,
 	OwnerWalletRegistry WalletRegistry,
 	IssuerWalletRegistry WalletRegistry,
@@ -68,6 +77,7 @@ func NewWalletService(
 		IdentityProvider:         identityProvider,
 		TokenVault:               tokenVault,
 		PublicParamsManager:      PPM,
+		ConfigManager:            ConfigManager,
 		DeserializerProvider:     deserializerProvider,
 		WalletFactory:            walletFactory,
 		OwnerWalletsRegistry:     OwnerWalletRegistry,

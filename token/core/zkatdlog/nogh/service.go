@@ -9,6 +9,7 @@ package nogh
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -31,10 +32,10 @@ type PublicParametersManager interface {
 	PublicParams() *crypto.PublicParams
 }
 
-type DeserializerProviderFunc = func(params *crypto.PublicParams) (driver.Deserializer, error)
+type DeserializerProviderFunc = func(params driver.PublicParameters) (driver.Deserializer, error)
 
 type Service struct {
-	*WalletService
+	*common.WalletService
 	PPM                   PublicParametersManager
 	TokenLoader           TokenLoader
 	TokenCommitmentLoader TokenCommitmentLoader
@@ -43,7 +44,7 @@ type Service struct {
 	configManager         config.Manager
 }
 
-func NewTokenService(ws *WalletService, PPM PublicParametersManager, tokenLoader TokenLoader, tokenCommitmentLoader TokenCommitmentLoader, identityProvider driver.IdentityProvider, deserializerProvider DeserializerProviderFunc, configManager config.Manager) (*Service, error) {
+func NewTokenService(ws *common.WalletService, PPM PublicParametersManager, tokenLoader TokenLoader, tokenCommitmentLoader TokenCommitmentLoader, identityProvider driver.IdentityProvider, deserializerProvider DeserializerProviderFunc, configManager config.Manager) (*Service, error) {
 	s := &Service{
 		WalletService:         ws,
 		PPM:                   PPM,

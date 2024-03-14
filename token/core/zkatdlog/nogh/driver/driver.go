@@ -9,6 +9,10 @@ package driver
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -27,6 +31,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
 
 type Driver struct {
 }
@@ -122,15 +128,18 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 
 	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
-	ws := zkatdlog.NewWalletService(
+	ws := common.NewWalletService(
+		logger,
 		ip,
 		qe,
 		ppm,
 		NewDeserializerProvider().Deserialize,
 		tmsConfig,
+		&zkatdlog.WalletFactory{},
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
+		nil,
 	)
 	service, err := zkatdlog.NewTokenService(
 		ws,
@@ -247,15 +256,18 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
 	// role service
-	ws := zkatdlog.NewWalletService(
+	ws := common.NewWalletService(
+		logger,
 		ip,
 		nil,
 		publicParamsManager,
 		NewDeserializerProvider().Deserialize,
 		tmsConfig,
+		&zkatdlog.WalletFactory{},
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
+		nil,
 	)
 
 	if err := roles.Reload(pp); err != nil {
