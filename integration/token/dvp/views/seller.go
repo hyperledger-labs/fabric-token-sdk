@@ -55,7 +55,10 @@ func (d *SellHouseView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to collect endorsements")
 
 	// Send to the ordering service and wait for confirmation
-	return context.RunView(ttx.NewOrderingAndFinalityView(tx))
+	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
+	assert.NoError(err, "failed ordering and finality")
+
+	return tx.ID(), nil
 }
 
 func (d *SellHouseView) preparePayment(context view.Context, tx *ttx.Transaction, house *house.House) (*ttx.Transaction, error) {
