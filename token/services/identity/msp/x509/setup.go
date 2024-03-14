@@ -10,14 +10,11 @@ import (
 	x5092 "crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
-	"os"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
-	pkcs112 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/pkcs11"
 	msp2 "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/hyperledger/fabric/bccsp/pkcs11"
@@ -33,7 +30,7 @@ const (
 
 // GetSigningIdentity retrieves a signing identity from the passed arguments.
 // If keyStorePath is empty, then it is assumed that the key is at mspConfigPath/keystore
-func GetSigningIdentity(mspConfigPath, keyStorePath, mspID string, bccspConfig *config.BCCSP) (driver.FullIdentity, error) {
+func GetSigningIdentity(mspConfigPath, keyStorePath, mspID string, bccspConfig *BCCSP) (driver.FullIdentity, error) {
 	mspInstance, err := LoadLocalMSPAt(mspConfigPath, keyStorePath, mspID, BCCSPType, bccspConfig)
 	if err != nil {
 		return nil, err
@@ -49,11 +46,11 @@ func GetSigningIdentity(mspConfigPath, keyStorePath, mspID string, bccspConfig *
 
 // LoadLocalMSPAt loads an MSP whose configuration is stored at 'dir', and whose
 // id and type are the passed as arguments.
-func LoadLocalMSPAt(dir, keyStorePath, id, mspType string, bccspConfig *config.BCCSP) (msp.MSP, error) {
+func LoadLocalMSPAt(dir, keyStorePath, id, mspType string, bccspConfig *BCCSP) (msp.MSP, error) {
 	if mspType != BCCSPType {
 		return nil, errors.Errorf("invalid msp type, expected 'bccsp', got %s", mspType)
 	}
-	conf, err := msp.GetLocalMspConfig(dir, nil, id)
+	conf, err := GetLocalMspConfig(dir, id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", dir)
 	}
@@ -85,7 +82,7 @@ func LoadVerifyingMSPAt(dir, id, mspType string) (msp.MSP, error) {
 	if mspType != BCCSPType {
 		return nil, errors.Errorf("invalid msp type, expected 'bccsp', got %s", mspType)
 	}
-	conf, err := msp.GetVerifyingMspConfig(dir, id, mspType)
+	conf, err := GetMspConfig(dir, id, nil)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", dir)
 	}
@@ -122,7 +119,7 @@ func LoadLocalMSPSignerCert(dir string) ([]byte, error) {
 
 // GetBCCSPFromConf returns a BCCSP instance and its relative key store from the passed configuration.
 // If no configuration is passed, the default one is used, namely the `SW` provider.
-func GetBCCSPFromConf(dir string, keyStorePath string, conf *config.BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
+func GetBCCSPFromConf(dir string, keyStorePath string, conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
 	if len(keyStorePath) == 0 {
 		keyStorePath = filepath.Join(dir, "keystore")
 	}
@@ -136,27 +133,27 @@ func GetBCCSPFromConf(dir string, keyStorePath string, conf *config.BCCSP) (bccs
 	case "PKCS11":
 		return GetPKCS11BCCSP(conf)
 	default:
-		return nil, nil, errors.Errorf("invalid config.BCCSP.Default.%s", conf.Default)
+		return nil, nil, errors.Errorf("invalid BCCSP.Default.%s", conf.Default)
 	}
 }
 
 // GetPKCS11BCCSP returns a new instance of the HSM-based BCCSP
-func GetPKCS11BCCSP(conf *config.BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
+func GetPKCS11BCCSP(conf *BCCSP) (bccsp.BCCSP, bccsp.KeyStore, error) {
 	if conf.PKCS11 == nil {
-		return nil, nil, errors.New("invalid config.BCCSP.PKCS11. missing configuration")
+		return nil, nil, errors.New("invalid BCCSP.PKCS11. missing configuration")
 	}
 
 	p11Opts := *conf.PKCS11
 	ks := sw.NewDummyKeyStore()
 	mapper := skiMapper(p11Opts)
-	csp, err := pkcs11.New(*pkcs112.ToOpts(&p11Opts), ks, pkcs11.WithKeyMapper(mapper))
+	csp, err := pkcs11.New(*ToPKCS11OptsOpts(&p11Opts), ks, pkcs11.WithKeyMapper(mapper))
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "Failed initializing PKCS11 library with config [%+v]", p11Opts)
 	}
 	return csp, ks, nil
 }
 
-func skiMapper(p11Opts config.PKCS11) func([]byte) []byte {
+func skiMapper(p11Opts PKCS11) func([]byte) []byte {
 	keyMap := map[string]string{}
 	for _, k := range p11Opts.KeyIDs {
 		keyMap[k.SKI] = k.ID
@@ -233,35 +230,4 @@ func GetRevocationHandle(id []byte) ([]byte, error) {
 	default:
 		return nil, errors.Errorf("bad block type %s, expected CERTIFICATE", block.Type)
 	}
-}
-
-func getPemMaterialFromDir(dir string) ([][]byte, error) {
-	_, err := os.Stat(dir)
-	if os.IsNotExist(err) {
-		return nil, err
-	}
-
-	content := make([][]byte, 0)
-	files, err := os.ReadDir(dir)
-	if err != nil {
-		return nil, errors.Wrapf(err, "could not read directory %s", dir)
-	}
-
-	for _, f := range files {
-		fullName := filepath.Join(dir, f.Name())
-		f, err := os.Stat(fullName)
-		if err != nil {
-			continue
-		}
-		if f.IsDir() {
-			continue
-		}
-		item, err := readPemFile(fullName)
-		if err != nil {
-			continue
-		}
-		content = append(content, item)
-	}
-
-	return content, nil
 }

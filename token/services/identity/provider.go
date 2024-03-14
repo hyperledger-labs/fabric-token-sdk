@@ -36,12 +36,16 @@ type EnrollmentIDUnmarshaler interface {
 
 type sigService interface {
 	IsMe(identity view.Identity) bool
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 	RegisterVerifier(identity view.Identity, v driver.Verifier) error
-	RegisterAuditInfo(identity view.Identity, info []byte) error
-	GetAuditInfo(identity view.Identity) ([]byte, error)
 	GetSigner(identity view.Identity) (driver.Signer, error)
+	GetSignerInfo(identity view.Identity) ([]byte, error)
 	GetVerifier(identity view.Identity) (driver.Verifier, error)
+}
+
+type Storage interface {
+	GetAuditInfo(id []byte) ([]byte, error)
+	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 }
 
 type Binder interface {
@@ -53,6 +57,7 @@ type Binder interface {
 type Provider struct {
 	SigService sigService
 	Binder     Binder
+	Storage    Storage
 
 	deserializerManager     deserializer.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
@@ -62,8 +67,9 @@ type Provider struct {
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
 // The Provider handles the long-term identities on top of which wallets are defined.
-func NewProvider(sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, deserializerManager deserializer.Manager) *Provider {
+func NewProvider(Storage Storage, sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, deserializerManager deserializer.Manager) *Provider {
 	return &Provider{
+		Storage:                 Storage,
 		SigService:              sigService,
 		Binder:                  binder,
 		deserializerManager:     deserializerManager,
@@ -76,16 +82,20 @@ func (p *Provider) RegisterVerifier(identity view.Identity, v driver.Verifier) e
 	return p.SigService.RegisterVerifier(identity, v)
 }
 
-func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
-	auditInfo, err := p.SigService.GetAuditInfo(identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", identity.String())
-	}
-	return auditInfo, nil
+func (p *Provider) RegisterAuditInfo(identity view.Identity, info []byte) error {
+	return p.Storage.StoreIdentityData(identity, info, nil, nil)
 }
 
-func (p *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
-	return p.SigService.RegisterSigner(identity, signer, verifier)
+func (p *Provider) GetAuditInfo(identity view.Identity) ([]byte, error) {
+	return p.Storage.GetAuditInfo(identity)
+}
+
+func (p *Provider) RegisterRecipientData(data *driver.RecipientData) error {
+	return p.Storage.StoreIdentityData(data.Identity, data.AuditInfo, data.TokenMetadata, data.TokenMetadataAuditInfo)
+}
+
+func (p *Provider) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
+	return p.SigService.RegisterSigner(identity, signer, verifier, signerInfo)
 }
 
 func (p *Provider) IsMe(identity view.Identity) bool {
@@ -166,13 +176,6 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 }
 
-func (p *Provider) RegisterAuditInfo(id view.Identity, auditInfo []byte) error {
-	if err := p.SigService.RegisterAuditInfo(id, auditInfo); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
 	return p.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
 }
@@ -199,7 +202,7 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	}
 
 	setAI := true
-	auditInfo, err := p.SigService.GetAuditInfo(to)
+	auditInfo, err := p.GetAuditInfo(to)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("failed getting audit info for [%s][%s]", to, err)
@@ -208,12 +211,16 @@ func (p *Provider) Bind(id view.Identity, to view.Identity) error {
 	}
 
 	if setSV {
-		if err := p.SigService.RegisterSigner(id, signer, verifier); err != nil {
+		signerInfo, err := p.SigService.GetSignerInfo(id)
+		if err != nil {
+			return err
+		}
+		if err := p.SigService.RegisterSigner(id, signer, verifier, signerInfo); err != nil {
 			return err
 		}
 	}
 	if setAI {
-		if err := p.SigService.RegisterAuditInfo(id, auditInfo); err != nil {
+		if err := p.RegisterAuditInfo(id, auditInfo); err != nil {
 			return err
 		}
 	}

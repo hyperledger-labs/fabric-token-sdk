@@ -27,7 +27,7 @@ type cache interface {
 
 type identityTables struct {
 	IdentityConfigurations string
-	AuditInfo              string
+	IdentityInfo           string
 	Signers                string
 }
 
@@ -55,7 +55,7 @@ func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfo
 
 	identityDB := newIdentityDB(db, identityTables{
 		IdentityConfigurations: tables.IdentityConfigurations,
-		AuditInfo:              tables.AuditInfo,
+		IdentityInfo:           tables.IdentityInfo,
 		Signers:                tables.Signers,
 	}, signerInfoCache)
 	if createSchema {
@@ -67,37 +67,49 @@ func NewIdentityDB(db *sql.DB, tablePrefix string, createSchema bool, signerInfo
 }
 
 func (db *IdentityDB) AddConfiguration(wp driver.IdentityConfiguration) error {
-	query := fmt.Sprintf("INSERT INTO %s (id, type, url) VALUES ($1, $2, $3)", db.table.IdentityConfigurations)
+	query := fmt.Sprintf("INSERT INTO %s (id, type, url, conf, raw) VALUES ($1, $2, $3, $4, $5)", db.table.IdentityConfigurations)
 	logger.Debug(query)
 
-	_, err := db.db.Exec(query, wp.ID, wp.Type, wp.URL)
+	_, err := db.db.Exec(query, wp.ID, wp.Type, wp.URL, wp.Config, wp.Raw)
 	return err
 }
 
 func (db *IdentityDB) IteratorConfigurations(configurationType string) (driver.Iterator[driver.IdentityConfiguration], error) {
-	query := fmt.Sprintf("SELECT id, url FROM %s WHERE type = $1", db.table.IdentityConfigurations)
+	query := fmt.Sprintf("SELECT id, url, conf, raw FROM %s WHERE type = $1", db.table.IdentityConfigurations)
 	logger.Debug(query)
 	rows, err := db.db.Query(query, configurationType)
 	if err != nil {
 		return nil, err
 	}
-	return &WalletPathStorageIterator{rows: rows, configurationType: configurationType}, nil
+	return &IdentityConfigurationIterator{rows: rows, configurationType: configurationType}, nil
 }
 
-func (db *IdentityDB) StoreAuditInfo(id, info []byte) error {
-	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, info) VALUES ($1, $2, $3)", db.table.AuditInfo)
+func (db *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
+	result, err := QueryUnique[string](db.db,
+		fmt.Sprintf("SELECT id FROM %s WHERE id=$1 AND type=$2", db.table.IdentityConfigurations),
+		id, typ,
+	)
+	if err != nil {
+		return false, errors.Wrapf(err, "failed getting configuration for [%s:%s]", id, typ)
+	}
+	logger.Debugf("found configuration for [%s:%s]", id, typ)
+	return len(result) != 0, nil
+}
+
+func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
+	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, identityAuditInfo, tokenMetadata, tokenMetadataAuditInfo) VALUES ($1, $2, $3, $4, $5)", db.table.IdentityInfo)
 	logger.Debug(query)
 
 	h := view.Identity(id).String()
-	_, err := db.db.Exec(query, h, id, info)
+	_, err := db.db.Exec(query, h, id, identityAudit, tokenMetadata, tokenMetadataAudit)
 	if err != nil {
 		// does the record already exists?
 		auditInfo, err2 := db.GetAuditInfo(id)
 		if err2 != nil {
 			return err
 		}
-		if !bytes.Equal(auditInfo, info) {
-			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", id, hash.Hashable(auditInfo), hash.Hashable(info))
+		if !bytes.Equal(auditInfo, identityAudit) {
+			return errors.Wrapf(err, "different audit info stored for [%s], [%s]!=[%s]", id, hash.Hashable(auditInfo), hash.Hashable(identityAudit))
 		}
 		return nil
 	}
@@ -106,7 +118,7 @@ func (db *IdentityDB) StoreAuditInfo(id, info []byte) error {
 
 func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 	h := view.Identity(id).String()
-	query := fmt.Sprintf("SELECT info FROM %s WHERE identity_hash = $1", db.table.AuditInfo)
+	query := fmt.Sprintf("SELECT identityAuditInfo FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)
 	var info []byte
@@ -118,6 +130,23 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 		return nil, errors.Wrapf(err, "error querying db")
 	}
 	return info, nil
+}
+
+func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
+	h := view.Identity(id).String()
+	query := fmt.Sprintf("SELECT tokenMetadata, tokenMetadataAuditInfo FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
+	logger.Debug(query)
+	row := db.db.QueryRow(query, h)
+	var tokenMetadata []byte
+	var tokenMetadataAuditInfo []byte
+	err := row.Scan(&tokenMetadata, &tokenMetadataAuditInfo)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil, nil
+		}
+		return nil, nil, errors.Wrapf(err, "error querying db")
+	}
+	return tokenMetadata, tokenMetadataAuditInfo, nil
 }
 
 func (db *IdentityDB) StoreSignerInfo(id, info []byte) error {
@@ -182,6 +211,22 @@ func (db *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 	return exists, nil
 }
 
+func (db *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
+	h := view.Identity(identity).String()
+	query := fmt.Sprintf("SELECT info FROM %s WHERE identity_hash = $1", db.table.Signers)
+	logger.Debug(query)
+	row := db.db.QueryRow(query, h)
+	var info []byte
+	err := row.Scan(&info)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, errors.Wrapf(err, "error querying db")
+	}
+	return info, nil
+}
+
 func (db *IdentityDB) signerInfoExists(h string) (bool, error) {
 	query := fmt.Sprintf("SELECT info FROM %s WHERE identity_hash = $1", db.table.Signers)
 	logger.Debug(query)
@@ -197,23 +242,23 @@ func (db *IdentityDB) signerInfoExists(h string) (bool, error) {
 	return true, nil
 }
 
-type WalletPathStorageIterator struct {
+type IdentityConfigurationIterator struct {
 	rows              *sql.Rows
 	configurationType string
 }
 
-func (w *WalletPathStorageIterator) Close() error {
+func (w *IdentityConfigurationIterator) Close() error {
 	return w.rows.Close()
 }
 
-func (w *WalletPathStorageIterator) HasNext() bool {
+func (w *IdentityConfigurationIterator) HasNext() bool {
 	return w.rows.Next()
 }
 
-func (w *WalletPathStorageIterator) Next() (driver.IdentityConfiguration, error) {
+func (w *IdentityConfigurationIterator) Next() (driver.IdentityConfiguration, error) {
 	var c driver.IdentityConfiguration
 	c.Type = w.configurationType
-	err := w.rows.Scan(&c.ID, &c.URL)
+	err := w.rows.Scan(&c.ID, &c.URL, &c.Config, &c.Raw)
 	return c, err
 }
 
@@ -221,17 +266,23 @@ func (db *IdentityDB) GetSchema() string {
 	return fmt.Sprintf(`
 		-- IdentityConfigurations
 		CREATE TABLE IF NOT EXISTS %s (
-			id TEXT NOT NULL PRIMARY KEY,
+			id TEXT NOT NULL,
             type TEXT NOT NULL,  
-			url TEXT NOT NULL
+			url TEXT NOT NULL,
+			conf BYTEA,
+			raw BYTEA,
+			PRIMARY KEY(id, type)
 		);
 		CREATE INDEX IF NOT EXISTS idx_ic_type_%s ON %s ( type );
+		CREATE INDEX IF NOT EXISTS idx_ic_id_type_%s ON %s ( id, type );
 
-		-- AuditInfo
+		-- IdentityInfo
 		CREATE TABLE IF NOT EXISTS %s (
             identity_hash TEXT NOT NULL PRIMARY KEY,
 			identity BYTEA NOT NULL,
-			info BYTEA NOT NULL
+			identityAuditInfo BYTEA NOT NULL,
+			tokenMetadata BYTEA,
+			tokenMetadataAuditInfo BYTEA
 		);
 		CREATE INDEX IF NOT EXISTS idx_audits_%s ON %s ( identity_hash );
 
@@ -245,8 +296,9 @@ func (db *IdentityDB) GetSchema() string {
 		`,
 		db.table.IdentityConfigurations,
 		db.table.IdentityConfigurations, db.table.IdentityConfigurations,
-		db.table.AuditInfo,
-		db.table.AuditInfo, db.table.AuditInfo,
+		db.table.IdentityConfigurations, db.table.IdentityConfigurations,
+		db.table.IdentityInfo,
+		db.table.IdentityInfo, db.table.IdentityInfo,
 		db.table.Signers,
 		db.table.Signers, db.table.Signers,
 	)

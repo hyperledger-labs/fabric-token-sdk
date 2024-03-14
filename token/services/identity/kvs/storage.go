@@ -16,6 +16,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+// RecipientData contains information about the identity of a token owner
+type RecipientData struct {
+	// AuditInfo contains private information Identity
+	AuditInfo []byte
+	// TokenMetadata contains public information related to the token to be assigned to this Recipient.
+	TokenMetadata []byte
+	// TokenMetadataAuditInfo contains private information TokenMetadata
+	TokenMetadataAuditInfo []byte
+}
+
 type KVS interface {
 	Exists(id string) bool
 	Put(id string, state interface{}) error
@@ -145,14 +155,26 @@ func (s *IdentityDB) IteratorConfigurations(configurationType string) (driver.It
 	return &IdentityConfigurationsIterator{Iterator: it}, nil
 }
 
-func (s *IdentityDB) StoreAuditInfo(identity, info []byte) error {
+func (s *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
+	k, err := kvs.CreateCompositeKey("token-sdk", []string{"msp", s.tmsID.String(), "registeredIdentity", typ, id})
+	if err != nil {
+		return false, errors.Wrapf(err, "failed to create key")
+	}
+	return s.kvs.Exists(k), nil
+}
+
+func (s *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
 	k := kvs.CreateCompositeKeyOrPanic(
 		"fsc.platform.view.sig",
 		[]string{
-			view.Identity(identity).String(),
+			view.Identity(id).String(),
 		},
 	)
-	if err := s.kvs.Put(k, info); err != nil {
+	if err := s.kvs.Put(k, &RecipientData{
+		AuditInfo:              identityAudit,
+		TokenMetadata:          tokenMetadata,
+		TokenMetadataAuditInfo: tokenMetadataAudit,
+	}); err != nil {
 		return err
 	}
 	return nil
@@ -168,11 +190,28 @@ func (s *IdentityDB) GetAuditInfo(identity []byte) ([]byte, error) {
 	if !s.kvs.Exists(k) {
 		return nil, nil
 	}
-	var res []byte
+	var res RecipientData
 	if err := s.kvs.Get(k, &res); err != nil {
 		return nil, err
 	}
-	return res, nil
+	return res.AuditInfo, nil
+}
+
+func (s *IdentityDB) GetTokenInfo(identity []byte) ([]byte, []byte, error) {
+	k := kvs.CreateCompositeKeyOrPanic(
+		"fsc.platform.view.sig",
+		[]string{
+			view.Identity(identity).String(),
+		},
+	)
+	if !s.kvs.Exists(k) {
+		return nil, nil, nil
+	}
+	var res RecipientData
+	if err := s.kvs.Get(k, &res); err != nil {
+		return nil, nil, err
+	}
+	return res.TokenMetadata, res.TokenMetadata, nil
 }
 
 func (s *IdentityDB) StoreSignerInfo(id, info []byte) error {
@@ -198,6 +237,19 @@ func (s *IdentityDB) SignerInfoExists(id []byte) (bool, error) {
 		return true, nil
 	}
 	return false, nil
+}
+
+func (s *IdentityDB) GetSignerInfo(identity []byte) ([]byte, error) {
+	idHash := view.Identity(identity).UniqueID()
+	k, err := kvs.CreateCompositeKey("sigService", []string{"signer", idHash})
+	if err != nil {
+		return nil, err
+	}
+	var res []byte
+	if err := s.kvs.Get(k, &res); err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 type IdentityConfigurationsIterator struct {

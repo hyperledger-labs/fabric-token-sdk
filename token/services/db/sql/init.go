@@ -55,7 +55,7 @@ type tableNames struct {
 	PublicParams           string
 	Wallets                string
 	IdentityConfigurations string
-	AuditInfo              string
+	IdentityInfo           string
 	Signers                string
 }
 
@@ -80,7 +80,7 @@ func getTableNames(prefix string) (tableNames, error) {
 		PublicParams:           fmt.Sprintf("%spublic_params", prefix),
 		Wallets:                fmt.Sprintf("%swallet", prefix),
 		IdentityConfigurations: fmt.Sprintf("%sid_configs", prefix),
-		AuditInfo:              fmt.Sprintf("%saudit_info", prefix),
+		IdentityInfo:           fmt.Sprintf("%sid_info", prefix),
 		Signers:                fmt.Sprintf("%ssigners", prefix),
 	}, nil
 }

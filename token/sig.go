@@ -53,7 +53,7 @@ func (s *SignatureService) GetSigner(id view.Identity) (Signer, error) {
 
 // RegisterSigner registers the pair (signer, verifier) bound to the given identity
 func (s *SignatureService) RegisterSigner(identity view.Identity, signer Signer, verifier Verifier) error {
-	return s.ip.RegisterSigner(identity, signer, verifier)
+	return s.ip.RegisterSigner(identity, signer, verifier, nil)
 }
 
 // IsMe returns true if for the given identity there is a signer registered
