@@ -26,9 +26,8 @@ type Driver struct {
 
 // Open returns a pure go sqlite implementation in memory for testing purposes.
 func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.TokenDB, error) {
-	name := sqldb.DatasourceName(tmsID)
 	h := sha256.New()
-	if _, err := h.Write([]byte(name)); err != nil {
+	if _, err := h.Write([]byte(tmsID.String())); err != nil {
 		return nil, err
 	}
 
@@ -41,7 +40,7 @@ func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.Token
 		return nil, errors.Wrapf(err, "failed to open memory db for [%s]", tmsID)
 	}
 
-	return sqldb.NewTokenDB(sqlDB, "memory", name, true)
+	return sqldb.NewTokenDB(sqlDB, "memory", true)
 }
 
 func init() {

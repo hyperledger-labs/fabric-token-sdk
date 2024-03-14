@@ -63,7 +63,7 @@ func (d *DBOpener) compileOpts(sp view.ServiceProvider, tmsID token.TMSID) (*Opt
 		return nil, errors.Wrapf(err, "failed getting opts for vault")
 	}
 	if opts.Driver == "" {
-		panic(fmt.Sprintf("%s.driver not set. See https://github.com/golang/go/wiki/SQLDrivers", d.optsKey))
+		panic(fmt.Sprintf("%s.driver not set", d.optsKey))
 	}
 
 	dataSourceName := os.Getenv(d.envVarKey)

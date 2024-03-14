@@ -39,8 +39,8 @@ func newTokenDB(db *sql.DB, tables tokenTables) *TokenDB {
 	}
 }
 
-func NewTokenDB(db *sql.DB, tablePrefix, name string, createSchema bool) (*TokenDB, error) {
-	tables, err := getTableNames(tablePrefix, name)
+func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (*TokenDB, error) {
+	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get table names")
 	}
@@ -748,8 +748,6 @@ func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, [
 }
 
 func (db *TokenDB) GetSchema() string {
-	// owner_raw is as1 encoded Type(string), Identity([]byte) (see token/core/identity/owner.go).
-	// If Type is "htlc", Identity is a json encoded Script.
 	return fmt.Sprintf(`
 		-- Tokens
 		CREATE TABLE IF NOT EXISTS %s (

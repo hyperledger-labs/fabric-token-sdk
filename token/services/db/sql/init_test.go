@@ -31,7 +31,7 @@ var Tokens *TokenDB
 var Identity *IdentityDB
 var Wallet *WalletDB
 
-func Init(driverName, dataSourceName, tablePrefix, name string, createSchema bool, maxOpenConns int) error {
+func Init(driverName, dataSourceName, tablePrefix string, createSchema bool, maxOpenConns int) error {
 	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
 	if Transactions != nil {
 		Transactions.Close()
@@ -40,7 +40,7 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 		Tokens.Close()
 	}
 
-	tables, err := getTableNames(tablePrefix, name)
+	tables, err := getTableNames(tablePrefix)
 	if err != nil {
 		return errors.Wrapf(err, "failed to get table names")
 	}
@@ -83,38 +83,54 @@ func Init(driverName, dataSourceName, tablePrefix, name string, createSchema boo
 	return nil
 }
 
-func TestGetTableNames(t *testing.T) {
-	const name = "default,mychannel,tokenchaincode"
+func initSqlite(t *testing.T, tempDir, key string) {
+	if err := Init("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), key, true, 10); err != nil {
+		t.Fatal(err)
+	}
+}
 
-	names, err := getTableNames("", name)
+func initSqliteMemory(t *testing.T, key string) {
+	if err := Init("sqlite", "file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", key, true, 10); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func initPostgres(t *testing.T, pgConnStr, key string) {
+	if err := Init("postgres", pgConnStr, key, true, 10); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestGetTableNames(t *testing.T) {
+	names, err := getTableNames("")
 	assert.NoError(t, err)
 	assert.Equal(t, tableNames{
-		Movements:              "movements_5193a5",
-		Transactions:           "transactions_5193a5",
-		Requests:               "requests_5193a5",
-		Validations:            "validations_5193a5",
-		TransactionEndorseAck:  "tea_5193a5",
-		Certifications:         "certifications_5193a5",
-		Tokens:                 "tokens_5193a5",
-		Ownership:              "ownership_5193a5",
-		PublicParams:           "public_params_5193a5",
-		Wallets:                "wallet_5193a5",
-		IdentityConfigurations: "id_configs_5193a5",
-		AuditInfo:              "audit_info_5193a5",
-		Signers:                "signers_5193a5",
+		Movements:              "movements",
+		Transactions:           "transactions",
+		Requests:               "requests",
+		Validations:            "validations",
+		TransactionEndorseAck:  "tea",
+		Certifications:         "certifications",
+		Tokens:                 "tokens",
+		Ownership:              "ownership",
+		PublicParams:           "public_params",
+		Wallets:                "wallet",
+		IdentityConfigurations: "id_configs",
+		AuditInfo:              "audit_info",
+		Signers:                "signers",
 	}, names)
 
-	names, err = getTableNames("valid_prefix", name)
+	names, err = getTableNames("valid_prefix")
 	assert.NoError(t, err)
-	assert.Equal(t, "valid_prefix_transactions_5193a5", names.Transactions)
+	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
 
-	names, err = getTableNames("Valid_Prefix", name)
+	names, err = getTableNames("Valid_Prefix")
 	assert.NoError(t, err)
-	assert.Equal(t, "Valid_Prefix_transactions_5193a5", names.Transactions)
+	assert.Equal(t, "Valid_Prefix_transactions", names.Transactions)
 
-	names, err = getTableNames("valid", name)
+	names, err = getTableNames("valid")
 	assert.NoError(t, err)
-	assert.Equal(t, "valid_transactions_5193a5", names.Transactions)
+	assert.Equal(t, "valid_transactions", names.Transactions)
 
 	invalid := []string{
 		"invalid;",
@@ -130,28 +146,10 @@ func TestGetTableNames(t *testing.T) {
 
 	for _, inv := range invalid {
 		t.Run(fmt.Sprintf("Prefix: %s", inv), func(t *testing.T) {
-			names, err := getTableNames(inv, name)
+			names, err := getTableNames(inv)
 			assert.NotNil(t, err)
 			assert.Equal(t, tableNames{}, names)
 		})
-	}
-}
-
-func initSqlite(t *testing.T, tempDir, key string) {
-	if err := Init("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), "test", key, true, 10); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func initSqliteMemory(t *testing.T, key string) {
-	if err := Init("sqlite", "file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", "test", key, true, 10); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func initPostgres(t *testing.T, pgConnStr, key string) {
-	if err := Init("postgres", pgConnStr, "test", key, true, 10); err != nil {
-		t.Fatal(err)
 	}
 }
 
