@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -115,7 +114,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
-	publicParamsManager := ppm.NewPublicParamsManager(
+	publicParamsManager := fabtoken.NewPublicParamsManager(
 		fabtoken.PublicParameters,
 		qe,
 	)
@@ -163,7 +162,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return ppm.NewPublicParamsManagerFromParams(pp)
+	return fabtoken.NewPublicParamsManagerFromParams(pp)
 }
 
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
@@ -234,7 +233,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if !ok {
 		return nil, errors.Errorf("expected *fabtoken.PublicParams parameters")
 	}
-	publicParamsManager, err := ppm.NewPublicParamsManagerFromParams(fabtokenPP)
+	publicParamsManager, err := fabtoken.NewPublicParamsManagerFromParams(fabtokenPP)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate public parameters manager")
 	}
