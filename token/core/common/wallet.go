@@ -35,10 +35,7 @@ type WalletRegistry interface {
 }
 
 type WalletFactory interface {
-	NewOwnerWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.OwnerWallet, error)
-	NewIssuerWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.IssuerWallet, error)
-	NewAuditorWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.AuditorWallet, error)
-	NewCertifierWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.CertifierWallet, error)
+	NewWallet(role driver.IdentityRole, walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error)
 }
 
 type DeserializerProviderFunc = func() (driver.Deserializer, error)
@@ -201,7 +198,7 @@ func (s *WalletService) walletByID(role driver.IdentityRole, id any) (driver.Wal
 	}
 	if w != nil {
 		mutex.RUnlock()
-		return w.(driver.OwnerWallet), nil
+		return w, nil
 	}
 	mutex.RUnlock()
 
@@ -213,11 +210,11 @@ func (s *WalletService) walletByID(role driver.IdentityRole, id any) (driver.Wal
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%v]", id)
 	}
 	if w != nil {
-		return w.(driver.OwnerWallet), nil
+		return w, nil
 	}
 
 	// create the wallet
-	newWallet, err := s.WalletFactory.NewOwnerWallet(registry, idInfo, wID)
+	newWallet, err := s.WalletFactory.NewWallet(role, registry, idInfo, wID)
 	if err != nil {
 		return nil, err
 	}

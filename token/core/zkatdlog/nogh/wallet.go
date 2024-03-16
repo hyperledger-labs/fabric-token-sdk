@@ -30,45 +30,41 @@ func NewWalletFactory(identityProvider driver.IdentityProvider, tokenVault Token
 	return &WalletFactory{IdentityProvider: identityProvider, TokenVault: tokenVault, ConfigManager: configManager, Deserializer: deserializer}
 }
 
-func (w *WalletFactory) NewOwnerWallet(walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.OwnerWallet, error) {
-	newWallet, err := newOwnerWallet(w.IdentityProvider, w.TokenVault, w.ConfigManager, w.Deserializer, walletRegistry, id, info)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
+func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error) {
+	switch role {
+	case driver.OwnerRole:
+		newWallet, err := newOwnerWallet(w.IdentityProvider, w.TokenVault, w.ConfigManager, w.Deserializer, walletRegistry, id, info)
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to create new owner wallet [%s]", id)
+		}
+		logger.Debugf("created owner wallet [%s]", id)
+		return newWallet, nil
+	case driver.IssuerRole:
+		idInfoIdentity, _, err := info.Get()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
+		}
+		newWallet := newIssuerWallet(w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
+		if err := walletRegistry.BindIdentity(idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
+			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
+		}
+		logger.Debugf("created issuer wallet [%s]", id)
+		return newWallet, nil
+	case driver.AuditorRole:
+		logger.Debugf("no wallet found, create it [%s]", id)
+		idInfoIdentity, _, err := info.Get()
+		if err != nil {
+			return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
+		}
+		newWallet := newAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
+		if err := walletRegistry.BindIdentity(idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
+			return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
+		}
+		logger.Debugf("created auditor wallet [%s]", id)
+		return newWallet, nil
+	default:
+		return nil, errors.Errorf("role [%d] not supported", role)
 	}
-	logger.Debugf("created owner wallet [%s]", id)
-	return newWallet, nil
-}
-
-func (w *WalletFactory) NewIssuerWallet(walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.IssuerWallet, error) {
-	idInfoIdentity, _, err := info.Get()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get issuer wallet identity for [%s]", id)
-	}
-	newWallet := newIssuerWallet(w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
-	if err := walletRegistry.BindIdentity(idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
-		return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
-	}
-	logger.Debugf("created issuer wallet [%s]", id)
-	return newWallet, nil
-}
-
-func (w *WalletFactory) NewAuditorWallet(walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.AuditorWallet, error) {
-	logger.Debugf("no wallet found, create it [%s]", id)
-	idInfoIdentity, _, err := info.Get()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get auditor wallet identity for [%s]", id)
-	}
-	newWallet := newAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
-	if err := walletRegistry.BindIdentity(idInfoIdentity, info.EnrollmentID(), id, nil); err != nil {
-		return nil, errors.WithMessagef(err, "programming error, failed to register recipient identity [%s]", id)
-	}
-	logger.Debugf("created auditor wallet [%s]", id)
-	return newWallet, nil
-}
-
-func (w *WalletFactory) NewCertifierWallet(walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.CertifierWallet, error) {
-	//TODO implement me
-	panic("implement me")
 }
 
 type ownerWallet struct {
