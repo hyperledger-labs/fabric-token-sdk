@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -25,7 +24,6 @@ type WalletRegistry struct {
 	Role    Role
 	Storage db.WalletDB
 
-	sync.RWMutex
 	Wallets map[string]driver.Wallet
 }
 

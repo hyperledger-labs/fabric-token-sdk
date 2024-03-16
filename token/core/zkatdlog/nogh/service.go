@@ -32,7 +32,7 @@ type PublicParametersManager interface {
 	PublicParams() *crypto.PublicParams
 }
 
-type DeserializerProviderFunc = func(params driver.PublicParameters) (driver.Deserializer, error)
+type DeserializerProviderFunc = func() (driver.Deserializer, error)
 
 type Service struct {
 	*common.WalletService
@@ -123,11 +123,7 @@ func (s *Service) ConfigManager() config.Manager {
 }
 
 func (s *Service) Deserializer() (driver.Deserializer, error) {
-	pp := s.PublicParams()
-	if pp == nil {
-		return nil, errors.Errorf("public parameters not inizialized")
-	}
-	d, err := s.DeserializerProvider(pp)
+	d, err := s.DeserializerProvider()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get deserializer")
 	}

@@ -128,20 +128,24 @@ func (d *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider)
 // DeserializerProvider provides the deserializer matching zkatdlog public parameters
 type DeserializerProvider struct {
 	oldHash []byte
+	ppm     driver.PublicParamsManager
 	des     *Deserializer
 	mux     sync.Mutex
 }
 
 // NewDeserializerProvider returns a DeserializerProvider
-func NewDeserializerProvider() *DeserializerProvider {
-	return &DeserializerProvider{}
+func NewDeserializerProvider(ppm driver.PublicParamsManager) *DeserializerProvider {
+	return &DeserializerProvider{
+		ppm: ppm,
+	}
 }
 
 // Deserialize returns the deserializer matching the passed public parameters
-func (d *DeserializerProvider) Deserialize(p driver.PublicParameters) (driver.Deserializer, error) {
+func (d *DeserializerProvider) Deserialize() (driver.Deserializer, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
 
+	p := d.ppm.PublicParameters()
 	params := p.(*crypto.PublicParams)
 	newHash, err := params.ComputeHash()
 	if err != nil {
@@ -162,8 +166,7 @@ func (d *DeserializerProvider) Deserialize(p driver.PublicParameters) (driver.De
 }
 
 // EnrollmentService returns enrollment IDs behind the owners of token
-type EnrollmentService struct {
-}
+type EnrollmentService struct{}
 
 // NewEnrollmentIDDeserializer returns an enrollmentService
 func NewEnrollmentIDDeserializer() *EnrollmentService {

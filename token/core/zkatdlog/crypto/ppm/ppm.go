@@ -45,7 +45,7 @@ func NewFromParams(pp *crypto.PublicParams) (*PublicParamsManager, error) {
 	if pp == nil {
 		return nil, errors.New("public parameters not set")
 	}
-	return &PublicParamsManager{PP: pp, Mutex: sync.RWMutex{}}, nil
+	return &PublicParamsManager{PP: pp}, nil
 }
 
 func (v *PublicParamsManager) PublicParameters() driver.PublicParameters {

@@ -88,7 +88,7 @@ func (wm *WalletManager) OwnerWallet(id string) *OwnerWallet {
 // OwnerWalletByIdentity returns the owner wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) OwnerWalletByIdentity(identity view.Identity) *OwnerWallet {
-	w, err := wm.walletService.OwnerWalletByIdentity(identity)
+	w, err := wm.walletService.OwnerWallet(identity)
 	if err != nil {
 		logger.Debugf("failed to get owner wallet for id [%s]: [%s]", identity, err)
 		return nil
@@ -111,7 +111,7 @@ func (wm *WalletManager) IssuerWallet(id string) *IssuerWallet {
 // IssuerWalletByIdentity returns the issuer wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) IssuerWalletByIdentity(identity view.Identity) *IssuerWallet {
-	w, err := wm.walletService.IssuerWalletByIdentity(identity)
+	w, err := wm.walletService.IssuerWallet(identity)
 	if err != nil {
 		logger.Debugf("failed to get issuer wallet for id [%s]: [%s]", identity, err)
 		return nil
@@ -132,7 +132,7 @@ func (wm *WalletManager) AuditorWallet(id string) *AuditorWallet {
 }
 
 func (wm *WalletManager) AuditorWalletByIdentity(id view.Identity) *AuditorWallet {
-	w, err := wm.walletService.AuditorWalletByIdentity(id)
+	w, err := wm.walletService.AuditorWallet(id)
 	if err != nil {
 		logger.Debugf("failed to get auditor wallet for id [%s]: [%s]", id, err)
 		return nil
@@ -155,7 +155,7 @@ func (wm *WalletManager) CertifierWallet(id string) *CertifierWallet {
 // CertifierWalletByIdentity returns the certifier wallet bound to the passed identity, if any is available.
 // If no wallet is found, it returns nil.
 func (wm *WalletManager) CertifierWalletByIdentity(identity view.Identity) *CertifierWallet {
-	w, err := wm.walletService.CertifierWalletByIdentity(identity)
+	w, err := wm.walletService.CertifierWallet(identity)
 	if err != nil {
 		logger.Debugf("failed to get certifier wallet for id [%s]: [%s]", identity, err)
 		return nil

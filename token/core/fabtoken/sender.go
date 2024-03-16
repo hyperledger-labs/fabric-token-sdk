@@ -94,7 +94,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	receiverIsSender := make([]bool, len(receivers))
 	for i, receiver := range receivers {
-		_, err = s.OwnerWalletByID(receiver)
+		_, err = s.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil
 	}
 

@@ -122,13 +122,10 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		qe,
-		publicParamsManager,
-		func(params driver.PublicParameters) (driver.Deserializer, error) {
+		func() (driver.Deserializer, error) {
 			return deserializer, nil
 		},
-		nil,
-		&fabtoken.WalletFactory{},
+		fabtoken.NewWalletFactory(ip, qe),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
@@ -229,24 +226,13 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
 	deserializer := NewDeserializer()
-	fabtokenPP, ok := params.(*fabtoken.PublicParams)
-	if !ok {
-		return nil, errors.Errorf("expected *fabtoken.PublicParams parameters")
-	}
-	publicParamsManager, err := fabtoken.NewPublicParamsManagerFromParams(fabtokenPP)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to instantiate public parameters manager")
-	}
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		nil,
-		publicParamsManager,
-		func(params driver.PublicParameters) (driver.Deserializer, error) {
+		func() (driver.Deserializer, error) {
 			return deserializer, nil
 		},
-		nil,
-		&fabtoken.WalletFactory{},
+		fabtoken.NewWalletFactory(ip, nil),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),

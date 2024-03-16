@@ -128,14 +128,12 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 
 	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
+	deserializerProvider := NewDeserializerProvider(ppm).Deserialize
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		qe,
-		ppm,
-		NewDeserializerProvider().Deserialize,
-		tmsConfig,
-		&zkatdlog.WalletFactory{},
+		deserializerProvider,
+		zkatdlog.NewWalletFactory(ip, qe, tmsConfig, deserializerProvider),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
@@ -147,7 +145,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		&zkatdlog.VaultTokenLoader{TokenVault: qe},
 		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
 		ip,
-		NewDeserializerProvider().Deserialize,
+		NewDeserializerProvider(ppm).Deserialize,
 		tmsConfig,
 	)
 	if err != nil {
@@ -255,15 +253,13 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
+	deserializerProvider := NewDeserializerProvider(publicParamsManager).Deserialize
 	// role service
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		nil,
-		publicParamsManager,
-		NewDeserializerProvider().Deserialize,
-		tmsConfig,
-		&zkatdlog.WalletFactory{},
+		deserializerProvider,
+		zkatdlog.NewWalletFactory(ip, nil, tmsConfig, deserializerProvider),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),

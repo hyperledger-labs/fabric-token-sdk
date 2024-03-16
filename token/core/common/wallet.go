@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"sync"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -26,8 +27,6 @@ type TokenVault interface {
 
 type WalletRegistry interface {
 	WalletIDs() ([]string, error)
-	Lock()
-	Unlock()
 	RegisterIdentity(id string, path string) error
 	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
@@ -36,63 +35,59 @@ type WalletRegistry interface {
 }
 
 type WalletFactory interface {
-	NewOwnerWallet(s *WalletService, info driver.IdentityInfo, id string) (driver.OwnerWallet, error)
-	NewIssuerWallet(s *WalletService, info driver.IdentityInfo, id string) (driver.IssuerWallet, error)
-	NewAuditorWallet(s *WalletService, info driver.IdentityInfo, id string) (driver.AuditorWallet, error)
-	NewCertifierWallet(s *WalletService, info driver.IdentityInfo, id string) (driver.CertifierWallet, error)
+	NewOwnerWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.OwnerWallet, error)
+	NewIssuerWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.IssuerWallet, error)
+	NewAuditorWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.AuditorWallet, error)
+	NewCertifierWallet(walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.CertifierWallet, error)
 }
 
-type DeserializerProviderFunc = func(params driver.PublicParameters) (driver.Deserializer, error)
+type DeserializerProviderFunc = func() (driver.Deserializer, error)
+
+type RegistryEntry struct {
+	Registry WalletRegistry
+	Mutex    *sync.RWMutex
+}
 
 type WalletService struct {
 	Logger               *flogging.FabricLogger
 	IdentityProvider     driver.IdentityProvider
-	TokenVault           TokenVault
-	PublicParamsManager  driver.PublicParamsManager
 	DeserializerProvider DeserializerProviderFunc
-	ConfigManager        config.Manager
 
-	WalletFactory            WalletFactory
-	OwnerWalletsRegistry     WalletRegistry
-	IssuerWalletsRegistry    WalletRegistry
-	AuditorWalletsRegistry   WalletRegistry
-	CertifierWalletsRegistry WalletRegistry
+	WalletFactory WalletFactory
+	Registries    map[driver.IdentityRole]*RegistryEntry
 }
 
 func NewWalletService(
 	logger *flogging.FabricLogger,
 	identityProvider driver.IdentityProvider,
-	tokenVault TokenVault,
-	PPM driver.PublicParamsManager,
 	deserializerProvider DeserializerProviderFunc,
-	ConfigManager config.Manager,
 	walletFactory WalletFactory,
 	OwnerWalletRegistry WalletRegistry,
 	IssuerWalletRegistry WalletRegistry,
 	AuditorWalletRegistry WalletRegistry,
 	CertifierWalletsRegistry WalletRegistry,
 ) *WalletService {
+	registries := map[driver.IdentityRole]*RegistryEntry{}
+	registries[driver.OwnerRole] = &RegistryEntry{Registry: OwnerWalletRegistry, Mutex: &sync.RWMutex{}}
+	registries[driver.IssuerRole] = &RegistryEntry{Registry: IssuerWalletRegistry, Mutex: &sync.RWMutex{}}
+	registries[driver.AuditorRole] = &RegistryEntry{Registry: AuditorWalletRegistry, Mutex: &sync.RWMutex{}}
+	registries[driver.CertifierRole] = &RegistryEntry{Registry: CertifierWalletsRegistry, Mutex: &sync.RWMutex{}}
+
 	return &WalletService{
-		Logger:                   logger,
-		IdentityProvider:         identityProvider,
-		TokenVault:               tokenVault,
-		PublicParamsManager:      PPM,
-		ConfigManager:            ConfigManager,
-		DeserializerProvider:     deserializerProvider,
-		WalletFactory:            walletFactory,
-		OwnerWalletsRegistry:     OwnerWalletRegistry,
-		IssuerWalletsRegistry:    IssuerWalletRegistry,
-		AuditorWalletsRegistry:   AuditorWalletRegistry,
-		CertifierWalletsRegistry: CertifierWalletsRegistry,
+		Logger:               logger,
+		IdentityProvider:     identityProvider,
+		DeserializerProvider: deserializerProvider,
+		WalletFactory:        walletFactory,
+		Registries:           registries,
 	}
 }
 
 func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.OwnerWalletsRegistry.RegisterIdentity(id, path)
+	return s.Registries[driver.OwnerRole].Registry.RegisterIdentity(id, path)
 }
 
 func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.IssuerWalletsRegistry.RegisterIdentity(id, path)
+	return s.Registries[driver.IssuerRole].Registry.RegisterIdentity(id, path)
 }
 
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
@@ -114,7 +109,7 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
 
 	// recognize identity and register it
-	d, err := s.Deserializer()
+	d, err := s.DeserializerProvider()
 	if err != nil {
 		return errors.Wrap(err, "failed getting deserializer")
 	}
@@ -141,11 +136,11 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 }
 
 func (s *WalletService) Wallet(identity view.Identity) driver.Wallet {
-	w, _ := s.OwnerWalletByIdentity(identity)
+	w, _ := s.OwnerWallet(identity)
 	if w != nil {
 		return w
 	}
-	iw, _ := s.IssuerWalletByIdentity(identity)
+	iw, _ := s.IssuerWallet(identity)
 	if iw != nil {
 		return iw
 	}
@@ -153,23 +148,67 @@ func (s *WalletService) Wallet(identity view.Identity) driver.Wallet {
 }
 
 func (s *WalletService) OwnerWalletIDs() ([]string, error) {
-	return s.OwnerWalletsRegistry.WalletIDs()
+	return s.Registries[driver.OwnerRole].Registry.WalletIDs()
 }
 
-func (s *WalletService) OwnerWallet(id string) (driver.OwnerWallet, error) {
-	return s.OwnerWalletByID(id)
+func (s *WalletService) OwnerWallet(id any) (driver.OwnerWallet, error) {
+	w, err := s.walletByID(driver.OwnerRole, id)
+	if err != nil {
+		return nil, err
+	}
+	return w.(driver.OwnerWallet), nil
 }
 
-func (s *WalletService) OwnerWalletByIdentity(identity view.Identity) (driver.OwnerWallet, error) {
-	return s.OwnerWalletByID(identity)
+func (s *WalletService) IssuerWallet(id any) (driver.IssuerWallet, error) {
+	w, err := s.walletByID(driver.IssuerRole, id)
+	if err != nil {
+		return nil, err
+	}
+	return w.(driver.IssuerWallet), nil
 }
 
-func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, error) {
-	s.OwnerWalletsRegistry.Lock()
-	defer s.OwnerWalletsRegistry.Unlock()
+func (s *WalletService) AuditorWallet(id any) (driver.AuditorWallet, error) {
+	w, err := s.walletByID(driver.AuditorRole, id)
+	if err != nil {
+		return nil, err
+	}
+	return w.(driver.AuditorWallet), nil
+}
 
-	// check if there is already a wallet
-	w, idInfo, wID, err := s.OwnerWalletsRegistry.Lookup(id)
+func (s *WalletService) CertifierWallet(id any) (driver.CertifierWallet, error) {
+	w, err := s.walletByID(driver.CertifierRole, id)
+	if err != nil {
+		return nil, err
+	}
+	return w.(driver.CertifierWallet), nil
+}
+
+// SpentIDs returns the spend ids for the passed token ids
+func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
+	return nil, nil
+}
+
+func (s *WalletService) walletByID(role driver.IdentityRole, id any) (driver.Wallet, error) {
+	entry := s.Registries[role]
+	registry := entry.Registry
+	mutex := entry.Mutex
+
+	mutex.RLock()
+	w, _, _, err := registry.Lookup(id)
+	if err != nil {
+		mutex.RUnlock()
+		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%v]", id)
+	}
+	if w != nil {
+		mutex.RUnlock()
+		return w.(driver.OwnerWallet), nil
+	}
+	mutex.RUnlock()
+
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	w, idInfo, wID, err := registry.Lookup(id)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%v]", id)
 	}
@@ -178,101 +217,12 @@ func (s *WalletService) OwnerWalletByID(id interface{}) (driver.OwnerWallet, err
 	}
 
 	// create the wallet
-	return s.WalletFactory.NewOwnerWallet(s, idInfo, wID)
-}
-
-func (s *WalletService) IssuerWallet(id string) (driver.IssuerWallet, error) {
-	return s.issuerWallet(id)
-}
-
-func (s *WalletService) IssuerWalletByIdentity(identity view.Identity) (driver.IssuerWallet, error) {
-	return s.issuerWallet(identity)
-}
-
-func (s *WalletService) issuerWallet(id interface{}) (driver.IssuerWallet, error) {
-	s.IssuerWalletsRegistry.Lock()
-	defer s.IssuerWalletsRegistry.Unlock()
-
-	// check if there is already a wallet
-	w, idInfo, wID, err := s.IssuerWalletsRegistry.Lookup(id)
+	newWallet, err := s.WalletFactory.NewOwnerWallet(registry, idInfo, wID)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for issuer wallet [%v]", id)
+		return nil, err
 	}
-	if w != nil {
-		return w.(driver.IssuerWallet), nil
+	if err := registry.RegisterWallet(wID, newWallet); err != nil {
+		return nil, err
 	}
-
-	// create the wallet
-	return s.WalletFactory.NewIssuerWallet(s, idInfo, wID)
-}
-
-func (s *WalletService) AuditorWallet(id string) (driver.AuditorWallet, error) {
-	return s.auditorWallet(id)
-}
-
-func (s *WalletService) AuditorWalletByIdentity(identity view.Identity) (driver.AuditorWallet, error) {
-	return s.auditorWallet(identity)
-}
-
-func (s *WalletService) auditorWallet(id interface{}) (driver.AuditorWallet, error) {
-	s.Logger.Debugf("get auditor wallet for [%v]", id)
-	s.AuditorWalletsRegistry.Lock()
-	defer s.AuditorWalletsRegistry.Unlock()
-	s.Logger.Debugf("get auditor wallet for [%v], lock acquired", id)
-
-	// check if there is already a wallet
-	w, idInfo, wID, err := s.AuditorWalletsRegistry.Lookup(id)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for auditor wallet [%v]", id)
-	}
-	s.Logger.Debugf("lookup finished, wallet id is [%s]", wID)
-	if w != nil {
-		s.Logger.Debugf("existing auditor wallet, return it [%s]", wID)
-		return w.(driver.AuditorWallet), nil
-	}
-
-	// create the wallet
-	return s.WalletFactory.NewAuditorWallet(s, idInfo, wID)
-}
-
-func (s *WalletService) CertifierWallet(id string) (driver.CertifierWallet, error) {
-	return s.certifierWallet(id)
-}
-
-func (s *WalletService) CertifierWalletByIdentity(identity view.Identity) (driver.CertifierWallet, error) {
-	return s.certifierWallet(identity)
-}
-
-func (s *WalletService) certifierWallet(id interface{}) (driver.CertifierWallet, error) {
-	s.CertifierWalletsRegistry.Lock()
-	defer s.CertifierWalletsRegistry.Unlock()
-
-	// check if there is already a wallet
-	w, idInfo, wID, err := s.CertifierWalletsRegistry.Lookup(id)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for issuer wallet [%v]", id)
-	}
-	if w != nil {
-		return w.(driver.CertifierWallet), nil
-	}
-
-	// create the wallet
-	return s.WalletFactory.NewCertifierWallet(s, idInfo, wID)
-}
-
-// SpentIDs returns the spend ids for the passed token ids
-func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
-	return nil, nil
-}
-
-func (s *WalletService) Deserializer() (driver.Deserializer, error) {
-	pp := s.PublicParamsManager.PublicParameters()
-	if pp == nil {
-		return nil, errors.Errorf("public parameters not inizialized")
-	}
-	d, err := s.DeserializerProvider(pp)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get deserializer")
-	}
-	return d, nil
+	return newWallet, nil
 }
