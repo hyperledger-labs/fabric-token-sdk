@@ -28,7 +28,7 @@ func (s *Service) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRequestMe
 		inputTokens = append(inputTokens, inputs)
 	}
 
-	des, err := s.Deserializer()
+	des, err := s.DeserializerProvider()
 	if err != nil {
 		return errors.WithMessagef(err, "failed getting deserializer for auditor check")
 	}

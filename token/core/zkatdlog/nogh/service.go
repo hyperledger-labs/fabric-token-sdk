@@ -101,7 +101,7 @@ func (s *Service) IdentityProvider() driver.IdentityProvider {
 
 // Validator returns the validator associated with the service
 func (s *Service) Validator() (driver.Validator, error) {
-	d, err := s.Deserializer()
+	d, err := s.DeserializerProvider()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get deserializer")
 	}
@@ -120,14 +120,6 @@ func (s *Service) PublicParamsManager() driver.PublicParamsManager {
 // ConfigManager returns the configuration manager associated with the service
 func (s *Service) ConfigManager() config.Manager {
 	return s.configManager
-}
-
-func (s *Service) Deserializer() (driver.Deserializer, error) {
-	d, err := s.DeserializerProvider()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get deserializer")
-	}
-	return d, nil
 }
 
 func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
