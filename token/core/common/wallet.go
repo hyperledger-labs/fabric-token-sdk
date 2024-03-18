@@ -157,7 +157,7 @@ func (s *WalletService) OwnerWalletIDs() ([]string, error) {
 	return s.Registries[driver.OwnerRole].Registry.WalletIDs()
 }
 
-func (s *WalletService) OwnerWallet(id any) (driver.OwnerWallet, error) {
+func (s *WalletService) OwnerWallet(id driver.WalletID) (driver.OwnerWallet, error) {
 	w, err := s.walletByID(driver.OwnerRole, id)
 	if err != nil {
 		return nil, err
@@ -165,7 +165,7 @@ func (s *WalletService) OwnerWallet(id any) (driver.OwnerWallet, error) {
 	return w.(driver.OwnerWallet), nil
 }
 
-func (s *WalletService) IssuerWallet(id any) (driver.IssuerWallet, error) {
+func (s *WalletService) IssuerWallet(id driver.WalletID) (driver.IssuerWallet, error) {
 	w, err := s.walletByID(driver.IssuerRole, id)
 	if err != nil {
 		return nil, err
@@ -173,7 +173,7 @@ func (s *WalletService) IssuerWallet(id any) (driver.IssuerWallet, error) {
 	return w.(driver.IssuerWallet), nil
 }
 
-func (s *WalletService) AuditorWallet(id any) (driver.AuditorWallet, error) {
+func (s *WalletService) AuditorWallet(id driver.WalletID) (driver.AuditorWallet, error) {
 	w, err := s.walletByID(driver.AuditorRole, id)
 	if err != nil {
 		return nil, err
@@ -181,7 +181,7 @@ func (s *WalletService) AuditorWallet(id any) (driver.AuditorWallet, error) {
 	return w.(driver.AuditorWallet), nil
 }
 
-func (s *WalletService) CertifierWallet(id any) (driver.CertifierWallet, error) {
+func (s *WalletService) CertifierWallet(id driver.WalletID) (driver.CertifierWallet, error) {
 	w, err := s.walletByID(driver.CertifierRole, id)
 	if err != nil {
 		return nil, err

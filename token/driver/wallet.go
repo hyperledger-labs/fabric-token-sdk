@@ -111,6 +111,8 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (view.Identity, error)
 }
 
+type WalletID = any
+
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
@@ -139,19 +141,19 @@ type WalletService interface {
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	OwnerWallet(id any) (OwnerWallet, error)
+	OwnerWallet(id WalletID) (OwnerWallet, error)
 
 	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	IssuerWallet(id any) (IssuerWallet, error)
+	IssuerWallet(id WalletID) (IssuerWallet, error)
 
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	AuditorWallet(id any) (AuditorWallet, error)
+	AuditorWallet(id WalletID) (AuditorWallet, error)
 
 	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	CertifierWallet(id any) (CertifierWallet, error)
+	CertifierWallet(id WalletID) (CertifierWallet, error)
 
 	// SpentIDs returns the spend ids for the passed token ids
 	SpentIDs(ids ...*token.ID) ([]string, error)
@@ -178,13 +180,14 @@ type Deserializer interface {
 	GetIssuerVerifier(id view.Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
 	GetAuditorVerifier(id view.Identity) (Verifier, error)
-	// GetOwnerMatcher returns an identity matcher for the passed identity audit data.
+	// GetOwnerMatcher returns an identity matcher for the passed identity audit data
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
-
+	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw []byte) ([]view.Identity, error)
-
+	// Match returns nil if the given identity matches the given audit information.
+	// An error otherwise
 	Match(identity view.Identity, info []byte) error
-
+	// GetOwnerAuditInfo returns the audit information for each identity contained in the given serialized representation
 	GetOwnerAuditInfo(raw []byte, p AuditInfoProvider) ([][]byte, error)
 }
 

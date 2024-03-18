@@ -62,6 +62,8 @@ func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry commo
 		}
 		logger.Debugf("created auditor wallet [%s]", id)
 		return newWallet, nil
+	case driver.CertifierRole:
+		return nil, errors.Errorf("certifiers are not supported by this driver")
 	default:
 		return nil, errors.Errorf("role [%d] not supported", role)
 	}

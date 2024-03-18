@@ -37,6 +37,8 @@ func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry commo
 		newWallet = newIssuerWallet(w.identityProvider, w.tokenVault, id, idInfoIdentity)
 	case driver.AuditorRole:
 		newWallet = newAuditorWallet(w.identityProvider, id, idInfoIdentity)
+	case driver.CertifierRole:
+		return nil, errors.Errorf("certifiers are not supported by this driver")
 	default:
 		return nil, errors.Errorf("role [%d] not supported", role)
 	}
