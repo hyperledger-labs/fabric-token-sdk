@@ -108,7 +108,7 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
-	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
+	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, hash.Hashable(data.AuditInfo))
 
 	// recognize identity and register it
 	d, err := s.DeserializerProvider()
