@@ -48,7 +48,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity view.Identity
 	signerService          common.SigService
 	deserializerManager    deserializer.Manager
-	storage                driver3.IdentityDB
+	identityDB             driver3.IdentityDB
 	keystore               keystore.KVS
 	mspID                  string
 	cacheSize              int
@@ -68,7 +68,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity view.Identity,
 	signerService common.SigService,
 	deserializerManager deserializer.Manager,
-	walletPathStorage driver3.IdentityDB,
+	identityDB driver3.IdentityDB,
 	keystore keystore.KVS,
 	mspID string,
 	cacheSize int,
@@ -81,7 +81,7 @@ func NewLocalMembership(
 		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,
 		deserializerManager:     deserializerManager,
-		storage:                 walletPathStorage,
+		identityDB:              identityDB,
 		keystore:                keystore,
 		mspID:                   mspID,
 		cacheSize:               cacheSize,
@@ -157,7 +157,7 @@ func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
-	if err := lm.storage.AddConfiguration(driver3.IdentityConfiguration{
+	if err := lm.identityDB.AddConfiguration(driver3.IdentityConfiguration{
 		ID:   id,
 		Type: IdentityConfigurationType,
 		URL:  path,
@@ -206,7 +206,7 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 	// load identity from KVS
 	logger.Debugf("load identity from KVS")
 	if err := lm.loadFromStorage(); err != nil {
-		return errors.Wrapf(err, "failed to load identity from storage")
+		return errors.Wrapf(err, "failed to load identity from identityDB")
 	}
 	logger.Debugf("load identity from KVS done")
 
@@ -345,7 +345,7 @@ func (lm *LocalMembership) cacheSizeForID(id string) (int, error) {
 }
 
 func (lm *LocalMembership) loadFromStorage() error {
-	it, err := lm.storage.IteratorConfigurations(IdentityConfigurationType)
+	it, err := lm.identityDB.IteratorConfigurations(IdentityConfigurationType)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

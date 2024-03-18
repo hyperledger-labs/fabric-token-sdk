@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -32,7 +33,7 @@ type PublicParametersManager interface {
 }
 
 type Service struct {
-	*WalletService
+	*common.WalletService
 	PPM         PublicParametersManager
 	TokenLoader TokenLoader
 	QE          QueryEngine
@@ -42,7 +43,7 @@ type Service struct {
 	Deserializer driver.Deserializer
 }
 
-func NewService(ws *WalletService, ppm PublicParametersManager, tokenLoader TokenLoader, qe QueryEngine, identityProvider driver.IdentityProvider, deserializer driver.Deserializer, cm config.Manager) *Service {
+func NewService(ws *common.WalletService, ppm PublicParametersManager, tokenLoader TokenLoader, qe QueryEngine, identityProvider driver.IdentityProvider, deserializer driver.Deserializer, cm config.Manager) *Service {
 	s := &Service{
 		WalletService: ws,
 		TokenLoader:   tokenLoader,

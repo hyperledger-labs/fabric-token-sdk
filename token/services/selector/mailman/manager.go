@@ -34,7 +34,7 @@ type Vault interface {
 }
 
 type WalletManager interface {
-	OwnerWalletByIdentity(identity view.Identity) *token.OwnerWallet
+	OwnerWallet(identity view.Identity) *token.OwnerWallet
 }
 
 type VaultProvide interface {
@@ -85,7 +85,7 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 
 		// calculate mailman key space
 		walletID := walletIDByRawIdentity(ut.Owner.Raw)
-		//walletID := walletManager.OwnerWalletByIdentity(ut.Owner.Raw).ID()
+		//walletID := walletManager.OwnerWallet(ut.Owner.Raw).ID()
 		k := spaceKey(walletID, ut.Type)
 
 		ids, ok := spaces[k]

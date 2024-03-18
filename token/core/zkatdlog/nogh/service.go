@@ -9,6 +9,7 @@ package nogh
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -31,10 +32,10 @@ type PublicParametersManager interface {
 	PublicParams() *crypto.PublicParams
 }
 
-type DeserializerProviderFunc = func(params *crypto.PublicParams) (driver.Deserializer, error)
+type DeserializerProviderFunc = func() (driver.Deserializer, error)
 
 type Service struct {
-	*WalletService
+	*common.WalletService
 	PPM                   PublicParametersManager
 	TokenLoader           TokenLoader
 	TokenCommitmentLoader TokenCommitmentLoader
@@ -43,7 +44,7 @@ type Service struct {
 	configManager         config.Manager
 }
 
-func NewTokenService(ws *WalletService, PPM PublicParametersManager, tokenLoader TokenLoader, tokenCommitmentLoader TokenCommitmentLoader, identityProvider driver.IdentityProvider, deserializerProvider DeserializerProviderFunc, configManager config.Manager) (*Service, error) {
+func NewTokenService(ws *common.WalletService, PPM PublicParametersManager, tokenLoader TokenLoader, tokenCommitmentLoader TokenCommitmentLoader, identityProvider driver.IdentityProvider, deserializerProvider DeserializerProviderFunc, configManager config.Manager) (*Service, error) {
 	s := &Service{
 		WalletService:         ws,
 		PPM:                   PPM,
@@ -100,7 +101,7 @@ func (s *Service) IdentityProvider() driver.IdentityProvider {
 
 // Validator returns the validator associated with the service
 func (s *Service) Validator() (driver.Validator, error) {
-	d, err := s.Deserializer()
+	d, err := s.DeserializerProvider()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get deserializer")
 	}
@@ -119,18 +120,6 @@ func (s *Service) PublicParamsManager() driver.PublicParamsManager {
 // ConfigManager returns the configuration manager associated with the service
 func (s *Service) ConfigManager() config.Manager {
 	return s.configManager
-}
-
-func (s *Service) Deserializer() (driver.Deserializer, error) {
-	pp := s.PublicParams()
-	if pp == nil {
-		return nil, errors.Errorf("public parameters not inizialized")
-	}
-	d, err := s.DeserializerProvider(pp)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get deserializer")
-	}
-	return d, nil
 }
 
 func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {

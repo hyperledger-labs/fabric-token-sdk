@@ -18,7 +18,7 @@ type Role interface {
 	ID() driver.IdentityRole
 	// MapToID returns the long-term identity and its identifier for the given index.
 	// The index can be an identity or a label (string).
-	MapToID(v interface{}) (view.Identity, string, error)
+	MapToID(v driver.WalletLookupID) (view.Identity, string, error)
 	// GetIdentityInfo returns the long-term identity info associated to the passed id
 	GetIdentityInfo(id string) (driver.IdentityInfo, error)
 	// RegisterIdentity registers the given identity

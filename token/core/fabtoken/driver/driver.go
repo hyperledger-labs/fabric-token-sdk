@@ -8,11 +8,12 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/ppm"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -22,6 +23,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.driver.fabtoken")
 
 type Driver struct {
 }
@@ -111,21 +114,26 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
-	ws := fabtoken.NewWalletService(
-		ip,
+	publicParamsManager := fabtoken.NewPublicParamsManager(
+		fabtoken.PublicParameters,
 		qe,
-		NewDeserializer(),
+	)
+	deserializer := NewDeserializer()
+	ws := common.NewWalletService(
+		logger,
+		ip,
+		func() (driver.Deserializer, error) {
+			return deserializer, nil
+		},
+		fabtoken.NewWalletFactory(ip, qe),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
+		nil,
 	)
-
 	service := fabtoken.NewService(
 		ws,
-		ppm.NewPublicParamsManager(
-			fabtoken.PublicParameters,
-			qe,
-		),
+		publicParamsManager,
 		&fabtoken.VaultTokenLoader{TokenVault: qe},
 		qe,
 		ip,
@@ -151,7 +159,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return ppm.NewPublicParamsManagerFromParams(pp)
+	return fabtoken.NewPublicParamsManagerFromParams(pp)
 }
 
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
@@ -217,13 +225,18 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
-	ws := fabtoken.NewWalletService(
+	deserializer := NewDeserializer()
+	ws := common.NewWalletService(
+		logger,
 		ip,
-		nil,
-		NewDeserializer(),
+		func() (driver.Deserializer, error) {
+			return deserializer, nil
+		},
+		fabtoken.NewWalletFactory(ip, nil),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
+		nil,
 	)
 
 	return ws, nil

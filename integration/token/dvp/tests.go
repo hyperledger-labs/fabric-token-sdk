@@ -67,11 +67,12 @@ func issueHouse(network *integration.Infrastructure, valuation uint64) string {
 }
 
 func sellHouse(network *integration.Infrastructure, houseID string) {
-	_, err := network.Client("seller").CallView("sell", common.JSONMarshall(views2.Sell{
+	txIDBoxed, err := network.Client("seller").CallView("sell", common.JSONMarshall(views2.Sell{
 		HouseID: houseID,
 		Buyer:   "buyer",
 	}))
 	Expect(err).NotTo(HaveOccurred())
+	Expect(network.Client("buyer").IsTxFinal(common.JSONUnmarshalString(txIDBoxed))).NotTo(HaveOccurred())
 }
 
 func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {
