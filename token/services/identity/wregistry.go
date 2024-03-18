@@ -46,7 +46,7 @@ func (r *WalletRegistry) RegisterIdentity(id string, path string) error {
 // Lookup searches the wallet corresponding to the passed id.
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
-func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error) {
+func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("looked-up identifier [%v]", id)
 	}

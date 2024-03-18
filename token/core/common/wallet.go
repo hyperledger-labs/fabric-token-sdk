@@ -10,14 +10,13 @@ import (
 	err "errors"
 	"sync"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -35,7 +34,7 @@ type TokenVault interface {
 type WalletRegistry interface {
 	WalletIDs() ([]string, error)
 	RegisterIdentity(id string, path string) error
-	Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error)
+	Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
 	BindIdentity(identity view.Identity, eID string, wID string, meta any) error
 	ContainsIdentity(i view.Identity, id string) bool

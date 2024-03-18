@@ -48,7 +48,7 @@ func (f *fakeRole) ID() driver.IdentityRole {
 	return 0
 }
 
-func (f *fakeRole) MapToID(v interface{}) (view.Identity, string, error) {
+func (f *fakeRole) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
 	//TODO implement me
 	panic("implement me")
 }

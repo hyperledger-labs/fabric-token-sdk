@@ -58,7 +58,7 @@ func (r *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 }
 
 // MapToID returns the identity for the given argument
-func (r *Role) MapToID(v interface{}) (view.Identity, string, error) {
+func (r *Role) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
 	defaultID := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
