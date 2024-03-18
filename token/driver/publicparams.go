@@ -50,20 +50,15 @@ type PublicParameters interface {
 	Precision() uint64
 	// String returns a readable version of the public parameters
 	String() string
+
+	Serialize() ([]byte, error)
+	Validate() error
 }
 
 // PublicParamsManager is the interface that must be implemented by the driver public parameters manager.
 type PublicParamsManager interface {
-	// Load loads the public parameters either from the local storage, if available
-	Load() error
 	// PublicParameters returns the public parameters.
 	PublicParameters() PublicParameters
-	// SetPublicParameters updates the public parameters with the passed value
-	SetPublicParameters(raw []byte) error
 	// NewCertifierKeyPair generates a new key pair for the certifier, if supported
 	NewCertifierKeyPair() ([]byte, []byte, error)
-	// SerializePublicParameters returns the public params in a serialized form
-	SerializePublicParameters() ([]byte, error)
-	// Validate validates the public parameters
-	Validate() error
 }

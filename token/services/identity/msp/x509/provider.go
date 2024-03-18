@@ -93,8 +93,8 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
 	}
 	ai := &AuditInfo{
-		EnrollmentId:     p.enrollmentID,
-		RevocationHandle: revocationHandle,
+		EID: p.enrollmentID,
+		RH:  revocationHandle,
 	}
 	infoRaw, err := ai.Bytes()
 	if err != nil {

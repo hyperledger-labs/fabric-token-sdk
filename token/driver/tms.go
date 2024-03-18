@@ -21,13 +21,15 @@ type TokenManagerService interface {
 	AuditorService
 	WalletService
 	CertificationService
-	Deserializer
 	Serializer
 
+	Deserializer() Deserializer
 	IdentityProvider() IdentityProvider
 	Validator() (Validator, error)
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
+	// Done releases all the resources allocated by this service
+	Done() error
 }
 
 // ServiceOptions is used to configure the service

@@ -9,17 +9,15 @@ package driver
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ppm"
+	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	zkatdlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -117,41 +115,58 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 
 	// Instantiate the token service
 	qe := v.QueryEngine()
-	ppm := ppm.NewPublicParamsManager(crypto.DLogPublicParameters, qe)
-	ppm.AddCallback(func(pp driver.PublicParameters) error {
-		return roles.Reload(pp)
-	})
+	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
+		&PublicParamsDeserializer{},
+		crypto.DLogPublicParameters,
+		publicParams,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
+	}
 	// wallet service
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
 
-	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
-	deserializerProvider := NewDeserializerProvider(ppm).Deserialize
+	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
+
+	deserializer, err := NewDeserializer(ppm.PublicParams())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
+	}
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		deserializerProvider,
-		zkatdlog.NewWalletFactory(ip, qe, tmsConfig, deserializerProvider),
+		deserializer,
+		zkatdlog.NewWalletFactory(ip, qe, tmsConfig, deserializer),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 		nil,
 	)
+	tokDeserializer := &TokenDeserializer{}
 	service, err := zkatdlog.NewTokenService(
 		ws,
 		ppm,
-		&zkatdlog.VaultTokenLoader{TokenVault: qe},
-		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
+		common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](
+			qe,
+			tokDeserializer,
+		),
+		common.NewLedgerTokenLoader[*token3.Token](
+			qe,
+			tokDeserializer,
+			3,
+			3*time.Second,
+		),
 		ip,
-		deserializerProvider,
+		deserializer,
 		tmsConfig,
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	if err := ppm.SetPublicParameters(publicParams); err != nil {
+	if err := roles.Reload(ppm.PublicParameters()); err != nil {
 		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 
@@ -175,7 +190,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return ppm.NewFromParams(pp)
+	return common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
 }
 
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
@@ -243,7 +258,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	// Instantiate the token service
 
 	// public parameters manager
-	publicParamsManager, err := ppm.NewFromParams(pp)
+	publicParamsManager, err := common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to load public parameters")
 	}
@@ -252,14 +267,17 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
-	deserializerProvider := NewDeserializerProvider(publicParamsManager).Deserialize
+	ip := identity.NewProvider(sigService, nil, NewEIDRHDeserializer(), deserializerManager)
+	deserializer, err := NewDeserializer(publicParamsManager.PublicParams())
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
+	}
 	// role service
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		deserializerProvider,
-		zkatdlog.NewWalletFactory(ip, nil, tmsConfig, deserializerProvider),
+		deserializer,
+		zkatdlog.NewWalletFactory(ip, nil, tmsConfig, deserializer),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),

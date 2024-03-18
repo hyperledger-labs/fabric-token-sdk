@@ -154,7 +154,7 @@ func PrepareUpdatedPublicParams(network *integration.Infrastructure, auditor str
 	Expect(err).NotTo(HaveOccurred())
 	Expect(pp.Validate()).NotTo(HaveOccurred())
 
-	// Update PP
+	// Update publicParameters
 	pp.Auditor = auditorId
 	pp.Issuers = [][]byte{issuerId}
 
