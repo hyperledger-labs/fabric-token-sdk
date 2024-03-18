@@ -58,7 +58,7 @@ func (c *collectActionsView) Call(context view.Context) (interface{}, error) {
 	ts := token.GetManagementService(context, token.WithChannel(c.tx.Channel()))
 
 	for _, actionTransfer := range c.actions.Transfers {
-		if w := ts.WalletManager().OwnerWalletByIdentity(actionTransfer.From); w != nil {
+		if w := ts.WalletManager().OwnerWallet(actionTransfer.From); w != nil {
 			if err := c.collectLocal(context, actionTransfer, w); err != nil {
 				return nil, err
 			}

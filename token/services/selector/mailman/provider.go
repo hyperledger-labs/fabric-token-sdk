@@ -71,7 +71,7 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 
 	// create walletID extractor function using TMS wallet manager
 	walletIDByRawIdentity := func(rawIdentity []byte) string {
-		w := tms.WalletManager().OwnerWalletByIdentity(rawIdentity)
+		w := tms.WalletManager().OwnerWallet(rawIdentity)
 		if w == nil {
 			logger.Errorf("wallet not found for identity [%s][%s]", view2.Identity(rawIdentity), debug.Stack())
 			return ""

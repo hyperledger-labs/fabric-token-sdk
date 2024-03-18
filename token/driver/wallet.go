@@ -111,7 +111,10 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (view.Identity, error)
 }
 
-type WalletID = any
+// WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
+// It can be a string, as the name of the wallet, or an identity contained in that wallet.
+// Ultimately, it is the token driver to decide which types are allowed.
+type WalletLookupID = any
 
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
@@ -141,19 +144,19 @@ type WalletService interface {
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	OwnerWallet(id WalletID) (OwnerWallet, error)
+	OwnerWallet(id WalletLookupID) (OwnerWallet, error)
 
 	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	IssuerWallet(id WalletID) (IssuerWallet, error)
+	IssuerWallet(id WalletLookupID) (IssuerWallet, error)
 
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	AuditorWallet(id WalletID) (AuditorWallet, error)
+	AuditorWallet(id WalletLookupID) (AuditorWallet, error)
 
 	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	CertifierWallet(id WalletID) (CertifierWallet, error)
+	CertifierWallet(id WalletLookupID) (CertifierWallet, error)
 
 	// SpentIDs returns the spend ids for the passed token ids
 	SpentIDs(ids ...*token.ID) ([]string, error)

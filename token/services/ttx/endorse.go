@@ -192,7 +192,7 @@ func (c *CollectEndorsementsView) requestSignatures(signers []view.Identity, ver
 		}
 
 		// Case 2:
-		if w := c.tx.TokenService().WalletManager().OwnerWalletByIdentity(party); w != nil {
+		if w := c.tx.TokenService().WalletManager().OwnerWallet(party); w != nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("found wallet for party [%s], request external signature", party)
 			}
@@ -413,7 +413,7 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 		isMe := c.tx.TokenService().SigService().IsMe(party) || view2.GetSigService(context).IsMe(party)
 		if !isMe {
 			// check if there is a wallet that contains that identity
-			isMe = c.tx.TokenService().WalletManager().OwnerWalletByIdentity(party) != nil
+			isMe = c.tx.TokenService().WalletManager().OwnerWallet(party) != nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute env to [%s], it is me [%v].", party.UniqueID(), isMe)
