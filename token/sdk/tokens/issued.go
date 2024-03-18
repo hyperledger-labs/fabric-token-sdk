@@ -22,7 +22,7 @@ type WalletIssued struct{}
 
 // Issued returns true if the passed issuer issued the passed token
 func (w *WalletIssued) Issued(tms *token.ManagementService, issuer view.Identity, tok *token2.Token) bool {
-	return tms.WalletManager().IssuerWalletByIdentity(issuer) != nil
+	return tms.WalletManager().IssuerWallet(issuer) != nil
 }
 
 // IssuedMultiplexer iterates over multiple Issued checker

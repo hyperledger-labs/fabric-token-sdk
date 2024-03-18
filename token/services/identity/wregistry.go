@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -25,7 +24,6 @@ type WalletRegistry struct {
 	Role    Role
 	Storage db.WalletDB
 
-	sync.RWMutex
 	Wallets map[string]driver.Wallet
 }
 
@@ -48,9 +46,9 @@ func (r *WalletRegistry) RegisterIdentity(id string, path string) error {
 // Lookup searches the wallet corresponding to the passed id.
 // If a wallet is found, Lookup returns the wallet and its identifier.
 // If no wallet is found, Lookup returns the identity info and a potential wallet identifier for the passed id, if anything is found
-func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityInfo, string, error) {
+func (r *WalletRegistry) Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("looked-up identifier [%v]", id)
+		logger.Debugf("lookup wallet by [%T]", id)
 	}
 	var walletIdentifiers []string
 
@@ -58,7 +56,7 @@ func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityI
 	if err != nil {
 		fail := true
 		// give it a second change
-		passedIdentity, ok := id.(view.Identity)
+		passedIdentity, ok := toViewIdentity(id)
 		if ok {
 			logger.Debugf("lookup failed, check if there is a wallet for identity [%s]", passedIdentity)
 			// is this identity registered
@@ -86,7 +84,7 @@ func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityI
 	walletIdentifiers = append(walletIdentifiers, wID)
 
 	// give it a second chance
-	passedIdentity, ok := id.(view.Identity)
+	passedIdentity, ok := toViewIdentity(id)
 	if ok {
 		logger.Debugf("no wallet found, check if there is a wallet for identity [%s]", passedIdentity)
 		// is this identity registered
@@ -104,7 +102,7 @@ func (r *WalletRegistry) Lookup(id interface{}) (driver.Wallet, driver.IdentityI
 	}
 
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("no wallet found for [%s] at [%s]", identity, toString(wID))
+		logger.Debugf("no wallet found for [%s] at [%s]", passedIdentity, toString(wID))
 	}
 	if len(identity) != 0 {
 		identityWID, err := r.GetWalletID(identity)
@@ -224,4 +222,15 @@ func toString(w string) string {
 	}
 
 	return fmt.Sprintf("%s~%s", strings.ToValidUTF8(w[:20], "X"), hash.Hashable(w).String())
+}
+
+func toViewIdentity(id driver.WalletLookupID) (view.Identity, bool) {
+	switch v := id.(type) {
+	case view.Identity:
+		return v, true
+	case []byte:
+		return v, true
+	default:
+		return nil, false
+	}
 }

@@ -85,7 +85,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
 
-	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
+	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -98,7 +98,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.DeserializerManager,
-		walletPathStorage,
+		identityDB,
 		keystore,
 		RoleToMSPID[role],
 		cacheSize,
@@ -123,7 +123,7 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
+	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -133,7 +133,7 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 		f.SignerService,
 		f.BinderService,
 		f.DeserializerManager,
-		walletPathStorage,
+		identityDB,
 		RoleToMSPID[role],
 		false,
 	)
@@ -149,7 +149,7 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Ro
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
 	}
-	walletPathStorage, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
+	identityDB, err := f.StorageProvider.OpenIdentityDB(f.TMSID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
@@ -159,7 +159,7 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Ro
 		f.SignerService,
 		f.BinderService,
 		f.DeserializerManager,
-		walletPathStorage,
+		identityDB,
 		RoleToMSPID[role],
 		true,
 	)

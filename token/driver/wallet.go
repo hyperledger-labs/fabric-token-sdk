@@ -111,6 +111,11 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (view.Identity, error)
 }
 
+// WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
+// It can be a string, as the name of the wallet, or an identity contained in that wallet.
+// Ultimately, it is the token driver to decide which types are allowed.
+type WalletLookupID = any
+
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
@@ -139,31 +144,19 @@ type WalletService interface {
 
 	// OwnerWallet returns an instance of the OwnerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	OwnerWallet(id string) (OwnerWallet, error)
-
-	// OwnerWalletByIdentity returns the OwnerWallet the passed identity belongs to.
-	OwnerWalletByIdentity(identity view.Identity) (OwnerWallet, error)
+	OwnerWallet(id WalletLookupID) (OwnerWallet, error)
 
 	// IssuerWallet returns an instance of the IssuerWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	IssuerWallet(id string) (IssuerWallet, error)
-
-	// IssuerWalletByIdentity returns an instance of the IssuerWallet interface that contains the passed identity.
-	IssuerWalletByIdentity(identity view.Identity) (IssuerWallet, error)
-
-	// AuditorWalletByIdentity returns an instance of the AuditorWallet interface that contains the passed identity.
-	AuditorWalletByIdentity(identity view.Identity) (AuditorWallet, error)
+	IssuerWallet(id WalletLookupID) (IssuerWallet, error)
 
 	// AuditorWallet returns an instance of the AuditorWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	AuditorWallet(id string) (AuditorWallet, error)
+	AuditorWallet(id WalletLookupID) (AuditorWallet, error)
 
 	// CertifierWallet returns an instance of the CertifierWallet interface bound to the passed id.
 	// The id can be: the wallet identifier or a unique id of a view identity belonging to the wallet.
-	CertifierWallet(id string) (CertifierWallet, error)
-
-	// CertifierWalletByIdentity returns an instance of the CertifierWallet interface that contains the passed identity.
-	CertifierWalletByIdentity(identity view.Identity) (CertifierWallet, error)
+	CertifierWallet(id WalletLookupID) (CertifierWallet, error)
 
 	// SpentIDs returns the spend ids for the passed token ids
 	SpentIDs(ids ...*token.ID) ([]string, error)
@@ -190,13 +183,14 @@ type Deserializer interface {
 	GetIssuerVerifier(id view.Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
 	GetAuditorVerifier(id view.Identity) (Verifier, error)
-	// GetOwnerMatcher returns an identity matcher for the passed identity audit data.
+	// GetOwnerMatcher returns an identity matcher for the passed identity audit data
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
-
+	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw []byte) ([]view.Identity, error)
-
+	// Match returns nil if the given identity matches the given audit information.
+	// An error otherwise
 	Match(identity view.Identity, info []byte) error
-
+	// GetOwnerAuditInfo returns the audit information for each identity contained in the given serialized representation
 	GetOwnerAuditInfo(raw []byte, p AuditInfoProvider) ([][]byte, error)
 }
 

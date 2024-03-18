@@ -102,7 +102,7 @@ func RequestRecipientIdentity(context view.Context, recipient view.Identity, opt
 }
 
 func (f *RequestRecipientIdentityView) Call(context view.Context) (interface{}, error) {
-	w := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager().OwnerWalletByIdentity(f.Other)
+	w := token.GetManagementService(context, token.WithTMSID(f.TMSID)).WalletManager().OwnerWallet(f.Other)
 
 	if isSameNode := w != nil; !isSameNode {
 		return f.callWithRecipientData(context)
@@ -302,7 +302,7 @@ type ExchangeRecipientIdentitiesView struct {
 func (f *ExchangeRecipientIdentitiesView) Call(context view.Context) (interface{}, error) {
 	ts := token.GetManagementService(context, token.WithTMSID(f.TMSID))
 
-	if w := ts.WalletManager().OwnerWalletByIdentity(f.Other); w != nil {
+	if w := ts.WalletManager().OwnerWallet(f.Other); w != nil {
 		other, err := w.GetRecipientIdentity()
 		if err != nil {
 			return nil, err

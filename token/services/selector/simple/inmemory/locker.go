@@ -45,7 +45,7 @@ func (l *lockEntry) String() string {
 
 type locker struct {
 	vault                  Vault
-	lock                   sync.RWMutex
+	lock                   *sync.RWMutex
 	locked                 map[token2.ID]*lockEntry
 	sleepTimeout           time.Duration
 	validTxEvictionTimeout time.Duration
@@ -55,7 +55,7 @@ func NewLocker(vault Vault, timeout time.Duration, validTxEvictionTimeout time.D
 	r := &locker{
 		vault:                  vault,
 		sleepTimeout:           timeout,
-		lock:                   sync.RWMutex{},
+		lock:                   &sync.RWMutex{},
 		locked:                 map[token2.ID]*lockEntry{},
 		validTxEvictionTimeout: validTxEvictionTimeout,
 	}

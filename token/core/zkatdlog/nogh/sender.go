@@ -49,7 +49,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	var owners [][]byte
 	var ownerIdentities []view.Identity
 
-	deserializer, err := s.Deserializer()
+	deserializer, err := s.DeserializerProvider()
 	if err != nil {
 		return nil, nil, errors.WithMessagef(err, "failed to get deserializer")
 	}
@@ -123,7 +123,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 
 	receiverIsSender := make([]bool, len(ownerIdentities))
 	for i, receiver := range ownerIdentities {
-		_, err := s.OwnerWalletByID(receiver)
+		_, err := s.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil
 	}
 

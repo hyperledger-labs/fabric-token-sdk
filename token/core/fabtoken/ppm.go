@@ -4,20 +4,16 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package ppm
+package fabtoken
 
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.fabtoken")
 
 type Vault interface {
 	// PublicParams returns the public parameters
@@ -27,7 +23,7 @@ type Vault interface {
 // PublicParamsManager loads fabtoken public parameters
 type PublicParamsManager struct {
 	// fabtoken public parameters
-	PP *fabtoken.PublicParams
+	PP *PublicParams
 	// the vault
 	Vault Vault
 	// label of the public params
@@ -45,7 +41,7 @@ func NewPublicParamsManager(PPLabel string, vault Vault) *PublicParamsManager {
 }
 
 // NewPublicParamsManagerFromParams initializes a PublicParamsManager with the passed PublicParams
-func NewPublicParamsManagerFromParams(pp *fabtoken.PublicParams) (*PublicParamsManager, error) {
+func NewPublicParamsManagerFromParams(pp *PublicParams) (*PublicParamsManager, error) {
 	if pp == nil {
 		return nil, errors.Errorf("public parameters must be non-nil")
 	}
@@ -96,7 +92,7 @@ func (v *PublicParamsManager) SetPublicParameters(raw []byte) error {
 		return errors.Errorf("empty public parameters")
 	}
 
-	pp, err := fabtoken.NewPublicParamsFromBytes(raw, v.PPLabel)
+	pp, err := NewPublicParamsFromBytes(raw, v.PPLabel)
 	if err != nil {
 		return err
 	}
@@ -120,7 +116,7 @@ func (v *PublicParamsManager) Issuers() [][]byte {
 }
 
 // PublicParams returns the fabtoken public parameters
-func (v *PublicParamsManager) PublicParams() *fabtoken.PublicParams {
+func (v *PublicParamsManager) PublicParams() *PublicParams {
 	v.Mutex.RLock()
 	defer v.Mutex.RUnlock()
 	return v.PP
