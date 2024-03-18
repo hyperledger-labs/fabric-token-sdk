@@ -159,7 +159,7 @@ func (w *ownerWallet) EnrollmentID() string {
 
 func (w *ownerWallet) RegisterRecipient(data *driver.RecipientData) error {
 	if data == nil {
-		return errors.Errorf("cannot recigest empty recipient")
+		return errors.WithStack(common.ErrNilRecipientData)
 	}
 	logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
 

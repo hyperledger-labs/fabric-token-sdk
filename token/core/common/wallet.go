@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	err "errors"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -15,6 +16,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+)
+
+var (
+	ErrNilRecipientData = err.New("nil recipient data")
 )
 
 type TokenVault interface {
@@ -101,7 +106,7 @@ func (s *WalletService) GetRevocationHandler(auditInfo []byte) (string, error) {
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {
 	if data == nil {
-		return errors.Errorf("cannot recigest empty recipient")
+		return errors.WithStack(ErrNilRecipientData)
 	}
 	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
 
