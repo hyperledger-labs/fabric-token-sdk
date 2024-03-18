@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
+	"runtime/debug"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -59,6 +61,19 @@ func (r *Role) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 
 // MapToID returns the identity for the given argument
 func (r *Role) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
+	switch vv := v.(type) {
+	case view.Identity:
+		return r.mapIdentityToID(vv)
+	case []byte:
+		return r.mapIdentityToID(vv)
+	case string:
+		return r.mapStringToID(vv)
+	default:
+		return nil, "", errors.Errorf("[LongTermIdentity] identifier not recognised, expected []byte or view.Identity, got [%T], [%s]", v, debug.Stack())
+	}
+}
+
+func (r *Role) mapStringToID(v string) (view.Identity, string, error) {
 	defaultID := r.localMembership.DefaultNetworkIdentity()
 	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
 
@@ -72,100 +87,100 @@ func (r *Role) MapToID(v driver.WalletLookupID) (view.Identity, string, error) {
 		)
 	}
 
-	switch vv := v.(type) {
-	case view.Identity:
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf(
-				"[LongTermIdentity] looking up identifier for identity [%s], default identity [%s]",
-				vv.String(),
-				defaultID.String(),
-			)
-		}
-		id := vv
-		switch {
-		case id.IsNone():
-			return defaultID, defaultIdentifier, nil
-		case id.Equal(defaultID):
-			return defaultID, defaultIdentifier, nil
-		case id.Equal(r.nodeIdentity):
-			return defaultID, defaultIdentifier, nil
-		case r.localMembership.IsMe(id):
-			if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
-				return id, idIdentifier, nil
-			}
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
-			}
-			return id, "", nil
-		case string(id) == defaultIdentifier:
-			return defaultID, defaultIdentifier, nil
-		}
-
-		label := string(id)
-		if info, err := r.localMembership.GetIdentityInfo(label, nil); err == nil {
-			id, _, err := info.Get()
-			if err != nil {
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("failed getting identity info for [%s], returning the identity", id)
-				}
-				return nil, info.ID(), nil
-			}
-			return id, label, nil
-		}
+	label := v
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[LongTermIdentity] looking up identifier for label [%s]", label)
+	}
+	switch {
+	case len(label) == 0:
+		return defaultID, defaultIdentifier, nil
+	case label == defaultIdentifier:
+		return defaultID, defaultIdentifier, nil
+	case label == defaultID.UniqueID():
+		return defaultID, defaultIdentifier, nil
+	case label == string(defaultID):
+		return defaultID, defaultIdentifier, nil
+	case defaultID.Equal(view.Identity(label)):
+		return defaultID, defaultIdentifier, nil
+	case r.nodeIdentity.Equal(view.Identity(label)):
+		return defaultID, defaultIdentifier, nil
+	case r.localMembership.IsMe(view.Identity(label)):
+		id := view.Identity(label)
 		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
 			return id, idIdentifier, nil
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", vv)
+			logger.Debugf("[LongTermIdentity] failed getting identity info for [%s], returning the identity", id)
 		}
-
 		return id, "", nil
-	case string:
-		label := vv
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[LongTermIdentity] looking up identifier for label [%s]", vv)
-		}
-		switch {
-		case len(label) == 0:
-			return defaultID, defaultIdentifier, nil
-		case label == defaultIdentifier:
-			return defaultID, defaultIdentifier, nil
-		case label == defaultID.UniqueID():
-			return defaultID, defaultIdentifier, nil
-		case label == string(defaultID):
-			return defaultID, defaultIdentifier, nil
-		case defaultID.Equal(view.Identity(label)):
-			return defaultID, defaultIdentifier, nil
-		case r.nodeIdentity.Equal(view.Identity(label)):
-			return defaultID, defaultIdentifier, nil
-		case r.localMembership.IsMe(view.Identity(label)):
-			id := view.Identity(label)
-			if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
-				return id, idIdentifier, nil
-			}
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("[LongTermIdentity] failed getting identity info for [%s], returning the identity", id)
-			}
-			return id, "", nil
-		}
-
-		if info, err := r.localMembership.GetIdentityInfo(label, nil); err == nil {
-			id, _, err := info.Get()
-			if err != nil {
-				if logger.IsEnabledFor(zapcore.DebugLevel) {
-					logger.Debugf("failed getting identity info for [%s], returning the identity", id)
-				}
-				return nil, info.ID(), nil
-			}
-			return id, label, nil
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", vv)
-		}
-		return nil, label, nil
-	default:
-		return nil, "", errors.Errorf("[LongTermIdentity] identifier not recognised, expected []byte or view.Identity")
 	}
+
+	if info, err := r.localMembership.GetIdentityInfo(label, nil); err == nil {
+		id, _, err := info.Get()
+		if err != nil {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+			}
+			return nil, info.ID(), nil
+		}
+		return id, label, nil
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", label)
+	}
+	return nil, label, nil
+}
+
+func (r *Role) mapIdentityToID(v view.Identity) (view.Identity, string, error) {
+	defaultID := r.localMembership.DefaultNetworkIdentity()
+	defaultIdentifier := r.localMembership.GetDefaultIdentifier()
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf(
+			"[LongTermIdentity] looking up identifier for identity [%s], default identity [%s]",
+			v,
+			defaultID.String(),
+		)
+	}
+	id := v
+	switch {
+	case id.IsNone():
+		return defaultID, defaultIdentifier, nil
+	case id.Equal(defaultID):
+		return defaultID, defaultIdentifier, nil
+	case id.Equal(r.nodeIdentity):
+		return defaultID, defaultIdentifier, nil
+	case r.localMembership.IsMe(id):
+		if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
+			return id, idIdentifier, nil
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+		}
+		return id, "", nil
+	case string(id) == defaultIdentifier:
+		return defaultID, defaultIdentifier, nil
+	}
+
+	label := string(id)
+	if info, err := r.localMembership.GetIdentityInfo(label, nil); err == nil {
+		id, _, err := info.Get()
+		if err != nil {
+			if logger.IsEnabledFor(zapcore.DebugLevel) {
+				logger.Debugf("failed getting identity info for [%s], returning the identity", id)
+			}
+			return nil, info.ID(), nil
+		}
+		return id, label, nil
+	}
+	if idIdentifier, err := r.localMembership.GetIdentifier(id); err == nil {
+		return id, idIdentifier, nil
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("[LongTermIdentity] cannot find match for view.Identity string [%s]", v)
+	}
+
+	return id, "", nil
 }
 
 // RegisterIdentity registers the given identity

@@ -193,7 +193,7 @@ func (s *WalletService) SpentIDs(ids ...*token.ID) ([]string, error) {
 	return nil, nil
 }
 
-func (s *WalletService) walletByID(role driver.IdentityRole, id any) (driver.Wallet, error) {
+func (s *WalletService) walletByID(role driver.IdentityRole, id driver.WalletLookupID) (driver.Wallet, error) {
 	entry := s.Registries[role]
 	registry := entry.Registry
 	mutex := entry.Mutex
@@ -202,7 +202,7 @@ func (s *WalletService) walletByID(role driver.IdentityRole, id any) (driver.Wal
 	w, _, _, err := registry.Lookup(id)
 	if err != nil {
 		mutex.RUnlock()
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%v]", id)
+		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%s]", id)
 	}
 	if w != nil {
 		mutex.RUnlock()
@@ -215,7 +215,7 @@ func (s *WalletService) walletByID(role driver.IdentityRole, id any) (driver.Wal
 
 	w, idInfo, wID, err := registry.Lookup(id)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%v]", id)
+		return nil, errors.WithMessagef(err, "failed to lookup identity for owner wallet [%s]", id)
 	}
 	if w != nil {
 		return w, nil
