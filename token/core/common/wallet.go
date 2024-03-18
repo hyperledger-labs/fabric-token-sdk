@@ -10,6 +10,8 @@ import (
 	err "errors"
 	"sync"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -108,7 +110,9 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
-	s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, hash.Hashable(data.AuditInfo))
+	if s.Logger.IsEnabledFor(zapcore.DebugLevel) {
+		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, hash.Hashable(data.AuditInfo))
+	}
 
 	// recognize identity and register it
 	d, err := s.DeserializerProvider()
