@@ -34,7 +34,7 @@ func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.Token
 	sqlDB, err := d.Driver.OpenSQLDB(
 		"sqlite",
 		fmt.Sprintf("file:%x?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", h.Sum(nil)),
-		10,
+		1,
 	)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open memory db for [%s]", tmsID)

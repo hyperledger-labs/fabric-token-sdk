@@ -36,11 +36,11 @@ const (
 )
 
 type Opts struct {
-	Driver       string
-	DataSource   string
-	CreateSchema bool
-	MaxOpenConns int
-	TablePrefix  string
+	Driver          string
+	DataSource      string
+	SkipCreateTable bool
+	MaxOpenConns    int
+	TablePrefix     string
 }
 
 type Driver struct {
@@ -57,7 +57,7 @@ func (d *Driver) OpenTokenTransactionDB(sp view.ServiceProvider, tmsID token.TMS
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
@@ -65,7 +65,7 @@ func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (auditd
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewTokenDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sql2.NewTokenDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenAuditTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
@@ -73,7 +73,7 @@ func (d *Driver) OpenAuditTransactionDB(sp view.ServiceProvider, tmsID token.TMS
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix+"aud_", opts.CreateSchema)
+	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix+"aud_", !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
@@ -81,7 +81,7 @@ func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (audit
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewWalletDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sql2.NewWalletDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
@@ -89,7 +89,7 @@ func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (aud
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewIdentityDB(sqlDB, opts.TablePrefix, opts.CreateSchema, secondcache.New(1000))
+	return sql2.NewIdentityDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable, secondcache.New(1000))
 }
 
 func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
@@ -124,7 +124,7 @@ func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opt
 }
 
 func (d *Driver) openSQLDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
-	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
+	logger.Infof("connecting to [%s] database", driverName)
 
 	id := driverName + dataSourceName
 	var p *sql.DB
@@ -154,27 +154,27 @@ func (d *Driver) openSQLDB(driverName, dataSourceName string, maxOpenConns int) 
 	return p, nil
 }
 
-type TTXDBDriver struct {
+type TtxDBDriver struct {
 	*Driver
 }
 
-func (t *TTXDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
+func (t *TtxDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
 	return t.OpenTokenTransactionDB(sp, tmsID)
 }
 
-type TOKENDBDriver struct {
+type TokenDBDriver struct {
 	*Driver
 }
 
-func (t *TOKENDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
+func (t *TokenDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
 	return t.OpenTokenDB(sp, tmsID)
 }
 
-type AUDITDBDriver struct {
+type AuditDBDriver struct {
 	*Driver
 }
 
-func (t *AUDITDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
+func (t *AuditDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
 	return t.OpenAuditTransactionDB(sp, tmsID)
 }
 
@@ -192,8 +192,8 @@ func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.T
 
 func init() {
 	root := NewDriver()
-	ttxdb.Register("unity", &TTXDBDriver{Driver: root})
-	tokendb.Register("unity", &TOKENDBDriver{Driver: root})
-	auditdb.Register("unity", &AUDITDBDriver{Driver: root})
+	ttxdb.Register("unity", &TtxDBDriver{Driver: root})
+	tokendb.Register("unity", &TokenDBDriver{Driver: root})
+	auditdb.Register("unity", &AuditDBDriver{Driver: root})
 	identitydb.Register("unity", &IdentityDBDriver{Driver: root})
 }

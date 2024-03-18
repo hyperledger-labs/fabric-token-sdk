@@ -30,18 +30,16 @@ token:
         persistence:
           type: unity
           opts:
-            createSchema: true 
             driver: sqlite    
-            maxOpenConns: 10
+            maxOpenConns: 1
             dataSource: {{ SQLDataSource }}
       tokendb:
         persistence:
           type: sql
           opts:
-            createSchema: true 
             tablePrefix: tokens  
             driver: sqlite    
-            maxOpenConns: 10
+            maxOpenConns: 1
             dataSource: {{ TokensSQLDataSource }}
       # Wallets associated with this TMS
       wallets:

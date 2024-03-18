@@ -24,9 +24,8 @@ token:
       db:
         persistence:
           opts:
-            createSchema: true 
             driver: sqlite    
-            maxOpenConns: 10
+            maxOpenConns: 1
             dataSource: {{ SQLDataSource }}
       identitydb:
         persistence:
@@ -41,10 +40,9 @@ token:
         persistence:
           type: sql
           opts:
-            createSchema: true 
             tablePrefix: tokens  
-            driver: sqlite    
-            maxOpenConns: 10
+            driver: sqlite
+            maxOpenConns: 1
             dataSource: {{ TokensSQLDataSource }}
       {{ if Wallets }}wallets:{{ if Wallets.Certifiers }}
         certifiers: {{ range Wallets.Certifiers }}

@@ -27,7 +27,7 @@ token:
       # auditdb: store audit records about the audited transactions
       # identitydb: store information about wallets and identities
       # The databases can be instantiated in isolation, a different backend for each db, or with a shared backend, depending on the driver used.
-      # In the following example, we have all databases using the same backed but tokendb.
+      # In the following example, we have all databases using the same backend but tokendb.
 
       # shared db configuration. The `unity` driver is used as provider.  
       db:
@@ -35,18 +35,20 @@ token:
           # configuration for the unity db driver. It uses sql as backend
           type: unity
           opts:
-            createSchema: true
             driver: sqlite
-            maxOpenConns: 10
-            dataSource: /some/path/unitydb
+            maxOpenConns: 1 # recommended for sqlite
+            dataSource: file:/some/path/unitydb.sqlite?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)
+            # see for options for the dataSource string for sqlite: https://pkg.go.dev/modernc.org/sqlite#Driver.Open.
       tokendb:
         persistence:
           type: sql
           opts:
-            createSchema: true 
-            driver: sqlite    
-            maxOpenConns: 10
-            dataSource: /some/path/tokendb
+            driver: postgres
+            skipCreateTables: true # if the schema already exists
+            maxOpenConns: 50 # by default this is 0 (unlimited), sets the maximum number of open connections to the database
+            dataSource: host=localhost port=5432 user=postgres password=example dbname=tokendb sslmode=disable
+            # The 'dataSource' field can be sensitive (contain a password). In that case,
+            # set it in the TOKENDB_DATASOURCE environment variable instead of in this file (or for the unity db: UNITYDB_DATASOURCE)
 
       # sections dedicated to the definition of the wallets
       wallets:
@@ -107,35 +109,5 @@ token:
                 SW:
                   Hash: SHA2
                   Security: 256
-  # Internal database to keep track of token transactions. 
-  # It is used by auditors and token owners to track history
-  ttxdb:
-    persistence:
-      # type can be one of badger, sql or memory.
-      type: badger
-      opts:
-        # persistence location
-        path: /some/path
-
-    # The sql driver uses golangs database/sql package internally.
-    # In theory you can use any driver if you import it in your application;
-    # for instance `import _ "github.com/mattn/go-sqlite3"` for the cgo version of sqlite.
-    # See https://github.com/golang/go/wiki/SQLDrivers. We only tested with github.com/lib/pq
-    # and modernc.org/sqlite, and it's likely that other drivers don't work exactly the same.
-    # To try a new sql driver, add a test here: token/services/ttxdb/db/sql/sql_test.go.
-    # 
-    # type: sql
-    # opts:
-    #   createSchema: true # create tables programmatically
-    #   tablePrefix: tsdk  # optional
-    #   driver: sqlite     # in the application, `import _ "modernc.org/sqlite"`
-    #   dataSource: /some/path/ttxdb.sqlite
-    #   maxOpenConns: 10  # by default this is 0 (unlimited), sets the maximum number of open connections to the database
-    #
-    # Alternative (`import _ "github.com/lib/pq"`).
-    # The 'dataSource' field can be sensitive (contain a password). In that case,
-    # set it in the TTXDB_DATASOURCE environment variable instead of in this file.
-    #   driver: postgres
-    #   dataSource: host=localhost port=5432 user=postgres password=example dbname=tokendb sslmode=disable
 
 ```
