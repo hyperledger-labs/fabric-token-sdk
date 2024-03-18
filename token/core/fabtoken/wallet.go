@@ -15,12 +15,12 @@ import (
 )
 
 type WalletFactory struct {
-	IdentityProvider driver.IdentityProvider
-	TokenVault       TokenVault
+	identityProvider driver.IdentityProvider
+	tokenVault       TokenVault
 }
 
 func NewWalletFactory(identityProvider driver.IdentityProvider, tokenVault TokenVault) *WalletFactory {
-	return &WalletFactory{IdentityProvider: identityProvider, TokenVault: tokenVault}
+	return &WalletFactory{identityProvider: identityProvider, tokenVault: tokenVault}
 }
 
 func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry common.WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error) {
@@ -32,11 +32,11 @@ func (w *WalletFactory) NewWallet(role driver.IdentityRole, walletRegistry commo
 	var newWallet driver.Wallet
 	switch role {
 	case driver.OwnerRole:
-		newWallet = newOwnerWallet(w.IdentityProvider, w.TokenVault, idInfoIdentity, id, info)
+		newWallet = newOwnerWallet(w.identityProvider, w.tokenVault, idInfoIdentity, id, info)
 	case driver.IssuerRole:
-		newWallet = newIssuerWallet(w.IdentityProvider, w.TokenVault, id, idInfoIdentity)
+		newWallet = newIssuerWallet(w.identityProvider, w.tokenVault, id, idInfoIdentity)
 	case driver.AuditorRole:
-		newWallet = newAuditorWallet(w.IdentityProvider, id, idInfoIdentity)
+		newWallet = newAuditorWallet(w.identityProvider, id, idInfoIdentity)
 	default:
 		return nil, errors.Errorf("role [%d] not supported", role)
 	}

@@ -145,7 +145,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		&zkatdlog.VaultTokenLoader{TokenVault: qe},
 		zkatdlog.NewVaultTokenCommitmentLoader(qe, 3, 3*time.Second),
 		ip,
-		NewDeserializerProvider(ppm).Deserialize,
+		deserializerProvider,
 		tmsConfig,
 	)
 	if err != nil {
