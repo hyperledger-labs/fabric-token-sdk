@@ -20,9 +20,9 @@ type TokenManagerService interface {
 	TokenService
 	AuditorService
 	WalletService
-	CertificationService
 	Serializer
 
+	CertificationService() CertificationService
 	Deserializer() Deserializer
 	IdentityProvider() IdentityProvider
 	Validator() (Validator, error)

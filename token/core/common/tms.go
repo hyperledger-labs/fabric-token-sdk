@@ -26,6 +26,7 @@ type Service[T driver.PublicParameters] struct {
 	deserializer            driver.Deserializer
 	identityProvider        driver.IdentityProvider
 	configManager           config.Manager
+	certificationService    driver.CertificationService
 }
 
 func NewTokenService[T driver.PublicParameters](
@@ -35,6 +36,7 @@ func NewTokenService[T driver.PublicParameters](
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
+	certificationService driver.CertificationService,
 ) (*Service[T], error) {
 	s := &Service[T]{
 		Logger:                  logger,
@@ -43,6 +45,7 @@ func NewTokenService[T driver.PublicParameters](
 		identityProvider:        identityProvider,
 		deserializer:            deserializer,
 		configManager:           configManager,
+		certificationService:    certificationService,
 	}
 	return s, nil
 }
@@ -63,6 +66,10 @@ func (s *Service[T]) IdentityProvider() driver.IdentityProvider {
 
 func (s *Service[T]) Deserializer() driver.Deserializer {
 	return s.deserializer
+}
+
+func (s *Service[T]) CertificationService() driver.CertificationService {
+	return s.certificationService
 }
 
 // PublicParamsManager returns the manager of the public parameters associated with the service

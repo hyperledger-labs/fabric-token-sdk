@@ -241,9 +241,14 @@ func (t *ManagementService) WalletManager() *WalletManager {
 	return &WalletManager{managementService: t, walletService: t.tms}
 }
 
-// CertificationManager returns the certification manager for this TMS
+// CertificationManager returns the certification manager for this TMS.
+// It returns nil if certification is not supported.
 func (t *ManagementService) CertificationManager() *CertificationManager {
-	return &CertificationManager{c: t.tms}
+	cs := t.tms.CertificationService()
+	if cs == nil {
+		return nil
+	}
+	return &CertificationManager{c: cs}
 }
 
 // CertificationClient returns the certification client for this TMS

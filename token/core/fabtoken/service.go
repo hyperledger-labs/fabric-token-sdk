@@ -37,6 +37,7 @@ func NewService(
 		identityProvider,
 		deserializer,
 		configManager,
+		nil,
 	)
 	if err != nil {
 		return nil, err
