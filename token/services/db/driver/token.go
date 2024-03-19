@@ -60,7 +60,7 @@ type CertificationDB interface {
 type TokenDBTransaction interface {
 	// TransactionExists returns true if a token with that transaction id exists in the db
 	TransactionExists(id string) (bool, error)
-	// GetTokens returns the owned tokens and their identifier keys for the passed ids.
+	// GetToken returns the owned tokens and their identifier keys for the passed ids.
 	GetToken(txID string, index uint64) (*token.Token, error)
 	// OwnersOf returns the list of owner of a given token
 	OwnersOf(txID string, index uint64) ([]string, error)

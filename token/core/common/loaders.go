@@ -23,9 +23,13 @@ type TokenDeserializer[T any] interface {
 	DeserializeToken([]byte) (T, error)
 }
 
+type MetadataDeserializer[M any] interface {
+	DeserializeMetadata([]byte) (M, error)
+}
+
 type TokenAndMetadataDeserializer[T LedgerToken, M any] interface {
 	TokenDeserializer[T]
-	DeserializeMetadata([]byte) (M, error)
+	MetadataDeserializer[M]
 }
 
 type VaultLedgerTokenLoader[T any] struct {
@@ -149,6 +153,30 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([
 	return inputIDs, tokens, inputInf, signerIds, nil
 }
 
+type VaultTokenInfoLoader[M any] struct {
+	TokenVault   driver.QueryEngine
+	Deserializer MetadataDeserializer[M]
+}
+
+func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer MetadataDeserializer[M]) *VaultTokenInfoLoader[M] {
+	return &VaultTokenInfoLoader[M]{TokenVault: tokenVault, Deserializer: deserializer}
+}
+
+func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ids []*token.ID) ([]M, error) {
+	var inputInf []M
+	if err := s.TokenVault.GetTokenInfos(ids, func(id *token.ID, bytes []byte) error {
+		ti, err := s.Deserializer.DeserializeMetadata(bytes)
+		if err != nil {
+			return errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
+		}
+		inputInf = append(inputInf, ti)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return inputInf, nil
+}
+
 type VaultTokenLoader struct {
 	TokenVault driver.QueryEngine
 }
@@ -161,4 +189,26 @@ func NewVaultTokenLoader(tokenVault driver.QueryEngine) *VaultTokenLoader {
 // in the vault and the content of the tokens
 func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token, error) {
 	return s.TokenVault.GetTokens(ids...)
+}
+
+type TokenCertificationStorage interface {
+	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
+}
+
+type VaultTokenCertificationLoader struct {
+	TokenCertificationStorage TokenCertificationStorage
+}
+
+func (s *VaultTokenCertificationLoader) GetCertifications(ids []*token.ID) ([][]byte, error) {
+	var certifications [][]byte
+	if err := s.TokenCertificationStorage.GetCertifications(ids, func(id *token.ID, bytes []byte) error {
+		if len(bytes) == 0 {
+			return errors.Errorf("failed getting certification for id [%v], nil value", id)
+		}
+		certifications = append(certifications, bytes)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+	return certifications, nil
 }

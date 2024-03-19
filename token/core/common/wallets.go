@@ -131,3 +131,45 @@ func (w *IssuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.Iss
 
 	return unspentTokens, nil
 }
+
+type CertifierWallet struct {
+	IdentityProvider driver.IdentityProvider
+	id               string
+	identity         view.Identity
+}
+
+func NewCertifierWallet(IdentityProvider driver.IdentityProvider, id string, identity view.Identity) *CertifierWallet {
+	return &CertifierWallet{
+		IdentityProvider: IdentityProvider,
+		id:               id,
+		identity:         identity,
+	}
+}
+
+func (w *CertifierWallet) ID() string {
+	return w.id
+}
+
+func (w *CertifierWallet) Contains(identity view.Identity) bool {
+	return w.identity.Equal(identity)
+}
+
+func (w *CertifierWallet) ContainsToken(token *token.UnspentToken) bool {
+	return w.Contains(token.Owner.Raw)
+}
+
+func (w *CertifierWallet) GetCertifierIdentity() (view.Identity, error) {
+	return w.identity, nil
+}
+
+func (w *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
+	if !w.Contains(id) {
+		return nil, errors.Errorf("identity does not belong to this ownerWallet [%s]", id.String())
+	}
+
+	si, err := w.IdentityProvider.GetSigner(w.identity)
+	if err != nil {
+		return nil, err
+	}
+	return si, err
+}
