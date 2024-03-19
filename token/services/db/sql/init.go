@@ -31,15 +31,16 @@ func initSchema(db *sql.DB, schemas ...string) (err error) {
 			}
 		}
 	}()
-	for _, schema := range schemas {
-		logger.Debug(schema)
+	for i, schema := range schemas {
+		logger.Debugf("schema %d: %s", i, schema)
 		if _, err = db.Exec(schema); err != nil {
 			return errors.Wrap(err, "error creating schema")
 		}
 	}
-	if err = tx.Commit(); err != nil {
+	if err := tx.Commit(); err != nil {
 		return err
 	}
+	logger.Debug("tables created")
 	return
 }
 

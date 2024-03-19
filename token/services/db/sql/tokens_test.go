@@ -26,7 +26,6 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
 	}
 	db.SetMaxOpenConns(maxOpenConns)
-
 	if err = db.Ping(); err != nil {
 		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
 	}
@@ -106,6 +105,11 @@ var TokensCases = []struct {
 }
 
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	for i := 0; i < 20; i++ {
 		owners := []string{"alice"}
 		tr := driver.TokenRecord{
@@ -122,7 +126,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 			Auditor:        false,
 			Issuer:         false,
 		}
-		assert.NoError(t, db.StoreToken(tr, owners))
+		assert.NoError(t, tx.StoreToken(tr, owners))
 	}
 	tr := driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100),
@@ -138,7 +142,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"dan"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"dan"}))
 
 	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100), // only txid + index + ns is unique together
@@ -154,7 +158,7 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice", "bob"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice", "bob"}))
 
 	tr = driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 101),
@@ -170,7 +174,8 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.Commit())
 
 	tok, err := db.ListUnspentTokens()
 	assert.NoError(t, err)
@@ -222,6 +227,10 @@ func getTokensBy(t *testing.T, db *TokenDB, ownerEID, typ string) []*token.Unspe
 }
 
 func TDeleteAndMine(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -236,7 +245,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -251,7 +260,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -266,7 +275,9 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.Commit())
+
 	assert.NoError(t, db.Delete("tx101", 0, "tx103"))
 
 	tok, err := db.ListUnspentTokens()
@@ -295,6 +306,10 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 
 // // ListAuditTokens returns the audited tokens associated to the passed ids
 func TListAuditTokens(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -308,7 +323,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Auditor:        true,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, nil))
+	assert.NoError(t, tx.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -322,7 +337,7 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Auditor:        true,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, nil))
+	assert.NoError(t, tx.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -336,7 +351,8 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		Auditor:        true,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, nil))
+	assert.NoError(t, tx.StoreToken(tr, nil))
+	assert.NoError(t, tx.Commit())
 
 	tid := []*token.ID{
 		{TxId: "tx101", Index: 0},
@@ -358,6 +374,10 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 }
 
 func TListIssuedTokens(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -372,7 +392,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreToken(tr, nil))
+	assert.NoError(t, tx.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -387,7 +407,7 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreToken(tr, nil))
+	assert.NoError(t, tx.StoreToken(tr, nil))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -402,7 +422,8 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         true,
 	}
-	assert.NoError(t, db.StoreToken(tr, nil))
+	assert.NoError(t, tx.StoreToken(tr, nil))
+	assert.NoError(t, tx.Commit())
 
 	tok, err := db.ListHistoryIssuedTokens()
 	if err != nil {
@@ -434,6 +455,10 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 // GetTokenInfos retrieves the token information for the passed ids.
 // For each id, the callback is invoked to unmarshal the token information
 func TGetTokenInfos(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -448,7 +473,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -463,7 +488,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          1,
@@ -478,7 +503,8 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.Commit())
 
 	ids := []*token.ID{
 		{TxId: "tx101", Index: 0},
@@ -536,6 +562,10 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 }
 
 func TDeleteMultiple(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
@@ -550,7 +580,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
@@ -565,7 +595,7 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
@@ -580,7 +610,9 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 		Auditor:        false,
 		Issuer:         false,
 	}
-	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.StoreToken(tr, []string{"alice"}))
+	assert.NoError(t, tx.Commit())
+
 	assert.NoError(t, db.DeleteTokens("", &token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
 
 	tok, err := db.ListUnspentTokens()

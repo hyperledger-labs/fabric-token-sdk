@@ -63,6 +63,9 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.AuditT
 	dataSourceName := os.Getenv(EnvVarKey)
 	if dataSourceName == "" {
 		dataSourceName = opts.DataSource
+		logger.Infof("using [%s] [%s] for [%s]", opts.Driver, dataSourceName, OptsKey)
+	} else {
+		logger.Infof("using [%s] env:[%s] for [%s]", opts.Driver, EnvVarKey, OptsKey)
 	}
 	if dataSourceName == "" {
 		return nil, errors.Errorf("either %s.dataSource in core.yaml or %s"+
@@ -79,8 +82,6 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.AuditT
 }
 
 func (d *Driver) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
-	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
-
 	id := driverName + dataSourceName
 	var p *sql.DB
 	d.mutex.RLock()

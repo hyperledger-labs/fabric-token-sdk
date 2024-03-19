@@ -206,18 +206,11 @@ type DB struct {
 	// * an exclusive lock is held when Commit is called.
 	db        driver.TokenTransactionDB
 	storeLock sync.RWMutex
-
-	eIDsLocks sync.Map
-
-	// status related fields
-	pendingTXs []string
 }
 
 func newDB(p driver.TokenTransactionDB) *DB {
 	return &DB{
-		db:         p,
-		eIDsLocks:  sync.Map{},
-		pendingTXs: make([]string, 0, 10000),
+		db: p,
 	}
 }
 
@@ -226,9 +219,6 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("Appending new transaction record... [%s][%d]", req.Anchor, db.counter)
 	}
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
 
 	ins, outs, err := req.InputsAndOutputs()
 	if err != nil {
@@ -239,25 +229,40 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 		Inputs:  ins,
 		Outputs: outs,
 	}
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
+	txs, err := TransactionRecords(record)
+	if err != nil {
+		return errors.WithMessage(err, "failed parsing transactions from audit record")
 	}
-	if err := db.appendTokenRequest(req); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
-	}
-	if err := db.appendTransactions(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
-	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
+	raw, err := req.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
 	}
 
-	logger.Debugf("Appending transaction record new completed without errors")
+	w, err := db.db.BeginAtomicWrite()
+	if err != nil {
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
+	}
+	if err := w.AddTokenRequest(req.Anchor, raw); err != nil {
+		rollback(w, err)
+		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
+	}
+	for _, tx := range txs {
+		if err := w.AddTransaction(&tx); err != nil {
+			rollback(w, err)
+			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
+		}
+	}
+	if err := w.Commit(); err != nil {
+		rollback(w, err)
+		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
+	}
 	return nil
+}
+
+func rollback(w driver.AtomicWrite, err error) {
+	if err1 := w.Discard(); err1 != nil {
+		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+	}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -276,7 +281,6 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 	logger.Debug("lock acquired")
 
 	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
-		db.rollback(err)
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
 	}
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
@@ -317,20 +321,17 @@ func (db *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, err
 // AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
 func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
 	logger.Debugf("Appending new validation record... [%d]", db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
 
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
+	w, err := db.db.BeginAtomicWrite()
+	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := db.db.AddValidationRecord(txID, tr, meta); err != nil {
-		db.rollback(err)
+	if err := w.AddValidationRecord(txID, tr, meta); err != nil {
+		rollback(w, err)
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
+	if err := w.Commit(); err != nil {
+		rollback(w, err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
 	}
 
@@ -338,7 +339,7 @@ func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]b
 	return nil
 }
 
-func (db *DB) appendTransactions(record *token.AuditRecord) error {
+func TransactionRecords(record *token.AuditRecord) (txs []TransactionRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
@@ -363,7 +364,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 		// All ins should be for same EID, check this
 		inEIDs := ins.EnrollmentIDs()
 		if len(inEIDs) > 1 {
-			return errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
+			return nil, errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
 		}
 		inEID := ""
 		if len(inEIDs) == 1 {
@@ -389,7 +390,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					}
 				}
 
-				if err := db.db.AddTransaction(&driver.TransactionRecord{
+				txs = append(txs, driver.TransactionRecord{
 					TxID:         record.Anchor,
 					SenderEID:    inEID,
 					RecipientEID: outEID,
@@ -398,40 +399,15 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					Status:       driver.Pending,
 					ActionType:   tt,
 					Timestamp:    timestamp,
-				}); err != nil {
-					if err1 := db.db.Discard(); err1 != nil {
-						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-					}
-					return err
-				}
+				})
 			}
 		}
 
 		actionIndex++
 	}
-	logger.Debugf("finished appending transactions for tx [%s]", record.Anchor)
+	logger.Debugf("parsed transactions for tx [%s]", record.Anchor)
 
-	return nil
-}
-
-func (db *DB) appendTokenRequest(request *token.Request) error {
-	raw, err := request.Bytes()
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
-	}
-	if err := db.db.AddTokenRequest(request.Anchor, raw); err != nil {
-		if err1 := db.db.Discard(); err1 != nil {
-			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-		}
-		return err
-	}
-	return nil
-}
-
-func (db *DB) rollback(err error) {
-	if err1 := db.db.Discard(); err1 != nil {
-		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-	}
+	return
 }
 
 type Config interface {

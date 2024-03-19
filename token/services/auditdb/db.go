@@ -11,12 +11,12 @@ import (
 	"reflect"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
 )
@@ -210,33 +210,52 @@ func (db *DB) Append(req *token.Request) error {
 	}
 	logger.Debugf("Appending new audit record... [%v]", record.Inputs, record.Outputs)
 
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
+	raw, err := req.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
+	}
+	movements, err := movementRecords(record)
+	if err != nil {
+		return err
+	}
+	txs, err := ttxdb.TransactionRecords(record)
+	if err != nil {
+		return errors.WithMessage(err, "failed parsing transactions from audit record")
+	}
+
+	w, err := db.db.BeginAtomicWrite()
+	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendSendMovements(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append send movements for txid [%s] failed", record.Anchor)
+	for _, m := range movements {
+		if err := w.AddMovement(&m); err != nil {
+			rollback(w, err)
+			return errors.WithMessagef(err, "append movements for txid [%s] failed", record.Anchor)
+		}
 	}
-	if err := db.appendReceivedMovements(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
+	for _, tx := range txs {
+		if err := w.AddTransaction(&tx); err != nil {
+			rollback(w, err)
+			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
+		}
 	}
-	if err := db.appendTokenRequest(req); err != nil {
-		db.rollback(err)
+	if err := w.AddTokenRequest(req.Anchor, raw); err != nil {
+		rollback(w, err)
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendTransactions(record); err != nil {
-		db.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
-	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
+	if err := w.Commit(); err != nil {
+		rollback(w, err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
 	logger.Debugf("Appending new completed without errors")
 	return nil
+}
+
+func rollback(w driver.AtomicWrite, err error) {
+	if err1 := w.Discard(); err1 != nil {
+		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+	}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -255,7 +274,6 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 	logger.Debug("lock acquired")
 
 	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
-		db.rollback(err)
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
 	}
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
@@ -275,7 +293,7 @@ func (db *DB) GetStatus(txID string) (TxStatus, error) {
 		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
 	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
-	return TxStatus(status), nil
+	return status, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
@@ -320,7 +338,7 @@ func (db *DB) ReleaseLocks(anchor string) {
 
 }
 
-func (db *DB) appendSendMovements(record *token.AuditRecord) error {
+func movementRecords(record *token.AuditRecord) (m []driver.MovementRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
@@ -330,164 +348,26 @@ func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			diff := sent.Sub(sent, received)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				continue
-			}
-			diff.Neg(diff)
-
-			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
-			if err := db.db.AddMovement(&driver.MovementRecord{
-				TxID:         record.Anchor,
-				EnrollmentID: eID,
-				Amount:       diff,
-				TokenType:    tokenType,
-				Status:       driver.TxStatus(driver.Pending),
-			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
-					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-				}
-				return err
-			}
-		}
-	}
-	logger.Debugf("finished to append send movements for tx [%s]", record.Anchor)
-
-	return nil
-}
-
-func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
-	inputs := record.Inputs
-	outputs := record.Outputs
-	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
-	eIDs := joinIOEIDs(record)
-	tokenTypes := outputs.TokenTypes()
-
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			diff := received.Sub(received, sent)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				// Nothing received
-				continue
+			if outgoing := diff.Cmp(big.NewInt(0)) <= 0; outgoing {
+				diff.Neg(diff)
 			}
 
-			if err := db.db.AddMovement(&driver.MovementRecord{
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			m = append(m, driver.MovementRecord{
 				TxID:         record.Anchor,
 				EnrollmentID: eID,
 				Amount:       diff,
 				TokenType:    tokenType,
 				Status:       driver.TxStatus(driver.Pending),
-			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
-					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-				}
-				return err
-			}
+			})
 		}
 	}
-	logger.Debugf("finished to append received movements for tx [%s]", record.Anchor)
+	logger.Debugf("parsed [%d] movements for tx [%s]", len(m), record.Anchor)
 
-	return nil
-}
-
-func (db *DB) appendTransactions(record *token.AuditRecord) error {
-	inputs := record.Inputs
-	outputs := record.Outputs
-
-	actionIndex := 0
-	timestamp := time.Now()
-	for {
-		// collect inputs and outputs from the same action
-		ins := inputs.Filter(func(t *token.Input) bool {
-			return t.ActionIndex == actionIndex
-		})
-		ous := outputs.Filter(func(t *token.Output) bool {
-			return t.ActionIndex == actionIndex
-		})
-		if ins.Count() == 0 && ous.Count() == 0 {
-			logger.Debugf("no actions left for tx [%s][%d]", record.Anchor, actionIndex)
-			// no more actions
-			break
-		}
-
-		// create a transaction record from ins and ous
-
-		// All ins should be for same EID, check this
-		inEIDs := ins.EnrollmentIDs()
-		if len(inEIDs) > 1 {
-			return errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
-		}
-		inEID := ""
-		if len(inEIDs) == 1 {
-			inEID = inEIDs[0]
-		}
-
-		outEIDs := ous.EnrollmentIDs()
-		outEIDs = append(outEIDs, "")
-		outTT := ous.TokenTypes()
-		for _, outEID := range outEIDs {
-			for _, tokenType := range outTT {
-				received := ous.ByEnrollmentID(outEID).ByType(tokenType).Sum()
-				if received.Cmp(big.NewInt(0)) <= 0 {
-					continue
-				}
-
-				tt := driver.Issue
-				if len(inEIDs) != 0 {
-					if len(outEID) == 0 {
-						tt = driver.Redeem
-					} else {
-						tt = driver.Transfer
-					}
-				}
-
-				if err := db.db.AddTransaction(&driver.TransactionRecord{
-					TxID:         record.Anchor,
-					SenderEID:    inEID,
-					RecipientEID: outEID,
-					TokenType:    tokenType,
-					Amount:       received,
-					Status:       driver.TxStatus(driver.Pending),
-					ActionType:   driver.ActionType(tt),
-					Timestamp:    timestamp,
-				}); err != nil {
-					if err1 := db.db.Discard(); err1 != nil {
-						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-					}
-					return err
-				}
-			}
-		}
-
-		actionIndex++
-	}
-	logger.Debugf("finished appending transactions for tx [%s]", record.Anchor)
-
-	return nil
-}
-
-func (db *DB) appendTokenRequest(request *token.Request) error {
-	raw, err := request.Bytes()
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
-	}
-	if err := db.db.AddTokenRequest(request.Anchor, raw); err != nil {
-		if err1 := db.db.Discard(); err1 != nil {
-			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-		}
-		return err
-	}
-	return nil
-}
-
-func (db *DB) rollback(err error) {
-	if err1 := db.db.Discard(); err1 != nil {
-		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-	}
+	return
 }
 
 type Config interface {

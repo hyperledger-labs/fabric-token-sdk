@@ -59,28 +59,6 @@ func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (*TokenDB, er
 	return tokenDB, nil
 }
 
-func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
-	tx, err := db.NewTokenDBTransaction()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil && tx != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
-	if err = tx.StoreToken(tr, owners); err != nil {
-
-		return
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	return nil
-}
-
 // Delete is called when spending a token
 func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) (err error) {
 	tx, err := db.NewTokenDBTransaction()
@@ -726,8 +704,8 @@ func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, [
 	if err != nil {
 		return err
 	}
-	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE ", db.table.Certifications) + conditions
-
+	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE %s", db.table.Certifications, conditions)
+	logger.Debug(query, tokenIDs)
 	rows, err := db.db.Query(query, tokenIDs...)
 	if err != nil {
 		return errors.Wrapf(err, "failed to query")
@@ -826,8 +804,7 @@ func (db *TokenDB) GetSchema() string {
 		db.table.Ownership,
 		db.table.PublicParams,
 		db.table.Certifications,
-		db.table.Certifications,
-		db.table.Certifications,
+		db.table.Certifications, db.table.Certifications,
 	)
 }
 
@@ -836,11 +813,12 @@ func (db *TokenDB) Close() {
 }
 
 func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
+	logger.Debug("starting db transaction")
 	tx, err := db.db.Begin()
 	if err != nil {
 		return nil, errors.New("failed starting a db transaction")
 	}
-	return NewTokenTransaction(db, tx), nil
+	return &TokenTransaction{db: db, tx: tx}, nil
 }
 
 type TokenTransaction struct {
@@ -967,10 +945,6 @@ func (t *TokenTransaction) Commit() error {
 
 func (t *TokenTransaction) Rollback() error {
 	return t.tx.Rollback()
-}
-
-func NewTokenTransaction(db *TokenDB, tx *sql.Tx) *TokenTransaction {
-	return &TokenTransaction{db: db, tx: tx}
 }
 
 type UnspentTokensIterator struct {
