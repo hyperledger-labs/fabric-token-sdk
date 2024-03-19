@@ -41,21 +41,22 @@ type VaultLedgerTokenLoader[T any] struct {
 	RetryDelay time.Duration
 }
 
-func NewLedgerTokenLoader[T any](tokenVault TokenVault, deserializer TokenDeserializer[T], numRetries int, retryDelay time.Duration) *VaultLedgerTokenLoader[T] {
+func NewLedgerTokenLoader[T any](tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
 	return &VaultLedgerTokenLoader[T]{
 		TokenVault:   tokenVault,
 		Deserializer: deserializer,
-		NumRetries:   numRetries,
-		RetryDelay:   retryDelay,
+		NumRetries:   3,
+		RetryDelay:   3 * time.Second,
 	}
 }
 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
 func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error) {
-	var tokens []T
 
 	var err error
 	for i := 0; i < s.NumRetries; i++ {
+		tokens := make([]T, len(ids))
+		counter := 0
 		err = s.TokenVault.GetTokenOutputs(ids, func(id *token.ID, bytes []byte) error {
 			if len(bytes) == 0 {
 				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
@@ -64,7 +65,8 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 			if err != nil {
 				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
 			}
-			tokens = append(tokens, ti)
+			tokens[counter] = ti
+			counter++
 			return nil
 		})
 		if err == nil {
@@ -116,12 +118,14 @@ func NewVaultLedgerTokenAndMetadataLoader[T LedgerToken, M any](tokenVault Token
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
 func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([]string, []T, []M, []view.Identity, error) {
-	var tokens []T
-	var inputIDs []string
-	var inputInf []M
-	var signerIds []view.Identity
+	n := len(ids)
+	tokens := make([]T, n)
+	inputIDs := make([]string, n)
+	inputInf := make([]M, n)
+	signerIds := make([]view.Identity, n)
 
 	// return token outputs and the corresponding opening
+	counter := 0
 	if err := s.TokenVault.GetTokenInfoAndOutputs(ids, func(id *token.ID, key string, comm, info []byte) error {
 		if len(comm) == 0 {
 			return errors.Errorf("failed getting state for id [%v], nil comm value", id)
@@ -140,10 +144,11 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([
 			return errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
 
-		inputIDs = append(inputIDs, key)
-		tokens = append(tokens, tok)
-		inputInf = append(inputInf, ti)
-		signerIds = append(signerIds, tok.GetOwner())
+		inputIDs[counter] = key
+		tokens[counter] = tok
+		inputInf[counter] = ti
+		signerIds[counter] = tok.GetOwner()
+		counter++
 
 		return nil
 	}); err != nil {
@@ -163,13 +168,15 @@ func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer 
 }
 
 func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ids []*token.ID) ([]M, error) {
-	var inputInf []M
+	inputInf := make([]M, len(ids))
+	counter := 0
 	if err := s.TokenVault.GetTokenInfos(ids, func(id *token.ID, bytes []byte) error {
 		ti, err := s.Deserializer.DeserializeMetadata(bytes)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
 		}
-		inputInf = append(inputInf, ti)
+		inputInf[counter] = ti
+		counter++
 		return nil
 	}); err != nil {
 		return nil, err
@@ -200,12 +207,14 @@ type VaultTokenCertificationLoader struct {
 }
 
 func (s *VaultTokenCertificationLoader) GetCertifications(ids []*token.ID) ([][]byte, error) {
-	var certifications [][]byte
+	certifications := make([][]byte, len(ids))
+	counter := 0
 	if err := s.TokenCertificationStorage.GetCertifications(ids, func(id *token.ID, bytes []byte) error {
 		if len(bytes) == 0 {
 			return errors.Errorf("failed getting certification for id [%v], nil value", id)
 		}
-		certifications = append(certifications, bytes)
+		certifications[counter] = bytes
+		counter++
 		return nil
 	}); err != nil {
 		return nil, err

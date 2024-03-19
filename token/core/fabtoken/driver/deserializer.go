@@ -39,13 +39,9 @@ func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label str
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
-type EIDRHDeserializer struct {
-	*common.EIDRHDeserializer[*x509.AuditInfo]
-}
+type EIDRHDeserializer = common.EIDRHDeserializer[*x509.AuditInfo]
 
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
-	return &EIDRHDeserializer{
-		EIDRHDeserializer: common.NewEIDRHDeserializer[*x509.AuditInfo](&x509.AuditInfoDeserializer{}),
-	}
+	return common.NewEIDRHDeserializer[*x509.AuditInfo](&x509.AuditInfoDeserializer{})
 }

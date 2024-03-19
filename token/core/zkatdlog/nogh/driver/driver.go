@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"time"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -149,16 +147,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	service, err := zkatdlog.NewTokenService(
 		ws,
 		ppm,
-		common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](
-			qe,
-			tokDeserializer,
-		),
-		common.NewLedgerTokenLoader[*token3.Token](
-			qe,
-			tokDeserializer,
-			3,
-			3*time.Second,
-		),
+		common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
+		common.NewLedgerTokenLoader[*token3.Token](qe, tokDeserializer),
 		ip,
 		deserializer,
 		tmsConfig,
