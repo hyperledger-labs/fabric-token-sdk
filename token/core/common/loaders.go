@@ -110,41 +110,33 @@ func NewVaultLedgerTokenAndMetadataLoader[T LedgerToken, M any](tokenVault Token
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
 func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([]string, []T, []M, []view.Identity, error) {
-	n := len(ids)
-	tokens := make([]T, n)
-	inputIDs := make([]string, n)
-	inputInf := make([]M, n)
-	signerIds := make([]view.Identity, n)
-
 	// return token outputs and the corresponding opening
-	counter := 0
-	if err := s.TokenVault.GetTokenInfoAndOutputs(ids, func(id *token.ID, key string, comm, info []byte) error {
-		if len(comm) == 0 {
-			return errors.Errorf("failed getting state for id [%v], nil comm value", id)
-		}
-		if len(info) == 0 {
-			return errors.Errorf("failed getting state for id [%v], nil info value", id)
-		}
-
-		//logger.Debugf("loaded transfer input [%s]", hash.Hashable(comm).String())
-		tok, err := s.Deserializer.DeserializeToken(comm)
-		if err != nil {
-			return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(comm))
-		}
-		ti, err := s.Deserializer.DeserializeMetadata(info)
-		if err != nil {
-			return errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
-		}
-
-		inputIDs[counter] = key
-		tokens[counter] = tok
-		inputInf[counter] = ti
-		signerIds[counter] = tok.GetOwner()
-		counter++
-
-		return nil
-	}); err != nil {
+	inputIDs, comms, infos, err := s.TokenVault.GetTokenInfoAndOutputs(ids)
+	if err != nil {
 		return nil, nil, nil, nil, err
+	}
+
+	tokens := make([]T, len(ids))
+	inputInf := make([]M, len(ids))
+	signerIds := make([]view.Identity, len(ids))
+	for i, id := range ids {
+		if len(comms[i]) == 0 {
+			return nil, nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)
+		}
+		if len(infos[i]) == 0 {
+			return nil, nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil info value", id)
+		}
+		tok, err := s.Deserializer.DeserializeToken(comms[i])
+		if err != nil {
+			return nil, nil, nil, nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(comms[i]))
+		}
+		ti, err := s.Deserializer.DeserializeMetadata(infos[i])
+		if err != nil {
+			return nil, nil, nil, nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
+		}
+		tokens[i] = tok
+		inputInf[i] = ti
+		signerIds[i] = tok.GetOwner()
 	}
 
 	return inputIDs, tokens, inputInf, signerIds, nil
@@ -160,18 +152,18 @@ func NewVaultTokenInfoLoader[M any](tokenVault driver.QueryEngine, deserializer 
 }
 
 func (s *VaultTokenInfoLoader[M]) GetTokenInfos(ids []*token.ID) ([]M, error) {
+	infos, err := s.TokenVault.GetTokenInfos(ids)
+	if err != nil {
+		return nil, err
+	}
+
 	inputInf := make([]M, len(ids))
-	counter := 0
-	if err := s.TokenVault.GetTokenInfos(ids, func(id *token.ID, bytes []byte) error {
+	for i, bytes := range infos {
 		ti, err := s.Deserializer.DeserializeMetadata(bytes)
 		if err != nil {
-			return errors.Wrapf(err, "failed deserializeing token info for id [%v]", id)
+			return nil, errors.Wrapf(err, "failed deserializeing token info for id [%v]", ids[i])
 		}
-		inputInf[counter] = ti
-		counter++
-		return nil
-	}); err != nil {
-		return nil, err
+		inputInf[i] = ti
 	}
 	return inputInf, nil
 }
@@ -191,7 +183,7 @@ func (s *VaultTokenLoader) GetTokens(ids []*token.ID) ([]string, []*token.Token,
 }
 
 type TokenCertificationStorage interface {
-	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
+	GetCertifications(ids []*token.ID) ([][]byte, error)
 }
 
 type VaultTokenCertificationLoader struct {
@@ -199,17 +191,5 @@ type VaultTokenCertificationLoader struct {
 }
 
 func (s *VaultTokenCertificationLoader) GetCertifications(ids []*token.ID) ([][]byte, error) {
-	certifications := make([][]byte, len(ids))
-	counter := 0
-	if err := s.TokenCertificationStorage.GetCertifications(ids, func(id *token.ID, bytes []byte) error {
-		if len(bytes) == 0 {
-			return errors.Errorf("failed getting certification for id [%v], nil value", id)
-		}
-		certifications[counter] = bytes
-		counter++
-		return nil
-	}); err != nil {
-		return nil, err
-	}
-	return certifications, nil
+	return s.TokenCertificationStorage.GetCertifications(ids)
 }

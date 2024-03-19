@@ -54,7 +54,7 @@ type CertificationDB interface {
 	// GetCertifications returns the certifications of the passed tokens.
 	// For each token, the callback function is invoked.
 	// If a token doesn't have a certification, the function returns an error
-	GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error
+	GetCertifications(ids []*token.ID) ([][]byte, error)
 }
 
 type TokenDBTransaction interface {
@@ -98,10 +98,10 @@ type TokenDB interface {
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
 	// GetTokenInfos returns the metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfos(ids []*token.ID, callback driver.QueryCallbackFunc) error
+	GetTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokenInfoAndOutputs returns both value and metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenInfoAndOutputs(ids []*token.ID, callback driver.QueryCallback2Func) error
+	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	// GetAllTokenInfos returns the token metadata for the passed ids
 	GetAllTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokens returns the owned tokens and their identifier keys for the passed ids.

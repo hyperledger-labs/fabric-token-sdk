@@ -339,38 +339,29 @@ func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallba
 
 // GetTokenInfos retrieves the token metadata for the passed ids.
 // For each id, the callback is invoked to unmarshal the token metadata
-func (db *TokenDB) GetTokenInfos(ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
+func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
-		return nil
+		return nil, nil
 	}
 	_, metas, err := db.getLedgerTokenAndMeta(ids)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < len(ids); i++ {
-		if err := callback(ids[i], metas[i]); err != nil {
-			return err
-		}
-	}
-	return nil
+	return metas, err
 }
 
 // GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID, callback tdriver.QueryCallback2Func) error {
+func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
 	tokens, metas, err := db.getLedgerTokenAndMeta(ids)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
+	outputIDs := make([]string, len(ids))
 	for i := 0; i < len(ids); i++ {
 		outputID, err := keys.CreateTokenKey(ids[i].TxId, ids[i].Index)
 		if err != nil {
-			return errors.Wrapf(err, "error creating output ID: %v", ids[i])
+			return nil, nil, nil, errors.Wrapf(err, "error creating output ID: %v", ids[i])
 		}
-		if err := callback(ids[i], outputID, tokens[i], metas[i]); err != nil {
-			return err
-		}
+		outputIDs[i] = outputID
 	}
-	return nil
+	return outputIDs, tokens, metas, nil
 }
 
 // GetAllTokenInfos retrieves the token information for the passed ids.
@@ -715,22 +706,22 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	return result
 }
 
-func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error {
+func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		// nothing to do here
-		return nil
+		return nil, nil
 	}
 
 	// build query
 	conditions, tokenIDs, err := certificationsQuerySql(ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE ", db.table.Certifications) + conditions
 
 	rows, err := db.db.Query(query, tokenIDs...)
 	if err != nil {
-		return errors.Wrapf(err, "failed to query")
+		return nil, errors.Wrapf(err, "failed to query")
 	}
 	defer rows.Close()
 
@@ -740,11 +731,11 @@ func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, [
 		var certification []byte
 		var id token.ID
 		if err := rows.Scan(&id.TxId, &id.Index, &certification); err != nil {
-			return err
+			return nil, err
 		}
 		// the callback is expected to be called in order of the ids
 		if len(certification) == 0 {
-			return errors.Errorf("empty certification for [%s]", id.String())
+			return nil, errors.Errorf("empty certification for [%s]", id.String())
 		}
 		for i := 0; i < len(ids); i++ {
 			if *ids[i] == id {
@@ -756,19 +747,12 @@ func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, [
 	}
 
 	if err = rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
 	if counter != len(ids) {
-		return errors.Errorf("not all tokens are certified")
+		return nil, errors.Errorf("not all tokens are certified")
 	}
-
-	for i, certification := range certifications {
-		if err := callback(ids[i], certification); err != nil {
-			return errors.WithMessagef(err, "failed callback for [%s]", ids[i])
-		}
-	}
-
-	return nil
+	return certifications, nil
 }
 
 func (db *TokenDB) GetSchema() string {
