@@ -52,7 +52,6 @@ func NewLedgerTokenLoader[T any](tokenVault TokenVault, deserializer TokenDeseri
 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
 func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error) {
-
 	var err error
 	for i := 0; i < s.NumRetries; i++ {
 		tokens := make([]T, len(ids))
@@ -75,33 +74,26 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
-		retry := false
-		for _, id := range ids {
-			pending, err := s.TokenVault.IsPending(id)
-			if err != nil {
-				break
-			}
-			if pending {
-				//logger.Warnf("failed getting serialized token output for id [%v] because the relative transaction is pending, retry at [%d]", id, i)
-				if i >= s.NumRetries-1 {
-					// too late, we tried already too many times
-					return nil, errors.Wrapf(err, "failed to get token outputs, tx [%s] is still pending", id.TxId)
-				}
-				time.Sleep(s.RetryDelay)
-				retry = true
-				break
-			}
+		if anyPending, anyError := s.isAnyPending(ids...); anyError != nil || !anyPending {
+			err = anyError
+			break
 		}
 
-		if retry {
-			tokens = nil
-			continue
+		if lastRetry := s.NumRetries - 1; i < lastRetry {
+			time.Sleep(s.RetryDelay)
 		}
-
-		return nil, errors.Wrapf(err, "failed to get token outputs")
 	}
 
 	return nil, errors.Wrapf(err, "failed to get token outputs")
+}
+
+func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending bool, anyError error) {
+	for _, id := range ids {
+		if pending, error := s.TokenVault.IsPending(id); pending || error != nil {
+			return pending, error
+		}
+	}
+	return false, nil
 }
 
 type VaultLedgerTokenAndMetadataLoader[T LedgerToken, M any] struct {
