@@ -51,5 +51,5 @@ func NewService(
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return NewValidator(s.PublicParametersManager.PublicParams(), s.Deserializer())
+	return NewValidator(s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
 }
