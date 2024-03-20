@@ -106,7 +106,13 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		identities,
 		f.ignoreRemote,
 	)
-	return &BindingRole{Role: idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: IdemixIdentity}, nil
+	return &BindingRole{
+		Role:          idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		IdentityType:  IdemixIdentity,
+		RootIdentity:  f.FSCIdentity,
+		SignerService: f.SignerService,
+		BinderService: f.BinderService,
+	}, nil
 }
 
 // NewX509 creates a new X509-based role
@@ -140,7 +146,13 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: identityType}, nil
+	return &BindingRole{
+		Role:          x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		IdentityType:  identityType,
+		RootIdentity:  f.FSCIdentity,
+		SignerService: f.SignerService,
+		BinderService: f.BinderService,
+	}, nil
 }
 
 // NewX509IgnoreRemote creates a new X509-based role treating the long-term identities as local
@@ -166,7 +178,13 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Ro
 	if err := lm.Load(identities); err != nil {
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
-	return &BindingRole{Role: x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm), Support: f, IdentityType: X509Identity}, nil
+	return &BindingRole{
+		Role:          x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		IdentityType:  X509Identity,
+		RootIdentity:  f.FSCIdentity,
+		SignerService: f.SignerService,
+		BinderService: f.BinderService,
+	}, nil
 }
 
 // IdentitiesForRole returns the configured identities for the passed role
@@ -177,7 +195,10 @@ func (f *RoleFactory) IdentitiesForRole(role driver.IdentityRole) ([]*config.Ide
 type BindingRole struct {
 	identity.Role
 	IdentityType string
-	Support      *RoleFactory
+
+	RootIdentity  view2.Identity
+	SignerService common.SigService
+	BinderService common.BinderService
 }
 
 func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
@@ -185,15 +206,24 @@ func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Info{IdentityInfo: info, Support: r.Support, IdentityType: r.IdentityType}, nil
+	return &Info{
+		IdentityInfo:  info,
+		IdentityType:  r.IdentityType,
+		RootIdentity:  r.RootIdentity,
+		SignerService: r.SignerService,
+		BinderService: r.BinderService,
+	}, nil
 }
 
 // Info wraps a driver.IdentityInfo to further register the audit info,
 // and binds the new identity to the default FSC node identity
 type Info struct {
 	driver.IdentityInfo
-	Support      *RoleFactory
 	IdentityType string
+
+	RootIdentity  view2.Identity
+	SignerService common.SigService
+	BinderService common.BinderService
 }
 
 func (i *Info) ID() string {
@@ -211,12 +241,12 @@ func (i *Info) Get() (view2.Identity, []byte, error) {
 		return nil, nil, err
 	}
 	// register the audit info
-	if err := i.Support.SignerService.RegisterAuditInfo(id, ai); err != nil {
+	if err := i.SignerService.RegisterAuditInfo(id, ai); err != nil {
 		return nil, nil, err
 	}
 	// bind the identity to the default FSC node identity
-	if i.Support.BinderService != nil {
-		if err := i.Support.BinderService.Bind(i.Support.FSCIdentity, id); err != nil {
+	if i.BinderService != nil {
+		if err := i.BinderService.Bind(i.RootIdentity, id); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -226,11 +256,11 @@ func (i *Info) Get() (view2.Identity, []byte, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if err := i.Support.SignerService.RegisterAuditInfo(raw, ai); err != nil {
+		if err := i.SignerService.RegisterAuditInfo(raw, ai); err != nil {
 			return nil, nil, err
 		}
-		if i.Support.BinderService != nil {
-			if err := i.Support.BinderService.Bind(i.Support.FSCIdentity, raw); err != nil {
+		if i.BinderService != nil {
+			if err := i.BinderService.Bind(i.RootIdentity, raw); err != nil {
 				return nil, nil, err
 			}
 		}

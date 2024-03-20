@@ -26,19 +26,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
-	pp := s.PublicParams()
-	if pp == nil {
-		return nil, nil, errors.Errorf("public parameters not inizialized")
-	}
-	//var signers []driver.Signer
-	//for _, id := range signerIds {
-	//	// get signers for each input token
-	//	si, err := s.identityProvider.GetSigner(id)
-	//	if err != nil {
-	//		return nil, nil, errors.Wrapf(err, "failed getting signing identity for id [%v]", id)
-	//	}
-	//	signers = append(signers, si)
-	//}
+	pp := s.PublicParametersManager.PublicParams()
 
 	// get sender
 	sender, err := transfer.NewSender(nil, tokens, inputIDs, inputInf, pp)
@@ -49,10 +37,6 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	var owners [][]byte
 	var ownerIdentities []view.Identity
 
-	deserializer, err := s.DeserializerProvider()
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to get deserializer")
-	}
 	// get values and owners of outputs
 	for i, output := range outputTokens {
 		q, err := token3.ToQuantity(output.Quantity, pp.Precision())
@@ -68,7 +52,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 			continue
 		}
-		recipients, err := deserializer.Recipients(output.Owner.Raw)
+		recipients, err := s.Deserializer().Recipients(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
@@ -96,7 +80,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := deserializer.GetOwnerAuditInfo(output.Owner.Raw, s)
+		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(output.Owner.Raw, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -106,7 +90,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for senders
 	var senderAuditInfos [][]byte
 	for i, t := range tokens {
-		auditInfo, err := deserializer.GetOwnerAuditInfo(t.Owner, s)
+		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(t.Owner, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}
@@ -154,10 +138,7 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [
 	}
 
 	// get commitments from outputs
-	pp := s.PublicParams()
-	if pp == nil {
-		return errors.Errorf("public parameters not inizialized")
-	}
+	pp := s.PublicParametersManager.PublicParams()
 	com := make([]*math.G1, len(tr.OutputTokens))
 	for i := 0; i < len(tr.OutputTokens); i++ {
 		com[i] = tr.OutputTokens[i].Data

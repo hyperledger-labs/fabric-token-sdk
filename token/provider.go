@@ -126,7 +126,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		certificationClientProvider: p.certificationClientProvider,
 		selectorManagerProvider:     p.selectorManagerProvider,
 		signatureService: &SignatureService{
-			deserializer: tokenService,
+			deserializer: tokenService.Deserializer(),
 			ip:           tokenService.IdentityProvider(),
 		},
 	}

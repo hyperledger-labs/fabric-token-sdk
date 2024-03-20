@@ -25,10 +25,11 @@ var (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	GetTokenInfoAndOutputs(ids []*token.ID, callback driver.QueryCallback2Func) error
+	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
+	PublicParams() ([]byte, error)
 }
 
 type WalletRegistry interface {
@@ -44,17 +45,15 @@ type WalletFactory interface {
 	NewWallet(role driver.IdentityRole, walletRegistry WalletRegistry, info driver.IdentityInfo, id string) (driver.Wallet, error)
 }
 
-type DeserializerProviderFunc = func() (driver.Deserializer, error)
-
 type RegistryEntry struct {
 	Registry WalletRegistry
 	Mutex    *sync.RWMutex
 }
 
 type WalletService struct {
-	Logger               *flogging.FabricLogger
-	IdentityProvider     driver.IdentityProvider
-	DeserializerProvider DeserializerProviderFunc
+	Logger           *flogging.FabricLogger
+	IdentityProvider driver.IdentityProvider
+	Deserializer     driver.Deserializer
 
 	WalletFactory WalletFactory
 	Registries    map[driver.IdentityRole]*RegistryEntry
@@ -63,7 +62,7 @@ type WalletService struct {
 func NewWalletService(
 	logger *flogging.FabricLogger,
 	identityProvider driver.IdentityProvider,
-	deserializerProvider DeserializerProviderFunc,
+	deserializer driver.Deserializer,
 	walletFactory WalletFactory,
 	OwnerWalletRegistry WalletRegistry,
 	IssuerWalletRegistry WalletRegistry,
@@ -77,11 +76,11 @@ func NewWalletService(
 	registries[driver.CertifierRole] = &RegistryEntry{Registry: CertifierWalletsRegistry, Mutex: &sync.RWMutex{}}
 
 	return &WalletService{
-		Logger:               logger,
-		IdentityProvider:     identityProvider,
-		DeserializerProvider: deserializerProvider,
-		WalletFactory:        walletFactory,
-		Registries:           registries,
+		Logger:           logger,
+		IdentityProvider: identityProvider,
+		Deserializer:     deserializer,
+		WalletFactory:    walletFactory,
+		Registries:       registries,
 	}
 }
 
@@ -113,20 +112,14 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, hash.Hashable(data.AuditInfo))
 	}
 
-	// recognize identity and register it
-	d, err := s.DeserializerProvider()
-	if err != nil {
-		return errors.Wrap(err, "failed getting deserializer")
-	}
-
 	// match identity and audit info
-	err = d.Match(data.Identity, data.AuditInfo)
+	err := s.Deserializer.Match(data.Identity, data.AuditInfo)
 	if err != nil {
 		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info
-	v, err := d.GetOwnerVerifier(data.Identity)
+	v, err := s.Deserializer.GetOwnerVerifier(data.Identity)
 	if err != nil {
 		return errors.Wrapf(err, "failed getting verifier for [%s]", data.Identity)
 	}

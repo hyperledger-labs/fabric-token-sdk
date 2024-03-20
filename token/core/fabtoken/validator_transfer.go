@@ -19,27 +19,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Context struct {
-	PP                *PublicParams
-	Deserializer      driver.Deserializer
-	SignatureProvider driver.SignatureProvider
-	Signatures        [][]byte
-	InputTokens       []*token.Token
-	Action            *TransferAction
-	Ledger            driver.Ledger
-	MetadataCounter   map[string]int
-}
-
-func (c *Context) CountMetadataKey(key string) {
-	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
-}
-
-// ValidateTransferFunc is the prototype of a validation function for a transfer action
-type ValidateTransferFunc func(ctx *Context) error
-
 // TransferSignatureValidate validates the signatures for the inputs spent by an action
 func TransferSignatureValidate(ctx *Context) error {
-	for _, tok := range ctx.InputTokens {
+	inputTokens, err := RetrieveInputsFromTransferAction(ctx.TransferAction, ctx.Ledger)
+	if err != nil {
+		return errors.Wrapf(err, "failed to retrieve input from transfer action")
+	}
+	ctx.InputTokens = inputTokens
+
+	for _, tok := range inputTokens {
 		logger.Debugf("check sender [%s]", view.Identity(tok.Owner.Raw).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner.Raw)
 		if err != nil {
@@ -57,7 +45,7 @@ func TransferSignatureValidate(ctx *Context) error {
 
 // TransferBalanceValidate checks that the sum of the inputs is equal to the sum of the outputs
 func TransferBalanceValidate(ctx *Context) error {
-	if ctx.Action.NumOutputs() == 0 {
+	if ctx.TransferAction.NumOutputs() == 0 {
 		return errors.New("there is no output")
 	}
 	if len(ctx.InputTokens) == 0 {
@@ -83,7 +71,7 @@ func TransferBalanceValidate(ctx *Context) error {
 			return errors.Errorf("input type %s does not match type %s", input.Type, typ)
 		}
 	}
-	for _, output := range ctx.Action.GetOutputs() {
+	for _, output := range ctx.TransferAction.GetOutputs() {
 		out := output.(*Output).Output
 		q, err := token.ToQuantity(out.Quantity, ctx.PP.QuantityPrecision)
 		if err != nil {
@@ -115,12 +103,12 @@ func TransferHTLCValidate(ctx *Context) error {
 		// is it owned by an htlc script?
 		if owner.Type == htlc.ScriptType {
 			// Then, the first output must be compatible with this input.
-			if len(ctx.Action.GetOutputs()) != 1 {
+			if len(ctx.TransferAction.GetOutputs()) != 1 {
 				return errors.New("invalid transfer action: an htlc script only transfers the ownership of a token")
 			}
 
 			// check type and quantity
-			output := ctx.Action.GetOutputs()[0].(*Output)
+			output := ctx.TransferAction.GetOutputs()[0].(*Output)
 			tok := output.Output
 			if ctx.InputTokens[0].Type != tok.Type {
 				return errors.New("invalid transfer action: type of input does not match type of output")
@@ -140,7 +128,7 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.Action, script, op, sigma)
+			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.TransferAction, script, op, sigma)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
@@ -150,7 +138,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 	}
 
-	for _, o := range ctx.Action.GetOutputs() {
+	for _, o := range ctx.TransferAction.GetOutputs() {
 		out, ok := o.(*Output)
 		if !ok {
 			return errors.New("invalid output")
@@ -173,7 +161,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err := script.Validate(now); err != nil {
 				return errors.WithMessagef(err, "htlc script invalid")
 			}
-			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.Action, script)
+			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.TransferAction, script)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
@@ -182,4 +170,29 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 	}
 	return nil
+}
+
+// RetrieveInputsFromTransferAction retrieves from the passed ledger the inputs identified in TransferAction
+func RetrieveInputsFromTransferAction(t *TransferAction, ledger driver.Ledger) ([]*token.Token, error) {
+	var inputTokens []*token.Token
+	inputs, err := t.GetInputs()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to retrieve input IDs")
+	}
+	for _, in := range inputs {
+		bytes, err := ledger.GetState(in)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
+		}
+		if len(bytes) == 0 {
+			return nil, errors.Errorf("input to spend [%s] does not exists", in)
+		}
+		tok := &token.Token{}
+		err = json.Unmarshal(bytes, tok)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
+		}
+		inputTokens = append(inputTokens, tok)
+	}
+	return inputTokens, nil
 }

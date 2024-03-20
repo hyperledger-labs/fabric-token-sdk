@@ -41,7 +41,7 @@ type TMSProvider struct {
 	vault          Vault
 	callbackFunc   CallbackFunc
 
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	services map[string]driver.TokenManagerService
 }
 
@@ -66,38 +66,31 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	if len(opts.Namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}
-	m.lock.Lock()
-	invokeCallback := false
-	defer func() {
-		// unlock
-		m.lock.Unlock()
-		// invoke callback
-		if invokeCallback && m.callbackFunc != nil {
-			err = m.callbackFunc(service, opts.Network, opts.Channel, opts.Namespace)
-			if err != nil {
-				logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
-			}
-		}
-	}()
 
 	key := tmsKey(opts)
-	var ok bool
-	service, ok = m.services[key]
-	if !ok {
-		logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
-		var err error
-		service, err = m.newTMS(&opts)
-		if err != nil {
-			return nil, err
-		}
-		m.services[key] = service
-		invokeCallback = true
+	m.lock.RLock()
+	service, ok := m.services[key]
+	if ok {
+		m.lock.RUnlock()
+		return service, nil
 	}
-	return service, nil
-}
+	m.lock.RUnlock()
 
-func tmsKey(opts driver.ServiceOptions) string {
-	return opts.Network + opts.Channel + opts.Namespace
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	service, ok = m.services[key]
+	if ok {
+		return service, nil
+	}
+
+	logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
+	service, err = m.getTokenManagerService(opts)
+	if err != nil {
+		return nil, err
+	}
+	m.services[key] = service
+	return service, nil
 }
 
 func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver.TokenManagerService, error) {
@@ -127,37 +120,46 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 		return errors.Errorf("public params not specified")
 	}
 	m.lock.Lock()
-	defer func() {
-		m.lock.Unlock()
-
-		// instantiate the token management service
-		logger.Debugf("retrieve token management system for [%s]", opts)
-		_, err = m.GetTokenManagerService(opts)
-	}()
+	defer m.lock.Unlock()
 
 	key := tmsKey(opts)
 	logger.Debugf("update tms for [%s] with key [%s]", opts, key)
 	service, ok := m.services[key]
 	if !ok {
 		logger.Debugf("no service found, instantiate token management system for [%s:%s:%s] for key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
-		return
-	}
-	// if the public params identifiers are the same, then just pass the new public params
-	var newPP *driver.SerializedPublicParameters
-	newPP, err = SerializedPublicParametersFromBytes(opts.PublicParams)
-	if err != nil {
-		err = errors.WithMessage(err, "failed unmarshalling public parameters")
-		return
-	}
-	oldPP := service.PublicParamsManager().PublicParameters()
-	if oldPP == nil || (oldPP != nil && newPP.Identifier == oldPP.Identifier()) {
-		logger.Debugf("same token driver identifier, update public parameters for [%s:%s:%s] with key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
-		return service.PublicParamsManager().SetPublicParameters(opts.PublicParams)
+	} else {
+		logger.Debugf("service found, unload token management system for [%s:%s:%s] for key [%s] and reload it", opts.Network, opts.Channel, opts.Namespace, key)
 	}
 
-	// if the public params identifiers are NOT the same, then unload the current instance
-	// and create the new one with the new public params
-	panic("not implemented yet")
+	// create the service for the new public params
+	newService, err := m.getTokenManagerService(opts)
+	if err == nil {
+		// unload the old service, if set
+		if service != nil {
+			if err := service.Done(); err != nil {
+				return errors.WithMessage(err, "failed to unload token service")
+			}
+		}
+		// register the new service
+		m.services[key] = newService
+	}
+	return
+}
+
+func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (service driver.TokenManagerService, err error) {
+	logger.Debugf("creating new token manager service for [%s]", opts)
+	service, err = m.newTMS(&opts)
+	if err != nil {
+		return nil, err
+	}
+	// invoke callback
+	if m.callbackFunc != nil {
+		err = m.callbackFunc(service, opts.Network, opts.Channel, opts.Namespace)
+		if err != nil {
+			logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
+		}
+	}
+	return service, nil
 }
 
 func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerService, error) {
@@ -268,4 +270,8 @@ func (m *TMSProvider) ppFromFetcher(opts *driver.ServiceOptions) ([]byte, error)
 		return ppRaw, nil
 	}
 	return nil, errors.Errorf("no public params fetched available")
+}
+
+func tmsKey(opts driver.ServiceOptions) string {
+	return opts.Network + opts.Channel + opts.Namespace
 }
