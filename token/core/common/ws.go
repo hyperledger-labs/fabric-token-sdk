@@ -126,7 +126,7 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	if err := s.IdentityProvider.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := s.IdentityProvider.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+	if err := s.IdentityProvider.RegisterRecipientData(data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 

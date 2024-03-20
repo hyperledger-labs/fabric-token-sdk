@@ -79,13 +79,15 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
+	ip := identity.NewProvider(identityDB, sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		fscIdentity,                              // FSC identity
 		networkLocalMembership.DefaultIdentity(), // network default identity
-		sigService,                               // signer service
-		view.GetEndpointService(sp),              // endpoint service
+		ip,
+		sigService,                  // signer service
+		view.GetEndpointService(sp), // endpoint service
 		storageProvider,
 		deserializerManager,
 		false,
@@ -126,8 +128,6 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-
-	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
 
 	deserializer, err := NewDeserializer(ppm.PublicParams())
 	if err != nil {
@@ -213,13 +213,15 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		return nil, errors.Wrapf(err, "failed to open identity db for tms [%s]", tmsID)
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
+	ip := identity.NewProvider(identityDB, sigService, nil, NewEIDRHDeserializer(), deserializerManager)
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
 		nil,                                      // FSC identity
 		nil,                                      // network default identity
-		sigService,                               // signer service
-		nil,                                      // endpoint service
+		ip,
+		sigService, // signer service
+		nil,        // endpoint service
 		storageProvider,
 		deserializerManager,
 		true,
@@ -257,7 +259,6 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, nil, NewEIDRHDeserializer(), deserializerManager)
 	deserializer, err := NewDeserializer(publicParamsManager.PublicParams())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")

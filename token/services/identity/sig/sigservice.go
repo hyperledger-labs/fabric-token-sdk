@@ -22,10 +22,11 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.services.identity.sig")
 
 type Storage interface {
-	StoreAuditInfo(id, info []byte) error
+	StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error
 	GetAuditInfo(id []byte) ([]byte, error)
 	StoreSignerInfo(id, info []byte) error
 	SignerInfoExists(id []byte) (bool, error)
+	GetSignerInfo(identity []byte) ([]byte, error)
 }
 
 type VerifierEntry struct {
@@ -55,7 +56,7 @@ func NewService(deserializer deserializer.Deserializer, storage Storage) *Servic
 	}
 }
 
-func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error {
+func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error {
 	if signer == nil {
 		return errors.New("invalid signer, expected a valid instance")
 	}
@@ -80,7 +81,7 @@ func (o *Service) RegisterSigner(identity view.Identity, signer driver.Signer, v
 
 	o.signers[idHash] = entry
 	if o.storage != nil {
-		if err := o.storage.StoreSignerInfo(identity, nil); err != nil {
+		if err := o.storage.StoreSignerInfo(identity, signerInfo); err != nil {
 			o.viewsSync.Unlock()
 			return errors.Wrap(err, "failed to store entry in storage for the passed signer")
 		}
@@ -124,14 +125,6 @@ func (o *Service) RegisterVerifier(identity view.Identity, verifier driver.Verif
 		logger.Debugf("register verifier to [%s]:[%s]", idHash, GetIdentifier(verifier))
 	}
 	return nil
-}
-
-func (o *Service) RegisterAuditInfo(identity view.Identity, info []byte) error {
-	return o.storage.StoreAuditInfo(identity, info)
-}
-
-func (o *Service) GetAuditInfo(identity view.Identity) ([]byte, error) {
-	return o.storage.GetAuditInfo(identity)
 }
 
 func (o *Service) IsMe(identity view.Identity) bool {
@@ -221,6 +214,10 @@ func (o *Service) GetSigner(identity view.Identity) (driver.Signer, error) {
 	o.signers[idHash] = entry
 
 	return entry.Signer, nil
+}
+
+func (o *Service) GetSignerInfo(identity view.Identity) ([]byte, error) {
+	return o.storage.GetSignerInfo(identity)
 }
 
 func (o *Service) GetVerifier(identity view.Identity) (driver.Verifier, error) {
