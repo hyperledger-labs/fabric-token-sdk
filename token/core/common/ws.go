@@ -26,7 +26,7 @@ var (
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
 	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
-	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
+	GetTokenOutputs(ids []*token.ID) ([][]byte, error)
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	PublicParams() ([]byte, error)

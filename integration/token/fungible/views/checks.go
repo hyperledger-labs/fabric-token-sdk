@@ -21,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 )
 
 type TokenTransactionDB interface {
@@ -180,22 +179,17 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	}
 	ledgerTokenContent, err := net.QueryTokens(context, tms.Namespace(), unspentTokenIDs)
 	if err != nil {
-		errorMessages = append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err))
-	} else {
-		assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
-		index := 0
-		assert.NoError(v.QueryEngine().GetTokenOutputs(unspentTokenIDs, func(id *token2.ID, tokenRaw []byte) error {
-			if !bytes.Equal(ledgerTokenContent[index], tokenRaw) {
-				errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]!=[%s]",
-					id,
-					index,
-					hash.Hashable(ledgerTokenContent[index]), hash.Hashable(tokenRaw)))
-			}
-			index++
-			return nil
-		}), "failed to match ledger token content with local")
+		return append(errorMessages, fmt.Sprintf("failed to query tokens: [%s]", err)), nil
 	}
-
+	assert.Equal(len(unspentTokenIDs), len(ledgerTokenContent))
+	outputs, err := v.QueryEngine().GetTokenOutputs(unspentTokenIDs)
+	assert.NoError(err, "failed to match ledger token content with local")
+	for i, tokenRaw := range outputs {
+		if !bytes.Equal(ledgerTokenContent[i], tokenRaw) {
+			errorMessages = append(errorMessages, fmt.Sprintf("token content does not match at [%s][%d], [%s]!=[%s]",
+				unspentTokenIDs[i], i, hash.Hashable(ledgerTokenContent[i]), hash.Hashable(tokenRaw)))
+		}
+	}
 	return errorMessages, nil
 }
 
@@ -277,18 +271,10 @@ func (c *CheckIfExistsInVaultView) Call(context view.Context) (interface{}, erro
 	assert.NotNil(net, "cannot find network [%s:%s]", c.TMSID.Network, c.TMSID.Channel)
 	vault, err := net.Vault(c.TMSID.Namespace)
 	assert.NoError(err, "failed to get vault for [%s:%s:%s]", c.TMSID.Network, c.TMSID.Channel, c.TMSID.Namespace)
-	qe := vault.QueryEngine()
-	var IDs []*token2.ID
-	count := 0
-	assert.NoError(qe.GetTokenOutputs(c.IDs, func(id *token2.ID, tokenRaw []byte) error {
-		if len(tokenRaw) == 0 {
-			return errors.Errorf("token id [%s] is nil", id)
-		}
-		IDs = append(IDs, id)
-		count++
-		return nil
-	}), "failed to match tokens")
-	assert.Equal(len(c.IDs), count, "got a mismatch; count is [%d] while there are [%d] ids", count, len(c.IDs))
+
+	IDs, err := vault.QueryEngine().GetTokenOutputs(c.IDs)
+	assert.NoError(err, "failed to match tokens")
+	assert.Equal(len(c.IDs), len(IDs), "got a mismatch; count is [%d] while there are [%d] ids", len(IDs), len(c.IDs))
 	return IDs, err
 }
 
