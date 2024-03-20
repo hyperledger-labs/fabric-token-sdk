@@ -19,8 +19,6 @@ import (
 
 type TokenVault interface {
 	IsPending(id *token.ID) (bool, error)
-	GetTokenInfoAndOutputs(ids []*token.ID, callback driver.QueryCallback2Func) error
-	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
 	UnspentTokensIteratorBy(id, tokenType string) (driver.UnspentTokensIterator, error)
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 }

@@ -41,7 +41,7 @@ type TMSProvider struct {
 	vault          Vault
 	callbackFunc   CallbackFunc
 
-	lock     sync.Mutex
+	lock     sync.RWMutex
 	services map[string]driver.TokenManagerService
 }
 
@@ -66,20 +66,30 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	if len(opts.Namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}
+
+	key := tmsKey(opts)
+	m.lock.RLock()
+	service, ok := m.services[key]
+	if ok {
+		m.lock.RUnlock()
+		return service, nil
+	}
+	m.lock.RUnlock()
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	key := tmsKey(opts)
-	var ok bool
 	service, ok = m.services[key]
-	if !ok {
-		logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
-		service, err = m.getTokenManagerService(opts)
-		if err != nil {
-			return nil, err
-		}
-		m.services[key] = service
+	if ok {
+		return service, nil
 	}
+
+	logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
+	service, err = m.getTokenManagerService(opts)
+	if err != nil {
+		return nil, err
+	}
+	m.services[key] = service
 	return service, nil
 }
 
@@ -129,8 +139,8 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 			if err := service.Done(); err != nil {
 				return errors.WithMessage(err, "failed to unload token service")
 			}
-			delete(m.services, key)
 		}
+		// register the new service
 		m.services[key] = newService
 	}
 	return
