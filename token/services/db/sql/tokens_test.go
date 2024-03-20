@@ -502,7 +502,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "tx101", Index: 0},
 		{TxId: "non existent", Index: 0},
 	}
-	infos, err = db.GetTokenInfos(ids)
+	_, err = db.GetTokenInfos(ids)
 	assert.Error(t, err)
 
 	ids = []*token.ID{
@@ -511,6 +511,7 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "tx101", Index: 0},
 	}
 	infos, err = db.GetTokenInfos(ids)
+	assert.NoError(t, err)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
