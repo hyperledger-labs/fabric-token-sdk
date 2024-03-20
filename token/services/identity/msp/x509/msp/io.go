@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package x509
+package msp
 
 import (
 	"crypto/x509"
@@ -92,17 +92,33 @@ func getPemMaterialFromDir(dir string) ([][]byte, error) {
 
 func loadCertificateAt(dir, certificatePath string, ouType string) []byte {
 	if certificatePath == "" {
-		logger.Debugf("Specific certificate for %s is not configured", ouType)
 		return nil
 	}
 
 	f := filepath.Join(dir, certificatePath)
 	raw, err := readFile(f)
 	if err != nil {
-		logger.Warnf("Failed loading %s certificate at [%s]: [%s]", ouType, f, err)
 	} else {
 		return raw
 	}
 
 	return nil
+}
+
+func PemDecodeCert(pemBytes []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil {
+		return nil, errors.New("bytes are not PEM encoded")
+	}
+
+	switch block.Type {
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, errors.WithMessage(err, "pem bytes are not cert encoded ")
+		}
+		return cert, nil
+	default:
+		return nil, errors.Errorf("bad type %s, expected 'CERTIFICATE", block.Type)
+	}
 }

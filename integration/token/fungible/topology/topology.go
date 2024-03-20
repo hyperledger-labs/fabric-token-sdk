@@ -71,7 +71,7 @@ func Topology(opts Opts) []api.Topology {
 	issuer.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	issuer.RegisterViewFactory("RegisterIssuerWallet", &views.RegisterIssuerWalletViewFactory{})
+	issuer.RegisterViewFactory("RegisterIssuerIdentity", &views.RegisterIssuerIdentityViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
@@ -255,7 +255,7 @@ func Topology(opts Opts) []api.Topology {
 	charlie.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	charlie.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	charlie.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
-	charlie.RegisterViewFactory("RegisterOwnerWallet", &views.RegisterOwnerWalletViewFactory{})
+	charlie.RegisterViewFactory("RegisterOwnerIdentity", &views.RegisterOwnerIdentityViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),

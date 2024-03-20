@@ -128,6 +128,10 @@ func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, id
 	return pp, nil
 }
 
+func (pp *PublicParams) IdemixIssuerPublicKey() []byte {
+	return pp.IdemixIssuerPK
+}
+
 func (pp *PublicParams) IdemixCurve() mathlib.CurveID {
 	return pp.IdemixCurveID
 }

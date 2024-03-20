@@ -22,11 +22,9 @@ type Role interface {
 	// GetIdentityInfo returns the long-term identity info associated to the passed id
 	GetIdentityInfo(id string) (driver.IdentityInfo, error)
 	// RegisterIdentity registers the given identity
-	RegisterIdentity(id string, path string) error
+	RegisterIdentity(config driver.IdentityConfiguration) error
 	// IdentityIDs returns the identifiers contained in this role
 	IdentityIDs() ([]string, error)
-	// Reload the roles with the respect to the passed public parameters
-	Reload(pp driver.PublicParameters) error
 }
 
 // Roles is a map of Role, one for each identity role
@@ -40,17 +38,4 @@ func NewRoles() Roles {
 // Register associates an instance of Role to a given identifier
 func (m Roles) Register(usage driver.IdentityRole, role Role) {
 	m[usage] = role
-}
-
-func (m Roles) Reload(pp driver.PublicParameters) error {
-	logger.Debugf("reload roles...")
-	for roleID, role := range m {
-		logger.Debugf("reload role [%d]...", roleID)
-		if err := role.Reload(pp); err != nil {
-			return err
-		}
-		logger.Debugf("reload role [%d]...done", roleID)
-	}
-	logger.Debugf("reload roles...done")
-	return nil
 }

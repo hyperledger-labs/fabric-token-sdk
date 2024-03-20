@@ -21,7 +21,7 @@ type localMembership interface {
 	GetIdentityInfo(label string, auditInfo []byte) (driver.IdentityInfo, error)
 	GetIdentifier(id view.Identity) (string, error)
 	GetDefaultIdentifier() string
-	RegisterIdentity(id string, path string) error
+	RegisterIdentity(config driver.IdentityConfiguration) error
 	IDs() ([]string, error)
 }
 
@@ -184,16 +184,15 @@ func (r *Role) mapIdentityToID(v view.Identity) (view.Identity, string, error) {
 }
 
 // RegisterIdentity registers the given identity
-func (r *Role) RegisterIdentity(id string, path string) error {
-	logger.Debugf("register x509 identity [%s:%s]", id, path)
-	return r.localMembership.RegisterIdentity(id, path)
+func (r *Role) RegisterIdentity(config driver.IdentityConfiguration) error {
+	return r.localMembership.RegisterIdentity(config)
 }
 
 func (r *Role) IdentityIDs() ([]string, error) {
 	return r.localMembership.IDs()
 }
 
-func (r *Role) Reload(pp driver.PublicParameters) error {
+func (r *Role) Load(pp driver.PublicParameters) error {
 	logger.Debugf("reload x509 wallets...")
 	// nothing to do here
 	return nil

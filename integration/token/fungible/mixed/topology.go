@@ -50,7 +50,7 @@ func Topology() []api.Topology {
 	issuer.RegisterViewFactory("transactionInfo", &views.TransactionInfoViewFactory{})
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
-	issuer.RegisterViewFactory("RegisterIssuerWallet", &views.RegisterIssuerWalletViewFactory{})
+	issuer.RegisterViewFactory("RegisterIssuerIdentity", &views.RegisterIssuerIdentityViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})

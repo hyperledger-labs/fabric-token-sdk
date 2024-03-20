@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
@@ -19,8 +19,11 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -79,7 +82,7 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 	// load identities from configuration
 	for _, identityConfig := range identities {
 		logger.Debugf("Load x509 Wallet: [%v]", identityConfig)
-		if err := lm.registerIdentity(identityConfig, identityConfig.Default); err != nil {
+		if err := lm.registerIdentity(nil, identityConfig, identityConfig.Default); err != nil {
 			return errors.WithMessage(err, "failed to load identity")
 		}
 	}
@@ -158,11 +161,26 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 	), nil
 }
 
-func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	return lm.registerIdentity(&config.Identity{
-		ID:   id,
-		Path: path,
-	}, lm.GetDefaultIdentifier() == "")
+func (lm *LocalMembership) RegisterIdentity(idConfig driver.IdentityConfiguration) error {
+	identityConfig := &config.Identity{
+		ID:   idConfig.ID,
+		Path: idConfig.URL,
+	}
+	if len(idConfig.Config) != 0 {
+		// load opts as yaml
+		if err := yaml.Unmarshal(idConfig.Config, &identityConfig.Opts); err != nil {
+			return errors.Wrapf(err, "failed to load options for [%s]", idConfig.ID)
+		}
+	}
+	var mspConfig *m.MSPConfig
+	if len(idConfig.Raw) != 0 {
+		// load raw as mspConfig
+		mspConfig = &m.MSPConfig{}
+		if err := proto.Unmarshal(idConfig.Raw, mspConfig); err != nil {
+			return errors.Wrapf(err, "failed to load msp config [%s]", idConfig.ID)
+		}
+	}
+	return lm.registerIdentity(mspConfig, identityConfig, lm.GetDefaultIdentifier() == "")
 }
 
 func (lm *LocalMembership) IDs() ([]string, error) {
@@ -173,10 +191,10 @@ func (lm *LocalMembership) IDs() ([]string, error) {
 	return ids, nil
 }
 
-func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool) error {
+func (lm *LocalMembership) registerIdentity(conf *m.MSPConfig, c *config.Identity, setDefault bool) error {
 	// Try to register the MSP provider
 	translatedPath := lm.config.TranslatePath(c.Path)
-	if err := lm.registerProvider(c, translatedPath, setDefault); err != nil {
+	if err := lm.registerProvider(conf, c, translatedPath, setDefault); err != nil {
 		// Does path correspond to a holder containing multiple MSP identities?
 		if err := lm.registerProviders(c, translatedPath); err != nil {
 			return errors.WithMessage(err, "failed to register MSP provider")
@@ -185,71 +203,50 @@ func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool)
 	return nil
 }
 
-func (lm *LocalMembership) registerProvider(identityConfig *config.Identity, translatedPath string, setDefault bool) error {
-	// Try without "msp"
-	opts, err := ToBCCSPOpts(identityConfig.Opts)
+func (lm *LocalMembership) registerProvider(conf *m.MSPConfig, identityConfig *config.Identity, translatedPath string, setDefault bool) error {
+	opts, err := msp.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return errors.WithMessage(err, "failed to extract BCCSP options")
 	}
 	if opts == nil {
-		logger.Debugf("no BCCSP options set for [%s]: [%v]", identityConfig.ID, identityConfig.Opts)
+		logger.Debugf("no BCCSP options set for [%s], opts [%v]", identityConfig.ID, identityConfig.Opts)
 	} else {
 		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", identityConfig.ID, opts, opts.PKCS11, opts.SW)
 	}
 
-	keyStorePath := ""
-	if lm.ignoreVerifyOnlyWallet {
-		// check if there is the folder keystoreFull, if yes then use it
-		path := filepath.Join(translatedPath, KeystoreFullFolder)
-		_, err := os.Stat(path)
-		if err == nil {
-			keyStorePath = path
-		} else {
-			path := filepath.Join(translatedPath, "msp", KeystoreFullFolder)
-			_, err := os.Stat(path)
-			if err == nil {
-				keyStorePath = path
-			}
-		}
-	}
-
+	keyStorePath := lm.keyStorePath(translatedPath)
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
-	provider, err := NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
+	// Try without "msp"
+	provider, conf, err := NewProviderFromConf(conf, translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
 	if err != nil {
-		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
+		logger.Debugf("failed loading provider at [%s]: [%s]", translatedPath, err)
 		// Try with "msp"
-		provider, err = NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
+		provider, conf, err = NewProviderFromConf(conf, filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
 		if err != nil {
-			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
-				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,
-			)
+			logger.Debugf("failed loading provider at [%s]: [%s]", filepath.Join(translatedPath, "msp"), err)
 			return err
 		}
 	}
 
-	walletId, _, err := provider.Identity(nil)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", identityConfig.ID, translatedPath)
-	}
-
-	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", identityConfig.ID, provider.EnrollmentID(), walletId.String())
-
-	lm.deserializerManager.AddDeserializer(provider)
-	if err := lm.addResolver(identityConfig.ID, provider.EnrollmentID(), setDefault, provider.IsRemote(), provider.Identity); err != nil {
+	if err := lm.addResolver(identityConfig, provider, setDefault); err != nil {
 		return err
 	}
 
 	if exists, _ := lm.identityDB.ConfigurationExists(identityConfig.ID, IdentityConfigurationType); !exists {
-		identityConfigRaw, err := json.Marshal(identityConfig)
+		optsRaw, err := yaml.Marshal(identityConfig.Opts)
 		if err != nil {
 			return errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
+		}
+		confRaw, err := proto.Marshal(conf)
+		if err != nil {
+			return errors.Wrapf(err, "failed to marshal msp config [%v]", identityConfig)
 		}
 		if err := lm.identityDB.AddConfiguration(driver2.IdentityConfiguration{
 			ID:     identityConfig.ID,
 			Type:   IdentityConfigurationType,
 			URL:    identityConfig.Path,
-			Config: identityConfigRaw,
-			Raw:    nil,
+			Config: optsRaw,
+			Raw:    confRaw,
 		}); err != nil {
 			return err
 		}
@@ -269,47 +266,49 @@ func (lm *LocalMembership) registerProviders(c *config.Identity, translatedPath 
 			continue
 		}
 		id := entry.Name()
-		if err := lm.registerProvider(c, filepath.Join(translatedPath, id), false); err != nil {
+		if err := lm.registerProvider(nil, c, filepath.Join(translatedPath, id), false); err != nil {
 			logger.Errorf("failed registering msp provider [%s]: [%s]", id, err)
 		}
 	}
 	return nil
 }
 
-func (lm *LocalMembership) addResolver(id string, eID string, defaultID bool, remote bool, IdentityGetter common.GetIdentityFunc) error {
-	logger.Debugf("Adding resolver [%s:%s]", id, eID)
+func (lm *LocalMembership) addResolver(identityConfig *config.Identity, provider *Provider, defaultID bool) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
 
+	eID := provider.EnrollmentID()
+	walletId, _, err := provider.Identity(nil)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get wallet identity from [%s]", identityConfig.ID)
+	}
+	logger.Debugf("adding x509 wallet resolver [%s:%s:%s]", identityConfig.ID, eID, walletId)
+
+	// deserializer
+	lm.deserializerManager.AddDeserializer(provider)
+
+	// bind
 	if lm.binderService != nil {
-		id, _, err := IdentityGetter(nil)
-		if err != nil {
-			return errors.WithMessagef(err, "cannot get identity for [%s,%s]", id, eID)
-		}
-		if err := lm.binderService.Bind(lm.defaultNetworkIdentity, id); err != nil {
-			return errors.WithMessagef(err, "cannot bing identity for [%s,%s]", id, eID)
+		if err := lm.binderService.Bind(lm.defaultNetworkIdentity, walletId); err != nil {
+			return errors.WithMessagef(err, "cannot bing identity for [%s,%s]", walletId, eID)
 		}
 	}
 
 	resolver := &common.Resolver{
-		Name:         id,
+		Name:         identityConfig.ID,
 		Default:      defaultID,
 		EnrollmentID: eID,
-		GetIdentity:  IdentityGetter,
-		Remote:       remote,
+		GetIdentity:  provider.Identity,
+		Remote:       provider.IsRemote(),
 	}
-	identity, _, err := IdentityGetter(nil)
-	if err != nil {
-		return errors.WithMessagef(err, "cannot get identity for [%s,%s]", id, eID)
-	}
-	lm.bccspResolversByIdentity[identity.String()] = resolver
-	lm.resolversByName[id] = resolver
+	lm.bccspResolversByIdentity[walletId.String()] = resolver
+	lm.resolversByName[identityConfig.ID] = resolver
 	if len(eID) != 0 {
 		lm.resolversByEnrollmentID[eID] = resolver
 	}
 	lm.resolvers = append(lm.resolvers, resolver)
 
-	logger.Debugf("Adding resolver [%s:%s] done", id, eID)
+	logger.Debugf("adding x509 wallet resolver [%s:%s:%s] done", identityConfig.ID, eID, walletId)
 	return nil
 }
 
@@ -333,6 +332,24 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 	return nil
 }
 
+func (lm *LocalMembership) keyStorePath(translatedPath string) (keyStorePath string) {
+	if lm.ignoreVerifyOnlyWallet {
+		// check if there is the folder keystoreFull, if yes then use it
+		path := filepath.Join(translatedPath, KeystoreFullFolder)
+		_, err := os.Stat(path)
+		if err == nil {
+			keyStorePath = path
+		} else {
+			path := filepath.Join(translatedPath, "msp", KeystoreFullFolder)
+			_, err := os.Stat(path)
+			if err == nil {
+				keyStorePath = path
+			}
+		}
+	}
+	return
+}
+
 func (lm *LocalMembership) loadFromStorage() error {
 	it, err := lm.identityDB.IteratorConfigurations(IdentityConfigurationType)
 	if err != nil {
@@ -348,22 +365,12 @@ func (lm *LocalMembership) loadFromStorage() error {
 		if lm.getResolver(id) != nil {
 			continue
 		}
-		identityConfig := &config.Identity{
-			ID:   id,
-			Path: entry.URL,
-			Type: IdentityConfigurationType,
-		}
-		if len(entry.Config) != 0 {
-			if err := json.Unmarshal([]byte(entry.Config), identityConfig); err != nil {
-				logger.Errorf("failed to load configuration for entry [%s]", entry.ID)
-				continue
-			}
-			if identityConfig.ID != id || identityConfig.Path != entry.URL || identityConfig.Type != IdentityConfigurationType {
-				logger.Errorf("invalid configuration for entry [%s], it does not match the expected values [%v][%v]", entry.ID, entry, identityConfig)
-				continue
-			}
-		}
-		if err := lm.registerIdentity(identityConfig, lm.GetDefaultIdentifier() == ""); err != nil {
+		if err := lm.RegisterIdentity(driver.IdentityConfiguration{
+			ID:     id,
+			URL:    entry.URL,
+			Config: entry.Config,
+			Raw:    entry.Raw,
+		}); err != nil {
 			return err
 		}
 	}

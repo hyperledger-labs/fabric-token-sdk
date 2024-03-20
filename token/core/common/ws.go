@@ -34,7 +34,7 @@ type TokenVault interface {
 
 type WalletRegistry interface {
 	WalletIDs() ([]string, error)
-	RegisterIdentity(id string, path string) error
+	RegisterIdentity(config driver.IdentityConfiguration) error
 	Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
 	BindIdentity(identity view.Identity, eID string, wID string, meta any) error
@@ -84,12 +84,12 @@ func NewWalletService(
 	}
 }
 
-func (s *WalletService) RegisterOwnerWallet(id string, path string) error {
-	return s.Registries[driver.OwnerRole].Registry.RegisterIdentity(id, path)
+func (s *WalletService) RegisterOwnerIdentity(config driver.IdentityConfiguration) error {
+	return s.Registries[driver.OwnerRole].Registry.RegisterIdentity(config)
 }
 
-func (s *WalletService) RegisterIssuerWallet(id string, path string) error {
-	return s.Registries[driver.IssuerRole].Registry.RegisterIdentity(id, path)
+func (s *WalletService) RegisterIssuerIdentity(config driver.IdentityConfiguration) error {
+	return s.Registries[driver.IssuerRole].Registry.RegisterIdentity(config)
 }
 
 func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {

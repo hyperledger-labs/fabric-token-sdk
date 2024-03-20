@@ -26,6 +26,7 @@ import (
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
@@ -41,7 +42,7 @@ var logger = flogging.MustGetLogger("token-sdk.integration.token")
 type PF interface {
 	GetTopology() *Topology
 	GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, walletID string) string
-	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string
+	GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) token.IdentityConfiguration
 	DeleteDBs(tms *topology2.TMS, id string)
 }
 
@@ -50,7 +51,7 @@ type NetworkHandler interface {
 	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
-	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string
+	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) token.IdentityConfiguration
 	UpdatePublicParams(tms *topology2.TMS, ppRaw []byte)
 	DeleteDBs(node *sfcnode.Node)
 	Cleanup()
@@ -224,7 +225,7 @@ func (p *Platform) GenIssuerCryptoMaterial(tmsNetwork string, fscNode string, wa
 	return nh.GenIssuerCryptoMaterial(targetTMS, fscNode, walletID)
 }
 
-func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) string {
+func (p *Platform) GenOwnerCryptoMaterial(tmsNetwork string, fscNode string, walletID string, useCAIfAvailable bool) token.IdentityConfiguration {
 	var targetTMS *topology2.TMS
 	for _, tms := range p.Topology.TMSs {
 		if tms.Network == tmsNetwork {

@@ -4,18 +4,21 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package x509
+package msp
 
 import (
 	"os"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/bccsp"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.x509")
 
 // ProviderType indicates the type of identity provider
 type ProviderType int
@@ -244,4 +247,18 @@ func GetMspConfig(dir string, ID string, signingIdentityInfo *msp.SigningIdentit
 	}
 
 	return &msp.MSPConfig{Config: fmpsjs, Type: int32(FABRIC)}, nil
+}
+
+func RemoveSigningIdentityInfo(c *msp.MSPConfig) (*msp.MSPConfig, error) {
+	fabricMSPConfig := &msp.FabricMSPConfig{}
+	if err := proto.Unmarshal(c.Config, fabricMSPConfig); err != nil {
+		return nil, err
+	}
+	fabricMSPConfig.SigningIdentity = nil
+
+	raw, err := proto.Marshal(fabricMSPConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &msp.MSPConfig{Config: raw, Type: int32(FABRIC)}, nil
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/gexec"
 )
@@ -274,7 +275,7 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 	return ""
 }
 
-func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string {
+func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) (res token.IdentityConfiguration) {
 	if useCAIfAvailable {
 		// check if the ca is available
 		ca := p.GetEntry(tms).CA
@@ -282,9 +283,9 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 			// Use the ca
 			// return the path where the credential is stored
 			logger.Infof("generate owner crypto material using ca")
-			output, err := ca.Gen(walletID)
+			ic, err := ca.Gen(walletID)
 			Expect(err).ToNot(HaveOccurred(), "failed to generate owner crypto material using ca [%s]", tms.ID())
-			return output
+			return ic
 		}
 		// continue without the ca
 	}
@@ -296,11 +297,14 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 	for _, node := range fscTopology.Nodes {
 		if node.ID() == nodeID {
 			ids := cmGenerator.GenerateOwnerIdentities(tms, node, walletID)
-			return ids[0].Path
+			res.ID = ids[0].ID
+			res.URL = ids[0].Path
+			res.Raw = ids[0].Raw
+			return
 		}
 	}
 	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
-	return ""
+	return
 }
 
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {

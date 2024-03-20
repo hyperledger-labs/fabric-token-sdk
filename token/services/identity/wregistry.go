@@ -38,9 +38,9 @@ func NewWalletRegistry(role Role, storage db.WalletDB) *WalletRegistry {
 	}
 }
 
-func (r *WalletRegistry) RegisterIdentity(id string, path string) error {
-	logger.Debugf("register identity [%s:%s]", id, path)
-	return r.Role.RegisterIdentity(id, path)
+func (r *WalletRegistry) RegisterIdentity(config driver.IdentityConfiguration) error {
+	logger.Debugf("register identity [%s:%s]", config.ID, config.URL)
+	return r.Role.RegisterIdentity(config)
 }
 
 // Lookup searches the wallet corresponding to the passed id.

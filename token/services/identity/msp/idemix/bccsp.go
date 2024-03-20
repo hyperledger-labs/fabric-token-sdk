@@ -7,34 +7,82 @@ SPDX-License-Identifier: Apache-2.0
 package idemix
 
 import (
-	idemix2 "github.com/IBM/idemix/bccsp"
+	idemix "github.com/IBM/idemix/bccsp"
 	"github.com/IBM/idemix/bccsp/keystore"
+	idemix3 "github.com/IBM/idemix/bccsp/schemes/dlog/crypto"
+	"github.com/IBM/idemix/bccsp/schemes/dlog/crypto/translator/amcl"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/pkg/errors"
 )
 
-// NewKVSBCCSP returns a new BCCSP for the passed curve, if the curve is BLS12_381_BBS, it returns the BCCSP implementation
-// based on aries.
-func NewKVSBCCSP(kvsStore keystore.KVS, curveID math.CurveID) (bccsp.BCCSP, error) {
-	if curveID == math.BLS12_381_BBS {
-		logger.Debugf("new aries KVS-based BCCSP")
-		return NewKSVBCCSP(kvsStore, curveID, true)
-	}
-	logger.Debugf("new dlog KVS-based BCCSP")
-	return NewKSVBCCSP(kvsStore, curveID, false)
-}
-
-// NewAriesBCCSP returns an instance of the idemix BCCSP for the given curve based on aries
-func NewAriesBCCSP() (bccsp.BCCSP, error) {
-	logger.Infof("new aries no-KeyStore BCCSP")
-	curve, tr, err := GetCurveAndTranslator(math.BLS12_381_BBS)
+func NewKeyStore(curveID math.CurveID, backend keystore.KVS) (bccsp.KeyStore, error) {
+	curve, tr, err := GetCurveAndTranslator(curveID)
 	if err != nil {
 		return nil, err
 	}
-	cryptoProvider, err := idemix2.NewAries(&keystore.Dummy{}, curve, tr, true)
+	keyStore := &keystore.KVSStore{
+		Curve:      curve,
+		KVS:        backend,
+		Translator: tr,
+	}
+	return keyStore, nil
+}
+
+// NewBCCSP returns an instance of the idemix BCCSP for the given curve and kvsStore
+func NewBCCSP(keyStore bccsp.KeyStore, curveID math.CurveID, aries bool) (bccsp.BCCSP, error) {
+	curve, tr, err := GetCurveAndTranslator(curveID)
+	if err != nil {
+		return nil, err
+	}
+
+	var cryptoProvider bccsp.BCCSP
+	if aries {
+		cryptoProvider, err = idemix.NewAries(keyStore, curve, tr, true)
+	} else {
+		cryptoProvider, err = idemix.New(keyStore, curve, tr, true)
+	}
+	if err != nil {
+		return nil, errors.Wrap(err, "failed getting crypto provider")
+	}
+
+	return cryptoProvider, nil
+}
+
+// NewBCCSPWithDummyKeyStore returns an instance of the idemix BCCSP for the given curve
+func NewBCCSPWithDummyKeyStore(curveID math.CurveID, aries bool) (bccsp.BCCSP, error) {
+	curve, tr, err := GetCurveAndTranslator(curveID)
+	if err != nil {
+		return nil, err
+	}
+	var cryptoProvider bccsp.BCCSP
+	if aries {
+		cryptoProvider, err = idemix.NewAries(&keystore.Dummy{}, curve, tr, true)
+	} else {
+		cryptoProvider, err = idemix.New(&keystore.Dummy{}, curve, tr, true)
+	}
 	if err != nil {
 		return nil, errors.Wrap(err, "failed getting crypto provider")
 	}
 	return cryptoProvider, nil
+}
+
+func GetCurveAndTranslator(curveID math.CurveID) (*math.Curve, idemix3.Translator, error) {
+	curve := math.Curves[curveID]
+	var tr idemix3.Translator
+	switch curveID {
+	case math.BN254:
+		tr = &amcl.Gurvy{C: curve}
+	case math.BLS12_377_GURVY:
+		tr = &amcl.Gurvy{C: curve}
+	case math.FP256BN_AMCL:
+		tr = &amcl.Fp256bn{C: curve}
+	case math.FP256BN_AMCL_MIRACL:
+		tr = &amcl.Fp256bnMiracl{C: curve}
+	case math.BLS12_381_BBS:
+		tr = &amcl.Gurvy{C: curve}
+	default:
+		return nil, nil, errors.Errorf("unsupported curve ID: %d", curveID)
+	}
+	return curve, tr, nil
 }
