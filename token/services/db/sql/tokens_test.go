@@ -503,20 +503,26 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "non existent", Index: 0},
 	}
 	infos, err = db.GetTokenInfos(ids)
-	assert.NoError(t, err)
+	assert.Error(t, err)
+
+	ids = []*token.ID{
+		{TxId: "tx102", Index: 1},
+		{TxId: "tx102", Index: 0},
+		{TxId: "tx101", Index: 0},
+	}
+	infos, err = db.GetTokenInfos(ids)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
-	assert.Equal(t, "", string(infos[3]))
 
 	// infos and outputs
 	keys, toks, infos, err := db.GetTokenInfoAndOutputs(ids)
 	assert.NoError(t, err)
-	assert.Len(t, infos, 4)
+	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
-	assert.Len(t, toks, 4)
+	assert.Len(t, toks, 3)
 	assert.Equal(t, "tx102l", string(toks[0]))
 	assert.Equal(t, "tx102l", string(toks[1]))
 	assert.Equal(t, "tx101l", string(toks[2]))
@@ -651,7 +657,7 @@ func TCertification(t *testing.T, db *TokenDB) {
 	assert.False(t, db.ExistsCertification(tokenID))
 
 	certifications, err := db.GetCertifications([]*token2.ID{tokenID})
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.Empty(t, certifications)
 
 	// store an empty certification and check that an error is returned
@@ -659,6 +665,6 @@ func TCertification(t *testing.T, db *TokenDB) {
 		tokenID: {},
 	}))
 	certifications, err = db.GetCertifications([]*token2.ID{tokenID})
-	assert.NoError(t, err)
+	assert.Error(t, err)
 	assert.Empty(t, certifications)
 }
