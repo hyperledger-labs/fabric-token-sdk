@@ -7,40 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"bytes"
-	"encoding/json"
-	"sync"
-
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
 
-// VerifierDES deserializes verifiers
-// A verifier checks the validity of a signature against the identity
-// associated with the verifier
-type VerifierDES interface {
-	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
-}
-
-// AuditDES deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
-type AuditDES interface {
-	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
-}
-
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
 type Deserializer struct {
-	auditorDeserializer VerifierDES
-	ownerDeserializer   VerifierDES
-	issuerDeserializer  VerifierDES
-	auditDeserializer   AuditDES
+	*common.Deserializer
 }
 
 // NewDeserializer returns a deserializer
@@ -52,174 +30,45 @@ func NewDeserializer(pp *crypto.PublicParams) (*Deserializer, error) {
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed getting idemix deserializer for passed public params [%d]", pp.IdemixCurveID)
 	}
-
 	return &Deserializer{
-		auditorDeserializer: &x509.MSPIdentityDeserializer{},
-		issuerDeserializer:  &x509.MSPIdentityDeserializer{},
-		ownerDeserializer:   htlc.NewDeserializer(identity.NewTypedIdentityDeserializer(idemixDes)),
-		auditDeserializer:   idemixDes,
+		Deserializer: common.NewDeserializer(
+			msp.IdemixIdentity,
+			&x509.MSPIdentityDeserializer{},
+			idemixDes,
+			&x509.MSPIdentityDeserializer{},
+			idemixDes,
+		),
 	}, nil
 }
 
-// GetOwnerVerifier deserializes the verifier for the passed owner identity
-func (d *Deserializer) GetOwnerVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.ownerDeserializer.DeserializeVerifier(id)
-}
+type TokenDeserializer struct{}
 
-// GetIssuerVerifier deserializes the verifier for the passed issuer identity
-func (d *Deserializer) GetIssuerVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.issuerDeserializer.DeserializeVerifier(id)
-}
-
-// GetAuditorVerifier deserializes the verifier for the passed auditor identity
-func (d *Deserializer) GetAuditorVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.auditorDeserializer.DeserializeVerifier(id)
-}
-
-// GetOwnerMatcher returns a matcher that allows auditors to match an identity to an enrollment ID
-func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.auditDeserializer.GetOwnerMatcher(raw)
-}
-
-func (d *Deserializer) Recipients(raw []byte) ([]view.Identity, error) {
-	owner, err := identity.UnmarshalTypedIdentity(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
-	}
-	if owner.Type == msp.IdemixIdentity {
-		return []view.Identity{raw}, nil
-	}
-	_, recipient, err := htlc.GetScriptSenderAndRecipient(owner)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed getting script sender and recipient")
-	}
-	return []view.Identity{recipient}, nil
-}
-
-func (d *Deserializer) Match(id view.Identity, ai []byte) error {
-	matcher, err := d.GetOwnerMatcher(ai)
-	if err != nil {
-		return errors.Wrapf(err, "failed getting audit info matcher for [%s]", id)
-	}
-
-	// match identity and audit info
-	recipient, err := identity.UnmarshalTypedIdentity(id)
-	if err != nil {
-		return errors.Wrapf(err, "failed to unmarshal identity [%s]", id)
-	}
-	if recipient.Type != msp.IdemixIdentity {
-		return errors.Errorf("expected serialized identity type, got [%s]", recipient.Type)
-	}
-	err = matcher.Match(recipient.Identity)
-	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", id, hash.Hashable(ai))
-	}
-	return nil
-}
-
-func (d *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	auditInfo, err := htlc.GetOwnerAuditInfo(raw, p)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
-	}
-	return [][]byte{auditInfo}, nil
-}
-
-// DeserializerProvider provides the deserializer matching zkatdlog public parameters
-type DeserializerProvider struct {
-	oldHash []byte
-	ppm     driver.PublicParamsManager
-	des     *Deserializer
-	mux     sync.Mutex
-}
-
-// NewDeserializerProvider returns a DeserializerProvider
-func NewDeserializerProvider(ppm driver.PublicParamsManager) *DeserializerProvider {
-	return &DeserializerProvider{
-		ppm: ppm,
-	}
-}
-
-// Deserialize returns the deserializer matching the passed public parameters
-func (d *DeserializerProvider) Deserialize() (driver.Deserializer, error) {
-	d.mux.Lock()
-	defer d.mux.Unlock()
-
-	p := d.ppm.PublicParameters()
-	params := p.(*crypto.PublicParams)
-	newHash, err := params.ComputeHash()
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to compute the hash of the public params")
-	}
-	//logger.Debugf("Deserialize: [%s][%s]", base64.StdEncoding.EncodeToString(newHash), base64.StdEncoding.EncodeToString(d.oldHash))
-	if bytes.Equal(d.oldHash, newHash) {
-		return d.des, nil
-	}
-
-	des, err := NewDeserializer(params)
-	if err != nil {
+func (d *TokenDeserializer) DeserializeMetadata(raw []byte) (*token.Metadata, error) {
+	metadata := &token.Metadata{}
+	if err := metadata.Deserialize(raw); err != nil {
 		return nil, err
 	}
-	d.des = des
-	d.oldHash = newHash
-	return des, nil
+	return metadata, nil
 }
 
-// EnrollmentService returns enrollment IDs behind the owners of token
-type EnrollmentService struct{}
-
-// NewEnrollmentIDDeserializer returns an enrollmentService
-func NewEnrollmentIDDeserializer() *EnrollmentService {
-	return &EnrollmentService{}
+func (d *TokenDeserializer) DeserializeToken(raw []byte) (*token.Token, error) {
+	token := &token.Token{}
+	if err := token.Deserialize(raw); err != nil {
+		return nil, err
+	}
+	return token, nil
 }
 
-// GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
-func (e *EnrollmentService) GetEnrollmentID(auditInfo []byte) (string, error) {
-	ai, err := e.getAuditInfo(auditInfo)
-	if err != nil {
-		return "", err
-	}
-	if ai == nil {
-		return "", nil
-	}
-	return ai.EnrollmentID(), nil
+type PublicParamsDeserializer struct{}
+
+func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label string) (*crypto.PublicParams, error) {
+	return crypto.NewPublicParamsFromBytes(raw, label)
 }
 
-// GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
-func (e *EnrollmentService) GetRevocationHandler(auditInfo []byte) (string, error) {
-	ai, err := e.getAuditInfo(auditInfo)
-	if err != nil {
-		return "", err
-	}
-	if ai == nil {
-		return "", nil
-	}
-	return ai.RevocationHandle(), nil
-}
+// EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
+type EIDRHDeserializer = common.EIDRHDeserializer[*idemix.AuditInfo]
 
-func (e *EnrollmentService) getAuditInfo(auditInfo []byte) (*idemix.AuditInfo, error) {
-	if len(auditInfo) == 0 {
-		return nil, nil
-	}
-
-	// Try to unmarshal it as ScriptInfo
-	si := &htlc.ScriptInfo{}
-	err := json.Unmarshal(auditInfo, si)
-	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
-		if len(si.Recipient) != 0 {
-			ai := &idemix.AuditInfo{}
-			if err := ai.FromBytes(si.Recipient); err != nil {
-				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
-			}
-			return ai, nil
-		}
-
-		return nil, nil
-	}
-
-	ai := &idemix.AuditInfo{}
-	if err := ai.FromBytes(auditInfo); err != nil {
-		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
-	}
-	return ai, nil
+// NewEIDRHDeserializer returns an enrollmentService
+func NewEIDRHDeserializer() *EIDRHDeserializer {
+	return common.NewEIDRHDeserializer[*idemix.AuditInfo](&idemix.Idemix{})
 }

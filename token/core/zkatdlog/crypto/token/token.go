@@ -24,6 +24,10 @@ type Token struct {
 	Data *math.G1
 }
 
+func (t *Token) GetOwner() []byte {
+	return t.Owner
+}
+
 // IsRedeem returns true if the token has an empty owner field
 func (t *Token) IsRedeem() bool {
 	return len(t.Owner) == 0

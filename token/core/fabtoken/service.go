@@ -10,72 +10,46 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type QueryEngine interface {
-	IsMine(id *token2.ID) (bool, error)
-	// UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
-	// The token type can be empty. In that case, tokens of any type are returned.
-	UnspentTokensIteratorBy(id, typ string) (driver.UnspentTokensIterator, error)
-	ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error)
-	ListHistoryIssuedTokens() (*token2.IssuedTokens, error)
-	PublicParams() ([]byte, error)
-}
-
 type TokenLoader interface {
-	GetTokens(ids []*token2.ID) ([]string, []*token2.Token, error)
-}
-
-type PublicParametersManager interface {
-	driver.PublicParamsManager
-	PublicParams() *PublicParams
+	GetTokens(ids []*token.ID) ([]string, []*token.Token, error)
 }
 
 type Service struct {
-	*common.WalletService
-	PPM         PublicParametersManager
+	*common.Service[*PublicParams]
 	TokenLoader TokenLoader
-	QE          QueryEngine
-	CM          config.Manager
-
-	IP           driver.IdentityProvider
-	Deserializer driver.Deserializer
 }
 
-func NewService(ws *common.WalletService, ppm PublicParametersManager, tokenLoader TokenLoader, qe QueryEngine, identityProvider driver.IdentityProvider, deserializer driver.Deserializer, cm config.Manager) *Service {
-	s := &Service{
-		WalletService: ws,
-		TokenLoader:   tokenLoader,
-		QE:            qe,
-		PPM:           ppm,
-		IP:            identityProvider,
-		Deserializer:  deserializer,
-		CM:            cm,
+func NewService(
+	ws *common.WalletService,
+	ppm common.PublicParametersManager[*PublicParams],
+	tokenLoader TokenLoader,
+	identityProvider driver.IdentityProvider,
+	deserializer driver.Deserializer,
+	configManager config.Manager,
+) (*Service, error) {
+	root, err := common.NewTokenService[*PublicParams](
+		logger,
+		ws,
+		ppm,
+		identityProvider,
+		deserializer,
+		configManager,
+		nil,
+	)
+	if err != nil {
+		return nil, err
 	}
-	return s
-}
 
-func (s *Service) IdentityProvider() driver.IdentityProvider {
-	return s.IP
+	s := &Service{
+		Service:     root,
+		TokenLoader: tokenLoader,
+	}
+	return s, nil
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return NewValidator(s.PPM.PublicParams(), s.Deserializer)
-}
-
-func (s *Service) PublicParamsManager() driver.PublicParamsManager {
-	return s.PPM
-}
-
-func (s *Service) ConfigManager() config.Manager {
-	return s.CM
-}
-
-func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
-	}
-	return newReq.Bytes()
+	return NewValidator(s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
 }

@@ -113,34 +113,38 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEnrollmentIDDeserializer(), deserializerManager)
-	publicParamsManager := fabtoken.NewPublicParamsManager(
+	ip := identity.NewProvider(sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
+	publicParamsManager, err := common.NewPublicParamsManager[*fabtoken.PublicParams](
+		&PublicParamsDeserializer{},
 		fabtoken.PublicParameters,
-		qe,
+		publicParams,
 	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
+	}
 	deserializer := NewDeserializer()
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		func() (driver.Deserializer, error) {
-			return deserializer, nil
-		},
+		deserializer,
 		fabtoken.NewWalletFactory(ip, qe),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 		nil,
 	)
-	service := fabtoken.NewService(
+	service, err := fabtoken.NewService(
 		ws,
 		publicParamsManager,
-		&fabtoken.VaultTokenLoader{TokenVault: qe},
-		qe,
+		common.NewVaultTokenLoader(qe),
 		ip,
 		NewDeserializer(),
 		tmsConfig,
 	)
-	if err := service.PPM.SetPublicParameters(publicParams); err != nil {
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to create token service")
+	}
+	if err := roles.Reload(publicParamsManager.PublicParameters()); err != nil {
 		return nil, errors.WithMessage(err, "failed to update public parameters")
 	}
 	return service, nil
@@ -151,7 +155,7 @@ func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator,
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewValidator(pp, NewDeserializer())
+	return fabtoken.NewValidator(pp, NewDeserializer()), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
@@ -159,7 +163,7 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewPublicParamsManagerFromParams(pp)
+	return common.NewPublicParamsManagerFromParams[*fabtoken.PublicParams](pp)
 }
 
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
@@ -224,14 +228,12 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	ip := identity.NewProvider(sigService, nil, NewEnrollmentIDDeserializer(), deserializerManager)
+	ip := identity.NewProvider(sigService, nil, NewEIDRHDeserializer(), deserializerManager)
 	deserializer := NewDeserializer()
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		func() (driver.Deserializer, error) {
-			return deserializer, nil
-		},
+		deserializer,
 		fabtoken.NewWalletFactory(ip, nil),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),

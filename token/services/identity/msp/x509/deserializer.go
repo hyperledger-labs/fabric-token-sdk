@@ -36,11 +36,22 @@ func (deserializer *MSPIdentityDeserializer) DeserializeVerifier(id view.Identit
 	return NewECDSAVerifier(publicKey), nil
 }
 
-type AuditInfoDeserializer struct {
+type AuditMatcherDeserializer struct{}
+
+func (a *AuditMatcherDeserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	ai := &AuditInfo{}
+	err := ai.FromBytes(raw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal")
+	}
+	return &AuditInfoMatcher{CommonName: ai.EID}, nil
+}
+
+type AuditInfoMatcher struct {
 	CommonName string
 }
 
-func (a *AuditInfoDeserializer) Match(id []byte) error {
+func (a *AuditInfoMatcher) Match(id []byte) error {
 	si := &msp.SerializedIdentity{}
 	err := proto.Unmarshal(id, si)
 	if err != nil {
@@ -57,4 +68,15 @@ func (a *AuditInfoDeserializer) Match(id []byte) error {
 	}
 
 	return nil
+}
+
+type AuditInfoDeserializer struct{}
+
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+	ai := &AuditInfo{}
+	err := ai.FromBytes(raw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal")
+	}
+	return ai, nil
 }

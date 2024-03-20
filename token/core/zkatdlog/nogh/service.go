@@ -15,44 +15,50 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
-	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type TokenCommitmentLoader interface {
-	GetTokenOutputs(ids []*token3.ID) ([]*token.Token, error)
+	GetTokenOutputs(ids []*token2.ID) ([]*token.Token, error)
 }
 
 type TokenLoader interface {
-	LoadTokens(ids []*token3.ID) ([]string, []*token.Token, []*token.Metadata, []view.Identity, error)
+	LoadTokens(ids []*token2.ID) ([]string, []*token.Token, []*token.Metadata, []view.Identity, error)
 }
-
-type PublicParametersManager interface {
-	driver.PublicParamsManager
-	PublicParams() *crypto.PublicParams
-}
-
-type DeserializerProviderFunc = func() (driver.Deserializer, error)
 
 type Service struct {
-	*common.WalletService
-	PPM                   PublicParametersManager
+	*common.Service[*crypto.PublicParams]
 	TokenLoader           TokenLoader
 	TokenCommitmentLoader TokenCommitmentLoader
-	DeserializerProvider  DeserializerProviderFunc
-	identityProvider      driver.IdentityProvider
-	configManager         config.Manager
 }
 
-func NewTokenService(ws *common.WalletService, PPM PublicParametersManager, tokenLoader TokenLoader, tokenCommitmentLoader TokenCommitmentLoader, identityProvider driver.IdentityProvider, deserializerProvider DeserializerProviderFunc, configManager config.Manager) (*Service, error) {
+func NewTokenService(
+	ws *common.WalletService,
+	ppm common.PublicParametersManager[*crypto.PublicParams],
+	tokenLoader TokenLoader,
+	tokenCommitmentLoader TokenCommitmentLoader,
+	identityProvider driver.IdentityProvider,
+	deserializer driver.Deserializer,
+	configManager config.Manager,
+) (*Service, error) {
+	root, err := common.NewTokenService[*crypto.PublicParams](
+		logger,
+		ws,
+		ppm,
+		identityProvider,
+		deserializer,
+		configManager,
+		nil,
+	)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Service{
-		WalletService:         ws,
-		PPM:                   PPM,
+		Service:               root,
 		TokenLoader:           tokenLoader,
 		TokenCommitmentLoader: tokenCommitmentLoader,
-		identityProvider:      identityProvider,
-		DeserializerProvider:  deserializerProvider,
-		configManager:         configManager,
 	}
 	return s, nil
 }
@@ -60,7 +66,7 @@ func NewTokenService(ws *common.WalletService, PPM PublicParametersManager, toke
 // DeserializeToken un-marshals a token and token info from raw bytes
 // It checks if the un-marshalled token matches the token info. If not, it returns
 // an error. Else it returns the token in cleartext and the identity of its issuer
-func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, view.Identity, error) {
+func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token2.Token, view.Identity, error) {
 	// get zkatdlog token
 	output := &token.Token{}
 	if err := output.Deserialize(tok); err != nil {
@@ -73,10 +79,7 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token3.Token, v
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token information")
 	}
-	pp := s.PublicParams()
-	if pp == nil {
-		return nil, nil, errors.Errorf("public parameters not inizialized")
-	}
+	pp := s.PublicParametersManager.PublicParams()
 	to, err := output.GetTokenInTheClear(ti, pp)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "failed to deserialize token")
@@ -94,43 +97,6 @@ func (s *Service) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte)
 	return tokenInfoRaw, nil
 }
 
-// IdentityProvider returns the identity provider associated with the service
-func (s *Service) IdentityProvider() driver.IdentityProvider {
-	return s.identityProvider
-}
-
-// Validator returns the validator associated with the service
 func (s *Service) Validator() (driver.Validator, error) {
-	d, err := s.DeserializerProvider()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get deserializer")
-	}
-	pp := s.PublicParams()
-	if pp == nil {
-		return nil, errors.Errorf("public parameters not inizialized")
-	}
-	return validator.New(pp, d), nil
-}
-
-// PublicParamsManager returns the manager of the public parameters associated with the service
-func (s *Service) PublicParamsManager() driver.PublicParamsManager {
-	return s.PPM
-}
-
-// ConfigManager returns the configuration manager associated with the service
-func (s *Service) ConfigManager() config.Manager {
-	return s.configManager
-}
-
-func (s *Service) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
-	}
-	return newReq.Bytes()
-}
-
-// PublicParams returns the public parameters associated with the service
-func (s *Service) PublicParams() *crypto.PublicParams {
-	return s.PPM.PublicParams()
+	return validator.New(s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
 }

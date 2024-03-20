@@ -49,12 +49,12 @@ type QueryEngine interface {
 	PublicParams() ([]byte, error)
 	// GetTokenInfos retrieves the token information for the passed ids.
 	// For each id, the callback is invoked to unmarshal the token information
-	GetTokenInfos(ids []*token.ID, callback QueryCallbackFunc) error
+	GetTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
 	// For each id, the callback is invoked to unmarshal the output
 	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
 	// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-	GetTokenInfoAndOutputs(ids []*token.ID, callback QueryCallback2Func) error
+	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	// GetTokens returns the list of tokens with their respective vault keys
 	GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error)
 	// WhoDeletedTokens returns info about who deleted the passed tokens.

@@ -43,7 +43,7 @@ func (c *PublicParameters) MaxTokenValue() uint64 {
 
 // Serialize returns the public parameters in their serialized form
 func (c *PublicParameters) Serialize() ([]byte, error) {
-	return c.ppm.SerializePublicParameters()
+	return c.PublicParameters.Serialize()
 }
 
 // Identifier returns the identifier of the public parameters
@@ -74,14 +74,4 @@ func (c *PublicParametersManager) PublicParameters() *PublicParameters {
 		return nil
 	}
 	return &PublicParameters{PublicParameters: pp, ppm: c.ppm}
-}
-
-// Validate validates the public parameters
-func (c *PublicParametersManager) Validate() error {
-	return c.ppm.Validate()
-}
-
-// SetPublicParameters updates the public parameters with the passed value
-func (c *PublicParametersManager) SetPublicParameters(raw []byte) error {
-	return c.ppm.SetPublicParameters(raw)
 }

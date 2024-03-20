@@ -7,26 +7,48 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"bytes"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.zkatdlog")
+var logger = flogging.MustGetLogger("token-sdk.zkatdlog.validator")
 
-type Validator struct {
-	pp                 *crypto.PublicParams
-	deserializer       driver.Deserializer
-	transferValidators []ValidateTransferFunc
+type ValidateTransferFunc = common.ValidateTransferFunc[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+
+type ValidateIssueFunc = common.ValidateIssueFunc[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+
+type Context = common.Context[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
+
+type ActionDeserializer struct{}
+
+func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*issue.IssueAction, []*transfer.TransferAction, error) {
+	issueActions := make([]*issue.IssueAction, len(tr.Issues))
+	for i := 0; i < len(tr.Issues); i++ {
+		ia := &issue.IssueAction{}
+		if err := ia.Deserialize(tr.Issues[i]); err != nil {
+			return nil, nil, err
+		}
+		issueActions[i] = ia
+	}
+
+	transferActions := make([]*transfer.TransferAction, len(tr.Transfers))
+	for i := 0; i < len(tr.Transfers); i++ {
+		ta := &transfer.TransferAction{}
+		if err := ta.Deserialize(tr.Transfers[i]); err != nil {
+			return nil, nil, err
+		}
+		transferActions[i] = ta
+	}
+
+	return issueActions, transferActions, nil
 }
+
+type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
 
 func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
@@ -35,229 +57,17 @@ func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidat
 		TransferHTLCValidate,
 	}
 	transferValidators = append(transferValidators, extraValidators...)
-	return &Validator{
-		pp:                 pp,
-		deserializer:       deserializer,
-		transferValidators: transferValidators,
-	}
-}
 
-func (v *Validator) VerifyTokenRequestFromRaw(getState driver.GetStateFnc, anchor string, raw []byte) ([]interface{}, map[string][]byte, error) {
-	if len(raw) == 0 {
-		return nil, nil, errors.New("empty token request")
-	}
-	tr := &driver.TokenRequest{}
-	err := tr.FromBytes(raw)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to unmarshal token request")
+	issueValidators := []ValidateIssueFunc{
+		IssueValidate,
 	}
 
-	// Prepare message expected to be signed
-	req := &driver.TokenRequest{}
-	req.Transfers = tr.Transfers
-	req.Issues = tr.Issues
-	raqRaw, err := req.Bytes()
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
-	}
-
-	logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(raqRaw).String(), anchor)
-	signed := append(raqRaw, []byte(anchor)...)
-	var signatures [][]byte
-	if len(v.pp.Auditor) != 0 {
-		signatures = append(signatures, tr.AuditorSignatures...)
-		signatures = append(signatures, tr.Signatures...)
-	} else {
-		signatures = tr.Signatures
-	}
-
-	backend := common.NewBackend(getState, signed, signatures)
-	return v.VerifyTokenRequest(backend, backend, anchor, tr)
-}
-
-func (v *Validator) VerifyTokenRequest(ledger driver.Ledger, signatureProvider driver.SignatureProvider, anchor string, tr *driver.TokenRequest) ([]interface{}, map[string][]byte, error) {
-	if err := v.verifyAuditorSignature(signatureProvider); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to verifier auditor's signature [%s]", anchor)
-	}
-	ia, ta, err := v.UnmarshalIssueTransferActions(tr)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to unmarshal actions [%s]", anchor)
-	}
-	err = v.verifyIssues(ia, signatureProvider)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to verify issuers' signatures [%s]", anchor)
-	}
-	err = v.verifyTransfers(ledger, ta, signatureProvider)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to verify senders' signatures [%s]", anchor)
-	}
-
-	var actions []interface{}
-	for _, action := range ia {
-		actions = append(actions, action)
-	}
-	for _, action := range ta {
-		actions = append(actions, action)
-	}
-	return actions, nil, nil
-}
-
-func (v *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
-	tr := &driver.TokenRequest{}
-	err := tr.FromBytes(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal token request")
-	}
-
-	ia, ta, err := v.UnmarshalIssueTransferActions(tr)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to unmarshal actions")
-	}
-
-	var res []interface{}
-	for _, action := range ia {
-		res = append(res, action)
-	}
-	for _, action := range ta {
-		res = append(res, action)
-	}
-	return res, nil
-}
-
-// UnmarshalIssueTransferActions returns the deserialized issue and transfer actions contained in TokenRequest
-func (v *Validator) UnmarshalIssueTransferActions(tr *driver.TokenRequest) ([]driver.IssueAction, []driver.TransferAction, error) {
-	ia, err := v.UnmarshalIssueActions(tr.Issues)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to unmarshal issue actions")
-	}
-	ta, err := v.UnmarshalTransferActions(tr.Transfers)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to unmarshal transfer actions")
-	}
-	return ia, ta, nil
-}
-
-func (v *Validator) UnmarshalTransferActions(raw [][]byte) ([]driver.TransferAction, error) {
-	res := make([]driver.TransferAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ta := &transfer.TransferAction{}
-		if err := ta.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ta
-	}
-	return res, nil
-}
-
-func (v *Validator) UnmarshalIssueActions(raw [][]byte) ([]driver.IssueAction, error) {
-	res := make([]driver.IssueAction, len(raw))
-	for i := 0; i < len(raw); i++ {
-		ia := &issue2.IssueAction{}
-		if err := ia.Deserialize(raw[i]); err != nil {
-			return nil, err
-		}
-		res[i] = ia
-	}
-	return res, nil
-}
-
-func (v *Validator) verifyAuditorSignature(signatureProvider driver.SignatureProvider) error {
-	if v.pp.Auditor != nil {
-		verifier, err := v.deserializer.GetAuditorVerifier(v.pp.Auditor)
-		if err != nil {
-			return errors.Errorf("failed to deserialize auditor's public key")
-		}
-
-		_, err = signatureProvider.HasBeenSignedBy(v.pp.Auditor, verifier)
-		return err
-	}
-	return nil
-}
-
-func (v *Validator) verifyIssues(issues []driver.IssueAction, signatureProvider driver.SignatureProvider) error {
-	for _, issue := range issues {
-		a := issue.(*issue2.IssueAction)
-
-		if err := v.verifyIssue(a); err != nil {
-			return errors.Wrapf(err, "failed to verify issue action")
-		}
-
-		issuers := v.pp.Issuers
-		if len(issuers) != 0 {
-			// Check the issuer is among those known
-			found := false
-			for _, issuer := range issuers {
-				if bytes.Equal(a.Issuer, issuer) {
-					found = true
-					break
-				}
-			}
-			if !found {
-				return errors.Errorf("issuer [%s] is not in issuers", view.Identity(a.Issuer).String())
-			}
-		}
-
-		verifier, err := v.deserializer.GetIssuerVerifier(a.Issuer)
-		if err != nil {
-			return errors.Wrapf(err, "failed getting verifier for [%s]", view.Identity(a.Issuer).String())
-		}
-		if _, err := signatureProvider.HasBeenSignedBy(a.Issuer, verifier); err != nil {
-			return errors.Wrapf(err, "failed verifying signature")
-		}
-	}
-	return nil
-}
-
-func (v *Validator) verifyIssue(issue driver.IssueAction) error {
-	action := issue.(*issue2.IssueAction)
-	commitments, err := action.GetCommitments()
-	if err != nil {
-		return errors.New("failed to verify issue")
-	}
-	return issue2.NewVerifier(
-		commitments,
-		action.IsAnonymous(),
-		v.pp).Verify(action.GetProof())
-}
-
-func (v *Validator) verifyTransfers(ledger driver.Ledger, transferActions []driver.TransferAction, signatureProvider driver.SignatureProvider) error {
-	logger.Debugf("check sender start...")
-	defer logger.Debugf("check sender finished.")
-	for _, t := range transferActions {
-		if err := v.verifyTransfer(t, ledger, signatureProvider); err != nil {
-			return errors.Wrapf(err, "failed to verify transfer action")
-		}
-	}
-	return nil
-}
-
-func (v *Validator) verifyTransfer(tr driver.TransferAction, ledger driver.Ledger, signatureProvider driver.SignatureProvider) error {
-	action := tr.(*transfer.TransferAction)
-	context := &Context{
-		PP:                v.pp,
-		Deserializer:      v.deserializer,
-		Action:            action,
-		Ledger:            ledger,
-		SignatureProvider: signatureProvider,
-		MetadataCounter:   map[string]int{},
-	}
-	for _, v := range v.transferValidators {
-		if err := v(context); err != nil {
-			return err
-		}
-	}
-
-	// Check that all metadata have been validated
-	counter := 0
-	for k, c := range context.MetadataCounter {
-		if c > 1 {
-			return errors.Errorf("metadata key [%s] appeared more than one time", k)
-		}
-		counter += c
-	}
-	if len(tr.GetMetadata()) != counter {
-		return errors.Errorf("more metadata than those validated [%d]!=[%d], [%v]!=[%v]", len(tr.GetMetadata()), counter, tr.GetMetadata(), context.MetadataCounter)
-	}
-
-	return nil
+	return common.NewValidator[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction](
+		logger,
+		pp,
+		deserializer,
+		&ActionDeserializer{},
+		transferValidators,
+		issueValidators,
+	)
 }

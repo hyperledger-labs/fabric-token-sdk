@@ -22,7 +22,7 @@ func TestDeserializer(t *testing.T) {
 	err = ai.FromBytes(auditInfo)
 	assert.NoError(t, err)
 
-	assert.Equal(t, eID, ai.EnrollmentId)
+	assert.Equal(t, eID, ai.EID)
 	assert.Equal(t, "auditor.org1.example.com", eID)
 
 	des := &MSPIdentityDeserializer{}

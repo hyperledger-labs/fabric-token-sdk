@@ -12,38 +12,19 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
-type Context struct {
-	PP                *crypto.PublicParams
-	Deserializer      driver.Deserializer
-	SignatureProvider driver.SignatureProvider
-	Signatures        [][]byte
-	InputTokens       []*token.Token
-	Action            *transfer.TransferAction
-	Ledger            driver.Ledger
-	MetadataCounter   map[string]int
-}
-
-func (c *Context) CountMetadataKey(key string) {
-	c.MetadataCounter[key] = c.MetadataCounter[key] + 1
-}
-
-type ValidateTransferFunc func(ctx *Context) error
-
 func TransferSignatureValidate(ctx *Context) error {
 	var tokens []*token.Token
 	var signatures [][]byte
 
-	inputs, err := ctx.Action.GetInputs()
+	inputs, err := ctx.TransferAction.GetInputs()
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve inputs to spend")
 	}
@@ -89,8 +70,8 @@ func TransferZKProofValidate(ctx *Context) error {
 
 	if err := transfer.NewVerifier(
 		in,
-		ctx.Action.GetOutputCommitments(),
-		ctx.PP).Verify(ctx.Action.GetProof()); err != nil {
+		ctx.TransferAction.GetOutputCommitments(),
+		ctx.PP).Verify(ctx.TransferAction.GetProof()); err != nil {
 		return err
 	}
 
@@ -106,11 +87,11 @@ func TransferHTLCValidate(ctx *Context) error {
 			return errors.Wrap(err, "failed to unmarshal owner of input token")
 		}
 		if owner.Type == htlc.ScriptType {
-			if len(ctx.InputTokens) != 1 || len(ctx.Action.GetOutputs()) != 1 {
+			if len(ctx.InputTokens) != 1 || len(ctx.TransferAction.GetOutputs()) != 1 {
 				return errors.Errorf("invalid transfer action: an htlc script only transfers the ownership of a token")
 			}
 
-			out := ctx.Action.GetOutputs()[0].(*token.Token)
+			out := ctx.TransferAction.GetOutputs()[0].(*token.Token)
 
 			// check that owner field in output is correct
 			script, op, err := htlc2.VerifyOwner(ctx.InputTokens[0].Owner, out.Owner, now)
@@ -120,7 +101,7 @@ func TransferHTLCValidate(ctx *Context) error {
 
 			// check metadata
 			sigma := ctx.Signatures[i]
-			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.Action, script, op, sigma)
+			metadataKey, err := htlc2.MetadataClaimKeyCheck(ctx.TransferAction, script, op, sigma)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}
@@ -130,7 +111,7 @@ func TransferHTLCValidate(ctx *Context) error {
 		}
 	}
 
-	for _, o := range ctx.Action.GetOutputs() {
+	for _, o := range ctx.TransferAction.GetOutputs() {
 		out, ok := o.(*token.Token)
 		if !ok {
 			return errors.Errorf("invalid output")
@@ -151,7 +132,7 @@ func TransferHTLCValidate(ctx *Context) error {
 			if err := script.Validate(now); err != nil {
 				return errors.WithMessagef(err, "htlc script invalid")
 			}
-			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.Action, script)
+			metadataKey, err := htlc2.MetadataLockKeyCheck(ctx.TransferAction, script)
 			if err != nil {
 				return errors.WithMessagef(err, "failed to check htlc metadata")
 			}

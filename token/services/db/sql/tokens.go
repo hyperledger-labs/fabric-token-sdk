@@ -12,7 +12,6 @@ import (
 	"runtime/debug"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -339,38 +338,25 @@ func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallba
 
 // GetTokenInfos retrieves the token metadata for the passed ids.
 // For each id, the callback is invoked to unmarshal the token metadata
-func (db *TokenDB) GetTokenInfos(ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
-	if len(ids) == 0 {
-		return nil
-	}
-	_, metas, err := db.getLedgerTokenAndMeta(ids)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < len(ids); i++ {
-		if err := callback(ids[i], metas[i]); err != nil {
-			return err
-		}
-	}
-	return nil
+func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
+	return db.GetAllTokenInfos(ids)
 }
 
 // GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID, callback tdriver.QueryCallback2Func) error {
+func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
 	tokens, metas, err := db.getLedgerTokenAndMeta(ids)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
+	outputIDs := make([]string, len(ids))
 	for i := 0; i < len(ids); i++ {
 		outputID, err := keys.CreateTokenKey(ids[i].TxId, ids[i].Index)
 		if err != nil {
-			return errors.Wrapf(err, "error creating output ID: %v", ids[i])
+			return nil, nil, nil, errors.Wrapf(err, "error creating output ID: %v", ids[i])
 		}
-		if err := callback(ids[i], outputID, tokens[i], metas[i]); err != nil {
-			return err
-		}
+		outputIDs[i] = outputID
 	}
-	return nil
+	return outputIDs, tokens, metas, nil
 }
 
 // GetAllTokenInfos retrieves the token information for the passed ids.
@@ -379,18 +365,13 @@ func (db *TokenDB) GetAllTokenInfos(ids []*token.ID) ([][]byte, error) {
 		return [][]byte{}, nil
 	}
 	_, metas, err := db.getLedgerTokenAndMeta(ids)
-	if err != nil {
-		return metas, err
-	}
-
-	return metas, nil
+	return metas, err
 }
 
 func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	logger.Debugf("retrieve ledger tokens for [%s]", ids)
-	tokens := make([][]byte, len(ids))
 	if len(ids) == 0 {
-		return tokens, nil
+		return [][]byte{}, nil
 	}
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ids)
@@ -403,52 +384,35 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	}
 	defer rows.Close()
 
-	counter := 0
+	tokenMap := make(map[string][]byte, len(ids))
 	for rows.Next() {
 		var tok []byte
 		var id token.ID
 		if err := rows.Scan(&id.TxId, &id.Index, &tok); err != nil {
 			return nil, err
 		}
-		logger.Debugf("found ledger token [%s:%d] [%s]", id.TxId, id.Index, hash.Hashable(tok))
-		// the result is expected to be in order of the ids
-		found := false
-		for i := 0; i < len(ids); i++ {
-			if ids[i].Equal(id) {
-				tokens[i] = tok
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, errors.Errorf("retrieved wrong token [%s]", id)
-		}
-		counter++
+		tokenMap[id.String()] = tok
 	}
-
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
-	if counter == 0 {
-		return nil, errors.Errorf("token not found for key [%s:%d]", ids[0].TxId, ids[0].Index)
-	}
-	if counter != len(ids) {
-		for j, t := range tokens {
-			if t == nil {
-				return nil, errors.Errorf("token not found for key [%s:%d]", ids[j].TxId, ids[j].Index)
-			}
-		}
-		panic("programming error: should not reach this point")
-	}
 
+	tokens := make([][]byte, len(ids))
+	for i, id := range ids {
+		if tok, ok := tokenMap[id.String()]; !ok || tok == nil {
+			return nil, errors.Errorf("token not found for key [%s]", id)
+		} else if len(tok) == 0 {
+			return nil, errors.Errorf("empty token found for key [%s]", id)
+		} else {
+			tokens[i] = tok
+		}
+	}
 	return tokens, nil
 }
 
 func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, error) {
-	tokens := make([][]byte, len(ids))
-	metas := make([][]byte, len(ids))
 	if len(ids) == 0 {
-		return tokens, metas, nil
+		return [][]byte{}, [][]byte{}, nil
 	}
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, ids)
@@ -457,33 +421,32 @@ func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, e
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
-		return tokens, metas, err
+		return nil, nil, err
 	}
 	defer rows.Close()
 
+	infoMap := make(map[string][2][]byte, len(ids))
 	for rows.Next() {
 		var tok []byte
 		var metadata []byte
 		var id token.ID
 		if err := rows.Scan(&id.TxId, &id.Index, &tok, &metadata); err != nil {
-			return tokens, metas, err
+			return nil, nil, err
 		}
-		// the callback is expected to be called in order of the ids
-		found := false
-		for i := 0; i < len(ids); i++ {
-			if ids[i].Equal(id) {
-				tokens[i] = tok
-				metas[i] = metadata
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, nil, errors.Errorf("retrieved wrong token [%s]", id)
-		}
+		infoMap[id.String()] = [2][]byte{tok, metadata}
 	}
 	if err = rows.Err(); err != nil {
-		return tokens, metas, err
+		return nil, nil, err
+	}
+	tokens := make([][]byte, len(ids))
+	metas := make([][]byte, len(ids))
+	for i, id := range ids {
+		if info, ok := infoMap[id.String()]; !ok {
+			return nil, nil, errors.Errorf("token/metadata not found for [%s]", id)
+		} else {
+			tokens[i] = info[0]
+			metas[i] = info[1]
+		}
 	}
 	return tokens, metas, nil
 }
@@ -715,60 +678,49 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	return result
 }
 
-func (db *TokenDB) GetCertifications(ids []*token.ID, callback func(*token.ID, []byte) error) error {
+func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
 		// nothing to do here
-		return nil
+		return nil, nil
 	}
 
 	// build query
 	conditions, tokenIDs, err := certificationsQuerySql(ids)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE ", db.table.Certifications) + conditions
 
 	rows, err := db.db.Query(query, tokenIDs...)
 	if err != nil {
-		return errors.Wrapf(err, "failed to query")
+		return nil, errors.Wrapf(err, "failed to query")
 	}
 	defer rows.Close()
 
-	certifications := make([][]byte, len(ids))
-	counter := 0
+	certificationMap := make(map[string][]byte, len(ids))
 	for rows.Next() {
 		var certification []byte
 		var id token.ID
 		if err := rows.Scan(&id.TxId, &id.Index, &certification); err != nil {
-			return err
+			return nil, err
 		}
-		// the callback is expected to be called in order of the ids
-		if len(certification) == 0 {
-			return errors.Errorf("empty certification for [%s]", id.String())
-		}
-		for i := 0; i < len(ids); i++ {
-			if *ids[i] == id {
-				certifications[i] = certification
-				break
-			}
-		}
-		counter++
+		certificationMap[id.String()] = certification
 	}
-
 	if err = rows.Err(); err != nil {
-		return err
-	}
-	if counter != len(ids) {
-		return errors.Errorf("not all tokens are certified")
+		return nil, err
 	}
 
-	for i, certification := range certifications {
-		if err := callback(ids[i], certification); err != nil {
-			return errors.WithMessagef(err, "failed callback for [%s]", ids[i])
+	certifications := make([][]byte, len(ids))
+	for i, id := range ids {
+		if cert, ok := certificationMap[id.String()]; !ok {
+			return nil, errors.Errorf("token %s was not certified", id)
+		} else if len(cert) == 0 {
+			return nil, errors.Errorf("empty certification for [%s]", id)
+		} else {
+			certifications[i] = cert
 		}
 	}
-
-	return nil
+	return certifications, nil
 }
 
 func (db *TokenDB) GetSchema() string {

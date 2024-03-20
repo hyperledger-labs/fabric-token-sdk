@@ -484,14 +484,13 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "tx101", Index: 0},
 		{TxId: "tx102", Index: 0},
 	}
-	assert.NoError(t, db.GetTokenInfos(ids, func(id *token.ID, info []byte) error {
-		assert.Equal(t, id.TxId, string(info))
-		assert.Equal(t, uint64(0), id.Index)
-		return nil
-	}))
 
 	infos, err := db.GetAllTokenInfos(ids)
 	assert.NoError(t, err)
+	for i, info := range infos {
+		assert.Equal(t, ids[i].TxId, string(info))
+		assert.Equal(t, uint64(0), ids[i].Index)
+	}
 	assert.Len(t, infos, 2)
 	assert.Equal(t, "tx101", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
@@ -503,32 +502,28 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		{TxId: "tx101", Index: 0},
 		{TxId: "non existent", Index: 0},
 	}
-	infos = [][]byte{}
-	assert.NoError(t, db.GetTokenInfos(ids, func(id *token.ID, info []byte) error {
-		infos = append(infos, info)
-		return nil
-	}))
+	_, err = db.GetTokenInfos(ids)
+	assert.Error(t, err)
+
+	ids = []*token.ID{
+		{TxId: "tx102", Index: 1},
+		{TxId: "tx102", Index: 0},
+		{TxId: "tx101", Index: 0},
+	}
+	infos, err = db.GetTokenInfos(ids)
+	assert.NoError(t, err)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
-	assert.Equal(t, "", string(infos[3]))
 
 	// infos and outputs
-	toks := [][]byte{}
-	infos = [][]byte{}
-	keys := []string{}
-	assert.NoError(t, db.GetTokenInfoAndOutputs(ids, func(id *token.ID, key string, tok []byte, info []byte) error {
-		toks = append(toks, tok)
-		infos = append(infos, info)
-		keys = append(keys, key)
-		return nil
-	}))
+	keys, toks, infos, err := db.GetTokenInfoAndOutputs(ids)
 	assert.NoError(t, err)
-	assert.Len(t, infos, 4)
+	assert.Len(t, infos, 3)
 	assert.Equal(t, "tx102", string(infos[0]))
 	assert.Equal(t, "tx102", string(infos[1]))
 	assert.Equal(t, "tx101", string(infos[2]))
-	assert.Len(t, toks, 4)
+	assert.Len(t, toks, 3)
 	assert.Equal(t, "tx102l", string(toks[0]))
 	assert.Equal(t, "tx102l", string(toks[1]))
 	assert.Equal(t, "tx101l", string(toks[2]))
@@ -632,10 +627,11 @@ func TCertification(t *testing.T, db *TokenDB) {
 				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
 			}))
 			assert.True(t, db.ExistsCertification(tokenID))
-			assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+			certifications, err := db.GetCertifications([]*token2.ID{tokenID})
+			assert.NoError(t, err)
+			for _, bytes := range certifications {
 				assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
-				return nil
-			}))
+			}
 			wg.Done()
 		}(i)
 	}
@@ -647,10 +643,11 @@ func TCertification(t *testing.T, db *TokenDB) {
 			Index: 0,
 		}
 		assert.True(t, db.ExistsCertification(tokenID))
-		assert.NoError(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
+		certifications, err := db.GetCertifications([]*token2.ID{tokenID})
+		assert.NoError(t, err)
+		for _, bytes := range certifications {
 			assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
-			return nil
-		}))
+		}
 	}
 
 	// check the certification of a token that was never stored
@@ -659,20 +656,16 @@ func TCertification(t *testing.T, db *TokenDB) {
 		Index: 0,
 	}
 	assert.False(t, db.ExistsCertification(tokenID))
-	found := false
-	assert.Error(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
-		found = true
-		return nil
-	}))
-	assert.False(t, found)
+
+	certifications, err := db.GetCertifications([]*token2.ID{tokenID})
+	assert.Error(t, err)
+	assert.Empty(t, certifications)
 
 	// store an empty certification and check that an error is returned
 	assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
 		tokenID: {},
 	}))
-	assert.Error(t, db.GetCertifications([]*token2.ID{tokenID}, func(id *token2.ID, bytes []byte) error {
-		found = true
-		return nil
-	}))
-	assert.False(t, found)
+	certifications, err = db.GetCertifications([]*token2.ID{tokenID})
+	assert.Error(t, err)
+	assert.Empty(t, certifications)
 }

@@ -20,8 +20,9 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 	// select inputs
 	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(ids)
 	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed loading input tokens")
+		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
+
 	var signerIds []view.Identity
 	for _, tok := range inputTokens {
 		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
@@ -63,7 +64,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 			receivers = append(receivers, output.Output.Owner.Raw)
 			continue
 		}
-		recipients, err := s.Deserializer.Recipients(output.Output.Owner.Raw)
+		recipients, err := s.Deserializer().Recipients(output.Output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
@@ -72,7 +73,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner.Raw, s)
+		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(t.Owner.Raw, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner.Raw).String())
 		}
@@ -81,7 +82,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	var receiverAuditInfos [][]byte
 	for _, output := range outs {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, s)
+		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(output.Output.Owner.Raw, s)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Output.Owner.Raw).String())
 		}
