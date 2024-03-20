@@ -193,7 +193,7 @@ func (r *Role) IdentityIDs() ([]string, error) {
 	return r.localMembership.IDs()
 }
 
-func (r *Role) Reload(pp driver.PublicParameters) error {
+func (r *Role) Load(pp driver.PublicParameters) error {
 	logger.Debugf("reload x509 wallets...")
 	// nothing to do here
 	return nil

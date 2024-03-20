@@ -39,11 +39,10 @@ const (
 
 var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
-type PublicParametersWithIdemixSupport interface {
-	IdemixCurve() math3.CurveID
-}
-
 type LocalMembership struct {
+	issuerPublicKey []byte
+	curveID         math3.CurveID
+
 	config                 config2.Config
 	defaultNetworkIdentity view.Identity
 	signerService          common.SigService
@@ -57,13 +56,14 @@ type LocalMembership struct {
 	resolvers               []*common.Resolver
 	resolversByName         map[string]*common.Resolver
 	resolversByEnrollmentID map[string]*common.Resolver
-	curveID                 math3.CurveID
 	identities              []*config.Identity
 	// ignoreVerifyOnlyWallet when set to true, for each wallet the service will force the load of the secrets
 	ignoreVerifyOnlyWallet bool
 }
 
 func NewLocalMembership(
+	issuerPublicKey []byte,
+	idemixCurveID math3.CurveID,
 	config config2.Config,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SigService,
@@ -72,11 +72,12 @@ func NewLocalMembership(
 	keystore keystore.KVS,
 	mspID string,
 	cacheSize int,
-	curveID math3.CurveID,
 	identities []*config.Identity,
 	ignoreVerifyOnlyWallet bool,
 ) *LocalMembership {
 	return &LocalMembership{
+		issuerPublicKey:         issuerPublicKey,
+		curveID:                 idemixCurveID,
 		config:                  config,
 		defaultNetworkIdentity:  defaultNetworkIdentity,
 		signerService:           signerService,
@@ -87,7 +88,6 @@ func NewLocalMembership(
 		cacheSize:               cacheSize,
 		resolversByEnrollmentID: map[string]*common.Resolver{},
 		resolversByName:         map[string]*common.Resolver{},
-		curveID:                 curveID,
 		identities:              identities,
 		ignoreVerifyOnlyWallet:  ignoreVerifyOnlyWallet,
 	}
@@ -167,15 +167,7 @@ func (lm *LocalMembership) IDs() ([]string, error) {
 	return ids, nil
 }
 
-func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
-	logger.Debugf("Reload Idemix Wallets for [%+q]", lm.identities)
-	idemixPP, ok := pp.(PublicParametersWithIdemixSupport)
-	if !ok {
-		return errors.Errorf("public params do not support idemix")
-	}
-	// set curve id from the public parameters
-	lm.curveID = idemixPP.IdemixCurve()
-
+func (lm *LocalMembership) Load() error {
 	logger.Debugf("Load Idemix Wallets with the respect to curve [%d], [%+q]", lm.curveID, lm.identities)
 
 	lm.resolversMutex.Lock()
@@ -233,11 +225,11 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 }
 
 func (lm *LocalMembership) registerProvider(identityConfig config.Identity, curveID math3.CurveID) error {
-	conf, err := GetLocalMspConfigWithType(identityConfig.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
+	conf, err := GetLocalMspConfigWithType(lm.issuerPublicKey, identityConfig.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
 	if err != nil {
 		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", identityConfig.Path, err)
 		// Try with "msp"
-		conf, err = GetLocalMspConfigWithType(filepath.Join(identityConfig.Path, "msp"), lm.mspID, lm.ignoreVerifyOnlyWallet)
+		conf, err = GetLocalMspConfigWithType(lm.issuerPublicKey, filepath.Join(identityConfig.Path, "msp"), lm.mspID, lm.ignoreVerifyOnlyWallet)
 		if err != nil {
 			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identityConfig.Path)
 		}
@@ -392,8 +384,8 @@ func (lm *LocalMembership) loadFromStorage() error {
 	return nil
 }
 
-func GetLocalMspConfigWithType(dir string, id string, ignoreVerifyOnlyWallet bool) (*msp.MSPConfig, error) {
-	mspConfig, err := GetIdemixMspConfigWithType(dir, id, ignoreVerifyOnlyWallet)
+func GetLocalMspConfigWithType(issuerPublicKey []byte, dir string, id string, ignoreVerifyOnlyWallet bool) (*msp.MSPConfig, error) {
+	mspConfig, err := GetIdemixMspConfigWithType(issuerPublicKey, dir, id, ignoreVerifyOnlyWallet)
 	if err != nil {
 		// load it using the fabric-ca format
 		mspConfig2, err2 := GetFabricCAIdemixMspConfig(dir, id)
@@ -406,12 +398,7 @@ func GetLocalMspConfigWithType(dir string, id string, ignoreVerifyOnlyWallet boo
 }
 
 // GetIdemixMspConfigWithType returns the configuration for the Idemix MSP of the specified type
-func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bool) (*msp.MSPConfig, error) {
-	ipkBytes, err := ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileIssuerPublicKey))
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to read issuer public key file")
-	}
-
+func GetIdemixMspConfigWithType(issuerPublicKey []byte, dir string, ID string, ignoreVerifyOnlyWallet bool) (*msp.MSPConfig, error) {
 	revocationPkBytes, err := ReadFile(filepath.Join(dir, idemix.IdemixConfigDirMsp, idemix.IdemixConfigFileRevocationPublicKey))
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to read revocation public key file")
@@ -419,7 +406,7 @@ func GetIdemixMspConfigWithType(dir string, ID string, ignoreVerifyOnlyWallet bo
 
 	idemixConfig := &idemixmsp.IdemixMSPConfig{
 		Name:         ID,
-		Ipk:          ipkBytes,
+		Ipk:          issuerPublicKey,
 		RevocationPk: revocationPkBytes,
 	}
 

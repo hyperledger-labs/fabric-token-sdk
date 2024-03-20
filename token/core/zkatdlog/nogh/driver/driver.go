@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -80,6 +79,14 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(identityDB, sigService, view.GetEndpointService(sp), NewEIDRHDeserializer(), deserializerManager)
+	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
+		&PublicParamsDeserializer{},
+		crypto.DLogPublicParameters,
+		publicParams,
+	)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
+	}
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
@@ -92,7 +99,12 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		deserializerManager,
 		false,
 	)
-	role, err := roleFactory.NewIdemix(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BLS12_381_BBS)
+	role, err := roleFactory.NewIdemix(
+		driver.OwnerRole,
+		tmsConfig.TMS().GetWalletDefaultCacheSize(),
+		ppm.PublicParams().IdemixIssuerPK,
+		ppm.PublicParams().IdemixCurveID,
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
@@ -115,14 +127,6 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 
 	// Instantiate the token service
 	qe := v.QueryEngine()
-	ppm, err := common.NewPublicParamsManager[*crypto.PublicParams](
-		&PublicParamsDeserializer{},
-		crypto.DLogPublicParameters,
-		publicParams,
-	)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to initiliaze public params manager")
-	}
 	// wallet service
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
@@ -155,9 +159,6 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
-	}
-	if err := roles.Reload(ppm.PublicParameters()); err != nil {
-		return nil, errors.WithMessage(err, "failed to fetch public parameters")
 	}
 
 	return service, err
@@ -214,6 +215,11 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	}
 	sigService := sig.NewService(deserializerManager, identityDB)
 	ip := identity.NewProvider(identityDB, sigService, nil, NewEIDRHDeserializer(), deserializerManager)
+	// public parameters manager
+	ppm, err := common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to load public parameters")
+	}
 	roleFactory := msp.NewRoleFactory(
 		tmsID,
 		config2.NewIdentityConfig(cs, tmsConfig), // config
@@ -226,7 +232,12 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		deserializerManager,
 		true,
 	)
-	role, err := roleFactory.NewIdemix(driver.OwnerRole, tmsConfig.TMS().GetWalletDefaultCacheSize(), math.BN254)
+	role, err := roleFactory.NewIdemix(
+		driver.OwnerRole,
+		tmsConfig.TMS().GetWalletDefaultCacheSize(),
+		ppm.PublicParams().IdemixIssuerPK,
+		ppm.PublicParams().IdemixCurveID,
+	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create owner role")
 	}
@@ -248,18 +259,11 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	roles.Register(driver.CertifierRole, role)
 
 	// Instantiate the token service
-
-	// public parameters manager
-	publicParamsManager, err := common.NewPublicParamsManagerFromParams[*crypto.PublicParams](pp)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to load public parameters")
-	}
-
 	walletDB, err := storageProvider.OpenWalletDB(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	deserializer, err := NewDeserializer(publicParamsManager.PublicParams())
+	deserializer, err := NewDeserializer(ppm.PublicParams())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate the deserializer")
 	}
@@ -274,10 +278,6 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 		nil,
 	)
-
-	if err := roles.Reload(pp); err != nil {
-		return nil, errors.WithMessage(err, "failed to load roles")
-	}
 
 	return ws, nil
 }

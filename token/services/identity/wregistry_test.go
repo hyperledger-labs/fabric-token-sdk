@@ -68,7 +68,7 @@ func (f *fakeRole) IdentityIDs() ([]string, error) {
 	panic("implement me")
 }
 
-func (f *fakeRole) Reload(pp driver.PublicParameters) error {
+func (f *fakeRole) Load(pp driver.PublicParameters) error {
 	//TODO implement me
 	panic("implement me")
 }

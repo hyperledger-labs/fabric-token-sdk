@@ -7,8 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package idemix_test
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
+
+	idemix2 "github.com/IBM/idemix"
 
 	"github.com/IBM/idemix/bccsp/types"
 	bccsp "github.com/IBM/idemix/bccsp/types"
@@ -309,7 +312,9 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := idemix.GetLocalMspConfigWithType("./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
+	ipkBytes, err := idemix.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigDirMsp, idemix2.IdemixConfigFileIssuerPublicKey))
+	assert.NoError(t, err)
+	config, err := idemix.GetLocalMspConfigWithType(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
 	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.BN254, false)
@@ -382,7 +387,9 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	config, err := idemix.GetLocalMspConfigWithType("./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
+	ipkBytes, err := idemix.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigDirMsp, idemix2.IdemixConfigFileIssuerPublicKey))
+	assert.NoError(t, err)
+	config, err := idemix.GetLocalMspConfigWithType(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
 
 	cryptoProvider, err := idemix.NewKSVBCCSP(kvss, math.BN254, false)

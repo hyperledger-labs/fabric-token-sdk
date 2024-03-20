@@ -145,9 +145,6 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}
-	if err := roles.Reload(publicParamsManager.PublicParameters()); err != nil {
-		return nil, errors.WithMessage(err, "failed to update public parameters")
-	}
 	return service, nil
 }
 

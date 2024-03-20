@@ -24,7 +24,6 @@ type localMembership interface {
 	GetDefaultIdentifier() string
 	RegisterIdentity(id string, path string) error
 	IDs() ([]string, error)
-	Reload(pp driver.PublicParameters) error
 }
 
 // Role is a container of idemix-based long-term identities.
@@ -201,9 +200,4 @@ func (r *Role) RegisterIdentity(id string, path string) error {
 
 func (r *Role) IdentityIDs() ([]string, error) {
 	return r.localMembership.IDs()
-}
-
-func (r *Role) Reload(pp driver.PublicParameters) error {
-	logger.Debugf("reload idemix wallets...")
-	return r.localMembership.Reload(pp)
 }
