@@ -23,9 +23,9 @@ The Token Vault service empowers you with a comprehensive suite of functionaliti
         * **ListHistoryIssuedTokens()**: This function delivers a detailed list of all tokens that have been issued within the network.
     * **Public Parameters:** The PublicParams() function retrieves the public parameters associated with the token system.
     * **Token Information Retrieval:** These functions provide mechanisms to access information about your tokens:
-        * **GetTokenInfos(ids []*token.ID, callback QueryCallbackFunc)**: This function retrieves information for the provided token IDs. It employs a callback function (`QueryCallbackFunc`) to unmarshal the retrieved token information for efficient processing.
-        * **GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc)**: Similar to the previous function, this function retrieves the raw token outputs stored on the ledger for the provided IDs. It utilizes a callback function (`QueryCallbackFunc`) for unmarshalling the retrieved data.
-        * **GetTokenInfoAndOutputs(ids []*token.ID, callback QueryCallback2Func)**: This function offers a combined approach, retrieving both the token information and their corresponding outputs for the provided IDs. It employs a dedicated callback function (`QueryCallback2Func`) tailored for handling both data types.
+        * **GetTokenInfos(ids []*token.ID)**: This function retrieves information for the provided token IDs.
+        * **GetTokenOutputs(ids []*token.ID)**: Similar to the previous function, this function retrieves the raw token outputs stored on the ledger for the provided IDs.
+        * **GetTokenInfoAndOutputs(ids []*token.ID)**: This function offers a combined approach, retrieving both the token information and their corresponding outputs for the provided IDs.
     * **GetTokens:** This function retrieves a list of tokens along with their corresponding vault keys.
     * **WhoDeletedTokens:** This function delves into the history of deleted tokens. It provides information about who deleted the specified tokens (if applicable) and returns a boolean array indicating whether each token at a given position has been deleted.
 

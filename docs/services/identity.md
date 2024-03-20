@@ -89,6 +89,6 @@ Both requires the identities to be stored on the filesystem following the Hyperl
 
 High level, these are the steps to follow:
 1. Instantiate the roles your driver will support.
-2. Instantiate the Wallet Registries for each role.
+2. Instantiate the Wallet Registry for each role.
 
-Let see an example taken from the [`fabtoken`](./../../token/core/fabtoken/driver) driver.
+See an example taken from the [`fabtoken`](./../../token/core/fabtoken/driver) driver.
