@@ -30,7 +30,7 @@ const (
 )
 
 type SignerService interface {
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, info []byte) error
 }
 
 type Provider struct {
@@ -256,7 +256,7 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte
 	}
 
 	if p.SignerService != nil {
-		if err := p.SignerService.RegisterSigner(raw, sID, sID); err != nil {
+		if err := p.SignerService.RegisterSigner(raw, sID, sID, nil); err != nil {
 			return nil, nil, err
 		}
 	}

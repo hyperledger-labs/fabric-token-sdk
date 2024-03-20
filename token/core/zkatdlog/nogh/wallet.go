@@ -183,7 +183,7 @@ func (w *ownerWallet) RegisterRecipient(data *driver.RecipientData) error {
 	if err := w.IdentityProvider.RegisterVerifier(data.Identity, v); err != nil {
 		return errors.Wrapf(err, "failed registering verifier for [%s]", data.Identity)
 	}
-	if err := w.IdentityProvider.RegisterAuditInfo(data.Identity, data.AuditInfo); err != nil {
+	if err := w.IdentityProvider.RegisterRecipientData(data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
 	if err := w.WalletRegistry.BindIdentity(data.Identity, w.EnrollmentID(), w.id, nil); err != nil {

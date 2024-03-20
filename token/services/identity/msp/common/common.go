@@ -22,12 +22,18 @@ type Resolver struct {
 
 type SigService interface {
 	IsMe(view.Identity) bool
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 	RegisterVerifier(identity view.Identity, v driver.Verifier) error
-	RegisterAuditInfo(identity view.Identity, info []byte) error
-	GetAuditInfo(id view.Identity) ([]byte, error)
 }
 
 type BinderService interface {
 	Bind(longTerm view.Identity, ephemeral view.Identity) error
+}
+
+type IdentityProvider interface {
+	// RegisterAuditInfo binds the passed audit info to the passed identity
+	RegisterAuditInfo(identity view.Identity, info []byte) error
+
+	// GetAuditInfo returns the audit info associated to the passed identity, nil if not found
+	GetAuditInfo(identity view.Identity) ([]byte, error)
 }

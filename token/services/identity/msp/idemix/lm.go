@@ -156,14 +156,6 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
-
-	if err := lm.identityDB.AddConfiguration(driver3.IdentityConfiguration{
-		ID:   id,
-		Type: IdentityConfigurationType,
-		URL:  path,
-	}); err != nil {
-		return err
-	}
 	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
 }
 
@@ -203,12 +195,12 @@ func (lm *LocalMembership) Reload(pp driver.PublicParameters) error {
 		logger.Debugf("load wallet for identity [%+v] done.", identityConfig)
 	}
 
-	// load identity from KVS
-	logger.Debugf("load identity from KVS")
+	// load identities from storage
+	logger.Debugf("load identities from storage...")
 	if err := lm.loadFromStorage(); err != nil {
-		return errors.Wrapf(err, "failed to load identity from identityDB")
+		return errors.Wrapf(err, "failed to load identities from identityDB")
 	}
-	logger.Debugf("load identity from KVS done")
+	logger.Debugf("load identities from storage...done")
 
 	// if no default identity, use the first one
 	defaultIdentifier := lm.GetDefaultIdentifier()
@@ -240,14 +232,14 @@ func (lm *LocalMembership) registerIdentity(identity config.Identity, curveID ma
 	return nil
 }
 
-func (lm *LocalMembership) registerProvider(identity config.Identity, curveID math3.CurveID) error {
-	conf, err := GetLocalMspConfigWithType(identity.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
+func (lm *LocalMembership) registerProvider(identityConfig config.Identity, curveID math3.CurveID) error {
+	conf, err := GetLocalMspConfigWithType(identityConfig.Path, lm.mspID, lm.ignoreVerifyOnlyWallet)
 	if err != nil {
-		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", identity.Path, err)
+		logger.Debugf("failed reading idemix msp configuration from [%s]: [%s], try adding 'msp'...", identityConfig.Path, err)
 		// Try with "msp"
-		conf, err = GetLocalMspConfigWithType(filepath.Join(identity.Path, "msp"), lm.mspID, lm.ignoreVerifyOnlyWallet)
+		conf, err = GetLocalMspConfigWithType(filepath.Join(identityConfig.Path, "msp"), lm.mspID, lm.ignoreVerifyOnlyWallet)
 		if err != nil {
-			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identity.Path)
+			return errors.Wrapf(err, "failed reading idemix msp configuration from [%s] and with 'msp'", identityConfig.Path)
 		}
 	}
 	cryptoProvider, err := NewKVSBCCSP(lm.keystore, curveID)
@@ -256,10 +248,10 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 	}
 	provider, err := NewProvider(conf, lm.signerService, types.EidNymRhNym, cryptoProvider)
 	if err != nil {
-		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identity.Path)
+		return errors.Wrapf(err, "failed instantiating idemix msp provider from [%s]", identityConfig.Path)
 	}
 
-	cacheSize, err := lm.cacheSizeForID(identity.ID)
+	cacheSize, err := lm.cacheSizeForID(identityConfig.ID)
 	if err != nil {
 		return err
 	}
@@ -273,8 +265,25 @@ func (lm *LocalMembership) registerProvider(identity config.Identity, curveID ma
 	} else {
 		getIdentityFunc = NewIdentityCache(provider.Identity, cacheSize, &common.IdentityOptions{}).Identity
 	}
-	lm.addResolver(identity.ID, provider.EnrollmentID(), provider.IsRemote(), identity.Default, getIdentityFunc)
-	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identity.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())
+	lm.addResolver(identityConfig.ID, provider.EnrollmentID(), provider.IsRemote(), identityConfig.Default, getIdentityFunc)
+
+	if exists, _ := lm.identityDB.ConfigurationExists(identityConfig.ID, IdentityConfigurationType); !exists {
+		identityConfigRaw, err := json.Marshal(identityConfig)
+		if err != nil {
+			return errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
+		}
+		if err := lm.identityDB.AddConfiguration(driver3.IdentityConfiguration{
+			ID:     identityConfig.ID,
+			Type:   IdentityConfigurationType,
+			URL:    identityConfig.Path,
+			Config: identityConfigRaw,
+			Raw:    nil,
+		}); err != nil {
+			return err
+		}
+	}
+
+	logger.Debugf("added idemix resolver for id [%s] with cache of size [%d], remote [%v]", identityConfig.ID+"@"+provider.EnrollmentID(), cacheSize, provider.IsRemote())
 	return nil
 }
 
@@ -359,6 +368,22 @@ func (lm *LocalMembership) loadFromStorage() error {
 		id := entry.ID
 		if lm.getResolver(id) != nil {
 			continue
+		}
+
+		identityConfig := &config.Identity{
+			ID:   id,
+			Path: entry.URL,
+			Type: IdentityConfigurationType,
+		}
+		if len(entry.Config) != 0 {
+			if err := json.Unmarshal(entry.Config, identityConfig); err != nil {
+				logger.Errorf("failed to load configuration for entry [%s]", entry.ID)
+				continue
+			}
+			if identityConfig.ID != id || identityConfig.Path != entry.URL || identityConfig.Type != IdentityConfigurationType {
+				logger.Errorf("invalid configuration for entry [%s], it does not match the expected values [%v][%v]", entry.ID, entry, identityConfig)
+				continue
+			}
 		}
 		if err := lm.registerIdentity(config.Identity{ID: id, Path: entry.URL, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID); err != nil {
 			return err

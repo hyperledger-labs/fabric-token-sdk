@@ -46,6 +46,7 @@ type RoleFactory struct {
 	Config                 config2.Config
 	FSCIdentity            view2.Identity
 	NetworkDefaultIdentity view2.Identity
+	IdentityProvider       common.IdentityProvider
 	SignerService          common.SigService
 	BinderService          common.BinderService
 	StorageProvider        identity.StorageProvider
@@ -59,6 +60,7 @@ func NewRoleFactory(
 	config config2.Config,
 	fscIdentity view2.Identity,
 	networkDefaultIdentity view2.Identity,
+	identityProvider common.IdentityProvider,
 	signerService common.SigService,
 	binderService common.BinderService,
 	storageProvider identity.StorageProvider,
@@ -70,6 +72,7 @@ func NewRoleFactory(
 		Config:                 config,
 		FSCIdentity:            fscIdentity,
 		NetworkDefaultIdentity: networkDefaultIdentity,
+		IdentityProvider:       identityProvider,
 		SignerService:          signerService,
 		BinderService:          binderService,
 		StorageProvider:        storageProvider,
@@ -107,11 +110,11 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 		f.ignoreRemote,
 	)
 	return &BindingRole{
-		Role:          idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
-		IdentityType:  IdemixIdentity,
-		RootIdentity:  f.FSCIdentity,
-		SignerService: f.SignerService,
-		BinderService: f.BinderService,
+		Role:             idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		IdentityType:     IdemixIdentity,
+		RootIdentity:     f.FSCIdentity,
+		IdentityProvider: f.IdentityProvider,
+		BinderService:    f.BinderService,
 	}, nil
 }
 
@@ -147,11 +150,11 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
 	return &BindingRole{
-		Role:          x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
-		IdentityType:  identityType,
-		RootIdentity:  f.FSCIdentity,
-		SignerService: f.SignerService,
-		BinderService: f.BinderService,
+		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		IdentityType:     identityType,
+		RootIdentity:     f.FSCIdentity,
+		IdentityProvider: f.IdentityProvider,
+		BinderService:    f.BinderService,
 	}, nil
 }
 
@@ -179,11 +182,11 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Ro
 		return nil, errors.WithMessage(err, "failed to load owners")
 	}
 	return &BindingRole{
-		Role:          x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
-		IdentityType:  X509Identity,
-		RootIdentity:  f.FSCIdentity,
-		SignerService: f.SignerService,
-		BinderService: f.BinderService,
+		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
+		IdentityType:     X509Identity,
+		RootIdentity:     f.FSCIdentity,
+		IdentityProvider: f.IdentityProvider,
+		BinderService:    f.BinderService,
 	}, nil
 }
 
@@ -196,9 +199,9 @@ type BindingRole struct {
 	identity.Role
 	IdentityType string
 
-	RootIdentity  view2.Identity
-	SignerService common.SigService
-	BinderService common.BinderService
+	RootIdentity     view2.Identity
+	IdentityProvider common.IdentityProvider
+	BinderService    common.BinderService
 }
 
 func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
@@ -207,11 +210,11 @@ func (r *BindingRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 		return nil, err
 	}
 	return &Info{
-		IdentityInfo:  info,
-		IdentityType:  r.IdentityType,
-		RootIdentity:  r.RootIdentity,
-		SignerService: r.SignerService,
-		BinderService: r.BinderService,
+		IdentityInfo:     info,
+		IdentityType:     r.IdentityType,
+		RootIdentity:     r.RootIdentity,
+		IdentityProvider: r.IdentityProvider,
+		BinderService:    r.BinderService,
 	}, nil
 }
 
@@ -221,9 +224,9 @@ type Info struct {
 	driver.IdentityInfo
 	IdentityType string
 
-	RootIdentity  view2.Identity
-	SignerService common.SigService
-	BinderService common.BinderService
+	RootIdentity     view2.Identity
+	IdentityProvider common.IdentityProvider
+	BinderService    common.BinderService
 }
 
 func (i *Info) ID() string {
@@ -241,7 +244,7 @@ func (i *Info) Get() (view2.Identity, []byte, error) {
 		return nil, nil, err
 	}
 	// register the audit info
-	if err := i.SignerService.RegisterAuditInfo(id, ai); err != nil {
+	if err := i.IdentityProvider.RegisterAuditInfo(id, ai); err != nil {
 		return nil, nil, err
 	}
 	// bind the identity to the default FSC node identity
@@ -256,7 +259,7 @@ func (i *Info) Get() (view2.Identity, []byte, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		if err := i.SignerService.RegisterAuditInfo(raw, ai); err != nil {
+		if err := i.IdentityProvider.RegisterAuditInfo(raw, ai); err != nil {
 			return nil, nil, err
 		}
 		if i.BinderService != nil {

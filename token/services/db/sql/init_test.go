@@ -71,7 +71,7 @@ func Init(driverName, dataSourceName, tablePrefix string, createSchema bool, max
 	})
 	Identity = newIdentityDB(db, identityTables{
 		IdentityConfigurations: tables.IdentityConfigurations,
-		AuditInfo:              tables.AuditInfo,
+		IdentityInfo:           tables.IdentityInfo,
 		Signers:                tables.Signers,
 	}, secondcache.New(1000))
 	Wallet = newWalletDB(db, walletTables{Wallets: tables.Wallets})
@@ -116,7 +116,7 @@ func TestGetTableNames(t *testing.T) {
 		PublicParams:           "public_params",
 		Wallets:                "wallet",
 		IdentityConfigurations: "id_configs",
-		AuditInfo:              "audit_info",
+		IdentityInfo:           "id_info",
 		Signers:                "signers",
 	}, names)
 

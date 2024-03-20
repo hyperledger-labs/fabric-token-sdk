@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
@@ -23,7 +22,7 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.x509")
 
 type SignerService interface {
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier) error
+	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 }
 
 type Provider struct {
@@ -41,7 +40,7 @@ func NewProvider(mspConfigPath, keyStorePath, mspID string, signerService Signer
 // NewProviderWithBCCSPConfig returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewProviderWithBCCSPConfig(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *config.BCCSP) (*Provider, error) {
+func NewProviderWithBCCSPConfig(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *BCCSP) (*Provider, error) {
 	p, err := newProvider(mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
 	if err == nil {
 		return p, nil
@@ -59,7 +58,7 @@ func NewProviderWithBCCSPConfig(mspConfigPath, keyStorePath, mspID string, signe
 	return &Provider{id: idRaw, enrollmentID: enrollmentID}, nil
 }
 
-func newProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *config.BCCSP) (*Provider, error) {
+func newProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *BCCSP) (*Provider, error) {
 	sID, err := GetSigningIdentity(mspConfigPath, keyStorePath, mspID, bccspConfig)
 	if err != nil {
 		return nil, err
@@ -70,7 +69,7 @@ func newProvider(mspConfigPath, keyStorePath, mspID string, signerService Signer
 	}
 	if signerService != nil {
 		logger.Debugf("register signer [%s][%s]", mspID, view.Identity(idRaw))
-		err = signerService.RegisterSigner(idRaw, sID, sID)
+		err = signerService.RegisterSigner(idRaw, sID, sID, nil)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
 		}

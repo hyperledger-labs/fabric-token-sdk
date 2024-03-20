@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
@@ -83,10 +84,12 @@ func (lm *LocalMembership) Load(identities []*config.Identity) error {
 		}
 	}
 
-	// load identity from KVS
+	// load identities from storage
+	logger.Debugf("load identities from storage...")
 	if err := lm.loadFromStorage(); err != nil {
-		return errors.Wrapf(err, "failed to load identity from storage")
+		return errors.Wrapf(err, "failed to load identities from storage")
 	}
+	logger.Debugf("load identities from storage...done")
 
 	// if no default identity, use the first one
 	defaultIdentifier := lm.GetDefaultIdentifier()
@@ -156,13 +159,6 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 }
 
 func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
-	if err := lm.identityDB.AddConfiguration(driver2.IdentityConfiguration{
-		ID:   id,
-		Type: IdentityConfigurationType,
-		URL:  path,
-	}); err != nil {
-		return err
-	}
 	return lm.registerIdentity(&config.Identity{
 		ID:   id,
 		Path: path,
@@ -189,16 +185,16 @@ func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool)
 	return nil
 }
 
-func (lm *LocalMembership) registerProvider(identity *config.Identity, translatedPath string, setDefault bool) error {
+func (lm *LocalMembership) registerProvider(identityConfig *config.Identity, translatedPath string, setDefault bool) error {
 	// Try without "msp"
-	opts, err := config2.ToBCCSPOpts(identity.Opts)
+	opts, err := ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return errors.WithMessage(err, "failed to extract BCCSP options")
 	}
 	if opts == nil {
-		logger.Debugf("no BCCSP options set for [%s]: [%v]", identity.ID, identity.Opts)
+		logger.Debugf("no BCCSP options set for [%s]: [%v]", identityConfig.ID, identityConfig.Opts)
 	} else {
-		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", identity.ID, opts, opts.PKCS11, opts.SW)
+		logger.Debugf("BCCSP options set for [%s] to [%v:%v:%v]", identityConfig.ID, opts, opts.PKCS11, opts.SW)
 	}
 
 	keyStorePath := ""
@@ -233,14 +229,30 @@ func (lm *LocalMembership) registerProvider(identity *config.Identity, translate
 
 	walletId, _, err := provider.Identity(nil)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", identity.ID, translatedPath)
+		return errors.WithMessagef(err, "failed to get wallet identity from [%s:%s]", identityConfig.ID, translatedPath)
 	}
 
-	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", identity.ID, provider.EnrollmentID(), walletId.String())
+	logger.Debugf("Adding x509 wallet resolver [%s:%s:%s]", identityConfig.ID, provider.EnrollmentID(), walletId.String())
 
 	lm.deserializerManager.AddDeserializer(provider)
-	if err := lm.addResolver(identity.ID, provider.EnrollmentID(), setDefault, provider.IsRemote(), provider.Identity); err != nil {
+	if err := lm.addResolver(identityConfig.ID, provider.EnrollmentID(), setDefault, provider.IsRemote(), provider.Identity); err != nil {
 		return err
+	}
+
+	if exists, _ := lm.identityDB.ConfigurationExists(identityConfig.ID, IdentityConfigurationType); !exists {
+		identityConfigRaw, err := json.Marshal(identityConfig)
+		if err != nil {
+			return errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
+		}
+		if err := lm.identityDB.AddConfiguration(driver2.IdentityConfiguration{
+			ID:     identityConfig.ID,
+			Type:   IdentityConfigurationType,
+			URL:    identityConfig.Path,
+			Config: identityConfigRaw,
+			Raw:    nil,
+		}); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -336,7 +348,22 @@ func (lm *LocalMembership) loadFromStorage() error {
 		if lm.getResolver(id) != nil {
 			continue
 		}
-		if err := lm.registerIdentity(&config.Identity{ID: id, Path: entry.URL}, lm.GetDefaultIdentifier() == ""); err != nil {
+		identityConfig := &config.Identity{
+			ID:   id,
+			Path: entry.URL,
+			Type: IdentityConfigurationType,
+		}
+		if len(entry.Config) != 0 {
+			if err := json.Unmarshal([]byte(entry.Config), identityConfig); err != nil {
+				logger.Errorf("failed to load configuration for entry [%s]", entry.ID)
+				continue
+			}
+			if identityConfig.ID != id || identityConfig.Path != entry.URL || identityConfig.Type != IdentityConfigurationType {
+				logger.Errorf("invalid configuration for entry [%s], it does not match the expected values [%v][%v]", entry.ID, entry, identityConfig)
+				continue
+			}
+		}
+		if err := lm.registerIdentity(identityConfig, lm.GetDefaultIdentifier() == ""); err != nil {
 			return err
 		}
 	}
