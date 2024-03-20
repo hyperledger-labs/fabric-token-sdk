@@ -97,7 +97,7 @@ func (db *IdentityDB) ConfigurationExists(id, typ string) (bool, error) {
 }
 
 func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMetadata []byte, tokenMetadataAudit []byte) error {
-	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, identityAuditInfo, tokenMetadata, tokenMetadataAuditInfo) VALUES ($1, $2, $3, $4, $5)", db.table.IdentityInfo)
+	query := fmt.Sprintf("INSERT INTO %s (identity_hash, identity, identity_audit_info, token_metadata, token_metadata_audit_info) VALUES ($1, $2, $3, $4, $5)", db.table.IdentityInfo)
 	logger.Debug(query)
 
 	h := view.Identity(id).String()
@@ -118,7 +118,7 @@ func (db *IdentityDB) StoreIdentityData(id []byte, identityAudit []byte, tokenMe
 
 func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 	h := view.Identity(id).String()
-	query := fmt.Sprintf("SELECT identityAuditInfo FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
+	query := fmt.Sprintf("SELECT identity_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)
 	var info []byte
@@ -134,7 +134,7 @@ func (db *IdentityDB) GetAuditInfo(id []byte) ([]byte, error) {
 
 func (db *IdentityDB) GetTokenInfo(id []byte) ([]byte, []byte, error) {
 	h := view.Identity(id).String()
-	query := fmt.Sprintf("SELECT tokenMetadata, tokenMetadataAuditInfo FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
+	query := fmt.Sprintf("SELECT token_metadata, token_metadata_audit_info FROM %s WHERE identity_hash = $1", db.table.IdentityInfo)
 	logger.Debug(query)
 	row := db.db.QueryRow(query, h)
 	var tokenMetadata []byte
@@ -280,9 +280,9 @@ func (db *IdentityDB) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
             identity_hash TEXT NOT NULL PRIMARY KEY,
 			identity BYTEA NOT NULL,
-			identityAuditInfo BYTEA NOT NULL,
-			tokenMetadata BYTEA,
-			tokenMetadataAuditInfo BYTEA
+			identity_audit_info BYTEA NOT NULL,
+			token_metadata BYTEA,
+			token_metadata_audit_info BYTEA
 		);
 		CREATE INDEX IF NOT EXISTS idx_audits_%s ON %s ( identity_hash );
 
