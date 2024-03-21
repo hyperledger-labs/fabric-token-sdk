@@ -74,13 +74,18 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 		return nil, err
 	}
 
-	// Import revocation public key
-	RevocationPublicKey, err := cryptoProvider.KeyImport(
-		conf.RevocationPk,
-		&bccsp.IdemixRevocationPublicKeyImportOpts{Temporary: true},
+	// IMPORTANT: we generate an ephemeral revocation key public key because
+	// it is never used in the current idemix implementations.
+	// This might change in the future
+	RevocationKey, err := cryptoProvider.KeyGen(
+		&bccsp.IdemixRevocationKeyGenOpts{Temporary: true},
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to import revocation public key")
+		return nil, errors.WithMessage(err, "failed to generate revocation key")
+	}
+	RevocationPublicKey, err := RevocationKey.PublicKey()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to extract revocation public key")
 	}
 
 	if conf.Signer == nil {

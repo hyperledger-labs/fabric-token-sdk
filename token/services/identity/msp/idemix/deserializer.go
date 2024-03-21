@@ -20,21 +20,10 @@ import (
 
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
 func NewDeserializer(ipk []byte, curveID math.CurveID) (*DeserializerWrapper, error) {
-	if curveID == math.BLS12_381_BBS {
-		return NewDeserializerAries(ipk)
-	}
 	logger.Infof("new deserialized for dlog idemix")
-	cryptoProvider, err := NewBCCSP(curveID)
+	cryptoProvider, err := NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
-	}
-	return NewDeserializerWithProvider(ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
-}
-
-func NewDeserializerAries(ipk []byte) (*DeserializerWrapper, error) {
-	cryptoProvider, err := NewAriesBCCSP()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to instantiate aries crypto provider")
 	}
 	return NewDeserializerWithProvider(ipk, csp.ExpectEidNymRhNym, nil, cryptoProvider)
 }

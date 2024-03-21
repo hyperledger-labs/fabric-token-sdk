@@ -92,9 +92,13 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
-	keystore, err := f.StorageProvider.NewKeystore()
+	backend, err := f.StorageProvider.NewKeystore()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get new keystore")
+		return nil, errors.Wrapf(err, "failed to get new keystore backend")
+	}
+	keyStore, err := idemix2.NewKeyStore(curveID, backend)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 	}
 	lm := idemix2.NewLocalMembership(
 		issuerPublicKey,
@@ -104,7 +108,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 		f.SignerService,
 		f.DeserializerManager,
 		identityDB,
-		keystore,
+		keyStore,
 		RoleToMSPID[role],
 		cacheSize,
 		identities,
