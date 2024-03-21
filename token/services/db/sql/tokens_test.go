@@ -228,7 +228,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
-	assert.NoError(t, db.Delete("tx101", 0, "tx103"))
+	assert.NoError(t, db.DeleteTokens("tx103", &token.ID{TxId: "tx101", Index: 0}))
 
 	tok, err := db.ListUnspentTokens()
 	assert.NoError(t, err)
