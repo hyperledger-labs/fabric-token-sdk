@@ -22,7 +22,7 @@ type Role interface {
 	// GetIdentityInfo returns the long-term identity info associated to the passed id
 	GetIdentityInfo(id string) (driver.IdentityInfo, error)
 	// RegisterIdentity registers the given identity
-	RegisterIdentity(id string, path string) error
+	RegisterIdentity(config driver.IdentityConfiguration) error
 	// IdentityIDs returns the identifiers contained in this role
 	IdentityIDs() ([]string, error)
 }

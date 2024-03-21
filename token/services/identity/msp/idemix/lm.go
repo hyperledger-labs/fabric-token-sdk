@@ -153,10 +153,10 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 	), nil
 }
 
-func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
+func (lm *LocalMembership) RegisterIdentity(idConfig driver.IdentityConfiguration) error {
 	lm.resolversMutex.Lock()
 	defer lm.resolversMutex.Unlock()
-	return lm.registerIdentity(config.Identity{ID: id, Path: path, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
+	return lm.registerIdentity(config.Identity{ID: idConfig.ID, Path: idConfig.URL, Default: lm.GetDefaultIdentifier() == ""}, lm.curveID)
 }
 
 func (lm *LocalMembership) IDs() ([]string, error) {

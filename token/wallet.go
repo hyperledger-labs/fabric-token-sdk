@@ -41,14 +41,20 @@ type WalletManager struct {
 	managementService *ManagementService
 }
 
-// RegisterOwnerWallet registers a new owner wallet with the passed id
-func (wm *WalletManager) RegisterOwnerWallet(id string, path string) error {
-	return wm.walletService.RegisterOwnerWallet(id, path)
+// RegisterOwnerIdentity registers a new owner wallet with the passed id
+func (wm *WalletManager) RegisterOwnerIdentity(id string, path string) error {
+	return wm.walletService.RegisterOwnerIdentity(driver.IdentityConfiguration{
+		ID:  id,
+		URL: path,
+	})
 }
 
-// RegisterIssuerWallet registers a new issuer wallet with the passed id
-func (wm *WalletManager) RegisterIssuerWallet(id string, path string) error {
-	return wm.walletService.RegisterIssuerWallet(id, path)
+// RegisterIssuerIdentity registers a new issuer wallet with the passed id
+func (wm *WalletManager) RegisterIssuerIdentity(id string, path string) error {
+	return wm.walletService.RegisterIssuerIdentity(driver.IdentityConfiguration{
+		ID:  id,
+		URL: path,
+	})
 }
 
 // RegisterRecipientIdentity registers a new recipient identity

@@ -312,7 +312,7 @@ func TestIdentityFromFabricCA(t *testing.T) {
 	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := idemix.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigDirMsp, idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := idemix.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
 	config, err := idemix.GetLocalMspConfigWithType(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)
@@ -387,7 +387,7 @@ func TestIdentityFromFabricCAWithEidRhNymPolicy(t *testing.T) {
 	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	assert.NoError(t, registry.RegisterService(sigService))
 
-	ipkBytes, err := idemix.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigDirMsp, idemix2.IdemixConfigFileIssuerPublicKey))
+	ipkBytes, err := idemix.ReadFile(filepath.Join("./testdata/charlie.ExtraId2", idemix2.IdemixConfigFileIssuerPublicKey))
 	assert.NoError(t, err)
 	config, err := idemix.GetLocalMspConfigWithType(ipkBytes, "./testdata/charlie.ExtraId2", "charlie.ExtraId2", true)
 	assert.NoError(t, err)

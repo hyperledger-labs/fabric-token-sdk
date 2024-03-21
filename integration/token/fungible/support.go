@@ -966,7 +966,7 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 }
 
 func RegisterIssuerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
-	_, err := network.Client(id).CallView("RegisterIssuerWallet", common.JSONMarshall(&views.RegisterIssuerWallet{
+	_, err := network.Client(id).CallView("RegisterIssuerIdentity", common.JSONMarshall(&views.RegisterIssuerWallet{
 		ID:   walletID,
 		Path: walletPath,
 	}))
@@ -975,7 +975,7 @@ func RegisterIssuerWallet(network *integration.Infrastructure, id string, wallet
 }
 
 func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
-	_, err := network.Client(id).CallView("RegisterOwnerWallet", common.JSONMarshall(&views.RegisterOwnerWallet{
+	_, err := network.Client(id).CallView("RegisterOwnerIdentity", common.JSONMarshall(&views.RegisterOwnerIdentity{
 		ID:   walletID,
 		Path: walletPath,
 	}))

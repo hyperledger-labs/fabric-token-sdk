@@ -158,10 +158,10 @@ func (lm *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (driv
 	), nil
 }
 
-func (lm *LocalMembership) RegisterIdentity(id string, path string) error {
+func (lm *LocalMembership) RegisterIdentity(idConfig driver.IdentityConfiguration) error {
 	return lm.registerIdentity(&config.Identity{
-		ID:   id,
-		Path: path,
+		ID:   idConfig.ID,
+		Path: idConfig.URL,
 	}, lm.GetDefaultIdentifier() == "")
 }
 
