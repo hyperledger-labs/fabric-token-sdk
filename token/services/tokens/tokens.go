@@ -225,27 +225,5 @@ func (t *Tokens) StorePublicParams(raw []byte) error {
 // DeleteToken marks the entries corresponding to the passed token ids as deleted.
 // The deletion is attributed to the passed deletedBy argument.
 func (t *Tokens) DeleteToken(deletedBy string, ids ...*token2.ID) (err error) {
-	ts, err := t.Storage.NewTransaction()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil && ts != nil {
-			if err := ts.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
-
-	for _, id := range ids {
-		if id != nil {
-			if err = ts.DeleteToken(id.TxId, id.Index, deletedBy); err != nil {
-				return errors.WithMessagef(err, "failed to delete [%s] by [%s]", id, deletedBy)
-			}
-		}
-	}
-	if err = ts.Commit(); err != nil {
-		return err
-	}
-	return nil
+	return t.Storage.tokenDB.DeleteTokens(deletedBy, ids...)
 }
