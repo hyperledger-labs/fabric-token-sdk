@@ -234,9 +234,11 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 	var err error
 	if len(identityConfig.Raw) != 0 {
 		// load the msp config directly from identityConfig.Raw
+		logger.Infof("load the msp config directly from identityConfig.Raw [%s]", hash.Hashable(identityConfig.Raw))
 		conf, err = NewMSPConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw, l.mspID)
 	} else {
 		// load from URL
+		logger.Infof("load the msp config form identityConfig.URL [%s]", identityConfig.URL)
 		conf, err = NewMSPConfigFromURL(l.issuerPublicKey, identityConfig.URL, l.mspID, l.ignoreVerifyOnlyWallet)
 	}
 	if err != nil {

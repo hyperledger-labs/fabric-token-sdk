@@ -18,6 +18,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
+	"github.com/IBM/idemix"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common/runner"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators"
@@ -35,7 +38,7 @@ type CAFactory = func(generators.TokenPlatform, *topology.TMS, string) (CA, erro
 type CA interface {
 	Start() error
 	Stop()
-	Gen(owner string) (string, error)
+	Gen(owner string) (token.IdentityConfiguration, error)
 }
 
 type CAServer struct {
@@ -186,7 +189,7 @@ func (i *IdemixCASupport) Stop() {
 	}
 }
 
-func (i *IdemixCASupport) Gen(owner string) (string, error) {
+func (i *IdemixCASupport) Gen(owner string) (res token.IdentityConfiguration, err error) {
 	//fabric-ca-client register --caname ca-org1 --id.name owner1a --id.secret password --id.type client --enrollment.type idemix --idemix.curve gurvy.Bn254 --tls.certfiles "${CERT_FILES}"
 	//fabric-ca-client enroll -u https://owner1a:password@localhost:7054 --caname ca-org1  -M "${PWD}/keys/owner1/wallet/owner1a/msp" --enrollment.type idemix --idemix.curve gurvy.Bn254 --tls.certfiles "${CERT_FILES}"
 
@@ -194,7 +197,7 @@ func (i *IdemixCASupport) Gen(owner string) (string, error) {
 	logger.Debugf("Generating owner identity [%s] for [%s]", owner, tmsID)
 	userOutput := filepath.Join(i.TokenPlatform.TokenDir(), "crypto", tmsID, "idemix", owner)
 	if err := os.MkdirAll(userOutput, 0766); err != nil {
-		return "", nil
+		return res, err
 	}
 
 	caName := tmsID + ".example.com"
@@ -214,7 +217,7 @@ func (i *IdemixCASupport) Gen(owner string) (string, error) {
 	cmd := common.NewCommand(fabricCAClientExePath, registerCommand)
 	sess, err := i.StartSession(cmd, registerCommand.SessionName())
 	if err != nil {
-		return "", err
+		return
 	}
 	Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
@@ -229,11 +232,17 @@ func (i *IdemixCASupport) Gen(owner string) (string, error) {
 	cmd = common.NewCommand(fabricCAClientExePath, enrollCommand)
 	sess, err = i.StartSession(cmd, enrollCommand.SessionName())
 	if err != nil {
-		return "", err
+		return
 	}
 	Eventually(sess, i.EventuallyTimeout).Should(gexec.Exit(0))
 
-	return userOutput, nil
+	signerBytes, err := os.ReadFile(filepath.Join(userOutput, idemix.IdemixConfigDirUser, idemix.IdemixConfigFileSigner))
+	Expect(err).NotTo(HaveOccurred())
+
+	res.ID = owner
+	res.Raw = signerBytes
+	res.URL = userOutput
+	return
 }
 
 func (i *IdemixCASupport) GenerateConfiguration() error {

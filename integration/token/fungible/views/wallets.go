@@ -44,9 +44,8 @@ func (p *RegisterIssuerIdentityViewFactory) NewView(in []byte) (view.View, error
 }
 
 type RegisterOwnerIdentity struct {
+	token.IdentityConfiguration
 	TMSID token.TMSID
-	ID    string
-	Path  string
 }
 
 // RegisterOwnerIdentityView is a view that registers an owner wallet
@@ -57,7 +56,7 @@ type RegisterOwnerIdentityView struct {
 func (r *RegisterOwnerIdentityView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err := tms.WalletManager().RegisterOwnerIdentity(r.ID, r.Path)
+	err := tms.WalletManager().RegisterOwnerIdentityConfiguration(r.IdentityConfiguration)
 	assert.NoError(err, "failed to register owner wallet [%s:%s]", r.ID, r.TMSID)
 	return nil, nil
 }

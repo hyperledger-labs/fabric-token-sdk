@@ -12,6 +12,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
@@ -187,7 +189,7 @@ func (lm *LocalMembership) registerIdentity(c *config.Identity, setDefault bool)
 
 func (lm *LocalMembership) registerProvider(identityConfig *config.Identity, translatedPath string, setDefault bool) error {
 	// Try without "msp"
-	opts, err := ToBCCSPOpts(identityConfig.Opts)
+	opts, err := msp.ToBCCSPOpts(identityConfig.Opts)
 	if err != nil {
 		return errors.WithMessage(err, "failed to extract BCCSP options")
 	}

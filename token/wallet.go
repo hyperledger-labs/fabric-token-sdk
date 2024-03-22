@@ -35,25 +35,34 @@ func WithType(tokenType string) ListTokensOption {
 	}
 }
 
+type IdentityConfiguration = driver.IdentityConfiguration
+
 // WalletManager defines the interface for managing wallets.
 type WalletManager struct {
 	walletService     driver.WalletService
 	managementService *ManagementService
 }
 
-// RegisterOwnerIdentity registers a new owner wallet with the passed id
-func (wm *WalletManager) RegisterOwnerIdentity(id string, path string) error {
+// RegisterOwnerIdentity registers an owner long-term identity. The identity will be loaded from the passed url.
+// Depending on the support, the url can be a path in the file system or something else.
+func (wm *WalletManager) RegisterOwnerIdentity(id string, url string) error {
 	return wm.walletService.RegisterOwnerIdentity(driver.IdentityConfiguration{
 		ID:  id,
-		URL: path,
+		URL: url,
 	})
 }
 
-// RegisterIssuerIdentity registers a new issuer wallet with the passed id
-func (wm *WalletManager) RegisterIssuerIdentity(id string, path string) error {
+// RegisterOwnerIdentityConfiguration registers an owner long-term identity via a identity configuration
+func (wm *WalletManager) RegisterOwnerIdentityConfiguration(conf IdentityConfiguration) error {
+	return wm.walletService.RegisterOwnerIdentity(conf)
+}
+
+// RegisterIssuerIdentity registers an issuer long-term identity. The identity will be loaded from the passed url.
+// Depending on the support, the url can be a path in the file system or something else.
+func (wm *WalletManager) RegisterIssuerIdentity(id string, url string) error {
 	return wm.walletService.RegisterIssuerIdentity(driver.IdentityConfiguration{
 		ID:  id,
-		URL: path,
+		URL: url,
 	})
 }
 

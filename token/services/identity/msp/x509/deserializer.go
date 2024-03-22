@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
@@ -25,7 +26,7 @@ func (deserializer *MSPIdentityDeserializer) DeserializeVerifier(id view.Identit
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
-	genericPublicKey, err := PemDecodeKey(si.IdBytes)
+	genericPublicKey, err := msp2.PemDecodeKey(si.IdBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing received public key")
 	}
@@ -33,7 +34,7 @@ func (deserializer *MSPIdentityDeserializer) DeserializeVerifier(id view.Identit
 	if !ok {
 		return nil, errors.New("expected *ecdsa.PublicKey")
 	}
-	return NewECDSAVerifier(publicKey), nil
+	return msp2.NewECDSAVerifier(publicKey), nil
 }
 
 type AuditMatcherDeserializer struct{}
@@ -58,7 +59,7 @@ func (a *AuditInfoMatcher) Match(id []byte) error {
 		return errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
 
-	cert, err := PemDecodeCert(si.IdBytes)
+	cert, err := msp2.PemDecodeCert(si.IdBytes)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode certificate")
 	}
