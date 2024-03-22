@@ -835,6 +835,7 @@ func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, a
 
 	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
 	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
+	Restart(network, false, "charlie")
 	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
 
 	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)

@@ -12,8 +12,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
@@ -21,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -216,11 +215,11 @@ func (lm *LocalMembership) registerProvider(identityConfig *config.Identity, tra
 	}
 
 	logger.Debugf("load provider at [%s][%s]", translatedPath, keyStorePath)
-	provider, err := NewProviderWithBCCSPConfig(translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
+	provider, err := NewProvider(translatedPath, keyStorePath, lm.mspID, lm.signerService, opts)
 	if err != nil {
 		logger.Debugf("failed reading bccsp msp configuration from [%s]: [%s]", filepath.Join(translatedPath), err)
 		// Try with "msp"
-		provider, err = NewProviderWithBCCSPConfig(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
+		provider, err = NewProvider(filepath.Join(translatedPath, "msp"), keyStorePath, lm.mspID, lm.signerService, opts)
 		if err != nil {
 			logger.Warnf("failed reading bccsp msp configuration from [%s and %s]: [%s]",
 				filepath.Join(translatedPath), filepath.Join(translatedPath, "msp"), err,

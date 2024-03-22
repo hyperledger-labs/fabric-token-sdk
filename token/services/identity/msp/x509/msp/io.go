@@ -104,3 +104,21 @@ func loadCertificateAt(dir, certificatePath string, ouType string) []byte {
 
 	return nil
 }
+
+func PemDecodeCert(pemBytes []byte) (*x509.Certificate, error) {
+	block, _ := pem.Decode(pemBytes)
+	if block == nil {
+		return nil, errors.New("bytes are not PEM encoded")
+	}
+
+	switch block.Type {
+	case "CERTIFICATE":
+		cert, err := x509.ParseCertificate(block.Bytes)
+		if err != nil {
+			return nil, errors.WithMessage(err, "pem bytes are not cert encoded ")
+		}
+		return cert, nil
+	default:
+		return nil, errors.Errorf("bad type %s, expected 'CERTIFICATE", block.Type)
+	}
+}
