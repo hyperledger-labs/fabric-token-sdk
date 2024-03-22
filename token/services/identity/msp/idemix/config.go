@@ -138,7 +138,22 @@ func NewMSPConfigFromRawSigner(issuerPublicKey []byte, signerRaw []byte, ID stri
 	if len(signerRaw) != 0 {
 		signer = &idemixmsp.IdemixMSPSignerConfig{}
 		if err := proto.Unmarshal(signerRaw, signer); err != nil {
-			return nil, errors.Wrapf(err, "failed to unamrshal idemix msp signer config")
+			// is the format Fabric-CA generate?
+			si := &SignerConfig{}
+			if err2 := json.Unmarshal(signerRaw, si); err2 != nil {
+				return nil, errors.Wrapf(
+					errors.Wrapf(err, "failed to unmarhal IdemixMSPSignerConfig"),
+					"failed to unmarshal SignerConfig [%s]", err2)
+			}
+			signer = &idemixmsp.IdemixMSPSignerConfig{
+				Cred:                            si.Cred,
+				Sk:                              si.Sk,
+				OrganizationalUnitIdentifier:    si.OrganizationalUnitIdentifier,
+				Role:                            int32(si.Role),
+				EnrollmentId:                    si.EnrollmentID,
+				CredentialRevocationInformation: si.CredentialRevocationInformation,
+				RevocationHandle:                si.RevocationHandle,
+			}
 		}
 	}
 	idemixConfig := &idemixmsp.IdemixMSPConfig{
