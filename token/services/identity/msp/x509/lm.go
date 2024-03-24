@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package x509
 
 import (
-	"encoding/json"
 	"os"
 	"path/filepath"
 	"sync"
@@ -22,6 +21,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
+	"gopkg.in/yaml.v2"
 )
 
 const (
@@ -241,7 +241,7 @@ func (lm *LocalMembership) registerProvider(identityConfig *config.Identity, tra
 	}
 
 	if exists, _ := lm.identityDB.ConfigurationExists(identityConfig.ID, IdentityConfigurationType); !exists {
-		identityConfigRaw, err := json.Marshal(identityConfig)
+		optsRaw, err := yaml.Marshal(identityConfig.Opts)
 		if err != nil {
 			return errors.Wrapf(err, "failed to marshal config [%v]", identityConfig)
 		}
@@ -249,7 +249,7 @@ func (lm *LocalMembership) registerProvider(identityConfig *config.Identity, tra
 			ID:     identityConfig.ID,
 			Type:   IdentityConfigurationType,
 			URL:    identityConfig.Path,
-			Config: identityConfigRaw,
+			Config: optsRaw,
 			Raw:    nil,
 		}); err != nil {
 			return err
@@ -355,14 +355,19 @@ func (lm *LocalMembership) loadFromStorage() error {
 			Type: IdentityConfigurationType,
 		}
 		if len(entry.Config) != 0 {
-			if err := json.Unmarshal([]byte(entry.Config), identityConfig); err != nil {
-				logger.Errorf("failed to load configuration for entry [%s]", entry.ID)
+			if err := yaml.Unmarshal(entry.Config, &identityConfig.Opts); err != nil {
+				logger.Errorf("failed to load configuration for entry [%s], err [%s]", entry.ID, err)
 				continue
 			}
-			if identityConfig.ID != id || identityConfig.Path != entry.URL || identityConfig.Type != IdentityConfigurationType {
-				logger.Errorf("invalid configuration for entry [%s], it does not match the expected values [%v][%v]", entry.ID, entry, identityConfig)
-				continue
-			}
+		}
+		if identityConfig.ID != id || identityConfig.Path != entry.URL || identityConfig.Type != IdentityConfigurationType {
+			logger.Errorf(
+				"invalid configuration it does not match the expected values [%s][%s], [%s][%s], [%s][%s]",
+				identityConfig.ID, id,
+				identityConfig.Path, entry.URL,
+				identityConfig.Type, IdentityConfigurationType,
+			)
+			continue
 		}
 		if err := lm.registerIdentity(identityConfig, lm.GetDefaultIdentifier() == ""); err != nil {
 			return err
