@@ -46,8 +46,8 @@ type Vault interface {
 	GetLastTxID() (string, error)
 
 	// Status returns the status of the transaction
-	Status(id string) (ValidationCode, error)
+	Status(id string) (ValidationCode, string, error)
 
 	// DiscardTx discards the transaction with the passed id
-	DiscardTx(id string) error
+	DiscardTx(id string, message string) error
 }

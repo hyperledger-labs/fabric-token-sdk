@@ -348,6 +348,10 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 }
 
 func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
+	if len(c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()) == 0 {
+		return nil, nil
+	}
+
 	if !c.tx.Opts.Auditor.IsNone() {
 		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
@@ -372,6 +376,10 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 }
 
 func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+	if c.Opts.SkipDistributeEnv {
+		return nil
+	}
+
 	if !c.Opts.SkipApproval {
 		// perform sanity checks
 		if env == nil {
@@ -700,10 +708,29 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // to be processed at time of committing.
 // 4. It sends back an ack.
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
+	if err := s.respondToSignatureRequests(context); err != nil {
+		return nil, err
+	}
+
+	if err := s.respondToEnvelope(context); err != nil {
+		return nil, err
+	}
+
+	labels := []string{
+		"network", s.tx.Network(),
+		"channel", s.tx.Channel(),
+		"namespace", s.tx.Namespace(),
+	}
+	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
+
+	return s.tx, nil
+}
+
+func (s *EndorseView) respondToSignatureRequests(context view.Context) error {
 	// Process signature requests
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed collecting requests of signature")
+		return errors.Wrapf(err, "failed collecting requests of signature")
 	}
 
 	session := context.Session()
@@ -722,54 +749,57 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 			timeout.Stop()
 		case <-timeout.C:
 			timeout.Stop()
-			return nil, errors.Errorf("Timeout from party %s", session.Info().Caller)
+			return errors.Errorf("Timeout from party %s", session.Info().Caller)
 		}
 		if msg.Status == view.ERROR {
-			return nil, errors.New(string(msg.Payload))
+			return errors.New(string(msg.Payload))
 		}
 
 		// TODO: check what is signed...
 		signatureRequest := &SignatureRequest{}
 		err := Unmarshal(msg.Payload, signatureRequest)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed unmarshalling signature request")
+			return errors.Wrap(err, "failed unmarshalling signature request")
 		}
 
 		sigService := s.tx.TokenService().SigService()
 		if !sigService.IsMe(signatureRequest.Signer) {
-			return nil, errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
+			return errors.Errorf("identity [%s] is not me", signatureRequest.Signer.UniqueID())
 		}
 		signer, err := sigService.GetSigner(signatureRequest.Signer)
 		if err != nil {
-			return nil, errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
+			return errors.Wrapf(err, "cannot find signer for [%s]", signatureRequest.Signer.UniqueID())
 		}
 		sigma, err := signer.Sign(signatureRequest.MessageToSign())
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed signing request")
+			return errors.Wrapf(err, "failed signing request")
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("Send back signature...")
 		}
 		err = session.Send(sigma)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed sending signature back")
+			return errors.Wrapf(err, "failed sending signature back")
 		}
 	}
+	return nil
+}
 
+func (s *EndorseView) respondToEnvelope(context view.Context) error {
 	// Receive transaction with envelope
 	_, rawRequest, err := s.receiveTransaction(context)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed receiving transaction")
+		return errors.Wrapf(err, "failed receiving transaction")
 	}
 
 	// Store envelope
 	if err := StoreEnvelope(context, s.tx); err != nil {
-		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
+		return errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
 	// Store transaction in the token transaction database
 	if err := StoreTransactionRecords(context, s.tx); err != nil {
-		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
+		return errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
 	}
 
 	// Send back an acknowledgement
@@ -778,20 +808,21 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	}
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
+		return errors.WithMessagef(err, "failed to get signer for default identity")
 	}
 	sigma, err := signer.Sign(rawRequest)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to sign ack response")
+		return errors.WithMessage(err, "failed to sign ack response")
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
 	}
+	session := context.Session()
 	if err := session.Send(sigma); err != nil {
-		return nil, errors.WithMessage(err, "failed sending ack")
+		return errors.WithMessage(err, "failed sending ack")
 	}
 
-	return s.tx, nil
+	return nil
 }
 
 func (s *EndorseView) receiveTransaction(context view.Context) (*Transaction, []byte, error) {

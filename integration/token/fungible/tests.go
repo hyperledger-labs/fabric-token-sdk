@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -826,22 +828,6 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 	CheckOwnerWalletIDs(network, "manager", "manager.id1", "manager.id2", "manager.id3")
 }
 
-func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool) {
-	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
-	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
-	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
-	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
-
-	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
-	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
-	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
-
-	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)
-	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10, auditor)
-	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
-}
-
 func TestRevokeIdentity(network *integration.Infrastructure, auditor string, revocationHandle string, errorMessage string) {
 	IssueCash(network, "", "USD", 110, "alice", auditor, true, "issuer")
 	CheckBalanceAndHolding(network, "alice", "", "USD", 110, auditor)
@@ -961,4 +947,38 @@ func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *Wall
 	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
 	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+}
+
+func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool) {
+	tokenPlatform := token.GetPlatform(network.Ctx, "token")
+	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
+	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
+	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
+	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
+
+	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
+	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
+	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
+
+	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId1", "SPE", 10, auditor)
+	CheckBalanceAndHolding(network, "charlie", "charlie.ExtraId2", "SPE", 15, auditor)
+}
+
+func TestMaliciousTransactions(net *integration.Infrastructure) {
+	CheckPublicParams(net, "issuer", "alice", "bob", "charlie", "manager")
+
+	Eventually(DoesWalletExist).WithArguments(net, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "bob", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	IssueCash(net, "", "USD", 110, "alice", "", true, "issuer")
+	CheckBalance(net, "alice", "", "USD", 110)
+
+	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
+	txStatusAlice := GetTXStatus(net, "alice", txID)
+	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("rwsets do not match"))
+	txStatusBob := GetTXStatus(net, "bob", txID)
+	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("rwsets do not match"))
 }

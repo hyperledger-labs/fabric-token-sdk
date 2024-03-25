@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -148,7 +150,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
 			}
 		}
-		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.Pending)
+		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, driver.TXStatusToString[auditor.Pending])
 		if errs[2] != firstError {
 			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
 		}

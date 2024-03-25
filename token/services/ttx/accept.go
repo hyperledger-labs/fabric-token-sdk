@@ -36,47 +36,8 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 		return nil, err
 	}
 
-	rawRequest, err := s.tx.Bytes()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal token request")
-	}
-	// Check the envelope exists
-	env := s.tx.Payload.Envelope
-	if env == nil {
-		return nil, errors.Errorf("expected fabric envelope")
-	}
-
-	// Store envelope
-	if !s.options.SkipApproval {
-		if err := StoreEnvelope(context, s.tx); err != nil {
-			return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
-		}
-	}
-
-	// Store transaction in the token transaction database
-	if err := StoreTransactionRecords(context, s.tx); err != nil {
-		return nil, errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
-	}
-
-	// Send back an acknowledgement
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
-	}
-	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get signer for default identity")
-	}
-	sigma, err := signer.Sign(rawRequest)
-	if err != nil {
-		return nil, errors.WithMessage(err, "failed to sign ack response")
-	}
-
-	// Ack for distribution
-	// Send the signature back
-	session := context.Session()
-	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
-	if err := session.Send(sigma); err != nil {
-		return nil, errors.WithMessage(err, "failed sending ack")
+	if err := s.respondToEnvelope(context); err != nil {
+		return nil, err
 	}
 
 	labels := []string{
@@ -184,6 +145,53 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("no need to wait the transaction to be sent back [%s]", s.tx.ID())
 		}
+	}
+
+	return nil
+}
+
+func (s *AcceptView) respondToEnvelope(context view.Context) error {
+	rawRequest, err := s.tx.Bytes()
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal token request")
+	}
+	// Check the envelope exists
+	env := s.tx.Payload.Envelope
+	if env == nil {
+		return errors.Errorf("expected fabric envelope")
+	}
+
+	// Store envelope
+	if !s.options.SkipApproval {
+		if err := StoreEnvelope(context, s.tx); err != nil {
+			return errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
+		}
+	}
+
+	// Store transaction in the token transaction database
+	if err := StoreTransactionRecords(context, s.tx); err != nil {
+		return errors.Wrapf(err, "failed storing transaction records %s", s.tx.ID())
+	}
+
+	// Send back an acknowledgement
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
+	}
+	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get signer for default identity")
+	}
+	sigma, err := signer.Sign(rawRequest)
+	if err != nil {
+		return errors.WithMessage(err, "failed to sign ack response")
+	}
+
+	// Ack for distribution
+	// Send the signature back
+	session := context.Session()
+	logger.Debugf("ack response: [%s] from [%s]", hash.Hashable(sigma), view2.GetIdentityProvider(context).DefaultIdentity())
+	if err := session.Send(sigma); err != nil {
+		return errors.WithMessage(err, "failed sending ack")
 	}
 
 	return nil

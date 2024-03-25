@@ -7,9 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"encoding/base64"
+
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -100,6 +105,11 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
+
+	if err := r.checkTokenRequest(tx.ID(), request, rws, ns); err != nil {
+		return err
+	}
+
 	tokens, err := r.GetTokens()
 	if err != nil {
 		return err
@@ -111,6 +121,34 @@ func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransac
 		namespace: tms.Namespace(),
 		request:   request,
 	})
+}
+
+func (r *RWSetProcessor) checkTokenRequest(txID string, request *token.Request, orws *orion.RWSet, ns string) error {
+	rws := NewRWSWrapper(orws)
+	key, err := keys.CreateTokenRequestKey(txID)
+	if err != nil {
+		return errors.Errorf("can't create for token request '%s'", txID)
+	}
+	rwsTrHash, err := rws.GetState(ns, key)
+	if err != nil {
+		return errors.Errorf("can't get request has '%s'", txID)
+	}
+	trToSign, err := request.MarshalToSign()
+	if err != nil {
+		return errors.Errorf("can't get request hash '%s'", txID)
+	}
+	if base64.StdEncoding.EncodeToString(rwsTrHash) != hash.Hashable(trToSign).String() {
+		logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(rwsTrHash), hash.Hashable(trToSign))
+		// no further processing of the tokens of these transactions
+		return errors.Wrapf(
+			committer.ErrDiscardTX,
+			"tx [%s], token requests do not match, tr hashes [%s][%s]",
+			txID,
+			base64.StdEncoding.EncodeToString(rwsTrHash),
+			hash.Hashable(trToSign),
+		)
+	}
+	return nil
 }
 
 type Transaction struct {

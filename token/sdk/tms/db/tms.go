@@ -26,18 +26,18 @@ import (
 var logger = flogging.MustGetLogger("token-sdk")
 
 type PostInitializer struct {
-	sp              view.ServiceProvider
-	networkProvider *network.Provider
-	ownerManager    *ttx.Manager
-	auditorManager  *auditor.Manager
+	sp                       view.ServiceProvider
+	networkProvider          *network.Provider
+	tokenTransactionsManager *ttx.Manager
+	auditorManager           *auditor.Manager
 }
 
 func NewPostInitializer(sp view.ServiceProvider, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) *PostInitializer {
 	return &PostInitializer{
-		sp:              sp,
-		networkProvider: networkProvider,
-		ownerManager:    ownerManager,
-		auditorManager:  auditorManager,
+		sp:                       sp,
+		networkProvider:          networkProvider,
+		tokenTransactionsManager: ownerManager,
+		auditorManager:           auditorManager,
 	}
 }
 
@@ -48,7 +48,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		Namespace: namespace,
 	}
 	// restore owner db
-	if err := p.ownerManager.RestoreTMS(tmsID); err != nil {
+	if err := p.tokenTransactionsManager.RestoreTMS(tmsID); err != nil {
 		return errors.WithMessagef(err, "failed to restore onwer dbs for [%s]", tmsID)
 	}
 	// restore auditor db

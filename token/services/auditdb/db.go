@@ -248,15 +248,15 @@ func (db *DB) NewQueryExecutor() *QueryExecutor {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (db *DB) SetStatus(txID string, status TxStatus) error {
+func (db *DB) SetStatus(txID string, status TxStatus, statusMessage string) error {
 	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
+	if err := db.db.SetStatus(txID, status, statusMessage); err != nil {
 		db.rollback(err)
-		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
+		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TXStatusToString[status])
 	}
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
 	return nil
@@ -264,18 +264,18 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (db *DB) GetStatus(txID string) (TxStatus, error) {
+func (db *DB) GetStatus(txID string) (TxStatus, string, error) {
 	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
 	db.storeLock.Lock()
 	defer db.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	status, err := db.db.GetStatus(txID)
+	status, sm, err := db.db.GetStatus(txID)
 	if err != nil {
-		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
+		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
 	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
-	return TxStatus(status), nil
+	return status, sm, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.

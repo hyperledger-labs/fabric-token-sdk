@@ -88,6 +88,7 @@ var _ = Describe("EndToEnd", func() {
 		It("Test Remote Wallet (WebSocket)", func() {
 			fungible.TestRemoteOwnerWallet(network, "auditor", true)
 		})
+
 	})
 
 	Describe("T2 Fungible with Auditor = Issuer", func() {
@@ -137,6 +138,29 @@ var _ = Describe("EndToEnd", func() {
 		It("succeeded", func() {
 			fungible.TestAll(network, "auditor", nil, false)
 		})
+	})
+
+	Describe("T4 Malicious Transactions", func() {
+		BeforeEach(func() {
+			// notice that fabric-ca does not support yet aries
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					Aries:          true,
+					NoAuditor:      true,
+				})...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+
+		It("Malicious Transactions", func() {
+			fungible.TestMaliciousTransactions(network)
+		})
+
 	})
 
 })
