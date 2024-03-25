@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 )
@@ -31,35 +32,45 @@ type Provider struct {
 	enrollmentID string
 }
 
-// NewProvider returns a new X509 provider. If the configuration path contains the secret key,
-// then the provider can generate also signatures, otherwise it cannot.
-func NewProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService) (*Provider, error) {
-	return NewProviderWithBCCSPConfig(mspConfigPath, keyStorePath, mspID, signerService, nil)
-}
-
-// NewProviderWithBCCSPConfig returns a new X509 provider with the passed BCCSP configuration.
+// NewProvider returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewProviderWithBCCSPConfig(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *BCCSP) (*Provider, error) {
-	p, err := newProvider(mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
-	if err == nil {
-		return p, nil
-	}
-
-	// load as verify only
-	idRaw, err := SerializeFromMSP(mspID, mspConfigPath)
+func NewProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, *msp.MSPConfig, error) {
+	conf, err := msp2.GetLocalMspConfig(mspConfigPath, mspID)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
+		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 	}
-	enrollmentID, err := GetEnrollmentID(idRaw)
+	p, conf, err := NewProviderFromConf(conf, mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to extract endorllment id from msp identity at [%s]", mspConfigPath)
+		return nil, nil, err
 	}
-	return &Provider{id: idRaw, enrollmentID: enrollmentID}, nil
+	return p, conf, nil
 }
 
-func newProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *BCCSP) (*Provider, error) {
-	sID, err := GetSigningIdentity(mspConfigPath, keyStorePath, mspID, bccspConfig)
+func NewProviderFromConf(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, *msp.MSPConfig, error) {
+	if conf == nil {
+		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
+		var err error
+		conf, err = msp2.GetLocalMspConfig(mspConfigPath, mspID)
+		if err != nil {
+			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
+		}
+	}
+	logger.Debugf("msp config [%d]", conf.Type)
+	p, err := newSigningProvider(conf, mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
+	if err == nil {
+		return p, conf, nil
+	}
+	// load as verify only
+	p, conf, err = newVerifyingProvider(conf, mspConfigPath, mspID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, conf, err
+}
+
+func newSigningProvider(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, error) {
+	sID, err := msp2.GetSigningIdentity(conf, mspConfigPath, keyStorePath, bccspConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -74,12 +85,31 @@ func newProvider(mspConfigPath, keyStorePath, mspID string, signerService Signer
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
 		}
 	}
-	enrollmentID, err := GetEnrollmentID(idRaw)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting enrollment id for [%s:%s]", mspConfigPath, mspID)
-	}
+	return newProvider(sID, idRaw)
+}
 
-	return &Provider{sID: sID, id: idRaw, enrollmentID: enrollmentID}, nil
+func newVerifyingProvider(conf *msp.MSPConfig, mspConfigPath, mspID string) (*Provider, *msp.MSPConfig, error) {
+	conf, err := msp2.RemoveSigningIdentityInfo(conf)
+	if err != nil {
+		return nil, nil, err
+	}
+	idRaw, err := msp2.SerializeFromMSP(conf, mspID, mspConfigPath)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
+	}
+	p, err := newProvider(nil, idRaw)
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, conf, nil
+}
+
+func newProvider(sID driver.SigningIdentity, id []byte) (*Provider, error) {
+	enrollmentID, err := GetEnrollmentID(id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get enrollment id")
+	}
+	return &Provider{sID: sID, id: id, enrollmentID: enrollmentID}, nil
 }
 
 func (p *Provider) IsRemote() bool {
@@ -113,7 +143,7 @@ func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to msp.SerializedIdentity{}")
 	}
-	genericPublicKey, err := PemDecodeKey(si.IdBytes)
+	genericPublicKey, err := msp2.PemDecodeKey(si.IdBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed parsing received public key")
 	}
@@ -124,7 +154,7 @@ func (p *Provider) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
 
 	// TODO: check the validity of the identity against the msp
 
-	return NewECDSAVerifier(publicKey), nil
+	return msp2.NewECDSAVerifier(publicKey), nil
 }
 
 func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
@@ -137,7 +167,7 @@ func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	cert, err := PemDecodeCert(si.IdBytes)
+	cert, err := msp2.PemDecodeCert(si.IdBytes)
 	if err != nil {
 		return "", err
 	}

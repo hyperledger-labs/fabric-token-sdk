@@ -14,6 +14,7 @@ type Identity struct {
 	Path    string
 	Default bool
 	Opts    *topology.BCCSP
+	Raw     []byte
 }
 
 type Wallets struct {

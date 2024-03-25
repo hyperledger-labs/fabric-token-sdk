@@ -13,7 +13,7 @@ import (
 )
 
 func TestDeserializer(t *testing.T) {
-	p, err := NewProvider("./testdata/msp", "", "apple", nil)
+	p, _, err := NewProvider("./testdata/msp", "", "apple", nil, nil)
 	assert.NoError(t, err)
 	id, auditInfo, err := p.Identity(nil)
 	assert.NoError(t, err)

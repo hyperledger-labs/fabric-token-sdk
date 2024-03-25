@@ -965,8 +965,8 @@ func Restart(network *integration.Infrastructure, deleteVault bool, ids ...strin
 	}
 }
 
-func RegisterIssuerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
-	_, err := network.Client(id).CallView("RegisterIssuerWallet", common.JSONMarshall(&views.RegisterIssuerWallet{
+func RegisterIssuerIdentity(network *integration.Infrastructure, id string, walletID, walletPath string) {
+	_, err := network.Client(id).CallView("RegisterIssuerIdentity", common.JSONMarshall(&views.RegisterIssuerWallet{
 		ID:   walletID,
 		Path: walletPath,
 	}))
@@ -974,13 +974,12 @@ func RegisterIssuerWallet(network *integration.Infrastructure, id string, wallet
 	network.Ctx.SetViewClient(walletPath, network.Client(id))
 }
 
-func RegisterOwnerWallet(network *integration.Infrastructure, id string, walletID, walletPath string) {
-	_, err := network.Client(id).CallView("RegisterOwnerWallet", common.JSONMarshall(&views.RegisterOwnerWallet{
-		ID:   walletID,
-		Path: walletPath,
+func RegisterOwnerIdentity(network *integration.Infrastructure, id string, identityConfiguration token2.IdentityConfiguration) {
+	_, err := network.Client(id).CallView("RegisterOwnerIdentity", common.JSONMarshall(&views.RegisterOwnerIdentity{
+		IdentityConfiguration: identityConfiguration,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	network.Ctx.SetViewClient(walletID, network.Client(id))
+	network.Ctx.SetViewClient(identityConfiguration.ID, network.Client(id))
 }
 
 func RegisterRecipientData(network *integration.Infrastructure, id string, walletID string, rd *token2.RecipientData) {

@@ -23,6 +23,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/dlog"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/generators/fabtoken"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric/tcc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
 	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
@@ -188,7 +189,7 @@ func (p *NetworkHandler) GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID stri
 	return ""
 }
 
-func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string {
+func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) (res token.IdentityConfiguration) {
 	cmGenerator := p.CryptoMaterialGenerators[tms.Driver]
 	Expect(cmGenerator).NotTo(BeNil(), "Crypto material generator for driver %s not found", tms.Driver)
 
@@ -196,11 +197,14 @@ func (p *NetworkHandler) GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID strin
 	for _, node := range fscTopology.Nodes {
 		if node.ID() == nodeID {
 			ids := cmGenerator.GenerateOwnerIdentities(tms, node, walletID)
-			return ids[0].Path
+			res.ID = ids[0].ID
+			res.URL = ids[0].Path
+			res.Raw = ids[0].Raw
+			return
 		}
 	}
 	Expect(false).To(BeTrue(), "cannot find FSC node [%s:%s]", tms.Network, nodeID)
-	return ""
+	return
 }
 
 func (p *NetworkHandler) SetCryptoMaterialGenerator(driver string, generator generators.CryptoMaterialGenerator) {

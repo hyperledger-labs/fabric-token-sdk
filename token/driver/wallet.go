@@ -111,6 +111,13 @@ type CertifierWallet interface {
 	GetCertifierIdentity() (view.Identity, error)
 }
 
+type IdentityConfiguration struct {
+	ID     string
+	URL    string
+	Config []byte
+	Raw    []byte
+}
+
 // WalletLookupID defines the type of identifiers that can be used to retrieve a given wallet.
 // It can be a string, as the name of the wallet, or an identity contained in that wallet.
 // Ultimately, it is the token driver to decide which types are allowed.
@@ -133,11 +140,11 @@ type WalletService interface {
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(identity view.Identity) Wallet
 
-	// RegisterOwnerWallet registers an owner wallet
-	RegisterOwnerWallet(id string, path string) error
+	// RegisterOwnerIdentity registers an owner long-term identity
+	RegisterOwnerIdentity(config IdentityConfiguration) error
 
-	// RegisterIssuerWallet registers an issuer wallet
-	RegisterIssuerWallet(id string, path string) error
+	// RegisterIssuerIdentity registers an issuer long-term wallet
+	RegisterIssuerIdentity(config IdentityConfiguration) error
 
 	// OwnerWalletIDs returns the list of owner wallet identifiers
 	OwnerWalletIDs() ([]string, error)
