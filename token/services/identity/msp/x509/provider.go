@@ -35,18 +35,42 @@ type Provider struct {
 // NewProvider returns a new X509 provider with the passed BCCSP configuration.
 // If the configuration path contains the secret key,
 // then the provider can generate also signatures, otherwise it cannot.
-func NewProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, error) {
-	p, err := newSigningProvider(mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
-	if err == nil {
-		return p, nil
+func NewProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, *msp.MSPConfig, error) {
+	conf, err := msp2.GetLocalMspConfig(mspConfigPath, mspID)
+	if err != nil {
+		return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
 	}
-
-	// load as verify only
-	return newVerifyingProvider(mspConfigPath, mspID)
+	p, conf, err := NewProviderFromConf(conf, mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, conf, nil
 }
 
-func newSigningProvider(mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, error) {
-	sID, err := msp2.GetSigningIdentity(mspConfigPath, keyStorePath, mspID, bccspConfig)
+func NewProviderFromConf(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, *msp.MSPConfig, error) {
+	if conf == nil {
+		logger.Debugf("load msp config from [%s:%s]", mspConfigPath, mspID)
+		var err error
+		conf, err = msp2.GetLocalMspConfig(mspConfigPath, mspID)
+		if err != nil {
+			return nil, nil, errors.WithMessagef(err, "could not get msp config from dir [%s]", mspConfigPath)
+		}
+	}
+	logger.Debugf("msp config [%d]", conf.Type)
+	p, err := newSigningProvider(conf, mspConfigPath, keyStorePath, mspID, signerService, bccspConfig)
+	if err == nil {
+		return p, conf, nil
+	}
+	// load as verify only
+	p, err = newVerifyingProvider(conf, mspConfigPath, mspID)
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, conf, err
+}
+
+func newSigningProvider(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID string, signerService SignerService, bccspConfig *msp2.BCCSP) (*Provider, error) {
+	sID, err := msp2.GetSigningIdentity(conf, mspConfigPath, keyStorePath, bccspConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +88,8 @@ func newSigningProvider(mspConfigPath, keyStorePath, mspID string, signerService
 	return newProvider(sID, idRaw)
 }
 
-func newVerifyingProvider(mspConfigPath, mspID string) (*Provider, error) {
-	idRaw, err := msp2.SerializeFromMSP(mspID, mspConfigPath)
+func newVerifyingProvider(conf *msp.MSPConfig, mspConfigPath, mspID string) (*Provider, error) {
+	idRaw, err := msp2.SerializeFromMSP(conf, mspID, mspConfigPath)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
 	}
