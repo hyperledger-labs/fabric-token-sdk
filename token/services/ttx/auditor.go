@@ -70,8 +70,8 @@ func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxAuditor) SetStatus(txID string, status TxStatus) error {
-	return a.auditDB.SetStatus(txID, auditdb.TxStatus(status))
+func (a *TxAuditor) SetStatus(txID string, status TxStatus, message string) error {
+	return a.auditDB.SetStatus(txID, status, message)
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {
@@ -343,11 +343,6 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	rawRequest, err := tx.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
-	}
-
-	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	if err := backend.StoreEnvelope(env); err != nil {
-		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
 	var sigma []byte

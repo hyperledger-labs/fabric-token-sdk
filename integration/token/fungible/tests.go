@@ -8,10 +8,11 @@ package fungible
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"strings"
 	"time"
+
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
@@ -24,7 +25,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -764,24 +764,11 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
 	CheckBalance(network, "charlie", "", "Pineapples", 0)
 	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
-	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
 	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
 	CheckBalanceAndHolding(network, "alice", "", "Pineapples", 6, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
-	CheckAuditorDB(network, auditor, "", func(errs []string) error {
-		// We should expect 6 errors, 3 records (Alice->Bob, Alice->Charlie, Alice-Alice (the rest) * 2 (envelope non found, no match in vault)
-		// each error should contain failedTransferTxID
-		if len(errs) != 6 {
-			return errors.Errorf("expected only 6 error, got [%d][%s]", len(errs), errs)
-		}
-		for _, err := range errs {
-			if !strings.Contains(err, failedTransferTxID) {
-				return errors.Errorf("expected error to contain [%s], got [%s]", failedTransferTxID, err)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, auditor, "", nil)
 }
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {
@@ -962,4 +949,22 @@ func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *Wall
 	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
 	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+}
+
+func TestMaliciousTransactions(net *integration.Infrastructure) {
+	CheckPublicParams(net, "issuer", "alice", "bob", "charlie", "manager")
+
+	Eventually(DoesWalletExist).WithArguments(net, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "bob", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	IssueCash(net, "", "USD", 110, "alice", "", true, "issuer")
+	CheckBalance(net, "alice", "", "USD", 110)
+
+	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
+	txStatusAlice := GetTXStatus(net, "alice", txID)
+	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+	txStatusBob := GetTXStatus(net, "bob", txID)
+	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }

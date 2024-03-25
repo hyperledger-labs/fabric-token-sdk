@@ -295,8 +295,9 @@ func (p *CurrentSpendingViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type SetTransactionAuditStatus struct {
-	TxID   string
-	Status ttx.TxStatus
+	TxID          string
+	Status        ttx.TxStatus
+	StatusMessage string
 }
 
 // SetTransactionAuditStatusView is used to set the status of a given transaction in the audit db
@@ -310,7 +311,7 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
-	assert.NoError(auditor.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+	assert.NoError(auditor.SetStatus(r.TxID, r.Status, r.StatusMessage), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	if r.Status == ttx.Deleted {
 		tms := token.GetManagementService(context)
@@ -319,7 +320,7 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 		assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
 		v, err := net.Vault(tms.Namespace())
 		assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
-		assert.NoError(v.DiscardTx(r.TxID), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
+		assert.NoError(v.DiscardTx(r.TxID, r.StatusMessage), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
 	}
 
 	return nil, nil

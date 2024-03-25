@@ -7,8 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package fabric
 
 import (
+	"encoding/base64"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/core/generic/committer"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -65,7 +69,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	case "init":
 		return r.init(tx, rws, ns)
 	default:
-		return r.tokenRequest(tx, ns)
+		return r.tokenRequest(tx, rws, ns)
 	}
 }
 
@@ -105,7 +109,7 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 	return nil
 }
 
-func (r *RWSetProcessor) tokenRequest(tx fabric.ProcessTransaction, ns string) error {
+func (r *RWSetProcessor) tokenRequest(tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
 	txID := tx.ID()
 
 	tms, err := r.GetTMSProvider().GetManagementService(
@@ -132,6 +136,7 @@ func (r *RWSetProcessor) tokenRequest(tx fabric.ProcessTransaction, ns string) e
 		}
 		return nil
 	}
+
 	request, err := tms.NewFullRequestFromBytes(trRaw)
 	if err != nil {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -143,17 +148,53 @@ func (r *RWSetProcessor) tokenRequest(tx fabric.ProcessTransaction, ns string) e
 		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
 		return nil
 	}
+
+	if err := r.checkTokenRequest(tx.ID(), request, rws, ns); err != nil {
+		return err
+	}
+
 	tokens, err := r.GetTokens()
 	if err != nil {
 		return err
 	}
-	return tokens.AppendTransaction(&Transaction{
+	if err := tokens.AppendTransaction(&Transaction{
 		id:        txID,
 		network:   tms.Network(),
 		channel:   tms.Channel(),
 		namespace: tms.Namespace(),
 		request:   request,
-	})
+	}); err != nil {
+		logger.Errorf("failed to append transaction [%s] to db: [%s]", txID, err)
+		return err
+	}
+	return nil
+}
+
+func (r *RWSetProcessor) checkTokenRequest(txID string, request *token.Request, rws *fabric.RWSet, ns string) error {
+	key, err := keys.CreateTokenRequestKey(txID)
+	if err != nil {
+		return errors.Errorf("can't create for token request '%s'", txID)
+	}
+	rwsTrHash, err := rws.GetState(ns, key, fabric.FromIntermediate)
+	if err != nil {
+		return errors.Errorf("can't get request has '%s'", txID)
+	}
+	trToSign, err := request.MarshalToSign()
+	if err != nil {
+		return errors.Errorf("can't get request hash '%s'", txID)
+	}
+	if base64.StdEncoding.EncodeToString(rwsTrHash) != hash.Hashable(trToSign).String() {
+		logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(rwsTrHash), hash.Hashable(trToSign))
+		// no further processing of the tokens of these transactions
+		return errors.Wrapf(
+			committer.ErrDiscardTX,
+			"tx [%s], token requests do not match, tr hashes [%s][%s]",
+			txID,
+			base64.StdEncoding.EncodeToString(rwsTrHash),
+			hash.Hashable(trToSign),
+		)
+	}
+	return nil
 }
 
 type Transaction struct {

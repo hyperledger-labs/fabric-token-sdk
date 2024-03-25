@@ -30,7 +30,7 @@ const (
 )
 
 type Vault interface {
-	Status(id string) (network.ValidationCode, error)
+	Status(id string) (network.ValidationCode, string, error)
 }
 
 type WalletManager interface {
@@ -304,7 +304,7 @@ func (m *Manager) scan() {
 		var unlockList []*SimpleSelector
 		m.selectorsLock.RLock()
 		for txID, selector := range m.selectors {
-			status, err := m.vault.Status(txID)
+			status, _, err := m.vault.Status(txID)
 			if err != nil {
 				logger.Warnf("failed getting status for tx [%s], unlocking", txID)
 				unlockList = append(unlockList, selector)

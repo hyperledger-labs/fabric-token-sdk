@@ -128,8 +128,9 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 		return errors.Errorf("failed to get vault for [%s:%s]", tmsID, walletID)
 	}
 	type ToBeUpdated struct {
-		TxID   string
-		Status auditdb.TxStatus
+		TxID          string
+		Status        auditdb.TxStatus
+		StatusMessage string
 	}
 	var toBeUpdated []ToBeUpdated
 	var pendingTXs []string
@@ -155,7 +156,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 			}
 
 			// check the status of the pending transactions in the vault
-			status, err := v.Status(tr.TxID)
+			status, sm, err := v.Status(tr.TxID)
 			if err != nil {
 				pendingTXs = append(pendingTXs, tr.TxID)
 				continue
@@ -172,8 +173,9 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 				continue
 			}
 			toBeUpdated = append(toBeUpdated, ToBeUpdated{
-				TxID:   tr.TxID,
-				Status: txStatus,
+				TxID:          tr.TxID,
+				Status:        txStatus,
+				StatusMessage: sm,
 			})
 		}
 	}
@@ -181,7 +183,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	qe.Done()
 
 	for _, updated := range toBeUpdated {
-		if err := auditor.db.SetStatus(updated.TxID, updated.Status); err != nil {
+		if err := auditor.db.SetStatus(updated.TxID, updated.Status, updated.StatusMessage); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
 		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
@@ -190,7 +192,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	logger.Infof("auditdb [%s], found [%d] pending transactions", tmsID, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
-		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, auditor.db}); err != nil {
+		if err := net.SubscribeTxStatusChanges(txID, tmsID.Namespace, &TxStatusChangesListener{net, auditor.db}); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, txID)
 		}
 	}

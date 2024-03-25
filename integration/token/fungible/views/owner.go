@@ -28,7 +28,7 @@ type SetTransactionOwnerStatusView struct {
 
 func (r *SetTransactionOwnerStatusView) Call(context view.Context) (interface{}, error) {
 	owner := ttx.NewOwner(context, token.GetManagementService(context))
-	assert.NoError(owner.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+	assert.NoError(owner.SetStatus(r.TxID, r.Status, ""), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	if r.Status == ttx.Deleted {
 		tms := token.GetManagementService(context)
@@ -37,7 +37,7 @@ func (r *SetTransactionOwnerStatusView) Call(context view.Context) (interface{},
 		assert.NotNil(net, "failed to get network [%s:%s]", tms.Network(), tms.Channel())
 		v, err := net.Vault(tms.Namespace())
 		assert.NoError(err, "failed to get vault [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
-		assert.NoError(v.DiscardTx(r.TxID), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
+		assert.NoError(v.DiscardTx(r.TxID, ""), "failed to discard tx [%s:%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace(), r.TxID)
 	}
 
 	return nil, nil

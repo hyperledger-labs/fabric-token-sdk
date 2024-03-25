@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -22,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -268,16 +267,11 @@ func (db *DB) NewQueryExecutor() *QueryExecutor {
 	return &QueryExecutor{db: db}
 }
 
-// SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (db *DB) SetStatus(txID string, status TxStatus) error {
+// SetStatus sets the status of the records with the passed transaction id to the passed status and message
+func (db *DB) SetStatus(txID string, status TxStatus, statusMessage string) error {
 	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
-	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
-		db.rollback(err)
-		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
+	if err := db.db.SetStatus(txID, status, statusMessage); err != nil {
+		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TXStatusToString[status])
 	}
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
 	return nil
@@ -285,18 +279,14 @@ func (db *DB) SetStatus(txID string, status TxStatus) error {
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (db *DB) GetStatus(txID string) (TxStatus, error) {
+func (db *DB) GetStatus(txID string) (TxStatus, string, error) {
 	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
-	status, err := db.db.GetStatus(txID)
+	status, sm, err := db.db.GetStatus(txID)
 	if err != nil {
-		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
+		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
 	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
-	return status, nil
+	return status, sm, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.

@@ -34,12 +34,17 @@ const (
 	HasDependencies                // Transaction is unknown but has known dependencies
 )
 
+var (
+	// ErrDiscardTX this error can be used to signal that a valid transaction should be discarded anyway
+	ErrDiscardTX = errors.New("discard tx")
+)
+
 type UnspentTokensIterator = driver.UnspentTokensIterator
 
 // TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
 type TxStatusChangeListener interface {
 	// OnStatusChange is called when the status of a transaction changes
-	OnStatusChange(txID string, status int) error
+	OnStatusChange(txID string, status int, statusMessage string, reference []byte) error
 }
 
 type GetFunc func() (view.Identity, []byte, error)
@@ -167,13 +172,13 @@ func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *Vault) Status(id string) (ValidationCode, error) {
-	vc, err := v.v.Status(id)
-	return ValidationCode(vc), err
+func (v *Vault) Status(id string) (ValidationCode, string, error) {
+	vc, sm, err := v.v.Status(id)
+	return ValidationCode(vc), sm, err
 }
 
-func (v *Vault) DiscardTx(id string) error {
-	return v.v.DiscardTx(id)
+func (v *Vault) DiscardTx(txID string, message string) error {
+	return v.v.DiscardTx(txID, message)
 }
 
 // PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
@@ -270,12 +275,12 @@ type Ledger struct {
 	l driver.Ledger
 }
 
-func (l *Ledger) Status(id string) (ValidationCode, error) {
+func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	vc, err := l.l.Status(id)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	return ValidationCode(vc), nil
+	return ValidationCode(vc), "", nil
 }
 
 // Network provides access to the remote network
@@ -300,18 +305,6 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 		return nil, err
 	}
 	return &Vault{n: n, v: v, ns: namespace}, nil
-}
-
-// StoreEnvelope stores locally the given transaction envelope and associated it with the given id
-func (n *Network) StoreEnvelope(env *Envelope) error {
-	if env == nil {
-		return errors.Errorf("nil envelope")
-	}
-	return n.n.StoreEnvelope(env.e)
-}
-
-func (n *Network) ExistEnvelope(id string) bool {
-	return n.n.EnvelopeExists(id)
 }
 
 // Broadcast sends the given blob to the network
@@ -392,8 +385,8 @@ func (n *Network) LocalMembership() *LocalMembership {
 }
 
 // SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
-func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
-	return n.n.SubscribeTxStatusChanges(txID, listener)
+func (n *Network) SubscribeTxStatusChanges(txID string, ns string, listener TxStatusChangeListener) error {
+	return n.n.SubscribeTxStatusChanges(txID, ns, listener)
 }
 
 // UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id

@@ -67,9 +67,9 @@ func (v *nv) DeleteTokens(ids ...*token.ID) error {
 	return v.tokenVault.DeleteTokens(ids...)
 }
 
-func (v *nv) Status(txID string) (driver.ValidationCode, error) {
-	vc, _, err := v.v.Status(txID)
-	return driver.ValidationCode(vc), err
+func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
+	vc, message, _, err := v.v.Status(id)
+	return driver.ValidationCode(vc), message, err
 }
 
 func (v *nv) GetLastTxID() (string, error) {
@@ -84,8 +84,8 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
-func (v *nv) DiscardTx(txID string) error {
-	return v.v.DiscardTx(txID)
+func (v *nv) DiscardTx(txID string, message string) error {
+	return v.v.DiscardTx(txID, message)
 }
 
 type ledger struct {
@@ -175,25 +175,6 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	n.vaultCache[namespace] = nv
 
 	return nv, nil
-}
-
-func (n *Network) StoreEnvelope(env driver.Envelope) error {
-	rws, err := n.ch.Vault().GetRWSet(env.TxID(), env.Results())
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get rwset")
-	}
-	rws.Done()
-
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return errors.WithMessagef(err, "failed marshalling tx env [%s]", env.TxID())
-	}
-
-	return n.ch.Vault().StoreEnvelope(env.TxID(), rawEnv)
-}
-
-func (n *Network) EnvelopeExists(id string) bool {
-	return n.ch.EnvelopeService().Exists(id)
 }
 
 func (n *Network) Broadcast(context context.Context, blob interface{}) error {
@@ -348,12 +329,12 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	}
 }
 
-func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.ch.Committer().SubscribeTxStatusChanges(txID, listener)
+func (n *Network) SubscribeTxStatusChanges(txID string, ns string, listener driver.TxStatusChangeListener) error {
+	return n.ch.Committer().SubscribeTxStatusChanges(txID, &TxStatusChangeListener{root: listener})
 }
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
+	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, &TxStatusChangeListener{root: listener})
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
@@ -424,4 +405,12 @@ func (n *Network) ProcessNamespace(namespace string) error {
 		return errors.WithMessagef(err, "failed to register processing of namespace [%s]", namespace)
 	}
 	return nil
+}
+
+type TxStatusChangeListener struct {
+	root driver.TxStatusChangeListener
+}
+
+func (t *TxStatusChangeListener) OnStatusChange(txID string, status int, statusMessage string) error {
+	return t.root.OnStatusChange(txID, status, statusMessage, nil)
 }

@@ -48,17 +48,26 @@ const (
 )
 
 // TxStatus is the status of a transaction
-type TxStatus string
+type TxStatus int
 
 const (
 	// Unknown is the status of a transaction that is unknown
-	Unknown TxStatus = "Unknown"
+	Unknown TxStatus = iota
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending TxStatus = "Pending"
+	Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed TxStatus = "Confirmed"
+	Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted TxStatus = "Deleted"
+	Deleted
+)
+
+var (
+	TXStatusToString = map[TxStatus]string{
+		Unknown:   "Unknown",
+		Pending:   "Pending",
+		Confirmed: "Confirmed",
+		Deleted:   "Deleted",
+	}
 )
 
 // MovementRecord is a record of a movement of assets.
@@ -120,7 +129,7 @@ func (t *TransactionRecord) String() string {
 	s.WriteString(" ")
 	s.WriteString(t.Timestamp.String())
 	s.WriteString(" ")
-	s.WriteString(string(t.Status))
+	s.WriteString(TXStatusToString[t.Status])
 	s.WriteString("}")
 	return s.String()
 }

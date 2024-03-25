@@ -33,6 +33,7 @@ type Transaction interface {
 	ID() string
 	Network() string
 	Channel() string
+	Namespace() string
 	Request() *token.Request
 }
 
@@ -107,7 +108,7 @@ func (a *Auditor) Append(tx Transaction) error {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
-	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.db}); err != nil {
+	if err := net.SubscribeTxStatusChanges(tx.ID(), tx.Namespace(), &TxStatusChangesListener{net, a.db}); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("append done for request %s", tx.ID())
@@ -126,12 +127,12 @@ func (a *Auditor) NewQueryExecutor() *QueryExecutor {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *Auditor) SetStatus(txID string, status TxStatus) error {
-	return a.db.SetStatus(txID, status)
+	return a.db.SetStatus(txID, status, "")
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *Auditor) GetStatus(txID string) (TxStatus, error) {
+func (a *Auditor) GetStatus(txID string) (TxStatus, string, error) {
 	return a.db.GetStatus(txID)
 }
 
@@ -145,7 +146,7 @@ type TxStatusChangesListener struct {
 	db  *auditdb.DB
 }
 
-func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
+func (t *TxStatusChangesListener) OnStatusChange(txID string, status int, statusMessage string, reference []byte) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var txStatus auditdb.TxStatus
 	switch network.ValidationCode(status) {
@@ -154,7 +155,7 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	case network.Invalid:
 		txStatus = auditdb.Deleted
 	}
-	if err := t.db.SetStatus(txID, txStatus); err != nil {
+	if err := t.db.SetStatus(txID, txStatus, statusMessage); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)

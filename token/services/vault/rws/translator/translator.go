@@ -11,6 +11,8 @@ import (
 	"encoding/base64"
 	"strconv"
 
+	"go.uber.org/zap/zapcore"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -83,6 +85,9 @@ func (w *Translator) CommitTokenRequest(raw []byte, storeHash bool) error {
 			return errors.Wrapf(err, "failed to write token request, hash failure '%s'", w.TxID)
 		}
 		raw = hash.Sum(nil)
+	}
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		logger.Debugf("store token request [%s]:[%s]", key, base64.StdEncoding.EncodeToString(raw))
 	}
 	err = w.RWSet.SetState(w.namespace, key, raw)
 	if err != nil {

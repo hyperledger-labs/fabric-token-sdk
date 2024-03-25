@@ -46,7 +46,7 @@ type Transaction interface {
 	Request() *token.Request
 }
 
-// Tokens is the interface for the owner service
+// Tokens is the interface for the token service
 type Tokens struct {
 	TMSProvider TMSProvider
 	Ownership   Authorization
@@ -54,23 +54,14 @@ type Tokens struct {
 	Storage     *DBStorage
 }
 
-// AppendTransaction appends the content of the passed transaction to the token db.
-// If the transaction is already in there, nothing more happens.
-// The operation is atomic.
-func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
-	txID := tx.ID()
-	tms, err := t.TMSProvider.GetManagementService(
-		token.WithNetwork(tx.Network()),
-		token.WithChannel(tx.Channel()),
-		token.WithNamespace(tx.Namespace()),
-	)
+func (t *Tokens) Append(tmsID token.TMSID, txID string, request *token.Request) (err error) {
+	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), tx.Namespace())
+		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
 	}
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
 	}
-	request := tx.Request()
 	if request == nil {
 		logger.Debugf("transaction [%s], no request found, skip it", txID)
 		return nil
@@ -80,9 +71,10 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 		return nil
 	}
 
+	logger.Debugf("transaction [%s] start db transaction", txID)
 	ts, err := t.Storage.NewTransaction()
 	if err != nil {
-		return err
+		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
 	}
 	defer func() {
 		if err != nil && ts != nil {
@@ -91,11 +83,13 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 			}
 		}
 	}()
-	exists, err := ts.TransactionExists(tx.ID())
+	exists, err := ts.TransactionExists(txID)
 	if err != nil {
-		return err
+		logger.Errorf("transaction [%s], failed to check existence in db [%s]", txID, err)
+		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
 	}
 	if exists {
+		logger.Debugf("transaction [%s], exists in db, skipping", txID)
 		return nil
 	}
 
@@ -103,7 +97,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	md, err := request.GetMetadata()
 	if err != nil {
 		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
-		return err
+		return errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
 	}
 	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
 		ids := md.SpentTokenID()
@@ -111,7 +105,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		if err := ts.DeleteTokens(txID, ids); err != nil {
-			return err
+			return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 		}
 	}
 
@@ -129,20 +123,20 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 
 	// parse the inputs
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), tx.ID())
+		logger.Debugf("parse [%d] inputs and [%d] outputs from [%s]", is.Count(), os.Count(), txID)
 	}
 	for _, input := range is.Inputs() {
 		if input.Id == nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("transaction [%s] found an input that is not mine, skip it", tx.ID())
+				logger.Debugf("transaction [%s] found an input that is not mine, skip it", txID)
 			}
 			continue
 		}
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s] delete input [%s]", tx.ID(), input.Id)
+			logger.Debugf("transaction [%s] delete input [%s]", txID, input.Id)
 		}
-		if err = ts.DeleteToken(input.Id.TxId, input.Id.Index, tx.ID()); err != nil {
-			return err
+		if err = ts.DeleteToken(input.Id.TxId, input.Id.Index, txID); err != nil {
+			return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 		}
 		continue
 	}
@@ -164,8 +158,8 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
 			}
-			if err = ts.DeleteToken(tx.ID(), output.Index, tx.ID()); err != nil {
-				return err
+			if err = ts.DeleteToken(txID, output.Index, txID); err != nil {
+				return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 			}
 			continue
 		}
@@ -206,7 +200,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 				Issuer:  issuerFlag,
 			},
 		); err != nil {
-			return err
+			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -215,9 +209,36 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	}
 
 	if err = ts.Commit(); err != nil {
-		return err
+		return errors.WithMessagef(err, "transaction [%s], failed to get token db transaction", txID)
 	}
 	return nil
+}
+
+func (t *Tokens) AppendRaw(tmsID token.TMSID, txID string, requestRaw []byte) (err error) {
+	tms, err := t.TMSProvider.GetManagementService(token.WithTMSID(tmsID))
+	if err != nil {
+		return errors.WithMessagef(err, "failed getting token management service [%s]", tmsID)
+	}
+	tr, err := tms.NewFullRequestFromBytes(requestRaw)
+	if err != nil {
+		return errors.WithMessagef(err, "failed unmarshal token request [%s]", txID)
+	}
+	return t.Append(tmsID, txID, tr)
+}
+
+// AppendTransaction appends the content of the passed transaction to the token db.
+// If the transaction is already in there, nothing more happens.
+// The operation is atomic.
+func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
+	return t.Append(
+		token.TMSID{
+			Network:   tx.Network(),
+			Channel:   tx.Channel(),
+			Namespace: tx.Namespace(),
+		},
+		tx.ID(),
+		tx.Request(),
+	)
 }
 
 // StorePublicParams stores the passed public parameters in the token db

@@ -3,12 +3,13 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type TxOptions struct {
@@ -17,6 +18,7 @@ type TxOptions struct {
 	Channel                   string
 	Namespace                 string
 	NoTransactionVerification bool
+	NetworkTxID               network.TxID
 }
 
 func compile(opts ...TxOption) (*TxOptions, error) {
@@ -82,6 +84,13 @@ func WithTMSID(id token.TMSID) TxOption {
 func WithNoTransactionVerification() TxOption {
 	return func(o *TxOptions) error {
 		o.NoTransactionVerification = true
+		return nil
+	}
+}
+
+func WithNetworkTxID(id network.TxID) TxOption {
+	return func(o *TxOptions) error {
+		o.NetworkTxID = id
 		return nil
 	}
 }

@@ -11,16 +11,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"math/big"
-	"strings"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure) {
@@ -98,7 +95,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 20, 0, -1)
 
-	failedClaimTXID := htlcClaim(network, defaultTMSID, "bob", "", preImage)
+	htlcClaim(network, defaultTMSID, "bob", "", preImage)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
@@ -113,21 +110,11 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "alice", "bob")
-	CheckAuditorDB(network, defaultTMSID, "auditor", "", func(errs []string) error {
-		if len(errs) != 2 {
-			return errors.Errorf("expected 2 errors, got [%d][%v][%s]", len(errs), errs, failedClaimTXID)
-		}
-		for _, err := range errs {
-			if strings.Contains(err, failedClaimTXID) {
-				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, defaultTMSID, "auditor", "", nil)
 
 	// lock two times with the same hash, the second lock should fail
 	_, _, hash := HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
-	failedLockTXID, _, _ := HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
+	HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
 		fmt.Sprintf(
 			"entry with transfer metadata key [%s] is already occupied by [%s]",
 			htlc.LockKey(hash),
@@ -138,27 +125,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")
-	CheckAuditorDB(network, defaultTMSID, "auditor", "", func(errs []string) error {
-		fmt.Printf("Got errors [%v]", errs)
-		if len(errs) != 6 {
-			return errors.Errorf("expected 6 errors, got [%d]", len(errs))
-		}
-		for _, err := range errs[:2] {
-			if strings.Contains(err, failedClaimTXID) {
-				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
-			}
-		}
-		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.Pending)
-		if errs[2] != firstError {
-			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
-		}
-		for _, err := range errs[2:] {
-			if !strings.Contains(err, failedLockTXID) {
-				return errors.Errorf("[%s] does not contain [%s]", err, failedLockTXID)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, defaultTMSID, "auditor", "", nil)
 	PruneInvalidUnspentTokens(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	for _, name := range []string{"alice", "bob"} {
 		IDs := ListVaultUnspentTokens(network, defaultTMSID, name)

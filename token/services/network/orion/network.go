@@ -12,10 +12,13 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/orion/core/generic/committer"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -38,15 +41,17 @@ type Network struct {
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 	newVault       NewVaultFunc
+	subscribers    *events.Subscribers
 }
 
 func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
 	net := &Network{
-		sp:         sp,
-		ip:         ip,
-		n:          n,
-		vaultCache: map[string]driver.Vault{},
-		newVault:   newVault,
+		sp:          sp,
+		ip:          ip,
+		n:           n,
+		vaultCache:  map[string]driver.Vault{},
+		newVault:    newVault,
+		subscribers: events.NewSubscribers(),
 	}
 	net.ledger = &ledger{n: net}
 	return net
@@ -99,25 +104,6 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	n.vaultCache[namespace] = nv
 
 	return nv, nil
-}
-
-func (n *Network) StoreEnvelope(env driver.Envelope) error {
-	rws, err := n.n.Vault().GetRWSet(env.TxID(), env.Results())
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get rwset")
-	}
-	rws.Done()
-
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return errors.WithMessagef(err, "failed marshalling tx env [%s]", env.TxID())
-	}
-
-	return n.n.Vault().StoreEnvelope(env.TxID(), rawEnv)
-}
-
-func (n *Network) EnvelopeExists(id string) bool {
-	return n.n.EnvelopeService().Exists(id)
 }
 
 func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
@@ -222,12 +208,23 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	}
 }
 
-func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.n.Committer().SubscribeTxStatusChanges(txID, listener)
+func (n *Network) SubscribeTxStatusChanges(txID string, ns string, listener driver.TxStatusChangeListener) error {
+	wrapper := &TxStatusChangeListener{
+		root:      listener,
+		network:   n.n.Name(),
+		sp:        n.n.SP,
+		namespace: ns,
+	}
+	n.subscribers.Set(txID, listener, wrapper)
+	return n.n.Committer().SubscribeTxStatusChanges(txID, wrapper)
 }
 
 func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.n.Committer().UnsubscribeTxStatusChanges(txID, listener)
+	wrapper, ok := n.subscribers.Get(txID, listener)
+	if !ok {
+		return errors.Errorf("listener was not registered")
+	}
+	return n.n.Committer().UnsubscribeTxStatusChanges(txID, wrapper.(orion.TxStatusChangeListener))
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
@@ -288,13 +285,13 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
-func (v *nv) Status(txID string) (driver.ValidationCode, error) {
-	vc, err := v.v.Status(txID)
-	return driver.ValidationCode(vc), err
+func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
+	vc, message, err := v.v.Status(id)
+	return driver.ValidationCode(vc), message, err
 }
 
-func (v *nv) DiscardTx(txID string) error {
-	return v.v.DiscardTx(txID)
+func (v *nv) DiscardTx(txID string, message string) error {
+	return v.v.DiscardTx(txID, message)
 }
 
 type ledger struct {
@@ -302,9 +299,53 @@ type ledger struct {
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n, id))
+	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n.Name(), "", id))
 	if err != nil {
 		return driver.Unknown, err
 	}
-	return boxed.(driver.ValidationCode), nil
+	return boxed.(*TxStatusResponse).Status, nil
+}
+
+type TxStatusChangeListener struct {
+	root      driver.TxStatusChangeListener
+	sp        token2.ServiceProvider
+	network   string
+	namespace string
+}
+
+func (t *TxStatusChangeListener) OnStatusChange(txID string, status int, statusMessage string) error {
+	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.namespace, t.namespace, txID))
+	if err != nil {
+		return err
+	}
+	err = t.root.OnStatusChange(txID, status, statusMessage, boxed.(*TxStatusResponse).TokenRequestReference)
+	if err == nil {
+		return nil
+	}
+
+	if HasCause(err, network.ErrDiscardTX) {
+		// TODO: we need to preserve the chain
+		return committer.ErrDiscardTX
+	}
+	return err
+}
+
+func HasCause(source, target error) bool {
+	if source == nil {
+		return false
+	}
+	if target == nil {
+		return false
+	}
+	if source == target {
+		return true
+	}
+	cause := errors.Cause(source)
+	if cause == target {
+		return true
+	}
+	if cause == source {
+		return false
+	}
+	return HasCause(cause, target)
 }
