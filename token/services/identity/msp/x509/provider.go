@@ -62,7 +62,7 @@ func NewProviderFromConf(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID
 		return p, conf, nil
 	}
 	// load as verify only
-	p, err = newVerifyingProvider(conf, mspConfigPath, mspID)
+	p, conf, err = newVerifyingProvider(conf, mspConfigPath, mspID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -88,12 +88,20 @@ func newSigningProvider(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID 
 	return newProvider(sID, idRaw)
 }
 
-func newVerifyingProvider(conf *msp.MSPConfig, mspConfigPath, mspID string) (*Provider, error) {
+func newVerifyingProvider(conf *msp.MSPConfig, mspConfigPath, mspID string) (*Provider, *msp.MSPConfig, error) {
+	conf, err := msp2.RemoveSigningIdentityInfo(conf)
+	if err != nil {
+		return nil, nil, err
+	}
 	idRaw, err := msp2.SerializeFromMSP(conf, mspID, mspConfigPath)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
+		return nil, nil, errors.WithMessagef(err, "failed to load msp identity at [%s]", mspConfigPath)
 	}
-	return newProvider(nil, idRaw)
+	p, err := newProvider(nil, idRaw)
+	if err != nil {
+		return nil, nil, err
+	}
+	return p, conf, nil
 }
 
 func newProvider(sID driver.SigningIdentity, id []byte) (*Provider, error) {

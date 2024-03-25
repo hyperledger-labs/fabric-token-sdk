@@ -248,3 +248,17 @@ func GetMspConfig(dir string, ID string, signingIdentityInfo *msp.SigningIdentit
 
 	return &msp.MSPConfig{Config: fmpsjs, Type: int32(FABRIC)}, nil
 }
+
+func RemoveSigningIdentityInfo(c *msp.MSPConfig) (*msp.MSPConfig, error) {
+	fabricMSPConfig := &msp.FabricMSPConfig{}
+	if err := proto.Unmarshal(c.Config, fabricMSPConfig); err != nil {
+		return nil, err
+	}
+	fabricMSPConfig.SigningIdentity = nil
+
+	raw, err := proto.Marshal(fabricMSPConfig)
+	if err != nil {
+		return nil, err
+	}
+	return &msp.MSPConfig{Config: raw, Type: int32(FABRIC)}, nil
+}
