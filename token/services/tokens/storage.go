@@ -63,7 +63,7 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 }
 
 func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
-	tok, err := t.tx.GetToken(txID, index)
+	tok, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
