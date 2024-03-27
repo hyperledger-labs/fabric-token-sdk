@@ -117,8 +117,6 @@ clean:
 	rm -rf ./integration/token/dvp/fabtoken/cmd/
 	rm -rf ./integration/token/interop/fabtoken/cmd/
 	rm -rf ./integration/token/interop/dlog/cmd/
-	rm -rf ./samples/fungible/cmd
-	rm -rf ./samples/nft/cmd
 
 .PHONY: clean-fabric-peer-images
 clean-fabric-peer-images:

@@ -1,15 +1,4 @@
-# Samples
-
-Samples are a collection of small and simple apps that demonstrate how to use the library.
-
-To run the samples, we recommend to use `go 1.20`. You will also need docker when using Fabric.
-To make sure you have all the required docker images, you can run `make docker-images` in the
-folder `$GOPATH/src/github.com/hyperledger-labs/fabric-token-sdk`.
-
-- [`Fungible Tokens, The Basics. On Fabric`](./fungible//README.md): How to handle `fungible tokens`.
-- [`Non-Fungible Tokens, The Basics. On Fabric`](./nft//README.md): How to handle `non-fungible tokens`.
-
-## Additional Examples via Integration Tests
+# Integration tests
 
 Integration tests are useful to show how multiple components work together.
 The Fabric Smart Client comes equipped with some of them to show the main features.
