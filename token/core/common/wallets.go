@@ -22,24 +22,24 @@ type OwnerTokenVault interface {
 
 type AuditorWallet struct {
 	IdentityProvider driver.IdentityProvider
-	id               string
-	identity         view.Identity
+	WalletID         string
+	AuditorIdentity  view.Identity
 }
 
 func NewAuditorWallet(IdentityProvider driver.IdentityProvider, id string, identity view.Identity) *AuditorWallet {
 	return &AuditorWallet{
 		IdentityProvider: IdentityProvider,
-		id:               id,
-		identity:         identity,
+		WalletID:         id,
+		AuditorIdentity:  identity,
 	}
 }
 
 func (w *AuditorWallet) ID() string {
-	return w.id
+	return w.WalletID
 }
 
 func (w *AuditorWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity)
+	return w.AuditorIdentity.Equal(identity)
 }
 
 func (w *AuditorWallet) ContainsToken(token *token.UnspentToken) bool {
@@ -47,7 +47,7 @@ func (w *AuditorWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *AuditorWallet) GetAuditorIdentity() (view.Identity, error) {
-	return w.identity, nil
+	return w.AuditorIdentity, nil
 }
 
 func (w *AuditorWallet) GetSigner(id view.Identity) (driver.Signer, error) {
@@ -55,7 +55,7 @@ func (w *AuditorWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", id, w.ID())
 	}
 
-	si, err := w.IdentityProvider.GetSigner(w.identity)
+	si, err := w.IdentityProvider.GetSigner(w.AuditorIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -70,8 +70,8 @@ type IssuerWallet struct {
 	Logger           *flogging.FabricLogger
 	IdentityProvider driver.IdentityProvider
 	TokenVault       IssuerTokenVault
-	id               string
-	identity         view.Identity
+	WalletID         string
+	IssuerIdentity   view.Identity
 }
 
 func NewIssuerWallet(Logger *flogging.FabricLogger, IdentityProvider driver.IdentityProvider, TokenVault IssuerTokenVault, id string, identity view.Identity) *IssuerWallet {
@@ -79,17 +79,17 @@ func NewIssuerWallet(Logger *flogging.FabricLogger, IdentityProvider driver.Iden
 		Logger:           Logger,
 		IdentityProvider: IdentityProvider,
 		TokenVault:       TokenVault,
-		id:               id,
-		identity:         identity,
+		WalletID:         id,
+		IssuerIdentity:   identity,
 	}
 }
 
 func (w *IssuerWallet) ID() string {
-	return w.id
+	return w.WalletID
 }
 
 func (w *IssuerWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity)
+	return w.IssuerIdentity.Equal(identity)
 }
 
 func (w *IssuerWallet) ContainsToken(token *token.UnspentToken) bool {
@@ -97,7 +97,7 @@ func (w *IssuerWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *IssuerWallet) GetIssuerIdentity(tokenType string) (view.Identity, error) {
-	return w.identity, nil
+	return w.IssuerIdentity, nil
 }
 
 func (w *IssuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
@@ -106,7 +106,7 @@ func (w *IssuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 	}
 	si, err := w.IdentityProvider.GetSigner(identity)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting issuer signer for identity [%s] in wallet [%s]", identity, w.identity)
+		return nil, errors.Wrapf(err, "failed getting issuer signer for identity [%s] in wallet [%s]", identity, w.IssuerIdentity)
 	}
 	return si, nil
 }
@@ -139,25 +139,25 @@ func (w *IssuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.Iss
 }
 
 type CertifierWallet struct {
-	IdentityProvider driver.IdentityProvider
-	id               string
-	identity         view.Identity
+	IdentityProvider  driver.IdentityProvider
+	WalletID          string
+	CertifierIdentity view.Identity
 }
 
 func NewCertifierWallet(IdentityProvider driver.IdentityProvider, id string, identity view.Identity) *CertifierWallet {
 	return &CertifierWallet{
-		IdentityProvider: IdentityProvider,
-		id:               id,
-		identity:         identity,
+		IdentityProvider:  IdentityProvider,
+		WalletID:          id,
+		CertifierIdentity: identity,
 	}
 }
 
 func (w *CertifierWallet) ID() string {
-	return w.id
+	return w.WalletID
 }
 
 func (w *CertifierWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity)
+	return w.CertifierIdentity.Equal(identity)
 }
 
 func (w *CertifierWallet) ContainsToken(token *token.UnspentToken) bool {
@@ -165,7 +165,7 @@ func (w *CertifierWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *CertifierWallet) GetCertifierIdentity() (view.Identity, error) {
-	return w.identity, nil
+	return w.CertifierIdentity, nil
 }
 
 func (w *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
@@ -173,7 +173,7 @@ func (w *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 		return nil, errors.Errorf("identity does not belong to this AnonymousOwnerWallet [%s]", id.String())
 	}
 
-	si, err := w.IdentityProvider.GetSigner(w.identity)
+	si, err := w.IdentityProvider.GetSigner(w.CertifierIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -181,29 +181,29 @@ func (w *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 }
 
 type LongTermOwnerWallet struct {
-	IdentityProvider driver.IdentityProvider
-	TokenVault       OwnerTokenVault
-	id               string
-	identityInfo     driver.IdentityInfo
-	identity         view.Identity
+	IdentityProvider  driver.IdentityProvider
+	TokenVault        OwnerTokenVault
+	WalletID          string
+	OwnerIdentityInfo driver.IdentityInfo
+	OwnerIdentity     view.Identity
 }
 
 func NewLongTermOwnerWallet(IdentityProvider driver.IdentityProvider, TokenVault OwnerTokenVault, identity view.Identity, id string, identityInfo driver.IdentityInfo) *LongTermOwnerWallet {
 	return &LongTermOwnerWallet{
-		IdentityProvider: IdentityProvider,
-		TokenVault:       TokenVault,
-		id:               id,
-		identityInfo:     identityInfo,
-		identity:         identity,
+		IdentityProvider:  IdentityProvider,
+		TokenVault:        TokenVault,
+		WalletID:          id,
+		OwnerIdentityInfo: identityInfo,
+		OwnerIdentity:     identity,
 	}
 }
 
 func (w *LongTermOwnerWallet) ID() string {
-	return w.id
+	return w.WalletID
 }
 
 func (w *LongTermOwnerWallet) Contains(identity view.Identity) bool {
-	return w.identity.Equal(identity)
+	return w.OwnerIdentity.Equal(identity)
 }
 
 func (w *LongTermOwnerWallet) ContainsToken(token *token.UnspentToken) bool {
@@ -211,7 +211,7 @@ func (w *LongTermOwnerWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *LongTermOwnerWallet) GetRecipientIdentity() (view.Identity, error) {
-	return w.identity, nil
+	return w.OwnerIdentity, nil
 }
 
 func (w *LongTermOwnerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
@@ -227,11 +227,11 @@ func (w *LongTermOwnerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byt
 }
 
 func (w *LongTermOwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
-	if !w.identity.Equal(identity) {
+	if !w.OwnerIdentity.Equal(identity) {
 		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
 	}
 
-	si, err := w.IdentityProvider.GetSigner(w.identity)
+	si, err := w.IdentityProvider.GetSigner(w.OwnerIdentity)
 	if err != nil {
 		return nil, err
 	}
@@ -239,7 +239,7 @@ func (w *LongTermOwnerWallet) GetSigner(identity view.Identity) (driver.Signer, 
 }
 
 func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -260,7 +260,7 @@ func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token
 }
 
 func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -268,7 +268,7 @@ func (w *LongTermOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions)
 }
 
 func (w *LongTermOwnerWallet) EnrollmentID() string {
-	return w.identityInfo.EnrollmentID()
+	return w.OwnerIdentityInfo.EnrollmentID()
 }
 
 func (w *LongTermOwnerWallet) RegisterRecipient(data *driver.RecipientData) error {
@@ -277,7 +277,7 @@ func (w *LongTermOwnerWallet) RegisterRecipient(data *driver.RecipientData) erro
 }
 
 func (w *LongTermOwnerWallet) Remote() bool {
-	return w.identityInfo.Remote()
+	return w.OwnerIdentityInfo.Remote()
 }
 
 type AnonymousOwnerWallet struct {
@@ -288,9 +288,9 @@ type AnonymousOwnerWallet struct {
 	Deserializer     driver.Deserializer
 	WalletRegistry   WalletRegistry
 
-	id           string
-	identityInfo driver.IdentityInfo
-	cache        *WalletIdentityCache
+	WalletID          string
+	OwnerIdentityInfo driver.IdentityInfo
+	IdentityCache     *WalletIdentityCache
 }
 
 func NewAnonymousOwnerWallet(
@@ -304,13 +304,13 @@ func NewAnonymousOwnerWallet(
 	identityInfo driver.IdentityInfo,
 ) (*AnonymousOwnerWallet, error) {
 	w := &AnonymousOwnerWallet{
-		Logger:           logger,
-		IdentityProvider: IdentityProvider,
-		TokenVault:       TokenVault,
-		Deserializer:     Deserializer,
-		WalletRegistry:   walletRegistry,
-		id:               id,
-		identityInfo:     identityInfo,
+		Logger:            logger,
+		IdentityProvider:  IdentityProvider,
+		TokenVault:        TokenVault,
+		Deserializer:      Deserializer,
+		WalletRegistry:    walletRegistry,
+		WalletID:          id,
+		OwnerIdentityInfo: identityInfo,
 	}
 	cacheSize := 0
 	tmsConfig := ConfigManager.TMS()
@@ -321,17 +321,17 @@ func NewAnonymousOwnerWallet(
 		cacheSize = conf.CacheSize
 	}
 
-	w.cache = NewWalletIdentityCache(logger, w.getRecipientIdentity, cacheSize)
+	w.IdentityCache = NewWalletIdentityCache(logger, w.getRecipientIdentity, cacheSize)
 	logger.Debugf("added wallet cache for id %s with cache of size %d", id+"@"+identityInfo.EnrollmentID(), cacheSize)
 	return w, nil
 }
 
 func (w *AnonymousOwnerWallet) ID() string {
-	return w.id
+	return w.WalletID
 }
 
 func (w *AnonymousOwnerWallet) Contains(identity view.Identity) bool {
-	return w.WalletRegistry.ContainsIdentity(identity, w.id)
+	return w.WalletRegistry.ContainsIdentity(identity, w.WalletID)
 }
 
 // ContainsToken returns true if the passed token is owned by this wallet
@@ -340,18 +340,18 @@ func (w *AnonymousOwnerWallet) ContainsToken(token *token.UnspentToken) bool {
 }
 
 func (w *AnonymousOwnerWallet) GetRecipientIdentity() (view.Identity, error) {
-	return w.cache.Identity()
+	return w.IdentityCache.Identity()
 }
 
 func (w *AnonymousOwnerWallet) getRecipientIdentity() (view.Identity, error) {
 	// Get a new pseudonym
-	pseudonym, _, err := w.identityInfo.Get()
+	pseudonym, _, err := w.OwnerIdentityInfo.Get()
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
 	}
 
 	// Register the pseudonym
-	if err := w.WalletRegistry.BindIdentity(pseudonym, w.identityInfo.EnrollmentID(), w.id, nil); err != nil {
+	if err := w.WalletRegistry.BindIdentity(pseudonym, w.OwnerIdentityInfo.EnrollmentID(), w.WalletID, nil); err != nil {
 		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
 	}
 	return pseudonym, nil
@@ -370,7 +370,7 @@ func (w *AnonymousOwnerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]by
 }
 
 func (w *AnonymousOwnerWallet) EnrollmentID() string {
-	return w.identityInfo.EnrollmentID()
+	return w.OwnerIdentityInfo.EnrollmentID()
 }
 
 func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) error {
@@ -396,8 +396,8 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 	if err := w.IdentityProvider.RegisterRecipientData(data); err != nil {
 		return errors.Wrapf(err, "failed registering audit info for [%s]", data.Identity)
 	}
-	if err := w.WalletRegistry.BindIdentity(data.Identity, w.EnrollmentID(), w.id, nil); err != nil {
-		return errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.id)
+	if err := w.WalletRegistry.BindIdentity(data.Identity, w.EnrollmentID(), w.WalletID, nil); err != nil {
+		return errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.WalletID)
 	}
 	return nil
 }
@@ -415,7 +415,7 @@ func (w *AnonymousOwnerWallet) GetSigner(identity view.Identity) (driver.Signer,
 }
 
 func (w *AnonymousOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -440,7 +440,7 @@ func (w *AnonymousOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*toke
 
 func (w *AnonymousOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
 	w.Logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.id, opts.TokenType)
+	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
 	if err != nil {
 		return nil, errors.Wrap(err, "token selection failed")
 	}
@@ -448,5 +448,5 @@ func (w *AnonymousOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions
 }
 
 func (w *AnonymousOwnerWallet) Remote() bool {
-	return w.identityInfo.Remote()
+	return w.OwnerIdentityInfo.Remote()
 }
