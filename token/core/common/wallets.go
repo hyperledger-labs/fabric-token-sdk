@@ -227,11 +227,11 @@ func (w *LongTermOwnerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byt
 }
 
 func (w *LongTermOwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
-	if !w.OwnerIdentity.Equal(identity) {
-		return nil, errors.Errorf("identity does not belong to this wallet [%s]", identity.String())
+	if !w.Contains(identity) {
+		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", identity, w.ID())
 	}
 
-	si, err := w.IdentityProvider.GetSigner(w.OwnerIdentity)
+	si, err := w.IdentityProvider.GetSigner(identity)
 	if err != nil {
 		return nil, err
 	}
@@ -281,16 +281,12 @@ func (w *LongTermOwnerWallet) Remote() bool {
 }
 
 type AnonymousOwnerWallet struct {
-	Logger           *flogging.FabricLogger
-	IdentityProvider driver.IdentityProvider
-	TokenVault       OwnerTokenVault
-	ConfigManager    config.Manager
-	Deserializer     driver.Deserializer
-	WalletRegistry   WalletRegistry
-
-	WalletID          string
-	OwnerIdentityInfo driver.IdentityInfo
-	IdentityCache     *WalletIdentityCache
+	*LongTermOwnerWallet
+	Logger         *flogging.FabricLogger
+	ConfigManager  config.Manager
+	Deserializer   driver.Deserializer
+	WalletRegistry WalletRegistry
+	IdentityCache  *WalletIdentityCache
 }
 
 func NewAnonymousOwnerWallet(
@@ -304,13 +300,15 @@ func NewAnonymousOwnerWallet(
 	identityInfo driver.IdentityInfo,
 ) (*AnonymousOwnerWallet, error) {
 	w := &AnonymousOwnerWallet{
-		Logger:            logger,
-		IdentityProvider:  IdentityProvider,
-		TokenVault:        TokenVault,
-		Deserializer:      Deserializer,
-		WalletRegistry:    walletRegistry,
-		WalletID:          id,
-		OwnerIdentityInfo: identityInfo,
+		LongTermOwnerWallet: &LongTermOwnerWallet{
+			IdentityProvider:  IdentityProvider,
+			TokenVault:        TokenVault,
+			WalletID:          id,
+			OwnerIdentityInfo: identityInfo,
+		},
+		Logger:         logger,
+		WalletRegistry: walletRegistry,
+		Deserializer:   Deserializer,
 	}
 	cacheSize := 0
 	tmsConfig := ConfigManager.TMS()
@@ -326,10 +324,6 @@ func NewAnonymousOwnerWallet(
 	return w, nil
 }
 
-func (w *AnonymousOwnerWallet) ID() string {
-	return w.WalletID
-}
-
 func (w *AnonymousOwnerWallet) Contains(identity view.Identity) bool {
 	return w.WalletRegistry.ContainsIdentity(identity, w.WalletID)
 }
@@ -341,36 +335,6 @@ func (w *AnonymousOwnerWallet) ContainsToken(token *token.UnspentToken) bool {
 
 func (w *AnonymousOwnerWallet) GetRecipientIdentity() (view.Identity, error) {
 	return w.IdentityCache.Identity()
-}
-
-func (w *AnonymousOwnerWallet) getRecipientIdentity() (view.Identity, error) {
-	// Get a new pseudonym
-	pseudonym, _, err := w.OwnerIdentityInfo.Get()
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
-	}
-
-	// Register the pseudonym
-	if err := w.WalletRegistry.BindIdentity(pseudonym, w.OwnerIdentityInfo.EnrollmentID(), w.WalletID, nil); err != nil {
-		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
-	}
-	return pseudonym, nil
-}
-
-func (w *AnonymousOwnerWallet) GetAuditInfo(id view.Identity) ([]byte, error) {
-	return w.IdentityProvider.GetAuditInfo(id)
-}
-
-func (w *AnonymousOwnerWallet) GetTokenMetadata(id view.Identity) ([]byte, error) {
-	return nil, nil
-}
-
-func (w *AnonymousOwnerWallet) GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error) {
-	return nil, nil
-}
-
-func (w *AnonymousOwnerWallet) EnrollmentID() string {
-	return w.OwnerIdentityInfo.EnrollmentID()
 }
 
 func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) error {
@@ -402,51 +366,16 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 	return nil
 }
 
-func (w *AnonymousOwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
-	if !w.Contains(identity) {
-		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", identity, w.ID())
-	}
-
-	si, err := w.IdentityProvider.GetSigner(identity)
+func (w *AnonymousOwnerWallet) getRecipientIdentity() (view.Identity, error) {
+	// Get a new pseudonym
+	pseudonym, _, err := w.OwnerIdentityInfo.Get()
 	if err != nil {
-		return nil, err
+		return nil, errors.WithMessagef(err, "failed getting recipient identity from wallet [%s]", w.ID())
 	}
-	return si, err
-}
 
-func (w *AnonymousOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
-	if err != nil {
-		return nil, errors.Wrap(err, "token selection failed")
+	// Register the pseudonym
+	if err := w.WalletRegistry.BindIdentity(pseudonym, w.OwnerIdentityInfo.EnrollmentID(), w.WalletID, nil); err != nil {
+		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
 	}
-	defer it.Close()
-
-	unspentTokens := &token.UnspentTokens{}
-	for {
-		t, err := it.Next()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to get next unspent token")
-		}
-		if t == nil {
-			break
-		}
-		w.Logger.Debugf("wallet: adding token of type [%s], quantity [%s]", t.Type, t.Quantity)
-		unspentTokens.Tokens = append(unspentTokens.Tokens, t)
-	}
-	w.Logger.Debugf("wallet: list tokens done, found [%d] unspent tokens", len(unspentTokens.Tokens))
-
-	return unspentTokens, nil
-}
-
-func (w *AnonymousOwnerWallet) ListTokensIterator(opts *driver.ListTokensOptions) (driver.UnspentTokensIterator, error) {
-	w.Logger.Debugf("wallet: list tokens, type [%s]", opts.TokenType)
-	it, err := w.TokenVault.UnspentTokensIteratorBy(w.WalletID, opts.TokenType)
-	if err != nil {
-		return nil, errors.Wrap(err, "token selection failed")
-	}
-	return it, nil
-}
-
-func (w *AnonymousOwnerWallet) Remote() bool {
-	return w.OwnerIdentityInfo.Remote()
+	return pseudonym, nil
 }

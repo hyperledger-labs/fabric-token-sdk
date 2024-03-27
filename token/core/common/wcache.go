@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"go.uber.org/zap/zapcore"
 )
 
 type WalletIdentityCacheBackendFunc func() (view.Identity, error)
@@ -39,14 +38,10 @@ func NewWalletIdentityCache(Logger *flogging.FabricLogger, backed WalletIdentity
 func (c *WalletIdentityCache) Identity() (view.Identity, error) {
 	select {
 	case entry := <-c.ch:
-		if c.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			c.Logger.Debugf("fetch identity from producer channel done [%s][%d]", entry)
-		}
+		c.Logger.Debugf("fetch identity from producer channel done [%s][%d]", entry)
 		return entry, nil
 	default:
-		if c.Logger.IsEnabledFor(zapcore.DebugLevel) {
-			c.Logger.Debugf("fetch identity from producer channel timeout")
-		}
+		c.Logger.Debugf("fetch identity from producer channel timeout")
 		return c.backed()
 	}
 }
