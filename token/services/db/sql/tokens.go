@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -128,13 +129,13 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 	logger.Debug(query, txID, index)
 
 	row := db.db.QueryRow(query, txID, index)
-	if err := row.Scan(&id); err != nil {
-		if err == sql.ErrNoRows {
-			return false, nil
-		}
+	if err := row.Scan(&id); err == nil {
+		return id == txID, nil
+	} else if err == sql.ErrNoRows {
+		return false, nil
+	} else {
 		return false, errors.Wrapf(err, "error querying db")
 	}
-	return id == txID, nil
 }
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
@@ -229,13 +230,16 @@ func (db *TokenDB) ListUnspentTokens() (*token.UnspentTokens, error) {
 
 // ListAuditTokens returns the audited tokens associated to the passed ids
 func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
+	return db.listTokens(ids, []string{"auditor = true"})
+}
+
+func (db *TokenDB) listTokens(ids []*token.ID, conditions []string) ([]*token.Token, error) {
 	if len(ids) == 0 {
 		return []*token.Token{}, nil
 	}
 	args := make([]interface{}, 0)
-	where := whereTokenIDs(&args, ids)
-
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s AND auditor = true", db.table.Tokens, where)
+	conditions = append([]string{whereTokenIDs(&args, ids)}, conditions...)
+	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s", db.table.Tokens, strings.Join(conditions, " AND "))
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -243,48 +247,26 @@ func (db *TokenDB) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
 	}
 	defer rows.Close()
 
-	tokens := make([]*token.Token, len(ids))
-	counter := 0
+	tokenMap := make(map[string]*token.Token, len(ids))
 	for rows.Next() {
 		id := token.ID{}
-		tok := token.Token{
-			Owner: &token.Owner{
-				Raw: []byte{},
-			},
-			Type:     "",
-			Quantity: "",
-		}
+		tok := token.Token{Owner: &token.Owner{Raw: []byte{}}}
 		if err := rows.Scan(&id.TxId, &id.Index, &tok.Owner.Raw, &tok.Type, &tok.Quantity); err != nil {
-			return tokens, err
+			return nil, err
 		}
-
-		// the result is expected to be in order of the ids
-		found := false
-		for i := 0; i < len(ids); i++ {
-			if ids[i].Equal(id) {
-				tokens[i] = &tok
-				found = true
-				counter++
-			}
-		}
-		if !found {
-			return nil, errors.Errorf("retrieved wrong token [%s]", id)
-		}
+		tokenMap[id.String()] = &tok
 	}
 
 	if rows.Err() != nil {
 		return nil, rows.Err()
 	}
-	if counter == 0 {
-		return nil, errors.Errorf("token not found for key [%s:%d]", ids[0].TxId, ids[0].Index)
-	}
-	if counter != len(ids) {
-		for j, t := range tokens {
-			if t == nil {
-				return nil, errors.Errorf("token not found for key [%s:%d]", ids[j].TxId, ids[j].Index)
-			}
+	tokens := make([]*token.Token, len(ids))
+	for i, id := range ids {
+		if tok, ok := tokenMap[id.String()]; !ok {
+			return nil, errors.Errorf("token not found for key [%s]", ids[0])
+		} else {
+			tokens[i] = tok
 		}
-		panic("programming error: should not reach this point")
 	}
 	return tokens, nil
 }
@@ -299,21 +281,12 @@ func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	}
 	defer rows.Close()
 
-	tokens := []*token.IssuedToken{}
+	var tokens []*token.IssuedToken
 	for rows.Next() {
 		tok := token.IssuedToken{
-			Id: &token.ID{
-				TxId:  "",
-				Index: 0,
-			},
-			Owner: &token.Owner{
-				Raw: []byte{},
-			},
-			Type:     "",
-			Quantity: "",
-			Issuer: &token.Owner{
-				Raw: []byte{},
-			},
+			Id:     &token.ID{},
+			Owner:  &token.Owner{Raw: []byte{}},
+			Issuer: &token.Owner{Raw: []byte{}},
 		}
 		if err := rows.Scan(&tok.Id.TxId, &tok.Id.Index, &tok.Owner.Raw, &tok.Type, &tok.Quantity, &tok.Issuer.Raw); err != nil {
 			return nil, err
@@ -323,52 +296,7 @@ func (db *TokenDB) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	return &token.IssuedTokens{Tokens: tokens}, rows.Err()
 }
 
-func (db *TokenDB) GetTokenOutputs(ids []*token.ID, callback tdriver.QueryCallbackFunc) error {
-	tokens, err := db.getLedgerToken(ids)
-	if err != nil {
-		return err
-	}
-	for i := 0; i < len(ids); i++ {
-		if err := callback(ids[i], tokens[i]); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// GetTokenInfos retrieves the token metadata for the passed ids.
-// For each id, the callback is invoked to unmarshal the token metadata
-func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
-	return db.GetAllTokenInfos(ids)
-}
-
-// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
-func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
-	tokens, metas, err := db.getLedgerTokenAndMeta(ids)
-	if err != nil {
-		return nil, nil, nil, err
-	}
-	outputIDs := make([]string, len(ids))
-	for i := 0; i < len(ids); i++ {
-		outputID, err := keys.CreateTokenKey(ids[i].TxId, ids[i].Index)
-		if err != nil {
-			return nil, nil, nil, errors.Wrapf(err, "error creating output ID: %v", ids[i])
-		}
-		outputIDs[i] = outputID
-	}
-	return outputIDs, tokens, metas, nil
-}
-
-// GetAllTokenInfos retrieves the token information for the passed ids.
-func (db *TokenDB) GetAllTokenInfos(ids []*token.ID) ([][]byte, error) {
-	if len(ids) == 0 {
-		return [][]byte{}, nil
-	}
-	_, metas, err := db.getLedgerTokenAndMeta(ids)
-	return metas, err
-}
-
-func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
+func (db *TokenDB) GetTokenOutputs(ids []*token.ID) ([][]byte, error) {
 	logger.Debugf("retrieve ledger tokens for [%s]", ids)
 	if len(ids) == 0 {
 		return [][]byte{}, nil
@@ -408,6 +336,38 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 		}
 	}
 	return tokens, nil
+}
+
+// GetTokenInfos retrieves the token metadata for the passed ids.
+// For each id, the callback is invoked to unmarshal the token metadata
+func (db *TokenDB) GetTokenInfos(ids []*token.ID) ([][]byte, error) {
+	return db.GetAllTokenInfos(ids)
+}
+
+// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
+func (db *TokenDB) GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error) {
+	tokens, metas, err := db.getLedgerTokenAndMeta(ids)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	outputIDs := make([]string, len(ids))
+	for i := 0; i < len(ids); i++ {
+		outputID, err := keys.CreateTokenKey(ids[i].TxId, ids[i].Index)
+		if err != nil {
+			return nil, nil, nil, errors.Wrapf(err, "error creating output ID: %v", ids[i])
+		}
+		outputIDs[i] = outputID
+	}
+	return outputIDs, tokens, metas, nil
+}
+
+// GetAllTokenInfos retrieves the token information for the passed ids.
+func (db *TokenDB) GetAllTokenInfos(ids []*token.ID) ([][]byte, error) {
+	if len(ids) == 0 {
+		return [][]byte{}, nil
+	}
+	_, metas, err := db.getLedgerTokenAndMeta(ids)
+	return metas, err
 }
 
 func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, error) {
@@ -453,82 +413,19 @@ func (db *TokenDB) getLedgerTokenAndMeta(ids []*token.ID) ([][]byte, [][]byte, e
 
 // GetTokens returns the owned tokens and their identifier keys for the passed ids.
 func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, error) {
-	if len(inputs) == 0 {
-		return []string{}, []*token.Token{}, nil
-	}
-	args := make([]interface{}, 0)
-	where := whereTokenIDs(&args, inputs)
-
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", db.table.Tokens, where)
-	logger.Debug(query, args)
-	rows, err := db.db.Query(query, args...)
+	tokens, err := db.listTokens(inputs, []string{"is_deleted = false", "owner = true"})
 	if err != nil {
 		return nil, nil, err
 	}
-	defer rows.Close()
-
-	tokens := make([]*token.Token, len(inputs))
 	ids := make([]string, len(inputs))
-	counter := 0
-	for rows.Next() {
-		tokID := token.ID{}
-		var typ, quantity string
-		var ownerRaw []byte
-		err := rows.Scan(
-			&tokID.TxId,
-			&tokID.Index,
-			&ownerRaw,
-			&typ,
-			&quantity,
-		)
-		if err != nil {
-			return nil, tokens, err
-		}
-		tok := &token.Token{
-			Owner:    &token.Owner{Raw: ownerRaw},
-			Type:     typ,
-			Quantity: quantity,
-		}
-
+	for i, id := range inputs {
 		// The token keys are used to refer to tokens as stored in the world state by the tokenchaincode
 		// so that they can be validated as inputs for the transaction
-		id, err := keys.CreateTokenKey(tokID.TxId, tokID.Index)
-		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed generating id key [%v]", tokID)
+		if key, err := keys.CreateTokenKey(id.TxId, id.Index); err != nil {
+			return nil, nil, errors.Wrapf(err, "failed generating id key [%s]", id)
+		} else {
+			ids[i] = key
 		}
-		logger.Debugf("input [%s]-[%s]-[%s:%s]", inputs[counter], tokID, tok.Type, tok.Quantity)
-
-		// put in the right position
-		found := false
-		for j := 0; j < len(inputs); j++ {
-			if inputs[j].Equal(tokID) {
-				ids[j] = id
-				tokens[j] = tok
-				logger.Debugf("set token at location [%s:%s]-[%d]", tok.Type, tok.Quantity, j)
-				found = true
-				break
-			}
-		}
-		if !found {
-			return nil, nil, errors.Errorf("retrieved wrong token [%s]", id)
-		}
-
-		counter++
-	}
-	logger.Debugf("found [%d] tokens, expected [%d]", counter, len(inputs))
-	if err = rows.Err(); err != nil {
-		return nil, tokens, err
-	}
-	if counter == 0 {
-		return nil, nil, errors.Errorf("token not found for key [%s:%d]", inputs[0].TxId, inputs[0].Index)
-	}
-	if counter != len(inputs) {
-		for j, t := range tokens {
-			if t == nil {
-				return nil, nil, errors.Errorf("token not found for key [%s:%d]", inputs[j].TxId, inputs[j].Index)
-			}
-		}
-		panic("programming error: should not reach this point")
 	}
 	return ids, tokens, nil
 }
@@ -537,17 +434,13 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 // The bool array is an indicator used to tell if the token at a given position has been deleted or not
 func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error) {
 	logger.Debugf("search first over token table [%s]...", inputs)
-	return db.whoDeleteTokens(db.table.Tokens, inputs...)
-}
-
-func (db *TokenDB) whoDeleteTokens(table string, inputs ...*token.ID) ([]string, []bool, error) {
 	if len(inputs) == 0 {
 		return []string{}, []bool{}, nil
 	}
 	args := make([]interface{}, 0)
 	where := whereTokenIDs(&args, inputs)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", table, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -555,47 +448,35 @@ func (db *TokenDB) whoDeleteTokens(table string, inputs ...*token.ID) ([]string,
 	}
 	defer rows.Close()
 
+	type spentStatus struct {
+		spent   bool
+		spentBy string
+	}
+	statusMap := make(map[string]*spentStatus, len(inputs))
+	for rows.Next() {
+		var id token.ID
+		var status spentStatus
+		if err := rows.Scan(&id.TxId, &id.Index, &status.spentBy, &status.spent); err != nil {
+			return nil, nil, err
+		}
+		statusMap[id.String()] = &status
+	}
+	logger.Debugf("found [%d] records, expected [%d]", len(statusMap), len(inputs))
+	if err = rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
 	spentBy := make([]string, len(inputs))
 	isSpent := make([]bool, len(inputs))
-	found := make([]bool, len(inputs))
-
-	counter := 0
-	for rows.Next() {
-		var txid string
-		var idx uint64
-		var spBy string
-		var isSp bool
-		if err := rows.Scan(&txid, &idx, &spBy, &isSp); err != nil {
-			return spentBy, isSpent, err
+	for i, id := range inputs {
+		if status, ok := statusMap[id.String()]; !ok {
+			return nil, nil, errors.Errorf("token not found for key [%s]", id)
+		} else {
+			isSpent[i] = status.spent
+			spentBy[i] = status.spentBy
 		}
-		// order is not necessarily the same, so we have to set it in a loop
-		for i, inp := range inputs {
-			if inp.TxId == txid && inp.Index == idx {
-				isSpent[i] = isSp
-				spentBy[i] = spBy
-				found[i] = true
-				break // stop searching for this id but continue looping over rows
-			}
-		}
-		counter++
-	}
-	logger.Debugf("found [%d] records, expected [%d]", counter, len(inputs))
-	if err = rows.Err(); err != nil {
-		return nil, isSpent, err
-	}
-	if counter == 0 {
-		return nil, nil, errors.Errorf("token not found for key [%s:%d]", inputs[0].TxId, inputs[0].Index)
-	}
-	if counter != len(inputs) {
-		for j, f := range found {
-			if !f {
-				return nil, nil, errors.Errorf("token not found for key [%s:%d]", inputs[j].TxId, inputs[j].Index)
-			}
-		}
-		panic("programming error: should not reach this point")
 	}
 	return spentBy, isSpent, nil
-
 }
 
 func (db *TokenDB) StorePublicParams(raw []byte) error {
@@ -680,8 +561,7 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 
 func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
-		// nothing to do here
-		return nil, nil
+		return [][]byte{}, nil
 	}
 
 	// build query
@@ -830,22 +710,14 @@ func (t *TokenTransaction) GetToken(txID string, index uint64) (*token.Token, er
 	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", t.db.table.Tokens, where)
 	logger.Debug(query, args)
 	row := t.tx.QueryRow(query, args...)
-	var tokenOwner []byte
-	var tokenType string
-	var quantity string
-	if err := row.Scan(&tokenOwner, &tokenType, &quantity); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
-		}
+	tok := token.Token{Owner: &token.Owner{Raw: []byte{}}}
+	if err := row.Scan(&tok.Owner.Raw, &tok.Type, &tok.Quantity); err == nil {
+		return &tok, nil
+	} else if errors.Is(err, sql.ErrNoRows) {
+		return nil, nil
+	} else {
 		return nil, err
 	}
-	return &token.Token{
-		Owner: &token.Owner{
-			Raw: tokenOwner,
-		},
-		Type:     tokenType,
-		Quantity: quantity,
-	}, nil
 }
 
 func (t *TokenTransaction) OwnersOf(txID string, index uint64) ([]string, error) {
@@ -938,26 +810,16 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 		return nil, nil
 	}
 
-	var typ, quantity string
-	var owner []byte
-	var id token.ID
-	// tx_id, idx, owner_raw, token_type, quantity
+	tok := token.UnspentToken{Id: &token.ID{}, Owner: &token.Owner{Raw: []byte{}}}
 	err := u.txs.Scan(
-		&id.TxId,
-		&id.Index,
-		&owner,
-		&typ,
-		&quantity,
+		&tok.Id.TxId,
+		&tok.Id.Index,
+		&tok.Owner.Raw,
+		&tok.Type,
+		&tok.Quantity,
 	)
 	if err != nil {
 		return nil, err
 	}
-	return &token.UnspentToken{
-		Id: &id,
-		Owner: &token.Owner{
-			Raw: owner,
-		},
-		Type:     typ,
-		Quantity: quantity,
-	}, err
+	return &tok, err
 }
