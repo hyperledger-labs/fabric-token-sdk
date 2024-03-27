@@ -151,10 +151,17 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	assert.NoError(t, err)
 	assert.NotNil(t, tok)
 	assert.Equal(t, "0x02", tok.Quantity)
-	tx.Rollback()
+	assert.NoError(t, tx.Delete("tx1", 0, "me"))
+	assert.NoError(t, tx.Commit())
 
-	// get owners of deleted tx
-
+	tx, err = db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, err = tx.GetToken("tx1", 0, false)
+	assert.NoError(t, err)
+	assert.Nil(t, tok)
+	assert.NoError(t, tx.Commit())
 }
 
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
