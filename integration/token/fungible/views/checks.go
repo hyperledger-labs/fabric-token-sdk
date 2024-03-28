@@ -95,7 +95,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			continue
 		}
 		switch {
-		case vaultValicationCode == network.Unknown && transactionRecord.Status != ttxdb.Deleted:
+		case vaultValicationCode == network.Unknown && transactionRecord.Status == ttxdb.Confirmed:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", transactionRecord.TxID, driver.TXStatusToString[transactionRecord.Status]))
 		case vaultValicationCode == network.HasDependencies:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] has dependencies", transactionRecord.TxID))

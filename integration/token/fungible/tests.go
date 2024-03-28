@@ -962,8 +962,8 @@ func TestMaliciousTransactions(net *integration.Infrastructure) {
 	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
 	txStatusAlice := GetTXStatus(net, "alice", txID)
 	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(network.Invalid))
-	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("rwsets do not match"))
+	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 	txStatusBob := GetTXStatus(net, "bob", txID)
 	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(network.Invalid))
-	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("rwsets do not match"))
+	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }
