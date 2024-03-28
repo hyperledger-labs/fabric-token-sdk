@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package fungible
 
 import (
+	"fmt"
 	"path/filepath"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -107,7 +108,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 
 	// prepare a service provider with the required services
 	sp := registry.New()
-	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", user))
+	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", fmt.Sprintf("fsc.%s.0", user)))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(configProvider)).ToNot(HaveOccurred())
 	kvss, err := kvs.NewWithConfig(sp, "memory", "", configProvider)
