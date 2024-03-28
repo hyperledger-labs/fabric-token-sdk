@@ -54,12 +54,7 @@ func (w *AuditorWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 	if !w.Contains(id) {
 		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", id, w.ID())
 	}
-
-	si, err := w.IdentityProvider.GetSigner(w.AuditorIdentity)
-	if err != nil {
-		return nil, err
-	}
-	return si, err
+	return w.IdentityProvider.GetSigner(id)
 }
 
 type IssuerTokenVault interface {
@@ -104,11 +99,7 @@ func (w *IssuerWallet) GetSigner(identity view.Identity) (driver.Signer, error) 
 	if !w.Contains(identity) {
 		return nil, errors.Errorf("failed getting signer, the passed identity [%s] does not belong to this wallet [%s]", identity, w.ID())
 	}
-	si, err := w.IdentityProvider.GetSigner(identity)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting issuer signer for identity [%s] in wallet [%s]", identity, w.IssuerIdentity)
-	}
-	return si, nil
+	return w.IdentityProvider.GetSigner(identity)
 }
 
 func (w *IssuerWallet) HistoryTokens(opts *driver.ListTokensOptions) (*token.IssuedTokens, error) {
@@ -172,12 +163,7 @@ func (w *CertifierWallet) GetSigner(id view.Identity) (driver.Signer, error) {
 	if !w.Contains(id) {
 		return nil, errors.Errorf("identity does not belong to this AnonymousOwnerWallet [%s]", id.String())
 	}
-
-	si, err := w.IdentityProvider.GetSigner(w.CertifierIdentity)
-	if err != nil {
-		return nil, err
-	}
-	return si, err
+	return w.IdentityProvider.GetSigner(id)
 }
 
 type LongTermOwnerWallet struct {
@@ -230,12 +216,7 @@ func (w *LongTermOwnerWallet) GetSigner(identity view.Identity) (driver.Signer, 
 	if !w.Contains(identity) {
 		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", identity, w.ID())
 	}
-
-	si, err := w.IdentityProvider.GetSigner(identity)
-	if err != nil {
-		return nil, err
-	}
-	return si, err
+	return w.IdentityProvider.GetSigner(identity)
 }
 
 func (w *LongTermOwnerWallet) ListTokens(opts *driver.ListTokensOptions) (*token.UnspentTokens, error) {
@@ -378,4 +359,11 @@ func (w *AnonymousOwnerWallet) getRecipientIdentity() (view.Identity, error) {
 		return nil, errors.WithMessagef(err, "failed storing recipient identity in wallet [%s]", w.ID())
 	}
 	return pseudonym, nil
+}
+
+func (w *AnonymousOwnerWallet) GetSigner(identity view.Identity) (driver.Signer, error) {
+	if !w.Contains(identity) {
+		return nil, errors.Errorf("identity [%s] does not belong to this wallet [%s]", identity, w.ID())
+	}
+	return w.IdentityProvider.GetSigner(identity)
 }

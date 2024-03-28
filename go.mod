@@ -18,6 +18,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/lib/pq v1.10.9
 	github.com/libp2p/go-libp2p v0.31.0
+	github.com/libp2p/go-libp2p-kad-dht v0.22.0
 	github.com/onsi/ginkgo/v2 v2.11.0
 	github.com/onsi/gomega v1.27.8
 	github.com/pkg/errors v0.9.1
@@ -147,7 +148,6 @@ require (
 	github.com/libp2p/go-cidranger v1.1.0 // indirect
 	github.com/libp2p/go-flow-metrics v0.1.0 // indirect
 	github.com/libp2p/go-libp2p-asn-util v0.3.0 // indirect
-	github.com/libp2p/go-libp2p-kad-dht v0.22.0 // indirect
 	github.com/libp2p/go-libp2p-kbucket v0.5.0 // indirect
 	github.com/libp2p/go-libp2p-record v0.2.0 // indirect
 	github.com/libp2p/go-msgio v0.3.0 // indirect
