@@ -20,7 +20,7 @@ import (
 // TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
 type TxStatusChangeListener interface {
 	// OnStatusChange is called when the status of a transaction changes
-	OnStatusChange(txID string, status int) error
+	OnStatusChange(txID string, status int, statusMessage string) error
 }
 
 type TransientMap map[string][]byte
@@ -45,12 +45,6 @@ type Network interface {
 	// Vault returns the vault for the passed namespace. If namespaces are not supported,
 	// the argument is ignored.
 	Vault(namespace string) (Vault, error)
-
-	// StoreEnvelope stores locally the passed envelope mapping it to the passed id
-	StoreEnvelope(env Envelope) error
-
-	// EnvelopeExists returns true if an envelope exists for the passed id, false otherwise
-	EnvelopeExists(id string) bool
 
 	// Broadcast sends the passed blob to the network
 	Broadcast(context context.Context, blob interface{}) error

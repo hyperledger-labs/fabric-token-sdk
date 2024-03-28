@@ -8,6 +8,7 @@ package db
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	fdriver "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -26,18 +27,18 @@ import (
 var logger = flogging.MustGetLogger("token-sdk")
 
 type PostInitializer struct {
-	sp              view.ServiceProvider
-	networkProvider *network.Provider
-	ownerManager    *ttx.Manager
-	auditorManager  *auditor.Manager
+	sp                       view.ServiceProvider
+	networkProvider          *network.Provider
+	tokenTransactionsManager *ttx.Manager
+	auditorManager           *auditor.Manager
 }
 
 func NewPostInitializer(sp view.ServiceProvider, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) *PostInitializer {
 	return &PostInitializer{
-		sp:              sp,
-		networkProvider: networkProvider,
-		ownerManager:    ownerManager,
-		auditorManager:  auditorManager,
+		sp:                       sp,
+		networkProvider:          networkProvider,
+		tokenTransactionsManager: ownerManager,
+		auditorManager:           auditorManager,
 	}
 }
 
@@ -48,7 +49,7 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 		Namespace: namespace,
 	}
 	// restore owner db
-	if err := p.ownerManager.RestoreTMS(tmsID); err != nil {
+	if err := p.tokenTransactionsManager.RestoreTMS(tmsID); err != nil {
 		return errors.WithMessagef(err, "failed to restore onwer dbs for [%s]", tmsID)
 	}
 	// restore auditor db
@@ -134,6 +135,18 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
 
+	ch, err := n.Channel(channel)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get channel [%s]", tmsID)
+	}
+	if err := ch.Committer().AddStatusReporter(&StatusReporter{
+		tmsID:                    tmsID,
+		tokenTransactionsManager: p.tokenTransactionsManager,
+		auditorManager:           p.auditorManager,
+	}); err != nil {
+		return errors.WithMessagef(err, "failed to add status reporter")
+	}
+
 	// check the vault for public parameters,
 	// use them if they exists
 	net, err := p.networkProvider.GetNetwork(networkID, channel)
@@ -156,4 +169,65 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		}
 	}
 	return nil
+}
+
+type StatusReporter struct {
+	tmsID                    token3.TMSID
+	tokenTransactionsManager *ttx.Manager
+	auditorManager           *auditor.Manager
+}
+
+func (s *StatusReporter) Status(txID string) (fdriver.ValidationCode, string, []string, error) {
+	vc, message, deps, err := s.a(txID)
+	if err == nil {
+		return vc, message, deps, nil
+	}
+
+	return s.b(txID)
+}
+
+func (s *StatusReporter) a(txID string) (fdriver.ValidationCode, string, []string, error) {
+	db, err := s.tokenTransactionsManager.DB(s.tmsID)
+	if err != nil {
+		return fdriver.Unknown, "", nil, err
+	}
+	status, message, err := db.GetStatus(txID)
+	if err != nil {
+		return fdriver.Unknown, "", nil, err
+	}
+	switch status {
+	case ttx.Pending:
+		return fdriver.Busy, message, nil, nil
+	case ttx.Confirmed:
+		return fdriver.Valid, message, nil, nil
+	case ttx.Deleted:
+		return fdriver.Invalid, message, nil, nil
+	case ttx.Unknown:
+		return fdriver.Unknown, message, nil, nil
+	}
+	return fdriver.Unknown, "", nil, errors.Errorf("status not recognized")
+
+}
+
+func (s *StatusReporter) b(txID string) (fdriver.ValidationCode, string, []string, error) {
+	db, err := s.auditorManager.Auditor(s.tmsID)
+	if err != nil {
+		return fdriver.Unknown, "", nil, err
+	}
+	status, message, err := db.GetStatus(txID)
+	if err != nil {
+		return fdriver.Unknown, "", nil, err
+	}
+	switch status {
+	case ttx.Pending:
+		return fdriver.Busy, message, nil, nil
+	case ttx.Confirmed:
+		return fdriver.Valid, message, nil, nil
+	case ttx.Deleted:
+		return fdriver.Invalid, message, nil, nil
+	case ttx.Unknown:
+		return fdriver.Unknown, message, nil, nil
+	}
+	return fdriver.Unknown, "", nil, errors.Errorf("status not recognized")
+
 }

@@ -24,6 +24,7 @@ import (
 type Opts struct {
 	Backend         string
 	TokenSDKDriver  string
+	NoAuditor       bool
 	AuditorAsIssuer bool
 	Aries           bool
 }
@@ -194,6 +195,8 @@ func Topology(opts Opts) []api.Topology {
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
 	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	alice.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
+	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
+	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -206,6 +209,7 @@ func Topology(opts Opts) []api.Topology {
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{})
 	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -229,6 +233,7 @@ func Topology(opts Opts) []api.Topology {
 	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
 	bob.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
+	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -309,7 +314,9 @@ func Topology(opts Opts) []api.Topology {
 		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
-	tms.AddAuditor(auditor)
+	if !opts.NoAuditor {
+		tms.AddAuditor(auditor)
+	}
 
 	if opts.Backend != "orion" {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))

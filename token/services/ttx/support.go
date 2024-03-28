@@ -8,23 +8,7 @@ package ttx
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
-
-// StoreEnvelope stores the transaction envelope locally
-func StoreEnvelope(context view.Context, tx *Transaction) error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("parse rws for id [%s]", tx.ID())
-	}
-	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	if err := backend.StoreEnvelope(tx.Payload.Envelope); err != nil {
-		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
-	}
-
-	return nil
-}
 
 // StoreTransactionRecords stores the transaction records extracted from the passed transaction to the
 // token transaction db

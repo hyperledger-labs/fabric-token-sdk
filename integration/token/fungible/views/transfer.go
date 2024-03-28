@@ -183,7 +183,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	net := network.GetInstance(context, tx.Network(), tx.Channel())
 	vault, err := net.Vault(tx.Namespace())
 	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, err := vault.Status(tx.ID())
+	vc, _, err := vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -193,7 +193,7 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 
 	// Sanity checks:
 	// - the transaction is in valid state in the vault
-	vc, err = vault.Status(tx.ID())
+	vc, _, err = vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
@@ -333,7 +333,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	net := network.GetInstance(context, tx.Network(), tx.Channel())
 	vault, err := net.Vault(tx.Namespace())
 	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, err := vault.Status(tx.ID())
+	vc, _, err := vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -348,7 +348,7 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 
 	// Sanity checks:
 	// - the transaction is in valid state in the vault
-	vc, err = vault.Status(tx.ID())
+	vc, _, err = vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
@@ -530,6 +530,132 @@ type FinalityWithTimeoutViewFactory struct{}
 func (i *FinalityWithTimeoutViewFactory) NewView(in []byte) (view.View, error) {
 	f := &FinalityWithTimeoutView{FinalityWithTimeout: &FinalityWithTimeout{}}
 	err := json.Unmarshal(in, f.FinalityWithTimeout)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+type MaliciousTransferView struct {
+	*Transfer
+}
+
+func (t *MaliciousTransferView) Call(context view.Context) (txID interface{}, err error) {
+	// As a first step operation, the sender contacts the recipient's FSC node
+	// to ask for the identity to use to assign ownership of the freshly created token.
+	// Notice that, this step would not be required if the sender knew already which
+	// identity the recipient wants to use.
+	// If t.RecipientData is different from nil, then this recipient data will be advertised to the recipient
+	// to make sure the recipient is aware of this identity the will be used to transfer tokens to
+	recipient, err := ttx.RequestRecipientIdentity(context, t.Recipient, ServiceOpts(t.TMSID, ttx.WithRecipientData(t.RecipientData))...)
+	assert.NoError(err, "failed getting recipient")
+
+	wm := token2.GetManagementService(context, ServiceOpts(t.TMSID)...).WalletManager()
+
+	// match recipient EID
+	eID, err := wm.GetEnrollmentID(recipient)
+	assert.NoError(err, "failed to get enrollment id for recipient [%s]", recipient)
+	assert.True(strings.HasPrefix(eID, t.RecipientEID), "recipient EID [%s] does not match the expected one [%s]", eID, t.RecipientEID)
+
+	// At this point, the sender is ready to prepare the token transaction.
+	// The sender creates an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+	// and specify the auditor that must be contacted to approve the operation.
+	var tx *ttx.Transaction
+	txOpts := append(TxOpts(t.TMSID), ttx.WithAuditor(view2.GetIdentityProvider(context).Identity(t.Auditor)))
+	if !t.NotAnonymous {
+		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+		tx, err = ttx.NewAnonymousTransaction(context, txOpts...)
+	} else {
+		// create a nominal transaction using the default identity
+		tx, err = ttx.NewTransaction(context, nil, txOpts...)
+	}
+	assert.NoError(err, "failed creating transaction")
+
+	// append metadata, if any
+	for k, v := range t.Metadata {
+		tx.SetApplicationMetadata(k, v)
+	}
+
+	// The sender will select tokens owned by this wallet
+	senderWallet := ttx.GetWallet(context, t.Wallet, ServiceOpts(t.TMSID)...)
+	assert.NotNil(senderWallet, "sender wallet [%s] not found", t.Wallet)
+
+	// The sender adds a new transfer operation to the transaction following the instruction received.
+	// Notice the use of `token2.WithTokenIDs(t.TokenIDs...)`. If t.TokenIDs is not empty, the MaliciousTransfer
+	// function uses those tokens, otherwise the tokens will be selected on the spot.
+	// Token selection happens internally by invoking the default token selector:
+	// selector, err := tx.TokenService().SelectorManager().NewSelector(tx.ID())
+	// assert.NoError(err, "failed getting selector")
+	// selector.Select(wallet, amount, tokenType)
+	// It is also possible to pass a custom token selector to the MaliciousTransfer function by using the relative opt:
+	// token2.WithTokenSelector(selector).
+	err = tx.Transfer(
+		senderWallet,
+		t.Type,
+		[]uint64{t.Amount},
+		[]view.Identity{recipient},
+		token2.WithTokenIDs(t.TokenIDs...),
+		token2.WithRestRecipientIdentity(t.SenderChangeRecipientData),
+	)
+	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+
+	// The sender is ready to collect all the required signatures.
+	// In this case, the sender's and the auditor's signatures.
+	// Invoke the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
+	// This is all done in one shot running the following view.
+	// Before completing, all recipients receive the approved transaction.
+	// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
+	// the token transaction valid.
+
+	var endorserOpts []ttx.EndorsementsOpt
+	if senderWallet.Remote() {
+		// if the sender wallet is remote, then the signatures that the wallet must generate are prepared externally to this FSC node.
+		// Here, we assume that the view has been called using GRPC stream
+		stream := view4.GetStream(context)
+		endorserOpts = append(endorserOpts, ttx.WithExternalWalletSigner(t.Wallet, ttx.NewStreamExternalWalletSignerServer(stream)))
+	}
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx, endorserOpts...))
+	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
+
+	// Now, we don't send tx but a new valid transaction with the same transaction id.
+	// First we invalidate tx
+	tx.Release()
+
+	// Then we prepare tx2
+	// The sender transfers some token to itself.
+	var tx2 *ttx.Transaction
+	txOpts = append(txOpts, ttx.WithNetworkTxID(tx.NetworkTxID()))
+	if !t.NotAnonymous {
+		// create an anonymous transaction (this means that the resulting Fabric transaction will be signed using idemix, for example),
+		tx2, err = ttx.NewAnonymousTransaction(context, txOpts...)
+	} else {
+		// create a nominal transaction using the default identity
+		tx2, err = ttx.NewTransaction(context, nil, txOpts...)
+	}
+	assert.NoError(err, "failed creating transaction")
+	self, err := senderWallet.GetRecipientIdentity()
+	assert.NoError(err, "failed create recipient identity")
+	err = tx2.Transfer(
+		senderWallet,
+		t.Type,
+		[]uint64{t.Amount},
+		[]view.Identity{self},
+	)
+	assert.NoError(err, "failed adding transfer action [%d:%s]", t.Amount, t.Recipient)
+
+	endorserOpts = append(endorserOpts, ttx.WithSkipDistributeEnv())
+	_, err = context.RunView(ttx.NewCollectEndorsementsView(tx2, endorserOpts...))
+	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx2.ID())
+	// Send to the ordering service and wait for finality
+	_, err = context.RunView(ttx.NewOrderingView(tx2))
+	assert.NoError(err, "failed asking ordering")
+
+	return tx2.ID(), nil
+}
+
+type MaliciousTransferViewFactory struct{}
+
+func (p *MaliciousTransferViewFactory) NewView(in []byte) (view.View, error) {
+	f := &MaliciousTransferView{Transfer: &Transfer{}}
+	err := json.Unmarshal(in, f.Transfer)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil
 }

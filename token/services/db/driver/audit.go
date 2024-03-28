@@ -26,11 +26,11 @@ type AuditTransactionDB interface {
 	Discard() error
 
 	// SetStatus sets the status of a transaction
-	SetStatus(txID string, status TxStatus) error
+	SetStatus(txID string, status TxStatus, message string) error
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
-	GetStatus(txID string) (TxStatus, error)
+	GetStatus(txID string) (TxStatus, string, error)
 
 	// AddMovement adds a movement record to the database.
 	// Each token transaction can be seen as a list of movements.

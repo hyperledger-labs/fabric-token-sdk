@@ -57,7 +57,7 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 }
 
 func (v *Vault) TransactionStatus(txID string) (driver.ValidationCode, error) {
-	vc, _, err := v.ch.Vault().Status(txID)
+	vc, _, _, err := v.ch.Vault().Status(txID)
 	return driver.ValidationCode(vc), err
 }
 

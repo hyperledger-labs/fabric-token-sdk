@@ -68,6 +68,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	}
 
 	key := tmsKey(opts)
+	logger.Debugf("check existence token manager service for [%s] with key [%s]", opts, key)
 	m.lock.RLock()
 	service, ok := m.services[key]
 	if ok {
@@ -76,11 +77,14 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	}
 	m.lock.RUnlock()
 
+	logger.Debugf("lock to create token manager service for [%s] with key [%s]", opts, key)
+
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	service, ok = m.services[key]
 	if ok {
+		logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
 		return service, nil
 	}
 
@@ -119,11 +123,12 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 	if len(opts.PublicParams) == 0 {
 		return errors.Errorf("public params not specified")
 	}
-	m.lock.Lock()
-	defer m.lock.Unlock()
 
 	key := tmsKey(opts)
 	logger.Debugf("update tms for [%s] with key [%s]", opts, key)
+
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	service, ok := m.services[key]
 	if !ok {
 		logger.Debugf("no service found, instantiate token management system for [%s:%s:%s] for key [%s]", opts.Network, opts.Channel, opts.Namespace, key)

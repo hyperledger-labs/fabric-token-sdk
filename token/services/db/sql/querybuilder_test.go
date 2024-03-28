@@ -37,7 +37,7 @@ func TestTransactionSql(t *testing.T) {
 				Statuses: []driver.TxStatus{driver.Confirmed},
 			},
 			expectedSql:  "WHERE status = $1;",
-			expectedArgs: []interface{}{string(driver.Confirmed)},
+			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
 			name: "Pending or deleted",
@@ -45,7 +45,7 @@ func TestTransactionSql(t *testing.T) {
 				Statuses: []driver.TxStatus{driver.Pending, driver.Deleted},
 			},
 			expectedSql:  "WHERE (status = $1 OR status = $2);",
-			expectedArgs: []interface{}{string(driver.Pending), string(driver.Deleted)},
+			expectedArgs: []interface{}{driver.Pending, driver.Deleted},
 		},
 		{
 			name: "Confirmed from any (only setting sender should return all)",
@@ -54,7 +54,7 @@ func TestTransactionSql(t *testing.T) {
 				Statuses:     []driver.TxStatus{driver.Confirmed},
 			},
 			expectedSql:  "WHERE status = $1;",
-			expectedArgs: []interface{}{"Confirmed"},
+			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
 			name: "Sender OR recipient matches",
@@ -107,7 +107,7 @@ func TestMovementConditions(t *testing.T) {
 			params: driver.QueryMovementsParams{
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status != 'Deleted' ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE status != 3 ORDER BY stored_at DESC;",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -116,7 +116,7 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status != 'Deleted' ORDER BY stored_at DESC LIMIT 5;",
+			expectedSql:  "WHERE status != 3 ORDER BY stored_at DESC LIMIT 5;",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -125,7 +125,7 @@ func TestMovementConditions(t *testing.T) {
 				EnrollmentIDs:     []string{"eid1", "eid2", "eid3"},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE (enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3) AND status != 'Deleted' ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE (enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3) AND status != 3 ORDER BY stored_at DESC;",
 			expectedArgs: []interface{}{"eid1", "eid2", "eid3"},
 		},
 		{
@@ -135,7 +135,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.All,
 			},
 			expectedSql:  "WHERE status = $1 ORDER BY stored_at DESC;",
-			expectedArgs: []interface{}{string(driver.Confirmed)},
+			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
 			name: "Pending and deleted",
@@ -144,7 +144,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.All,
 			},
 			expectedSql:  "WHERE (status = $1 OR status = $2) ORDER BY stored_at DESC;",
-			expectedArgs: []interface{}{string(driver.Pending), string(driver.Deleted)},
+			expectedArgs: []interface{}{driver.Pending, driver.Deleted},
 		},
 		{
 			name: "Confirmed from alice",
@@ -154,7 +154,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.All,
 			},
 			expectedSql:  "WHERE enrollment_id = $1 AND status = $2 ORDER BY stored_at DESC;",
-			expectedArgs: []interface{}{"alice", "Confirmed"},
+			expectedArgs: []interface{}{"alice", driver.Confirmed},
 		},
 		{
 			name: "Confirmed ABC and XYZ from alice",
@@ -165,7 +165,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.All,
 			},
 			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC;",
-			expectedArgs: []interface{}{"alice", "ABC", "XYZ", "Confirmed"},
+			expectedArgs: []interface{}{"alice", "ABC", "XYZ", driver.Confirmed},
 		},
 		{
 			name: "Max 5 confirmed ABC and XYZ from alice",
@@ -177,7 +177,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.All,
 			},
 			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC LIMIT 5;",
-			expectedArgs: []interface{}{"alice", "ABC", "XYZ", "Confirmed"},
+			expectedArgs: []interface{}{"alice", "ABC", "XYZ", driver.Confirmed},
 		},
 		{
 			name: "Sent XYZ from alice",
@@ -186,7 +186,7 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []string{"XYZ"},
 				MovementDirection: driver.Sent,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND token_type = $2 AND status != 'Deleted' AND amount < 0 ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE enrollment_id = $1 AND token_type = $2 AND status != 3 AND amount < 0 ORDER BY stored_at DESC;",
 			expectedArgs: []interface{}{"alice", "XYZ"},
 		},
 		{
@@ -198,7 +198,7 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        2,
 			},
 			expectedSql:  "WHERE status = $1 AND amount > 0 ORDER BY stored_at DESC LIMIT 2;",
-			expectedArgs: []interface{}{"Pending"},
+			expectedArgs: []interface{}{driver.Pending},
 		},
 	}
 

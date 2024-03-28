@@ -84,7 +84,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 	net := network.GetInstance(context, tx.Network(), tx.Channel())
 	vault, err := net.Vault(tx.Namespace())
 	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, err := vault.Status(tx.ID())
+	vc, _, err := vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
 
@@ -94,7 +94,7 @@ func (t *RedeemView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in valid state in the vault
-	vc, err = vault.Status(tx.ID())
+	vc, _, err = vault.Status(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 

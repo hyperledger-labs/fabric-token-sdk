@@ -21,6 +21,7 @@ type PublicParametersManager[T driver.PublicParameters] interface {
 
 type Service[T driver.PublicParameters] struct {
 	*WalletService
+	Serializer
 	Logger                  *flogging.FabricLogger
 	PublicParametersManager PublicParametersManager[T]
 	deserializer            driver.Deserializer
@@ -82,15 +83,6 @@ func (s *Service[T]) ConfigManager() config.Manager {
 	return s.configManager
 }
 
-func (s *Service[T]) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
-	}
-	return newReq.Bytes()
-}
-
-// Done releases all the resources allocated by this service
 func (s *Service[T]) Done() error {
 	return nil
 }

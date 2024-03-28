@@ -101,25 +101,6 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	return nv, nil
 }
 
-func (n *Network) StoreEnvelope(env driver.Envelope) error {
-	rws, err := n.n.Vault().GetRWSet(env.TxID(), env.Results())
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get rwset")
-	}
-	rws.Done()
-
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return errors.WithMessagef(err, "failed marshalling tx env [%s]", env.TxID())
-	}
-
-	return n.n.Vault().StoreEnvelope(env.TxID(), rawEnv)
-}
-
-func (n *Network) EnvelopeExists(id string) bool {
-	return n.n.EnvelopeService().Exists(id)
-}
-
 func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
@@ -288,13 +269,13 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
-func (v *nv) Status(txID string) (driver.ValidationCode, error) {
-	vc, err := v.v.Status(txID)
-	return driver.ValidationCode(vc), err
+func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
+	vc, message, err := v.v.Status(id)
+	return driver.ValidationCode(vc), message, err
 }
 
-func (v *nv) DiscardTx(txID string) error {
-	return v.v.DiscardTx(txID)
+func (v *nv) DiscardTx(txID string, message string) error {
+	return v.v.DiscardTx(txID, message)
 }
 
 type ledger struct {
