@@ -75,6 +75,8 @@ type MovementRecord struct {
 	TokenType string
 	// Amount is positive if tokens are received. Negative otherwise
 	Amount *big.Int
+	// Timestamp is the time the transaction was submitted to the db
+	Timestamp time.Time
 	// Status is the status of the transaction
 	Status TxStatus
 }

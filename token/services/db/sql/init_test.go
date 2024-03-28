@@ -32,7 +32,6 @@ var Identity *IdentityDB
 var Wallet *WalletDB
 
 func Init(driverName, dataSourceName, tablePrefix string, createSchema bool, maxOpenConns int) error {
-	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
 	if Transactions != nil {
 		Transactions.Close()
 	}
