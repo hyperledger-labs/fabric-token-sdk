@@ -270,12 +270,7 @@ func (db *DB) NewQueryExecutor() *QueryExecutor {
 // SetStatus sets the status of the records with the passed transaction id to the passed status and message
 func (db *DB) SetStatus(txID string, status TxStatus, statusMessage string) error {
 	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
 	if err := db.db.SetStatus(txID, status, statusMessage); err != nil {
-		db.rollback(err)
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TXStatusToString[status])
 	}
 	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
@@ -286,10 +281,6 @@ func (db *DB) SetStatus(txID string, status TxStatus, statusMessage string) erro
 // It returns an error if no transaction with that id is found
 func (db *DB) GetStatus(txID string) (TxStatus, string, error) {
 	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
 	status, sm, err := db.db.GetStatus(txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)

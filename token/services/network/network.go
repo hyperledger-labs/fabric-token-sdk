@@ -302,18 +302,6 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 	return &Vault{n: n, v: v, ns: namespace}, nil
 }
 
-// StoreEnvelope stores locally the given transaction envelope and associated it with the given id
-func (n *Network) StoreEnvelope(env *Envelope) error {
-	if env == nil {
-		return errors.Errorf("nil envelope")
-	}
-	return n.n.StoreEnvelope(env.e)
-}
-
-func (n *Network) ExistEnvelope(id string) bool {
-	return n.n.EnvelopeExists(id)
-}
-
 // Broadcast sends the given blob to the network
 func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 	switch b := blob.(type) {

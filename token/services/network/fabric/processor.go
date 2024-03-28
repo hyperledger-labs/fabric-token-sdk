@@ -157,13 +157,17 @@ func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTrans
 	if err != nil {
 		return err
 	}
-	return tokens.AppendTransaction(&Transaction{
+	if err := tokens.AppendTransaction(&Transaction{
 		id:        txID,
 		network:   tms.Network(),
 		channel:   tms.Channel(),
 		namespace: tms.Namespace(),
 		request:   request,
-	})
+	}); err != nil {
+		logger.Errorf("failed to append transaction [%s] to db: [%s]", txID, err)
+		return err
+	}
+	return nil
 }
 
 func (r *RWSetProcessor) checkTokenRequest(txID string, request *token.Request, rws *fabric.RWSet, ns string) error {

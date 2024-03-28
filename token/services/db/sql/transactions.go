@@ -128,7 +128,7 @@ func (db *TransactionDB) AddTokenRequest(txID string, tr []byte) error {
 	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message) VALUES ($1, $2, $3, $4)", db.table.Requests)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)))
 
-	_, err := db.txn.Exec(query, txID, tr, 0, "")
+	_, err := db.txn.Exec(query, txID, tr, driver.Pending, "")
 	return err
 }
 

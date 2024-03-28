@@ -47,12 +47,11 @@ type CollectEndorsementsView struct {
 
 // NewCollectEndorsementsView returns an instance of the CollectEndorsementsView struct.
 // This view does the following:
-// 1. It collects all the required signatures
-// to authorize any issue and transfer operation contained in the token transaction.
-// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
-// 3. Before completing, all recipients receive the approved transaction.
-// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
-// the token transaction valid.
+// 1. It collects all the required signatures to authorize any issue and transfer operation contained in the token transaction.
+// 2. Audit.
+// 3. Request Approval.
+// 4. Finalize.
+// 5. Cleanup.
 func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *CollectEndorsementsView {
 	options, err := CompileCollectEndorsementsOpts(opts...)
 	if err != nil {
@@ -61,16 +60,9 @@ func NewCollectEndorsementsView(tx *Transaction, opts ...EndorsementsOpt) *Colle
 	return &CollectEndorsementsView{tx: tx, Opts: options, sessions: map[string]view.Session{}}
 }
 
-// Call executes the view.
-// This view does the following:
-// 1. It collects all the required signatures
-// to authorize any issue and transfer operation contained in the token transaction.
-// 2. It invokes the Token Chaincode to collect endorsements on the Token Request and prepare the relative transaction.
-// 3. Before completing, all recipients receive the approved transaction.
-// Depending on the token driver implementation, the recipient's signature might or might not be needed to make
-// the token transaction valid.
+// Call executes the view
 func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error) {
-	metrics := GetMetrics(context)
+	logger.Debugf("collect endorsement start [%s]", c.tx.ID())
 
 	externalWallets := make(map[string]ExternalWalletSigner)
 	// 1. First collect signatures on the token request
@@ -103,7 +95,7 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		}
 	}
 
-	// 3. Endorse and return the transaction envelope
+	// 3. Request Approval
 	var env *network.Envelope
 	if !c.Opts.SkipApproval {
 		env, err = c.requestApproval(context)
@@ -112,27 +104,23 @@ func (c *CollectEndorsementsView) Call(context view.Context) (interface{}, error
 		}
 	}
 
-	// Distribute Env to all parties
+	// 4. Finalize
 	distributionList := append(IssueDistributionList(c.tx.TokenRequest), TransferDistributionList(c.tx.TokenRequest)...)
-	if err := c.distributeEnv(context, env, distributionList, auditors); err != nil {
+	if err := c.finalize(context, env, distributionList, auditors); err != nil {
 		return nil, errors.WithMessage(err, "failed distributing envelope")
 	}
 
-	// Cleanup audit
+	// 5. Cleanup
 	if err := c.cleanupAudit(context); err != nil {
 		return nil, errors.WithMessage(err, "failed cleaning up audit")
 	}
 
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("CollectEndorsementsView done.")
-	}
-
-	labels := []string{
+	logger.Debugf("collect endorsement done [%s]", c.tx.ID())
+	GetMetrics(context).EndorsedTransactions.With([]string{
 		"network", c.tx.Network(),
 		"channel", c.tx.Channel(),
 		"namespace", c.tx.Namespace(),
-	}
-	metrics.EndorsedTransactions.With(labels...).Add(1)
+	}...).Add(1)
 	return nil, nil
 }
 
@@ -375,7 +363,7 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 	return nil
 }
 
-func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+func (c *CollectEndorsementsView) finalize(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
 	if c.Opts.SkipDistributeEnv {
 		return nil
 	}
@@ -518,11 +506,11 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			}
 
 			// Store envelope
-			if !c.Opts.SkipApproval {
-				if err := StoreEnvelope(context, c.tx); err != nil {
-					return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
-				}
-			}
+			//if !c.Opts.SkipApproval {
+			//	if err := StoreEnvelope(context, c.tx); err != nil {
+			//		return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
+			//	}
+			//}
 
 			// Store transaction in the token transaction database
 			if err := StoreTransactionRecords(context, c.tx); err != nil {
@@ -708,25 +696,21 @@ func NewEndorseView(tx *Transaction) *EndorseView {
 // to be processed at time of committing.
 // 4. It sends back an ack.
 func (s *EndorseView) Call(context view.Context) (interface{}, error) {
-	if err := s.respondToSignatureRequests(context); err != nil {
+	if err := s.sign(context); err != nil {
 		return nil, err
 	}
-
-	if err := s.respondToEnvelope(context); err != nil {
+	if err := s.finalize(context); err != nil {
 		return nil, err
 	}
-
-	labels := []string{
+	GetMetrics(context).AcceptedTransactions.With([]string{
 		"network", s.tx.Network(),
 		"channel", s.tx.Channel(),
 		"namespace", s.tx.Namespace(),
-	}
-	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
-
+	}...).Add(1)
 	return s.tx, nil
 }
 
-func (s *EndorseView) respondToSignatureRequests(context view.Context) error {
+func (s *EndorseView) sign(context view.Context) error {
 	// Process signature requests
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.Request())
 	if err != nil {
@@ -785,16 +769,11 @@ func (s *EndorseView) respondToSignatureRequests(context view.Context) error {
 	return nil
 }
 
-func (s *EndorseView) respondToEnvelope(context view.Context) error {
+func (s *EndorseView) finalize(context view.Context) error {
 	// Receive transaction with envelope
 	_, rawRequest, err := s.receiveTransaction(context)
 	if err != nil {
 		return errors.Wrapf(err, "failed receiving transaction")
-	}
-
-	// Store envelope
-	if err := StoreEnvelope(context, s.tx); err != nil {
-		return errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
 	// Store transaction in the token transaction database

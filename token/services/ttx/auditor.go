@@ -345,11 +345,6 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
 	}
 
-	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	if err := backend.StoreEnvelope(env); err != nil {
-		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
-	}
-
 	var sigma []byte
 	logger.Debugf("auditor signing ack response [%s] with identity [%s]", hash.Hashable(rawRequest), view2.GetIdentityProvider(context).DefaultIdentity())
 	signer, err := view2.GetSigService(context).GetSigner(view2.GetIdentityProvider(context).DefaultIdentity())

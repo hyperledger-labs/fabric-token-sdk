@@ -32,25 +32,21 @@ func NewAcceptView(tx *Transaction, opts ...EndorsementsOpt) *AcceptView {
 }
 
 func (s *AcceptView) Call(context view.Context) (interface{}, error) {
-	if err := s.respondToSignatureRequests(context); err != nil {
+	if err := s.sign(context); err != nil {
 		return nil, err
 	}
-
-	if err := s.respondToEnvelope(context); err != nil {
+	if err := s.finalize(context); err != nil {
 		return nil, err
 	}
-
-	labels := []string{
+	GetMetrics(context).AcceptedTransactions.With([]string{
 		"network", s.tx.Network(),
 		"channel", s.tx.Channel(),
 		"namespace", s.tx.Namespace(),
-	}
-	GetMetrics(context).AcceptedTransactions.With(labels...).Add(1)
-
+	}...).Add(1)
 	return s.tx, nil
 }
 
-func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
+func (s *AcceptView) sign(context view.Context) error {
 	requestsToBeSigned, err := requestsToBeSigned(s.tx.TokenRequest)
 	if err != nil {
 		return errors.Wrapf(err, "failed collecting requests of signature")
@@ -150,22 +146,10 @@ func (s *AcceptView) respondToSignatureRequests(context view.Context) error {
 	return nil
 }
 
-func (s *AcceptView) respondToEnvelope(context view.Context) error {
+func (s *AcceptView) finalize(context view.Context) error {
 	rawRequest, err := s.tx.Bytes()
 	if err != nil {
 		return errors.Wrap(err, "failed to marshal token request")
-	}
-	// Check the envelope exists
-	env := s.tx.Payload.Envelope
-	if env == nil {
-		return errors.Errorf("expected fabric envelope")
-	}
-
-	// Store envelope
-	if !s.options.SkipApproval {
-		if err := StoreEnvelope(context, s.tx); err != nil {
-			return errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
-		}
 	}
 
 	// Store transaction in the token transaction database

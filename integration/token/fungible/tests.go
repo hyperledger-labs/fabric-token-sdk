@@ -8,7 +8,6 @@ package fungible
 
 import (
 	"crypto/rand"
-	"fmt"
 	"math/big"
 	"strings"
 	"time"
@@ -26,7 +25,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -766,24 +764,11 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckHolding(network, "bob", "", "Pineapples", 2, auditor)
 	CheckBalance(network, "charlie", "", "Pineapples", 0)
 	CheckHolding(network, "charlie", "", "Pineapples", 3, auditor)
-	fmt.Printf("failed transaction [%s]\n", failedTransferTxID)
 	SetTransactionAuditStatus(network, auditor, failedTransferTxID, ttx.Deleted)
 	CheckBalanceAndHolding(network, "alice", "", "Pineapples", 6, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
-	CheckAuditorDB(network, auditor, "", func(errs []string) error {
-		// We should expect 6 errors, 3 records (Alice->Bob, Alice->Charlie, Alice-Alice (the rest) * 2 (envelope non found, no match in vault)
-		// each error should contain failedTransferTxID
-		if len(errs) != 6 {
-			return errors.Errorf("expected only 6 error, got [%d][%s]", len(errs), errs)
-		}
-		for _, err := range errs {
-			if !strings.Contains(err, failedTransferTxID) {
-				return errors.Errorf("expected error to contain [%s], got [%s]", failedTransferTxID, err)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, auditor, "", nil)
 }
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {

@@ -80,9 +80,10 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 		return nil
 	}
 
+	logger.Debugf("transaction [%s] start db transaction", txID)
 	ts, err := t.Storage.NewTransaction()
 	if err != nil {
-		return err
+		return errors.WithMessagef(err, "transaction [%s], failed to start db transaction", txID)
 	}
 	defer func() {
 		if err != nil && ts != nil {
@@ -93,9 +94,11 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	}()
 	exists, err := ts.TransactionExists(tx.ID())
 	if err != nil {
-		return err
+		logger.Errorf("transaction [%s], failed to check existence in db [%s]", txID, err)
+		return errors.WithMessagef(err, "transaction [%s], failed to check existence in db", txID)
 	}
 	if exists {
+		logger.Debugf("transaction [%s], exists in db, skipping", txID)
 		return nil
 	}
 
@@ -103,7 +106,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	md, err := request.GetMetadata()
 	if err != nil {
 		logger.Debugf("transaction [%s], failed to get metadata [%s]", txID, err)
-		return err
+		return errors.WithMessagef(err, "transaction [%s], failed to get request metadata", txID)
 	}
 	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
 		ids := md.SpentTokenID()
@@ -111,7 +114,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 			logger.Debugf("transaction [%s] with graph hiding, delete inputs [%v]", txID, ids)
 		}
 		if err := ts.DeleteTokens(txID, ids); err != nil {
-			return err
+			return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 		}
 	}
 
@@ -142,7 +145,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 			logger.Debugf("transaction [%s] delete input [%s]", tx.ID(), input.Id)
 		}
 		if err = ts.DeleteToken(input.Id.TxId, input.Id.Index, tx.ID()); err != nil {
-			return err
+			return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 		}
 		continue
 	}
@@ -165,7 +168,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 				logger.Debugf("transaction [%s] without graph hiding, delete input [%d]", txID, output.Index)
 			}
 			if err = ts.DeleteToken(tx.ID(), output.Index, tx.ID()); err != nil {
-				return err
+				return errors.WithMessagef(err, "transaction [%s], failed to delete tokens", txID)
 			}
 			continue
 		}
@@ -206,7 +209,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 				Issuer:  issuerFlag,
 			},
 		); err != nil {
-			return err
+			return errors.WithMessagef(err, "transaction [%s], failed to append token", txID)
 		}
 
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
@@ -215,7 +218,7 @@ func (t *Tokens) AppendTransaction(tx Transaction) (err error) {
 	}
 
 	if err = ts.Commit(); err != nil {
-		return err
+		return errors.WithMessagef(err, "transaction [%s], failed to get token db transaction", txID)
 	}
 	return nil
 }
