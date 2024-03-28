@@ -65,7 +65,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	case "init":
 		return r.init(tx, rws, ns)
 	default:
-		return r.tokenRequest(req, tx, rws, ns)
+		return r.tokenRequest(tx, ns)
 	}
 }
 
@@ -105,7 +105,7 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 	return nil
 }
 
-func (r *RWSetProcessor) tokenRequest(req fabric.Request, tx fabric.ProcessTransaction, rws *fabric.RWSet, ns string) error {
+func (r *RWSetProcessor) tokenRequest(tx fabric.ProcessTransaction, ns string) error {
 	txID := tx.ID()
 
 	tms, err := r.GetTMSProvider().GetManagementService(

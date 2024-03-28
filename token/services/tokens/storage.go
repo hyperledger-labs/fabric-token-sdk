@@ -63,13 +63,9 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 }
 
 func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
-	tok, err := t.tx.GetToken(txID, index)
+	tok, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
-	}
-	owners, err := t.tx.OwnersOf(txID, index)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get owners for token [%s:%d]", txID, index)
 	}
 	err = t.tx.Delete(txID, index, deletedBy)
 	if err != nil {
@@ -79,9 +75,17 @@ func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) e
 		}
 		return errors.WithMessagef(err, "failed to delete token [%s:%d]", txID, index)
 	}
-	for _, id := range owners {
-		logger.Debugf("post new delete-token event")
-		t.Notify(DeleteToken, t.tmsID, id, tok.Type, txID, index)
+	if tok == nil {
+		logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
+		return nil
+	}
+	owners, err := t.tx.OwnersOf(txID, index)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get owners for token [%s:%d]", txID, index)
+	}
+	for _, owner := range owners {
+		logger.Debugf("post new delete-token event [%s:%s:%s]", txID, index, owner)
+		t.Notify(DeleteToken, t.tmsID, owner, tok.Type, txID, index)
 	}
 	return nil
 }

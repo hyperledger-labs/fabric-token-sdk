@@ -60,10 +60,10 @@ func (r *RWSetProcessor) Process(req orion.Request, tx orion.ProcessTransaction,
 		return nil
 	}
 
-	return r.tokenRequest(req, tx, rws, ns)
+	return r.tokenRequest(tx, ns)
 }
 
-func (r *RWSetProcessor) tokenRequest(req orion.Request, tx orion.ProcessTransaction, rws *orion.RWSet, ns string) error {
+func (r *RWSetProcessor) tokenRequest(tx orion.ProcessTransaction, ns string) error {
 	txID := tx.ID()
 
 	tms, err := r.GetTMSProvider().GetManagementService(
