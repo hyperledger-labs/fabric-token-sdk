@@ -47,7 +47,7 @@ type PF interface {
 
 type NetworkHandler interface {
 	GenerateArtifacts(tms *topology2.TMS)
-	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string
+	GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string
 	PostRun(load bool, tms *topology2.TMS)
 	GenIssuerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string) string
 	GenOwnerCryptoMaterial(tms *topology2.TMS, nodeID string, walletID string, useCAIfAvailable bool) string
@@ -127,8 +127,10 @@ func (p *Platform) GenerateArtifacts() {
 			// get the network handler for this TMS
 			nh := p.NetworkHandlers[p.Context.TopologyByName(tms.Network).Type()]
 			// generate artifacts
-			ext := nh.GenerateExtension(tms, node)
-			p.Context.AddExtension(node.Name, TopologyName, ext)
+			for _, uniqueName := range node.ReplicaUniqueNames() {
+				ext := nh.GenerateExtension(tms, node, uniqueName)
+				p.Context.AddExtension(uniqueName, TopologyName, ext)
+			}
 		}
 	}
 }
@@ -256,7 +258,9 @@ func (p *Platform) GenerateExtension(node *sfcnode.Node) {
 	err = t.Execute(io.MultiWriter(ext), p)
 	Expect(err).NotTo(HaveOccurred())
 
-	p.Context.AddExtension(node.Name, TopologyName, ext.String())
+	for _, uniqueName := range node.ReplicaUniqueNames() {
+		p.Context.AddExtension(uniqueName, TopologyName, ext.String())
+	}
 }
 
 func (p *Platform) StartSession(cmd *exec.Cmd, name string) (*gexec.Session, error) {

@@ -42,24 +42,24 @@ type NetworkHandler struct {
 	ColorIndex        int
 }
 
-func (p *NetworkHandler) TTXDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return p.dbsqlDataSourceDir(peer, "ttxdb")
+func (p *NetworkHandler) TTXDBSQLDataSourceDir(uniqueName string) string {
+	return p.dbsqlDataSourceDir(uniqueName, "ttxdb")
 }
 
-func (p *NetworkHandler) TokensDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return p.dbsqlDataSourceDir(peer, "tokensdb")
+func (p *NetworkHandler) TokensDBSQLDataSourceDir(uniqueName string) string {
+	return p.dbsqlDataSourceDir(uniqueName, "tokensdb")
 }
 
-func (p *NetworkHandler) AuditDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return p.dbsqlDataSourceDir(peer, "auditdb")
+func (p *NetworkHandler) AuditDBSQLDataSourceDir(uniqueName string) string {
+	return p.dbsqlDataSourceDir(uniqueName, "auditdb")
 }
 
-func (p *NetworkHandler) IdentityDBSQLDataSourceDir(peer *sfcnode.Node) string {
-	return p.dbsqlDataSourceDir(peer, "identitydb")
+func (p *NetworkHandler) IdentityDBSQLDataSourceDir(uniqueName string) string {
+	return p.dbsqlDataSourceDir(uniqueName, "identitydb")
 }
 
-func (p *NetworkHandler) dbsqlDataSourceDir(peer *sfcnode.Node, dirName string) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), dirName)
+func (p *NetworkHandler) dbsqlDataSourceDir(uniqueName string, dirName string) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", uniqueName, dirName)
 }
 
 func (p *NetworkHandler) DBPath(root string, tms *topology2.TMS) string {
@@ -70,14 +70,16 @@ func (p *NetworkHandler) DBPath(root string, tms *topology2.TMS) string {
 		) + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
 }
 
-func (p *NetworkHandler) FSCNodeKVSDir(peer *sfcnode.Node) string {
-	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", peer.ID(), "kvs")
+func (p *NetworkHandler) FSCNodeKVSDir(uniqueName string) string {
+	return filepath.Join(p.TokenPlatform.GetContext().RootDir(), "fsc", "nodes", uniqueName, "kvs")
 }
 
 func (p *NetworkHandler) DeleteDBs(node *sfcnode.Node) {
-	for _, path := range []string{p.TokensDBSQLDataSourceDir(node)} {
-		logger.Infof("remove all [%s]", path)
-		Expect(os.RemoveAll(path)).ToNot(HaveOccurred())
-		Expect(os.MkdirAll(path, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", path)
+	for _, uniqueName := range node.ReplicaUniqueNames() {
+		for _, path := range []string{p.TokensDBSQLDataSourceDir(uniqueName)} {
+			logger.Infof("remove all [%s]", path)
+			Expect(os.RemoveAll(path)).ToNot(HaveOccurred())
+			Expect(os.MkdirAll(path, 0775)).ToNot(HaveOccurred(), "failed to create [%s]", path)
+		}
 	}
 }

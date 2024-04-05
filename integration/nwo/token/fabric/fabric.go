@@ -166,21 +166,21 @@ func (p *NetworkHandler) GenerateArtifacts(tms *topology2.TMS) {
 	entry.TCC = &TCC{Chaincode: chaincode}
 }
 
-func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node) string {
-	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(node))
-	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(node))
-	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(node))
-	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(node), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(node))
+func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Node, uniqueName string) string {
+	Expect(os.MkdirAll(p.TTXDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TTXDBSQLDataSourceDir(uniqueName))
+	Expect(os.MkdirAll(p.TokensDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.TokensDBSQLDataSourceDir(uniqueName))
+	Expect(os.MkdirAll(p.AuditDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.AuditDBSQLDataSourceDir(uniqueName))
+	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
 		"TMSID":                 func() string { return tms.ID() },
 		"TMS":                   func() *topology2.TMS { return tms },
 		"Wallets":               func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
-		"SQLDataSource":         func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(node), tms) },
-		"TokensSQLDataSource":   func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(node), tms) },
-		"AuditSQLDataSource":    func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(node), tms) },
-		"IdentitySQLDataSource": func() string { return p.DBPath(p.IdentityDBSQLDataSourceDir(node), tms) },
-		"NodeKVSPath":           func() string { return p.FSCNodeKVSDir(node) },
+		"SQLDataSource":         func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(uniqueName), tms) },
+		"TokensSQLDataSource":   func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(uniqueName), tms) },
+		"AuditSQLDataSource":    func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(uniqueName), tms) },
+		"IdentitySQLDataSource": func() string { return p.DBPath(p.IdentityDBSQLDataSourceDir(uniqueName), tms) },
+		"NodeKVSPath":           func() string { return p.FSCNodeKVSDir(uniqueName) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
