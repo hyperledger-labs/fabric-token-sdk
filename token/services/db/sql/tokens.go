@@ -71,7 +71,6 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 		}
 	}()
 	if err = tx.StoreToken(tr, owners); err != nil {
-
 		return
 	}
 	if err = tx.Commit(); err != nil {
@@ -80,37 +79,13 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 	return nil
 }
 
-// Delete is called when spending a token
-func (db *TokenDB) Delete(txID string, index uint64, deletedBy string) (err error) {
-	tx, err := db.NewTokenDBTransaction()
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil && tx != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
-	if err = tx.Delete(txID, index, deletedBy); err != nil {
-		return err
-	}
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-	return nil
-}
-
-// DeleteTokens delete multiple tokens at the same time (e.g. when invalid or expired)
+// DeleteTokens deletes multiple tokens at the same time (when spent, invalid or expired)
 func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
 	logger.Debugf("delete tokens [%s:%v]", ids)
 	if len(ids) == 0 {
 		return nil
 	}
-	now := time.Now().UTC()
-
-	args := []interface{}{deletedBy, now}
+	args := []interface{}{deletedBy, time.Now().UTC()}
 	where := whereTokenIDs(&args, ids)
 
 	query := fmt.Sprintf("UPDATE %s SET is_deleted = true, spent_by = $1, spent_at = $2 WHERE %s", db.table.Tokens, where)
@@ -821,13 +796,16 @@ func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
 
 }
 
-func (t *TokenTransaction) GetToken(txID string, index uint64) (*token.Token, error) {
+func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, error) {
 	args := make([]interface{}, 0)
 	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
 	where := whereTokenIDs(&args, tokenIDs)
+	var del string
+	if !includeDeleted {
+		del = "AND is_deleted = false"
+	}
 
-	// select token
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND is_deleted = false AND owner = true", t.db.table.Tokens, where)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND owner = true %s", t.db.table.Tokens, where, del)
 	logger.Debug(query, args)
 	row := t.tx.QueryRow(query, args...)
 	var tokenOwner []byte

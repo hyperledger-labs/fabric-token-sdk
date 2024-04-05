@@ -61,10 +61,10 @@ type TokenDBTransaction interface {
 	// TransactionExists returns true if a token with that transaction id exists in the db
 	TransactionExists(id string) (bool, error)
 	// GetToken returns the owned tokens and their identifier keys for the passed ids.
-	GetToken(txID string, index uint64) (*token.Token, error)
+	GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, error)
 	// OwnersOf returns the list of owner of a given token
 	OwnersOf(txID string, index uint64) ([]string, error)
-	// Delete marks the passed token as deleted by a given identifier
+	// Delete marks the passed token as deleted by a given identifier (idempotent)
 	Delete(txID string, index uint64, deletedBy string) error
 	// StoreToken stores the passed token record in relation to the passed owner identifiers, if any
 	StoreToken(tr TokenRecord, owners []string) error

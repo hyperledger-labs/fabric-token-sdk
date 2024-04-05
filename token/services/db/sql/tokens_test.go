@@ -15,7 +15,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
 )
@@ -95,6 +94,7 @@ var TokensCases = []struct {
 	Name string
 	Fn   func(*testing.T, *TokenDB)
 }{
+	{"Transaction", TTransaction},
 	{"SaveAndGetToken", TSaveAndGetToken},
 	{"DeleteAndMine", TDeleteAndMine},
 	{"GetTokenInfos", TGetTokenInfos},
@@ -103,6 +103,65 @@ var TokensCases = []struct {
 	{"DeleteMultiple", TDeleteMultiple},
 	{"PublicParams", TPublicParams},
 	{"TCertification", TCertification},
+}
+
+func TTransaction(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.StoreToken(driver.TokenRecord{
+		TxID:           "tx1",
+		Index:          0,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x02",
+		Type:           "TST",
+		Amount:         2,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	}, []string{"alice"})
+	assert.NoError(t, err)
+	assert.NoError(t, tx.Commit())
+
+	tx, err = db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, err := tx.GetToken("tx1", 0, false)
+	assert.NoError(t, err)
+	assert.Equal(t, "0x02", tok.Quantity)
+	assert.NoError(t, tx.Delete("tx1", 0, "me"))
+	tok, err = tx.GetToken("tx1", 0, false)
+	assert.NoError(t, err)
+	assert.Nil(t, tok)
+	tok, err = tx.GetToken("tx1", 0, true) // include deleted
+	assert.NoError(t, err)
+	assert.Equal(t, "0x02", tok.Quantity)
+	assert.NoError(t, tx.Rollback())
+
+	tx, err = db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, err = tx.GetToken("tx1", 0, false)
+	assert.NoError(t, err)
+	assert.NotNil(t, tok)
+	assert.Equal(t, "0x02", tok.Quantity)
+	assert.NoError(t, tx.Delete("tx1", 0, "me"))
+	assert.NoError(t, tx.Commit())
+
+	tx, err = db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tok, err = tx.GetToken("tx1", 0, false)
+	assert.NoError(t, err)
+	assert.Nil(t, tok)
+	assert.NoError(t, tx.Commit())
 }
 
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
@@ -267,7 +326,7 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
-	assert.NoError(t, db.Delete("tx101", 0, "tx103"))
+	assert.NoError(t, db.DeleteTokens("tx103", &token.ID{TxId: "tx101", Index: 0}))
 
 	tok, err := db.ListUnspentTokens()
 	assert.NoError(t, err)
@@ -619,15 +678,15 @@ func TCertification(t *testing.T, db *TokenDB) {
 	wg.Add(40)
 	for i := 0; i < 40; i++ {
 		go func(i int) {
-			tokenID := &token2.ID{
+			tokenID := &token.ID{
 				TxId:  fmt.Sprintf("tx_%d", i),
 				Index: 0,
 			}
-			assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
+			assert.NoError(t, db.StoreCertifications(map[*token.ID][]byte{
 				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
 			}))
 			assert.True(t, db.ExistsCertification(tokenID))
-			certifications, err := db.GetCertifications([]*token2.ID{tokenID})
+			certifications, err := db.GetCertifications([]*token.ID{tokenID})
 			assert.NoError(t, err)
 			for _, bytes := range certifications {
 				assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
@@ -638,12 +697,12 @@ func TCertification(t *testing.T, db *TokenDB) {
 	wg.Wait()
 
 	for i := 0; i < 40; i++ {
-		tokenID := &token2.ID{
+		tokenID := &token.ID{
 			TxId:  fmt.Sprintf("tx_%d", i),
 			Index: 0,
 		}
 		assert.True(t, db.ExistsCertification(tokenID))
-		certifications, err := db.GetCertifications([]*token2.ID{tokenID})
+		certifications, err := db.GetCertifications([]*token.ID{tokenID})
 		assert.NoError(t, err)
 		for _, bytes := range certifications {
 			assert.Equal(t, fmt.Sprintf("certification_%d", i), string(bytes))
@@ -651,21 +710,21 @@ func TCertification(t *testing.T, db *TokenDB) {
 	}
 
 	// check the certification of a token that was never stored
-	tokenID := &token2.ID{
+	tokenID := &token.ID{
 		TxId:  "pineapple",
 		Index: 0,
 	}
 	assert.False(t, db.ExistsCertification(tokenID))
 
-	certifications, err := db.GetCertifications([]*token2.ID{tokenID})
+	certifications, err := db.GetCertifications([]*token.ID{tokenID})
 	assert.Error(t, err)
 	assert.Empty(t, certifications)
 
 	// store an empty certification and check that an error is returned
-	assert.NoError(t, db.StoreCertifications(map[*token2.ID][]byte{
+	assert.NoError(t, db.StoreCertifications(map[*token.ID][]byte{
 		tokenID: {},
 	}))
-	certifications, err = db.GetCertifications([]*token2.ID{tokenID})
+	certifications, err = db.GetCertifications([]*token.ID{tokenID})
 	assert.Error(t, err)
 	assert.Empty(t, certifications)
 }
