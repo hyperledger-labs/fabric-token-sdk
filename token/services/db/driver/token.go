@@ -95,7 +95,7 @@ type TokenDB interface {
 	ListHistoryIssuedTokens() (*token.IssuedTokens, error)
 	// GetTokenOutputs returns the value of the tokens as they appear on the ledger for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
-	GetTokenOutputs(ids []*token.ID, callback driver.QueryCallbackFunc) error
+	GetTokenOutputs(ids []*token.ID) ([][]byte, error)
 	// GetTokenInfos returns the metadata of the tokens for the passed ids.
 	// For each token, the call-back function is invoked. The call-back function is invoked respecting the order of the passed ids.
 	GetTokenInfos(ids []*token.ID) ([][]byte, error)

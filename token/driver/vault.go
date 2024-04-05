@@ -52,7 +52,7 @@ type QueryEngine interface {
 	GetTokenInfos(ids []*token.ID) ([][]byte, error)
 	// GetTokenOutputs retrieves the token output as stored on the ledger for the passed ids.
 	// For each id, the callback is invoked to unmarshal the output
-	GetTokenOutputs(ids []*token.ID, callback QueryCallbackFunc) error
+	GetTokenOutputs(ids []*token.ID) ([][]byte, error)
 	// GetTokenInfoAndOutputs retrieves both the token output and information for the passed ids.
 	GetTokenInfoAndOutputs(ids []*token.ID) ([]string, [][]byte, [][]byte, error)
 	// GetTokens returns the list of tokens with their respective vault keys

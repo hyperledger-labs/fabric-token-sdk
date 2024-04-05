@@ -52,31 +52,24 @@ func NewLedgerTokenLoader[T any](tokenVault TokenVault, deserializer TokenDeseri
 
 // GetTokenOutputs takes an array of token identifiers (txID, index) and returns the corresponding token outputs
 func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error) {
-	var err error
 	for i := 0; i < s.NumRetries; i++ {
+		outputs, err := s.TokenVault.GetTokenOutputs(ids)
+		if err == nil {
+			return nil, err
+		}
 		tokens := make([]T, len(ids))
-		counter := 0
-		err = s.TokenVault.GetTokenOutputs(ids, func(id *token.ID, bytes []byte) error {
-			if len(bytes) == 0 {
-				return errors.Errorf("failed getting serialized token output for id [%v], nil value", id)
-			}
+		for i, bytes := range outputs {
 			ti, err := s.Deserializer.DeserializeToken(bytes)
 			if err != nil {
-				return errors.Wrapf(err, "failed deserializing token for id [%v][%s]", id, string(bytes))
+				return nil, errors.Wrapf(err, "failed deserializing token for id [%v][%s]", ids[i], string(bytes))
 			}
-			tokens[counter] = ti
-			counter++
-			return nil
-		})
-		if err == nil {
-			return tokens, nil
+			tokens[i] = ti
 		}
 
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
 		if anyPending, anyError := s.isAnyPending(ids...); anyError != nil || !anyPending {
-			err = anyError
-			break
+			return nil, errors.Wrapf(anyError, "failed to get token outputs")
 		}
 
 		if lastRetry := s.NumRetries - 1; i < lastRetry {
@@ -84,13 +77,13 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 		}
 	}
 
-	return nil, errors.Wrapf(err, "failed to get token outputs")
+	return nil, errors.New("failed to get token outputs")
 }
 
-func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (anyPending bool, anyError error) {
+func (s *VaultLedgerTokenLoader[T]) isAnyPending(ids ...*token.ID) (bool, error) {
 	for _, id := range ids {
-		if pending, error := s.TokenVault.IsPending(id); pending || error != nil {
-			return pending, error
+		if pending, err := s.TokenVault.IsPending(id); pending || err != nil {
+			return pending, err
 		}
 	}
 	return false, nil
