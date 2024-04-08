@@ -46,7 +46,7 @@ func GetCustodian(cp configProvider, network string) (string, error) {
 		}
 	}
 
-	return "", errors.Errorf("no token-sdk configuration for network %s", network)
+	return "", errors.Errorf("no token-sdk configuration for network [%s]", network)
 }
 
 func tmss(cp configProvider) (map[string]*TMS, error) {

@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion/core/generic/committer"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -127,22 +128,6 @@ func (n *Network) IsFinal(ctx context.Context, id string) error {
 
 func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
-}
-
-func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	return n.n.Vault().StoreTransient(id, orion.TransientMap(transient))
-}
-
-func (n *Network) TransientExists(id string) bool {
-	return n.n.MetadataService().Exists(id)
-}
-
-func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
-	tm, err := n.n.MetadataService().LoadTransient(id)
-	if err != nil {
-		return nil, err
-	}
-	return driver.TransientMap(tm), nil
 }
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
@@ -314,7 +299,7 @@ type TxStatusChangeListener struct {
 }
 
 func (t *TxStatusChangeListener) OnStatusChange(txID string, status int, statusMessage string) error {
-	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.namespace, t.namespace, txID))
+	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID))
 	if err != nil {
 		return err
 	}
@@ -323,29 +308,9 @@ func (t *TxStatusChangeListener) OnStatusChange(txID string, status int, statusM
 		return nil
 	}
 
-	if HasCause(err, network.ErrDiscardTX) {
+	if errors2.HasCause(err, network.ErrDiscardTX) {
 		// TODO: we need to preserve the chain
 		return committer.ErrDiscardTX
 	}
 	return err
-}
-
-func HasCause(source, target error) bool {
-	if source == nil {
-		return false
-	}
-	if target == nil {
-		return false
-	}
-	if source == target {
-		return true
-	}
-	cause := errors.Cause(source)
-	if cause == target {
-		return true
-	}
-	if cause == source {
-		return false
-	}
-	return HasCause(cause, target)
 }

@@ -106,7 +106,7 @@ func NewTxStatusChangesListener(net *network.Network, tmsID token.TMSID, ttxDB *
 }
 
 func (t *TxStatusChangesListener) OnStatusChange(txID string, status int, statusMessage string, reference []byte) error {
-	logger.Debugf("tx status changed for tx %s: %s", txID, status)
+	logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus ttxdb.TxStatus
 	switch network.ValidationCode(status) {
 	case network.Valid:

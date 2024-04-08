@@ -60,7 +60,7 @@ func (r *RequestTxStatusView) Call(context view.Context) (interface{}, error) {
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	return response.Status, nil
+	return response, nil
 }
 
 type RequestTxStatusResponderView struct{}

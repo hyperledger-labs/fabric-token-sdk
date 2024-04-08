@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 )
 
 // Swap contains the input information for a swap
@@ -100,25 +101,27 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to sign transaction")
 
 	// Sanity checks:
-	// - the transaction is in busy state in the vault
-	net := network.GetInstance(context, tx.Network(), tx.Channel())
-	vault, err := net.Vault(tx.Namespace())
-	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, _, err := vault.Status(tx.ID())
+	// - the transaction is in busy state
+	db, err := ttxdb.GetByTMSId(context, tx.TokenService().ID())
+	assert.NoError(err, "failed to get ttxdb [%s]", tx.TokenService().ID())
+	vc, _, err := db.GetStatus(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	assert.Equal(ttxdb.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Send to the ordering service and wait for finality
 	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 
 	// Sanity checks:
-	// - the transaction is in valid state in the vault
-	vc, _, err = vault.Status(tx.ID())
+	// - the transaction is in valid state
+	vc, _, err = db.GetStatus(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	assert.Equal(ttxdb.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	// Check that the tokens are or are not in the vault
+	net := network.GetInstance(context, tx.Network(), tx.Channel())
+	vault, err := net.Vault(tx.Namespace())
+	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
 	AssertTokensInVault(vault, tx, outputs, me)
 
 	return tx.ID(), nil
@@ -171,25 +174,29 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed endorsing transaction")
 
 	// Sanity checks:
-	// - the transaction is in busy state in the vault
-	net := network.GetInstance(context, tx.Network(), tx.Channel())
-	vault, err := net.Vault(tx.Namespace())
-	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, _, err := vault.Status(tx.ID())
+	// - the transaction is in busy state
+	db, err := ttxdb.GetByTMSId(context, tx.TokenService().ID())
+	assert.NoError(err, "failed to get ttxdb [%s]", tx.TokenService().ID())
+	vc, _, err := db.GetStatus(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	assert.Equal(ttxdb.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Before completing, the recipient waits for finality of the transaction
 	_, err = context.RunView(ttx.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
-	vc, _, err = vault.Status(tx.ID())
+	// Sanity checks:
+	// - the transaction is in valid state
+	vc, _, err = db.GetStatus(tx.ID())
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	assert.Equal(ttxdb.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	// Check that the tokens are or are not in the vault
 	outputs, err := tx.Outputs()
-	assert.NoError(err, "failed to retrieve outputs")
+	assert.NoError(err, "failed to get outputs")
+	net := network.GetInstance(context, tx.Network(), tx.Channel())
+	vault, err := net.Vault(tx.Namespace())
+	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
 	AssertTokensInVault(vault, tx, outputs, me)
 
 	return tx.ID(), nil
