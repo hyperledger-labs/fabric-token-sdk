@@ -265,7 +265,7 @@ func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
 	// 9223372036854775808 on x86 and 18446744073709551615 on arm).
 	var i, e = big.NewInt(2), big.NewInt(int64(pp.RangeProofParams.BitLength))
 	i.Exp(i, e, nil)
-	return i.Sub(i, big.NewInt(2)).Uint64()
+	return i.Sub(i, big.NewInt(1)).Uint64()
 }
 
 func (pp *PublicParams) String() string {

@@ -58,5 +58,13 @@ func TestComputeMaxTokenValue(t *testing.T) {
 		},
 	}
 	max := pp.ComputeMaxTokenValue()
-	assert.Equal(t, uint64(18446744073709551614), max)
+	assert.Equal(t, uint64(18446744073709551615), max)
+
+	pp = PublicParams{
+		RangeProofParams: &RangeProofParams{
+			BitLength: 16,
+		},
+	}
+	max = pp.ComputeMaxTokenValue()
+	assert.Equal(t, uint64(65535), max)
 }
