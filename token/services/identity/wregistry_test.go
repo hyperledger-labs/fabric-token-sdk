@@ -58,7 +58,7 @@ func (f *fakeRole) GetIdentityInfo(id string) (driver.IdentityInfo, error) {
 	panic("implement me")
 }
 
-func (f *fakeRole) RegisterIdentity(id string, path string) error {
+func (f *fakeRole) RegisterIdentity(config driver.IdentityConfiguration) error {
 	//TODO implement me
 	panic("implement me")
 }
@@ -68,7 +68,7 @@ func (f *fakeRole) IdentityIDs() ([]string, error) {
 	panic("implement me")
 }
 
-func (f *fakeRole) Reload(pp driver.PublicParameters) error {
+func (f *fakeRole) Load(pp driver.PublicParameters) error {
 	//TODO implement me
 	panic("implement me")
 }

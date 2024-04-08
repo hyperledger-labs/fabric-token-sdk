@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package x509
+package msp
 
 import (
 	"github.com/hyperledger/fabric/bccsp/pkcs11"

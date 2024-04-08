@@ -4,17 +4,21 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package idemix
+package cache
 
 import (
 	"runtime"
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"go.uber.org/zap/zapcore"
 )
+
+var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
 type IdentityCacheBackendFunc func(opts *common.IdentityOptions) (view.Identity, []byte, error)
 

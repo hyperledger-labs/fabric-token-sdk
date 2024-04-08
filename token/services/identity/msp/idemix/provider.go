@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+
 	"github.com/IBM/idemix"
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	"github.com/IBM/idemix/idemixmsp"
@@ -24,9 +26,7 @@ import (
 )
 
 const (
-	EIDIndex                     = 2
-	RHIndex                      = 3
-	Any      bccsp.SignatureType = 100
+	Any bccsp.SignatureType = 100
 )
 
 type SignerService interface {
@@ -34,7 +34,7 @@ type SignerService interface {
 }
 
 type Provider struct {
-	*Idemix
+	*msp.Deserializer
 	userKey       bccsp.Key
 	conf          idemixmsp.IdemixMSPConfig
 	SignerService SignerService
@@ -74,13 +74,18 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 		return nil, err
 	}
 
-	// Import revocation public key
-	RevocationPublicKey, err := cryptoProvider.KeyImport(
-		conf.RevocationPk,
-		&bccsp.IdemixRevocationPublicKeyImportOpts{Temporary: true},
+	// IMPORTANT: we generate an ephemeral revocation key public key because
+	// it is never used in the current idemix implementations.
+	// This might change in the future
+	RevocationKey, err := cryptoProvider.KeyGen(
+		&bccsp.IdemixRevocationKeyGenOpts{Temporary: true},
 	)
 	if err != nil {
-		return nil, errors.WithMessage(err, "failed to import revocation public key")
+		return nil, errors.WithMessage(err, "failed to generate revocation key")
+	}
+	RevocationPublicKey, err := RevocationKey.PublicKey()
+	if err != nil {
+		return nil, errors.WithMessage(err, "failed to extract revocation public key")
 	}
 
 	if conf.Signer == nil {
@@ -104,7 +109,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 			MspIdentifier: conf.Name,
 			Role:          m.MSPRole_MEMBER,
 		}
-		if CheckRole(int(conf.Signer.Role), ADMIN) {
+		if msp.CheckRole(int(conf.Signer.Role), msp.ADMIN) {
 			role.Role = m.MSPRole_ADMIN
 		}
 		valid, err := cryptoProvider.Verify(
@@ -115,7 +120,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 				IssuerPK: issuerPublicKey,
 				Attributes: []bccsp.IdemixAttribute{
 					{Type: bccsp.IdemixBytesAttribute, Value: []byte(conf.Signer.OrganizationalUnitIdentifier)},
-					{Type: bccsp.IdemixIntAttribute, Value: GetIdemixRoleFromMSPRole(role)},
+					{Type: bccsp.IdemixIntAttribute, Value: msp.GetIdemixRoleFromMSPRole(role)},
 					{Type: bccsp.IdemixBytesAttribute, Value: []byte(conf.Signer.EnrollmentId)},
 					{Type: bccsp.IdemixHiddenAttribute},
 				},
@@ -144,7 +149,7 @@ func NewProvider(conf1 *m.MSPConfig, signerService SignerService, sigType bccsp.
 	}
 
 	return &Provider{
-		Idemix: &Idemix{
+		Deserializer: &msp.Deserializer{
 			Name:            conf.Name,
 			Csp:             cryptoProvider,
 			IssuerPublicKey: issuerPublicKey,
@@ -181,7 +186,7 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte
 		MspIdentifier: p.Name,
 		Role:          m.MSPRole_MEMBER,
 	}
-	if CheckRole(int(p.conf.Signer.Role), ADMIN) {
+	if msp.CheckRole(int(p.conf.Signer.Role), msp.ADMIN) {
 		role.Role = m.MSPRole_ADMIN
 	}
 
@@ -223,8 +228,8 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte
 			{Type: bccsp.IdemixHiddenAttribute},
 			{Type: bccsp.IdemixHiddenAttribute},
 		},
-		RhIndex:  RHIndex,
-		EidIndex: EIDIndex,
+		RhIndex:  msp.RHIndex,
+		EidIndex: msp.EIDIndex,
 		CRI:      p.conf.Signer.CredentialRevocationInformation,
 		SigType:  sigType,
 		Metadata: signerMetadata,
@@ -239,12 +244,12 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte
 	}
 
 	// Set up default signer
-	id, err := NewMSPIdentityWithVerType(p.Idemix, NymPublicKey, role, ou, proof, p.verType)
+	id, err := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, proof, p.verType)
 	if err != nil {
 		return nil, nil, err
 	}
-	sID := &MSPSigningIdentity{
-		MSPIdentity:  id,
+	sID := &msp.SigningIdentity{
+		Identity:     id,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
 		NymKey:       nymKey,
@@ -266,14 +271,14 @@ func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte
 	case bccsp.Standard:
 		infoRaw = nil
 	case bccsp.EidNymRhNym:
-		auditInfo := &AuditInfo{
+		auditInfo := &msp.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 			EidNymAuditData: sigOpts.Metadata.EidNymAuditData,
 			RhNymAuditData:  sigOpts.Metadata.RhNymAuditData,
 			Attributes: [][]byte{
 				[]byte(p.conf.Signer.OrganizationalUnitIdentifier),
-				[]byte(strconv.Itoa(GetIdemixRoleFromMSPRole(role))),
+				[]byte(strconv.Itoa(msp.GetIdemixRoleFromMSPRole(role))),
 				[]byte(enrollmentID),
 				[]byte(rh),
 			},
@@ -315,8 +320,8 @@ func (p *Provider) DeserializeSigner(raw []byte) (driver.Signer, error) {
 		return nil, errors.Wrap(err, "cannot find nym secret key")
 	}
 
-	si := &MSPSigningIdentity{
-		MSPIdentity:  r.Identity,
+	si := &msp.SigningIdentity{
+		Identity:     r.Identity,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
 		NymKey:       nymKey,
@@ -341,7 +346,7 @@ func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
 
 	eid := ""
 	if len(auditInfo) != 0 {
-		ai := &AuditInfo{
+		ai := &msp.AuditInfo{
 			Csp:             p.Csp,
 			IssuerPublicKey: p.IssuerPublicKey,
 		}
@@ -407,7 +412,7 @@ func (p *Provider) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentit
 		return nil, errors.Wrap(err, "cannot deserialize the role of the identity")
 	}
 
-	id, _ := NewMSPIdentityWithVerType(p.Idemix, NymPublicKey, role, ou, serialized.Proof, p.verType)
+	id, _ := msp.NewIdentity(p.Deserializer, NymPublicKey, role, ou, serialized.Proof, p.verType)
 	if err := id.Validate(); err != nil {
 		return nil, errors.Wrap(err, "cannot deserialize, invalid identity")
 	}
@@ -416,8 +421,8 @@ func (p *Provider) DeserializeSigningIdentity(raw []byte) (driver.SigningIdentit
 		return nil, errors.Wrap(err, "cannot find nym secret key")
 	}
 
-	return &MSPSigningIdentity{
-		MSPIdentity:  id,
+	return &msp.SigningIdentity{
+		Identity:     id,
 		Cred:         p.conf.Signer.Cred,
 		UserKey:      p.userKey,
 		NymKey:       nymKey,

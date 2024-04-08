@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package msp
 
 import (
-	math "github.com/IBM/mathlib"
+	math3 "github.com/IBM/mathlib"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
@@ -82,7 +83,7 @@ func NewRoleFactory(
 }
 
 // NewIdemix creates a new Idemix-based role
-func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID math.CurveID) (identity.Role, error) {
+func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerPublicKey []byte, curveID math3.CurveID) (identity.Role, error) {
 	identities, err := f.IdentitiesForRole(role)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identities for role [%d]", role)
@@ -92,23 +93,31 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, curveID
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get wallet path storage")
 	}
-	keystore, err := f.StorageProvider.NewKeystore()
+	backend, err := f.StorageProvider.NewKeystore()
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get new keystore")
+		return nil, errors.Wrapf(err, "failed to get new keystore backend")
+	}
+	keyStore, err := msp.NewKeyStore(curveID, backend)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 	}
 	lm := idemix2.NewLocalMembership(
+		issuerPublicKey,
+		curveID,
 		f.Config,
 		f.NetworkDefaultIdentity,
 		f.SignerService,
 		f.DeserializerManager,
 		identityDB,
-		keystore,
+		keyStore,
 		RoleToMSPID[role],
 		cacheSize,
-		curveID,
 		identities,
 		f.ignoreRemote,
 	)
+	if err := lm.Load(); err != nil {
+		return nil, errors.WithMessage(err, "failed to load identities")
+	}
 	return &BindingRole{
 		Role:             idemix2.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
 		IdentityType:     IdemixIdentity,
@@ -147,7 +156,7 @@ func (f *RoleFactory) NewX509WithType(role driver.IdentityRole, identityType str
 		false,
 	)
 	if err := lm.Load(identities); err != nil {
-		return nil, errors.WithMessage(err, "failed to load owners")
+		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return &BindingRole{
 		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),
@@ -179,7 +188,7 @@ func (f *RoleFactory) NewX509IgnoreRemote(role driver.IdentityRole) (identity.Ro
 		true,
 	)
 	if err := lm.Load(identities); err != nil {
-		return nil, errors.WithMessage(err, "failed to load owners")
+		return nil, errors.WithMessage(err, "failed to load identities")
 	}
 	return &BindingRole{
 		Role:             x5092.NewRole(role, f.TMSID.Network, f.FSCIdentity, lm),

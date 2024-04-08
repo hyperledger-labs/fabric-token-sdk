@@ -12,6 +12,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
@@ -66,9 +67,9 @@ func (p *PublicParamsDeserializer) DeserializePublicParams(raw []byte, label str
 }
 
 // EIDRHDeserializer returns enrollment ID and revocation handle behind the owners of token
-type EIDRHDeserializer = common.EIDRHDeserializer[*idemix.AuditInfo]
+type EIDRHDeserializer = common.EIDRHDeserializer[*msp2.AuditInfo]
 
 // NewEIDRHDeserializer returns an enrollmentService
 func NewEIDRHDeserializer() *EIDRHDeserializer {
-	return common.NewEIDRHDeserializer[*idemix.AuditInfo](&idemix.Idemix{})
+	return common.NewEIDRHDeserializer[*msp2.AuditInfo](&msp2.Deserializer{})
 }

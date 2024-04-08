@@ -20,53 +20,52 @@ type RegisterIssuerWallet struct {
 	Path  string
 }
 
-// RegisterIssuerWalletView is a view that register an issuer wallet
-type RegisterIssuerWalletView struct {
+// RegisterIssuerIdentityView is a view that register an issuer wallet
+type RegisterIssuerIdentityView struct {
 	*RegisterIssuerWallet
 }
 
-func (r *RegisterIssuerWalletView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterIssuerIdentityView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err := tms.WalletManager().RegisterIssuerWallet(r.ID, r.Path)
+	err := tms.WalletManager().RegisterIssuerIdentity(r.ID, r.Path)
 	assert.NoError(err, "failed to register issuer wallet [%s:%s]", r.ID, r.TMSID)
 	return nil, nil
 }
 
-type RegisterIssuerWalletViewFactory struct{}
+type RegisterIssuerIdentityViewFactory struct{}
 
-func (p *RegisterIssuerWalletViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RegisterIssuerWalletView{RegisterIssuerWallet: &RegisterIssuerWallet{}}
+func (p *RegisterIssuerIdentityViewFactory) NewView(in []byte) (view.View, error) {
+	f := &RegisterIssuerIdentityView{RegisterIssuerWallet: &RegisterIssuerWallet{}}
 	err := json.Unmarshal(in, f.RegisterIssuerWallet)
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil
 }
 
-type RegisterOwnerWallet struct {
+type RegisterOwnerIdentity struct {
+	token.IdentityConfiguration
 	TMSID token.TMSID
-	ID    string
-	Path  string
 }
 
-// RegisterOwnerWalletView is a view that registers an owner wallet
-type RegisterOwnerWalletView struct {
-	*RegisterOwnerWallet
+// RegisterOwnerIdentityView is a view that registers an owner wallet
+type RegisterOwnerIdentityView struct {
+	*RegisterOwnerIdentity
 }
 
-func (r *RegisterOwnerWalletView) Call(context view.Context) (interface{}, error) {
+func (r *RegisterOwnerIdentityView) Call(context view.Context) (interface{}, error) {
 	tms := token.GetManagementService(context, token.WithTMSID(r.TMSID))
 	assert.NotNil(tms, "tms not found [%s]", r.TMSID)
-	err := tms.WalletManager().RegisterOwnerWallet(r.ID, r.Path)
+	err := tms.WalletManager().RegisterOwnerIdentityConfiguration(r.IdentityConfiguration)
 	assert.NoError(err, "failed to register owner wallet [%s:%s]", r.ID, r.TMSID)
 	return nil, nil
 }
 
-type RegisterOwnerWalletViewFactory struct{}
+type RegisterOwnerIdentityViewFactory struct{}
 
-func (p *RegisterOwnerWalletViewFactory) NewView(in []byte) (view.View, error) {
-	f := &RegisterOwnerWalletView{RegisterOwnerWallet: &RegisterOwnerWallet{}}
-	err := json.Unmarshal(in, f.RegisterOwnerWallet)
+func (p *RegisterOwnerIdentityViewFactory) NewView(in []byte) (view.View, error) {
+	f := &RegisterOwnerIdentityView{RegisterOwnerIdentity: &RegisterOwnerIdentity{}}
+	err := json.Unmarshal(in, f.RegisterOwnerIdentity)
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil

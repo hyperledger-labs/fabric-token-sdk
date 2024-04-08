@@ -334,7 +334,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	// Gen crypto material for the new issuer wallet
 	newIssuerWalletPath := tokenPlatform.GenIssuerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "issuer", "issuer.ExtraId")
 	// Register it
-	RegisterIssuerWallet(network, "issuer", "newIssuerWallet", newIssuerWalletPath)
+	RegisterIssuerIdentity(network, "issuer", "newIssuerWallet", newIssuerWalletPath)
 	// Issuer tokens with this new wallet
 	t4 := time.Now()
 	IssueCash(network, "newIssuerWallet", "EUR", 10, "bob", auditor, false, "issuer")
@@ -828,13 +828,14 @@ func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string,
 
 func testTwoGeneratedOwnerWalletsSameNode(network *integration.Infrastructure, auditor string, useFabricCA bool) {
 	tokenPlatform := token.GetPlatform(network.Ctx, "token")
-	newOwnerWalletPath1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
-	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId1", newOwnerWalletPath1)
-	newOwnerWalletPath2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
-	RegisterOwnerWallet(network, "charlie", "charlie.ExtraId2", newOwnerWalletPath2)
+	idConfig1 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId1", false)
+	RegisterOwnerIdentity(network, "charlie", idConfig1)
+	idConfig2 := tokenPlatform.GenOwnerCryptoMaterial(tokenPlatform.GetTopology().TMSs[0].BackendTopology.Name(), "charlie", "charlie.ExtraId2", useFabricCA)
+	RegisterOwnerIdentity(network, "charlie", idConfig2)
 
 	IssueCash(network, "", "SPE", 100, "charlie", auditor, true, "issuer")
 	TransferCash(network, "charlie", "", "SPE", 25, "charlie.ExtraId1", auditor)
+	Restart(network, false, "charlie")
 	TransferCash(network, "charlie", "charlie.ExtraId1", "SPE", 15, "charlie.ExtraId2", auditor)
 
 	CheckBalanceAndHolding(network, "charlie", "", "SPE", 75, auditor)

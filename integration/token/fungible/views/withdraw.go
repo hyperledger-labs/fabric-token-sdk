@@ -46,12 +46,9 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 	if i.RecipientData != nil {
 		// Use the passed RecipientData.
 		// First register it locally
-		assert.NoError(
-			token.GetManagementService(
-				context, token.WithTMSID(i.TMSID),
-			).WalletManager().OwnerWallet(i.Wallet).RegisterRecipient(i.RecipientData),
-			"failed to register remote recipient",
-		)
+		w := token.GetManagementService(context, token.WithTMSID(i.TMSID)).WalletManager().OwnerWallet(i.Wallet)
+		assert.NotNil(w, "cannot find wallet [%s:%s]", i.TMSID, i.Wallet)
+		assert.NoError(w.RegisterRecipient(i.RecipientData), "failed to register remote recipient")
 		// Then request withdrawal
 		id, session, err = ttx.RequestWithdrawalForRecipient(context, view.Identity(i.Issuer), i.Wallet, i.TokenType, i.Amount, i.RecipientData, token.WithTMSID(i.TMSID))
 	} else {

@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package idemix
+package msp
 
 import (
 	bccsp "github.com/IBM/idemix/bccsp/types"
@@ -13,15 +13,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Identity struct {
-	Identity           *MSPIdentity
+type DeserializedIdentity struct {
+	Identity           *Identity
 	NymPublicKey       bccsp.Key
 	SerializedIdentity *m.SerializedIdentity
 	OU                 *m.OrganizationUnit
 	Role               *m.MSPRole
 }
 
-type Idemix struct {
+type Deserializer struct {
 	Name            string
 	Ipk             []byte
 	Csp             bccsp.BCCSP
@@ -33,11 +33,11 @@ type Idemix struct {
 	RhNym           []byte
 }
 
-func (c *Idemix) Deserialize(raw []byte, checkValidity bool) (*Identity, error) {
+func (c *Deserializer) Deserialize(raw []byte, checkValidity bool) (*DeserializedIdentity, error) {
 	return c.DeserializeAgainstNymEID(raw, checkValidity, nil)
 }
 
-func (c *Idemix) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*Identity, error) {
+func (c *Deserializer) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID []byte) (*DeserializedIdentity, error) {
 	si := &m.SerializedIdentity{}
 	err := proto.Unmarshal(raw, si)
 	if err != nil {
@@ -81,7 +81,7 @@ func (c *Idemix) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID
 
 	idemix := c
 	if len(nymEID) != 0 {
-		idemix = &Idemix{
+		idemix = &Deserializer{
 			Name:            c.Name,
 			Ipk:             c.Ipk,
 			Csp:             c.Csp,
@@ -93,7 +93,7 @@ func (c *Idemix) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID
 		}
 	}
 
-	id, err := NewMSPIdentityWithVerType(
+	id, err := NewIdentity(
 		idemix,
 		NymPublicKey,
 		role,
@@ -110,7 +110,7 @@ func (c *Idemix) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID
 		}
 	}
 
-	return &Identity{
+	return &DeserializedIdentity{
 		Identity:           id,
 		NymPublicKey:       NymPublicKey,
 		SerializedIdentity: si,
@@ -119,7 +119,7 @@ func (c *Idemix) DeserializeAgainstNymEID(raw []byte, checkValidity bool, nymEID
 	}, nil
 }
 
-func (c *Idemix) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (c *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	ai, err := DeserializeAuditInfo(raw)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
@@ -127,22 +127,4 @@ func (c *Idemix) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
 	ai.Csp = c.Csp
 	ai.IssuerPublicKey = c.IssuerPublicKey
 	return ai, nil
-}
-
-type NymSignatureVerifier struct {
-	CSP   bccsp.BCCSP
-	IPK   bccsp.Key
-	NymPK bccsp.Key
-}
-
-func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {
-	_, err := v.CSP.Verify(
-		v.NymPK,
-		sigma,
-		message,
-		&bccsp.IdemixNymSignerOpts{
-			IssuerPK: v.IPK,
-		},
-	)
-	return err
 }
