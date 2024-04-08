@@ -11,6 +11,10 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
+
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+
 	bccsp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
@@ -25,11 +29,6 @@ import (
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
-)
-
-const (
-	SignerConfigFull          = "SignerConfigFull"
-	IdentityConfigurationType = "idemix"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
@@ -235,18 +234,18 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 	if len(identityConfig.Raw) != 0 {
 		// load the msp config directly from identityConfig.Raw
 		logger.Infof("load the msp config directly from identityConfig.Raw [%s]", hash.Hashable(identityConfig.Raw))
-		conf, err = NewMSPConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw, l.mspID)
+		conf, err = msp2.NewMSPConfigFromRawSigner(l.issuerPublicKey, identityConfig.Raw, l.mspID)
 	} else {
 		// load from URL
 		logger.Infof("load the msp config form identityConfig.URL [%s]", identityConfig.URL)
-		conf, err = NewMSPConfigFromURL(l.issuerPublicKey, identityConfig.URL, l.mspID, l.ignoreVerifyOnlyWallet)
+		conf, err = msp2.NewMSPConfigFromURL(l.issuerPublicKey, identityConfig.URL, l.mspID, l.ignoreVerifyOnlyWallet)
 	}
 	if err != nil {
 		return err
 	}
 
 	// instantiate provider from configuration
-	cryptoProvider, err := NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
+	cryptoProvider, err := msp2.NewBCCSP(l.keyStore, l.curveID, l.curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return errors.WithMessage(err, "failed to instantiate crypto provider")
 	}
@@ -267,14 +266,14 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
-		getIdentityFunc = NewIdentityCache(provider.Identity, cacheSize, &common.IdentityOptions{}).Identity
+		getIdentityFunc = cache.NewIdentityCache(provider.Identity, cacheSize, &common.IdentityOptions{}).Identity
 	}
 	l.addResolver(identityConfig.ID, provider.EnrollmentID(), provider.IsRemote(), defaultIdentity, getIdentityFunc)
 
-	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, IdentityConfigurationType); !exists {
+	if exists, _ := l.identityDB.ConfigurationExists(identityConfig.ID, msp2.IdentityConfigurationType); !exists {
 		if err := l.identityDB.AddConfiguration(driver3.IdentityConfiguration{
 			ID:     identityConfig.ID,
-			Type:   IdentityConfigurationType,
+			Type:   msp2.IdentityConfigurationType,
 			URL:    identityConfig.URL,
 			Config: identityConfig.Config,
 			Raw:    identityConfig.Raw,
@@ -358,7 +357,7 @@ func (l *LocalMembership) cacheSizeForID(id string) (int, error) {
 }
 
 func (l *LocalMembership) loadFromStorage() error {
-	it, err := l.identityDB.IteratorConfigurations(IdentityConfigurationType)
+	it, err := l.identityDB.IteratorConfigurations(msp2.IdentityConfigurationType)
 	if err != nil {
 		return errors.WithMessage(err, "failed to get registered identities from kvs")
 	}

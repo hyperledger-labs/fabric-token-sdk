@@ -15,13 +15,18 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	"github.com/pkg/errors"
 )
 
+type Deserializer struct {
+	*msp2.Deserializer
+}
+
 // NewDeserializer returns a new deserializer for the idemix ExpectEidNymRhNym verification strategy
-func NewDeserializer(ipk []byte, curveID math.CurveID) (*DeserializerWrapper, error) {
+func NewDeserializer(ipk []byte, curveID math.CurveID) (*Deserializer, error) {
 	logger.Infof("new deserialized for dlog idemix")
-	cryptoProvider, err := NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
+	cryptoProvider, err := msp2.NewBCCSPWithDummyKeyStore(curveID, curveID == math.BLS12_381_BBS)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to instantiate crypto provider for curve [%d]", curveID)
 	}
@@ -34,16 +39,8 @@ func NewDeserializerWithProvider(
 	verType csp.VerificationType,
 	nymEID []byte,
 	cryptoProvider csp.BCCSP,
-) (*DeserializerWrapper, error) {
-	des, err := NewDeserializerWithBCCSP(ipk, verType, nymEID, cryptoProvider)
-	if err != nil {
-		return nil, err
-	}
-	return &DeserializerWrapper{Deserializer: des}, nil
-}
-
-type Deserializer struct {
-	*Idemix
+) (*Deserializer, error) {
+	return NewDeserializerWithBCCSP(ipk, verType, nymEID, cryptoProvider)
 }
 
 func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID []byte, cryptoProvider csp.BCCSP) (*Deserializer, error) {
@@ -70,7 +67,7 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 	}
 
 	return &Deserializer{
-		Idemix: &Idemix{
+		Deserializer: &msp2.Deserializer{
 			Ipk:             ipk,
 			Csp:             cryptoProvider,
 			IssuerPublicKey: issuerPublicKey,
@@ -80,28 +77,28 @@ func NewDeserializerWithBCCSP(ipk []byte, verType csp.VerificationType, nymEID [
 	}, nil
 }
 
-func (i *Deserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
+func (i *Deserializer) DeserializeVerifier(raw view.Identity) (driver.Verifier, error) {
 	identity, err := i.Deserialize(raw, true)
 	if err != nil {
 		return nil, err
 	}
 
-	return &NymSignatureVerifier{
-		CSP:   i.Idemix.Csp,
-		IPK:   i.Idemix.IssuerPublicKey,
+	return &msp2.NymSignatureVerifier{
+		CSP:   i.Deserializer.Csp,
+		IPK:   i.Deserializer.IssuerPublicKey,
 		NymPK: identity.NymPublicKey,
 	}, nil
 }
 
 func (i *Deserializer) DeserializeVerifierAgainstNymEID(raw []byte, nymEID []byte) (driver.Verifier, error) {
-	identity, err := i.Idemix.DeserializeAgainstNymEID(raw, true, nymEID)
+	identity, err := i.Deserializer.DeserializeAgainstNymEID(raw, true, nymEID)
 	if err != nil {
 		return nil, err
 	}
 
-	return &NymSignatureVerifier{
-		CSP:   i.Idemix.Csp,
-		IPK:   i.Idemix.IssuerPublicKey,
+	return &msp2.NymSignatureVerifier{
+		CSP:   i.Deserializer.Csp,
+		IPK:   i.Deserializer.IssuerPublicKey,
 		NymPK: identity.NymPublicKey,
 	}, nil
 }
@@ -110,8 +107,12 @@ func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (i *Deserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
-	return i.Idemix.DeserializeAuditInfo(raw)
+func (i *Deserializer) DeserializeAuditInfo(raw []byte) (*msp2.AuditInfo, error) {
+	return i.Deserializer.DeserializeAuditInfo(raw)
+}
+
+func (i *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
+	return i.DeserializeAuditInfo(raw)
 }
 
 func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
@@ -122,7 +123,7 @@ func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 
 	eid := ""
 	if len(auditInfo) != 0 {
-		ai, err := DeserializeAuditInfo(auditInfo)
+		ai, err := msp2.DeserializeAuditInfo(auditInfo)
 		if err != nil {
 			return "", err
 		}
@@ -137,20 +138,4 @@ func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 
 func (i *Deserializer) String() string {
 	return fmt.Sprintf("Idemix with IPK [%s]", hash.Hashable(i.Ipk).String())
-}
-
-type DeserializerWrapper struct {
-	*Deserializer
-}
-
-func (d *DeserializerWrapper) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	return d.Deserializer.DeserializeVerifier(id)
-}
-
-func (d *DeserializerWrapper) DeserializeVerifierAgainstNymEID(id view.Identity, nymEID []byte) (driver.Verifier, error) {
-	return d.Deserializer.DeserializeVerifierAgainstNymEID(id, nymEID)
-}
-
-func (d *DeserializerWrapper) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return d.Deserializer.DeserializeAuditInfo(raw)
 }

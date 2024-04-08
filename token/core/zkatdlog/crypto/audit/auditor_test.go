@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	msp3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
+
 	"github.com/IBM/idemix/bccsp/types"
 
 	math "github.com/IBM/mathlib"
@@ -231,7 +233,7 @@ func (f *fakeProv) TranslatePath(path string) string {
 	return ""
 }
 
-func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo) {
+func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo) {
 	registry := registry2.New()
 	Expect(registry.RegisterService(&fakeProv{typ: "memory"})).NotTo(HaveOccurred())
 
@@ -246,9 +248,9 @@ func getIdemixInfo(dir string) (view.Identity, *idemix.AuditInfo) {
 	config, err := msp2.GetLocalMspConfigWithType(dir, nil, "idemix", "idemix")
 	Expect(err).NotTo(HaveOccurred())
 
-	keyStore, err := idemix.NewKeyStore(math.FP256BN_AMCL, backend)
+	keyStore, err := msp3.NewKeyStore(math.FP256BN_AMCL, backend)
 	Expect(err).NotTo(HaveOccurred())
-	cryptoProvider, err := idemix.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
+	cryptoProvider, err := msp3.NewBCCSP(keyStore, math.FP256BN_AMCL, false)
 	Expect(err).NotTo(HaveOccurred())
 	p, err := idemix.NewProvider(config, sigService, types.EidNymRhNym, cryptoProvider)
 	Expect(err).NotTo(HaveOccurred())

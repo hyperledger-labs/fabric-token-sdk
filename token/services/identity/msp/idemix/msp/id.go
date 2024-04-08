@@ -4,22 +4,32 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package idemix
+package msp
 
 import (
 	"bytes"
 	"time"
 
 	bccsp "github.com/IBM/idemix/bccsp/types"
+	"github.com/IBM/idemix/common/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	m "github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/hyperledger/fabric/msp"
 	"github.com/pkg/errors"
 )
 
-type MSPIdentity struct {
+const (
+	EIDIndex                  = 2
+	RHIndex                   = 3
+	SignerConfigFull          = "SignerConfigFull"
+	IdentityConfigurationType = "idemix"
+)
+
+var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
+
+type Identity struct {
 	NymPublicKey bccsp.Key
-	Idemix       *Idemix
+	Idemix       *Deserializer
 	ID           *msp.IdentityIdentifier
 	Role         *m.MSPRole
 	OU           *m.OrganizationUnit
@@ -30,8 +40,8 @@ type MSPIdentity struct {
 	VerificationType bccsp.VerificationType
 }
 
-func NewMSPIdentityWithVerType(idemix *Idemix, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) (*MSPIdentity, error) {
-	id := &MSPIdentity{}
+func NewIdentity(idemix *Deserializer, NymPublicKey bccsp.Key, role *m.MSPRole, ou *m.OrganizationUnit, proof []byte, verificationType bccsp.VerificationType) (*Identity, error) {
+	id := &Identity{}
 	id.Idemix = idemix
 	id.NymPublicKey = NymPublicKey
 	id.Role = role
@@ -51,25 +61,25 @@ func NewMSPIdentityWithVerType(idemix *Idemix, NymPublicKey bccsp.Key, role *m.M
 	return id, nil
 }
 
-func (id *MSPIdentity) Anonymous() bool {
+func (id *Identity) Anonymous() bool {
 	return true
 }
 
-func (id *MSPIdentity) ExpiresAt() time.Time {
+func (id *Identity) ExpiresAt() time.Time {
 	// Idemix MSP currently does not use expiration dates or revocation,
 	// so we return the zero time to indicate this.
 	return time.Time{}
 }
 
-func (id *MSPIdentity) GetIdentifier() *msp.IdentityIdentifier {
+func (id *Identity) GetIdentifier() *msp.IdentityIdentifier {
 	return id.ID
 }
 
-func (id *MSPIdentity) GetMSPIdentifier() string {
+func (id *Identity) GetMSPIdentifier() string {
 	return id.Idemix.Name
 }
 
-func (id *MSPIdentity) GetOrganizationalUnits() []*msp.OUIdentifier {
+func (id *Identity) GetOrganizationalUnits() []*msp.OUIdentifier {
 	// we use the (serialized) public key of this MSP as the CertifiersIdentifier
 	certifiersIdentifier, err := id.Idemix.IssuerPublicKey.Bytes()
 	if err != nil {
@@ -80,7 +90,7 @@ func (id *MSPIdentity) GetOrganizationalUnits() []*msp.OUIdentifier {
 	return []*msp.OUIdentifier{{CertifiersIdentifier: certifiersIdentifier, OrganizationalUnitIdentifier: id.OU.OrganizationalUnitIdentifier}}
 }
 
-func (id *MSPIdentity) Validate() error {
+func (id *Identity) Validate() error {
 	// logger.Debugf("Validating identity %+v", id)
 	if id.GetMSPIdentifier() != id.Idemix.Name {
 		return errors.Errorf("the supplied identity does not belong to this msp")
@@ -88,7 +98,7 @@ func (id *MSPIdentity) Validate() error {
 	return id.verifyProof()
 }
 
-func (id *MSPIdentity) Verify(msg []byte, sig []byte) error {
+func (id *Identity) Verify(msg []byte, sig []byte) error {
 	_, err := id.Idemix.Csp.Verify(
 		id.NymPublicKey,
 		sig,
@@ -100,11 +110,11 @@ func (id *MSPIdentity) Verify(msg []byte, sig []byte) error {
 	return err
 }
 
-func (id *MSPIdentity) SatisfiesPrincipal(principal *m.MSPPrincipal) error {
+func (id *Identity) SatisfiesPrincipal(principal *m.MSPPrincipal) error {
 	return errors.Errorf("not supported")
 }
 
-func (id *MSPIdentity) Serialize() ([]byte, error) {
+func (id *Identity) Serialize() ([]byte, error) {
 	serialized := &m.SerializedIdemixIdentity{}
 
 	raw, err := id.NymPublicKey.Bytes()
@@ -143,7 +153,7 @@ func (id *MSPIdentity) Serialize() ([]byte, error) {
 	return idBytes, nil
 }
 
-func (id *MSPIdentity) verifyProof() error {
+func (id *Identity) verifyProof() error {
 	// Verify signature
 	var metadata *bccsp.IdemixSignerMetadata
 	if len(id.Idemix.NymEID) != 0 {
@@ -179,15 +189,15 @@ func (id *MSPIdentity) verifyProof() error {
 	return err
 }
 
-type MSPSigningIdentity struct {
-	*MSPIdentity `json:"-"`
+type SigningIdentity struct {
+	*Identity    `json:"-"`
 	Cred         []byte
 	UserKey      bccsp.Key `json:"-"`
 	NymKey       bccsp.Key `json:"-"`
 	EnrollmentId string
 }
 
-func (id *MSPSigningIdentity) Sign(msg []byte) ([]byte, error) {
+func (id *SigningIdentity) Sign(msg []byte) ([]byte, error) {
 	// logger.Debugf("Idemix identity %s is signing", id.GetIdentifier())
 
 	sig, err := id.Idemix.Csp.Sign(
@@ -202,4 +212,22 @@ func (id *MSPSigningIdentity) Sign(msg []byte) ([]byte, error) {
 		return nil, err
 	}
 	return sig, nil
+}
+
+type NymSignatureVerifier struct {
+	CSP   bccsp.BCCSP
+	IPK   bccsp.Key
+	NymPK bccsp.Key
+}
+
+func (v *NymSignatureVerifier) Verify(message, sigma []byte) error {
+	_, err := v.CSP.Verify(
+		v.NymPK,
+		sigma,
+		message,
+		&bccsp.IdemixNymSignerOpts{
+			IssuerPK: v.IPK,
+		},
+	)
+	return err
 }

@@ -105,7 +105,7 @@ func newVerifyingProvider(conf *msp.MSPConfig, mspConfigPath, mspID string) (*Pr
 }
 
 func newProvider(sID driver.SigningIdentity, id []byte) (*Provider, error) {
-	enrollmentID, err := GetEnrollmentID(id)
+	enrollmentID, err := msp2.GetEnrollmentID(id)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get enrollment id")
 	}
@@ -117,7 +117,7 @@ func (p *Provider) IsRemote() bool {
 }
 
 func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
-	revocationHandle, err := GetRevocationHandle(p.id)
+	revocationHandle, err := msp2.GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
 	}

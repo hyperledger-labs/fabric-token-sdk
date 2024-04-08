@@ -17,6 +17,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
 	"github.com/pkg/errors"
 )
@@ -96,7 +97,7 @@ func (f *RoleFactory) NewIdemix(role driver.IdentityRole, cacheSize int, issuerP
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get new keystore backend")
 	}
-	keyStore, err := idemix2.NewKeyStore(curveID, backend)
+	keyStore, err := msp.NewKeyStore(curveID, backend)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to instantiate bccsp key store")
 	}

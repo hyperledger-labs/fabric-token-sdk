@@ -332,22 +332,22 @@ func (lm *LocalMembership) getResolver(label string) *common.Resolver {
 	return nil
 }
 
-func (lm *LocalMembership) keyStorePath(translatedPath string) (keyStorePath string) {
-	if lm.ignoreVerifyOnlyWallet {
-		// check if there is the folder keystoreFull, if yes then use it
-		path := filepath.Join(translatedPath, KeystoreFullFolder)
-		_, err := os.Stat(path)
-		if err == nil {
-			keyStorePath = path
-		} else {
-			path := filepath.Join(translatedPath, "msp", KeystoreFullFolder)
-			_, err := os.Stat(path)
-			if err == nil {
-				keyStorePath = path
-			}
-		}
+func (lm *LocalMembership) keyStorePath(translatedPath string) string {
+	if !lm.ignoreVerifyOnlyWallet {
+		return ""
 	}
-	return
+
+	path := filepath.Join(translatedPath, KeystoreFullFolder)
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+
+	path = filepath.Join(translatedPath, "msp", KeystoreFullFolder)
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+
+	return ""
 }
 
 func (lm *LocalMembership) loadFromStorage() error {
