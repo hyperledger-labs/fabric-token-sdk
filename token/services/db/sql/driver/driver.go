@@ -12,14 +12,12 @@ import (
 	"os"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	auditdbd "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
@@ -52,7 +50,7 @@ func NewDriver() *Driver {
 	return &Driver{dbs: make(map[string]*sql.DB)}
 }
 
-func (d *Driver) OpenTokenTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
+func (d *Driver) OpenTokenTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (db.TokenTransactionDB, error) {
 	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
@@ -60,7 +58,7 @@ func (d *Driver) OpenTokenTransactionDB(sp view.ServiceProvider, tmsID token.TMS
 	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
-func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
+func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (db.TokenDB, error) {
 	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
@@ -68,15 +66,7 @@ func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (auditd
 	return sql2.NewTokenDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
-func (d *Driver) OpenAuditTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
-	sqlDB, opts, err := d.open(sp, tmsID)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
-	}
-	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix+"aud_", opts.CreateSchema)
-}
-
-func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
+func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (db.WalletDB, error) {
 	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
@@ -84,7 +74,7 @@ func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (audit
 	return sql2.NewWalletDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
 }
 
-func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
+func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (db.IdentityDB, error) {
 	sqlDB, opts, err := d.open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
@@ -158,7 +148,7 @@ type TTXDBDriver struct {
 	*Driver
 }
 
-func (t *TTXDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
+func (t *TTXDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (db.TokenTransactionDB, error) {
 	return t.OpenTokenTransactionDB(sp, tmsID)
 }
 
@@ -166,27 +156,19 @@ type TOKENDBDriver struct {
 	*Driver
 }
 
-func (t *TOKENDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
+func (t *TOKENDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (db.TokenDB, error) {
 	return t.OpenTokenDB(sp, tmsID)
-}
-
-type AUDITDBDriver struct {
-	*Driver
-}
-
-func (t *AUDITDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
-	return t.OpenAuditTransactionDB(sp, tmsID)
 }
 
 type IdentityDBDriver struct {
 	*Driver
 }
 
-func (t *IdentityDBDriver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
+func (t *IdentityDBDriver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (db.WalletDB, error) {
 	return t.Driver.OpenWalletDB(sp, tmsID)
 }
 
-func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
+func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (db.IdentityDB, error) {
 	return t.Driver.OpenIdentityDB(sp, tmsID)
 }
 
@@ -194,6 +176,5 @@ func init() {
 	root := NewDriver()
 	ttxdb.Register("unity", &TTXDBDriver{Driver: root})
 	tokendb.Register("unity", &TOKENDBDriver{Driver: root})
-	auditdb.Register("unity", &AUDITDBDriver{Driver: root})
 	identitydb.Register("unity", &IdentityDBDriver{Driver: root})
 }

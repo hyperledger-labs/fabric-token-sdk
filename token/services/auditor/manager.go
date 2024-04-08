@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -23,14 +22,14 @@ type TokenManagementServiceProvider interface {
 	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
 }
 
-type AuditDBProvider interface {
-	DBByTMSId(id token.TMSID) (*auditdb.DB, error)
+type DBProvider interface {
+	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
 }
 
 // Manager handles the databases
 type Manager struct {
 	networkProvider NetworkProvider
-	auditDBProvider AuditDBProvider
+	dbProvider      DBProvider
 
 	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
@@ -38,11 +37,11 @@ type Manager struct {
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(networkProvider NetworkProvider, dbProvider DBProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		networkProvider: networkProvider,
 		storage:         storage,
-		auditDBProvider: auditDBProvider,
+		dbProvider:      dbProvider,
 		auditors:        map[string]*Auditor{},
 	}
 }
@@ -74,7 +73,7 @@ func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, err
 	defer cm.mutex.Unlock()
 
 	id := tmsID.String() + walletID
-	logger.Debugf("get auditdb for [%s]", id)
+	logger.Debugf("get ttxdb for [%s]", id)
 	c, ok := cm.auditors[id]
 	if !ok {
 		// add an entry
@@ -92,16 +91,16 @@ func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, err
 }
 
 func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
-	db, err := cm.auditDBProvider.DBByTMSId(tmsID)
+	db, err := cm.dbProvider.DBByTMSId(tmsID)
 	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
+		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
 	auditor := &Auditor{np: cm.networkProvider, db: db}
 	_, err = cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
-	logger.Debugf("auditdb: register tx status listener for all tx at network [%s]", tmsID)
+	logger.Debugf("ttxdb: register tx status listener for all tx at network [%s]", tmsID)
 	return auditor, nil
 }
 
@@ -118,7 +117,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	qe := auditor.NewQueryExecutor()
 	defer qe.Done()
 
-	it, err := qe.Transactions(auditdb.QueryTransactionsParams{})
+	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s]", tmsID, walletID)
 	}
@@ -129,7 +128,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	}
 	type ToBeUpdated struct {
 		TxID   string
-		Status auditdb.TxStatus
+		Status ttxdb.TxStatus
 	}
 	var toBeUpdated []ToBeUpdated
 	var pendingTXs []string
@@ -161,12 +160,12 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 				continue
 			}
 
-			var txStatus auditdb.TxStatus
+			var txStatus ttxdb.TxStatus
 			switch status {
 			case network.Valid:
-				txStatus = auditdb.Confirmed
+				txStatus = ttxdb.Confirmed
 			case network.Invalid:
-				txStatus = auditdb.Deleted
+				txStatus = ttxdb.Deleted
 			default:
 				pendingTXs = append(pendingTXs, tr.TxID)
 				continue
@@ -187,7 +186,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
 	}
 
-	logger.Infof("auditdb [%s], found [%d] pending transactions", tmsID, len(pendingTXs))
+	logger.Infof("ttxdb [%s], found [%d] pending transactions", tmsID, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
 		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, auditor.db}); err != nil {

@@ -32,8 +32,6 @@ import (
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault/db"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/dummy"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/certifier/interactive"
@@ -97,8 +95,6 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
 	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
-	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(auditDBManager))
 	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(identityDBManager))
 	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
@@ -106,7 +102,7 @@ func (p *SDK) Install() error {
 
 	ownerManager := ttx.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
-	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	auditorManager := auditor.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(auditorManager))
 	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
 

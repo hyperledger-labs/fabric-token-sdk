@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -26,13 +25,13 @@ type TxAuditor struct {
 	sp                      view2.ServiceProvider
 	w                       *token.AuditorWallet
 	auditor                 *auditor.Auditor
-	auditDB                 *auditdb.DB
+	auditDB                 *ttxdb.DB
 	transactionInfoProvider *TransactionInfoProvider
 }
 
 func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
 	backend := auditor.New(sp, w)
-	auditDB, err := auditdb.GetByTMSId(sp, w.TMS().ID())
+	auditDB, err := ttxdb.GetByTMSId(sp, w.TMS().ID())
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +70,7 @@ func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *TxAuditor) SetStatus(txID string, status TxStatus) error {
-	return a.auditDB.SetStatus(txID, auditdb.TxStatus(status))
+	return a.auditDB.SetStatus(txID, ttxdb.TxStatus(status))
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {

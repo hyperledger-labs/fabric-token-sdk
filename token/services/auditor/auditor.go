@@ -7,25 +7,27 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"sync"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.auditor")
 
 // TxStatus is the status of a transaction
-type TxStatus = auditdb.TxStatus
+type TxStatus = ttxdb.TxStatus
 
 const (
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending = auditdb.Pending
+	Pending = ttxdb.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed = auditdb.Confirmed
+	Confirmed = ttxdb.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted = auditdb.Deleted
+	Deleted = ttxdb.Deleted
 )
 
 // Transaction models a generic token transaction
@@ -38,16 +40,16 @@ type Transaction interface {
 
 // QueryExecutor defines the interface for the query executor
 type QueryExecutor struct {
-	*auditdb.QueryExecutor
+	*ttxdb.QueryExecutor
 }
 
 // NewPaymentsFilter returns a filter for payments
-func (a *QueryExecutor) NewPaymentsFilter() *auditdb.PaymentsFilter {
+func (a *QueryExecutor) NewPaymentsFilter() *ttxdb.PaymentsFilter {
 	return a.QueryExecutor.NewPaymentsFilter()
 }
 
 // NewHoldingsFilter returns a filter for holdings
-func (a *QueryExecutor) NewHoldingsFilter() *auditdb.HoldingsFilter {
+func (a *QueryExecutor) NewHoldingsFilter() *ttxdb.HoldingsFilter {
 	return a.QueryExecutor.NewHoldingsFilter()
 }
 
@@ -62,8 +64,9 @@ type NetworkProvider interface {
 
 // Auditor is the interface for the auditor service
 type Auditor struct {
-	np NetworkProvider
-	db *auditdb.DB
+	np        NetworkProvider
+	db        *ttxdb.DB
+	eIDsLocks sync.Map
 }
 
 // Validate validates the passed token request
@@ -84,7 +87,7 @@ func (a *Auditor) Audit(tx Transaction) (*token.InputStream, *token.OutputStream
 	var eids []string
 	eids = append(eids, record.Inputs.EnrollmentIDs()...)
 	eids = append(eids, record.Outputs.EnrollmentIDs()...)
-	if err := a.db.AcquireLocks(request.Anchor, eids...); err != nil {
+	if err := a.AcquireLocks(request.Anchor, eids...); err != nil {
 		return nil, nil, err
 	}
 
@@ -97,7 +100,7 @@ func (a *Auditor) Append(tx Transaction) error {
 	defer a.Release(tx)
 
 	// append request to audit db
-	if err := a.db.Append(tx.Request()); err != nil {
+	if err := a.db.AppendTransactionRecord(tx.Request()); err != nil {
 		return errors.WithMessagef(err, "failed appending request %s", tx.ID())
 	}
 
@@ -116,7 +119,7 @@ func (a *Auditor) Append(tx Transaction) error {
 
 // Release releases the lock acquired of the passed transaction.
 func (a *Auditor) Release(tx Transaction) {
-	a.db.ReleaseLocks(tx.Request().Anchor)
+	a.ReleaseLocks(tx.Request().Anchor)
 }
 
 // NewQueryExecutor returns a new query executor
@@ -140,19 +143,56 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
 }
 
+// AcquireLocks acquires locks for the passed anchor and enrollment ids.
+// This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
+func (a *Auditor) AcquireLocks(anchor string, eIDs ...string) error {
+	dedup := deduplicate(eIDs)
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
+	a.eIDsLocks.LoadOrStore(anchor, dedup)
+	for _, id := range dedup {
+		lock, _ := a.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
+		lock.(*sync.RWMutex).Lock()
+		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
+	}
+	logger.Debugf("Acquire locks for [%s:%v] enrollment ids...done", anchor, dedup)
+	return nil
+}
+
+// ReleaseLocks releases the locks associated to the passed anchor
+func (a *Auditor) ReleaseLocks(anchor string) {
+	dedupBoxed, ok := a.eIDsLocks.LoadAndDelete(anchor)
+	if !ok {
+		logger.Debugf("nothing to release for [%s] ", anchor)
+		return
+	}
+	dedup := dedupBoxed.([]string)
+	logger.Debugf("Release locks for [%s:%v] enrollment ids", anchor, dedup)
+	for _, id := range dedup {
+		lock, ok := a.eIDsLocks.Load(id)
+		if !ok {
+			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
+			continue
+		}
+		logger.Debugf("unlock lock for [%s:%v] enrollment id done", anchor, id)
+		lock.(*sync.RWMutex).Unlock()
+	}
+	logger.Debugf("Release locks for [%s:%v] enrollment ids...done", anchor, dedup)
+
+}
+
 type TxStatusChangesListener struct {
 	net *network.Network
-	db  *auditdb.DB
+	db  *ttxdb.DB
 }
 
 func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
-	var txStatus auditdb.TxStatus
+	var txStatus ttxdb.TxStatus
 	switch network.ValidationCode(status) {
 	case network.Valid:
-		txStatus = auditdb.Confirmed
+		txStatus = ttxdb.Confirmed
 	case network.Invalid:
-		txStatus = auditdb.Deleted
+		txStatus = ttxdb.Deleted
 	}
 	if err := t.db.SetStatus(txID, txStatus); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
@@ -166,4 +206,17 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 		logger.Debugf("unsubscribe for tx %s...done", txID)
 	}()
 	return nil
+}
+
+// deduplicate removes duplicate entries from a slice
+func deduplicate(source []string) []string {
+	support := make(map[string]bool)
+	var res []string
+	for _, item := range source {
+		if _, value := support[item]; !value {
+			support[item] = true
+			res = append(res, item)
+		}
+	}
+	return res
 }

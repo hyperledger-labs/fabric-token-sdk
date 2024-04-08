@@ -15,7 +15,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -69,7 +68,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db, err := ttx.NewAuditor(context, auditorWallet)
 		assert.NoError(err, "failed to get auditor instance")
-		qe = &AuditDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
+		qe = &TTXDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
 		tokenDB = db
 	} else {
 		db := ttx.NewOwner(context, tms)
@@ -303,28 +302,12 @@ func (c *CheckIfExistsInVaultViewFactory) NewView(in []byte) (view.View, error) 
 	return f, nil
 }
 
-type AuditDBQueryExecutor struct {
-	*auditdb.QueryExecutor
-}
-
-func (a *AuditDBQueryExecutor) Transactions() (TransactionIterator, error) {
-	it, err := a.QueryExecutor.Transactions(auditdb.QueryTransactionsParams{})
-	if err != nil {
-		return nil, err
-	}
-	return &AuditDBTransactionIterator{TransactionIterator: it}, nil
-}
-
-func (a *AuditDBQueryExecutor) Done() {
-	a.QueryExecutor.Done()
-}
-
 type TTXDBQueryExecutor struct {
 	*ttxdb.QueryExecutor
 }
 
 func (a *TTXDBQueryExecutor) Transactions() (TransactionIterator, error) {
-	it, err := a.QueryExecutor.Transactions(auditdb.QueryTransactionsParams{})
+	it, err := a.QueryExecutor.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
 		return nil, err
 	}
@@ -338,28 +321,6 @@ func (a *TTXDBQueryExecutor) Done() {
 type TransactionRecord struct {
 	TxID   string
 	Status string
-}
-
-type AuditDBTransactionIterator struct {
-	*auditdb.TransactionIterator
-}
-
-func (t *AuditDBTransactionIterator) Close() {
-	t.TransactionIterator.Close()
-}
-
-func (t *AuditDBTransactionIterator) Next() (*TransactionRecord, error) {
-	next, err := t.TransactionIterator.Next()
-	if err != nil {
-		return nil, err
-	}
-	if next == nil {
-		return nil, nil
-	}
-	return &TransactionRecord{
-		TxID:   next.TxID,
-		Status: string(next.Status),
-	}, nil
 }
 
 type TTXDBTransactionIterator struct {

@@ -13,8 +13,6 @@ import (
 	"sync"
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -22,6 +20,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -155,6 +154,20 @@ type QueryExecutor struct {
 	closed bool
 }
 
+// NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
+func (qe *QueryExecutor) NewPaymentsFilter() *PaymentsFilter {
+	return &PaymentsFilter{
+		db: qe.db,
+	}
+}
+
+// NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
+func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
+	return &HoldingsFilter{
+		db: qe.db,
+	}
+}
+
 // Transactions returns an iterators of transaction records filtered by the given params.
 func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
 	it, err := qe.db.db.QueryTransactions(params)
@@ -242,6 +255,14 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 	if err := db.db.BeginUpdate(); err != nil {
 		db.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
+	}
+	if err := db.appendSendMovements(record); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append send movements for txid [%s] failed", record.Anchor)
+	}
+	if err := db.appendReceivedMovements(record); err != nil {
+		db.rollback(err)
+		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
 	}
 	if err := db.appendTokenRequest(req); err != nil {
 		db.rollback(err)
@@ -335,6 +356,80 @@ func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]b
 	}
 
 	logger.Debugf("Appending validation record completed without errors")
+	return nil
+}
+
+func (db *DB) appendSendMovements(record *token.AuditRecord) error {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
+	logger.Debugf("eIDs [%v]", eIDs)
+	tokenTypes := outputs.TokenTypes()
+
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			diff := sent.Sub(sent, received)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				continue
+			}
+			diff.Neg(diff)
+
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			if err := db.db.AddMovement(&driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Status:       driver.TxStatus(driver.Pending),
+			}); err != nil {
+				if err1 := db.db.Discard(); err1 != nil {
+					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+				}
+				return err
+			}
+		}
+	}
+	logger.Debugf("finished to append send movements for tx [%s]", record.Anchor)
+
+	return nil
+}
+
+func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
+	tokenTypes := outputs.TokenTypes()
+
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			diff := received.Sub(received, sent)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				// Nothing received
+				continue
+			}
+
+			if err := db.db.AddMovement(&driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Status:       driver.TxStatus(driver.Pending),
+			}); err != nil {
+				if err1 := db.db.Discard(); err1 != nil {
+					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+				}
+				return err
+			}
+		}
+	}
+	logger.Debugf("finished to append received movements for tx [%s]", record.Anchor)
+
 	return nil
 }
 
@@ -432,6 +527,28 @@ func (db *DB) rollback(err error) {
 	if err1 := db.db.Discard(); err1 != nil {
 		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 	}
+}
+
+// joinIOEIDs joins enrollment IDs of inputs and outputs
+func joinIOEIDs(record *token.AuditRecord) []string {
+	iEIDs := record.Inputs.EnrollmentIDs()
+	oEIDs := record.Outputs.EnrollmentIDs()
+	eIDs := append(iEIDs, oEIDs...)
+	eIDs = deduplicate(eIDs)
+	return eIDs
+}
+
+// deduplicate removes duplicate entries from a slice
+func deduplicate(source []string) []string {
+	support := make(map[string]bool)
+	var res []string
+	for _, item := range source {
+		if _, value := support[item]; !value {
+			support[item] = true
+			res = append(res, item)
+		}
+	}
+	return res
 }
 
 type Config interface {
