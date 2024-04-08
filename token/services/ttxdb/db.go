@@ -13,6 +13,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
+
 	"go.uber.org/zap/zapcore"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -193,6 +195,7 @@ type Wallet interface {
 
 // DB is a database that stores token transactions related information
 type DB struct {
+	*db.StatusSupport
 	counter atomic.Int32
 
 	// the vault handles access concurrency to the store using storeLock.
@@ -215,9 +218,10 @@ type DB struct {
 
 func newDB(p driver.TokenTransactionDB) *DB {
 	return &DB{
-		db:         p,
-		eIDsLocks:  sync.Map{},
-		pendingTXs: make([]string, 0, 10000),
+		StatusSupport: db.NewStatusSupport(),
+		db:            p,
+		eIDsLocks:     sync.Map{},
+		pendingTXs:    make([]string, 0, 10000),
 	}
 }
 
