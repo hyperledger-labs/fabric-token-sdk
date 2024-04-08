@@ -10,6 +10,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"math"
+	"math/big"
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
@@ -259,7 +260,12 @@ func (pp *PublicParams) ComputeHash() ([]byte, error) {
 }
 
 func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
-	return uint64(math.Pow(2, float64(pp.RangeProofParams.BitLength))) - 1
+	// We can't use math.Pow because it uses float64 which does not lead to the same results
+	// across architectures (see: https://go.dev/play/p/jwqAHvIXvRI; the same code returns
+	// 9223372036854775808 on x86 and 18446744073709551615 on arm).
+	var i, e = big.NewInt(2), big.NewInt(int64(pp.RangeProofParams.BitLength))
+	i.Exp(i, e, nil)
+	return i.Sub(i, big.NewInt(2)).Uint64()
 }
 
 func (pp *PublicParams) String() string {

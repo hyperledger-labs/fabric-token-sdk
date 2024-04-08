@@ -50,3 +50,13 @@ func TestSerialization(t *testing.T) {
 	assert.NoError(t, pp.Validate())
 
 }
+
+func TestComputeMaxTokenValue(t *testing.T) {
+	pp := PublicParams{
+		RangeProofParams: &RangeProofParams{
+			BitLength: 64,
+		},
+	}
+	max := pp.ComputeMaxTokenValue()
+	assert.Equal(t, uint64(18446744073709551614), max)
+}
