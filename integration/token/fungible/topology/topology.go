@@ -26,6 +26,7 @@ type Opts struct {
 	TokenSDKDriver  string
 	AuditorAsIssuer bool
 	Aries           bool
+	FSCLogSpec      string
 }
 
 func Topology(opts Opts) []api.Topology {
@@ -48,7 +49,7 @@ func Topology(opts Opts) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),

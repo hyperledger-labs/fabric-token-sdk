@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
@@ -169,6 +170,7 @@ type Wallet interface {
 
 // DB is a database that stores token transactions related information
 type DB struct {
+	*db.StatusSupport
 	counter atomic.Int32
 
 	// the vault handles access concurrency to the store using storeLock.
@@ -191,17 +193,18 @@ type DB struct {
 
 func newDB(p driver.AuditTransactionDB) *DB {
 	return &DB{
-		db:         p,
-		eIDsLocks:  sync.Map{},
-		pendingTXs: make([]string, 0, 10000),
+		StatusSupport: db.NewStatusSupport(),
+		db:            p,
+		eIDsLocks:     sync.Map{},
+		pendingTXs:    make([]string, 0, 10000),
 	}
 }
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
-func (db *DB) Append(req *token.Request) error {
-	logger.Debugf("Appending new record... [%v]", db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
+func (d *DB) Append(req *token.Request) error {
+	logger.Debugf("Appending new record... [%v]", d.counter)
+	d.storeLock.Lock()
+	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
 	record, err := req.AuditRecord()
@@ -210,28 +213,28 @@ func (db *DB) Append(req *token.Request) error {
 	}
 	logger.Debugf("Appending new audit record... [%v]", record.Inputs, record.Outputs)
 
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
+	if err := d.db.BeginUpdate(); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendSendMovements(record); err != nil {
-		db.rollback(err)
+	if err := d.appendSendMovements(record); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append send movements for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendReceivedMovements(record); err != nil {
-		db.rollback(err)
+	if err := d.appendReceivedMovements(record); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append received movements for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendTokenRequest(req); err != nil {
-		db.rollback(err)
+	if err := d.appendTokenRequest(req); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendTransactions(record); err != nil {
-		db.rollback(err)
+	if err := d.appendTransactions(record); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
+	if err := d.db.Commit(); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
@@ -240,57 +243,62 @@ func (db *DB) Append(req *token.Request) error {
 }
 
 // NewQueryExecutor returns a new query executor
-func (db *DB) NewQueryExecutor() *QueryExecutor {
-	db.counter.Inc()
-	db.storeLock.RLock()
+func (d *DB) NewQueryExecutor() *QueryExecutor {
+	d.counter.Inc()
+	d.storeLock.RLock()
 
-	return &QueryExecutor{db: db}
+	return &QueryExecutor{db: d}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (db *DB) SetStatus(txID string, status TxStatus) error {
-	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
+func (d *DB) SetStatus(txID string, status TxStatus) error {
+	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, d.counter)
 
-	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
-		db.rollback(err)
+	d.storeLock.Lock()
+	if err := d.db.SetStatus(txID, status); err != nil {
+		d.storeLock.Unlock()
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
 	}
-	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
+	d.storeLock.Unlock()
+
+	// notify the listeners
+	d.Notify(db.StatusEvent{
+		TxID:           txID,
+		ValidationCode: status,
+	})
+	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, d.counter)
 	return nil
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (db *DB) GetStatus(txID string) (TxStatus, error) {
-	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
+func (d *DB) GetStatus(txID string) (TxStatus, error) {
+	logger.Debugf("Get status [%s]...[%d]", txID, d.counter)
+	d.storeLock.Lock()
+	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	status, err := db.db.GetStatus(txID)
+	status, err := d.db.GetStatus(txID)
 	if err != nil {
 		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
+	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, d.counter)
 	return TxStatus(status), nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (db *DB) GetTokenRequest(txID string) ([]byte, error) {
-	return db.db.GetTokenRequest(txID)
+func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
+	return d.db.GetTokenRequest(txID)
 }
 
 // AcquireLocks acquires locks for the passed anchor and enrollment ids.
 // This can be used to prevent concurrent read/write access to the audit records of the passed enrollment ids.
-func (db *DB) AcquireLocks(anchor string, eIDs ...string) error {
+func (d *DB) AcquireLocks(anchor string, eIDs ...string) error {
 	dedup := deduplicate(eIDs)
 	logger.Debugf("Acquire locks for [%s:%v] enrollment ids", anchor, dedup)
-	db.eIDsLocks.LoadOrStore(anchor, dedup)
+	d.eIDsLocks.LoadOrStore(anchor, dedup)
 	for _, id := range dedup {
-		lock, _ := db.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
+		lock, _ := d.eIDsLocks.LoadOrStore(id, &sync.RWMutex{})
 		lock.(*sync.RWMutex).Lock()
 		logger.Debugf("Acquire locks for [%s:%v] enrollment id done", anchor, id)
 	}
@@ -299,8 +307,8 @@ func (db *DB) AcquireLocks(anchor string, eIDs ...string) error {
 }
 
 // ReleaseLocks releases the locks associated to the passed anchor
-func (db *DB) ReleaseLocks(anchor string) {
-	dedupBoxed, ok := db.eIDsLocks.LoadAndDelete(anchor)
+func (d *DB) ReleaseLocks(anchor string) {
+	dedupBoxed, ok := d.eIDsLocks.LoadAndDelete(anchor)
 	if !ok {
 		logger.Debugf("nothing to release for [%s] ", anchor)
 		return
@@ -308,7 +316,7 @@ func (db *DB) ReleaseLocks(anchor string) {
 	dedup := dedupBoxed.([]string)
 	logger.Debugf("Release locks for [%s:%v] enrollment ids", anchor, dedup)
 	for _, id := range dedup {
-		lock, ok := db.eIDsLocks.Load(id)
+		lock, ok := d.eIDsLocks.Load(id)
 		if !ok {
 			logger.Warnf("unlock for enrollment id [%d:%s] not possible, lock never acquired", anchor, id)
 			continue
@@ -320,7 +328,7 @@ func (db *DB) ReleaseLocks(anchor string) {
 
 }
 
-func (db *DB) appendSendMovements(record *token.AuditRecord) error {
+func (d *DB) appendSendMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
@@ -339,14 +347,14 @@ func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 			diff.Neg(diff)
 
 			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
-			if err := db.db.AddMovement(&driver.MovementRecord{
+			if err := d.db.AddMovement(&driver.MovementRecord{
 				TxID:         record.Anchor,
 				EnrollmentID: eID,
 				Amount:       diff,
 				TokenType:    tokenType,
 				Status:       driver.TxStatus(driver.Pending),
 			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
+				if err1 := d.db.Discard(); err1 != nil {
 					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 				}
 				return err
@@ -358,7 +366,7 @@ func (db *DB) appendSendMovements(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
+func (d *DB) appendReceivedMovements(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
@@ -375,14 +383,14 @@ func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
 				continue
 			}
 
-			if err := db.db.AddMovement(&driver.MovementRecord{
+			if err := d.db.AddMovement(&driver.MovementRecord{
 				TxID:         record.Anchor,
 				EnrollmentID: eID,
 				Amount:       diff,
 				TokenType:    tokenType,
 				Status:       driver.TxStatus(driver.Pending),
 			}); err != nil {
-				if err1 := db.db.Discard(); err1 != nil {
+				if err1 := d.db.Discard(); err1 != nil {
 					logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 				}
 				return err
@@ -394,7 +402,7 @@ func (db *DB) appendReceivedMovements(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *DB) appendTransactions(record *token.AuditRecord) error {
+func (d *DB) appendTransactions(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
@@ -445,7 +453,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					}
 				}
 
-				if err := db.db.AddTransaction(&driver.TransactionRecord{
+				if err := d.db.AddTransaction(&driver.TransactionRecord{
 					TxID:         record.Anchor,
 					SenderEID:    inEID,
 					RecipientEID: outEID,
@@ -455,7 +463,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					ActionType:   driver.ActionType(tt),
 					Timestamp:    timestamp,
 				}); err != nil {
-					if err1 := db.db.Discard(); err1 != nil {
+					if err1 := d.db.Discard(); err1 != nil {
 						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
 					}
 					return err
@@ -470,13 +478,13 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *DB) appendTokenRequest(request *token.Request) error {
+func (d *DB) appendTokenRequest(request *token.Request) error {
 	raw, err := request.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
 	}
-	if err := db.db.AddTokenRequest(request.Anchor, raw); err != nil {
-		if err1 := db.db.Discard(); err1 != nil {
+	if err := d.db.AddTokenRequest(request.Anchor, raw); err != nil {
+		if err1 := d.db.Discard(); err1 != nil {
 			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
 		}
 		return err
@@ -484,8 +492,8 @@ func (db *DB) appendTokenRequest(request *token.Request) error {
 	return nil
 }
 
-func (db *DB) rollback(err error) {
-	if err1 := db.db.Discard(); err1 != nil {
+func (d *DB) rollback(err error) {
+	if err1 := d.db.Discard(); err1 != nil {
 		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 	}
 }

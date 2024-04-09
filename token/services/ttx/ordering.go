@@ -55,7 +55,7 @@ type orderingAndFinalityView struct {
 // 2. It waits for finality of the token transaction by listening to delivery events from one of the
 // Fabric peer nodes trusted by the FSC node.
 func NewOrderingAndFinalityView(tx *Transaction) *orderingAndFinalityView {
-	return &orderingAndFinalityView{tx: tx}
+	return NewOrderingAndFinalityWithTimeoutView(tx, finalityTimeout)
 }
 
 // NewOrderingAndFinalityWithTimeoutView returns a new instance of the orderingAndFinalityView struct.
