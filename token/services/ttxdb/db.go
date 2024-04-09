@@ -271,9 +271,9 @@ func (d *DB) NewQueryExecutor() *QueryExecutor {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (db *DB) SetStatus(txID string, status TxStatus, message string) error {
+func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 	logger.Debugf("Set status [%s][%s]...", txID, status)
-	if err := db.db.SetStatus(txID, status, message); err != nil {
+	if err := d.db.SetStatus(txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
 

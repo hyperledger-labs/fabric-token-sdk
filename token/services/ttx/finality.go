@@ -99,9 +99,9 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Got a timeout for finality of [%s], check the status", txID)
 			}
-			vd, err := transactionDB.GetStatus(txID)
+			vd, _, err := transactionDB.GetStatus(txID)
 			if err != nil || vd != ttxdb.Confirmed && vd != ttxdb.Deleted {
-				vd, err = auditDB.GetStatus(txID)
+				vd, _, err = auditDB.GetStatus(txID)
 			}
 			if err != nil {
 				logger.Debugf("Is [%s] final? not available yet, wait [err:%s, vc:%d]", txID, err, vd)
