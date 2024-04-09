@@ -93,7 +93,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 			if event.ValidationCode == ttxdb.Confirmed {
 				return nil, nil
 			}
-			return nil, errors.Errorf("transaction is not final")
+			return nil, errors.Errorf("transaction [%s] is not vali", txID)
 		case event := <-auditDBChannel:
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("Got an answer to finality of [%s]: [%s]", txID, event)
@@ -102,7 +102,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 			if event.ValidationCode == ttxdb.Confirmed {
 				return nil, nil
 			}
-			return nil, errors.Errorf("transaction is not final")
+			return nil, errors.Errorf("transaction [%s] is not valid", txID)
 		case <-timeout.C:
 			timeout.Stop()
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
