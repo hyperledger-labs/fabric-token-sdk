@@ -226,12 +226,12 @@ func newDB(p driver.TokenTransactionDB) *DB {
 }
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
-func (db *DB) AppendTransactionRecord(req *token.Request) error {
+func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Appending new transaction record... [%s][%d]", req.Anchor, db.counter)
+		logger.Debugf("Appending new transaction record... [%s][%d]", req.Anchor, d.counter)
 	}
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
+	d.storeLock.Lock()
+	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
 	ins, outs, err := req.InputsAndOutputs()
@@ -243,20 +243,20 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 		Inputs:  ins,
 		Outputs: outs,
 	}
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
+	if err := d.db.BeginUpdate(); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendTokenRequest(req); err != nil {
-		db.rollback(err)
+	if err := d.appendTokenRequest(req); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
-	if err := db.appendTransactions(record); err != nil {
-		db.rollback(err)
+	if err := d.appendTransactions(record); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
+	if err := d.db.Commit(); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
@@ -265,76 +265,81 @@ func (db *DB) AppendTransactionRecord(req *token.Request) error {
 }
 
 // NewQueryExecutor returns a new query executor
-func (db *DB) NewQueryExecutor() *QueryExecutor {
-	db.counter.Inc()
-	db.storeLock.RLock()
+func (d *DB) NewQueryExecutor() *QueryExecutor {
+	d.counter.Inc()
+	d.storeLock.RLock()
 
-	return &QueryExecutor{db: db}
+	return &QueryExecutor{db: d}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (db *DB) SetStatus(txID string, status TxStatus) error {
-	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
-	logger.Debug("lock acquired")
+func (d *DB) SetStatus(txID string, status TxStatus) error {
+	logger.Debugf("Set status [%s][%s]...[%d]", txID, status, d.counter)
 
-	if err := db.db.SetStatus(txID, driver.TxStatus(status)); err != nil {
-		db.rollback(err)
+	d.storeLock.Lock()
+	if err := d.db.SetStatus(txID, status); err != nil {
+		d.storeLock.Unlock()
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, status)
 	}
-	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, db.counter)
+	d.storeLock.Unlock()
+
+	// notify the listeners
+	d.Notify(db.StatusEvent{
+		TxID:           txID,
+		ValidationCode: status,
+	})
+	logger.Debugf("Set status [%s][%s]...[%d] done without errors", txID, status, d.counter)
 	return nil
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (db *DB) GetStatus(txID string) (TxStatus, error) {
-	logger.Debugf("Get status [%s]...[%d]", txID, db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
+func (d *DB) GetStatus(txID string) (TxStatus, error) {
+	logger.Debugf("Get status [%s]...[%d]", txID, d.counter)
+	d.storeLock.Lock()
+	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	status, err := db.db.GetStatus(txID)
+	status, err := d.db.GetStatus(txID)
 	if err != nil {
 		return Unknown, errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, db.counter)
+	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, d.counter)
 	return status, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
-func (db *DB) GetTokenRequest(txID string) ([]byte, error) {
-	return db.db.GetTokenRequest(txID)
+func (d *DB) GetTokenRequest(txID string) ([]byte, error) {
+	return d.db.GetTokenRequest(txID)
 }
 
 // AddTransactionEndorsementAck records the signature of a given endorser for a given transaction
-func (db *DB) AddTransactionEndorsementAck(txID string, id view2.Identity, sigma []byte) error {
-	return db.db.AddTransactionEndorsementAck(txID, id, sigma)
+func (d *DB) AddTransactionEndorsementAck(txID string, id view2.Identity, sigma []byte) error {
+	return d.db.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
 // GetTransactionEndorsementAcks returns the endorsement signatures for the given transaction id
-func (db *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
-	return db.db.GetTransactionEndorsementAcks(txID)
+func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, error) {
+	return d.db.GetTransactionEndorsementAcks(txID)
 }
 
 // AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
-func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
-	logger.Debugf("Appending new validation record... [%d]", db.counter)
-	db.storeLock.Lock()
-	defer db.storeLock.Unlock()
+func (d *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+	logger.Debugf("Appending new validation record... [%d]", d.counter)
+	d.storeLock.Lock()
+	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	if err := db.db.BeginUpdate(); err != nil {
-		db.rollback(err)
+	if err := d.db.BeginUpdate(); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := db.db.AddValidationRecord(txID, tr, meta); err != nil {
-		db.rollback(err)
+	if err := d.db.AddValidationRecord(txID, tr, meta); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
-	if err := db.db.Commit(); err != nil {
-		db.rollback(err)
+	if err := d.db.Commit(); err != nil {
+		d.rollback(err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
 	}
 
@@ -342,7 +347,7 @@ func (db *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]b
 	return nil
 }
 
-func (db *DB) appendTransactions(record *token.AuditRecord) error {
+func (d *DB) appendTransactions(record *token.AuditRecord) error {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
@@ -393,7 +398,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					}
 				}
 
-				if err := db.db.AddTransaction(&driver.TransactionRecord{
+				if err := d.db.AddTransaction(&driver.TransactionRecord{
 					TxID:         record.Anchor,
 					SenderEID:    inEID,
 					RecipientEID: outEID,
@@ -403,7 +408,7 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 					ActionType:   tt,
 					Timestamp:    timestamp,
 				}); err != nil {
-					if err1 := db.db.Discard(); err1 != nil {
+					if err1 := d.db.Discard(); err1 != nil {
 						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
 					}
 					return err
@@ -418,13 +423,13 @@ func (db *DB) appendTransactions(record *token.AuditRecord) error {
 	return nil
 }
 
-func (db *DB) appendTokenRequest(request *token.Request) error {
+func (d *DB) appendTokenRequest(request *token.Request) error {
 	raw, err := request.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
 	}
-	if err := db.db.AddTokenRequest(request.Anchor, raw); err != nil {
-		if err1 := db.db.Discard(); err1 != nil {
+	if err := d.db.AddTokenRequest(request.Anchor, raw); err != nil {
+		if err1 := d.db.Discard(); err1 != nil {
 			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
 		}
 		return err
@@ -432,8 +437,8 @@ func (db *DB) appendTokenRequest(request *token.Request) error {
 	return nil
 }
 
-func (db *DB) rollback(err error) {
-	if err1 := db.db.Discard(); err1 != nil {
+func (d *DB) rollback(err error) {
+	if err1 := d.db.Discard(); err1 != nil {
 		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
 	}
 }
