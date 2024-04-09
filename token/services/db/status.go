@@ -39,7 +39,6 @@ func (c *StatusSupport) AddStatusListener(txID string, ch chan StatusEvent) {
 	ls, ok := c.listeners[txID]
 	if !ok {
 		ls = []chan StatusEvent{}
-		c.listeners[txID] = ls
 	}
 	ls = append(ls, ch)
 	c.listeners[txID] = ls
