@@ -21,7 +21,7 @@ type StatusEvent struct {
 
 type StatusSupport struct {
 	listeners      map[string][]chan StatusEvent
-	mutex          sync.Mutex
+	mutex          sync.RWMutex
 	pollingTimeout time.Duration
 }
 
@@ -63,11 +63,18 @@ func (c *StatusSupport) DeleteStatusListener(txID string, ch chan StatusEvent) {
 }
 
 func (c *StatusSupport) Notify(event StatusEvent) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
+	c.mutex.RLock()
 	listeners := c.listeners[event.TxID]
-	for _, listener := range listeners {
+	if len(listeners) == 0 {
+		c.mutex.RUnlock()
+		return
+	}
+	// clone listeners and release lock
+	clone := make([]chan StatusEvent, len(listeners))
+	copy(clone, listeners)
+	c.mutex.RUnlock()
+
+	for _, listener := range clone {
 		listener <- event
 	}
 }
