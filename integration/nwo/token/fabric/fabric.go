@@ -174,14 +174,13 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(os.MkdirAll(p.IdentityDBSQLDataSourceDir(uniqueName), 0775)).ToNot(HaveOccurred(), "failed to create [%s]", p.IdentityDBSQLDataSourceDir(uniqueName))
 
 	t, err := template.New("peer").Funcs(template.FuncMap{
-		"TMSID":                 func() string { return tms.ID() },
-		"TMS":                   func() *topology2.TMS { return tms },
-		"Wallets":               func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
-		"SQLDataSource":         func() string { return p.DBPath(p.TTXDBSQLDataSourceDir(uniqueName), tms) },
-		"TokensSQLDataSource":   func() string { return p.DBPath(p.TokensDBSQLDataSourceDir(uniqueName), tms) },
-		"AuditSQLDataSource":    func() string { return p.DBPath(p.AuditDBSQLDataSourceDir(uniqueName), tms) },
-		"IdentitySQLDataSource": func() string { return p.DBPath(p.IdentityDBSQLDataSourceDir(uniqueName), tms) },
-		"NodeKVSPath":           func() string { return p.FSCNodeKVSDir(uniqueName) },
+		"TMSID":               func() string { return tms.ID() },
+		"TMS":                 func() *topology2.TMS { return tms },
+		"Wallets":             func() *generators.Wallets { return p.GetEntry(tms).Wallets[node.Name] },
+		"SQLDriver":           func() string { return GetTokenPersistenceDriver(node.Options) },
+		"SQLDataSource":       func() string { return p.GetSQLDataSource(node.Options, uniqueName, tms) },
+		"TokensSQLDriver":     func() string { return GetTokenPersistenceDriver(node.Options) },
+		"TokensSQLDataSource": func() string { return p.GetTokensSQLDataSource(node.Options, uniqueName, tms) },
 	}).Parse(Extension)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -190,6 +189,41 @@ func (p *NetworkHandler) GenerateExtension(tms *topology2.TMS, node *sfcnode.Nod
 	Expect(err).NotTo(HaveOccurred())
 
 	return ext.String()
+}
+
+func (p *NetworkHandler) GetTokensSQLDataSource(opts *sfcnode.Options, uniqueName string, tms *topology2.TMS) string {
+	switch GetTokenPersistenceDriver(opts) {
+	case "sqlite":
+		return p.DBPath(p.TokensDBSQLDataSourceDir(uniqueName), tms)
+	case "postgres":
+		return GetPostgresDataSource(opts)
+	}
+	panic("unknown driver type")
+
+}
+
+func (p *NetworkHandler) GetSQLDataSource(opts *sfcnode.Options, uniqueName string, tms *topology2.TMS) string {
+	switch GetTokenPersistenceDriver(opts) {
+	case "sqlite":
+		return p.DBPath(p.TTXDBSQLDataSourceDir(uniqueName), tms)
+	case "postgres":
+		return GetPostgresDataSource(opts)
+	}
+	panic("unknown driver type")
+}
+
+func GetPostgresDataSource(opts *sfcnode.Options) string {
+	if v := opts.Get("token.persistence.sql"); v != nil {
+		return v.(string)
+	}
+	panic("unknown data source")
+}
+
+func GetTokenPersistenceDriver(opts *sfcnode.Options) string {
+	if v := opts.Get("token.persistence.driver"); v != nil {
+		return v.(string)
+	}
+	return "sqlite"
 }
 
 func (p *NetworkHandler) PostRun(load bool, tms *topology2.TMS) {

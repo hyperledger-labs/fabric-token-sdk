@@ -8,36 +8,40 @@ package dlog
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	orion "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		network.Stop()
+	Describe("NFT Orion with libp2p", func() {
+		var ts = nft.NewTestSuiteLibP2P("orion", StartPortDlog, "dlog")
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("succeeded", func() { nft.TestAll(ts.II) })
 	})
 
-	Describe("NFT Orion", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", nft.Topology("orion", "dlog", &orion.SDK{}, &sdk.SDK{})...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
+	Describe("NFT Orion with websockets", func() {
+		var ts = nft.NewTestSuiteWebsocket("orion", StartPortDlog, "dlog", integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("succeeded", func() { nft.TestAll(ts.II) })
+	})
 
-		It("succeeded", func() {
-			nft.TestAll(network)
+	Describe("NFT Orion with websockets and replicas", func() {
+		var ts = nft.NewTestSuiteWebsocket("orion", StartPortDlog, "dlog", &integration.ReplicationOptions{
+			ReplicationFactors: map[string]int{
+				"alice": 3,
+				"bob":   2,
+			},
+			SQLConfigs: map[string]*sql.PostgresConfig{
+				"alice": sql.DefaultConfig("alice-db"),
+				"bob":   sql.DefaultConfig("bob-db"),
+			},
 		})
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("succeeded", func() { nft.TestAllWithReplicas(ts.II) })
 	})
 
 })

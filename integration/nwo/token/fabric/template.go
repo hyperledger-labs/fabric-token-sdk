@@ -31,7 +31,7 @@ token:
           type: unity
           opts:
             createSchema: true 
-            driver: sqlite    
+            driver: {{ SQLDriver }}    
             maxOpenConns: 10
             dataSource: {{ SQLDataSource }}
       tokendb:
@@ -40,7 +40,7 @@ token:
           opts:
             createSchema: true 
             tablePrefix: tokens  
-            driver: sqlite    
+            driver: {{ TokensSQLDriver }}    
             maxOpenConns: 10
             dataSource: {{ TokensSQLDataSource }}
       # Wallets associated with this TMS
