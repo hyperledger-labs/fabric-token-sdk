@@ -162,6 +162,7 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 			Status:       driver.Pending,
 		}
 		assert.NoError(t, db.AddTransaction(tr1))
+		assert.NoError(t, db.AddTokenRequest(tr1.TxID, []byte(fmt.Sprintf("token request for %s", tr1.TxID))))
 		txs = append(txs, tr1)
 	}
 	assert.NoError(t, db.Commit())
@@ -194,14 +195,13 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Empty(t, tr)
 
 	// update status
-	assert.NoError(t, db.BeginUpdate())
-	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed, "pineapple"))
 	assert.NoError(t, db.SetStatus("tx3", driver.Confirmed, ""))
-	assert.NoError(t, db.Commit())
 
-	status, err := db.GetStatus("tx2")
+	status, message, err := db.GetStatus("tx2")
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Confirmed, status)
+	assert.Equal(t, "pineapple", message)
 
 	records := getTransactions(t, db, driver.QueryTransactionsParams{Statuses: []driver.TxStatus{driver.Pending}})
 	assert.Len(t, records, 19, "expect 19 pending")
@@ -209,7 +209,7 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	records = getTransactions(t, db, driver.QueryTransactionsParams{Statuses: []driver.TxStatus{driver.Confirmed}})
 	assert.Len(t, records, 2, "expect 2 confirmed")
 
-	status, err = db.GetStatus("nonexistenttx")
+	status, _, err = db.GetStatus("nonexistenttx")
 	assert.NoError(t, err, "a non existent transaction should return Unknown status but no error")
 	assert.Equal(t, driver.Unknown, status)
 }
@@ -562,13 +562,13 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 			Metadata: map[string][]byte{
 				"key": []byte("value"),
 			},
-			Status: "",
+			Status: driver.Unknown,
 		},
 		{
 			TxID:         "2",
 			TokenRequest: []byte{},
 			Metadata:     nil,
-			Status:       "",
+			Status:       driver.Unknown,
 		},
 		{
 			TxID:         "3",
@@ -576,7 +576,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 			Metadata: map[string][]byte{
 				"key": []byte("value"),
 			},
-			Status: "",
+			Status: driver.Unknown,
 		},
 		{
 			TxID:         "4",
@@ -622,7 +622,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 
 	filtered := getValidationRecords(t, db, driver.QueryValidationRecordsParams{
 		Filter: func(r *driver.ValidationRecord) bool {
-			return r.Status == ""
+			return r.Status == driver.Unknown
 		},
 	})
 	assert.Len(t, filtered, 3)

@@ -57,17 +57,17 @@ func (a *DB) Append(tx *Transaction) error {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *DB) SetStatus(txID string, status TxStatus, message string) error {
-	return a.db.SetStatus(txID, ttxdb.TxStatus(status), message)
+	return a.db.SetStatus(txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *DB) GetStatus(txID string) (TxStatus, error) {
-	st, err := a.db.GetStatus(txID)
+func (a *DB) GetStatus(txID string) (TxStatus, string, error) {
+	st, message, err := a.db.GetStatus(txID)
 	if err != nil {
-		return "", err
+		return Unknown, "", err
 	}
-	return TxStatus(st), nil
+	return st, message, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.

@@ -125,10 +125,10 @@ func (db *TransactionDB) AddTokenRequest(txID string, tr []byte) error {
 	if db.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, request) VALUES ($1, $2)", db.table.Requests)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message) VALUES ($1, $2, $3, $4)", db.table.Requests)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)))
 
-	_, err := db.txn.Exec(query, txID, tr)
+	_, err := db.txn.Exec(query, txID, tr, driver.Pending, "")
 	return err
 }
 
@@ -163,17 +163,19 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 	for rows.Next() {
 		var r driver.MovementRecord
 		var amount int64
+		var status int
 		err = rows.Scan(
 			&r.TxID,
 			&r.EnrollmentID,
 			&r.TokenType,
 			&amount,
-			&r.Status,
+			&status,
 		)
 		if err != nil {
 			return res, err
 		}
 		r.Amount = big.NewInt(amount)
+		r.Status = driver.TxStatus(status)
 		logger.Debugf("movement [%s:%s:%d]", r.TxID, r.Status, r.Amount)
 
 		res = append(res, &r)
@@ -256,13 +258,16 @@ func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus, message 
 		}
 	}()
 
-	if err = db.setStatusIfExists(tx, db.table.Movements, txID, status); err != nil {
+	if err = db.setStatusIfExists(tx, db.table.Requests, txID, status, message); err != nil {
 		return err
 	}
-	if err = db.setStatusIfExists(tx, db.table.Transactions, txID, status); err != nil {
+	if err = db.setStatusIfExists(tx, db.table.Movements, txID, status, ""); err != nil {
 		return err
 	}
-	if err = db.setStatusIfExists(tx, db.table.Validations, txID, status); err != nil {
+	if err = db.setStatusIfExists(tx, db.table.Transactions, txID, status, ""); err != nil {
+		return err
+	}
+	if err = db.setStatusIfExists(tx, db.table.Validations, txID, status, ""); err != nil {
 		return err
 	}
 
@@ -275,7 +280,7 @@ func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus, message 
 
 // setStatusIfExists checks if the record exists before updating it, because some sql drivers return an
 // error on update of a non-existent record
-func (db *TransactionDB) setStatusIfExists(tx *sql.Tx, table, txID string, status driver.TxStatus) error {
+func (db *TransactionDB) setStatusIfExists(tx *sql.Tx, table, txID string, status driver.TxStatus, statusMessage string) error {
 	curStatus := driver.Unknown
 	query := fmt.Sprintf("SELECT status FROM %s WHERE tx_id = $1 LIMIT 1;", table)
 	logger.Debug(query)
@@ -294,10 +299,15 @@ func (db *TransactionDB) setStatusIfExists(tx *sql.Tx, table, txID string, statu
 		return nil
 	}
 
-	query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", table)
-	logger.Debug(query)
-
-	_, err = tx.Exec(query, status, txID)
+	if len(statusMessage) != 0 {
+		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", table)
+		logger.Debug(query)
+		_, err = tx.Exec(query, status, statusMessage, txID)
+	} else {
+		query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", table)
+		logger.Debug(query)
+		_, err = tx.Exec(query, status, txID)
+	}
 	if err != nil {
 		return errors.Wrapf(err, "error updating tx [%s]", txID)
 	}
@@ -305,21 +315,22 @@ func (db *TransactionDB) setStatusIfExists(tx *sql.Tx, table, txID string, statu
 	return nil
 }
 
-func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, error) {
+func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error) {
 	var status driver.TxStatus
-	query := fmt.Sprintf("SELECT status FROM %s WHERE tx_id=$1;", db.table.Transactions)
+	var statusMessage string
+	query := fmt.Sprintf("SELECT status, status_message FROM %s WHERE tx_id=$1;", db.table.Requests)
 	logger.Debug(query, txID)
 
 	row := db.db.QueryRow(query, txID)
-	if err := row.Scan(&status); err != nil {
+	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
 			// not an error for compatibility with badger.
-			logger.Warnf("tried to get status for non-existent tx %s, returning unknown", txID)
-			return driver.Unknown, nil
+			logger.Warnf("tried to get status for non-existent tx [%s], returning unknown", txID)
+			return driver.Unknown, "", nil
 		}
-		return driver.Unknown, errors.Wrapf(err, "error querying db")
+		return driver.Unknown, "", errors.Wrapf(err, "error querying db")
 	}
-	return status, nil
+	return status, statusMessage, nil
 }
 
 func (db *TransactionDB) AddValidationRecord(txID string, tokenrequest []byte, meta map[string][]byte) error {
@@ -328,7 +339,7 @@ func (db *TransactionDB) AddValidationRecord(txID string, tokenrequest []byte, m
 		return errors.New("no db transaction in progress")
 	}
 
-	status := "" // analogous to badger implementation
+	status := driver.Unknown // analogous to badger implementation
 	md, err := marshal(meta)
 	if err != nil {
 		return errors.New("can't marshal metadata")
@@ -402,7 +413,7 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 		if err := rows.Scan(&endorser, &sigma); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				// not an error for compatibility with badger.
-				logger.Warnf("tried to get status for non-existent tx %s, returning unknown", txID)
+				logger.Warnf("tried to get status for non-existent tx [%s], returning unknown", txID)
 				continue
 			}
 			return nil, errors.Wrapf(err, "error querying db")
@@ -441,7 +452,7 @@ func (db *TransactionDB) GetSchema() string {
 			token_type TEXT NOT NULL,
 			amount BIGINT NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
-			status TEXT NOT NULL
+			status INT NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 
@@ -452,20 +463,24 @@ func (db *TransactionDB) GetSchema() string {
 			token_type TEXT NOT NULL,
 			amount BIGINT NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
-			status TEXT NOT NULL
+			status INT NOT NULL
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL PRIMARY KEY,
-			request BYTEA NOT NULL
+			request BYTEA NOT NULL,
+			status INT NOT NULL,
+			status_message TEXT NOT NULL
 		);
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL PRIMARY KEY,
 			request BYTEA NOT NULL,
 			metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
-			status TEXT NOT NULL
+			status INT NOT NULL
 		);
 
 		CREATE TABLE IF NOT EXISTS %s (
@@ -478,16 +493,14 @@ func (db *TransactionDB) GetSchema() string {
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		`,
 		db.table.Transactions,
-		db.table.Transactions,
-		db.table.Transactions,
+		db.table.Transactions, db.table.Transactions,
 		db.table.Movements,
-		db.table.Movements,
-		db.table.Movements,
+		db.table.Movements, db.table.Movements,
 		db.table.Requests,
+		db.table.Requests, db.table.Requests,
 		db.table.Validations,
 		db.table.TransactionEndorseAck,
-		db.table.TransactionEndorseAck,
-		db.table.TransactionEndorseAck,
+		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)
 }
 
@@ -518,6 +531,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	}
 	var actionType int
 	var amount int64
+	var status int
 	err := t.txs.Scan(
 		&r.TxID,
 		&actionType,
@@ -525,12 +539,13 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 		&r.RecipientEID,
 		&r.TokenType,
 		&amount,
-		&r.Status,
+		&status,
 		&r.Timestamp,
 	)
 
 	r.ActionType = driver.ActionType(actionType)
 	r.Amount = big.NewInt(amount)
+	r.Status = driver.TxStatus(status)
 
 	return &r, err
 }
@@ -555,11 +570,12 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 
 	var meta []byte
 	var storedAt time.Time
+	var status int
 	if err := t.txs.Scan(
 		&r.TxID,
 		&r.TokenRequest,
 		&meta,
-		&r.Status,
+		&status,
 		&storedAt,
 	); err != nil {
 		return &r, err
@@ -568,6 +584,7 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 		return &r, err
 	}
 	r.Timestamp = storedAt
+	r.Status = driver.TxStatus(status)
 
 	// sqlite database returns nil for empty slice
 	if r.TokenRequest == nil {

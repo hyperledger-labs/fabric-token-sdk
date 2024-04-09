@@ -28,6 +28,8 @@ const (
 	Deleted = auditdb.Deleted
 )
 
+var TxStatusMessage = auditdb.TxStatusMessage
+
 // Transaction models a generic token transaction
 type Transaction interface {
 	ID() string
@@ -131,7 +133,7 @@ func (a *Auditor) SetStatus(txID string, status TxStatus, message string) error 
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *Auditor) GetStatus(txID string) (TxStatus, error) {
+func (a *Auditor) GetStatus(txID string) (TxStatus, string, error) {
 	return a.db.GetStatus(txID)
 }
 

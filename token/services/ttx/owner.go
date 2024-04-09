@@ -54,7 +54,7 @@ func (a *TxOwner) SetStatus(txID string, status TxStatus, message string) error 
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *TxOwner) GetStatus(txID string) (TxStatus, error) {
+func (a *TxOwner) GetStatus(txID string) (TxStatus, string, error) {
 	return a.owner.GetStatus(txID)
 }
 

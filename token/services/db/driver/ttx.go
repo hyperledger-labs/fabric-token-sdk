@@ -37,7 +37,7 @@ type TransactionDB interface {
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
-	GetStatus(txID string) (TxStatus, error)
+	GetStatus(txID string) (TxStatus, string, error)
 
 	// AddMovement adds a movement record to the database.
 	// Each token transaction can be seen as a list of movements.

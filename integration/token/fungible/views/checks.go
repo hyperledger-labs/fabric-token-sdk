@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -95,20 +97,20 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 		switch {
 		case vc == network.Unknown:
-			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", transactionRecord.TxID, transactionRecord.Status))
+			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", transactionRecord.TxID, driver.TxStatusMessage[transactionRecord.Status]))
 		case vc == network.HasDependencies:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] has dependencies", transactionRecord.TxID))
-		case vc == network.Valid && transactionRecord.Status == string(ttxdb.Pending):
+		case vc == network.Valid && transactionRecord.Status == ttxdb.Pending:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but pending for the db", transactionRecord.TxID))
-		case vc == network.Valid && transactionRecord.Status == string(ttxdb.Deleted):
+		case vc == network.Valid && transactionRecord.Status == ttxdb.Deleted:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but deleted for the db", transactionRecord.TxID))
-		case vc == network.Invalid && transactionRecord.Status == string(ttxdb.Confirmed):
+		case vc == network.Invalid && transactionRecord.Status == ttxdb.Confirmed:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but confirmed for the db", transactionRecord.TxID))
-		case vc == network.Invalid && transactionRecord.Status == string(ttxdb.Pending):
+		case vc == network.Invalid && transactionRecord.Status == ttxdb.Pending:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is invalid for vault but pending for the db", transactionRecord.TxID))
-		case vc == network.Busy && transactionRecord.Status == string(ttxdb.Confirmed):
+		case vc == network.Busy && transactionRecord.Status == ttxdb.Confirmed:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but confirmed for the db", transactionRecord.TxID))
-		case vc == network.Busy && transactionRecord.Status == string(ttxdb.Deleted):
+		case vc == network.Busy && transactionRecord.Status == ttxdb.Deleted:
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is busy for vault but deleted for the db", transactionRecord.TxID))
 		}
 
@@ -133,7 +135,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 			}
 			errorMessages = append(errorMessages, fmt.Sprintf("transaction record [%s] is valid for vault but not for the ledger [%d]", transactionRecord.TxID, lVC))
 		case vc == network.Invalid && lVC != network.Invalid:
-			if lVC != network.Unknown || transactionRecord.Status != string(ttxdb.Deleted) {
+			if lVC != network.Unknown || transactionRecord.Status != ttxdb.Deleted {
 				if err != nil {
 					errorMessages = append(errorMessages, fmt.Sprintf("failed to get ledger transaction status for [%s]: [%s]", transactionRecord.TxID, err))
 				}
@@ -337,7 +339,7 @@ func (a *TTXDBQueryExecutor) Done() {
 
 type TransactionRecord struct {
 	TxID   string
-	Status string
+	Status driver.TxStatus
 }
 
 type AuditDBTransactionIterator struct {
@@ -358,7 +360,7 @@ func (t *AuditDBTransactionIterator) Next() (*TransactionRecord, error) {
 	}
 	return &TransactionRecord{
 		TxID:   next.TxID,
-		Status: string(next.Status),
+		Status: next.Status,
 	}, nil
 }
 
@@ -380,6 +382,6 @@ func (t *TTXDBTransactionIterator) Next() (*TransactionRecord, error) {
 	}
 	return &TransactionRecord{
 		TxID:   next.TxID,
-		Status: string(next.Status),
+		Status: next.Status,
 	}, nil
 }
