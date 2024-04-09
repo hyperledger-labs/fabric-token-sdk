@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -20,7 +21,11 @@ import (
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func Topology(backend, tokenSDKDriver string) []api.Topology {
+type replicationOpts interface {
+	For(name string) []node.Option
+}
+
+func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts replicationOpts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch backend {
@@ -41,45 +46,53 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("grpc=error:debug", "")
+	fscTopology.P2PCommunicationType = commType
 
-	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
-	)
-	issuer.RegisterViewFactory("issue", &views.IssueHouseViewFactory{})
+	fscTopology.AddNodeByName("issuer").
+		AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			orion.WithRole("issuer"),
+			token.WithDefaultIssuerIdentity(),
+		).
+		AddOptions(replicationOpts.For("issuer")...).
+		RegisterViewFactory("issue", &views.IssueHouseViewFactory{})
 
-	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
-	)
-	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
+	auditor := fscTopology.AddNodeByName("auditor").
+		AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			orion.WithRole("auditor"),
+			token.WithAuditorIdentity(),
+		).
+		AddOptions(replicationOpts.For("auditor")...).
+		RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 
-	alice := fscTopology.AddNodeByName("alice").AddOptions(
+	fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("alice"),
 		token.WithOwnerIdentity("alice.id1"),
-	)
-	alice.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
-	alice.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
-	alice.RegisterViewFactory("transfer", &views.TransferHouseViewFactory{})
-	alice.RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
+	).
+		AddOptions(replicationOpts.For("alice")...).
+		RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{}).
+		RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{}).
+		RegisterViewFactory("transfer", &views.TransferHouseViewFactory{}).
+		RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
 
-	bob := fscTopology.AddNodeByName("bob").AddOptions(
-		fabric.WithOrganization("Org2"),
-		fabric.WithAnonymousIdentity(),
-		orion.WithRole("bob"),
-		token.WithDefaultOwnerIdentity(),
-		token.WithOwnerIdentity("bob.id1"),
-	)
-	bob.RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{})
-	bob.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
-	bob.RegisterViewFactory("transfer", &views.TransferHouseViewFactory{})
-	bob.RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
+	fscTopology.AddNodeByName("bob").
+		AddOptions(
+			fabric.WithOrganization("Org2"),
+			fabric.WithAnonymousIdentity(),
+			orion.WithRole("bob"),
+			token.WithDefaultOwnerIdentity(),
+			token.WithOwnerIdentity("bob.id1"),
+		).
+		AddOptions(replicationOpts.For("bob")...).
+		RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{}).
+		RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{}).
+		RegisterViewFactory("transfer", &views.TransferHouseViewFactory{}).
+		RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
@@ -87,8 +100,9 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org1")
 	if backend == "orion" {
 		// we need to define the custodian
-		custodian := fscTopology.AddNodeByName("custodian")
-		custodian.AddOptions(orion.WithRole("custodian"))
+		custodian := fscTopology.AddNodeByName("custodian").
+			AddOptions(orion.WithRole("custodian")).
+			AddOptions(replicationOpts.For("custodian")...)
 		orion2.SetCustodian(tms, custodian)
 		tms.AddNode(custodian)
 

@@ -8,34 +8,40 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
 
-	AfterEach(func() {
-		network.Stop()
+	Describe("NFT with libp2p", func() {
+		var ts = nft.NewTestSuiteLibP2P("fabric", StartPortDlog, "fabtoken")
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("succeeded", func() { nft.TestAll(ts.II) })
 	})
 
-	Describe("NFT", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", nft.Topology("fabric", "fabtoken")...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
-		It("succeeded", func() {
-			nft.TestAll(network)
-		})
+	Describe("NFT with websockets", func() {
+		var ts = nft.NewTestSuiteWebsocket("fabric", StartPortDlog, "fabtoken", integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("succeeded", func() { nft.TestAll(ts.II) })
 	})
 
+	Describe("NFT with websockets and replicas", func() {
+		var ts = nft.NewTestSuiteWebsocket("fabric", StartPortDlog, "fabtoken", &integration.ReplicationOptions{
+			ReplicationFactors: map[string]int{
+				"alice": 3,
+				"bob":   2,
+			},
+			SQLConfigs: map[string]*sql.PostgresConfig{
+				"alice": sql.DefaultConfig("alice-db"),
+				"bob":   sql.DefaultConfig("bob-db"),
+			},
+		})
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("succeeded", func() { nft.TestAllWithReplicas(ts.II) })
+	})
 })
