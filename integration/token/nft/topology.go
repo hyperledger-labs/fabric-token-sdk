@@ -10,22 +10,18 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-type replicationOpts interface {
-	For(name string) []node.Option
-}
-
-func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts replicationOpts) []api.Topology {
+func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch backend {
