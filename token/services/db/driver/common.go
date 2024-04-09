@@ -62,6 +62,7 @@ const (
 )
 
 var (
+	// TxStatusMessage maps TxStatus to string
 	TxStatusMessage = map[TxStatus]string{
 		Unknown:   "Unknown",
 		Pending:   "Pending",

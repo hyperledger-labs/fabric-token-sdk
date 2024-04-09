@@ -21,3 +21,6 @@ const (
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
 	Deleted TxStatus = driver.Deleted
 )
+
+// TxStatusMessage maps TxStatus to string
+var TxStatusMessage = driver.TxStatusMessage
