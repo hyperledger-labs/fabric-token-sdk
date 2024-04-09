@@ -15,6 +15,10 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+type ReplicationOpts interface {
+	For(name string) []node.Option
+}
+
 type ReplicationOptions struct {
 	*integration.ReplicationOptions
 }
@@ -30,8 +34,10 @@ func (o *ReplicationOptions) For(name string) []node.Option {
 func NewTestSuite(sqlConfigs map[string]*sql.PostgresConfig, startPort func() int, topologies []api.Topology) *TestSuite {
 	return &TestSuite{
 		sqlConfigs: sqlConfigs,
-		generator:  func() (*integration.Infrastructure, error) { return integration.New(startPort(), "", topologies...) },
-		closeFunc:  func() {},
+		generator: func() (*integration.Infrastructure, error) {
+			return integration.New(startPort(), "", topologies...)
+		},
+		closeFunc: func() {},
 	}
 }
 

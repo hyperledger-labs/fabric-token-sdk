@@ -24,7 +24,7 @@ func NewTestSuiteLibP2P(backend string, startPort func() int, tokenSDKDriver str
 }
 
 func NewTestSuiteWebsocket(backend string, startPort func() int, tokenSDKDriver string, replicationOpts *integration.ReplicationOptions) *token.TestSuite {
-	return token.NewTestSuite(replicationOpts.SQLConfigs, startPort, Topology(backend, fsc.WebSocket, tokenSDKDriver, &token.ReplicationOptions{replicationOpts}))
+	return token.NewTestSuite(replicationOpts.SQLConfigs, startPort, Topology(backend, fsc.WebSocket, tokenSDKDriver, &token.ReplicationOptions{ReplicationOptions: replicationOpts}))
 }
 
 func TestAll(network *integration.Infrastructure) {
