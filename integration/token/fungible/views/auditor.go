@@ -295,8 +295,9 @@ func (p *CurrentSpendingViewFactory) NewView(in []byte) (view.View, error) {
 }
 
 type SetTransactionAuditStatus struct {
-	TxID   string
-	Status ttx.TxStatus
+	TxID    string
+	Status  ttx.TxStatus
+	Message string
 }
 
 // SetTransactionAuditStatusView is used to set the status of a given transaction in the audit db
@@ -310,7 +311,7 @@ func (r *SetTransactionAuditStatusView) Call(context view.Context) (interface{},
 
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
-	assert.NoError(auditor.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+	assert.NoError(auditor.SetStatus(r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	if r.Status == ttx.Deleted {
 		tms := token.GetManagementService(context)

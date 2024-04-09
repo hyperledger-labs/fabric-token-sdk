@@ -48,8 +48,8 @@ func (a *TxOwner) TransactionInfo(txID string) (*TransactionInfo, error) {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxOwner) SetStatus(txID string, status TxStatus) error {
-	return a.owner.SetStatus(txID, status)
+func (a *TxOwner) SetStatus(txID string, status TxStatus, message string) error {
+	return a.owner.SetStatus(txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.

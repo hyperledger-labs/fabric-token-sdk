@@ -58,7 +58,7 @@ type QueryEngine struct {
 }
 
 func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
-	vc, err := q.backend.TransactionStatus(id.TxId)
+	vc, _, err := q.backend.TransactionStatus(id.TxId)
 	if err != nil {
 		return false, err
 	}

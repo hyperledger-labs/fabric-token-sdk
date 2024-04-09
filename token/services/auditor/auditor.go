@@ -125,8 +125,8 @@ func (a *Auditor) NewQueryExecutor() *QueryExecutor {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *Auditor) SetStatus(txID string, status TxStatus) error {
-	return a.db.SetStatus(txID, status)
+func (a *Auditor) SetStatus(txID string, status TxStatus, message string) error {
+	return a.db.SetStatus(txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.
@@ -145,7 +145,7 @@ type TxStatusChangesListener struct {
 	db  *auditdb.DB
 }
 
-func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
+func (t *TxStatusChangesListener) OnStatusChange(txID string, status int, message string) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var txStatus auditdb.TxStatus
 	switch network.ValidationCode(status) {
@@ -154,7 +154,7 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	case network.Invalid:
 		txStatus = auditdb.Deleted
 	}
-	if err := t.db.SetStatus(txID, txStatus); err != nil {
+	if err := t.db.SetStatus(txID, txStatus, message); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)

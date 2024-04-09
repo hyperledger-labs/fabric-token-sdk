@@ -18,5 +18,5 @@ const (
 )
 
 type Vault interface {
-	TransactionStatus(txID string) (ValidationCode, error)
+	TransactionStatus(txID string) (ValidationCode, string, error)
 }

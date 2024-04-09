@@ -88,7 +88,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 
 		// compare the status in the vault with the status of the record
-		vc, err := v.Status(transactionRecord.TxID)
+		vc, _, err := v.Status(transactionRecord.TxID)
 		if err != nil {
 			errorMessages = append(errorMessages, fmt.Sprintf("failed to get vault status transaction record [%s]: [%s]", transactionRecord.TxID, err))
 			continue
@@ -122,7 +122,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		assert.NotNil(tokenRequest, "token requests must not be nil")
 
 		// check the ledger
-		lVC, err := l.Status(transactionRecord.TxID)
+		lVC, _, err := l.Status(transactionRecord.TxID)
 		if err != nil {
 			lVC = network.Unknown
 		}

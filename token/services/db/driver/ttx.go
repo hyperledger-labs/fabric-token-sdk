@@ -33,7 +33,7 @@ type TransactionDB interface {
 	Discard() error
 
 	// SetStatus sets the status of a transaction
-	SetStatus(txID string, status TxStatus) error
+	SetStatus(txID string, status TxStatus, message string) error
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found

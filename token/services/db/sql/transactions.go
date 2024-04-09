@@ -242,7 +242,7 @@ func (db *TransactionDB) AddTransaction(r *driver.TransactionRecord) error {
 	return err
 }
 
-func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus) (err error) {
+func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus, message string) (err error) {
 	logger.Debugf("setting [%s] status to [%s]", txID, status)
 	tx, err := db.db.Begin()
 	if err != nil {

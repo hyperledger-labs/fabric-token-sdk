@@ -114,7 +114,7 @@ func TMovements(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, records, 1)
 
 	assert.NoError(t, db.BeginUpdate())
-	assert.NoError(t, db.SetStatus("2", driver.Confirmed))
+	assert.NoError(t, db.SetStatus("2", driver.Confirmed, ""))
 	assert.NoError(t, db.Commit())
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
@@ -122,7 +122,7 @@ func TMovements(t *testing.T, db driver.TokenTransactionDB) {
 
 	// setting same status twice should not change the results
 	assert.NoError(t, db.BeginUpdate())
-	assert.NoError(t, db.SetStatus("2", driver.Confirmed))
+	assert.NoError(t, db.SetStatus("2", driver.Confirmed, ""))
 	assert.NoError(t, db.Commit())
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Confirmed}})
 	assert.NoError(t, err)
@@ -195,8 +195,8 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 
 	// update status
 	assert.NoError(t, db.BeginUpdate())
-	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed))
-	assert.NoError(t, db.SetStatus("tx3", driver.Confirmed))
+	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed, ""))
+	assert.NoError(t, db.SetStatus("tx3", driver.Confirmed, ""))
 	assert.NoError(t, db.Commit())
 
 	status, err := db.GetStatus("tx2")
@@ -592,7 +592,7 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 		assert.NoError(t, db.AddValidationRecord(e.TxID, e.TokenRequest, e.Metadata), "AddValidationRecord "+e.TxID)
 	}
 	assert.NoError(t, db.Commit(), "Commit")
-	assert.NoError(t, db.SetStatus("4", driver.Confirmed))
+	assert.NoError(t, db.SetStatus("4", driver.Confirmed, ""))
 
 	all := getValidationRecords(t, db, driver.QueryValidationRecordsParams{})
 	assert.Len(t, all, 4)
