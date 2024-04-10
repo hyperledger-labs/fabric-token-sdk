@@ -12,6 +12,7 @@ import (
 	"github.com/hashicorp/go-uuid"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -53,9 +54,9 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 	return nil
 }
 
-func (v *Vault) TransactionStatus(txID string) (driver.ValidationCode, error) {
-	vc, err := v.ons.Vault().Status(txID)
-	return driver.ValidationCode(vc), err
+func (v *Vault) TransactionStatus(txID string) (driver2.ValidationCode, string, error) {
+	vc, message, err := v.ons.Vault().Status(txID)
+	return driver.ValidationCode(vc), message, err
 }
 
 type Executor struct {

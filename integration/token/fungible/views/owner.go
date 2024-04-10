@@ -17,8 +17,9 @@ import (
 )
 
 type SetTransactionOwnerStatus struct {
-	TxID   string
-	Status ttx.TxStatus
+	TxID    string
+	Status  ttx.TxStatus
+	Message string
 }
 
 // SetTransactionOwnerStatusView is used to set the status of a given transaction in the audit db
@@ -28,7 +29,7 @@ type SetTransactionOwnerStatusView struct {
 
 func (r *SetTransactionOwnerStatusView) Call(context view.Context) (interface{}, error) {
 	owner := ttx.NewOwner(context, token.GetManagementService(context))
-	assert.NoError(owner.SetStatus(r.TxID, r.Status), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
+	assert.NoError(owner.SetStatus(r.TxID, r.Status, r.Message), "failed to set status of [%s] to [%d]", r.TxID, r.Status)
 
 	if r.Status == ttx.Deleted {
 		tms := token.GetManagementService(context)

@@ -70,8 +70,8 @@ func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *TxAuditor) SetStatus(txID string, status TxStatus) error {
-	return a.auditDB.SetStatus(txID, auditdb.TxStatus(status))
+func (a *TxAuditor) SetStatus(txID string, status TxStatus, message string) error {
+	return a.auditDB.SetStatus(txID, auditdb.TxStatus(status), message)
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {

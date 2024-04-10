@@ -39,7 +39,7 @@ type UnspentTokensIterator = driver.UnspentTokensIterator
 // TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
 type TxStatusChangeListener interface {
 	// OnStatusChange is called when the status of a transaction changes
-	OnStatusChange(txID string, status int) error
+	OnStatusChange(txID string, status int, message string) error
 }
 
 type GetFunc func() (view.Identity, []byte, error)
@@ -167,13 +167,13 @@ func (v *Vault) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *Vault) Status(id string) (ValidationCode, error) {
-	vc, err := v.v.Status(id)
-	return ValidationCode(vc), err
+func (v *Vault) Status(id string) (ValidationCode, string, error) {
+	vc, message, err := v.v.Status(id)
+	return ValidationCode(vc), message, err
 }
 
 func (v *Vault) DiscardTx(id string) error {
-	return v.v.DiscardTx(id)
+	return v.v.DiscardTx(id, "")
 }
 
 // PruneInvalidUnspentTokens checks that each unspent token is actually available on the ledger.
@@ -270,12 +270,12 @@ type Ledger struct {
 	l driver.Ledger
 }
 
-func (l *Ledger) Status(id string) (ValidationCode, error) {
+func (l *Ledger) Status(id string) (ValidationCode, string, error) {
 	vc, err := l.l.Status(id)
 	if err != nil {
-		return 0, err
+		return 0, "", err
 	}
-	return ValidationCode(vc), nil
+	return ValidationCode(vc), "", nil
 }
 
 // Network provides access to the remote network

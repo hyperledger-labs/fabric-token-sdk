@@ -67,9 +67,9 @@ func (v *nv) DeleteTokens(ids ...*token.ID) error {
 	return v.tokenVault.DeleteTokens(ids...)
 }
 
-func (v *nv) Status(txID string) (driver.ValidationCode, error) {
-	vc, _, err := v.v.Status(txID)
-	return driver.ValidationCode(vc), err
+func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
+	vc, message, _, err := v.v.Status(id)
+	return driver.ValidationCode(vc), message, err
 }
 
 func (v *nv) GetLastTxID() (string, error) {
@@ -84,8 +84,8 @@ func (v *nv) Store(certifications map[*token.ID][]byte) error {
 	return v.tokenVault.CertificationStorage().Store(certifications)
 }
 
-func (v *nv) DiscardTx(txID string) error {
-	return v.v.DiscardTx(txID)
+func (v *nv) DiscardTx(id string, message string) error {
+	return v.v.DiscardTx(id, message)
 }
 
 type ledger struct {

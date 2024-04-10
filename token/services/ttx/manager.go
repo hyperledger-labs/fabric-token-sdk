@@ -106,8 +106,9 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	}
 	var pendingTXs []string
 	type ToBeUpdated struct {
-		TxID   string
-		Status ttxdb.TxStatus
+		TxID    string
+		Status  ttxdb.TxStatus
+		Message string
 	}
 	var toBeUpdated []ToBeUpdated
 	for {
@@ -132,7 +133,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 			}
 
 			// check the status of the pending transactions in the vault
-			status, err := v.Status(tr.TxID)
+			status, message, err := v.Status(tr.TxID)
 			if err != nil {
 				pendingTXs = append(pendingTXs, tr.TxID)
 				continue
@@ -149,8 +150,9 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 				continue
 			}
 			toBeUpdated = append(toBeUpdated, ToBeUpdated{
-				TxID:   tr.TxID,
-				Status: txStatus,
+				TxID:    tr.TxID,
+				Status:  txStatus,
+				Message: message,
 			})
 		}
 	}
@@ -158,7 +160,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	qe.Done()
 
 	for _, updated := range toBeUpdated {
-		if err := db.db.SetStatus(updated.TxID, updated.Status); err != nil {
+		if err := db.db.SetStatus(updated.TxID, updated.Status, updated.Message); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
 		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)

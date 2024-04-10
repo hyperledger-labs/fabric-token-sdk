@@ -148,7 +148,7 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 				return errors.Errorf("[%s] does not contain [%s]", err, failedClaimTXID)
 			}
 		}
-		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.Pending)
+		firstError := fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [%s]", failedLockTXID, auditor.TxStatusMessage[auditor.Pending])
 		if errs[2] != firstError {
 			return errors.Errorf("expected first error to be [%s], got [%s]", firstError, errs[0])
 		}

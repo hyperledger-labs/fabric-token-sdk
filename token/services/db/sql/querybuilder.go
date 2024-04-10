@@ -46,7 +46,7 @@ func transactionsConditionsSql(params driver.QueryTransactionsParams) (string, [
 	if len(params.Statuses) > 0 {
 		t := make([]interface{}, len(params.Statuses))
 		for i, s := range params.Statuses {
-			t[i] = string(s)
+			t[i] = s
 		}
 		add(&and, in(&args, "status", t))
 	}
@@ -89,7 +89,7 @@ func validationConditionsSql(params driver.QueryValidationRecordsParams) (string
 	if len(params.Statuses) > 0 {
 		t := make([]interface{}, len(params.Statuses))
 		for i, s := range params.Statuses {
-			t[i] = string(s)
+			t[i] = s
 		}
 		add(&and, in(&args, "status", t))
 	}
@@ -124,7 +124,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 	if len(params.TxStatuses) > 0 {
 		statuses := make([]interface{}, len(params.TxStatuses))
 		for i, s := range params.TxStatuses {
-			statuses[i] = string(s)
+			statuses[i] = s
 		}
 		add(&and, in(&args, "status", statuses))
 	} else {

@@ -56,18 +56,18 @@ func (a *DB) Append(tx *Transaction) error {
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
-func (a *DB) SetStatus(txID string, status TxStatus) error {
-	return a.db.SetStatus(txID, ttxdb.TxStatus(status))
+func (a *DB) SetStatus(txID string, status TxStatus, message string) error {
+	return a.db.SetStatus(txID, status, message)
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
-func (a *DB) GetStatus(txID string) (TxStatus, error) {
-	st, err := a.db.GetStatus(txID)
+func (a *DB) GetStatus(txID string) (TxStatus, string, error) {
+	st, message, err := a.db.GetStatus(txID)
 	if err != nil {
-		return "", err
+		return Unknown, "", err
 	}
-	return TxStatus(st), nil
+	return st, message, nil
 }
 
 // GetTokenRequest returns the token request bound to the passed transaction id, if available.
@@ -88,7 +88,7 @@ type TxStatusChangesListener struct {
 	db  *ttxdb.DB
 }
 
-func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error {
+func (t *TxStatusChangesListener) OnStatusChange(txID string, status int, message string) error {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var txStatus ttxdb.TxStatus
 	switch network.ValidationCode(status) {
@@ -97,7 +97,7 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int) error 
 	case network.Invalid:
 		txStatus = ttxdb.Deleted
 	}
-	if err := t.db.SetStatus(txID, txStatus); err != nil {
+	if err := t.db.SetStatus(txID, txStatus, message); err != nil {
 		return errors.WithMessagef(err, "failed setting status for request %s", txID)
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
