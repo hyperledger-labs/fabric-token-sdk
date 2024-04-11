@@ -148,7 +148,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 			return nil, errors.Wrapf(err, "failed to write action")
 		}
 	}
-	err = t.CommitTokenRequest(attributes[common.TokenRequestToSign], false)
+	err = t.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to commit token request")
 	}
