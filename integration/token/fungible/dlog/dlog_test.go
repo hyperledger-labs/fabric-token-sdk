@@ -40,7 +40,7 @@ var _ = Describe("EndToEnd", func() {
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
 					Aries:          true,
-					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
+					FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
