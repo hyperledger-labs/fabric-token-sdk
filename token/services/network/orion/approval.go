@@ -12,6 +12,7 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
 	"github.com/pkg/errors"
@@ -121,7 +122,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s]", request.Network)
 	}
 
-	actions, err := validator.UnmarshallAndVerify(
+	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(
 		&LedgerWrapper{qe: qe},
 		request.TxID,
 		request.Request,
@@ -147,7 +148,7 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 			return nil, errors.Wrapf(err, "failed to write action")
 		}
 	}
-	err = t.CommitTokenRequest(request.Request, false)
+	err = t.CommitTokenRequest(attributes[common.TokenRequestToSign], false)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to commit token request")
 	}

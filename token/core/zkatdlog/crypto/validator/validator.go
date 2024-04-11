@@ -69,5 +69,6 @@ func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidat
 		&ActionDeserializer{},
 		transferValidators,
 		issueValidators,
+		&common.Serializer{},
 	)
 }

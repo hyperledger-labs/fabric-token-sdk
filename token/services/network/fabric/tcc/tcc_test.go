@@ -73,7 +73,7 @@ var _ = Describe("ccvalidator", func() {
 				fakestub.GetTransientReturns(map[string][]byte{"token_request": []byte("token request")}, nil)
 				fakestub.GetStateReturnsOnCall(0, []byte("pp"), nil)
 				fakestub.GetStateReturnsOnCall(1, nil, nil)
-				fakeValidator.UnmarshallAndVerifyReturns([]interface{}{}, nil)
+				fakeValidator.UnmarshallAndVerifyWithMetadataReturns([]interface{}{}, nil, nil)
 			})
 			It("succeeds", func() {
 				response := chaincode.Invoke(fakestub)
@@ -90,7 +90,7 @@ var _ = Describe("ccvalidator", func() {
 				Expect(err).NotTo(HaveOccurred())
 				fakestub.GetArgsReturns(args)
 				fakestub.GetTransientReturns(map[string][]byte{"token_request": []byte("token request")}, nil)
-				fakeValidator.UnmarshallAndVerifyReturns(nil, errors.Errorf("flying monkeys"))
+				fakeValidator.UnmarshallAndVerifyWithMetadataReturns(nil, nil, errors.Errorf("flying monkeys"))
 			})
 			It("fails", func() {
 				response := chaincode.Invoke(fakestub)

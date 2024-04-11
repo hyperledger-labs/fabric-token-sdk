@@ -9,100 +9,106 @@ import (
 )
 
 type Validator struct {
-	UnmarshallAndVerifyStub        func(token.Ledger, string, []byte) ([]interface{}, error)
-	unmarshallAndVerifyMutex       sync.RWMutex
-	unmarshallAndVerifyArgsForCall []struct {
+	UnmarshallAndVerifyWithMetadataStub        func(token.Ledger, string, []byte) ([]interface{}, map[string][]byte, error)
+	unmarshallAndVerifyWithMetadataMutex       sync.RWMutex
+	unmarshallAndVerifyWithMetadataArgsForCall []struct {
 		arg1 token.Ledger
 		arg2 string
 		arg3 []byte
 	}
-	unmarshallAndVerifyReturns struct {
+	unmarshallAndVerifyWithMetadataReturns struct {
 		result1 []interface{}
-		result2 error
+		result2 map[string][]byte
+		result3 error
 	}
-	unmarshallAndVerifyReturnsOnCall map[int]struct {
+	unmarshallAndVerifyWithMetadataReturnsOnCall map[int]struct {
 		result1 []interface{}
-		result2 error
+		result2 map[string][]byte
+		result3 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *Validator) UnmarshallAndVerify(arg1 token.Ledger, arg2 string, arg3 []byte) ([]interface{}, error) {
+func (fake *Validator) UnmarshallAndVerifyWithMetadata(arg1 token.Ledger, arg2 string, arg3 []byte) ([]interface{}, map[string][]byte, error) {
 	var arg3Copy []byte
 	if arg3 != nil {
 		arg3Copy = make([]byte, len(arg3))
 		copy(arg3Copy, arg3)
 	}
-	fake.unmarshallAndVerifyMutex.Lock()
-	ret, specificReturn := fake.unmarshallAndVerifyReturnsOnCall[len(fake.unmarshallAndVerifyArgsForCall)]
-	fake.unmarshallAndVerifyArgsForCall = append(fake.unmarshallAndVerifyArgsForCall, struct {
+	fake.unmarshallAndVerifyWithMetadataMutex.Lock()
+	ret, specificReturn := fake.unmarshallAndVerifyWithMetadataReturnsOnCall[len(fake.unmarshallAndVerifyWithMetadataArgsForCall)]
+	fake.unmarshallAndVerifyWithMetadataArgsForCall = append(fake.unmarshallAndVerifyWithMetadataArgsForCall, struct {
 		arg1 token.Ledger
 		arg2 string
 		arg3 []byte
 	}{arg1, arg2, arg3Copy})
-	fake.recordInvocation("UnmarshallAndVerify", []interface{}{arg1, arg2, arg3Copy})
-	fake.unmarshallAndVerifyMutex.Unlock()
-	if fake.UnmarshallAndVerifyStub != nil {
-		return fake.UnmarshallAndVerifyStub(arg1, arg2, arg3)
+	stub := fake.UnmarshallAndVerifyWithMetadataStub
+	fakeReturns := fake.unmarshallAndVerifyWithMetadataReturns
+	fake.recordInvocation("UnmarshallAndVerifyWithMetadata", []interface{}{arg1, arg2, arg3Copy})
+	fake.unmarshallAndVerifyWithMetadataMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1, ret.result2
+		return ret.result1, ret.result2, ret.result3
 	}
-	fakeReturns := fake.unmarshallAndVerifyReturns
-	return fakeReturns.result1, fakeReturns.result2
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
-func (fake *Validator) UnmarshallAndVerifyCallCount() int {
-	fake.unmarshallAndVerifyMutex.RLock()
-	defer fake.unmarshallAndVerifyMutex.RUnlock()
-	return len(fake.unmarshallAndVerifyArgsForCall)
+func (fake *Validator) UnmarshallAndVerifyWithMetadataCallCount() int {
+	fake.unmarshallAndVerifyWithMetadataMutex.RLock()
+	defer fake.unmarshallAndVerifyWithMetadataMutex.RUnlock()
+	return len(fake.unmarshallAndVerifyWithMetadataArgsForCall)
 }
 
-func (fake *Validator) UnmarshallAndVerifyCalls(stub func(token.Ledger, string, []byte) ([]interface{}, error)) {
-	fake.unmarshallAndVerifyMutex.Lock()
-	defer fake.unmarshallAndVerifyMutex.Unlock()
-	fake.UnmarshallAndVerifyStub = stub
+func (fake *Validator) UnmarshallAndVerifyWithMetadataCalls(stub func(token.Ledger, string, []byte) ([]interface{}, map[string][]byte, error)) {
+	fake.unmarshallAndVerifyWithMetadataMutex.Lock()
+	defer fake.unmarshallAndVerifyWithMetadataMutex.Unlock()
+	fake.UnmarshallAndVerifyWithMetadataStub = stub
 }
 
-func (fake *Validator) UnmarshallAndVerifyArgsForCall(i int) (token.Ledger, string, []byte) {
-	fake.unmarshallAndVerifyMutex.RLock()
-	defer fake.unmarshallAndVerifyMutex.RUnlock()
-	argsForCall := fake.unmarshallAndVerifyArgsForCall[i]
+func (fake *Validator) UnmarshallAndVerifyWithMetadataArgsForCall(i int) (token.Ledger, string, []byte) {
+	fake.unmarshallAndVerifyWithMetadataMutex.RLock()
+	defer fake.unmarshallAndVerifyWithMetadataMutex.RUnlock()
+	argsForCall := fake.unmarshallAndVerifyWithMetadataArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3
 }
 
-func (fake *Validator) UnmarshallAndVerifyReturns(result1 []interface{}, result2 error) {
-	fake.unmarshallAndVerifyMutex.Lock()
-	defer fake.unmarshallAndVerifyMutex.Unlock()
-	fake.UnmarshallAndVerifyStub = nil
-	fake.unmarshallAndVerifyReturns = struct {
+func (fake *Validator) UnmarshallAndVerifyWithMetadataReturns(result1 []interface{}, result2 map[string][]byte, result3 error) {
+	fake.unmarshallAndVerifyWithMetadataMutex.Lock()
+	defer fake.unmarshallAndVerifyWithMetadataMutex.Unlock()
+	fake.UnmarshallAndVerifyWithMetadataStub = nil
+	fake.unmarshallAndVerifyWithMetadataReturns = struct {
 		result1 []interface{}
-		result2 error
-	}{result1, result2}
+		result2 map[string][]byte
+		result3 error
+	}{result1, result2, result3}
 }
 
-func (fake *Validator) UnmarshallAndVerifyReturnsOnCall(i int, result1 []interface{}, result2 error) {
-	fake.unmarshallAndVerifyMutex.Lock()
-	defer fake.unmarshallAndVerifyMutex.Unlock()
-	fake.UnmarshallAndVerifyStub = nil
-	if fake.unmarshallAndVerifyReturnsOnCall == nil {
-		fake.unmarshallAndVerifyReturnsOnCall = make(map[int]struct {
+func (fake *Validator) UnmarshallAndVerifyWithMetadataReturnsOnCall(i int, result1 []interface{}, result2 map[string][]byte, result3 error) {
+	fake.unmarshallAndVerifyWithMetadataMutex.Lock()
+	defer fake.unmarshallAndVerifyWithMetadataMutex.Unlock()
+	fake.UnmarshallAndVerifyWithMetadataStub = nil
+	if fake.unmarshallAndVerifyWithMetadataReturnsOnCall == nil {
+		fake.unmarshallAndVerifyWithMetadataReturnsOnCall = make(map[int]struct {
 			result1 []interface{}
-			result2 error
+			result2 map[string][]byte
+			result3 error
 		})
 	}
-	fake.unmarshallAndVerifyReturnsOnCall[i] = struct {
+	fake.unmarshallAndVerifyWithMetadataReturnsOnCall[i] = struct {
 		result1 []interface{}
-		result2 error
-	}{result1, result2}
+		result2 map[string][]byte
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *Validator) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.unmarshallAndVerifyMutex.RLock()
-	defer fake.unmarshallAndVerifyMutex.RUnlock()
+	fake.unmarshallAndVerifyWithMetadataMutex.RLock()
+	defer fake.unmarshallAndVerifyWithMetadataMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value

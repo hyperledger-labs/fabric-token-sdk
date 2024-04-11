@@ -63,5 +63,6 @@ func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValid
 		&ActionDeserializer{},
 		transferValidators,
 		issueValidators,
+		&common.Serializer{},
 	)
 }
