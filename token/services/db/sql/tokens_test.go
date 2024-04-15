@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"database/sql"
 	"fmt"
 	"path"
 	"sync"
@@ -15,36 +14,16 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
-	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
 )
 
 func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*TokenDB, error) {
-	db, err := sql.Open(driverName, dataSourceName)
+	d := NewSQLDBOpener("", "")
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
+		return nil, err
 	}
-	db.SetMaxOpenConns(maxOpenConns)
-
-	if err = db.Ping(); err != nil {
-		return nil, errors.Wrapf(err, "failed to ping db [%s]", driverName)
-	}
-	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
-
-	tables, err := getTableNames(tablePrefix)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get table names")
-	}
-	tokens := newTokenDB(db, tokenTables{
-		Tokens:         tables.Tokens,
-		Ownership:      tables.Ownership,
-		PublicParams:   tables.PublicParams,
-		Certifications: tables.Certifications,
-	})
-	if err = initSchema(db, tokens.GetSchema()); err != nil {
-		return tokens, err
-	}
-	return tokens, nil
+	return NewTokenDB(sqlDB, tablePrefix, true)
 }
 
 func TestTokensSqlite(t *testing.T) {

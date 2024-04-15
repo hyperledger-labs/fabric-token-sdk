@@ -7,30 +7,45 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"fmt"
+	"path"
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/stretchr/testify/assert"
 )
 
+func initWalletDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*WalletDB, error) {
+	d := NewSQLDBOpener("", "")
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns)
+	if err != nil {
+		return nil, err
+	}
+	return NewWalletDB(sqlDB, tablePrefix, true)
+}
+
 func TestWalletSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range WalletCases {
-		initSqlite(t, tempDir, c.Name)
+		db, err := initWalletDB("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close() // TODO
-			c.Fn(xt, Wallet)
+			c.Fn(xt, db)
 		})
 	}
 }
 
 func TestWalletSqliteMemory(t *testing.T) {
 	for _, c := range WalletCases {
-		initSqliteMemory(t, c.Name)
+		db, err := initWalletDB("sqlite", "file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close()
-			c.Fn(xt, Wallet)
+			c.Fn(xt, db)
 		})
 	}
 }
@@ -40,10 +55,12 @@ func TestWalletPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range WalletCases {
-		initPostgres(t, pgConnStr, c.Name)
+		db, err := initWalletDB("postgres", pgConnStr, c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close()
-			c.Fn(xt, Wallet)
+			c.Fn(xt, db)
 		})
 	}
 }
