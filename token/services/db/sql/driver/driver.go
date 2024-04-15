@@ -7,27 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"database/sql"
-	"fmt"
-	"os"
-	"sync"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	auditdbd "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	sql2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
+	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.sql")
 
 const (
 	// OptsKey is the key for the opts in the config
@@ -35,123 +26,54 @@ const (
 	EnvVarKey = "UNITYDB_DATASOURCE"
 )
 
-type Opts struct {
-	Driver       string
-	DataSource   string
-	CreateSchema bool
-	MaxOpenConns int
-	TablePrefix  string
-}
-
 type Driver struct {
-	mutex sync.RWMutex
-	dbs   map[string]*sql.DB
+	DBOpener *sqldb.DBOpener
 }
 
 func NewDriver() *Driver {
-	return &Driver{dbs: make(map[string]*sql.DB)}
+	return &Driver{
+		DBOpener: sqldb.NewSQLDBOpener(OptsKey, EnvVarKey),
+	}
 }
 
 func (d *Driver) OpenTokenTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
-	sqlDB, opts, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sqldb.NewTransactionDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenTokenDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
-	sqlDB, opts, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewTokenDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sqldb.NewTokenDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenAuditTransactionDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
-	sqlDB, opts, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewTransactionDB(sqlDB, opts.TablePrefix+"aud_", opts.CreateSchema)
+	return sqldb.NewTransactionDB(sqlDB, opts.TablePrefix+"aud_", !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.WalletDB, error) {
-	sqlDB, opts, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewWalletDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sqldb.NewWalletDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.IdentityDB, error) {
-	sqlDB, opts, err := d.open(sp, tmsID)
+	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
 	}
-	return sql2.NewIdentityDB(sqlDB, opts.TablePrefix, opts.CreateSchema, secondcache.New(1000))
-}
-
-func (d *Driver) open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
-	opts := &Opts{}
-	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
-	if err != nil {
-		return nil, nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
-	}
-	if err := tmsConfig.UnmarshalKey(OptsKey, opts); err != nil {
-		return nil, nil, errors.Wrapf(err, "failed getting opts for vault")
-	}
-	if opts.Driver == "" {
-		panic(fmt.Sprintf("%s.driver not set", OptsKey))
-	}
-
-	dataSourceName := os.Getenv(EnvVarKey)
-	if dataSourceName == "" {
-		dataSourceName = opts.DataSource
-	}
-	if dataSourceName == "" {
-		return nil, nil, errors.Errorf("either %s.dataSource in core.yaml or %s"+
-			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
-			OptsKey, EnvVarKey, opts.Driver)
-	}
-
-	sqlDB, err := d.openSQLDB(opts.Driver, opts.DataSource, opts.MaxOpenConns)
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", OptsKey, EnvVarKey, opts.Driver)
-	}
-
-	return sqlDB, opts, nil
-}
-
-func (d *Driver) openSQLDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
-	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
-
-	id := driverName + dataSourceName
-	var p *sql.DB
-	d.mutex.RLock()
-	p, ok := d.dbs[id]
-	if ok {
-		logger.Infof("reuse [%s] database (cached)", driverName)
-		d.mutex.RUnlock()
-		return p, nil
-	}
-	d.mutex.RUnlock()
-
-	d.mutex.Lock()
-	defer d.mutex.Unlock()
-
-	// check again
-	p, ok = d.dbs[id]
-	if ok {
-		return p, nil
-	}
-	p, err := sql.Open(driverName, dataSourceName)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
-	}
-	p.SetMaxOpenConns(maxOpenConns)
-	d.dbs[id] = p
-	return p, nil
+	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable, secondcache.New(1000))
 }
 
 type TtxDBDriver struct {

@@ -19,11 +19,12 @@ import (
 )
 
 type Opts struct {
-	Driver       string
-	DataSource   string
-	TablePrefix  string
-	CreateSchema bool
-	MaxOpenConns int
+	Driver          string
+	DataSource      string
+	TablePrefix     string
+	SkipCreateTable bool
+	SkipPragmas     bool
+	MaxOpenConns    int
 }
 
 type DBOpener struct {

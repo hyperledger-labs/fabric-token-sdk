@@ -33,7 +33,7 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.AuditT
 	if err != nil {
 		return nil, err
 	}
-	return sqldb.NewTransactionDB(sqlDB, opts.TablePrefix+"_aud", opts.CreateSchema)
+	return sqldb.NewTransactionDB(sqlDB, opts.TablePrefix+"_aud", !opts.SkipCreateTable)
 }
 
 func init() {

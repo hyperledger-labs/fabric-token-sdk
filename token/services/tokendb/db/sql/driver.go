@@ -33,7 +33,7 @@ func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.TokenD
 	if err != nil {
 		return nil, err
 	}
-	return sqldb.NewTokenDB(sqlDB, opts.TablePrefix, opts.CreateSchema)
+	return sqldb.NewTokenDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable)
 }
 
 func init() {
