@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
+	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -147,7 +149,7 @@ func (t *transaction) AppendToken(
 		},
 		ids,
 	)
-	if err != nil {
+	if err != nil && !errors2.HasCause(err, driver.UniqueKeyViolation) {
 		return errors.Wrapf(err, "cannot store token in db")
 	}
 
