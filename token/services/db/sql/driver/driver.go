@@ -154,27 +154,27 @@ func (d *Driver) openSQLDB(driverName, dataSourceName string, maxOpenConns int) 
 	return p, nil
 }
 
-type TTXDBDriver struct {
+type TtxDBDriver struct {
 	*Driver
 }
 
-func (t *TTXDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
+func (t *TtxDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenTransactionDB, error) {
 	return t.OpenTokenTransactionDB(sp, tmsID)
 }
 
-type TOKENDBDriver struct {
+type TokenDBDriver struct {
 	*Driver
 }
 
-func (t *TOKENDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
+func (t *TokenDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.TokenDB, error) {
 	return t.OpenTokenDB(sp, tmsID)
 }
 
-type AUDITDBDriver struct {
+type AuditDBDriver struct {
 	*Driver
 }
 
-func (t *AUDITDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
+func (t *AuditDBDriver) Open(sp view.ServiceProvider, tmsID token.TMSID) (auditdbd.AuditTransactionDB, error) {
 	return t.OpenAuditTransactionDB(sp, tmsID)
 }
 
@@ -192,8 +192,8 @@ func (t *IdentityDBDriver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.T
 
 func init() {
 	root := NewDriver()
-	ttxdb.Register("unity", &TTXDBDriver{Driver: root})
-	tokendb.Register("unity", &TOKENDBDriver{Driver: root})
-	auditdb.Register("unity", &AUDITDBDriver{Driver: root})
+	ttxdb.Register("unity", &TtxDBDriver{Driver: root})
+	tokendb.Register("unity", &TokenDBDriver{Driver: root})
+	auditdb.Register("unity", &AuditDBDriver{Driver: root})
 	identitydb.Register("unity", &IdentityDBDriver{Driver: root})
 }
