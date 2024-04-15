@@ -16,7 +16,7 @@ import (
 
 func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*TransactionDB, error) {
 	d := NewSQLDBOpener("", "")
-	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns)
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
 	if err != nil {
 		return nil, err
 	}
@@ -26,7 +26,7 @@ func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenC
 func TestTransactionsSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initTransactionsDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -40,7 +40,7 @@ func TestTransactionsSqlite(t *testing.T) {
 
 func TestTransactionsSqliteMemory(t *testing.T) {
 	for _, c := range dbtest.Cases {
-		db, err := initTransactionsDB("sqlite", "file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initTransactionsDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}

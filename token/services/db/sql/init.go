@@ -33,7 +33,7 @@ func initSchema(db *sql.DB, schemas ...string) (err error) {
 	}()
 	for _, schema := range schemas {
 		logger.Debug(schema)
-		if _, err = db.Exec(schema); err != nil {
+		if _, err = tx.Exec(schema); err != nil {
 			return errors.Wrap(err, "error creating schema")
 		}
 	}

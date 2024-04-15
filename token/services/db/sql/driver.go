@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -17,6 +18,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/pkg/errors"
 )
+
+const sqlitePragmas = `
+	PRAGMA journal_mode = WAL;
+	PRAGMA busy_timeout = 5000;
+	PRAGMA synchronous = NORMAL;
+	PRAGMA cache_size = 1000000000;
+	PRAGMA temp_store = memory;`
 
 type Opts struct {
 	Driver          string
@@ -39,7 +47,7 @@ func (d *DBOpener) Open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *O
 	if err != nil {
 		return nil, nil, err
 	}
-	sqlDB, err := d.OpenSQLDB(opts.Driver, opts.DataSource, opts.MaxOpenConns)
+	sqlDB, err := d.OpenSQLDB(opts.Driver, opts.DataSource, opts.MaxOpenConns, opts.SkipPragmas)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", d.optsKey, d.envVarKey, opts.Driver)
 	}
@@ -79,7 +87,7 @@ func (d *DBOpener) compileOpts(sp view.ServiceProvider, tmsID token.TMSID) (*Opt
 	return opts, nil
 }
 
-func (d *DBOpener) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int) (*sql.DB, error) {
+func (d *DBOpener) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int, skipPragmas bool) (*sql.DB, error) {
 	logger.Infof("connecting to [%s] database", driverName) // dataSource can contain a password
 
 	id := driverName + dataSourceName
@@ -105,7 +113,28 @@ func (d *DBOpener) OpenSQLDB(driverName, dataSourceName string, maxOpenConns int
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
 	}
+	if err := p.Ping(); err != nil {
+		if strings.Contains(err.Error(), "out of memory (14)") {
+			logger.Warnf("does the directory for the configured datasource exist?")
+		}
+		return nil, errors.Wrapf(err, "failed to open db [%s]", driverName)
+	}
+
+	// set some good defaults if the driver is sqlite
+	if driverName == "sqlite" {
+		if skipPragmas {
+			if !strings.Contains(dataSourceName, "WAL") {
+				logger.Warn("skipping default pragmas. Set at least ?_pragma=journal_mode(WAL) or similar in the dataSource to prevent SQLITE_BUSY errors")
+			}
+		} else {
+			logger.Debug(sqlitePragmas)
+			if _, err = p.Exec(sqlitePragmas); err != nil {
+				return nil, fmt.Errorf("error setting pragmas: %w", err)
+			}
+		}
+	}
 	p.SetMaxOpenConns(maxOpenConns)
+
 	d.dbs[id] = p
 	return p, nil
 }
