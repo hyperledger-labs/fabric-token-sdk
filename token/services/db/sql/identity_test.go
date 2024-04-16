@@ -7,32 +7,48 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
+	"fmt"
+	"path"
 	"reflect"
 	"testing"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func initIdentityDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*IdentityDB, error) {
+	d := NewSQLDBOpener("", "")
+	sqlDB, err := d.OpenSQLDB(driverName, dataSourceName, maxOpenConns, false)
+	if err != nil {
+		return nil, err
+	}
+	return NewIdentityDB(sqlDB, tablePrefix, true, secondcache.New(1000))
+}
+
 func TestIdentitySqlite(t *testing.T) {
 	tempDir := t.TempDir()
 
 	for _, c := range IdentityCases {
-		initSqlite(t, tempDir, c.Name)
+		db, err := initIdentityDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close() // TODO
-			c.Fn(xt, Identity)
+			c.Fn(xt, db)
 		})
 	}
 }
 
 func TestIdentitySqliteMemory(t *testing.T) {
 	for _, c := range IdentityCases {
-		initSqliteMemory(t, c.Name)
+		db, err := initIdentityDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close()
-			c.Fn(xt, Identity)
+			c.Fn(xt, db)
 		})
 	}
 }
@@ -42,10 +58,12 @@ func TestIdentityPostgres(t *testing.T) {
 	defer terminate()
 
 	for _, c := range IdentityCases {
-		initPostgres(t, pgConnStr, c.Name)
+		db, err := initIdentityDB("postgres", pgConnStr, c.Name, 10)
+		if err != nil {
+			t.Fatal(err)
+		}
 		t.Run(c.Name, func(xt *testing.T) {
-			defer Transactions.Close()
-			c.Fn(xt, Identity)
+			c.Fn(xt, db)
 		})
 	}
 }

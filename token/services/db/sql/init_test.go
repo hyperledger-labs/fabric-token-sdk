@@ -8,98 +8,19 @@ package sql
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"os"
-	"path"
 	"runtime/debug"
 	"testing"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	_ "github.com/lib/pq"
-	"github.com/pkg/errors"
 	"github.com/test-go/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
 	_ "modernc.org/sqlite"
 )
-
-var Transactions *TransactionDB
-var Tokens *TokenDB
-var Identity *IdentityDB
-var Wallet *WalletDB
-
-func Init(driverName, dataSourceName, tablePrefix string, createSchema bool, maxOpenConns int) error {
-	logger.Infof("connecting to sql database [%s:%s]", driverName, tablePrefix) // dataSource can contain a password
-	if Transactions != nil {
-		Transactions.Close()
-	}
-	if Tokens != nil {
-		Tokens.Close()
-	}
-
-	tables, err := getTableNames(tablePrefix)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get table names")
-	}
-
-	db, err := sql.Open(driverName, dataSourceName)
-	if err != nil {
-		return errors.Wrapf(err, "failed to open db [%s]", driverName)
-	}
-	db.SetMaxOpenConns(maxOpenConns)
-
-	if err = db.Ping(); err != nil {
-		return errors.Wrapf(err, "failed to ping db [%s]", driverName)
-	}
-	logger.Infof("connected to [%s:%s] database", driverName, tablePrefix)
-
-	Transactions = newTransactionDB(db, transactionTables{
-		Movements:             tables.Movements,
-		Transactions:          tables.Transactions,
-		Requests:              tables.Requests,
-		Validations:           tables.Validations,
-		TransactionEndorseAck: tables.TransactionEndorseAck,
-	})
-	Tokens = newTokenDB(db, tokenTables{
-		Tokens:         tables.Tokens,
-		Ownership:      tables.Ownership,
-		PublicParams:   tables.PublicParams,
-		Certifications: tables.Certifications,
-	})
-	Identity = newIdentityDB(db, identityTables{
-		IdentityConfigurations: tables.IdentityConfigurations,
-		IdentityInfo:           tables.IdentityInfo,
-		Signers:                tables.Signers,
-	}, secondcache.New(1000))
-	Wallet = newWalletDB(db, walletTables{Wallets: tables.Wallets})
-	if createSchema {
-		if err = initSchema(db, Transactions.GetSchema(), Tokens.GetSchema(), Identity.GetSchema(), Wallet.GetSchema()); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func initSqlite(t *testing.T, tempDir, key string) {
-	if err := Init("sqlite", fmt.Sprintf("file:%s?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), key, true, 10); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func initSqliteMemory(t *testing.T, key string) {
-	if err := Init("sqlite", "file:tmp?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&mode=memory&cache=shared", key, true, 10); err != nil {
-		t.Fatal(err)
-	}
-}
-
-func initPostgres(t *testing.T, pgConnStr, key string) {
-	if err := Init("postgres", pgConnStr, key, true, 10); err != nil {
-		t.Fatal(err)
-	}
-}
 
 func TestGetTableNames(t *testing.T) {
 	names, err := getTableNames("")
