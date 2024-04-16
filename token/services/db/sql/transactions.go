@@ -339,7 +339,7 @@ func (db *TransactionDB) AddValidationRecord(txID string, tokenrequest []byte, m
 		return errors.New("no db transaction in progress")
 	}
 
-	status := driver.Unknown // analogous to badger implementation
+	status := driver.Unknown
 	md, err := marshal(meta)
 	if err != nil {
 		return errors.New("can't marshal metadata")
@@ -623,7 +623,7 @@ func (w *AtomicWrite) Discard() error {
 func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 	logger.Debugf("adding transaction record [%s:%d:%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 	if w.txn == nil {
-		panic("no db transaction in progress")
+		return errors.New("no db transaction in progress")
 	}
 	if !r.Amount.IsInt64() {
 		return errors.New("the database driver does not support larger values than int64")
@@ -645,19 +645,19 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte) error {
 	logger.Debugf("adding token request [%s]", txID)
 	if w.txn == nil {
-		panic("no db transaction in progress")
+		return errors.New("no db transaction in progress")
 	}
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, request) VALUES ($1, $2)", w.db.table.Requests)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, status, status_message) VALUES ($1, $2, $3, $4)", w.db.table.Requests)
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)))
 
-	_, err := w.txn.Exec(query, txID, tr)
+	_, err := w.txn.Exec(query, txID, tr, driver.Pending, "")
 	return err
 }
 
 func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	logger.Debugf("adding movement record [%s:%s:%s:%d:%s]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
 	if w.txn == nil {
-		panic("no db transaction in progress")
+		return errors.New("no db transaction in progress")
 	}
 	if !r.Amount.IsInt64() {
 		return errors.New("the database driver does not support larger values than int64")
@@ -683,7 +683,7 @@ func (w *AtomicWrite) AddValidationRecord(txID string, tokenrequest []byte, meta
 		return errors.New("no db transaction in progress")
 	}
 
-	status := "" // analogous to badger implementation
+	status := driver.Unknown
 	md, err := marshal(meta)
 	if err != nil {
 		return errors.New("can't marshal metadata")

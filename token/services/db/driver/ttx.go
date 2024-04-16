@@ -47,14 +47,14 @@ type TransactionDB interface {
 	// BeginAtomicWrite opens an atomic database transaction. It must be committed or discarded.
 	BeginAtomicWrite() (AtomicWrite, error)
 
-	// BeginUpdate begins a new update to the database
-	BeginUpdate() error
+	// // BeginUpdate begins a new update to the database
+	// BeginUpdate() error
 
-	// Commit commits the current update to the database
-	Commit() error
+	// // Commit commits the current update to the database
+	// Commit() error
 
-	// Discard discards the current update to the database
-	Discard() error
+	// // Discard discards the current update to the database
+	// Discard() error
 
 	// SetStatus sets the status of a transaction
 	SetStatus(txID string, status TxStatus, message string) error
