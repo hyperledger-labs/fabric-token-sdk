@@ -200,14 +200,6 @@ func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 	return n.n.Ordering().Broadcast(context, blob)
 }
 
-func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
-	return n.ch.Finality().IsFinalForParties(id, endpoints...)
-}
-
-func (n *Network) IsFinal(ctx context.Context, id string) error {
-	return n.ch.Finality().IsFinal(ctx, id)
-}
-
 func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
 }

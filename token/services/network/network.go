@@ -15,6 +15,7 @@ import (
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -23,16 +24,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ValidationCode int
+type ValidationCode = driver.ValidationCode
 
 const (
-	_               ValidationCode = iota
-	Valid                          // Transaction is valid and committed
-	Invalid                        // Transaction is invalid and has been discarded
-	Busy                           // Transaction does not yet have a validity state
-	Unknown                        // Transaction is unknown
-	HasDependencies                // Transaction is unknown but has known dependencies
+	_       ValidationCode = iota
+	Valid                  = driver.Valid   // Transaction is valid and committed
+	Invalid                = driver.Invalid // Transaction is invalid and has been discarded
+	Busy                   = driver.Busy    // Transaction does not yet have a validity state
+	Unknown                = driver.Unknown // Transaction is unknown
 )
+
+var logger = flogging.MustGetLogger("token-sdk.network")
 
 type UnspentTokensIterator = driver.UnspentTokensIterator
 
@@ -322,19 +324,6 @@ func (n *Network) Broadcast(context context.Context, blob interface{}) error {
 	default:
 		return n.n.Broadcast(context, b)
 	}
-}
-
-// IsFinalForParties returns true if the given transaction is final for the given parties
-func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
-	return n.n.IsFinalForParties(id, endpoints...)
-}
-
-// IsFinal returns true if the given transaction is final
-func (n *Network) IsFinal(ctx context.Context, id string) error {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	return n.n.IsFinal(ctx, id)
 }
 
 // AnonymousIdentity returns a fresh anonymous identity

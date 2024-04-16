@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-type ValidationCode int
+type ValidationCode = int
 
 const (
 	_               ValidationCode = iota
