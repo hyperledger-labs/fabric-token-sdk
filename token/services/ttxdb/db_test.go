@@ -10,14 +10,17 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/core/config"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/registry"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/sql"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/stretchr/testify/assert"
 	_ "modernc.org/sqlite"
 )
@@ -30,9 +33,9 @@ func TestDB(t *testing.T) {
 	assert.NoError(t, registry.RegisterService(cp))
 
 	manager := ttxdb.NewManager(registry, db.NewConfig(cp, "ttxdb.persistence.type"))
-	db1, err := manager.DBByTMSId(token2.TMSID{Network: "pineapple"})
+	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
-	db2, err := manager.DBByTMSId(token2.TMSID{Network: "grapes"})
+	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})
 	assert.NoError(t, err)
 
 	TEndorserAcks(t, db1, db2)
@@ -70,5 +73,98 @@ func TEndorserAcks(t *testing.T, db1, db2 *ttxdb.DB) {
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("bob_%d", i)).String()])
+	}
+}
+
+type qsMock struct{}
+
+func (qs qsMock) IsMine(id *token2.ID) (bool, error) {
+	return true, nil
+}
+
+func TestTransactionRecords(t *testing.T) {
+	now := time.Now()
+
+	// Transfer
+	record := simpleTransfer()
+	txr, err := ttxdb.TransactionRecords(&record, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, txr, 1)
+	assert.Equal(t, txr[0].ActionType, driver.Transfer)
+	assert.Equal(t, txr[0].Amount.Int64(), int64(10))
+	assert.Equal(t, txr[0].SenderEID, "alice")
+	assert.Equal(t, txr[0].RecipientEID, "bob")
+	assert.Equal(t, txr[0].Timestamp, now)
+	assert.Equal(t, txr[0].TxID, record.Anchor)
+
+	// Issue
+	record = simpleTransfer()
+	record.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
+	txr, err = ttxdb.TransactionRecords(&record, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, txr, 1)
+	assert.Equal(t, txr[0].ActionType, driver.Issue)
+	assert.Equal(t, txr[0].Amount.Int64(), int64(10))
+	assert.Equal(t, txr[0].SenderEID, "")
+	assert.Equal(t, txr[0].RecipientEID, "bob")
+	assert.Equal(t, txr[0].Timestamp, now)
+	assert.Equal(t, txr[0].TxID, record.Anchor)
+
+	// Redeem
+	record = redeem()
+	txr, err = ttxdb.TransactionRecords(&record, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.Len(t, txr, 1)
+	assert.Equal(t, txr[0].ActionType, driver.Redeem)
+	assert.Equal(t, txr[0].Amount.Int64(), int64(10))
+	assert.Equal(t, txr[0].SenderEID, "alice")
+	assert.Equal(t, txr[0].RecipientEID, "")
+	assert.Equal(t, txr[0].Timestamp, now)
+	assert.Equal(t, txr[0].TxID, record.Anchor)
+}
+
+func simpleTransfer() token.AuditRecord {
+	input1 := &token.Input{
+		ActionIndex:  0,
+		EnrollmentID: "alice",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(10),
+	}
+	output1 := &token.Output{
+		ActionIndex:  0,
+		EnrollmentID: "bob",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(10),
+	}
+	return token.AuditRecord{
+		Anchor:  "test",
+		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),
+		Outputs: token.NewOutputStream([]*token.Output{output1}, 64),
+	}
+}
+
+func redeem() token.AuditRecord {
+	input1 := &token.Input{
+		ActionIndex:  0,
+		EnrollmentID: "alice",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(10),
+	}
+	output1 := &token.Output{
+		ActionIndex:  0,
+		EnrollmentID: "",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(10),
+	}
+	return token.AuditRecord{
+		Anchor:  "test",
+		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),
+		Outputs: token.NewOutputStream([]*token.Output{output1}, 64),
 	}
 }

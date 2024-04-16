@@ -376,23 +376,8 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view
 	if err != nil {
 		return errors.Wrapf(err, "error generating uuid")
 	}
-
-	tx, err := db.db.Begin()
-	if err != nil {
-		return errors.New("failed starting a transaction")
-	}
-	defer func() {
-		if err != nil && tx != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
-	if _, err = tx.Exec(query, id, txID, endorser, sigma, now); err != nil {
-		return errors.Wrapf(err, "failed to execute")
-	}
-	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed committing status update")
+	if _, err = db.db.Exec(query, id, txID, endorser, sigma, now); err != nil {
+		return errors.Wrapf(err, "failed to add endorsement ack")
 	}
 	return
 }
@@ -600,4 +585,114 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	// Skipping this record causes a recursive call
 	// to this function to parse next record
 	return t.Next()
+}
+
+func (db *TransactionDB) BeginAtomicWrite() (driver.AtomicWrite, error) {
+	txn, err := db.db.Begin()
+	if err != nil {
+		return nil, err
+	}
+
+	return &AtomicWrite{
+		txn: txn,
+		db:  db,
+	}, nil
+}
+
+type AtomicWrite struct {
+	txn *sql.Tx
+	db  *TransactionDB
+}
+
+func (w *AtomicWrite) Commit() error {
+	if err := w.txn.Commit(); err != nil {
+		return fmt.Errorf("could not commit transaction: %w", err)
+	}
+	w.txn = nil
+	return nil
+}
+
+func (w *AtomicWrite) Discard() error {
+	if err := w.txn.Rollback(); err != nil {
+		return err
+	}
+	w.txn = nil
+	return nil
+}
+
+func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
+	logger.Debugf("adding transaction record [%s:%d:%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+	if w.txn == nil {
+		panic("no db transaction in progress")
+	}
+	if !r.Amount.IsInt64() {
+		return errors.New("the database driver does not support larger values than int64")
+	}
+	amount := r.Amount.Int64()
+	actionType := int(r.ActionType)
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return errors.Wrapf(err, "error generating uuid")
+	}
+
+	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);", w.db.table.Transactions)
+	logger.Debug(query, id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Status, r.Timestamp.UTC())
+	_, err = w.txn.Exec(query, id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Status, r.Timestamp.UTC())
+
+	return err
+}
+
+func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte) error {
+	logger.Debugf("adding token request [%s]", txID)
+	if w.txn == nil {
+		panic("no db transaction in progress")
+	}
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, request) VALUES ($1, $2)", w.db.table.Requests)
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)))
+
+	_, err := w.txn.Exec(query, txID, tr)
+	return err
+}
+
+func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
+	logger.Debugf("adding movement record [%s:%s:%s:%d:%s]", r.TxID, r.EnrollmentID, r.TokenType, r.Amount.Int64(), r.Status)
+	if w.txn == nil {
+		panic("no db transaction in progress")
+	}
+	if !r.Amount.IsInt64() {
+		return errors.New("the database driver does not support larger values than int64")
+	}
+	amount := r.Amount.Int64()
+
+	id, err := uuid.GenerateUUID()
+	if err != nil {
+		return errors.Wrapf(err, "error generating uuid")
+	}
+	now := time.Now().UTC()
+
+	query := fmt.Sprintf(`INSERT INTO %s (id, tx_id, enrollment_id, token_type, amount, status, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7);`, w.db.table.Movements)
+	logger.Debug(query, id, r.TxID, r.EnrollmentID, r.TokenType, amount, r.Status, now)
+	_, err = w.txn.Exec(query, id, r.TxID, r.EnrollmentID, r.TokenType, amount, r.Status, now)
+
+	return err
+}
+
+func (w *AtomicWrite) AddValidationRecord(txID string, tokenrequest []byte, meta map[string][]byte) error {
+	logger.Debugf("adding validation record [%s]", txID)
+	if w.txn == nil {
+		return errors.New("no db transaction in progress")
+	}
+
+	status := "" // analogous to badger implementation
+	md, err := marshal(meta)
+	if err != nil {
+		return errors.New("can't marshal metadata")
+	}
+	now := time.Now().UTC()
+
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, metadata, status, stored_at) VALUES ($1, $2, $3, $4, $5)", w.db.table.Validations)
+	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tokenrequest)), fmt.Sprintf("(%d bytes)", len(md)), now)
+
+	_, err = w.txn.Exec(query, txID, tokenrequest, md, status, now)
+	return err
 }

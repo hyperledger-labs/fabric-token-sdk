@@ -19,9 +19,33 @@ type TokenTransactionDB interface {
 	TransactionEndorsementAckDB
 }
 
+type AtomicWrite interface {
+	// Commit commits the current update to the database
+	Commit() error
+
+	// Discard discards the current update to the database
+	Discard() error
+
+	// AddMovement adds a movement record to the database transaction.
+	// Each token transaction can be seen as a list of movements.
+	AddMovement(record *MovementRecord) error
+
+	// AddTransaction adds a transaction record to the database transaction.
+	AddTransaction(record *TransactionRecord) error
+
+	// AddValidationRecord adds a new validation records for the given params
+	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
+
+	// AddTokenRequest binds the passed transaction id to the passed token request
+	AddTokenRequest(txID string, tr []byte) error
+}
+
 type TransactionDB interface {
-	// Close closes the database
+	// Close closes the databases
 	Close() error
+
+	// BeginAtomicWrite opens an atomic database transaction. It must be committed or discarded.
+	BeginAtomicWrite() (AtomicWrite, error)
 
 	// BeginUpdate begins a new update to the database
 	BeginUpdate() error

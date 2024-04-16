@@ -226,7 +226,7 @@ func newDB(p driver.TokenTransactionDB) *DB {
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
 func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Appending new transaction record... [%s][%d]", req.Anchor, d.counter)
+		logger.Debugf("appending new transaction record... [%s][%d]", req.Anchor, d.counter)
 	}
 	d.storeLock.Lock()
 	defer d.storeLock.Unlock()
@@ -241,25 +241,42 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 		Inputs:  ins,
 		Outputs: outs,
 	}
-	if err := d.db.BeginUpdate(); err != nil {
-		d.rollback(err)
+	raw, err := req.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
+	}
+	txs, err := TransactionRecords(record, time.Now())
+	if err != nil {
+		return errors.WithMessage(err, "failed parsing transactions from audit record")
+	}
+
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := d.appendTokenRequest(req); err != nil {
-		d.rollback(err)
+	if err := w.AddTokenRequest(record.Anchor, raw); err != nil {
+		rollback(w, err)
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
-	if err := d.appendTransactions(record); err != nil {
-		d.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
+	for _, tx := range txs {
+		if err := w.AddTransaction(&tx); err != nil {
+			rollback(w, err)
+			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
+		}
 	}
-	if err := d.db.Commit(); err != nil {
-		d.rollback(err)
+	if err := w.Commit(); err != nil {
+		rollback(w, err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
-	logger.Debugf("Appending transaction record new completed without errors")
+	logger.Debugf("appending transaction record new completed without errors")
 	return nil
+}
+
+func rollback(w driver.AtomicWrite, err error) {
+	if err1 := w.Discard(); err1 != nil {
+		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+	}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -319,34 +336,22 @@ func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, erro
 
 // AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
 func (d *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
-	logger.Debugf("Appending new validation record... [%d]", d.counter)
+	logger.Debugf("appending new validation record... [%d]", d.counter)
 	d.storeLock.Lock()
 	defer d.storeLock.Unlock()
-	logger.Debug("lock acquired")
 
-	if err := d.db.BeginUpdate(); err != nil {
-		d.rollback(err)
-		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
-	}
 	if err := d.db.AddValidationRecord(txID, tr, meta); err != nil {
-		d.rollback(err)
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
-	if err := d.db.Commit(); err != nil {
-		d.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
-	}
-
-	logger.Debugf("Appending validation record completed without errors")
+	logger.Debugf("appending validation record completed without errors")
 	return nil
 }
 
-func (d *DB) appendTransactions(record *token.AuditRecord) error {
+func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
 	actionIndex := 0
-	timestamp := time.Now()
 	for {
 		// collect inputs and outputs from the same action
 		ins := inputs.Filter(func(t *token.Input) bool {
@@ -366,7 +371,7 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 		// All ins should be for same EID, check this
 		inEIDs := ins.EnrollmentIDs()
 		if len(inEIDs) > 1 {
-			return errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
+			return nil, errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
 		}
 		inEID := ""
 		if len(inEIDs) == 1 {
@@ -392,7 +397,7 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 					}
 				}
 
-				if err := d.db.AddTransaction(&driver.TransactionRecord{
+				txs = append(txs, driver.TransactionRecord{
 					TxID:         record.Anchor,
 					SenderEID:    inEID,
 					RecipientEID: outEID,
@@ -401,40 +406,15 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 					Status:       driver.Pending,
 					ActionType:   tt,
 					Timestamp:    timestamp,
-				}); err != nil {
-					if err1 := d.db.Discard(); err1 != nil {
-						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-					}
-					return err
-				}
+				})
 			}
 		}
 
 		actionIndex++
 	}
-	logger.Debugf("finished appending transactions for tx [%s]", record.Anchor)
+	logger.Debugf("parsed transactions for tx [%s]", record.Anchor)
 
-	return nil
-}
-
-func (d *DB) appendTokenRequest(request *token.Request) error {
-	raw, err := request.Bytes()
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
-	}
-	if err := d.db.AddTokenRequest(request.Anchor, raw); err != nil {
-		if err1 := d.db.Discard(); err1 != nil {
-			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-		}
-		return err
-	}
-	return nil
-}
-
-func (d *DB) rollback(err error) {
-	if err1 := d.db.Discard(); err1 != nil {
-		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-	}
+	return
 }
 
 type Config interface {
