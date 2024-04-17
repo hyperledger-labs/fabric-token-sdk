@@ -90,6 +90,13 @@ const (
 // in that action.
 type TransactionRecord = driver.TransactionRecord
 
+// MovementRecord is a record of a movement of assets.
+// Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
+// and each token type that was transferred.
+// The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
+// in a given token transaction.
+type MovementRecord = driver.MovementRecord
+
 // ValidationRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
 // a transaction record is created for each unique enrollment ID found in the outputs.
@@ -232,20 +239,15 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	ins, outs, err := req.InputsAndOutputs()
+	record, err := req.AuditRecord()
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting inputs and outputs for request [%s]", req.Anchor)
-	}
-	record := &token.AuditRecord{
-		Anchor:  req.Anchor,
-		Inputs:  ins,
-		Outputs: outs,
+		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
 	}
 	raw, err := req.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
 	}
-	txs, err := TransactionRecords(record, time.Now())
+	txs, err := TransactionRecords(record, time.Now().UTC())
 	if err != nil {
 		return errors.WithMessage(err, "failed parsing transactions from audit record")
 	}
@@ -415,6 +417,139 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 	logger.Debugf("parsed transactions for tx [%s]", record.Anchor)
 
 	return
+}
+
+func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecord, err error) {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
+	logger.Debugf("eIDs [%v]", eIDs)
+	tokenTypes := outputs.TokenTypes()
+
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			// RECEIVED
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			diff := received.Sub(received, sent)
+			if sent == received {
+				// Nothing received
+				continue
+			}
+
+			// // SENT
+			// sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			// received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			// diff := sent.Sub(sent, received)
+			// if diff.Cmp(big.NewInt(0)) <= 0 {
+			// 	continue
+			// }
+			// diff.Neg(diff)
+
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			mv = append(mv, driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Timestamp:    created,
+				Status:       driver.Pending,
+			})
+		}
+	}
+	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
+
+	return
+}
+
+func SentMovements(record *token.AuditRecord, timestamp time.Time) (mv []MovementRecord, err error) {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
+	logger.Debugf("eIDs [%v]", eIDs)
+	tokenTypes := outputs.TokenTypes()
+
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			diff := sent.Sub(sent, received)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				continue
+			}
+			diff.Neg(diff)
+
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			mv = append(mv, driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Timestamp:    timestamp,
+				Status:       driver.Pending,
+			})
+		}
+	}
+	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
+
+	return
+}
+
+func ReceivedMovements(record *token.AuditRecord, timestamp time.Time) (mv []MovementRecord, err error) {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
+	tokenTypes := outputs.TokenTypes()
+
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			diff := received.Sub(received, sent)
+			if diff.Cmp(big.NewInt(0)) <= 0 {
+				// Nothing received
+				continue
+			}
+
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			mv = append(mv, driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Timestamp:    timestamp,
+				Status:       driver.Pending,
+			})
+		}
+	}
+	logger.Debugf("finished to parse received movements for tx [%s]", record.Anchor)
+
+	return
+}
+
+// joinIOEIDs joins enrollment IDs of inputs and outputs
+func joinIOEIDs(record *token.AuditRecord) []string {
+	iEIDs := record.Inputs.EnrollmentIDs()
+	oEIDs := record.Outputs.EnrollmentIDs()
+	eIDs := append(iEIDs, oEIDs...)
+	eIDs = deduplicate(eIDs)
+	return eIDs
+}
+
+// deduplicate removes duplicate entries from a slice
+func deduplicate(source []string) []string {
+	support := make(map[string]bool)
+	var res []string
+	for _, item := range source {
+		if _, value := support[item]; !value {
+			support[item] = true
+			res = append(res, item)
+		}
+	}
+	return res
 }
 
 type Config interface {

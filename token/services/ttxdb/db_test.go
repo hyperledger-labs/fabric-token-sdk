@@ -8,6 +8,7 @@ package ttxdb_test
 
 import (
 	"fmt"
+	"math/big"
 	"sync"
 	"testing"
 	"time"
@@ -86,47 +87,166 @@ func TestTransactionRecords(t *testing.T) {
 	now := time.Now()
 
 	// Transfer
-	record := simpleTransfer()
-	txr, err := ttxdb.TransactionRecords(&record, now)
+	input := simpleTransfer()
+	recs, err := ttxdb.TransactionRecords(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.TransactionRecord{
+		{
+			TxID:         input.Anchor,
+			ActionType:   driver.Transfer,
+			SenderEID:    "alice",
+			RecipientEID: "bob",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
+
+	// Transfer with change
+	input = transferWithChange()
+	recs, err = ttxdb.TransactionRecords(&input, now)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Len(t, txr, 1)
-	assert.Equal(t, txr[0].ActionType, driver.Transfer)
-	assert.Equal(t, txr[0].Amount.Int64(), int64(10))
-	assert.Equal(t, txr[0].SenderEID, "alice")
-	assert.Equal(t, txr[0].RecipientEID, "bob")
-	assert.Equal(t, txr[0].Timestamp, now)
-	assert.Equal(t, txr[0].TxID, record.Anchor)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.TransactionRecord{
+		{
+			TxID:         input.Anchor,
+			ActionType:   driver.Transfer,
+			SenderEID:    "alice",
+			RecipientEID: "bob",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+		{
+			TxID:         input.Anchor,
+			ActionType:   driver.Transfer,
+			SenderEID:    "alice",
+			RecipientEID: "alice",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(90),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
 
 	// Issue
-	record = simpleTransfer()
-	record.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
-	txr, err = ttxdb.TransactionRecords(&record, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Len(t, txr, 1)
-	assert.Equal(t, txr[0].ActionType, driver.Issue)
-	assert.Equal(t, txr[0].Amount.Int64(), int64(10))
-	assert.Equal(t, txr[0].SenderEID, "")
-	assert.Equal(t, txr[0].RecipientEID, "bob")
-	assert.Equal(t, txr[0].Timestamp, now)
-	assert.Equal(t, txr[0].TxID, record.Anchor)
+	input = simpleTransfer()
+	input.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
+	recs, err = ttxdb.TransactionRecords(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.TransactionRecord{
+		{
+			TxID:         input.Anchor,
+			ActionType:   driver.Issue,
+			SenderEID:    "",
+			RecipientEID: "bob",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
 
 	// Redeem
-	record = redeem()
-	txr, err = ttxdb.TransactionRecords(&record, now)
-	if err != nil {
-		t.Fatal(err)
-	}
-	assert.Len(t, txr, 1)
-	assert.Equal(t, txr[0].ActionType, driver.Redeem)
-	assert.Equal(t, txr[0].Amount.Int64(), int64(10))
-	assert.Equal(t, txr[0].SenderEID, "alice")
-	assert.Equal(t, txr[0].RecipientEID, "")
-	assert.Equal(t, txr[0].Timestamp, now)
-	assert.Equal(t, txr[0].TxID, record.Anchor)
+	input = redeem()
+	recs, err = ttxdb.TransactionRecords(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.TransactionRecord{
+		{
+			TxID:         input.Anchor,
+			ActionType:   driver.Redeem,
+			SenderEID:    "alice",
+			RecipientEID: "",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
+}
+
+func TestMovementRecords(t *testing.T) {
+	now := time.Now()
+
+	// Transfer
+	input := simpleTransfer()
+	recs, err := ttxdb.Movements(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.MovementRecord{
+		{
+			TxID:         input.Anchor,
+			EnrollmentID: "alice",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(-10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+		{
+			TxID:         input.Anchor,
+			EnrollmentID: "bob",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
+
+	input = transferWithChange()
+	recs, err = ttxdb.Movements(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.MovementRecord{
+		{
+			TxID:         input.Anchor,
+			EnrollmentID: "alice",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(-10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+		{
+			TxID:         input.Anchor,
+			EnrollmentID: "bob",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
+
+	// Issue
+	input = simpleTransfer()
+	input.Inputs = token.NewInputStream(qsMock{}, []*token.Input{}, 64)
+	recs, err = ttxdb.Movements(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.MovementRecord{
+		{
+			TxID:         input.Anchor,
+			EnrollmentID: "bob",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
+
+	// Redeem
+	input = redeem()
+	recs, err = ttxdb.Movements(&input, now)
+	assert.NoError(t, err)
+	assert.Equal(t, []driver.MovementRecord{
+		{
+			TxID:         input.Anchor,
+			EnrollmentID: "alice",
+			TokenType:    "TOK",
+			Amount:       big.NewInt(-10),
+			Timestamp:    now,
+			Status:       driver.Pending,
+		},
+	}, recs)
 }
 
 func simpleTransfer() token.AuditRecord {
@@ -146,6 +266,32 @@ func simpleTransfer() token.AuditRecord {
 		Anchor:  "test",
 		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),
 		Outputs: token.NewOutputStream([]*token.Output{output1}, 64),
+	}
+}
+
+func transferWithChange() token.AuditRecord {
+	input1 := &token.Input{
+		ActionIndex:  0,
+		EnrollmentID: "alice",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(100),
+	}
+	output1 := &token.Output{
+		ActionIndex:  0,
+		EnrollmentID: "bob",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(10),
+	}
+	output2 := &token.Output{
+		ActionIndex:  0,
+		EnrollmentID: "alice",
+		Type:         "TOK",
+		Quantity:     token2.NewQuantityFromUInt64(90),
+	}
+	return token.AuditRecord{
+		Anchor:  "test",
+		Inputs:  token.NewInputStream(qsMock{}, []*token.Input{input1}, 64),
+		Outputs: token.NewOutputStream([]*token.Output{output1, output2}, 64),
 	}
 }
 
