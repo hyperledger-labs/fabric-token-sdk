@@ -11,7 +11,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -31,9 +30,6 @@ type transactionTables struct {
 type TransactionDB struct {
 	db    *sql.DB
 	table transactionTables
-
-	txn     *sql.Tx
-	txnLock sync.Mutex
 }
 
 func newTransactionDB(db *sql.DB, tables transactionTables) *TransactionDB {
@@ -208,11 +204,6 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 
 func (db *TransactionDB) Close() error {
 	logger.Info("closing database")
-	db.txnLock.Lock()
-	defer db.txnLock.Unlock()
-
-	db.txn = nil
-
 	err := db.db.Close()
 	if err != nil {
 		return errors.Wrap(err, "could not close DB")

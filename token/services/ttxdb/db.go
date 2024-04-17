@@ -441,23 +441,12 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 
 	for _, eID := range eIDs {
 		for _, tokenType := range tokenTypes {
-			// RECEIVED
 			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
 			diff := received.Sub(received, sent)
 			if sent == received {
-				// Nothing received
 				continue
 			}
-
-			// // SENT
-			// sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			// received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			// diff := sent.Sub(sent, received)
-			// if diff.Cmp(big.NewInt(0)) <= 0 {
-			// 	continue
-			// }
-			// diff.Neg(diff)
 
 			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
 			mv = append(mv, driver.MovementRecord{
@@ -471,73 +460,6 @@ func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecor
 		}
 	}
 	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
-
-	return
-}
-
-func SentMovements(record *token.AuditRecord, timestamp time.Time) (mv []MovementRecord, err error) {
-	inputs := record.Inputs
-	outputs := record.Outputs
-	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
-	eIDs := joinIOEIDs(record)
-	logger.Debugf("eIDs [%v]", eIDs)
-	tokenTypes := outputs.TokenTypes()
-
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			diff := sent.Sub(sent, received)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				continue
-			}
-			diff.Neg(diff)
-
-			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
-			mv = append(mv, driver.MovementRecord{
-				TxID:         record.Anchor,
-				EnrollmentID: eID,
-				Amount:       diff,
-				TokenType:    tokenType,
-				Timestamp:    timestamp,
-				Status:       driver.Pending,
-			})
-		}
-	}
-	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
-
-	return
-}
-
-func ReceivedMovements(record *token.AuditRecord, timestamp time.Time) (mv []MovementRecord, err error) {
-	inputs := record.Inputs
-	outputs := record.Outputs
-	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
-	eIDs := joinIOEIDs(record)
-	tokenTypes := outputs.TokenTypes()
-
-	for _, eID := range eIDs {
-		for _, tokenType := range tokenTypes {
-			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
-			diff := received.Sub(received, sent)
-			if diff.Cmp(big.NewInt(0)) <= 0 {
-				// Nothing received
-				continue
-			}
-
-			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
-			mv = append(mv, driver.MovementRecord{
-				TxID:         record.Anchor,
-				EnrollmentID: eID,
-				Amount:       diff,
-				TokenType:    tokenType,
-				Timestamp:    timestamp,
-				Status:       driver.Pending,
-			})
-		}
-	}
-	logger.Debugf("finished to parse received movements for tx [%s]", record.Anchor)
 
 	return
 }
