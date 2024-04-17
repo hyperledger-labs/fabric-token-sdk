@@ -21,7 +21,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 	"go.uber.org/atomic"
-	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -232,9 +231,7 @@ func newDB(p driver.TokenTransactionDB) *DB {
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
 func (d *DB) AppendTransactionRecord(req *token.Request) error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("appending new transaction record... [%s][%d]", req.Anchor, d.counter)
-	}
+	logger.Debugf("appending new transaction record... [%s][%d]", req.Anchor, d.counter)
 	d.storeLock.Lock()
 	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
@@ -252,33 +249,27 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 		return errors.WithMessage(err, "failed parsing transactions from audit record")
 	}
 
+	logger.Debugf("storing new records... [%d,%d]", len(raw), len(txs))
 	w, err := d.db.BeginAtomicWrite()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	if err := w.AddTokenRequest(record.Anchor, raw); err != nil {
-		rollback(w, err)
+		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	for _, tx := range txs {
 		if err := w.AddTransaction(&tx); err != nil {
-			rollback(w, err)
+			w.Rollback()
 			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 		}
 	}
 	if err := w.Commit(); err != nil {
-		rollback(w, err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
 	logger.Debugf("appending transaction record new completed without errors")
 	return nil
-}
-
-func rollback(w driver.AtomicWrite, err error) {
-	if err1 := w.Discard(); err1 != nil {
-		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-	}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -291,9 +282,17 @@ func (d *DB) NewQueryExecutor() *QueryExecutor {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
-	logger.Debugf("Set status [%s][%s]...", txID, status)
-	if err := d.db.SetStatus(txID, status, message); err != nil {
+	logger.Debugf("set status [%s][%s]...", txID, status)
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
+	}
+	if err := w.SetStatus(txID, status, message); err != nil {
+		w.Rollback()
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
+	}
+	if err := w.Commit(); err != nil {
+		return errors.WithMessagef(err, "failed committing status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
 
 	// notify the listeners
@@ -308,7 +307,7 @@ func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
-	logger.Debugf("Get status [%s]...[%d]", txID, d.counter)
+	logger.Debugf("get status [%s]...[%d]", txID, d.counter)
 	d.storeLock.Lock()
 	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
@@ -342,8 +341,15 @@ func (d *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]by
 	d.storeLock.Lock()
 	defer d.storeLock.Unlock()
 
-	if err := d.db.AddValidationRecord(txID, tr, meta); err != nil {
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
+	}
+	if err := w.AddValidationRecord(txID, tr, meta); err != nil {
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
+	}
+	if err := w.Commit(); err != nil {
+		return errors.WithMessagef(err, "append validation record commit for txid [%s] failed", txID)
 	}
 	logger.Debugf("appending validation record completed without errors")
 	return nil

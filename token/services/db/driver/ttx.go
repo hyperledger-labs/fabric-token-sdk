@@ -23,8 +23,10 @@ type AtomicWrite interface {
 	// Commit commits the current update to the database
 	Commit() error
 
-	// Discard discards the current update to the database
-	Discard() error
+	// Rollback discards the in progress database transaction.
+	// It logs but otherwise ignores errors rolling back:
+	// the result is always the end of the transaction.
+	Rollback()
 
 	// AddMovement adds a movement record to the database transaction.
 	// Each token transaction can be seen as a list of movements.
@@ -38,6 +40,9 @@ type AtomicWrite interface {
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
 	AddTokenRequest(txID string, tr []byte) error
+
+	// SetStatus sets the status of a transaction
+	SetStatus(txID string, status TxStatus, message string) error
 }
 
 type TransactionDB interface {
@@ -46,9 +51,6 @@ type TransactionDB interface {
 
 	// BeginAtomicWrite opens an atomic database transaction. It must be committed or discarded.
 	BeginAtomicWrite() (AtomicWrite, error)
-
-	// SetStatus sets the status of a transaction
-	SetStatus(txID string, status TxStatus, message string) error
 
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
@@ -62,9 +64,6 @@ type TransactionDB interface {
 
 	// QueryValidations returns a list of validation  records
 	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
-
-	// AddValidationRecord adds a new validation records for the given params
-	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
 
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.

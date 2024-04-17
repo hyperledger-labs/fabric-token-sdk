@@ -236,34 +236,27 @@ func (d *DB) Append(req *token.Request) error {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
 	if err := w.AddTokenRequest(record.Anchor, raw); err != nil {
-		rollback(w, err)
+		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
 	for _, mv := range mov {
 		if err := w.AddMovement(&mv); err != nil {
-			rollback(w, err)
+			w.Rollback()
 			return errors.WithMessagef(err, "append sent movements for txid [%s] failed", record.Anchor)
 		}
 	}
 	for _, tx := range txs {
 		if err := w.AddTransaction(&tx); err != nil {
-			rollback(w, err)
+			w.Rollback()
 			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
 		}
 	}
 	if err := w.Commit(); err != nil {
-		rollback(w, err)
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
 	logger.Debugf("appending new records completed without errors")
 	return nil
-}
-
-func rollback(w driver.AtomicWrite, err error) {
-	if err1 := w.Discard(); err1 != nil {
-		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
-	}
 }
 
 // NewQueryExecutor returns a new query executor
@@ -276,9 +269,18 @@ func (d *DB) NewQueryExecutor() *QueryExecutor {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
-	logger.Debugf("Set status [%s][%s]...", txID, status)
-	if err := d.db.SetStatus(txID, status, message); err != nil {
+	logger.Debugf("set status [%s][%s]...", txID, status)
+
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
+	}
+	if err := w.SetStatus(txID, status, message); err != nil {
+		w.Rollback()
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
+	}
+	if err := w.Commit(); err != nil {
+		return errors.WithMessagef(err, "failed committing status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
 
 	// notify the listeners
@@ -286,14 +288,14 @@ func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 		TxID:           txID,
 		ValidationCode: status,
 	})
-	logger.Debugf("Set status [%s][%s]...done without errors", txID, driver.TxStatusMessage[status])
+	logger.Debugf("set status [%s][%s]...done without errors", txID, driver.TxStatusMessage[status])
 	return nil
 }
 
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
-	logger.Debugf("Get status [%s]...[%d]", txID, d.counter)
+	logger.Debugf("get status [%s]...[%d]", txID, d.counter)
 	d.storeLock.Lock()
 	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")

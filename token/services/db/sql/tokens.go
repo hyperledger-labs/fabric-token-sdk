@@ -61,20 +61,16 @@ func NewTokenDB(db *sql.DB, tablePrefix string, createSchema bool) (*TokenDB, er
 func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error) {
 	tx, err := db.NewTokenDBTransaction()
 	if err != nil {
-		return err
+		return
 	}
-	defer func() {
-		if err != nil && tx != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
 	if err = tx.StoreToken(tr, owners); err != nil {
+		if err1 := tx.Rollback(); err1 != nil {
+			logger.Errorf("error rolling back: %s", err1.Error())
+		}
 		return
 	}
 	if err = tx.Commit(); err != nil {
-		return err
+		return
 	}
 	return nil
 }
@@ -767,7 +763,7 @@ func (db *TokenDB) NewTokenDBTransaction() (driver.TokenDBTransaction, error) {
 	if err != nil {
 		return nil, errors.New("failed starting a db transaction")
 	}
-	return NewTokenTransaction(db, tx), nil
+	return &TokenTransaction{db: db, tx: tx}, nil
 }
 
 type TokenTransaction struct {
@@ -897,10 +893,6 @@ func (t *TokenTransaction) Commit() error {
 
 func (t *TokenTransaction) Rollback() error {
 	return t.tx.Rollback()
-}
-
-func NewTokenTransaction(db *TokenDB, tx *sql.Tx) *TokenTransaction {
-	return &TokenTransaction{db: db, tx: tx}
 }
 
 type UnspentTokensIterator struct {

@@ -115,13 +115,20 @@ func TMovements(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
 
-	assert.NoError(t, db.SetStatus("2", driver.Confirmed, ""))
+	w, err = db.BeginAtomicWrite()
+	assert.NoError(t, err)
+	assert.NoError(t, w.SetStatus("2", driver.Confirmed, ""))
+	assert.NoError(t, w.Commit())
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 
 	// setting same status twice should not change the results
-	assert.NoError(t, db.SetStatus("2", driver.Confirmed, ""))
+	w, err = db.BeginAtomicWrite()
+	assert.NoError(t, err)
+	assert.NoError(t, w.SetStatus("2", driver.Confirmed, ""))
+	assert.NoError(t, w.Commit())
+
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Confirmed}})
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
@@ -194,8 +201,11 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Empty(t, tr)
 
 	// update status
-	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed, "pineapple"))
-	assert.NoError(t, db.SetStatus("tx3", driver.Confirmed, ""))
+	w, err = db.BeginAtomicWrite()
+	assert.NoError(t, err)
+	assert.NoError(t, w.SetStatus("tx2", driver.Confirmed, "pineapple"))
+	assert.NoError(t, w.SetStatus("tx3", driver.Confirmed, ""))
+	assert.NoError(t, w.Commit())
 
 	status, message, err := db.GetStatus("tx2")
 	assert.NoError(t, err)
@@ -310,7 +320,7 @@ func TRollback(t *testing.T, db driver.TokenTransactionDB) {
 	}
 	assert.NoError(t, w.AddTransaction(tr1))
 	assert.NoError(t, w.AddMovement(mr1))
-	assert.NoError(t, w.Discard())
+	w.Rollback()
 	assert.Len(t, getTransactions(t, db, driver.QueryTransactionsParams{}), 0)
 }
 
@@ -595,8 +605,8 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 	for _, e := range exp {
 		assert.NoError(t, w.AddValidationRecord(e.TxID, e.TokenRequest, e.Metadata), "AddValidationRecord "+e.TxID)
 	}
+	assert.NoError(t, w.SetStatus("4", driver.Confirmed, ""))
 	assert.NoError(t, w.Commit(), "Commit")
-	assert.NoError(t, db.SetStatus("4", driver.Confirmed, ""))
 
 	all := getValidationRecords(t, db, driver.QueryValidationRecordsParams{})
 	assert.Len(t, all, 4)

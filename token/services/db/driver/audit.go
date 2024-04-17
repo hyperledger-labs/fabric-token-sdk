@@ -19,9 +19,6 @@ type AuditTransactionDB interface {
 	// BeginAtomicWrite opens an atomic database transaction. It must be committed or discarded.
 	BeginAtomicWrite() (AtomicWrite, error)
 
-	// SetStatus sets the status of a transaction
-	SetStatus(txID string, status TxStatus, message string) error
-
 	// GetStatus returns the status of a given transaction.
 	// It returns an error if the transaction is not found
 	GetStatus(txID string) (TxStatus, string, error)
