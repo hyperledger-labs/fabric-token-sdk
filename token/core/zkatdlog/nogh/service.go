@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -32,6 +33,7 @@ type Service struct {
 }
 
 func NewTokenService(
+	logger logging.Logger,
 	ws *common.WalletService,
 	ppm common.PublicParametersManager[*crypto.PublicParams],
 	identityProvider driver.IdentityProvider,
@@ -95,12 +97,12 @@ func (s *Service) DeserializeToken(tok []byte, infoRaw []byte) (*token2.Token, v
 func (s *Service) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
 	tokenInfoRaw := meta.GetTokenInfo(target)
 	if len(tokenInfoRaw) == 0 {
-		logger.Debugf("metadata for [%s] not found", hash.Hashable(target).String())
+		s.Logger.Debugf("metadata for [%s] not found", hash.Hashable(target).String())
 		return nil, errors.Errorf("metadata for [%s] not found", hash.Hashable(target).String())
 	}
 	return tokenInfoRaw, nil
 }
 
 func (s *Service) Validator() (driver.Validator, error) {
-	return validator.New(s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
+	return validator.New(s.Logger, s.PublicParametersManager.PublicParams(), s.Deserializer()), nil
 }

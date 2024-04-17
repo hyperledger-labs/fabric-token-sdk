@@ -12,6 +12,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -19,7 +20,7 @@ import (
 )
 
 const (
-	TransferMetadataPrefix = "TransferMetadataPrefix"
+	TransferMetadataPrefix = meta.TransferMetadataPrefix
 )
 
 // RecipientData contains information about the identity of a token owner

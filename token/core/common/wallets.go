@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -62,14 +62,14 @@ type IssuerTokenVault interface {
 }
 
 type IssuerWallet struct {
-	Logger           *flogging.FabricLogger
+	Logger           logging.Logger
 	IdentityProvider driver.IdentityProvider
 	TokenVault       IssuerTokenVault
 	WalletID         string
 	IssuerIdentity   view.Identity
 }
 
-func NewIssuerWallet(Logger *flogging.FabricLogger, IdentityProvider driver.IdentityProvider, TokenVault IssuerTokenVault, id string, identity view.Identity) *IssuerWallet {
+func NewIssuerWallet(Logger logging.Logger, IdentityProvider driver.IdentityProvider, TokenVault IssuerTokenVault, id string, identity view.Identity) *IssuerWallet {
 	return &IssuerWallet{
 		Logger:           Logger,
 		IdentityProvider: IdentityProvider,
@@ -263,7 +263,7 @@ func (w *LongTermOwnerWallet) Remote() bool {
 
 type AnonymousOwnerWallet struct {
 	*LongTermOwnerWallet
-	Logger         *flogging.FabricLogger
+	Logger         logging.Logger
 	ConfigManager  config.Manager
 	Deserializer   driver.Deserializer
 	WalletRegistry WalletRegistry
@@ -271,7 +271,7 @@ type AnonymousOwnerWallet struct {
 }
 
 func NewAnonymousOwnerWallet(
-	logger *flogging.FabricLogger,
+	logger logging.Logger,
 	IdentityProvider driver.IdentityProvider,
 	TokenVault OwnerTokenVault,
 	ConfigManager config.Manager,

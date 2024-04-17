@@ -12,13 +12,11 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.core")
 
 type CallbackFunc func(tms driver.TokenManagerService, network, channel, namespace string) error
 
@@ -37,6 +35,7 @@ type ConfigProvider interface {
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
 	sp             view.ServiceProvider
+	logger         common2.Logger
 	configProvider ConfigProvider
 	vault          Vault
 	callbackFunc   CallbackFunc
@@ -45,9 +44,10 @@ type TMSProvider struct {
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(sp view.ServiceProvider, configProvider ConfigProvider, vault Vault, callbackFunc CallbackFunc) *TMSProvider {
+func NewTMSProvider(sp view.ServiceProvider, logger common2.Logger, configProvider ConfigProvider, vault Vault, callbackFunc CallbackFunc) *TMSProvider {
 	ms := &TMSProvider{
 		sp:             sp,
+		logger:         logger,
 		configProvider: configProvider,
 		vault:          vault,
 		callbackFunc:   callbackFunc,
@@ -84,7 +84,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 		return service, nil
 	}
 
-	logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
+	m.logger.Debugf("creating new token manager service for [%s] with key [%s]", opts, key)
 	service, err = m.getTokenManagerService(opts)
 	if err != nil {
 		return nil, err
@@ -100,7 +100,7 @@ func (m *TMSProvider) NewTokenManagerService(opts driver.ServiceOptions) (driver
 	if len(opts.Namespace) == 0 {
 		return nil, errors.Errorf("namespace not specified")
 	}
-	logger.Debugf("creating new token manager service for [%s]", opts)
+	m.logger.Debugf("creating new token manager service for [%s]", opts)
 
 	service, err := m.newTMS(&opts)
 	if err != nil {
@@ -123,12 +123,12 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 	defer m.lock.Unlock()
 
 	key := tmsKey(opts)
-	logger.Debugf("update tms for [%s] with key [%s]", opts, key)
+	m.logger.Debugf("update tms for [%s] with key [%s]", opts, key)
 	service, ok := m.services[key]
 	if !ok {
-		logger.Debugf("no service found, instantiate token management system for [%s:%s:%s] for key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
+		m.logger.Debugf("no service found, instantiate token management system for [%s:%s:%s] for key [%s]", opts.Network, opts.Channel, opts.Namespace, key)
 	} else {
-		logger.Debugf("service found, unload token management system for [%s:%s:%s] for key [%s] and reload it", opts.Network, opts.Channel, opts.Namespace, key)
+		m.logger.Debugf("service found, unload token management system for [%s:%s:%s] for key [%s] and reload it", opts.Network, opts.Channel, opts.Namespace, key)
 	}
 
 	// create the service for the new public params
@@ -147,7 +147,7 @@ func (m *TMSProvider) Update(opts driver.ServiceOptions) (err error) {
 }
 
 func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (service driver.TokenManagerService, err error) {
-	logger.Debugf("creating new token manager service for [%s]", opts)
+	m.logger.Debugf("creating new token manager service for [%s]", opts)
 	service, err = m.newTMS(&opts)
 	if err != nil {
 		return nil, err
@@ -156,7 +156,7 @@ func (m *TMSProvider) getTokenManagerService(opts driver.ServiceOptions) (servic
 	if m.callbackFunc != nil {
 		err = m.callbackFunc(service, opts.Network, opts.Channel, opts.Namespace)
 		if err != nil {
-			logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
+			m.logger.Fatalf("failed to initialize tms for [%s]: [%s]", opts, err)
 		}
 	}
 	return service, nil
@@ -171,7 +171,7 @@ func (m *TMSProvider) newTMS(opts *driver.ServiceOptions) (driver.TokenManagerSe
 	if !ok {
 		return nil, errors.Errorf("failed instantiate token service, driver [%s] not found", driverName)
 	}
-	logger.Debugf("instantiating token service for [%s], with driver identifier [%s]", opts, driverName)
+	m.logger.Debugf("instantiating token service for [%s], with driver identifier [%s]", opts, driverName)
 
 	ts, err := d.NewTokenService(m.sp, opts.Network, opts.Channel, opts.Namespace, opts.PublicParams)
 	if err != nil {
@@ -201,7 +201,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) (*driver.Ser
 	for _, retriever := range []func(options *driver.ServiceOptions) ([]byte, error){m.ppFromOpts, m.ppFromVault, m.ppFromConfig, m.ppFromFetcher} {
 		ppRaw, err = retriever(opts)
 		if err != nil {
-			logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
+			m.logger.Warnf("failed to retrieve params for [%s]: [%s]", opts, err)
 		}
 		if len(ppRaw) != 0 {
 			break
@@ -209,7 +209,7 @@ func (m *TMSProvider) loadPublicParams(opts *driver.ServiceOptions) (*driver.Ser
 	}
 
 	if len(ppRaw) == 0 {
-		logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, debug.Stack())
+		m.logger.Errorf("cannot retrieve public params for [%s]: [%s]", opts, debug.Stack())
 		return nil, errors.Errorf("cannot retrive public params for [%s]", opts)
 	}
 
@@ -247,7 +247,7 @@ func (m *TMSProvider) ppFromConfig(opts *driver.ServiceOptions) ([]byte, error) 
 	}
 	cPP := tmsConfig.TMS().PublicParameters
 	if cPP != nil && len(cPP.Path) != 0 {
-		logger.Infof("load public parameters from [%s]...", cPP.Path)
+		m.logger.Infof("load public parameters from [%s]...", cPP.Path)
 		ppRaw, err := os.ReadFile(cPP.Path)
 		if err != nil {
 			return nil, errors.Errorf("failed to load public parameters from [%s]: [%s]", cPP.Path, err)

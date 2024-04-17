@@ -9,20 +9,20 @@ package common
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 )
 
 type WalletIdentityCacheBackendFunc func() (view.Identity, error)
 
 type WalletIdentityCache struct {
-	Logger  *flogging.FabricLogger
+	Logger  logging.Logger
 	backed  WalletIdentityCacheBackendFunc
 	ch      chan view.Identity
 	timeout time.Duration
 }
 
-func NewWalletIdentityCache(Logger *flogging.FabricLogger, backed WalletIdentityCacheBackendFunc, size int) *WalletIdentityCache {
+func NewWalletIdentityCache(Logger logging.Logger, backed WalletIdentityCacheBackendFunc, size int) *WalletIdentityCache {
 	ci := &WalletIdentityCache{
 		Logger:  Logger,
 		backed:  backed,

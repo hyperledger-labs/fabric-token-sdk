@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
 type Context[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] struct {
+	Logger            logging.Logger
 	PP                P
 	Deserializer      driver.Deserializer
 	SignatureProvider driver.SignatureProvider
@@ -38,7 +39,7 @@ type ActionDeserializer[TA driver.TransferAction, IA driver.IssueAction] interfa
 }
 
 type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction] struct {
-	Logger             *flogging.FabricLogger
+	Logger             logging.Logger
 	PublicParams       P
 	Deserializer       driver.Deserializer
 	ActionDeserializer ActionDeserializer[TA, IA]
@@ -47,7 +48,7 @@ type Validator[P driver.PublicParameters, T any, TA driver.TransferAction, IA dr
 }
 
 func NewValidator[P driver.PublicParameters, T any, TA driver.TransferAction, IA driver.IssueAction](
-	Logger *flogging.FabricLogger,
+	Logger logging.Logger,
 	publicParams P,
 	deserializer driver.Deserializer,
 	actionDeserializer ActionDeserializer[TA, IA],
@@ -169,6 +170,7 @@ func (v *Validator[P, T, TA, IA]) verifyIssues(ledger driver.Ledger, issues []IA
 
 func (v *Validator[P, T, TA, IA]) verifyIssue(tr IA, ledger driver.Ledger, signatureProvider driver.SignatureProvider) error {
 	context := &Context[P, T, TA, IA]{
+		Logger:            v.Logger,
 		PP:                v.PublicParams,
 		Deserializer:      v.Deserializer,
 		IssueAction:       tr,
@@ -210,6 +212,7 @@ func (v *Validator[P, T, TA, IA]) verifyTransfers(ledger driver.Ledger, transfer
 
 func (v *Validator[P, T, TA, IA]) verifyTransfer(tr TA, ledger driver.Ledger, signatureProvider driver.SignatureProvider) error {
 	context := &Context[P, T, TA, IA]{
+		Logger:            v.Logger,
 		PP:                v.PublicParams,
 		Deserializer:      v.Deserializer,
 		TransferAction:    tr,

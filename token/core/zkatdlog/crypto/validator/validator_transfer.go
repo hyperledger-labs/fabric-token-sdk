@@ -29,7 +29,7 @@ func TransferSignatureValidate(ctx *Context) error {
 		return errors.Wrapf(err, "failed to retrieve inputs to spend")
 	}
 	for i, in := range inputs {
-		logger.Debugf("load token [%d][%s]", i, in)
+		ctx.Logger.Debugf("load token [%d][%s]", i, in)
 		bytes, err := ctx.Ledger.GetState(in)
 		if err != nil {
 			return errors.Wrapf(err, "failed to retrieve input to spend [%s]", in)
@@ -43,12 +43,12 @@ func TransferSignatureValidate(ctx *Context) error {
 			return errors.Wrapf(err, "failed to deserialize input to spend [%s]", in)
 		}
 		tokens = append(tokens, tok)
-		logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner).UniqueID())
+		ctx.Logger.Debugf("check sender [%d][%s]", i, view.Identity(tok.Owner).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
 		}
-		logger.Debugf("signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
+		ctx.Logger.Debugf("signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%d][%s][%s]", i, in, view.Identity(tok.Owner).UniqueID())

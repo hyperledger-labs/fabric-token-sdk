@@ -8,11 +8,11 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -27,8 +27,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-var logger = flogging.MustGetLogger("token-sdk.driver.zkatdlog")
-
 type Driver struct {
 }
 
@@ -41,6 +39,8 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 }
 
 func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
+	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", networkID, channel, namespace)
+
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
@@ -141,7 +141,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		logger,
 		ip,
 		deserializer,
-		zkatdlog.NewWalletFactory(ip, qe, tmsConfig, deserializer),
+		zkatdlog.NewWalletFactory(logger, ip, qe, tmsConfig, deserializer),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
@@ -149,6 +149,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	)
 	tokDeserializer := &TokenDeserializer{}
 	service, err := zkatdlog.NewTokenService(
+		logger,
 		ws,
 		ppm,
 		ip,
@@ -156,8 +157,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		deserializer,
 		tmsConfig,
 		zkatdlog.NewIssueService(ppm, ws),
-		zkatdlog.NewTransferService(ppm, ws, common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer), deserializer),
-		zkatdlog.NewAuditorService(ppm, common.NewLedgerTokenLoader[*token3.Token](qe, tokDeserializer), deserializer),
+		zkatdlog.NewTransferService(logger, ppm, ws, common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer), deserializer),
+		zkatdlog.NewAuditorService(logger, ppm, common.NewLedgerTokenLoader[*token3.Token](qe, tokDeserializer), deserializer),
 		zkatdlog.NewTokensService(ppm),
 	)
 	if err != nil {
@@ -168,6 +169,8 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 }
 
 func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
+	logger := logging.DriverLoggerFromPP("token-sdk.driver.zkatdlog", params.Identifier())
+
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
@@ -176,7 +179,7 @@ func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator,
 	if err != nil {
 		return nil, err
 	}
-	return validator.New(pp, deserializer), nil
+	return validator.New(logger, pp, deserializer), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
@@ -188,6 +191,8 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 }
 
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
+	logger := logging.DriverLogger("token-sdk.driver.zkatdlog", networkID, channel, namespace)
+
 	pp, ok := params.(*crypto.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
@@ -275,7 +280,7 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 		logger,
 		ip,
 		deserializer,
-		zkatdlog.NewWalletFactory(ip, nil, tmsConfig, deserializer),
+		zkatdlog.NewWalletFactory(logger, ip, nil, tmsConfig, deserializer),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),

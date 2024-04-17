@@ -10,6 +10,8 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -19,20 +21,33 @@ import (
 )
 
 type TransferService struct {
+	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
 }
 
-func NewTransferService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], walletService driver.WalletService, tokenLoader TokenLoader, deserializer driver.Deserializer) *TransferService {
-	return &TransferService{PublicParametersManager: publicParametersManager, WalletService: walletService, TokenLoader: tokenLoader, Deserializer: deserializer}
+func NewTransferService(
+	logger logging.Logger,
+	publicParametersManager common.PublicParametersManager[*crypto.PublicParams],
+	walletService driver.WalletService,
+	tokenLoader TokenLoader,
+	deserializer driver.Deserializer,
+) *TransferService {
+	return &TransferService{
+		Logger:                  logger,
+		PublicParametersManager: publicParametersManager,
+		WalletService:           walletService,
+		TokenLoader:             tokenLoader,
+		Deserializer:            deserializer,
+	}
 }
 
-// Transfer returns a TransferAction as a function of the passed arguments
+// Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
 func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
+	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
 	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
 	if err != nil {
@@ -78,7 +93,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	}
 
 	// add transfer action's metadata
-	common.SetTransferActionMetadata(opts.Attributes, zkTransfer.Metadata)
+	zkTransfer.Metadata = meta.TransferActionMetadata(opts.Attributes)
 
 	ws := s.WalletService
 
@@ -109,7 +124,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}
 		if len(auditInfo) == 0 {
-			logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i].String(), view.Identity(t.Owner))
+			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i].String(), view.Identity(t.Owner))
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}
@@ -125,7 +140,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 		receiverIsSender[i] = err == nil
 	}
 
-	logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(ids), len(senderAuditInfos), len(outputs))
+	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(ids), len(senderAuditInfos), len(outputs))
 
 	metadata := &driver.TransferMetadata{
 		Outputs:            outputs,
@@ -141,14 +156,14 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	return zkTransfer, metadata, nil
 }
 
-// VerifyTransfer checks the outputs in the TransferAction against the passed metadata
+// VerifyTransfer checks the outputs in the TransferActionMetadata against the passed metadata
 func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMetadata [][]byte) error {
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
 	tr, ok := action.(*transfer.TransferAction)
 	if !ok {
-		return errors.New("failed to verify transfer: expected *zkatdlog.TransferAction")
+		return errors.New("failed to verify transfer: expected *zkatdlog.TransferActionMetadata")
 	}
 
 	// get commitments from outputs
@@ -172,13 +187,13 @@ func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMe
 		if err != nil {
 			return errors.Wrap(err, "failed getting token in the clear")
 		}
-		logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
+		s.Logger.Debugf("transfer output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 	}
 
 	return transfer.NewVerifier(tr.InputCommitments, com, pp).Verify(tr.Proof)
 }
 
-// DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
+// DeserializeTransferAction un-marshals a TransferActionMetadata from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
 func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	transferAction := &transfer.TransferAction{}
