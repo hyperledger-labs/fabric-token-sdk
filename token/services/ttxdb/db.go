@@ -236,10 +236,16 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	defer d.storeLock.Unlock()
 	logger.Debug("lock acquired")
 
-	record, err := req.AuditRecord()
+	ins, outs, err := req.InputsAndOutputs()
 	if err != nil {
-		return errors.WithMessagef(err, "failed getting audit records for request [%s]", req.Anchor)
+		return errors.WithMessagef(err, "failed getting inputs and outputs for request [%s]", req.Anchor)
 	}
+	record := &token.AuditRecord{
+		Anchor:  req.Anchor,
+		Inputs:  ins,
+		Outputs: outs,
+	}
+
 	raw, err := req.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
