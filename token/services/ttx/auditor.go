@@ -16,6 +16,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
@@ -62,11 +63,19 @@ func (a *TxAuditor) Release(tx *Transaction) {
 	a.auditor.Release(tx)
 }
 
-// NewQueryExecutor returns a new query executor. The query executor is used to
-// execute queries against the auditor's DB.
-// The function `Done` on the query executor must be called when it is no longer needed.
-func (a *TxAuditor) NewQueryExecutor() *auditor.QueryExecutor {
-	return a.auditor.NewQueryExecutor()
+// Transactions returns an iterator of transaction records filtered by the given params.
+func (a *TxAuditor) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+	return a.auditDB.Transactions(params)
+}
+
+// NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
+func (a *TxAuditor) NewPaymentsFilter() *auditdb.PaymentsFilter {
+	return a.auditDB.NewPaymentsFilter()
+}
+
+// NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
+func (a *TxAuditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
+	return a.auditDB.NewHoldingsFilter()
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status

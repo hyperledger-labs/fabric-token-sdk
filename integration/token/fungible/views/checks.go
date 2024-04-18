@@ -27,16 +27,7 @@ import (
 
 type TokenTransactionDB interface {
 	GetTokenRequest(txID string) ([]byte, error)
-}
-
-type TransactionIterator interface {
-	Close()
-	Next() (*TransactionRecord, error)
-}
-
-type QueryExecutor interface {
-	Transactions() (TransactionIterator, error)
-	Done()
+	Transactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error)
 }
 
 type CheckTTXDB struct {
@@ -63,22 +54,18 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 	l, err := net.Ledger()
 	assert.NoError(err, "failed to get ledger [%s:%s:%s]", tms.Network(), tms.Channel(), tms.Namespace())
 
-	var qe QueryExecutor
 	var tokenDB TokenTransactionDB
 	if m.Auditor {
 		auditorWallet := tms.WalletManager().AuditorWallet(m.AuditorWalletID)
 		assert.NotNil(auditorWallet, "cannot find auditor wallet [%s]", m.AuditorWalletID)
 		db, err := ttx.NewAuditor(context, auditorWallet)
 		assert.NoError(err, "failed to get auditor instance")
-		qe = &AuditDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
 		tokenDB = db
 	} else {
 		db := ttx.NewOwner(context, tms)
-		qe = &TTXDBQueryExecutor{QueryExecutor: db.NewQueryExecutor().QueryExecutor}
 		tokenDB = db
 	}
-	defer qe.Done()
-	it, err := qe.Transactions()
+	it, err := tokenDB.Transactions(driver.QueryTransactionsParams{})
 	assert.NoError(err, "failed to get transaction iterators")
 	defer it.Close()
 	for {
@@ -300,38 +287,6 @@ func (c *CheckIfExistsInVaultViewFactory) NewView(in []byte) (view.View, error) 
 	assert.NoError(err, "failed unmarshalling input")
 
 	return f, nil
-}
-
-type AuditDBQueryExecutor struct {
-	*auditdb.QueryExecutor
-}
-
-func (a *AuditDBQueryExecutor) Transactions() (TransactionIterator, error) {
-	it, err := a.QueryExecutor.Transactions(auditdb.QueryTransactionsParams{})
-	if err != nil {
-		return nil, err
-	}
-	return &AuditDBTransactionIterator{TransactionIterator: it}, nil
-}
-
-func (a *AuditDBQueryExecutor) Done() {
-	a.QueryExecutor.Done()
-}
-
-type TTXDBQueryExecutor struct {
-	*ttxdb.QueryExecutor
-}
-
-func (a *TTXDBQueryExecutor) Transactions() (TransactionIterator, error) {
-	it, err := a.QueryExecutor.Transactions(auditdb.QueryTransactionsParams{})
-	if err != nil {
-		return nil, err
-	}
-	return &TTXDBTransactionIterator{TransactionIterator: it}, nil
-}
-
-func (a *TTXDBQueryExecutor) Done() {
-	a.QueryExecutor.Done()
 }
 
 type TransactionRecord struct {

@@ -148,44 +148,6 @@ func (t *ValidationRecordsIterator) Next() (*ValidationRecord, error) {
 	return next, nil
 }
 
-// QueryTransactionsParams defines the parameters for querying movements
-type QueryTransactionsParams = driver.QueryTransactionsParams
-
-// QueryValidationRecordsParams defines the parameters for querying movements
-type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
-
-// QueryExecutor executors queries against the DB
-type QueryExecutor struct {
-	db     *DB
-	closed bool
-}
-
-// Transactions returns an iterators of transaction records filtered by the given params.
-func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
-	it, err := qe.db.db.QueryTransactions(params)
-	if err != nil {
-		return nil, errors.Errorf("failed to query transactions: %s", err)
-	}
-	return &TransactionIterator{it: it}, nil
-}
-
-// ValidationRecords returns an iterators of validation records filtered by the given params.
-func (qe *QueryExecutor) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
-	it, err := qe.db.db.QueryValidations(params)
-	if err != nil {
-		return nil, errors.Errorf("failed to query validation records: %s", err)
-	}
-	return &ValidationRecordsIterator{it: it}, nil
-}
-
-// Done closes the query executor. It must be called when the query executor is no longer needed.
-func (qe *QueryExecutor) Done() {
-	if qe.closed {
-		return
-	}
-	qe.closed = true
-}
-
 // Wallet models a wallet
 type Wallet interface {
 	// ID returns the wallet ID
@@ -210,6 +172,26 @@ func newDB(p driver.TokenTransactionDB) *DB {
 		eIDsLocks:     sync.Map{},
 		pendingTXs:    make([]string, 0, 10000),
 	}
+}
+
+// QueryTransactionsParams defines the parameters for querying movements
+type QueryTransactionsParams = driver.QueryTransactionsParams
+
+// QueryValidationRecordsParams defines the parameters for querying movements
+type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
+
+// Transactions returns an iterators of transaction records filtered by the given params.
+func (db *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+	return db.db.QueryTransactions(params)
+}
+
+// ValidationRecords returns an iterators of validation records filtered by the given params.
+func (db *DB) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
+	it, err := db.db.QueryValidations(params)
+	if err != nil {
+		return nil, errors.Errorf("failed to query validation records: %s", err)
+	}
+	return &ValidationRecordsIterator{it: it}, nil
 }
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
@@ -256,11 +238,6 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 
 	logger.Debugf("appending transaction record new completed without errors")
 	return nil
-}
-
-// NewQueryExecutor returns a new query executor
-func (d *DB) NewQueryExecutor() *QueryExecutor {
-	return &QueryExecutor{db: d}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
