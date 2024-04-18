@@ -217,7 +217,7 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 		return nil, err
 	}
 	return &Metadata{
-		TokenService:         t.tms,
+		TokenService:         t.tms.TokensService(),
 		WalletService:        t.tms.WalletService(),
 		TokenRequestMetadata: tokenRequestMetadata,
 	}, nil

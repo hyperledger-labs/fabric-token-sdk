@@ -498,7 +498,7 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if len(issueAction.GetOutputs()) != len(issueMeta.TokenInfo) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, _, err := tms.DeserializeToken(raw, issueMeta.TokenInfo[j])
+		tok, _, err := tms.TokensService().DeserializeToken(raw, issueMeta.TokenInfo[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
@@ -558,7 +558,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			continue
 		}
 
-		tok, _, err := tms.DeserializeToken(raw, transferMeta.OutputsMetadata[j])
+		tok, _, err := tms.TokensService().DeserializeToken(raw, transferMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
@@ -1084,7 +1084,7 @@ func (r *Request) SetApplicationMetadata(k string, v []byte) {
 // FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
 func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 	meta := &Metadata{
-		TokenService:         r.TokenService.tms,
+		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 	}
@@ -1106,7 +1106,7 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 		return nil, errors.New("can't get metadata: nil token service in request")
 	}
 	return &Metadata{
-		TokenService:         r.TokenService.tms,
+		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 	}, nil

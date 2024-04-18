@@ -20,9 +20,8 @@ import (
 type TokenManagerService interface {
 	IssueService() IssueService
 	TransferService() TransferService
-	TokenService
+	TokensService() TokensService
 	AuditorService() AuditorService
-
 	CertificationService() CertificationService
 	Deserializer() Deserializer
 	Serializer() Serializer

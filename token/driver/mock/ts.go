@@ -218,4 +218,4 @@ func (fake *TokenService) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.TokenService = new(TokenService)
+var _ driver.TokensService = new(TokenService)

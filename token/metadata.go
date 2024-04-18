@@ -16,7 +16,7 @@ import (
 
 // Metadata contains the metadata of a Token Request
 type Metadata struct {
-	TokenService         driver.TokenService
+	TokenService         driver.TokensService
 	WalletService        driver.WalletService
 	TokenRequestMetadata *driver.TokenRequestMetadata
 }
