@@ -68,8 +68,8 @@ func (v *nv) DeleteTokens(ids ...*token.ID) error {
 }
 
 func (v *nv) Status(id string) (driver.ValidationCode, string, error) {
-	vc, message, _, err := v.v.Status(id)
-	return driver.ValidationCode(vc), message, err
+	vc, message, err := v.v.Status(id)
+	return vc, message, err
 }
 
 func (v *nv) GetLastTxID() (string, error) {
@@ -340,12 +340,12 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	}
 }
 
-func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.ch.Committer().SubscribeTxStatusChanges(txID, listener)
+func (n *Network) AddFinalityListener(txID string, listener driver.FinalityListener) error {
+	return n.ch.Committer().AddFinalityListener(txID, listener)
 }
 
-func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.ch.Committer().UnsubscribeTxStatusChanges(txID, listener)
+func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
+	return n.ch.Committer().RemoveFinalityListener(txID, listener)
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {

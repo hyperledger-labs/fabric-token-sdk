@@ -188,7 +188,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	logger.Infof("auditdb [%s], found [%d] pending transactions", tmsID, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
-		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, auditor.db}); err != nil {
+		if err := net.AddFinalityListener(txID, &FinalityListener{net, auditor.db}); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, txID)
 		}
 	}

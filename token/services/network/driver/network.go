@@ -17,13 +17,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-// TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
-type TxStatusChangeListener interface {
-	// OnStatusChange is called when the status of a transaction changes
-	OnStatusChange(txID string, status int, message string) error
+// FinalityListener is the interface that must be implemented to receive transaction status change notifications
+type FinalityListener interface {
+	// OnStatus is called when the status of a transaction changes
+	OnStatus(txID string, status int, message string)
 }
 
-type TransientMap map[string][]byte
+type TransientMap = map[string][]byte
 
 type TxID struct {
 	Nonce   []byte
@@ -77,11 +77,15 @@ type Network interface {
 	// LocalMembership returns the local membership
 	LocalMembership() LocalMembership
 
-	// SubscribeTxStatusChanges registers a listener for transaction status changes for the passed id
-	SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error
+	// AddFinalityListener registers a listener for transaction status for the passed transaction id.
+	// If the status is already valid or invalid, the listener is called immediately.
+	// When the listener is invoked, then it is also removed.
+	// If the transaction id is empty, the listener will be called on status changes of any transaction.
+	// In this case, the listener is not removed
+	AddFinalityListener(txID string, listener FinalityListener) error
 
-	// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
-	UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error
+	// RemoveFinalityListener unregisters the passed listener.
+	RemoveFinalityListener(id string, listener FinalityListener) error
 
 	// LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.
 	// The operation gets canceled if the passed timeout elapses.

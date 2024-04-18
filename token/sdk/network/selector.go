@@ -22,17 +22,17 @@ type FabricVault struct {
 }
 
 func (v *FabricVault) Status(id string) (int, error) {
-	r, _, _, err := v.Vault.Status(id)
+	r, _, err := v.Vault.Status(id)
 	return int(r), err
 }
 
 type OrionVault struct {
-	*orion.Vault
+	orion.Vault
 }
 
 func (v *OrionVault) Status(id string) (int, error) {
 	r, _, err := v.Vault.Status(id)
-	return int(r), err
+	return r, err
 }
 
 type LockerProvider struct {
