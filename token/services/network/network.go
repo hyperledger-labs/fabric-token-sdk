@@ -27,11 +27,10 @@ import (
 type ValidationCode = driver.ValidationCode
 
 const (
-	_       ValidationCode = iota
-	Valid                  = driver.Valid   // Transaction is valid and committed
-	Invalid                = driver.Invalid // Transaction is invalid and has been discarded
-	Busy                   = driver.Busy    // Transaction does not yet have a validity state
-	Unknown                = driver.Unknown // Transaction is unknown
+	Valid   = driver.Valid   // Transaction is valid and committed
+	Invalid = driver.Invalid // Transaction is invalid and has been discarded
+	Busy    = driver.Busy    // Transaction does not yet have a validity state
+	Unknown = driver.Unknown // Transaction is unknown
 )
 
 var logger = flogging.MustGetLogger("token-sdk.network")
