@@ -19,7 +19,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
-	"go.uber.org/atomic"
 )
 
 var (
@@ -158,8 +157,6 @@ func (qe *QueryExecutor) Done() {
 	if qe.closed {
 		return
 	}
-	qe.db.counter.Dec()
-	qe.db.storeLock.RUnlock()
 	qe.closed = true
 }
 
@@ -174,20 +171,7 @@ type Wallet interface {
 // DB is a database that stores token transactions related information
 type DB struct {
 	*db.StatusSupport
-	counter atomic.Int32
-
-	// the vault handles access concurrency to the store using storeLock.
-	// In particular:
-	// * when a directQueryExecutor is returned, it holds a read-lock;
-	//   when Done is called on it, the lock is released.
-	// * when an interceptor is returned (using NewRWSet (in case the
-	//   transaction context is generated from nothing) or GetRWSet
-	//   (in case the transaction context is received from another node)),
-	//   it holds a read-lock; when Done is called on it, the lock is released.
-	// * an exclusive lock is held when Commit is called.
 	db        driver.AuditTransactionDB
-	storeLock sync.RWMutex
-
 	eIDsLocks sync.Map
 
 	// status related fields
@@ -205,10 +189,7 @@ func newDB(p driver.AuditTransactionDB) *DB {
 
 // Append appends send and receive movements, and transaction records corresponding to the passed token request
 func (d *DB) Append(req *token.Request) error {
-	logger.Debugf("appending new record... [%d]", d.counter)
-	d.storeLock.Lock()
-	defer d.storeLock.Unlock()
-	logger.Debug("lock acquired")
+	logger.Debugf("appending new record... [%s]", req.Anchor)
 
 	record, err := req.AuditRecord()
 	if err != nil {
@@ -261,9 +242,6 @@ func (d *DB) Append(req *token.Request) error {
 
 // NewQueryExecutor returns a new query executor
 func (d *DB) NewQueryExecutor() *QueryExecutor {
-	d.counter.Inc()
-	d.storeLock.RLock()
-
 	return &QueryExecutor{db: d}
 }
 
@@ -295,16 +273,12 @@ func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
-	logger.Debugf("get status [%s]...[%d]", txID, d.counter)
-	d.storeLock.Lock()
-	defer d.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
+	logger.Debugf("get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, d.counter)
+	logger.Debugf("Got status [%s][%s]", txID, status)
 	return status, message, nil
 }
 
