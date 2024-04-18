@@ -137,10 +137,14 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	service, err := fabtoken.NewService(
 		ws,
 		publicParamsManager,
-		common.NewVaultTokenLoader(qe),
 		ip,
-		NewDeserializer(),
+		common.NewSerializer(),
+		deserializer,
 		tmsConfig,
+		fabtoken.NewIssueService(publicParamsManager),
+		fabtoken.NewTransferService(publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
+		fabtoken.NewAuditorService(),
+		fabtoken.NewTokensService(),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

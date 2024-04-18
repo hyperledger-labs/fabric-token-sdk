@@ -151,11 +151,14 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 	service, err := zkatdlog.NewTokenService(
 		ws,
 		ppm,
-		common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
-		common.NewLedgerTokenLoader[*token3.Token](qe, tokDeserializer),
 		ip,
+		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
+		zkatdlog.NewIssueService(ppm, ws),
+		zkatdlog.NewTransferService(ppm, ws, common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer), deserializer),
+		zkatdlog.NewAuditorService(ppm, common.NewLedgerTokenLoader[*token3.Token](qe, tokDeserializer), deserializer),
+		zkatdlog.NewTokensService(ppm),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

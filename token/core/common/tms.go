@@ -20,13 +20,18 @@ type PublicParametersManager[T driver.PublicParameters] interface {
 }
 
 type Service[T driver.PublicParameters] struct {
-	*WalletService
 	Logger                  *flogging.FabricLogger
 	PublicParametersManager PublicParametersManager[T]
+	serializer              driver.Serializer
 	deserializer            driver.Deserializer
 	identityProvider        driver.IdentityProvider
 	configManager           config.Manager
 	certificationService    driver.CertificationService
+	walletService           driver.WalletService
+	issueService            driver.IssueService
+	transferService         driver.TransferService
+	auditorService          driver.AuditorService
+	tokensService           driver.TokensService
 }
 
 func NewTokenService[T driver.PublicParameters](
@@ -34,18 +39,28 @@ func NewTokenService[T driver.PublicParameters](
 	ws *WalletService,
 	publicParametersManager PublicParametersManager[T],
 	identityProvider driver.IdentityProvider,
+	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
 	certificationService driver.CertificationService,
+	issueService driver.IssueService,
+	transferService driver.TransferService,
+	auditorService driver.AuditorService,
+	tokensService driver.TokensService,
 ) (*Service[T], error) {
 	s := &Service[T]{
 		Logger:                  logger,
-		WalletService:           ws,
 		PublicParametersManager: publicParametersManager,
 		identityProvider:        identityProvider,
+		serializer:              serializer,
 		deserializer:            deserializer,
 		configManager:           configManager,
 		certificationService:    certificationService,
+		walletService:           ws,
+		issueService:            issueService,
+		transferService:         transferService,
+		auditorService:          auditorService,
+		tokensService:           tokensService,
 	}
 	return s, nil
 }
@@ -68,6 +83,10 @@ func (s *Service[T]) Deserializer() driver.Deserializer {
 	return s.deserializer
 }
 
+func (s *Service[T]) Serializer() driver.Serializer {
+	return s.serializer
+}
+
 func (s *Service[T]) CertificationService() driver.CertificationService {
 	return s.certificationService
 }
@@ -82,12 +101,24 @@ func (s *Service[T]) ConfigManager() config.Manager {
 	return s.configManager
 }
 
-func (s *Service[T]) MarshalTokenRequestToSign(request *driver.TokenRequest, meta *driver.TokenRequestMetadata) ([]byte, error) {
-	newReq := &driver.TokenRequest{
-		Issues:    request.Issues,
-		Transfers: request.Transfers,
-	}
-	return newReq.Bytes()
+func (s *Service[T]) WalletService() driver.WalletService {
+	return s.walletService
+}
+
+func (s *Service[T]) IssueService() driver.IssueService {
+	return s.issueService
+}
+
+func (s *Service[T]) TransferService() driver.TransferService {
+	return s.transferService
+}
+
+func (s *Service[T]) AuditorService() driver.AuditorService {
+	return s.auditorService
+}
+
+func (s *Service[T]) TokensService() driver.TokensService {
+	return s.tokensService
 }
 
 // Done releases all the resources allocated by this service

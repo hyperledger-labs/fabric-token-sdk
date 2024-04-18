@@ -5,40 +5,26 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	tokena "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type TMS struct {
-	DeserializeTokenStub        func([]byte, []byte) (*tokena.Token, view.Identity, error)
+type TokenService struct {
+	DeserializeTokenStub        func([]byte, []byte) (*token.Token, view.Identity, error)
 	deserializeTokenMutex       sync.RWMutex
 	deserializeTokenArgsForCall []struct {
 		arg1 []byte
 		arg2 []byte
 	}
 	deserializeTokenReturns struct {
-		result1 *tokena.Token
+		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}
 	deserializeTokenReturnsOnCall map[int]struct {
-		result1 *tokena.Token
+		result1 *token.Token
 		result2 view.Identity
 		result3 error
-	}
-	GetEnrollmentIDStub        func([]byte) (string, error)
-	getEnrollmentIDMutex       sync.RWMutex
-	getEnrollmentIDArgsForCall []struct {
-		arg1 []byte
-	}
-	getEnrollmentIDReturns struct {
-		result1 string
-		result2 error
-	}
-	getEnrollmentIDReturnsOnCall map[int]struct {
-		result1 string
-		result2 error
 	}
 	GetTokenInfoStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
 	getTokenInfoMutex       sync.RWMutex
@@ -58,7 +44,7 @@ type TMS struct {
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TMS) DeserializeToken(arg1 []byte, arg2 []byte) (*tokena.Token, view.Identity, error) {
+func (fake *TokenService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
@@ -88,124 +74,55 @@ func (fake *TMS) DeserializeToken(arg1 []byte, arg2 []byte) (*tokena.Token, view
 	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
 }
 
-func (fake *TMS) DeserializeTokenCallCount() int {
+func (fake *TokenService) DeserializeTokenCallCount() int {
 	fake.deserializeTokenMutex.RLock()
 	defer fake.deserializeTokenMutex.RUnlock()
 	return len(fake.deserializeTokenArgsForCall)
 }
 
-func (fake *TMS) DeserializeTokenCalls(stub func([]byte, []byte) (*tokena.Token, view.Identity, error)) {
+func (fake *TokenService) DeserializeTokenCalls(stub func([]byte, []byte) (*token.Token, view.Identity, error)) {
 	fake.deserializeTokenMutex.Lock()
 	defer fake.deserializeTokenMutex.Unlock()
 	fake.DeserializeTokenStub = stub
 }
 
-func (fake *TMS) DeserializeTokenArgsForCall(i int) ([]byte, []byte) {
+func (fake *TokenService) DeserializeTokenArgsForCall(i int) ([]byte, []byte) {
 	fake.deserializeTokenMutex.RLock()
 	defer fake.deserializeTokenMutex.RUnlock()
 	argsForCall := fake.deserializeTokenArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TMS) DeserializeTokenReturns(result1 *tokena.Token, result2 view.Identity, result3 error) {
+func (fake *TokenService) DeserializeTokenReturns(result1 *token.Token, result2 view.Identity, result3 error) {
 	fake.deserializeTokenMutex.Lock()
 	defer fake.deserializeTokenMutex.Unlock()
 	fake.DeserializeTokenStub = nil
 	fake.deserializeTokenReturns = struct {
-		result1 *tokena.Token
+		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *TMS) DeserializeTokenReturnsOnCall(i int, result1 *tokena.Token, result2 view.Identity, result3 error) {
+func (fake *TokenService) DeserializeTokenReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 error) {
 	fake.deserializeTokenMutex.Lock()
 	defer fake.deserializeTokenMutex.Unlock()
 	fake.DeserializeTokenStub = nil
 	if fake.deserializeTokenReturnsOnCall == nil {
 		fake.deserializeTokenReturnsOnCall = make(map[int]struct {
-			result1 *tokena.Token
+			result1 *token.Token
 			result2 view.Identity
 			result3 error
 		})
 	}
 	fake.deserializeTokenReturnsOnCall[i] = struct {
-		result1 *tokena.Token
+		result1 *token.Token
 		result2 view.Identity
 		result3 error
 	}{result1, result2, result3}
 }
 
-func (fake *TMS) GetEnrollmentID(arg1 []byte) (string, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
-	fake.getEnrollmentIDMutex.Lock()
-	ret, specificReturn := fake.getEnrollmentIDReturnsOnCall[len(fake.getEnrollmentIDArgsForCall)]
-	fake.getEnrollmentIDArgsForCall = append(fake.getEnrollmentIDArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
-	stub := fake.GetEnrollmentIDStub
-	fakeReturns := fake.getEnrollmentIDReturns
-	fake.recordInvocation("GetEnrollmentID", []interface{}{arg1Copy})
-	fake.getEnrollmentIDMutex.Unlock()
-	if stub != nil {
-		return stub(arg1)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2
-	}
-	return fakeReturns.result1, fakeReturns.result2
-}
-
-func (fake *TMS) GetEnrollmentIDCallCount() int {
-	fake.getEnrollmentIDMutex.RLock()
-	defer fake.getEnrollmentIDMutex.RUnlock()
-	return len(fake.getEnrollmentIDArgsForCall)
-}
-
-func (fake *TMS) GetEnrollmentIDCalls(stub func([]byte) (string, error)) {
-	fake.getEnrollmentIDMutex.Lock()
-	defer fake.getEnrollmentIDMutex.Unlock()
-	fake.GetEnrollmentIDStub = stub
-}
-
-func (fake *TMS) GetEnrollmentIDArgsForCall(i int) []byte {
-	fake.getEnrollmentIDMutex.RLock()
-	defer fake.getEnrollmentIDMutex.RUnlock()
-	argsForCall := fake.getEnrollmentIDArgsForCall[i]
-	return argsForCall.arg1
-}
-
-func (fake *TMS) GetEnrollmentIDReturns(result1 string, result2 error) {
-	fake.getEnrollmentIDMutex.Lock()
-	defer fake.getEnrollmentIDMutex.Unlock()
-	fake.GetEnrollmentIDStub = nil
-	fake.getEnrollmentIDReturns = struct {
-		result1 string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *TMS) GetEnrollmentIDReturnsOnCall(i int, result1 string, result2 error) {
-	fake.getEnrollmentIDMutex.Lock()
-	defer fake.getEnrollmentIDMutex.Unlock()
-	fake.GetEnrollmentIDStub = nil
-	if fake.getEnrollmentIDReturnsOnCall == nil {
-		fake.getEnrollmentIDReturnsOnCall = make(map[int]struct {
-			result1 string
-			result2 error
-		})
-	}
-	fake.getEnrollmentIDReturnsOnCall[i] = struct {
-		result1 string
-		result2 error
-	}{result1, result2}
-}
-
-func (fake *TMS) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
+func (fake *TokenService) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
@@ -230,26 +147,26 @@ func (fake *TMS) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TMS) GetTokenInfoCallCount() int {
+func (fake *TokenService) GetTokenInfoCallCount() int {
 	fake.getTokenInfoMutex.RLock()
 	defer fake.getTokenInfoMutex.RUnlock()
 	return len(fake.getTokenInfoArgsForCall)
 }
 
-func (fake *TMS) GetTokenInfoCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
+func (fake *TokenService) GetTokenInfoCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
 	fake.getTokenInfoMutex.Lock()
 	defer fake.getTokenInfoMutex.Unlock()
 	fake.GetTokenInfoStub = stub
 }
 
-func (fake *TMS) GetTokenInfoArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
+func (fake *TokenService) GetTokenInfoArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
 	fake.getTokenInfoMutex.RLock()
 	defer fake.getTokenInfoMutex.RUnlock()
 	argsForCall := fake.getTokenInfoArgsForCall[i]
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *TMS) GetTokenInfoReturns(result1 []byte, result2 error) {
+func (fake *TokenService) GetTokenInfoReturns(result1 []byte, result2 error) {
 	fake.getTokenInfoMutex.Lock()
 	defer fake.getTokenInfoMutex.Unlock()
 	fake.GetTokenInfoStub = nil
@@ -259,7 +176,7 @@ func (fake *TMS) GetTokenInfoReturns(result1 []byte, result2 error) {
 	}{result1, result2}
 }
 
-func (fake *TMS) GetTokenInfoReturnsOnCall(i int, result1 []byte, result2 error) {
+func (fake *TokenService) GetTokenInfoReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.getTokenInfoMutex.Lock()
 	defer fake.getTokenInfoMutex.Unlock()
 	fake.GetTokenInfoStub = nil
@@ -275,13 +192,11 @@ func (fake *TMS) GetTokenInfoReturnsOnCall(i int, result1 []byte, result2 error)
 	}{result1, result2}
 }
 
-func (fake *TMS) Invocations() map[string][][]interface{} {
+func (fake *TokenService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
 	fake.deserializeTokenMutex.RLock()
 	defer fake.deserializeTokenMutex.RUnlock()
-	fake.getEnrollmentIDMutex.RLock()
-	defer fake.getEnrollmentIDMutex.RUnlock()
 	fake.getTokenInfoMutex.RLock()
 	defer fake.getTokenInfoMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
@@ -291,7 +206,7 @@ func (fake *TMS) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *TMS) recordInvocation(key string, args []interface{}) {
+func (fake *TokenService) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -303,4 +218,4 @@ func (fake *TMS) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ token.TMS = new(TMS)
+var _ driver.TokensService = new(TokenService)

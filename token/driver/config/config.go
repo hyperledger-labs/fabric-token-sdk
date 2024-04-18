@@ -77,8 +77,5 @@ func (t *TMS) GetWalletDefaultCacheSize() int {
 
 type Manager interface {
 	TMS() *TMS
-	TranslatePath(path string) string
-	IsSet(key string) bool
 	UnmarshalKey(key string, rawVal interface{}) error
-	GetString(key string) string
 }

@@ -246,7 +246,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	// Compute Issue
-	issue, meta, err := r.TokenService.tms.Issue(
+	issue, meta, err := r.TokenService.tms.IssueService().Issue(
 		id,
 		typ,
 		[]uint64{q},
@@ -270,7 +270,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		return nil, err
 	}
 
-	auditInfo, err := r.TokenService.tms.GetAuditInfo(receiver)
+	auditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(receiver)
 	if err != nil {
 		return nil, err
 	}
@@ -313,7 +313,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 
 	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
 
-	ts := r.TokenService.tms
+	ts := r.TokenService.tms.TransferService()
 
 	// Compute transfer
 	transfer, transferMetadata, err := ts.Transfer(
@@ -361,7 +361,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 
 	logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
 
-	ts := r.TokenService.tms
+	ts := r.TokenService.tms.TransferService()
 
 	// Compute redeem, it is a transfer with owner set to nil
 	transfer, transferMetadata, err := ts.Transfer(
@@ -414,9 +414,10 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	}
 	var outputs []*Output
 	counter := uint64(0)
+	is := tms.IssueService()
 	for i, issue := range r.Actions.Issues {
 		// deserialize action
-		issueAction, err := tms.DeserializeIssueAction(issue)
+		issueAction, err := is.DeserializeIssueAction(issue)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
@@ -437,9 +438,10 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		counter = newCounter
 	}
 
+	ts := tms.TransferService()
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
-		transferAction, err := tms.DeserializeTransferAction(transfer)
+		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -496,15 +498,15 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if len(issueAction.GetOutputs()) != len(issueMeta.TokenInfo) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, _, err := tms.DeserializeToken(raw, issueMeta.TokenInfo[j])
+		tok, _, err := tms.TokensService().DeserializeToken(raw, issueMeta.TokenInfo[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
-		eID, err := tms.GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
+		eID, err := tms.WalletService().GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
-		rID, err := tms.GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
+		rID, err := tms.WalletService().GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 		}
@@ -556,7 +558,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			continue
 		}
 
-		tok, _, err := tms.DeserializeToken(raw, transferMeta.OutputsMetadata[j])
+		tok, _, err := tms.TokensService().DeserializeToken(raw, transferMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting transfer action output in the clear [%d,%d]", i, j)
 		}
@@ -565,11 +567,11 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		var ownerAuditInfo []byte
 		if len(tok.Owner.Raw) != 0 {
 			ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]
-			eID, err = tms.GetEnrollmentID(ownerAuditInfo)
+			eID, err = tms.WalletService().GetEnrollmentID(ownerAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
-			rID, err = tms.GetRevocationHandler(ownerAuditInfo)
+			rID, err = tms.WalletService().GetRevocationHandler(ownerAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 			}
@@ -618,9 +620,10 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 		return nil, err
 	}
 	var inputs []*Input
+	ts := tms.TransferService()
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
-		transferAction, err := tms.DeserializeTransferAction(transfer)
+		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -661,12 +664,12 @@ func (r *Request) extractInputs(i int, transferMeta *TransferMetadata, failOnMis
 			continue
 		}
 
-		eID, err := tms.GetEnrollmentID(senderAuditInfo)
+		eID, err := tms.WalletService().GetEnrollmentID(senderAuditInfo)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
 
-		rID, err := tms.GetRevocationHandler(senderAuditInfo)
+		rID, err := tms.WalletService().GetRevocationHandler(senderAuditInfo)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 		}
@@ -700,9 +703,10 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 	var outputs []*Output
 	counter := uint64(0)
 
+	issueService := tms.IssueService()
 	for i, issue := range r.Actions.Issues {
 		// deserialize action
-		issueAction, err := tms.DeserializeIssueAction(issue)
+		issueAction, err := issueService.DeserializeIssueAction(issue)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
@@ -716,7 +720,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		}
 
 		if verifyActions {
-			if err := tms.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
+			if err := issueService.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed verifying issue action")
 			}
 		}
@@ -729,9 +733,10 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		counter = newCounter
 	}
 
+	ts := tms.TransferService()
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
-		transferAction, err := tms.DeserializeTransferAction(transfer)
+		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -744,7 +749,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 			return nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if verifyActions {
-			if err := tms.VerifyTransfer(transferAction, transferMeta.OutputsMetadata); err != nil {
+			if err := ts.VerifyTransfer(transferAction, transferMeta.OutputsMetadata); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed verifying transfer action")
 			}
 		}
@@ -769,9 +774,9 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 	}
 
 	precision := tms.PublicParamsManager().PublicParameters().Precision()
-	is := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
+	inputStream := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
 	os := NewOutputStream(outputs, precision)
-	return is, os, nil
+	return inputStream, os, nil
 }
 
 // IsValid checks that the request is valid.
@@ -813,7 +818,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	return r.TokenService.tms.MarshalTokenRequestToSign(r.Actions, r.Metadata)
+	return r.TokenService.tms.Serializer().MarshalTokenRequestToSign(r.Actions, r.Metadata)
 }
 
 // RequestToBytes marshals the request's actions to bytes.
@@ -997,7 +1002,7 @@ func (r *Request) AuditCheck() error {
 	if err := r.IsValid(); err != nil {
 		return err
 	}
-	return r.TokenService.tms.AuditorCheck(
+	return r.TokenService.tms.AuditorService().AuditorCheck(
 		r.Actions,
 		r.Metadata,
 		r.Anchor,
@@ -1041,7 +1046,7 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 		in.Quantity = q
 
 		// retrieve the owner's audit info
-		ownerAuditInfo, err := r.TokenService.tms.GetAuditInfo(toks[i].Owner.Raw)
+		ownerAuditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(toks[i].Owner.Raw)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
@@ -1079,7 +1084,8 @@ func (r *Request) SetApplicationMetadata(k string, v []byte) {
 // FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
 func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 	meta := &Metadata{
-		TMS:                  r.TokenService.tms,
+		TokenService:         r.TokenService.tms.TokensService(),
+		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 	}
 	filteredMeta, err := meta.FilterBy(eIDs[0])
@@ -1100,7 +1106,8 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 		return nil, errors.New("can't get metadata: nil token service in request")
 	}
 	return &Metadata{
-		TMS:                  r.TokenService.tms,
+		TokenService:         r.TokenService.tms.TokensService(),
+		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 	}, nil
 }

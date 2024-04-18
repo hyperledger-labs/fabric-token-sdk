@@ -12,16 +12,10 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/mock"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
-
-//go:generate counterfeiter -o mock/tms.go -fake-name TMS . TMS
-
-type TMS interface {
-	token.TMS
-}
 
 func TestFilterBy(t *testing.T) {
 	testFilterByCase0(t)
@@ -64,18 +58,18 @@ func testFilterByCase0(t *testing.T) {
 		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
 		ReceiverIsSender:   []bool{false},
 	}
-	tms := &mock.TMS{}
-	tms.GetEnrollmentIDReturnsOnCall(0, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(1, "Charlie", nil)
-	tms.GetEnrollmentIDReturnsOnCall(2, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(3, "Charlie", nil)
-	tms.GetEnrollmentIDReturnsOnCall(4, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(5, "Charlie", nil)
-	tms.GetEnrollmentIDReturnsOnCall(6, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(7, "Charlie", nil)
+	ws := &mock.WalletService{}
+	ws.GetEnrollmentIDReturnsOnCall(0, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(1, "Charlie", nil)
+	ws.GetEnrollmentIDReturnsOnCall(2, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(3, "Charlie", nil)
+	ws.GetEnrollmentIDReturnsOnCall(4, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(5, "Charlie", nil)
+	ws.GetEnrollmentIDReturnsOnCall(6, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(7, "Charlie", nil)
 
 	metadata := &token.Metadata{
-		TMS: tms,
+		WalletService: ws,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{
 			Issues: nil,
 			Transfers: []driver.TransferMetadata{
@@ -91,7 +85,7 @@ func testFilterByCase0(t *testing.T) {
 	filteredMetadata, err := metadata.FilterBy("Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 2, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 0)
 	// Check that the application metadata is not filtered
@@ -105,7 +99,7 @@ func testFilterByCase0(t *testing.T) {
 	filteredMetadata, err = metadata.FilterBy("Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 4, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 0)
 	// Check that the application metadata is not filtered
@@ -119,7 +113,7 @@ func testFilterByCase0(t *testing.T) {
 	filteredMetadata, err = metadata.FilterBy("Eve")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 6, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 0)
 	// Check that the application metadata is not filtered
@@ -133,7 +127,7 @@ func testFilterByCase0(t *testing.T) {
 	filteredMetadata, err = metadata.FilterBy("Bob", "Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 8, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
 	// Check no issues were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Issues, 0)
 	// Check that the application metadata is not filtered
@@ -166,18 +160,18 @@ func testFilterByCase1(t *testing.T) {
 		ReceiversAuditInfos: [][]byte{[]byte("Bob")},
 	}
 
-	tms := &mock.TMS{}
-	tms.GetEnrollmentIDReturnsOnCall(0, "Alice", nil)
-	tms.GetEnrollmentIDReturnsOnCall(1, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(2, "Alice", nil)
-	tms.GetEnrollmentIDReturnsOnCall(3, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(4, "Alice", nil)
-	tms.GetEnrollmentIDReturnsOnCall(5, "Bob", nil)
-	tms.GetEnrollmentIDReturnsOnCall(6, "Alice", nil)
-	tms.GetEnrollmentIDReturnsOnCall(7, "Bob", nil)
+	ws := &mock.WalletService{}
+	ws.GetEnrollmentIDReturnsOnCall(0, "Alice", nil)
+	ws.GetEnrollmentIDReturnsOnCall(1, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(2, "Alice", nil)
+	ws.GetEnrollmentIDReturnsOnCall(3, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(4, "Alice", nil)
+	ws.GetEnrollmentIDReturnsOnCall(5, "Bob", nil)
+	ws.GetEnrollmentIDReturnsOnCall(6, "Alice", nil)
+	ws.GetEnrollmentIDReturnsOnCall(7, "Bob", nil)
 
 	metadata := &token.Metadata{
-		TMS: tms,
+		WalletService: ws,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{
 			Issues: []driver.IssueMetadata{
 				aliceIssue,
@@ -190,7 +184,7 @@ func testFilterByCase1(t *testing.T) {
 	filteredMetadata, err := metadata.FilterBy("Alice")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 2, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 2, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 0)
 	// Check that the application metadata is not filtered
@@ -204,7 +198,7 @@ func testFilterByCase1(t *testing.T) {
 	filteredMetadata, err = metadata.FilterBy("Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 4, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 4, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 0)
 	// Check that the application metadata is not filtered
@@ -218,7 +212,7 @@ func testFilterByCase1(t *testing.T) {
 	filteredMetadata, err = metadata.FilterBy("Charlie")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 6, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 6, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 0)
 	// Check that the application metadata is not filtered
@@ -232,7 +226,7 @@ func testFilterByCase1(t *testing.T) {
 	filteredMetadata, err = metadata.FilterBy("Alice", "Bob")
 	assert.NoError(t, err)
 	// assert the calls to the TMS
-	assert.Equal(t, 8, tms.GetEnrollmentIDCallCount())
+	assert.Equal(t, 8, ws.GetEnrollmentIDCallCount())
 	// Check no transfers were returned
 	assert.Len(t, filteredMetadata.TokenRequestMetadata.Transfers, 0)
 	// Check that the application metadata is not filtered

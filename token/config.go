@@ -24,8 +24,3 @@ func (m *ConfigManager) Certifiers() []string {
 func (m *ConfigManager) UnmarshalKey(key string, rawVal interface{}) error {
 	return m.cm.UnmarshalKey(key, rawVal)
 }
-
-// IsSet checks to see if the key has been set in any of the data locations
-func (m *ConfigManager) IsSet(key string) bool {
-	return m.cm.IsSet(key)
-}
