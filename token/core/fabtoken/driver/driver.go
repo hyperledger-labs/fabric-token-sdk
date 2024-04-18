@@ -139,6 +139,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		publicParamsManager,
 		common.NewVaultTokenLoader(qe),
 		ip,
+		common.NewSerializer(),
 		NewDeserializer(),
 		tmsConfig,
 	)

@@ -27,6 +27,7 @@ func NewService(
 	ppm common.PublicParametersManager[*PublicParams],
 	tokenLoader TokenLoader,
 	identityProvider driver.IdentityProvider,
+	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
 ) (*Service, error) {
@@ -35,6 +36,7 @@ func NewService(
 		ws,
 		ppm,
 		identityProvider,
+		serializer,
 		deserializer,
 		configManager,
 		nil,

@@ -14,28 +14,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-type TMS interface {
-	// DeserializeToken returns the token and its issuer (if any).
-	DeserializeToken(outputRaw []byte, tokenInfoRaw []byte) (*token.Token, view.Identity, error)
-	// GetTokenInfo extracts from the given metadata the token info entry corresponding to the given target
-	GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error)
-	// GetEnrollmentID extracts the enrollment id from the passed audit information
-	GetEnrollmentID(bytes []byte) (string, error)
-}
-
 // Metadata contains the metadata of a Token Request
 type Metadata struct {
-	TMS                  TMS
+	TokenService         driver.TokenService
+	WalletService        driver.WalletService
 	TokenRequestMetadata *driver.TokenRequestMetadata
 }
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
 func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, error) {
-	tokenInfoRaw, err := m.TMS.GetTokenInfo(m.TokenRequestMetadata, raw)
+	tokenInfoRaw, err := m.TokenService.GetTokenInfo(m.TokenRequestMetadata, raw)
 	if err != nil {
 		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", hash.Hashable(raw).String())
 	}
-	tok, id, err := m.TMS.DeserializeToken(raw, tokenInfoRaw)
+	tok, id, err := m.TokenService.DeserializeToken(raw, tokenInfoRaw)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed getting token in the clear")
 	}
@@ -62,7 +54,8 @@ func (m *Metadata) SpentTokenID() []*token.ID {
 // Application metadata is always included
 func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 	res := &Metadata{
-		TMS:                  m.TMS,
+		TokenService:         m.TokenService,
+		WalletService:        m.WalletService,
 		TokenRequestMetadata: &driver.TokenRequestMetadata{},
 	}
 
@@ -75,7 +68,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 		for i, auditInfo := range issue.ReceiversAuditInfos {
 			// If the receiver has the given enrollment ID, add it
-			recipientEID, err := m.TMS.GetEnrollmentID(auditInfo)
+			recipientEID, err := m.WalletService.GetEnrollmentID(auditInfo)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
@@ -112,7 +105,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		// if the receiver has the given enrollment ID, add it. Otherwise, add empty entries
 		skip := true
 		for i, auditInfo := range transfer.ReceiverAuditInfos {
-			recipientEID, err := m.TMS.GetEnrollmentID(auditInfo)
+			recipientEID, err := m.WalletService.GetEnrollmentID(auditInfo)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}

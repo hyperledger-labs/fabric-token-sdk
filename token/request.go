@@ -270,7 +270,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 		return nil, err
 	}
 
-	auditInfo, err := r.TokenService.tms.GetAuditInfo(receiver)
+	auditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(receiver)
 	if err != nil {
 		return nil, err
 	}
@@ -500,11 +500,11 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
-		eID, err := tms.GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
+		eID, err := tms.WalletService().GetEnrollmentID(issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
-		rID, err := tms.GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
+		rID, err := tms.WalletService().GetRevocationHandler(issueMeta.ReceiversAuditInfos[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 		}
@@ -565,11 +565,11 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		var ownerAuditInfo []byte
 		if len(tok.Owner.Raw) != 0 {
 			ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]
-			eID, err = tms.GetEnrollmentID(ownerAuditInfo)
+			eID, err = tms.WalletService().GetEnrollmentID(ownerAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
-			rID, err = tms.GetRevocationHandler(ownerAuditInfo)
+			rID, err = tms.WalletService().GetRevocationHandler(ownerAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 			}
@@ -661,12 +661,12 @@ func (r *Request) extractInputs(i int, transferMeta *TransferMetadata, failOnMis
 			continue
 		}
 
-		eID, err := tms.GetEnrollmentID(senderAuditInfo)
+		eID, err := tms.WalletService().GetEnrollmentID(senderAuditInfo)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 		}
 
-		rID, err := tms.GetRevocationHandler(senderAuditInfo)
+		rID, err := tms.WalletService().GetRevocationHandler(senderAuditInfo)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 		}
@@ -813,7 +813,7 @@ func (r *Request) MarshalToSign() ([]byte, error) {
 	if r.Actions == nil {
 		return nil, errors.Errorf("failed to marshal request in tx [%s] for signing", r.Anchor)
 	}
-	return r.TokenService.tms.MarshalTokenRequestToSign(r.Actions, r.Metadata)
+	return r.TokenService.tms.Serializer().MarshalTokenRequestToSign(r.Actions, r.Metadata)
 }
 
 // RequestToBytes marshals the request's actions to bytes.
@@ -1041,7 +1041,7 @@ func (r *Request) AuditRecord() (*AuditRecord, error) {
 		in.Quantity = q
 
 		// retrieve the owner's audit info
-		ownerAuditInfo, err := r.TokenService.tms.GetAuditInfo(toks[i].Owner.Raw)
+		ownerAuditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(toks[i].Owner.Raw)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed getting audit info for owner [%s]", toks[i].Owner)
 		}
@@ -1079,7 +1079,8 @@ func (r *Request) SetApplicationMetadata(k string, v []byte) {
 // FilterMetadataBy returns a new Request with the metadata filtered by the given enrollment IDs.
 func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 	meta := &Metadata{
-		TMS:                  r.TokenService.tms,
+		TokenService:         r.TokenService.tms,
+		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 	}
 	filteredMeta, err := meta.FilterBy(eIDs[0])
@@ -1100,7 +1101,8 @@ func (r *Request) GetMetadata() (*Metadata, error) {
 		return nil, errors.New("can't get metadata: nil token service in request")
 	}
 	return &Metadata{
-		TMS:                  r.TokenService.tms,
+		TokenService:         r.TokenService.tms,
+		WalletService:        r.TokenService.tms.WalletService(),
 		TokenRequestMetadata: r.Metadata,
 	}, nil
 }

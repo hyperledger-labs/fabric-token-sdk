@@ -39,6 +39,7 @@ func NewTokenService(
 	tokenLoader TokenLoader,
 	tokenCommitmentLoader TokenCommitmentLoader,
 	identityProvider driver.IdentityProvider,
+	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
 ) (*Service, error) {
@@ -47,6 +48,7 @@ func NewTokenService(
 		ws,
 		ppm,
 		identityProvider,
+		serializer,
 		deserializer,
 		configManager,
 		nil,

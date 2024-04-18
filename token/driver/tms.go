@@ -13,21 +13,25 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate counterfeiter -o mock/ts.go -fake-name TokenService . TokenService
+//go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
+
 // TokenManagerService is the entry point of the Driver API and gives access to the rest of the API
 type TokenManagerService interface {
 	IssueService
 	TransferService
 	TokenService
 	AuditorService
-	WalletService
-	Serializer
 
 	CertificationService() CertificationService
 	Deserializer() Deserializer
+	Serializer() Serializer
 	IdentityProvider() IdentityProvider
 	Validator() (Validator, error)
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
+	WalletService() WalletService
+
 	// Done releases all the resources allocated by this service
 	Done() error
 }

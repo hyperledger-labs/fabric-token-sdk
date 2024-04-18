@@ -217,7 +217,8 @@ func (t *ManagementService) NewMetadataFromBytes(raw []byte) (*Metadata, error) 
 		return nil, err
 	}
 	return &Metadata{
-		TMS:                  t.tms,
+		TokenService:         t.tms,
+		WalletService:        t.tms.WalletService(),
 		TokenRequestMetadata: tokenRequestMetadata,
 	}, nil
 }
@@ -238,7 +239,7 @@ func (t *ManagementService) Vault() *Vault {
 
 // WalletManager returns the wallet manager for this TMS
 func (t *ManagementService) WalletManager() *WalletManager {
-	return &WalletManager{managementService: t, walletService: t.tms}
+	return &WalletManager{managementService: t, walletService: t.tms.WalletService()}
 }
 
 // CertificationManager returns the certification manager for this TMS.

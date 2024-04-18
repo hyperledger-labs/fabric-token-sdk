@@ -154,6 +154,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer),
 		common.NewLedgerTokenLoader[*token3.Token](qe, tokDeserializer),
 		ip,
+		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
 	)

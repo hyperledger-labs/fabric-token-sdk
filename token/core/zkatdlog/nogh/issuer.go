@@ -26,7 +26,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 		}
 	}
 
-	w, err := s.IssuerWallet(issuerIdentity)
+	w, err := s.WalletService().IssuerWallet(issuerIdentity)
 	if err != nil {
 		return nil, nil, err
 	}

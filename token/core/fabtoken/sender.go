@@ -54,6 +54,8 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 	// add transfer action's metadata
 	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
 
+	ws := s.WalletService()
+
 	// assemble transfer metadata
 	var receivers []view.Identity
 	for i, output := range outs {
@@ -73,7 +75,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
-		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(t.Owner.Raw, s)
+		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(t.Owner.Raw, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner.Raw).String())
 		}
@@ -82,7 +84,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	var receiverAuditInfos [][]byte
 	for _, output := range outs {
-		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(output.Output.Owner.Raw, s)
+		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Output.Owner.Raw).String())
 		}
@@ -95,7 +97,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	receiverIsSender := make([]bool, len(receivers))
 	for i, receiver := range receivers {
-		_, err = s.OwnerWallet(receiver)
+		_, err = ws.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil
 	}
 
