@@ -19,7 +19,7 @@ import (
 // TokenManagerService is the entry point of the Driver API and gives access to the rest of the API
 type TokenManagerService interface {
 	IssueService() IssueService
-	TransferService
+	TransferService() TransferService
 	TokenService
 	AuditorService
 

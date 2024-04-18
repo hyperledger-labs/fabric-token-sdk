@@ -313,7 +313,7 @@ func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, own
 
 	logger.Debugf("Prepare Transfer Action [id:%s,ins:%d,outs:%d]", r.Anchor, len(tokenIDs), len(outputTokens))
 
-	ts := r.TokenService.tms
+	ts := r.TokenService.tms.TransferService()
 
 	// Compute transfer
 	transfer, transferMetadata, err := ts.Transfer(
@@ -361,7 +361,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 
 	logger.Debugf("Prepare Redeem Action [ins:%d,outs:%d]", len(tokenIDs), len(outputTokens))
 
-	ts := r.TokenService.tms
+	ts := r.TokenService.tms.TransferService()
 
 	// Compute redeem, it is a transfer with owner set to nil
 	transfer, transferMetadata, err := ts.Transfer(
@@ -438,9 +438,10 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 		counter = newCounter
 	}
 
+	ts := tms.TransferService()
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
-		transferAction, err := tms.DeserializeTransferAction(transfer)
+		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -619,9 +620,10 @@ func (r *Request) inputs(failOnMissing bool) (*InputStream, error) {
 		return nil, err
 	}
 	var inputs []*Input
+	ts := tms.TransferService()
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
-		transferAction, err := tms.DeserializeTransferAction(transfer)
+		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -731,9 +733,10 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		counter = newCounter
 	}
 
+	ts := tms.TransferService()
 	for i, transfer := range r.Actions.Transfers {
 		// deserialize action
-		transferAction, err := tms.DeserializeTransferAction(transfer)
+		transferAction, err := ts.DeserializeTransferAction(transfer)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed deserializing transfer action [%d]", i)
 		}
@@ -746,7 +749,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 			return nil, nil, errors.Wrapf(err, "failed matching transfer action with its metadata [%d]", i)
 		}
 		if verifyActions {
-			if err := tms.VerifyTransfer(transferAction, transferMeta.OutputsMetadata); err != nil {
+			if err := ts.VerifyTransfer(transferAction, transferMeta.OutputsMetadata); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed verifying transfer action")
 			}
 		}

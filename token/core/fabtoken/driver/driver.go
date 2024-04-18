@@ -134,16 +134,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 		nil,
 	)
-	service, err := fabtoken.NewService(
-		ws,
-		publicParamsManager,
-		common.NewVaultTokenLoader(qe),
-		ip,
-		common.NewSerializer(),
-		NewDeserializer(),
-		tmsConfig,
-		fabtoken.NewIssueService(publicParamsManager),
-	)
+	service, err := fabtoken.NewService(ws, publicParamsManager, ip, common.NewSerializer(), deserializer, tmsConfig, fabtoken.NewIssueService(publicParamsManager), fabtoken.NewTransferService(publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer))
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")
 	}

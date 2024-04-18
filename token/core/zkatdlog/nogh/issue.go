@@ -8,6 +8,7 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
@@ -17,11 +18,11 @@ import (
 )
 
 type IssueService struct {
-	PublicParametersManager driver.PublicParamsManager
+	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
 }
 
-func NewIssueService(publicParametersManager driver.PublicParamsManager, walletService driver.WalletService) *IssueService {
+func NewIssueService(publicParametersManager common2.PublicParametersManager[*crypto.PublicParams], walletService driver.WalletService) *IssueService {
 	return &IssueService{PublicParametersManager: publicParametersManager, WalletService: walletService}
 }
 
@@ -45,12 +46,12 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 		return nil, nil, err
 	}
 
-	pp := s.PublicParametersManager.PublicParameters()
+	pp := s.PublicParametersManager.PublicParams()
 	issuer := &nonanonym.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
-	}, pp.(*crypto.PublicParams))
+	}, pp)
 
 	issue, outputMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {

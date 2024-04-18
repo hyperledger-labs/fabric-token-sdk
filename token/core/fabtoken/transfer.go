@@ -14,9 +14,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+type TransferService struct {
+	PublicParametersManager common.PublicParametersManager[*PublicParams]
+	WalletService           driver.WalletService
+	TokenLoader             TokenLoader
+	Deserializer            driver.Deserializer
+}
+
+func NewTransferService(publicParametersManager common.PublicParametersManager[*PublicParams], walletService driver.WalletService, tokenLoader TokenLoader, deserializer driver.Deserializer) *TransferService {
+	return &TransferService{PublicParametersManager: publicParametersManager, WalletService: walletService, TokenLoader: tokenLoader, Deserializer: deserializer}
+}
+
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.ID, Outputs []*token.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	// select inputs
 	inputIDs, inputTokens, err := s.TokenLoader.GetTokens(ids)
 	if err != nil {
@@ -54,7 +65,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 	// add transfer action's metadata
 	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
 
-	ws := s.WalletService()
+	ws := s.WalletService
 
 	// assemble transfer metadata
 	var receivers []view.Identity
@@ -66,7 +77,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 			receivers = append(receivers, output.Output.Owner.Raw)
 			continue
 		}
-		recipients, err := s.Deserializer().Recipients(output.Output.Owner.Raw)
+		recipients, err := s.Deserializer.Recipients(output.Output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
@@ -75,7 +86,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	var senderAuditInfos [][]byte
 	for _, t := range inputTokens {
-		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(t.Owner.Raw, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner.Raw, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner.Raw).String())
 		}
@@ -84,7 +95,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 
 	var receiverAuditInfos [][]byte
 	for _, output := range outs {
-		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Output.Owner.Raw, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Output.Owner.Raw).String())
 		}
@@ -119,14 +130,14 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token.
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed tokenInfos
-func (s *Service) VerifyTransfer(tr driver.TransferAction, outputsMetadata [][]byte) error {
+func (s *TransferService) VerifyTransfer(tr driver.TransferAction, outputsMetadata [][]byte) error {
 	// TODO:
 	return nil
 }
 
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
-func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
+func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	t := &TransferAction{}
 	if err := t.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing transfer action")

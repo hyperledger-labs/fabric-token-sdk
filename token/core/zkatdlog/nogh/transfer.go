@@ -10,6 +10,7 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -17,9 +18,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+type TransferService struct {
+	PublicParametersManager common.PublicParametersManager[*crypto.PublicParams]
+	WalletService           driver.WalletService
+	TokenLoader             TokenLoader
+	Deserializer            driver.Deserializer
+}
+
+func NewTransferService(publicParametersManager common.PublicParametersManager[*crypto.PublicParams], walletService driver.WalletService, tokenLoader TokenLoader, deserializer driver.Deserializer) *TransferService {
+	return &TransferService{PublicParametersManager: publicParametersManager, WalletService: walletService, TokenLoader: tokenLoader, Deserializer: deserializer}
+}
+
 // Transfer returns a TransferAction as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
 	logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
 	// load tokens with the passed token identifiers
 	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
@@ -52,7 +64,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
 			continue
 		}
-		recipients, err := s.Deserializer().Recipients(output.Owner.Raw)
+		recipients, err := s.Deserializer.Recipients(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
@@ -68,7 +80,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// add transfer action's metadata
 	common.SetTransferActionMetadata(opts.Attributes, zkTransfer.Metadata)
 
-	ws := s.WalletService()
+	ws := s.WalletService
 
 	// prepare metadata
 	var outputMetadataRaw [][]byte
@@ -82,7 +94,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
 	for _, output := range outputTokens {
-		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(output.Owner.Raw, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner.Raw, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
 		}
@@ -92,7 +104,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 	// audit info for senders
 	var senderAuditInfos [][]byte
 	for i, t := range tokens {
-		auditInfo, err := s.Deserializer().GetOwnerAuditInfo(t.Owner, ws)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(t.Owner, ws)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}
@@ -130,7 +142,7 @@ func (s *Service) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3
 }
 
 // VerifyTransfer checks the outputs in the TransferAction against the passed metadata
-func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [][]byte) error {
+func (s *TransferService) VerifyTransfer(action driver.TransferAction, outputsMetadata [][]byte) error {
 	if action == nil {
 		return errors.New("failed to verify transfer: nil transfer action")
 	}
@@ -168,7 +180,7 @@ func (s *Service) VerifyTransfer(action driver.TransferAction, outputsMetadata [
 
 // DeserializeTransferAction un-marshals a TransferAction from the passed array of bytes.
 // DeserializeTransferAction returns an error, if the un-marshalling fails.
-func (s *Service) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
+func (s *TransferService) DeserializeTransferAction(raw []byte) (driver.TransferAction, error) {
 	transferAction := &transfer.TransferAction{}
 	err := transferAction.Deserialize(raw)
 	if err != nil {
