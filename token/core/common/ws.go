@@ -10,9 +10,9 @@ import (
 	err "errors"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -51,7 +51,7 @@ type RegistryEntry struct {
 }
 
 type WalletService struct {
-	Logger           *flogging.FabricLogger
+	Logger           logging.Logger
 	IdentityProvider driver.IdentityProvider
 	Deserializer     driver.Deserializer
 
@@ -60,7 +60,7 @@ type WalletService struct {
 }
 
 func NewWalletService(
-	logger *flogging.FabricLogger,
+	logger logging.Logger,
 	identityProvider driver.IdentityProvider,
 	deserializer driver.Deserializer,
 	walletFactory WalletFactory,

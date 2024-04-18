@@ -9,20 +9,35 @@ package fabtoken
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type TransferService struct {
+	Logger                  logging.Logger
 	PublicParametersManager common.PublicParametersManager[*PublicParams]
 	WalletService           driver.WalletService
 	TokenLoader             TokenLoader
 	Deserializer            driver.Deserializer
 }
 
-func NewTransferService(publicParametersManager common.PublicParametersManager[*PublicParams], walletService driver.WalletService, tokenLoader TokenLoader, deserializer driver.Deserializer) *TransferService {
-	return &TransferService{PublicParametersManager: publicParametersManager, WalletService: walletService, TokenLoader: tokenLoader, Deserializer: deserializer}
+func NewTransferService(
+	logger logging.Logger,
+	publicParametersManager common.PublicParametersManager[*PublicParams],
+	walletService driver.WalletService,
+	tokenLoader TokenLoader,
+	deserializer driver.Deserializer,
+) *TransferService {
+	return &TransferService{
+		Logger:                  logger,
+		PublicParametersManager: publicParametersManager,
+		WalletService:           walletService,
+		TokenLoader:             tokenLoader,
+		Deserializer:            deserializer,
+	}
 }
 
 // Transfer returns a TransferAction as a function of the passed arguments
@@ -36,7 +51,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 
 	var signerIds []view.Identity
 	for _, tok := range inputTokens {
-		logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
+		s.Logger.Debugf("Selected output [%s,%s,%s]", tok.Type, tok.Quantity, view.Identity(tok.Owner.Raw))
 		signerIds = append(signerIds, tok.Owner.Raw)
 	}
 
@@ -59,11 +74,8 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	transfer := &TransferAction{
 		Inputs:   inputIDs,
 		Outputs:  outs,
-		Metadata: map[string][]byte{},
+		Metadata: meta.TransferActionMetadata(opts.Attributes),
 	}
-
-	// add transfer action's metadata
-	common.SetTransferActionMetadata(opts.Attributes, transfer.Metadata)
 
 	ws := s.WalletService
 
@@ -123,7 +135,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 		ReceiverAuditInfos: receiverAuditInfos,
 	}
 
-	logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.Outputs), len(metadata.Receivers))
+	s.Logger.Debugf("Transfer metadata: [out:%d, rec:%d]", len(metadata.Outputs), len(metadata.Receivers))
 
 	// done
 	return transfer, metadata, nil

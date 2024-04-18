@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/pkg/errors"
@@ -20,7 +20,7 @@ type PublicParametersManager[T driver.PublicParameters] interface {
 }
 
 type Service[T driver.PublicParameters] struct {
-	Logger                  *flogging.FabricLogger
+	Logger                  logging.Logger
 	PublicParametersManager PublicParametersManager[T]
 	serializer              driver.Serializer
 	deserializer            driver.Deserializer
@@ -35,7 +35,7 @@ type Service[T driver.PublicParameters] struct {
 }
 
 func NewTokenService[T driver.PublicParameters](
-	logger *flogging.FabricLogger,
+	logger logging.Logger,
 	ws *WalletService,
 	publicParametersManager PublicParametersManager[T],
 	identityProvider driver.IdentityProvider,

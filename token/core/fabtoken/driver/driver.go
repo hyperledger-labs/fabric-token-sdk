@@ -8,12 +8,12 @@ package driver
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/config"
@@ -23,8 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.driver.fabtoken")
 
 type Driver struct {
 }
@@ -38,6 +36,8 @@ func (d *Driver) PublicParametersFromBytes(params []byte) (driver.PublicParamete
 }
 
 func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, channel string, namespace string, publicParams []byte) (driver.TokenManagerService, error) {
+	logger := logging.DriverLogger("token-sdk.driver.fabtoken", networkID, channel, namespace)
+
 	if len(publicParams) == 0 {
 		return nil, errors.Errorf("empty public parameters")
 	}
@@ -128,13 +128,14 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		logger,
 		ip,
 		deserializer,
-		fabtoken.NewWalletFactory(ip, qe),
+		fabtoken.NewWalletFactory(logger, ip, qe),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),
 		nil,
 	)
 	service, err := fabtoken.NewService(
+		logger,
 		ws,
 		publicParamsManager,
 		ip,
@@ -142,7 +143,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		deserializer,
 		tmsConfig,
 		fabtoken.NewIssueService(publicParamsManager),
-		fabtoken.NewTransferService(publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
+		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
 		fabtoken.NewAuditorService(),
 		fabtoken.NewTokensService(),
 	)
@@ -153,11 +154,13 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 }
 
 func (d *Driver) NewValidator(params driver.PublicParameters) (driver.Validator, error) {
+	logger := logging.DriverLoggerFromPP("token-sdk.driver.fabtoken", params.Identifier())
+
 	pp, ok := params.(*fabtoken.PublicParams)
 	if !ok {
 		return nil, errors.Errorf("invalid public parameters type [%T]", params)
 	}
-	return fabtoken.NewValidator(pp, NewDeserializer()), nil
+	return fabtoken.NewValidator(logger, pp, NewDeserializer()), nil
 }
 
 func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (driver.PublicParamsManager, error) {
@@ -169,6 +172,8 @@ func (d *Driver) NewPublicParametersManager(params driver.PublicParameters) (dri
 }
 
 func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, channel string, namespace string, params driver.PublicParameters) (driver.WalletService, error) {
+	logger := logging.DriverLogger("token-sdk.driver.fabtoken", networkID, channel, namespace)
+
 	cs := view.GetConfigService(sp)
 	tmsConfig, err := config.NewTokenSDK(cs).GetTMS(networkID, channel, namespace)
 	if err != nil {
@@ -232,12 +237,11 @@ func (d *Driver) NewWalletService(sp driver.ServiceProvider, networkID string, c
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get identity storage provider")
 	}
-	deserializer := NewDeserializer()
 	ws := common.NewWalletService(
 		logger,
 		ip,
-		deserializer,
-		fabtoken.NewWalletFactory(ip, nil),
+		NewDeserializer(),
+		fabtoken.NewWalletFactory(logger, ip, nil),
 		identity.NewWalletRegistry(roles[driver.OwnerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.IssuerRole], walletDB),
 		identity.NewWalletRegistry(roles[driver.AuditorRole], walletDB),

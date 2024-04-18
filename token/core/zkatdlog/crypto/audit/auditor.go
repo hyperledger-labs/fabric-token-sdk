@@ -11,8 +11,8 @@ import (
 	"encoding/json"
 
 	math "github.com/IBM/mathlib"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
@@ -24,8 +24,6 @@ import (
 	htlc2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.zkatdlog.audit")
 
 //go:generate counterfeiter -o mock/signing_identity.go -fake-name SigningIdentity . SigningIdentity
 
@@ -86,6 +84,7 @@ type OwnerOpening struct {
 
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
+	Logger common2.Logger
 	// Owner Identity Deserializer
 	Des Deserializer
 	// Auditor's signing identity
@@ -103,8 +102,9 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger common2.Logger, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
+		Logger:         logger,
 		Des:            des,
 		PedersenParams: pp,
 		NYMParams:      nymparams,
@@ -128,7 +128,7 @@ func (a *Auditor) Endorse(tokenRequest *driver.TokenRequest, txID string) ([]byt
 		return nil, errors.Errorf("audit of tx [%s] failed: error marshal token request for signature", txID)
 	}
 	// Sign
-	logger.Debugf("Endorse [%s][%s]", hash.Hashable(bytes).String(), txID)
+	a.Logger.Debugf("Endorse [%s][%s]", hash.Hashable(bytes).String(), txID)
 	if a.Signer == nil {
 		return nil, errors.Errorf("audit of tx [%s] failed: signer is nil", txID)
 	}

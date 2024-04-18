@@ -8,6 +8,7 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -44,7 +45,7 @@ type Context = common.Context[*PublicParams, *token.Token, *TransferAction, *Iss
 
 type Validator = common.Validator[*PublicParams, *token.Token, *TransferAction, *IssueAction]
 
-func NewValidator(pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
+func NewValidator(logger logging.Logger, pp *PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferBalanceValidate,

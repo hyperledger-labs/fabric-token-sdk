@@ -7,16 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package validator
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
-
-var logger = flogging.MustGetLogger("token-sdk.zkatdlog.validator")
 
 type ValidateTransferFunc = common.ValidateTransferFunc[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
 
@@ -50,7 +48,7 @@ func (a *ActionDeserializer) DeserializeActions(tr *driver.TokenRequest) ([]*iss
 
 type Validator = common.Validator[*crypto.PublicParams, *token.Token, *transfer.TransferAction, *issue.IssueAction]
 
-func New(pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
+func New(logger logging.Logger, pp *crypto.PublicParams, deserializer driver.Deserializer, extraValidators ...ValidateTransferFunc) *Validator {
 	transferValidators := []ValidateTransferFunc{
 		TransferSignatureValidate,
 		TransferZKProofValidate,

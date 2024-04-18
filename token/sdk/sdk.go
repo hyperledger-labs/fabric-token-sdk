@@ -112,6 +112,7 @@ func (p *SDK) Install() error {
 
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
+		flogging.MustGetLogger("token-sdk.core"),
 		configProvider,
 		&vault.PublicParamsProvider{Provider: networkProvider},
 		p.postInitializer.PostInit,

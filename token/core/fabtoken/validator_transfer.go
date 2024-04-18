@@ -28,12 +28,12 @@ func TransferSignatureValidate(ctx *Context) error {
 	ctx.InputTokens = inputTokens
 
 	for _, tok := range inputTokens {
-		logger.Debugf("check sender [%s]", view.Identity(tok.Owner.Raw).UniqueID())
+		ctx.Logger.Debugf("check sender [%s]", view.Identity(tok.Owner.Raw).UniqueID())
 		verifier, err := ctx.Deserializer.GetOwnerVerifier(tok.Owner.Raw)
 		if err != nil {
 			return errors.Wrapf(err, "failed deserializing owner [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
 		}
-		logger.Debugf("signature verification [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
+		ctx.Logger.Debugf("signature verification [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
 		sigma, err := ctx.SignatureProvider.HasBeenSignedBy(tok.Owner.Raw, verifier)
 		if err != nil {
 			return errors.Wrapf(err, "failed signature verification [%v][%s]", tok, view.Identity(tok.Owner.Raw).UniqueID())
