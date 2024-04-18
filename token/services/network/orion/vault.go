@@ -10,6 +10,7 @@ import (
 	"runtime/debug"
 
 	"github.com/hashicorp/go-uuid"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
@@ -60,7 +61,7 @@ func (v *Vault) TransactionStatus(txID string) (driver2.ValidationCode, string, 
 }
 
 type Executor struct {
-	qe *orion.QueryExecutor
+	qe driver3.QueryExecutor
 }
 
 func (e *Executor) Done() {

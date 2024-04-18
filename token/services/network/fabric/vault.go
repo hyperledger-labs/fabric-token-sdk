@@ -10,8 +10,8 @@ import (
 	"runtime/debug"
 
 	"github.com/hashicorp/go-uuid"
+	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -58,12 +58,12 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 }
 
 func (v *Vault) TransactionStatus(txID string) (driver2.ValidationCode, string, error) {
-	vc, message, _, err := v.ch.Vault().Status(txID)
-	return driver.ValidationCode(vc), message, err
+	vc, message, err := v.ch.Vault().Status(txID)
+	return vc, message, err
 }
 
 type Executor struct {
-	qe *fabric.QueryExecutor
+	qe driver3.QueryExecutor
 }
 
 func (e *Executor) Done() {

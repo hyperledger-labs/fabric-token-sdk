@@ -37,10 +37,10 @@ var logger = flogging.MustGetLogger("token-sdk.network")
 
 type UnspentTokensIterator = driver.UnspentTokensIterator
 
-// TxStatusChangeListener is the interface that must be implemented to receive transaction status change notifications
-type TxStatusChangeListener interface {
-	// OnStatusChange is called when the status of a transaction changes
-	OnStatusChange(txID string, status int, message string) error
+// FinalityListener is the interface that must be implemented to receive transaction status change notifications
+type FinalityListener interface {
+	// OnStatus is called when the status of a transaction changes
+	OnStatus(txID string, status int, message string)
 }
 
 type GetFunc func() (view.Identity, []byte, error)
@@ -379,14 +379,18 @@ func (n *Network) LocalMembership() *LocalMembership {
 	return &LocalMembership{lm: n.n.LocalMembership()}
 }
 
-// SubscribeTxStatusChanges register a listener for transaction status updates for the given id.
-func (n *Network) SubscribeTxStatusChanges(txID string, listener TxStatusChangeListener) error {
-	return n.n.SubscribeTxStatusChanges(txID, listener)
+// AddFinalityListener registers a listener for transaction status for the passed transaction id.
+// If the status is already valid or invalid, the listener is called immediately.
+// When the listener is invoked, then it is also removed.
+// If the transaction id is empty, the listener will be called on status changes of any transaction.
+// In this case, the listener is not removed
+func (n *Network) AddFinalityListener(txID string, listener FinalityListener) error {
+	return n.n.AddFinalityListener(txID, listener)
 }
 
-// UnsubscribeTxStatusChanges unregisters a listener for transaction status changes for the passed id
-func (n *Network) UnsubscribeTxStatusChanges(id string, listener TxStatusChangeListener) error {
-	return n.n.UnsubscribeTxStatusChanges(id, listener)
+// RemoveFinalityListener unregisters the passed listener.
+func (n *Network) RemoveFinalityListener(id string, listener FinalityListener) error {
+	return n.n.RemoveFinalityListener(id, listener)
 }
 
 // LookupTransferMetadataKey searches for a transfer metadata key containing the passed sub-key starting from the passed transaction id in the given namespace.

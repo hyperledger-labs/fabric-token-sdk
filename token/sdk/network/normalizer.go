@@ -58,8 +58,8 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions
 
 	if len(opt.Channel) == 0 {
 		if fns := fabric.GetFabricNetworkService(n.sp, opt.Network); fns != nil {
-			logger.Debugf("No channel specified, using default channel: %s", fns.DefaultChannel())
-			opt.Channel = fns.DefaultChannel()
+			logger.Debugf("No channel specified, using default channel: %s", fns.ConfigService().DefaultChannel())
+			opt.Channel = fns.ConfigService().DefaultChannel()
 		} else if ons := orion2.GetOrionNetworkService(n.sp, opt.Network); ons != nil {
 			logger.Debugf("No need to specify channel for orion")
 			// Nothing to do here
