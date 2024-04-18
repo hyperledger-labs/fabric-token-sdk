@@ -1002,7 +1002,7 @@ func (r *Request) AuditCheck() error {
 	if err := r.IsValid(); err != nil {
 		return err
 	}
-	return r.TokenService.tms.AuditorCheck(
+	return r.TokenService.tms.AuditorService().AuditorCheck(
 		r.Actions,
 		r.Metadata,
 		r.Anchor,

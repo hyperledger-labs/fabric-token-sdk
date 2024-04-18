@@ -29,19 +29,18 @@ type TokenLoader interface {
 
 type Service struct {
 	*common.Service[*crypto.PublicParams]
-	TokenCommitmentLoader TokenCommitmentLoader
 }
 
 func NewTokenService(
 	ws *common.WalletService,
 	ppm common.PublicParametersManager[*crypto.PublicParams],
-	tokenCommitmentLoader TokenCommitmentLoader,
 	identityProvider driver.IdentityProvider,
 	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
 	issueService driver.IssueService,
 	transferService driver.TransferService,
+	auditorService driver.AuditorService,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*crypto.PublicParams](
 		logger,
@@ -54,14 +53,14 @@ func NewTokenService(
 		nil,
 		issueService,
 		transferService,
+		auditorService,
 	)
 	if err != nil {
 		return nil, err
 	}
 
 	s := &Service{
-		Service:               root,
-		TokenCommitmentLoader: tokenCommitmentLoader,
+		Service: root,
 	}
 	return s, nil
 }

@@ -21,7 +21,7 @@ type TokenManagerService interface {
 	IssueService() IssueService
 	TransferService() TransferService
 	TokenService
-	AuditorService
+	AuditorService() AuditorService
 
 	CertificationService() CertificationService
 	Deserializer() Deserializer

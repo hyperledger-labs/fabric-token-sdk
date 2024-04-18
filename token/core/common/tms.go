@@ -30,6 +30,7 @@ type Service[T driver.PublicParameters] struct {
 	walletService           driver.WalletService
 	issueService            driver.IssueService
 	transferService         driver.TransferService
+	auditorService          driver.AuditorService
 }
 
 func NewTokenService[T driver.PublicParameters](
@@ -43,6 +44,7 @@ func NewTokenService[T driver.PublicParameters](
 	certificationService driver.CertificationService,
 	issueService driver.IssueService,
 	transferService driver.TransferService,
+	auditorService driver.AuditorService,
 ) (*Service[T], error) {
 	s := &Service[T]{
 		Logger:                  logger,
@@ -55,6 +57,7 @@ func NewTokenService[T driver.PublicParameters](
 		walletService:           ws,
 		issueService:            issueService,
 		transferService:         transferService,
+		auditorService:          auditorService,
 	}
 	return s, nil
 }
@@ -105,6 +108,10 @@ func (s *Service[T]) IssueService() driver.IssueService {
 
 func (s *Service[T]) TransferService() driver.TransferService {
 	return s.transferService
+}
+
+func (s *Service[T]) AuditorService() driver.AuditorService {
+	return s.auditorService
 }
 
 // Done releases all the resources allocated by this service
