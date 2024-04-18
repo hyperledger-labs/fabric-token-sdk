@@ -14,10 +14,10 @@ import (
 	"runtime/debug"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-chaincode-go/shim"
 	pb "github.com/hyperledger/fabric-protos-go/peer"
@@ -50,7 +50,7 @@ func (a *SetupAction) GetSetupParameters() ([]byte, error) {
 //go:generate counterfeiter -o mock/validator.go -fake-name Validator . Validator
 
 type Validator interface {
-	UnmarshallAndVerify(ledger token.Ledger, binding string, raw []byte) ([]interface{}, error)
+	UnmarshallAndVerifyWithMetadata(ledger token.Ledger, anchor string, raw []byte) ([]interface{}, map[string][]byte, error)
 }
 
 //go:generate counterfeiter -o mock/public_parameters_manager.go -fake-name PublicParametersManager . PublicParametersManager
@@ -212,7 +212,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	}
 
 	// Verify
-	actions, err := validator.UnmarshallAndVerify(stub, stub.GetTxID(), raw)
+	actions, attributes, err := validator.UnmarshallAndVerifyWithMetadata(stub, stub.GetTxID(), raw)
 	if err != nil {
 		return shim.Error("failed to verify token request: " + err.Error())
 	}
@@ -230,7 +230,7 @@ func (cc *TokenChaincode) ProcessRequest(raw []byte, stub shim.ChaincodeStubInte
 	if err != nil {
 		return shim.Error("failed to add public params dependency:" + err.Error())
 	}
-	err = w.CommitTokenRequest(raw, false)
+	err = w.CommitTokenRequest(attributes[common.TokenRequestToSign], true)
 	if err != nil {
 		return shim.Error("failed to write token request:" + err.Error())
 	}

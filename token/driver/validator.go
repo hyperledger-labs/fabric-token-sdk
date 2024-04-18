@@ -8,6 +8,12 @@ package driver
 
 import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
+// ValidationAttributeID is the type of validation attribute identifier
+type ValidationAttributeID = string
+
+// ValidationAttributes is a map containing attributes generated during validation
+type ValidationAttributes = map[ValidationAttributeID][]byte
+
 // GetStateFnc models a function that returns the value for the given key from the ledger
 type GetStateFnc = func(key string) ([]byte, error)
 
@@ -31,5 +37,5 @@ type Validator interface {
 	// VerifyTokenRequestFromRaw verifies the passed marshalled token request against the passed ledger and anchor.
 	// The function returns additionally a map that contains information about the token request. The content of this map
 	// is driver-dependant
-	VerifyTokenRequestFromRaw(getState GetStateFnc, anchor string, raw []byte) ([]interface{}, map[string][]byte, error)
+	VerifyTokenRequestFromRaw(getState GetStateFnc, anchor string, raw []byte) ([]interface{}, ValidationAttributes, error)
 }
