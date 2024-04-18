@@ -42,6 +42,7 @@ func NewTokenService(
 	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
+	issueService driver.IssueService,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*crypto.PublicParams](
 		logger,
@@ -52,6 +53,7 @@ func NewTokenService(
 		deserializer,
 		configManager,
 		nil,
+		issueService,
 	)
 	if err != nil {
 		return nil, err

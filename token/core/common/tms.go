@@ -28,6 +28,7 @@ type Service[T driver.PublicParameters] struct {
 	configManager           config.Manager
 	certificationService    driver.CertificationService
 	walletService           driver.WalletService
+	issueService            driver.IssueService
 }
 
 func NewTokenService[T driver.PublicParameters](
@@ -39,6 +40,7 @@ func NewTokenService[T driver.PublicParameters](
 	deserializer driver.Deserializer,
 	configManager config.Manager,
 	certificationService driver.CertificationService,
+	issueService driver.IssueService,
 ) (*Service[T], error) {
 	s := &Service[T]{
 		Logger:                  logger,
@@ -49,6 +51,7 @@ func NewTokenService[T driver.PublicParameters](
 		configManager:           configManager,
 		certificationService:    certificationService,
 		walletService:           ws,
+		issueService:            issueService,
 	}
 	return s, nil
 }
@@ -91,6 +94,10 @@ func (s *Service[T]) ConfigManager() config.Manager {
 
 func (s *Service[T]) WalletService() driver.WalletService {
 	return s.walletService
+}
+
+func (s *Service[T]) IssueService() driver.IssueService {
+	return s.issueService
 }
 
 // Done releases all the resources allocated by this service

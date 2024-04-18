@@ -157,6 +157,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
+		zkatdlog.NewIssueService(ppm, ws),
 	)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed to create token service")

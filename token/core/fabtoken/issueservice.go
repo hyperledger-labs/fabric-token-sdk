@@ -13,10 +13,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+type IssueService struct {
+	PublicParamsManager driver.PublicParamsManager
+}
+
+func NewIssueService(publicParamsManager driver.PublicParamsManager) *IssueService {
+	return &IssueService{PublicParamsManager: publicParamsManager}
+}
+
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization OutputMetadata associated with issued tokens
 // and the identity of the issuer
-func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
@@ -26,7 +34,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 
 	var outs []*Output
 	var metas [][]byte
-	pp := s.PublicParamsManager().PublicParameters()
+	pp := s.PublicParamsManager.PublicParameters()
 	if pp == nil {
 		return nil, nil, errors.Errorf("public paramenters not set")
 	}
@@ -65,14 +73,14 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos
-func (s *Service) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
+func (s *IssueService) VerifyIssue(tr driver.IssueAction, tokenInfos [][]byte) error {
 	// TODO:
 	return nil
 }
 
 // DeserializeIssueAction un-marshals the passed bytes into an IssueAction
 // If unmarshalling fails, then DeserializeIssueAction returns an error
-func (s *Service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
+func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &IssueAction{}
 	if err := issue.Deserialize(raw); err != nil {
 		return nil, errors.Wrap(err, "failed deserializing issue action")

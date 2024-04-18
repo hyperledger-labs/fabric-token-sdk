@@ -246,7 +246,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 	}
 
 	// Compute Issue
-	issue, meta, err := r.TokenService.tms.Issue(
+	issue, meta, err := r.TokenService.tms.IssueService().Issue(
 		id,
 		typ,
 		[]uint64{q},
@@ -414,9 +414,10 @@ func (r *Request) outputs(failOnMissing bool) (*OutputStream, error) {
 	}
 	var outputs []*Output
 	counter := uint64(0)
+	is := tms.IssueService()
 	for i, issue := range r.Actions.Issues {
 		// deserialize action
-		issueAction, err := tms.DeserializeIssueAction(issue)
+		issueAction, err := is.DeserializeIssueAction(issue)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
@@ -700,9 +701,10 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 	var outputs []*Output
 	counter := uint64(0)
 
+	issueService := tms.IssueService()
 	for i, issue := range r.Actions.Issues {
 		// deserialize action
-		issueAction, err := tms.DeserializeIssueAction(issue)
+		issueAction, err := issueService.DeserializeIssueAction(issue)
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed deserializing issue action [%d]", i)
 		}
@@ -716,7 +718,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		}
 
 		if verifyActions {
-			if err := tms.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
+			if err := issueService.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed verifying issue action")
 			}
 		}
@@ -769,9 +771,9 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 	}
 
 	precision := tms.PublicParamsManager().PublicParameters().Precision()
-	is := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
+	inputStream := NewInputStream(r.TokenService.Vault().NewQueryEngine(), inputs, precision)
 	os := NewOutputStream(outputs, precision)
-	return is, os, nil
+	return inputStream, os, nil
 }
 
 // IsValid checks that the request is valid.

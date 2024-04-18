@@ -8,6 +8,7 @@ package nogh
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
@@ -15,10 +16,19 @@ import (
 	"github.com/pkg/errors"
 )
 
+type IssueService struct {
+	PublicParametersManager driver.PublicParamsManager
+	WalletService           driver.WalletService
+}
+
+func NewIssueService(publicParametersManager driver.PublicParamsManager, walletService driver.WalletService) *IssueService {
+	return &IssueService{PublicParametersManager: publicParametersManager, WalletService: walletService}
+}
+
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization TokenInformation associated with issued tokens
 // and the identity of the issuer
-func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
@@ -26,7 +36,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 		}
 	}
 
-	w, err := s.WalletService().IssuerWallet(issuerIdentity)
+	w, err := s.WalletService.IssuerWallet(issuerIdentity)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -35,12 +45,12 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 		return nil, nil, err
 	}
 
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParameters()
 	issuer := &nonanonym.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
-	}, pp)
+	}, pp.(*crypto.PublicParams))
 
 	issue, outputMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
@@ -69,7 +79,7 @@ func (s *Service) Issue(issuerIdentity view.Identity, tokenType string, values [
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed metadata
-func (s *Service) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) error {
+func (s *IssueService) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) error {
 	if ia == nil {
 		return errors.New("failed to verify issue: nil issue action")
 	}
@@ -77,7 +87,7 @@ func (s *Service) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) e
 	if !ok {
 		return errors.New("failed to verify issue: expected *zkatdlog.IssueAction")
 	}
-	pp := s.PublicParametersManager.PublicParams()
+	pp := s.PublicParametersManager.PublicParameters()
 	coms, err := action.GetCommitments()
 	if err != nil {
 		return errors.New("failed to verify issue")
@@ -86,11 +96,11 @@ func (s *Service) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]byte) e
 	return issue.NewVerifier(
 		coms,
 		action.IsAnonymous(),
-		pp).Verify(action.GetProof())
+		pp.(*crypto.PublicParams)).Verify(action.GetProof())
 }
 
 // DeserializeIssueAction un-marshals raw bytes into a zkatdlog IssueAction
-func (s *Service) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
+func (s *IssueService) DeserializeIssueAction(raw []byte) (driver.IssueAction, error) {
 	issue := &issue.IssueAction{}
 	err := issue.Deserialize(raw)
 	if err != nil {

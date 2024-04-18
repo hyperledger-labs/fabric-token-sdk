@@ -30,6 +30,7 @@ func NewService(
 	serializer driver.Serializer,
 	deserializer driver.Deserializer,
 	configManager config.Manager,
+	issueService driver.IssueService,
 ) (*Service, error) {
 	root, err := common.NewTokenService[*PublicParams](
 		logger,
@@ -40,6 +41,7 @@ func NewService(
 		deserializer,
 		configManager,
 		nil,
+		issueService,
 	)
 	if err != nil {
 		return nil, err
