@@ -20,8 +20,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
-	"go.uber.org/atomic"
-	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -89,6 +87,13 @@ const (
 // The transaction record contains the total amount of the token type that was transferred to/from that enrollment ID
 // in that action.
 type TransactionRecord = driver.TransactionRecord
+
+// MovementRecord is a record of a movement of assets.
+// Given a Token Transaction, a movement record is created for each enrollment ID that participated in the transaction
+// and each token type that was transferred.
+// The movement record contains the total amount of the token type that was transferred to/from the enrollment ID
+// in a given token transaction.
+type MovementRecord = driver.MovementRecord
 
 // ValidationRecord is a more finer-grained version of a movement record.
 // Given a Token Transaction, for each token action in the Token Request,
@@ -173,13 +178,11 @@ func (qe *QueryExecutor) ValidationRecords(params QueryValidationRecordsParams) 
 	return &ValidationRecordsIterator{it: it}, nil
 }
 
-// Done closes the query executor. It must be called when the query executor is no longer needed.s
+// Done closes the query executor. It must be called when the query executor is no longer needed.
 func (qe *QueryExecutor) Done() {
 	if qe.closed {
 		return
 	}
-	qe.db.counter.Dec()
-	qe.db.storeLock.RUnlock()
 	qe.closed = true
 }
 
@@ -194,22 +197,8 @@ type Wallet interface {
 // DB is a database that stores token transactions related information
 type DB struct {
 	*db.StatusSupport
-	counter atomic.Int32
-
-	// the vault handles access concurrency to the store using storeLock.
-	// In particular:
-	// * when a directQueryExecutor is returned, it holds a read-lock;
-	//   when Done is called on it, the lock is released.
-	// * when an interceptor is returned (using NewRWSet (in case the
-	//   transaction context is generated from nothing) or GetRWSet
-	//   (in case the transaction context is received from another node)),
-	//   it holds a read-lock; when Done is called on it, the lock is released.
-	// * an exclusive lock is held when Commit is called.
 	db        driver.TokenTransactionDB
-	storeLock sync.RWMutex
-
 	eIDsLocks sync.Map
-
 	// status related fields
 	pendingTXs []string
 }
@@ -225,12 +214,7 @@ func newDB(p driver.TokenTransactionDB) *DB {
 
 // AppendTransactionRecord appends the transaction records corresponding to the passed token request.
 func (d *DB) AppendTransactionRecord(req *token.Request) error {
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("Appending new transaction record... [%s][%d]", req.Anchor, d.counter)
-	}
-	d.storeLock.Lock()
-	defer d.storeLock.Unlock()
-	logger.Debug("lock acquired")
+	logger.Debugf("appending new transaction record... [%s]", req.Anchor)
 
 	ins, outs, err := req.InputsAndOutputs()
 	if err != nil {
@@ -241,40 +225,57 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 		Inputs:  ins,
 		Outputs: outs,
 	}
-	if err := d.db.BeginUpdate(); err != nil {
-		d.rollback(err)
+
+	raw, err := req.Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to marshal token request [%s]", req.Anchor)
+	}
+	txs, err := TransactionRecords(record, time.Now().UTC())
+	if err != nil {
+		return errors.WithMessage(err, "failed parsing transactions from audit record")
+	}
+
+	logger.Debugf("storing new records... [%d,%d]", len(raw), len(txs))
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := d.appendTokenRequest(req); err != nil {
-		d.rollback(err)
+	if err := w.AddTokenRequest(record.Anchor, raw); err != nil {
+		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
-	if err := d.appendTransactions(record); err != nil {
-		d.rollback(err)
-		return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
+	for _, tx := range txs {
+		if err := w.AddTransaction(&tx); err != nil {
+			w.Rollback()
+			return errors.WithMessagef(err, "append transactions for txid [%s] failed", record.Anchor)
+		}
 	}
-	if err := d.db.Commit(); err != nil {
-		d.rollback(err)
+	if err := w.Commit(); err != nil {
 		return errors.WithMessagef(err, "committing tx for txid [%s] failed", record.Anchor)
 	}
 
-	logger.Debugf("Appending transaction record new completed without errors")
+	logger.Debugf("appending transaction record new completed without errors")
 	return nil
 }
 
 // NewQueryExecutor returns a new query executor
 func (d *DB) NewQueryExecutor() *QueryExecutor {
-	d.counter.Inc()
-	d.storeLock.RLock()
-
 	return &QueryExecutor{db: d}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
-	logger.Debugf("Set status [%s][%s]...", txID, status)
-	if err := d.db.SetStatus(txID, status, message); err != nil {
+	logger.Debugf("set status [%s][%s]...", txID, status)
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
+		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
+	}
+	if err := w.SetStatus(txID, status, message); err != nil {
+		w.Rollback()
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
+	}
+	if err := w.Commit(); err != nil {
+		return errors.WithMessagef(err, "failed committing status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
 
 	// notify the listeners
@@ -289,16 +290,12 @@ func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 // GetStatus return the status of the given transaction id.
 // It returns an error if no transaction with that id is found
 func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
-	logger.Debugf("Get status [%s]...[%d]", txID, d.counter)
-	d.storeLock.Lock()
-	defer d.storeLock.Unlock()
-	logger.Debug("lock acquired")
-
+	logger.Debugf("get status [%s]...", txID)
 	status, message, err := d.db.GetStatus(txID)
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("Get status [%s][%s]...[%d] done without errors", txID, status, d.counter)
+	logger.Debugf("Got status [%s][%s]", txID, status)
 	return status, message, nil
 }
 
@@ -319,34 +316,28 @@ func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, erro
 
 // AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
 func (d *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
-	logger.Debugf("Appending new validation record... [%d]", d.counter)
-	d.storeLock.Lock()
-	defer d.storeLock.Unlock()
-	logger.Debug("lock acquired")
+	logger.Debugf("appending new validation record... [%s]", txID)
 
-	if err := d.db.BeginUpdate(); err != nil {
-		d.rollback(err)
+	w, err := d.db.BeginAtomicWrite()
+	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := d.db.AddValidationRecord(txID, tr, meta); err != nil {
-		d.rollback(err)
+	if err := w.AddValidationRecord(txID, tr, meta); err != nil {
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
-	if err := d.db.Commit(); err != nil {
-		d.rollback(err)
-		return errors.WithMessagef(err, "committing tx for txid [%s] failed", txID)
+	if err := w.Commit(); err != nil {
+		return errors.WithMessagef(err, "append validation record commit for txid [%s] failed", txID)
 	}
-
-	logger.Debugf("Appending validation record completed without errors")
+	logger.Debugf("appending validation record completed without errors")
 	return nil
 }
 
-func (d *DB) appendTransactions(record *token.AuditRecord) error {
+// TransactionRecords is a pure function that converts an AuditRecord for storage in the database.
+func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []TransactionRecord, err error) {
 	inputs := record.Inputs
 	outputs := record.Outputs
 
 	actionIndex := 0
-	timestamp := time.Now()
 	for {
 		// collect inputs and outputs from the same action
 		ins := inputs.Filter(func(t *token.Input) bool {
@@ -357,7 +348,6 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 		})
 		if ins.Count() == 0 && ous.Count() == 0 {
 			logger.Debugf("no actions left for tx [%s][%d]", record.Anchor, actionIndex)
-			// no more actions
 			break
 		}
 
@@ -366,7 +356,7 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 		// All ins should be for same EID, check this
 		inEIDs := ins.EnrollmentIDs()
 		if len(inEIDs) > 1 {
-			return errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
+			return nil, errors.Errorf("expected at most 1 input enrollment id, got %d, [%v]", len(inEIDs), inEIDs)
 		}
 		inEID := ""
 		if len(inEIDs) == 1 {
@@ -392,7 +382,7 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 					}
 				}
 
-				if err := d.db.AddTransaction(&driver.TransactionRecord{
+				txs = append(txs, driver.TransactionRecord{
 					TxID:         record.Anchor,
 					SenderEID:    inEID,
 					RecipientEID: outEID,
@@ -401,40 +391,72 @@ func (d *DB) appendTransactions(record *token.AuditRecord) error {
 					Status:       driver.Pending,
 					ActionType:   tt,
 					Timestamp:    timestamp,
-				}); err != nil {
-					if err1 := d.db.Discard(); err1 != nil {
-						logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
-					}
-					return err
-				}
+				})
 			}
 		}
 
 		actionIndex++
 	}
-	logger.Debugf("finished appending transactions for tx [%s]", record.Anchor)
+	logger.Debugf("parsed transactions for tx [%s]", record.Anchor)
 
-	return nil
+	return
 }
 
-func (d *DB) appendTokenRequest(request *token.Request) error {
-	raw, err := request.Bytes()
-	if err != nil {
-		return errors.Wrapf(err, "failed to marshal token request [%s]", request.Anchor)
-	}
-	if err := d.db.AddTokenRequest(request.Anchor, raw); err != nil {
-		if err1 := d.db.Discard(); err1 != nil {
-			logger.Errorf("got error [%s]; discarding caused [%s]", err.Error(), err1.Error())
+// Movements converts an AuditRecord to MovementRecords for storage in the database.
+// A positive movement Amount means incoming tokens, and negative means outgoing tokens from the enrollment ID.
+func Movements(record *token.AuditRecord, created time.Time) (mv []MovementRecord, err error) {
+	inputs := record.Inputs
+	outputs := record.Outputs
+	// we need to consider both inputs and outputs enrollment IDs because the record can refer to a redeem
+	eIDs := joinIOEIDs(record)
+	logger.Debugf("eIDs [%v]", eIDs)
+	tokenTypes := outputs.TokenTypes()
+
+	for _, eID := range eIDs {
+		for _, tokenType := range tokenTypes {
+			received := outputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			sent := inputs.ByEnrollmentID(eID).ByType(tokenType).Sum()
+			diff := received.Sub(received, sent)
+			if sent == received {
+				continue
+			}
+
+			logger.Debugf("adding movement [%s:%d]", eID, diff.Int64())
+			mv = append(mv, driver.MovementRecord{
+				TxID:         record.Anchor,
+				EnrollmentID: eID,
+				Amount:       diff,
+				TokenType:    tokenType,
+				Timestamp:    created,
+				Status:       driver.Pending,
+			})
 		}
-		return err
 	}
-	return nil
+	logger.Debugf("finished to parse sent movements for tx [%s]", record.Anchor)
+
+	return
 }
 
-func (d *DB) rollback(err error) {
-	if err1 := d.db.Discard(); err1 != nil {
-		logger.Errorf("got error %s; discarding caused %s", err.Error(), err1.Error())
+// joinIOEIDs joins enrollment IDs of inputs and outputs
+func joinIOEIDs(record *token.AuditRecord) []string {
+	iEIDs := record.Inputs.EnrollmentIDs()
+	oEIDs := record.Outputs.EnrollmentIDs()
+	eIDs := append(iEIDs, oEIDs...)
+	eIDs = deduplicate(eIDs)
+	return eIDs
+}
+
+// deduplicate removes duplicate entries from a slice
+func deduplicate(source []string) []string {
+	support := make(map[string]bool)
+	var res []string
+	for _, item := range source {
+		if _, value := support[item]; !value {
+			support[item] = true
+			res = append(res, item)
+		}
 	}
+	return res
 }
 
 type Config interface {
