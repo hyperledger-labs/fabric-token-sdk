@@ -30,7 +30,6 @@ type TokenManagerService interface {
 	PublicParamsManager() PublicParamsManager
 	ConfigManager() config.Manager
 	WalletService() WalletService
-
 	// Done releases all the resources allocated by this service
 	Done() error
 }
