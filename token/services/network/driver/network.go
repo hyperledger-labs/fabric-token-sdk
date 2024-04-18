@@ -55,16 +55,6 @@ type Network interface {
 	// Broadcast sends the passed blob to the network
 	Broadcast(context context.Context, blob interface{}) error
 
-	// IsFinalForParties takes in input a transaction id and an array of identities.
-	// The identities are contacted to gather information about the finality of the
-	// passed transaction
-	IsFinalForParties(id string, endpoints ...view.Identity) error
-
-	// IsFinal takes in input a transaction id and waits for its confirmation
-	// with the respect to the passed context that can be used to set a deadline
-	// for the waiting time.
-	IsFinal(ctx context.Context, id string) error
-
 	// NewEnvelope returns a new instance of an envelope
 	NewEnvelope() Envelope
 

@@ -131,14 +131,6 @@ func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
 	return err
 }
 
-func (n *Network) IsFinalForParties(id string, endpoints ...view.Identity) error {
-	panic("implement me")
-}
-
-func (n *Network) IsFinal(ctx context.Context, id string) error {
-	return n.n.Finality().IsFinal(ctx, id)
-}
-
 func (n *Network) NewEnvelope() driver.Envelope {
 	return n.n.TransactionManager().NewEnvelope()
 }
