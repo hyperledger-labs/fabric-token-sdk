@@ -14,9 +14,10 @@ Key features and components:
     3. **Append**: Adds a transaction to the audit database and subscribes to transaction status changes on the network.
     4. **Release**: Releases locks acquired during auditing.
 - **Querying and status management:**
-    - **NewQueryExecutor**: Creates a QueryExecutor for filtering and retrieving audit data.
+    - **NewPaymentsFilter**: Creates a PaymentFilter to query movements from the database
+    - **NewHoldingsFilter**: Creates a HoldingsFilter to query holdings from the database
     - **SetStatus**: Sets the status of an audit record (Pending, Confirmed, Deleted).
     - **GetStatus**: Retrieves the status of a transaction.
     - **GetTokenRequest**: Retrieves the token request associated with a transaction ID.
 
-The auditor service is locate under [`token/services/auditor`](./../../token/services/auditor).
+The auditor service is located under [`token/services/auditor`](./../../token/services/auditor).
