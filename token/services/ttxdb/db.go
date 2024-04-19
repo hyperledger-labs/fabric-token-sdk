@@ -292,19 +292,14 @@ func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, erro
 }
 
 // AppendValidationRecord appends the given validation metadata related to the given transaction id
-func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[string][]byte) error {
+func (d *DB) AppendValidationRecord(txID string, meta map[string][]byte) error {
 	logger.Debugf("appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := w.AddTokenRequest(txID, tokenRequest); err != nil {
-		w.Rollback()
-		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
-	}
 	if err := w.AddValidationRecord(txID, meta); err != nil {
-		w.Rollback()
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
 	if err := w.Commit(); err != nil {
@@ -366,6 +361,7 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 
 				txs = append(txs, driver.TransactionRecord{
 					TxID:         record.Anchor,
+					Index:        uint64(actionIndex),
 					SenderEID:    inEID,
 					RecipientEID: outEID,
 					TokenType:    tokenType,
