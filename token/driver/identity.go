@@ -39,6 +39,8 @@ type IdentityInfo interface {
 	Get() (view.Identity, []byte, error)
 }
 
+//go:generate counterfeiter -o mock/ip.go -fake-name IdentityProvider . IdentityProvider
+
 // IdentityProvider manages identity-related concepts like signature signers, verifiers, audit information, and so on.
 type IdentityProvider interface {
 	// RegisterRecipientData stores the passed recipient data

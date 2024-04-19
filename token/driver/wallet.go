@@ -181,6 +181,8 @@ type AuditInfoProvider interface {
 	GetAuditInfo(identity view.Identity) ([]byte, error)
 }
 
+//go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
+
 // Deserializer models the deserializer of owner, issuer, and auditor identities to
 // get signature verifiers
 type Deserializer interface {

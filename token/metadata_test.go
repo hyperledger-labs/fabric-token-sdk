@@ -17,9 +17,14 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-func TestFilterBy(t *testing.T) {
-	testFilterByCase0(t)
-	testFilterByCase1(t)
+func TestMetadata_TestFilterBy(t *testing.T) {
+	testCases := map[string]func(*testing.T){
+		"case0": testFilterByCase0,
+		"case1": testFilterByCase1,
+	}
+	for key, tc := range testCases {
+		t.Run(key, tc)
+	}
 }
 
 func testFilterByCase0(t *testing.T) {
@@ -313,4 +318,38 @@ func assertEqualTransferMetadata(t *testing.T, original, filtered *driver.Transf
 	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 	assert.Equal(t, original.ReceiverAuditInfos, filtered.ReceiverAuditInfos)
+}
+
+func TestMetadata_GetToken(t *testing.T) {
+	// Create mock TokenService
+	mockTokenService := &mock.TokensService{}
+	// Create mock WalletService
+	mockWalletService := &mock.WalletService{}
+
+	metadata := &token.Metadata{
+		TokenService:         mockTokenService,
+		WalletService:        mockWalletService,
+		TokenRequestMetadata: &driver.TokenRequestMetadata{},
+	}
+
+	// Mocks and expectations
+	raw := []byte("some raw data")
+	expectedToken := &token2.Token{}
+	expectedIdentity := view.Identity("identity1")
+	expectedTokenInfoRaw := []byte("token info raw")
+	mockTokenService.GetTokenInfoStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
+		return expectedTokenInfoRaw, nil
+	}
+	mockTokenService.DeserializeTokenStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error) {
+		return expectedToken, expectedIdentity, nil
+	}
+
+	// Test
+	tok, id, tokenInfoRaw, err := metadata.GetToken(raw)
+
+	// Assertions
+	assert.NoError(t, err)
+	assert.Equal(t, expectedToken, tok)
+	assert.Equal(t, expectedIdentity, id)
+	assert.Equal(t, expectedTokenInfoRaw, tokenInfoRaw)
 }

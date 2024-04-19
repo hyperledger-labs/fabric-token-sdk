@@ -8,21 +8,14 @@ package token
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // Verifier models a signature verifier
-type Verifier interface {
-	// Verify verifies the signature of a given message
-	Verify(message, sigma []byte) error
-}
+type Verifier = driver.Verifier
 
 // Signer models a signature signer
-type Signer interface {
-	// Sign signs message bytes and returns the signature or an error on failure.
-	Sign(message []byte) ([]byte, error)
-}
+type Signer = driver.Signer
 
 // SignatureService gives access to signature verifiers and signers bound to identities known by
 // this service

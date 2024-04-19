@@ -30,6 +30,13 @@ type SignatureProvider interface {
 	Signatures() [][]byte
 }
 
+//go:generate counterfeiter -o mock/validator.go -fake-name Validator . Validator
+//go:generate counterfeiter -o mock/validator_ledger.go -fake-name ValidatorLedger . ValidatorLedger
+
+type ValidatorLedger interface {
+	GetState(key string) ([]byte, error)
+}
+
 // Validator models a token request validator
 type Validator interface {
 	// UnmarshalActions returns the actions contained in the serialized token request

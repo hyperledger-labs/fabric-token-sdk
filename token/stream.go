@@ -10,14 +10,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
 type QueryService interface {
-	IsMine(id *token2.ID) (bool, error)
+	IsMine(id *token.ID) (bool, error)
 }
 
 // Output models the output of a token action
@@ -37,25 +36,13 @@ type Output struct {
 	// Type is the type of token
 	Type string
 	// Quantity is the quantity of tokens
-	Quantity token2.Quantity
+	Quantity token.Quantity
 
 	LedgerOutput []byte
 }
 
-func (o Output) ID(txID string) *token2.ID {
-	return &token2.ID{TxId: txID, Index: o.Index}
-}
-
-// Input models an input of a token action
-type Input struct {
-	ActionIndex       int
-	Id                *token2.ID
-	Owner             view.Identity
-	OwnerAuditInfo    []byte
-	EnrollmentID      string
-	RevocationHandler string
-	Type              string
-	Quantity          token2.Quantity
+func (o Output) ID(txID string) *token.ID {
+	return &token.ID{TxId: txID, Index: o.Index}
 }
 
 // OutputStream models a stream over a set of outputs (Output).
@@ -141,23 +128,6 @@ func (o *OutputStream) EnrollmentIDs() []string {
 	return eIDs
 }
 
-// RevocationHandlers returns the Revocation Handlers of the outputs in the OutputStream.
-func (o *OutputStream) RevocationHandlers() []string {
-	duplicates := map[string]interface{}{}
-	var rIDs []string
-	for _, output := range o.outputs {
-		if len(output.RevocationHandler) == 0 {
-			continue
-		}
-		rh := hash.Hashable(output.RevocationHandler).String()
-		if _, ok := duplicates[rh]; !ok {
-			rIDs = append(rIDs, rh)
-			duplicates[rh] = true
-		}
-	}
-	return rIDs
-}
-
 // TokenTypes returns the token types of the outputs in the OutputStream.
 func (o *OutputStream) TokenTypes() []string {
 	duplicates := map[string]interface{}{}
@@ -177,14 +147,13 @@ func (o *OutputStream) RevocationHandles() []string {
 	duplicates := map[string]interface{}{}
 	var rIDs []string
 	for _, output := range o.outputs {
-		if len(output.RevocationHandler) == 0 {
+		rh := output.RevocationHandler
+		if len(rh) == 0 {
 			continue
 		}
-
-		rh := hash.Hashable(output.RevocationHandler).String()
 		_, ok := duplicates[rh]
 		if !ok {
-			rIDs = append(rIDs, output.RevocationHandler)
+			rIDs = append(rIDs, rh)
 			duplicates[rh] = true
 		}
 	}
@@ -194,6 +163,18 @@ func (o *OutputStream) RevocationHandles() []string {
 // String returns a string representation of the input stream
 func (o *OutputStream) String() string {
 	return fmt.Sprintf("[%v]", o.outputs)
+}
+
+// Input models an input of a token action
+type Input struct {
+	ActionIndex       int
+	Id                *token.ID
+	Owner             view.Identity
+	OwnerAuditInfo    []byte
+	EnrollmentID      string
+	RevocationHandler string
+	Type              string
+	Quantity          token.Quantity
 }
 
 // InputStream models a stream over a set of inputs (Input).
@@ -265,8 +246,8 @@ func (is *InputStream) At(i int) *Input {
 }
 
 // IDs returns the IDs of the inputs.
-func (is *InputStream) IDs() []*token2.ID {
-	var res []*token2.ID
+func (is *InputStream) IDs() []*token.ID {
+	var res []*token.ID
 	for _, input := range is.inputs {
 		res = append(res, input.Id)
 	}
@@ -298,14 +279,13 @@ func (is *InputStream) RevocationHandles() []string {
 	duplicates := map[string]interface{}{}
 	var rIDs []string
 	for _, input := range is.inputs {
-		if len(input.RevocationHandler) == 0 {
+		rh := input.RevocationHandler
+		if len(rh) == 0 {
 			continue
 		}
-
-		rh := hash.Hashable(input.RevocationHandler).String()
 		_, ok := duplicates[rh]
 		if !ok {
-			rIDs = append(rIDs, input.RevocationHandler)
+			rIDs = append(rIDs, rh)
 			duplicates[rh] = true
 		}
 	}
