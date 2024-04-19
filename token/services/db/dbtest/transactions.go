@@ -117,11 +117,7 @@ func TStatus(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, mvs, 1)
 	assert.Equal(t, driver.Pending, mvs[0].Status, "movement status should be pending")
 
-	w, err = db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.SetStatus("tx1", driver.Confirmed, "message"))
-	assert.NoError(t, w.Commit())
-
+	assert.NoError(t, db.SetStatus("tx1", driver.Confirmed, "message"))
 	s, mess, err = db.GetStatus("tx1")
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Confirmed, s, "status should be changed to confirmed")
@@ -744,9 +740,6 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionDB) {
 			assert.NoError(t, w.AddTokenRequest(r.TxID, []byte{}))
 		}
 		assert.NoError(t, w.AddTransaction(&r))
-		if r.Status != driver.Pending {
-			assert.NoError(t, w.SetStatus(r.TxID, r.Status, ""))
-		}
 		previous = r.TxID
 	}
 	assert.NoError(t, w.Commit())
@@ -818,9 +811,6 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 	for _, e := range exp {
 		assert.NoError(t, w.AddTokenRequest(e.TxID, e.TokenRequest))
 		assert.NoError(t, w.AddValidationRecord(e.TxID, e.Metadata), "AddValidationRecord "+e.TxID)
-		if e.Status != driver.Pending {
-			assert.NoError(t, w.SetStatus(e.TxID, e.Status, ""))
-		}
 	}
 	assert.NoError(t, w.Commit(), "Commit")
 	for _, e := range exp {

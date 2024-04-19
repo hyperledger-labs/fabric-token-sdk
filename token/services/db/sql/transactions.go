@@ -553,26 +553,6 @@ func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) e
 	return dbError(err)
 }
 
-func (w *AtomicWrite) SetStatus(txID string, status driver.TxStatus, message string) (err error) {
-	if w.txn == nil {
-		return errors.New("no db transaction in progress")
-	}
-	var query string
-	if len(message) != 0 {
-		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", w.db.table.Requests)
-		logger.Debug(query)
-		_, err = w.txn.Exec(query, status, message, txID)
-	} else {
-		query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", w.db.table.Requests)
-		logger.Debug(query)
-		_, err = w.txn.Exec(query, status, txID)
-	}
-	if err != nil {
-		return errors.Wrapf(err, "error updating tx [%s]", txID)
-	}
-	return
-}
-
 func dbError(err error) error {
 	if err == nil {
 		return nil

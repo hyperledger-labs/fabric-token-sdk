@@ -45,10 +45,6 @@ type AtomicWrite interface {
 	// AddValidationRecord adds a new validation records for the given params
 	// This operation _requires_ a TokenRequest with the same tx_id to exist
 	AddValidationRecord(txID string, meta map[string][]byte) error
-
-	// SetStatus sets the status of a TokenRequest
-	// (and with that, the associated ValidationRecord, Movement and Transaction)
-	SetStatus(txID string, status TxStatus, message string) error
 }
 
 type TransactionDB interface {
