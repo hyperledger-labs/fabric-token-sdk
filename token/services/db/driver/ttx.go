@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"errors"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -28,20 +30,24 @@ type AtomicWrite interface {
 	// the result is always the end of the transaction.
 	Rollback()
 
-	// AddMovement adds a movement record to the database transaction.
-	// Each token transaction can be seen as a list of movements.
-	AddMovement(record *MovementRecord) error
-
-	// AddTransaction adds a transaction record to the database transaction.
-	AddTransaction(record *TransactionRecord) error
-
-	// AddValidationRecord adds a new validation records for the given params
-	AddValidationRecord(txID string, tr []byte, meta map[string][]byte) error
-
 	// AddTokenRequest binds the passed transaction id to the passed token request
 	AddTokenRequest(txID string, tr []byte) error
 
-	// SetStatus sets the status of a transaction
+	// AddMovement adds a movement record to the database transaction.
+	// Each token transaction can be seen as a list of movements.
+	// This operation _requires_ a TokenRequest with the same tx_id to exist
+	AddMovement(record *MovementRecord) error
+
+	// AddTransaction adds a transaction record to the database transaction.
+	// This operation _requires_ a TokenRequest with the same tx_id to exist
+	AddTransaction(record *TransactionRecord) error
+
+	// AddValidationRecord adds a new validation records for the given params
+	// This operation _requires_ a TokenRequest with the same tx_id to exist
+	AddValidationRecord(txID string, meta map[string][]byte) error
+
+	// SetStatus sets the status of a TokenRequest
+	// (and with that, the associated ValidationRecord, Movement and Transaction)
 	SetStatus(txID string, status TxStatus, message string) error
 }
 
@@ -83,3 +89,7 @@ type TTXDBDriver interface {
 	// Open opens a token transaction database
 	Open(sp view2.ServiceProvider, tmsID token2.TMSID) (TokenTransactionDB, error)
 }
+
+var (
+	ErrTokenRequestDoesNotExist = errors.New("token request does not exist")
+)

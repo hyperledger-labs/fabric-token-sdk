@@ -99,6 +99,8 @@ type MovementRecord struct {
 type TransactionRecord struct {
 	// TxID is the transaction ID
 	TxID string
+	// Index is the action sequence number within the transaction
+	Index uint64
 	// ActionType is the type of action performed by this transaction record
 	ActionType ActionType
 	// SenderEID is the enrollment ID of the account that is sending tokens
@@ -113,6 +115,9 @@ type TransactionRecord struct {
 	Timestamp time.Time
 	// Status is the status of the transaction
 	Status TxStatus
+	// ApplicationMetadata is the metadata sent by the application in the
+	// transient field. It is not validated or recorded on the ledger.
+	ApplicationMetadata map[string][]byte
 }
 
 func (t *TransactionRecord) String() string {

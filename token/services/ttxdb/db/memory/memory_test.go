@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/dbtest"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 )
 
 type MockServiceProvider struct{}

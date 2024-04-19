@@ -60,9 +60,9 @@ func transactionsConditionsSql(params driver.QueryTransactionsParams) (string, [
 	}
 
 	if len(and) == 0 {
-		return ";", args
+		return "", args
 	}
-	where := fmt.Sprintf("WHERE %s;", strings.Join(and, " AND "))
+	where := fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
 
 	return where, args
 }
@@ -89,15 +89,15 @@ func validationConditionsSql(params driver.QueryValidationRecordsParams) (string
 	if len(params.Statuses) > 0 {
 		t := make([]interface{}, len(params.Statuses))
 		for i, s := range params.Statuses {
-			t[i] = s
+			t[i] = int(s)
 		}
 		add(&and, in(&args, "status", t))
 	}
 
 	if len(and) == 0 {
-		return ";", args
+		return "", args
 	}
-	where := fmt.Sprintf("WHERE %s;", strings.Join(and, " AND "))
+	where := fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
 
 	return where, args
 }
@@ -128,7 +128,7 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 		}
 		add(&and, in(&args, "status", statuses))
 	} else {
-		and = append(and, "status != 'Deleted'")
+		and = append(and, fmt.Sprintf("status != %d", driver.Deleted))
 	}
 
 	// Sent or received
@@ -153,14 +153,14 @@ func movementConditionsSql(params driver.QueryMovementsParams) (string, []interf
 		limit = fmt.Sprintf(" LIMIT %d", params.NumRecords)
 	}
 
-	where := fmt.Sprintf("WHERE %s%s%s;", strings.Join(and, " AND "), order, limit)
+	where := fmt.Sprintf("WHERE %s%s%s", strings.Join(and, " AND "), order, limit)
 
 	return where, args
 }
 
 func certificationsQuerySql(ids []*token.ID) (string, []any, error) {
 	if len(ids) == 0 {
-		return ";", nil, nil
+		return "", nil, nil
 	}
 	if ids[0] == nil {
 		return "", nil, errors.Errorf("invalid token-id, cannot be nil")
@@ -177,7 +177,7 @@ func certificationsQuerySql(ids []*token.ID) (string, []any, error) {
 		builder.WriteString(fmt.Sprintf("token_id=$%d", i+1))
 		tokenIDs = append(tokenIDs, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index))
 	}
-	builder.WriteString(";")
+	builder.WriteString("")
 
 	return builder.String(), tokenIDs, nil
 }
@@ -223,4 +223,8 @@ func add(and *[]string, clause string) {
 	if clause != "" {
 		*and = append(*and, clause)
 	}
+}
+
+func joinOnTxID(table, parent string) string {
+	return fmt.Sprintf("LEFT JOIN %s ON %s.tx_id = %s.tx_id", parent, table, parent)
 }

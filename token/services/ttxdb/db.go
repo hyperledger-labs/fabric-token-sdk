@@ -260,7 +260,7 @@ func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 		TxID:           txID,
 		ValidationCode: status,
 	})
-	logger.Debugf("Set status [%s][%s]...done without errors", txID, driver.TxStatusMessage[status])
+	logger.Debugf("set status [%s][%s] done", txID, driver.TxStatusMessage[status])
 	return nil
 }
 
@@ -272,7 +272,7 @@ func (d *DB) GetStatus(txID string) (TxStatus, string, error) {
 	if err != nil {
 		return Unknown, "", errors.Wrapf(err, "failed geting status [%s]", txID)
 	}
-	logger.Debugf("Got status [%s][%s]", txID, status)
+	logger.Debugf("got status [%s][%s]", txID, status)
 	return status, message, nil
 }
 
@@ -291,15 +291,15 @@ func (d *DB) GetTransactionEndorsementAcks(txID string) (map[string][]byte, erro
 	return d.db.GetTransactionEndorsementAcks(txID)
 }
 
-// AppendValidationRecord appends the given validation metadata related to the given token request and transaction id
-func (d *DB) AppendValidationRecord(txID string, tr []byte, meta map[string][]byte) error {
+// AppendValidationRecord appends the given validation metadata related to the given transaction id
+func (d *DB) AppendValidationRecord(txID string, meta map[string][]byte) error {
 	logger.Debugf("appending new validation record... [%s]", txID)
 
 	w, err := d.db.BeginAtomicWrite()
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := w.AddValidationRecord(txID, tr, meta); err != nil {
+	if err := w.AddValidationRecord(txID, meta); err != nil {
 		return errors.WithMessagef(err, "append validation record for txid [%s] failed", txID)
 	}
 	if err := w.Commit(); err != nil {
@@ -361,6 +361,7 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 
 				txs = append(txs, driver.TransactionRecord{
 					TxID:         record.Anchor,
+					Index:        uint64(actionIndex),
 					SenderEID:    inEID,
 					RecipientEID: outEID,
 					TokenType:    tokenType,
