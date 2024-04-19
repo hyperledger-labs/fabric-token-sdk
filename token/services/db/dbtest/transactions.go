@@ -19,7 +19,7 @@ import (
 	"github.com/test-go/testify/assert"
 )
 
-// This file exposes functions that db drivers can use for integration tests
+// This file exposes functions that db driver implementations can use for integration tests
 var Cases = []struct {
 	Name string
 	Fn   func(*testing.T, driver.TokenTransactionDB)
@@ -117,11 +117,7 @@ func TStatus(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, mvs, 1)
 	assert.Equal(t, driver.Pending, mvs[0].Status, "movement status should be pending")
 
-	w, err = db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.SetStatus("tx1", driver.Confirmed, "message"))
-	assert.NoError(t, w.Commit())
-
+	assert.NoError(t, db.SetStatus("tx1", driver.Confirmed, "message"))
 	s, mess, err = db.GetStatus("tx1")
 	assert.NoError(t, err)
 	assert.Equal(t, driver.Confirmed, s, "status should be changed to confirmed")
@@ -220,24 +216,17 @@ func TMovements(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
 
-	w, err = db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.SetStatus("2", driver.Confirmed, ""))
-	assert.NoError(t, w.Commit())
+	assert.NoError(t, db.SetStatus("2", driver.Confirmed, "message"))
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Pending}, SearchDirection: driver.FromLast, MovementDirection: driver.Received, NumRecords: 3})
 	assert.NoError(t, err)
 	assert.Len(t, records, 2)
 
 	// setting same status twice should not change the results
-	w, err = db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.SetStatus("2", driver.Confirmed, ""))
-	assert.NoError(t, w.Commit())
+	assert.NoError(t, db.SetStatus("2", driver.Confirmed, ""))
 
 	records, err = db.QueryMovements(driver.QueryMovementsParams{TxStatuses: []driver.TxStatus{driver.Confirmed}})
 	assert.NoError(t, err)
 	assert.Len(t, records, 1)
-
 }
 
 func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
@@ -306,11 +295,8 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Empty(t, tr)
 
 	// update status
-	w, err = db.BeginAtomicWrite()
-	assert.NoError(t, err)
-	assert.NoError(t, w.SetStatus("tx2", driver.Confirmed, "pineapple"))
-	assert.NoError(t, w.SetStatus("tx3", driver.Confirmed, ""))
-	assert.NoError(t, w.Commit())
+	assert.NoError(t, db.SetStatus("tx2", driver.Confirmed, "pineapple"))
+	assert.NoError(t, db.SetStatus("tx3", driver.Confirmed, ""))
 
 	status, message, err := db.GetStatus("tx2")
 	assert.NoError(t, err)
@@ -663,12 +649,14 @@ func TTransactionQueries(t *testing.T, db driver.TokenTransactionDB) {
 			assert.NoError(t, w.AddTokenRequest(r.TxID, []byte{}))
 		}
 		assert.NoError(t, w.AddTransaction(&r))
-		if r.Status != driver.Pending {
-			assert.NoError(t, w.SetStatus(r.TxID, r.Status, ""))
-		}
 		previous = r.TxID
 	}
 	assert.NoError(t, w.Commit())
+	for _, r := range tr {
+		if r.Status != driver.Pending {
+			assert.NoError(t, db.SetStatus(r.TxID, r.Status, ""))
+		}
+	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -732,13 +720,13 @@ func TValidationRecordQueries(t *testing.T, db driver.TokenTransactionDB) {
 	for _, e := range exp {
 		assert.NoError(t, w.AddTokenRequest(e.TxID, e.TokenRequest))
 		assert.NoError(t, w.AddValidationRecord(e.TxID, e.Metadata), "AddValidationRecord "+e.TxID)
+	}
+	assert.NoError(t, w.Commit(), "Commit")
+	for _, e := range exp {
 		if e.Status != driver.Pending {
-			assert.NoError(t, w.SetStatus(e.TxID, e.Status, ""))
+			assert.NoError(t, db.SetStatus(e.TxID, e.Status, ""))
 		}
 	}
-	assert.NoError(t, w.SetStatus("4", driver.Confirmed, ""))
-	assert.NoError(t, w.Commit(), "Commit")
-
 	all := getValidationRecords(t, db, driver.QueryValidationRecordsParams{})
 	assert.Len(t, all, 4)
 

@@ -243,16 +243,8 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (d *DB) SetStatus(txID string, status TxStatus, message string) error {
 	logger.Debugf("set status [%s][%s]...", txID, status)
-	w, err := d.db.BeginAtomicWrite()
-	if err != nil {
-		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
-	}
-	if err := w.SetStatus(txID, status, message); err != nil {
-		w.Rollback()
+	if err := d.db.SetStatus(txID, status, message); err != nil {
 		return errors.Wrapf(err, "failed setting status [%s][%s]", txID, driver.TxStatusMessage[status])
-	}
-	if err := w.Commit(); err != nil {
-		return errors.WithMessagef(err, "failed committing status [%s][%s]", txID, driver.TxStatusMessage[status])
 	}
 
 	// notify the listeners
