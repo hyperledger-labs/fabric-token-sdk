@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package token
 
 import (
@@ -72,7 +78,7 @@ func TestSignatureService_GetSigner(t *testing.T) {
 		deserializer: deserializer,
 		ip:           ip,
 	}
-	
+
 	expectedSigner := &mock.Signer{}
 	ip.GetSignerReturns(expectedSigner, nil)
 

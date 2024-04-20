@@ -1,3 +1,9 @@
+/*
+Copyright IBM Corp. All Rights Reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package token
 
 import (
@@ -133,7 +139,7 @@ func TestPublicParametersManager_PublicParameters_Nil(t *testing.T) {
 	ppm := &PublicParametersManager{
 		ppm: &mock.PublicParamsManager{},
 	}
-	
+
 	mockPPM := ppm.ppm.(*mock.PublicParamsManager)
 	mockPPM.PublicParametersReturns(nil)
 	pp := ppm.PublicParameters()
