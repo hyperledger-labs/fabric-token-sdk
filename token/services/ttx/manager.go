@@ -91,10 +91,8 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
-	qe := db.NewQueryExecutor()
-	defer qe.Done()
 
-	it, err := qe.Transactions(ttxdb.QueryTransactionsParams{})
+	it, err := db.db.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
@@ -157,7 +155,6 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 		}
 	}
 	it.Close()
-	qe.Done()
 
 	for _, updated := range toBeUpdated {
 		if err := db.db.SetStatus(updated.TxID, updated.Status, updated.Message); err != nil {

@@ -62,9 +62,6 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 	defer auditor.Release(tx)
 
 	logger.Debugf("AuditView: [%s] get query executor... ", tx.ID())
-	aqe := auditor.NewQueryExecutor()
-	logger.Debugf("AuditView: [%s] get query executor...done", tx.ID())
-	defer aqe.Done()
 
 	// R1: Default payment limit is set to 200. All payments of an amount less than or equal to Default Payment Limit is valid.
 	eIDs := inputs.EnrollmentIDs()
@@ -111,7 +108,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			fmt.Printf("Cumulative Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
 
 			// load last 10 payments, add diff, and check that it is below the threshold
-			filter, err := aqe.NewPaymentsFilter().ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute()
+			filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute()
 			assert.NoError(err, "failed retrieving last 10 payments")
 			sumLastPayments := filter.Sum()
 			fmt.Printf("Cumulative Limit: [%s] Last NewPaymentsFilter [%s], type [%s]\n", eID, sumLastPayments.Text(10), tokenType)
@@ -144,7 +141,7 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			fmt.Printf("Holding Limit: [%s] Diff [%d], type [%s]\n", eID, diff.Int64(), tokenType)
 
 			// load current holding, add diff, and check that it is below the threshold
-			filter, err := aqe.NewHoldingsFilter().ByEnrollmentId(eID).ByType(tokenType).Execute()
+			filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(eID).ByType(tokenType).Execute()
 			assert.NoError(err, "failed retrieving holding for [%s][%s]", eIDs, tokenTypes)
 			currentHolding := filter.Sum()
 
@@ -176,8 +173,6 @@ func (a *AuditView) Call(context view.Context) (interface{}, error) {
 			return nil, errors.Errorf("%s Identity is in revoked state", rh)
 		}
 	}
-
-	aqe.Done()
 
 	logger.Debugf("AuditView: Approve... [%s]", tx.ID())
 	res, err := context.RunView(ttx.NewAuditApproveView(w, tx))
@@ -232,10 +227,7 @@ func (r *CurrentHoldingView) Call(context view.Context) (interface{}, error) {
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
 
-	aqe := auditor.NewQueryExecutor()
-	defer aqe.Done()
-
-	filter, err := aqe.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	filter, err := auditor.NewHoldingsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
 	assert.NoError(err, "failed retrieving holding for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentHolding := filter.Sum()
 	decimal := currentHolding.Text(10)
@@ -272,10 +264,7 @@ func (r *CurrentSpendingView) Call(context view.Context) (interface{}, error) {
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
 
-	aqe := auditor.NewQueryExecutor()
-	defer aqe.Done()
-
-	filter, err := aqe.NewPaymentsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
+	filter, err := auditor.NewPaymentsFilter().ByEnrollmentId(r.EnrollmentID).ByType(r.TokenType).Execute()
 	assert.NoError(err, "failed retrieving spending for [%s][%s]", r.EnrollmentID, r.TokenType)
 	currentSpending := filter.Sum()
 	decimal := currentSpending.Text(10)

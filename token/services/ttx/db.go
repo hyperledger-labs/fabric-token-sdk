@@ -15,11 +15,6 @@ import (
 
 type QueryTransactionsParams = ttxdb.QueryTransactionsParams
 
-// QueryExecutor defines the interface for the query executor
-type QueryExecutor struct {
-	*ttxdb.QueryExecutor
-}
-
 type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
@@ -28,11 +23,6 @@ type NetworkProvider interface {
 type DB struct {
 	networkProvider NetworkProvider
 	db              *ttxdb.DB
-}
-
-// NewQueryExecutor returns a new query executor
-func (a *DB) NewQueryExecutor() *QueryExecutor {
-	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
 }
 
 // Append adds the passed transaction to the database

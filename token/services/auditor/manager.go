@@ -115,10 +115,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditor for [%s]", walletID)
 	}
-	qe := auditor.NewQueryExecutor()
-	defer qe.Done()
-
-	it, err := qe.Transactions(auditdb.QueryTransactionsParams{})
+	it, err := auditor.db.Transactions(auditdb.QueryTransactionsParams{})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s]", tmsID, walletID)
 	}
@@ -180,7 +177,6 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 		}
 	}
 	it.Close()
-	qe.Done()
 
 	for _, updated := range toBeUpdated {
 		if err := auditor.db.SetStatus(updated.TxID, updated.Status, updated.Message); err != nil {

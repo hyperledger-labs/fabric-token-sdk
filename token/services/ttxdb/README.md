@@ -40,20 +40,11 @@ It is also possible to append just the transaction records corresponding to a gi
 
 ## Payments
 
-To get a list of payments filtered by given criteria, one must first obtain a `query executor` like
-this:
-
-```go
-    qe := ttxDB.NewQueryExecutor()
-    defer aqe.Done() // Don't forget to close the query executor
-```
-
-Now, we are ready to perform payment queries. 
 The following example shows how to retrieve the total amount of last 10 payments made by a given 
 business party, identified by the corresponding enrollment ID, for a given token type.
 
 ```go
-    filter := qe.NewPaymentsFilter()
+    filter := ttxDB.NewPaymentsFilter()
     filter, err = filter.ByEnrollmentId(eID).ByType(tokenType).Last(10).Execute()
     if err != nil {
         return errors.WithMessagef(err, "failed getting payments for enrollment id [%s] and token type [%s]", eID, tokenType)
@@ -68,7 +59,7 @@ Recall that the current holding is equal to the difference between inbound and o
 the entire history.
 
 ```go
-    filter := qe.NewHoldingsFilter()
+    filter := ttxDB.NewHoldingsFilter()
     filter, err = filter.ByEnrollmentId(eID).ByType(tokenType).Execute()
     if err != nil {
         return errors.WithMessagef(err, "failed getting holdings for enrollment id [%s] and token type [%s]", eID, tokenType)

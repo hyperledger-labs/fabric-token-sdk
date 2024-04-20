@@ -10,6 +10,7 @@ import (
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
 type TxOwner struct {
@@ -30,16 +31,14 @@ func NewOwner(sp view2.ServiceProvider, tms *token.ManagementService) *TxOwner {
 	}
 }
 
-// NewQueryExecutor returns a new query executor.
-// The query executor is used to execute queries against the token transaction DB.
-// The function `Done` on the query executor must be called when it is no longer needed.
-func (a *TxOwner) NewQueryExecutor() *QueryExecutor {
-	return a.owner.NewQueryExecutor()
-}
-
 // Append adds a new transaction to the token transaction database.
 func (a *TxOwner) Append(tx *Transaction) error {
 	return a.owner.Append(tx)
+}
+
+// Transactions returns an iterators of transaction records filtered by the given params.
+func (a *TxOwner) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+	return a.owner.db.Transactions(params)
 }
 
 // TransactionInfo returns the transaction info for the given transaction ID.

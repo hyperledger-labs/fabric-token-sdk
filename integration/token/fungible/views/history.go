@@ -66,9 +66,8 @@ func (p *ListAuditedTransactionsView) Call(context view.Context) (interface{}, e
 	// Get query executor
 	auditor, err := ttx.NewAuditor(context, w)
 	assert.NoError(err, "failed to get auditor instance")
-	aqe := auditor.NewQueryExecutor()
-	defer aqe.Done()
-	it, err := aqe.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
+
+	it, err := auditor.Transactions(ttxdb.QueryTransactionsParams{From: p.From, To: p.To})
 	assert.NoError(err, "failed querying transactions")
 	defer it.Close()
 
@@ -111,9 +110,7 @@ type ListAcceptedTransactionsView struct {
 func (p *ListAcceptedTransactionsView) Call(context view.Context) (interface{}, error) {
 	// Get query executor
 	owner := ttx.NewOwner(context, token.GetManagementService(context))
-	aqe := owner.NewQueryExecutor()
-	defer aqe.Done()
-	it, err := aqe.Transactions(ttxdb.QueryTransactionsParams{
+	it, err := owner.Transactions(ttxdb.QueryTransactionsParams{
 		SenderWallet:    p.SenderWallet,
 		RecipientWallet: p.RecipientWallet,
 		From:            p.From,

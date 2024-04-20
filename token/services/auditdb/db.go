@@ -123,43 +123,6 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
 
-// QueryExecutor executors queries against the DB
-type QueryExecutor struct {
-	db     *DB
-	closed bool
-}
-
-// NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
-func (qe *QueryExecutor) NewPaymentsFilter() *PaymentsFilter {
-	return &PaymentsFilter{
-		db: qe.db,
-	}
-}
-
-// NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
-func (qe *QueryExecutor) NewHoldingsFilter() *HoldingsFilter {
-	return &HoldingsFilter{
-		db: qe.db,
-	}
-}
-
-// Transactions returns an iterators of transaction records filtered by the given params.
-func (qe *QueryExecutor) Transactions(params QueryTransactionsParams) (*TransactionIterator, error) {
-	it, err := qe.db.db.QueryTransactions(params)
-	if err != nil {
-		return nil, errors.Errorf("failed to query transactions: %s", err)
-	}
-	return &TransactionIterator{it: it}, nil
-}
-
-// Done closes the query executor. It must be called when the query executor is no longer needed.s
-func (qe *QueryExecutor) Done() {
-	if qe.closed {
-		return
-	}
-	qe.closed = true
-}
-
 // Wallet models a wallet
 type Wallet interface {
 	// ID returns the wallet ID
@@ -240,9 +203,23 @@ func (d *DB) Append(req *token.Request) error {
 	return nil
 }
 
-// NewQueryExecutor returns a new query executor
-func (d *DB) NewQueryExecutor() *QueryExecutor {
-	return &QueryExecutor{db: d}
+// Transactions returns an iterators of transaction records filtered by the given params.
+func (db *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+	return db.db.QueryTransactions(params)
+}
+
+// NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
+func (db *DB) NewPaymentsFilter() *PaymentsFilter {
+	return &PaymentsFilter{
+		db: db,
+	}
+}
+
+// NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
+func (db *DB) NewHoldingsFilter() *HoldingsFilter {
+	return &HoldingsFilter{
+		db: db,
+	}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status

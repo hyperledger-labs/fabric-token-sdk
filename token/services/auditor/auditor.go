@@ -38,26 +38,6 @@ type Transaction interface {
 	Request() *token.Request
 }
 
-// QueryExecutor defines the interface for the query executor
-type QueryExecutor struct {
-	*auditdb.QueryExecutor
-}
-
-// NewPaymentsFilter returns a filter for payments
-func (a *QueryExecutor) NewPaymentsFilter() *auditdb.PaymentsFilter {
-	return a.QueryExecutor.NewPaymentsFilter()
-}
-
-// NewHoldingsFilter returns a filter for holdings
-func (a *QueryExecutor) NewHoldingsFilter() *auditdb.HoldingsFilter {
-	return a.QueryExecutor.NewHoldingsFilter()
-}
-
-// Done closes the query executor. It must be called when the query executor is no longer needed.
-func (a *QueryExecutor) Done() {
-	a.QueryExecutor.Done()
-}
-
 type NetworkProvider interface {
 	GetNetwork(network string, channel string) (*network.Network, error)
 }
@@ -119,11 +99,6 @@ func (a *Auditor) Append(tx Transaction) error {
 // Release releases the lock acquired of the passed transaction.
 func (a *Auditor) Release(tx Transaction) {
 	a.db.ReleaseLocks(tx.Request().Anchor)
-}
-
-// NewQueryExecutor returns a new query executor
-func (a *Auditor) NewQueryExecutor() *QueryExecutor {
-	return &QueryExecutor{QueryExecutor: a.db.NewQueryExecutor()}
 }
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
