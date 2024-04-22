@@ -246,8 +246,8 @@ func TestCertificationStorage_Exists_NotExist(t *testing.T) {
 func TestCertificationStorage_Store(t *testing.T) {
 	mockStorage := &mock.CertificationStorage{}
 	certifications := map[*token.ID][]byte{
-		&token.ID{TxId: "a_transaction", Index: 0}:       []byte("cert1"),
-		&token.ID{TxId: "another_transaction", Index: 0}: []byte("cert2"),
+		{TxId: "a_transaction", Index: 0}:       []byte("cert1"),
+		{TxId: "another_transaction", Index: 0}: []byte("cert2"),
 	}
 	mockStorage.StoreReturns(nil)
 
@@ -261,8 +261,8 @@ func TestCertificationStorage_Store(t *testing.T) {
 func TestCertificationStorage_Store_Error(t *testing.T) {
 	mockStorage := &mock.CertificationStorage{}
 	certifications := map[*token.ID][]byte{
-		&token.ID{TxId: "a_transaction", Index: 0}:       []byte("cert1"),
-		&token.ID{TxId: "another_transaction", Index: 0}: []byte("cert2"),
+		{TxId: "a_transaction", Index: 0}:       []byte("cert1"),
+		{TxId: "another_transaction", Index: 0}: []byte("cert2"),
 	}
 	mockErr := errors.New("storage error")
 	mockStorage.StoreReturns(mockErr)
