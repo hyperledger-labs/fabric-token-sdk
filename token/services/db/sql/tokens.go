@@ -10,6 +10,7 @@ import (
 	"database/sql"
 	"fmt"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	tdriver "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -110,51 +111,25 @@ func (db *TokenDB) IsMine(txID string, index uint64) (bool, error) {
 
 // UnspentTokensIterator returns an iterator over all unspent tokens
 func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error) {
-	var uti UnspentTokensIterator
-
-	query := fmt.Sprintf("SELECT tx_id, idx, owner_raw, token_type, quantity FROM %s WHERE is_deleted = false AND owner = true", db.table.Tokens)
-	logger.Debug(query)
-	rows, err := db.db.Query(query)
-	uti.txs = rows
-	return &uti, err
+	return db.UnspentTokensIteratorBy("", "")
 }
 
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
 func (db *TokenDB) UnspentTokensIteratorBy(ownerEID, typ string) (tdriver.UnspentTokensIterator, error) {
-	var uti UnspentTokensIterator
+	where, join, args := tokenQuerySql(ownerEID, driver.QueryTokenDetailsParams{TokenType: typ}, db.table.Tokens, db.table.Ownership)
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s %s %s",
+		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
-	var args []interface{}
-	if ownerEID != "" {
-		args = append(args, ownerEID)
-	}
-	if typ != "" {
-		args = append(args, typ)
-	}
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s INNER JOIN %s ON %s.tx_id = %s.tx_id AND %s.idx = %s.idx AND %s.is_deleted = false AND %s.owner = true ",
-		db.table.Tokens, db.table.Tokens, // select
-		db.table.Tokens,                     // from
-		db.table.Ownership,                  // inner join
-		db.table.Tokens, db.table.Ownership, // .txid
-		db.table.Tokens, db.table.Ownership, // .idx
-		db.table.Tokens, // Unspent
-		db.table.Tokens, // owner token
-	)
-	if ownerEID != "" {
-		query += " AND enrollment_id = $1"
-	}
-	if typ != "" {
-		query += fmt.Sprintf(" AND token_type = $%d", len(args))
-	}
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
-	uti.txs = rows
-	return &uti, err
+
+	return &UnspentTokensIterator{txs: rows}, err
 }
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenDB) ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error) {
-	logger.Debugf("List unspent token...")
+	logger.Debugf("List unspent token by...")
 	it, err := db.UnspentTokensIteratorBy(ownerEID, typ)
 	if err != nil {
 		return nil, err
@@ -504,21 +479,57 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 	return ids, tokens, nil
 }
 
+// QueryTokensDetails returns details about owner tokens, regardless if they have been spent or not.
+// Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
+// is no filter on enrollmentID, the token will be returned twice (once for each owner).
+func (db *TokenDB) QueryTokenDetails(ownerEID string, params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
+	where, join, args := tokenQuerySql(ownerEID, params, db.table.Tokens, db.table.Ownership)
+
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, owner_type, enrollment_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
+		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
+	logger.Debug(query, args)
+	rows, err := db.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	deets := []driver.TokenDetails{}
+	for rows.Next() {
+		td := driver.TokenDetails{}
+		if err := rows.Scan(
+			&td.TxID,
+			&td.Index,
+			&td.OwnerRaw,
+			&td.OwnerType,
+			&td.OwnerEnrollment,
+			&td.Type,
+			&td.Amount,
+			&td.IsSpent,
+			&td.SpentBy,
+			&td.StoredAt,
+		); err != nil {
+			return deets, err
+		}
+		deets = append(deets, td)
+	}
+	logger.Debugf("found [%d] tokens", len(deets))
+	if err = rows.Err(); err != nil {
+		return deets, err
+	}
+	return deets, nil
+}
+
 // WhoDeletedTokens returns information about which transaction deleted the passed tokens.
 // The bool array is an indicator used to tell if the token at a given position has been deleted or not
 func (db *TokenDB) WhoDeletedTokens(inputs ...*token.ID) ([]string, []bool, error) {
-	logger.Debugf("search first over token table [%s]...", inputs)
-	return db.whoDeleteTokens(db.table.Tokens, inputs...)
-}
-
-func (db *TokenDB) whoDeleteTokens(table string, inputs ...*token.ID) ([]string, []bool, error) {
 	if len(inputs) == 0 {
 		return []string{}, []bool{}, nil
 	}
-	args := make([]interface{}, 0)
+	args := []any{}
 	where := whereTokenIDs(&args, inputs)
 
-	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", table, where)
+	query := fmt.Sprintf("SELECT tx_id, idx, spent_by, is_deleted FROM %s WHERE %s", db.table.Tokens, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
 	if err != nil {
@@ -566,7 +577,6 @@ func (db *TokenDB) whoDeleteTokens(table string, inputs ...*token.ID) ([]string,
 		panic("programming error: should not reach this point")
 	}
 	return spentBy, isSpent, nil
-
 }
 
 func (db *TokenDB) StorePublicParams(raw []byte) error {
@@ -596,31 +606,25 @@ func (db *TokenDB) PublicParams() ([]byte, error) {
 
 func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err error) {
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (token_id, tx_id, idx, certification, stored_at) VALUES ($1, $2, $3, $4, $5)", db.table.Certifications)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, certification, stored_at) VALUES ($1, $2, $3, $4)", db.table.Certifications)
 
 	tx, err := db.db.Begin()
 	if err != nil {
 		return errors.New("failed starting a transaction")
 	}
-	defer func() {
-		if err != nil && tx != nil {
-			if err := tx.Rollback(); err != nil {
-				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
-			}
-		}
-	}()
+	defer tx.Rollback()
+
 	for tokenID, certification := range certifications {
 		if tokenID == nil {
 			return errors.Errorf("invalid token-id, cannot be nil")
 		}
-		tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
-		logger.Debug(query, tokenIDStr, fmt.Sprintf("(%d bytes)", len(certification)), now)
-		if _, err = tx.Exec(query, tokenIDStr, tokenID.TxId, tokenID.Index, certification, now); err != nil {
-			return errors.Wrapf(err, "failed to execute")
+		logger.Debug(query, fmt.Sprintf("(%d bytes)", len(certification)), now)
+		if _, err = tx.Exec(query, tokenID.TxId, tokenID.Index, certification, now); err != nil {
+			return tokenDBError(err)
 		}
 	}
 	if err = tx.Commit(); err != nil {
-		return errors.Wrap(err, "failed committing status update")
+		return errors.Wrap(err, "failed committing certifications")
 	}
 	return
 }
@@ -629,40 +633,37 @@ func (db *TokenDB) ExistsCertification(tokenID *token.ID) bool {
 	if tokenID == nil {
 		return false
 	}
-	tokenIDStr := fmt.Sprintf("%s%d", tokenID.TxId, tokenID.Index)
-	query := fmt.Sprintf("SELECT certification FROM %s WHERE token_id=$1;", db.table.Certifications)
-	logger.Debug(query, tokenIDStr)
+	args := []any{}
+	where := whereTokenIDs(&args, []*token.ID{tokenID})
 
-	row := db.db.QueryRow(query, tokenIDStr)
+	query := fmt.Sprintf("SELECT certification FROM %s WHERE %s", db.table.Certifications, where)
+	logger.Debug(query, args)
+	row := db.db.QueryRow(query, args...)
+
 	var certification []byte
 	if err := row.Scan(&certification); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return false
 		}
-		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenIDStr, err)
+		logger.Warnf("tried to check certification existence for token id %s, err %s", tokenID, err)
 		return false
 	}
 	result := len(certification) != 0
 	if !result {
-		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenIDStr)
+		logger.Warnf("tried to check certification existence for token id %s, got an empty certification", tokenID)
 	}
 	return result
 }
 
 func (db *TokenDB) GetCertifications(ids []*token.ID) ([][]byte, error) {
 	if len(ids) == 0 {
-		// nothing to do here
 		return nil, nil
 	}
+	args := []any{}
+	where := whereTokenIDs(&args, ids)
+	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE %s ", db.table.Certifications, where)
 
-	// build query
-	conditions, tokenIDs, err := certificationsQuerySql(ids)
-	if err != nil {
-		return nil, err
-	}
-	query := fmt.Sprintf("SELECT tx_id, idx, certification FROM %s WHERE ", db.table.Certifications) + conditions
-
-	rows, err := db.db.Query(query, tokenIDs...)
+	rows, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to query")
 	}
@@ -705,6 +706,7 @@ func (db *TokenDB) GetSchema() string {
 			quantity TEXT NOT NULL,
 			issuer_raw BYTEA,
 			owner_raw BYTEA NOT NULL,
+			owner_type TEXT NOT NULL,
 			ledger BYTEA NOT NULL,
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
@@ -725,6 +727,7 @@ func (db *TokenDB) GetSchema() string {
 			idx INT NOT NULL,
 			enrollment_id TEXT NOT NULL,
 			PRIMARY KEY (tx_id, idx, enrollment_id)
+			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
 
 		-- Public Parameters
@@ -735,22 +738,20 @@ func (db *TokenDB) GetSchema() string {
 
 		-- Certifications
 		CREATE TABLE IF NOT EXISTS %s (
-			token_id TEXT NOT NULL PRIMARY KEY,
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
 			certification BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL
+			stored_at TIMESTAMP NOT NULL,
+			PRIMARY KEY (tx_id, idx)
+			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
-		CREATE INDEX IF NOT EXISTS exists_%s ON %s ( token_id );
 		`,
-		db.table.Tokens, db.table.Tokens,
-		db.table.Tokens, db.table.Tokens,
 		db.table.Tokens,
-		db.table.Ownership,
+		db.table.Tokens, db.table.Tokens,
+		db.table.Tokens, db.table.Tokens,
+		db.table.Ownership, db.table.Tokens,
 		db.table.PublicParams,
-		db.table.Certifications,
-		db.table.Certifications,
-		db.table.Certifications,
+		db.table.Certifications, db.table.Tokens,
 	)
 }
 
@@ -792,34 +793,48 @@ func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
 
 }
 
-func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, error) {
-	args := make([]interface{}, 0)
-	tokenIDs := []*token.ID{{TxId: txID, Index: index}}
-	where := whereTokenIDs(&args, tokenIDs)
-	var del string
-	if !includeDeleted {
-		del = "AND is_deleted = false"
-	}
-
-	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity FROM %s WHERE %s AND owner = true %s", t.db.table.Tokens, where, del)
+func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
+	where, join, args := tokenQuerySql("", driver.QueryTokenDetailsParams{
+		IDs:            []*token.ID{{TxId: txID, Index: index}},
+		IncludeDeleted: includeDeleted,
+	}, t.db.table.Tokens, t.db.table.Ownership)
+	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM %s %s %s", t.db.table.Tokens, join, where)
 	logger.Debug(query, args)
-	row := t.tx.QueryRow(query, args...)
-	var tokenOwner []byte
+	rows, err := t.tx.Query(query, args...)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer rows.Close()
+
+	var raw []byte
 	var tokenType string
 	var quantity string
-	if err := row.Scan(&tokenOwner, &tokenType, &quantity); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+	owners := []string{}
+	for rows.Next() {
+		var owner string
+		if err := rows.Scan(&raw, &tokenType, &quantity, &owner); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil, owners, nil
+			}
+			return nil, owners, err
 		}
-		return nil, err
+		if len(owner) > 0 {
+			owners = append(owners, owner)
+		}
+	}
+	if rows.Err() != nil {
+		return nil, nil, rows.Err()
+	}
+	if len(raw) == 0 {
+		return nil, owners, nil
 	}
 	return &token.Token{
 		Owner: &token.Owner{
-			Raw: tokenOwner,
+			Raw: raw,
 		},
 		Type:     tokenType,
 		Quantity: quantity,
-	}, nil
+	}, owners, nil
 }
 
 func (t *TokenTransaction) OwnersOf(txID string, index uint64) ([]string, error) {
@@ -868,9 +883,9 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)", t.db.table.Tokens)
-	logger.Debug(query, tr.TxID, tr.Index, len(tr.IssuerRaw), len(tr.OwnerRaw), len(tr.Ledger), len(tr.LedgerMetadata), tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer)
-	if _, err := t.tx.Exec(query, tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.Ledger, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer); err != nil {
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", t.db.table.Tokens)
+	logger.Debug(query, tr.TxID, tr.Index, len(tr.IssuerRaw), len(tr.OwnerRaw), tr.OwnerType, len(tr.Ledger), len(tr.LedgerMetadata), tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer)
+	if _, err := t.tx.Exec(query, tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.Ledger, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.db.table.Tokens, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.db.table.Tokens)
 	}
@@ -930,4 +945,17 @@ func (u *UnspentTokensIterator) Next() (*token.UnspentToken, error) {
 		Type:     typ,
 		Quantity: quantity,
 	}, err
+}
+
+func tokenDBError(err error) error {
+	if err == nil {
+		return nil
+	}
+	logger.Error(err)
+	e := strings.ToLower(err.Error())
+	if strings.Contains(e, "foreign key constraint") {
+
+		return driver.ErrTokenDoesNotExist
+	}
+	return err
 }

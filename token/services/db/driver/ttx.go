@@ -31,7 +31,7 @@ type AtomicWrite interface {
 	Rollback()
 
 	// AddTokenRequest binds the passed transaction id to the passed token request
-	AddTokenRequest(txID string, tr []byte) error
+	AddTokenRequest(txID string, tr []byte, applicationMetadata map[string][]byte) error
 
 	// AddMovement adds a movement record to the database transaction.
 	// Each token transaction can be seen as a list of movements.
@@ -95,4 +95,5 @@ type TTXDBDriver interface {
 
 var (
 	ErrTokenRequestDoesNotExist = errors.New("token request does not exist")
+	ErrTokenDoesNotExist        = errors.New("token does not exist")
 )

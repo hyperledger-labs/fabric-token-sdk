@@ -7,9 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
+	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -63,7 +66,7 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 }
 
 func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
-	tok, err := t.tx.GetToken(txID, index, true)
+	tok, owners, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
@@ -78,10 +81,6 @@ func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) e
 	if tok == nil {
 		logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
 		return nil
-	}
-	owners, err := t.tx.OwnersOf(txID, index)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get owners for token [%s:%d]", txID, index)
 	}
 	for _, owner := range owners {
 		logger.Debugf("post new delete-token event [%s:%s:%s]", txID, index, owner)
@@ -114,12 +113,19 @@ func (t *transaction) AppendToken(
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
 	}
+	id, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
+	if err != nil {
+		logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
+		return fmt.Errorf("could not unmarshal identity when storing token: %w", err)
+	}
+
 	err = t.tx.StoreToken(
 		tokendb.TokenRecord{
 			TxID:           txID,
 			Index:          index,
 			IssuerRaw:      issuer,
 			OwnerRaw:       tok.Owner.Raw,
+			OwnerType:      id.Type,
 			Ledger:         tokenOnLedger,
 			LedgerMetadata: tokenOnLedgerMetadata,
 			Quantity:       tok.Quantity,
