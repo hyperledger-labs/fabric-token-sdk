@@ -28,6 +28,8 @@ const (
 	Deleted
 )
 
+//go:generate counterfeiter -o mock/uti.go -fake-name UnspentTokensIterator . UnspentTokensIterator
+
 type UnspentTokensIterator interface {
 	Close()
 	Next() (*token.UnspentToken, error)
@@ -38,10 +40,14 @@ type Vault interface {
 	CertificationStorage() CertificationStorage
 }
 
+//go:generate counterfeiter -o mock/certification_storage.go -fake-name CertificationStorage . CertificationStorage
+
 type CertificationStorage interface {
 	Exists(id *token.ID) bool
 	Store(certifications map[*token.ID][]byte) error
 }
+
+//go:generate counterfeiter -o mock/qe.go -fake-name QueryEngine . QueryEngine
 
 type QueryEngine interface {
 	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise

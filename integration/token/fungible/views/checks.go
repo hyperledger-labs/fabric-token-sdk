@@ -112,6 +112,7 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		if err != nil {
 			lVC = network.Unknown
 		}
+		logger.Infof("status [%s] [%d][%d]", transactionRecord.TxID, vc, lVC)
 		switch {
 		case vc == network.Valid && lVC != network.Valid:
 			if err != nil {
