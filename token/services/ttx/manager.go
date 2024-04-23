@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
@@ -22,10 +23,20 @@ type DBProvider interface {
 	DBByTMSId(id token.TMSID) (*ttxdb.DB, error)
 }
 
+type TokensProvider interface {
+	Tokens(tmsID token.TMSID) (*tokens.Tokens, error)
+}
+
+type TMSProvider interface {
+	GetManagementService(opts ...token.ServiceOption) (*token.ManagementService, error)
+}
+
 // Manager handles the databases
 type Manager struct {
 	networkProvider NetworkProvider
-	dbProvider      DBProvider
+	tmsProvider     TMSProvider
+	ttxDBProvider   DBProvider
+	tokensProvider  TokensProvider
 
 	storage storage.DBEntriesStorage
 	mutex   sync.Mutex
@@ -33,66 +44,75 @@ type Manager struct {
 }
 
 // NewManager creates a new DB manager.
-func NewManager(np NetworkProvider, dbProvider DBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(np NetworkProvider, tmsProvider TMSProvider, ttxDBProvider DBProvider, tokensBProvider TokensProvider, storage storage.DBEntriesStorage) *Manager {
 	return &Manager{
 		networkProvider: np,
 		storage:         storage,
-		dbProvider:      dbProvider,
+		tmsProvider:     tmsProvider,
+		ttxDBProvider:   ttxDBProvider,
+		tokensProvider:  tokensBProvider,
 		dbs:             map[string]*DB{},
 	}
 }
 
 // DB returns the DB for the given TMS
-func (cm *Manager) DB(tmsID token.TMSID) (*DB, error) {
-	cm.mutex.Lock()
-	defer cm.mutex.Unlock()
+func (m *Manager) DB(tmsID token.TMSID) (*DB, error) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	id := tmsID.String()
 	logger.Debugf("get ttxdb for [%s]", id)
-	c, ok := cm.dbs[id]
+	c, ok := m.dbs[id]
 	if !ok {
 		// add an entry
-		if err := cm.storage.Put(tmsID, ""); err != nil {
+		if err := m.storage.Put(tmsID, ""); err != nil {
 			return nil, errors.Wrapf(err, "failed to store db entry in KVS [%s]", tmsID)
 		}
 		var err error
-		c, err = cm.newDB(tmsID)
+		c, err = m.newDB(tmsID)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to instantiate db for TMS [%s]", tmsID)
 		}
-		cm.dbs[id] = c
+		m.dbs[id] = c
 	}
 	return c, nil
 }
 
-func (cm *Manager) newDB(tmsID token.TMSID) (*DB, error) {
-	db, err := cm.dbProvider.DBByTMSId(tmsID)
+func (m *Manager) newDB(tmsID token.TMSID) (*DB, error) {
+	ttxDB, err := m.ttxDBProvider.DBByTMSId(tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
+	}
+	tokenDB, err := m.tokensProvider.Tokens(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get ttxdb for [%s]", tmsID)
 	}
 	wrapper := &DB{
-		networkProvider: cm.networkProvider,
-		db:              db,
+		networkProvider: m.networkProvider,
+		tmsID:           tmsID,
+		tmsProvider:     m.tmsProvider,
+		ttxDB:           ttxDB,
+		tokenDB:         tokenDB,
 	}
-	_, err = cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
+	_, err = m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 	return wrapper, nil
 }
 
-func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
-	net, err := cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
+func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
+	net, err := m.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	db, err := cm.DB(tmsID)
+	db, err := m.DB(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.db.Transactions(ttxdb.QueryTransactionsParams{})
+	it, err := db.ttxDB.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
@@ -104,9 +124,9 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	}
 	var pendingTXs []string
 	type ToBeUpdated struct {
-		TxID    string
-		Status  ttxdb.TxStatus
-		Message string
+		TxID          string
+		Status        ttxdb.TxStatus
+		StatusMessage string
 	}
 	var toBeUpdated []ToBeUpdated
 	for {
@@ -131,7 +151,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 			}
 
 			// check the status of the pending transactions in the vault
-			status, message, err := v.Status(tr.TxID)
+			status, sm, err := v.Status(tr.TxID)
 			if err != nil {
 				pendingTXs = append(pendingTXs, tr.TxID)
 				continue
@@ -148,16 +168,16 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 				continue
 			}
 			toBeUpdated = append(toBeUpdated, ToBeUpdated{
-				TxID:    tr.TxID,
-				Status:  txStatus,
-				Message: message,
+				TxID:          tr.TxID,
+				Status:        txStatus,
+				StatusMessage: sm,
 			})
 		}
 	}
 	it.Close()
 
 	for _, updated := range toBeUpdated {
-		if err := db.db.SetStatus(updated.TxID, updated.Status, updated.Message); err != nil {
+		if err := db.ttxDB.SetStatus(updated.TxID, updated.Status, updated.StatusMessage); err != nil {
 			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
 		}
 		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
@@ -166,7 +186,10 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("ttxdb [%s:%s], found [%d] pending transactions", tmsID.Network, tmsID.Channel, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
-		if err := net.AddFinalityListener(txID, &FinalityListener{net, db.db}); err != nil {
+		if err := net.AddFinalityListener(
+			txID,
+			NewFinalityListener(net, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB),
+		); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, txID)
 		}
 	}

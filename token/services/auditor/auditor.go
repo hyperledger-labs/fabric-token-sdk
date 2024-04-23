@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"fmt"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -123,9 +125,25 @@ type FinalityListener struct {
 }
 
 func (t *FinalityListener) OnStatus(txID string, status int, message string) {
+	defer func() {
+		if e := recover(); e != nil {
+			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
+			if err := t.net.AddFinalityListener(txID, t); err != nil {
+				panic(err)
+			}
+			logger.Debugf("unsubscribe for tx [%s]...done", txID)
+		} else {
+			logger.Debugf("unsubscribe for tx [%s]...", txID)
+			if err := t.net.RemoveFinalityListener(txID, t); err != nil {
+				logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+			}
+			logger.Debugf("unsubscribe for tx [%s]...done", txID)
+		}
+	}()
+
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var txStatus auditdb.TxStatus
-	switch network.ValidationCode(status) {
+	switch status {
 	case network.Valid:
 		txStatus = auditdb.Confirmed
 	case network.Invalid:
@@ -133,14 +151,7 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 	}
 	if err := t.db.SetStatus(txID, txStatus, message); err != nil {
 		logger.Errorf("failed setting status for request [%s]: [%s]", txID, err)
-		return
+		panic(fmt.Errorf("failed setting status for request [%s]: [%s]", txID, err))
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
-	go func() {
-		logger.Debugf("unsubscribe for tx %s...", txID)
-		if err := t.net.RemoveFinalityListener(txID, t); err != nil {
-			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
-		}
-		logger.Debugf("unsubscribe for tx %s...done", txID)
-	}()
 }

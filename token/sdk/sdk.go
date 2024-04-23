@@ -92,30 +92,11 @@ func (p *SDK) Install() error {
 	networkProvider := network.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(networkProvider))
 
-	// Token and Transaction DBs, and derivatives
-	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(tokenDBManager))
-	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(auditDBManager))
-	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
-	assert.NoError(p.registry.RegisterService(identityDBManager))
-	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
-	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
-
-	ownerManager := ttx.NewManager(networkProvider, ttxdbManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
-	assert.NoError(p.registry.RegisterService(ownerManager))
-	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
-	assert.NoError(p.registry.RegisterService(auditorManager))
-	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
-
 	tmsProvider := tms2.NewTMSProvider(
 		p.registry,
 		flogging.MustGetLogger("token-sdk.core"),
 		configProvider,
 		&vault.PublicParamsProvider{Provider: networkProvider},
-		p.postInitializer.PostInit,
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
@@ -149,6 +130,20 @@ func (p *SDK) Install() error {
 		selectorManagerProvider,
 	)
 	assert.NoError(p.registry.RegisterService(tmsp))
+
+	// DBs and their managers
+	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(ttxdbManager))
+	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(tokenDBManager))
+	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(auditDBManager))
+	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
+	assert.NoError(p.registry.RegisterService(identityDBManager))
+	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
+	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
+	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(auditorManager))
 	publisher, err := events.GetPublisher(p.registry)
 	assert.NoError(err, "failed to get publisher")
 	tokensManager := tokens.NewManager(
@@ -160,7 +155,14 @@ func (p *SDK) Install() error {
 		storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)),
 	)
 	assert.NoError(p.registry.RegisterService(tokensManager))
+	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
+	assert.NoError(p.registry.RegisterService(ownerManager))
 
+	// TMS callback
+	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
+	tmsProvider.SetCallback(p.postInitializer.PostInit)
+
+	// Orion related initialization
 	enabled, err := orion.IsCustodian(configProvider)
 	assert.NoError(err, "failed to get custodian status")
 	logger.Infof("Orion Custodian enabled: %t", enabled)
