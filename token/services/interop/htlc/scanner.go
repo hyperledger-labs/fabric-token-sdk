@@ -12,7 +12,6 @@ import (
 	"encoding/base64"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/encoding"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -35,7 +34,7 @@ func WithStartingTransaction(txID string) token.ServiceOption {
 }
 
 // ScanForPreImage scans the ledger for a preimage of the passed image, taking into account the timeout
-func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
+func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Hash, hashEncoding encoding.Encoding, timeout time.Duration, opts ...token.ServiceOption) ([]byte, error) {
 	logger.Debugf("scanning for preimage of [%s] with timeout [%s]", base64.StdEncoding.EncodeToString(image), timeout)
 
 	if !hashFunc.Available() {
@@ -49,9 +48,9 @@ func ScanForPreImage(ctx view.Context, image []byte, hashFunc crypto.Hash, hashE
 	if err != nil {
 		return nil, err
 	}
-	tms := token.GetManagementService(ctx, opts...)
+	tms := token.GetManagementService(sp, opts...)
 
-	network := network.GetInstance(ctx, tms.Network(), tms.Channel())
+	network := network.GetInstance(sp, tms.Network(), tms.Channel())
 	if network == nil {
 		return nil, errors.Errorf("cannot find network [%s:%s]", tms.Namespace(), tms.Channel())
 	}
