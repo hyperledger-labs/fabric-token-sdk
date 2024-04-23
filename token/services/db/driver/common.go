@@ -99,8 +99,6 @@ type MovementRecord struct {
 type TransactionRecord struct {
 	// TxID is the transaction ID
 	TxID string
-	// Index is the action sequence number within the transaction
-	Index uint64
 	// ActionType is the type of action performed by this transaction record
 	ActionType ActionType
 	// SenderEID is the enrollment ID of the account that is sending tokens

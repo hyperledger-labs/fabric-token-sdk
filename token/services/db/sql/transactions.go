@@ -119,7 +119,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	conditions, args := transactionsConditionsSql(params)
 	query := fmt.Sprintf(
-		"SELECT %s.tx_id, idx, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, stored_at FROM %s %s %s",
+		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, stored_at FROM %s %s %s",
 		db.table.Transactions, db.table.Requests,
 		db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests), conditions)
 
@@ -263,7 +263,6 @@ func (db *TransactionDB) GetSchema() string {
 		CREATE TABLE IF NOT EXISTS %s (
 			id CHAR(36) NOT NULL PRIMARY KEY,
 			tx_id TEXT NOT NULL REFERENCES %s,
-			idx INT NOT NULL,
 			action_type INT NOT NULL,
 			sender_eid TEXT NOT NULL,
 			recipient_eid TEXT NOT NULL,
@@ -337,10 +336,9 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	var actionType int
 	var amount int64
 	var status int
-	// tx_id, idx, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at
+	// tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at
 	err := t.txs.Scan(
 		&r.TxID,
-		&r.Index,
 		&actionType,
 		&r.SenderEID,
 		&r.RecipientEID,
@@ -477,7 +475,7 @@ func (w *AtomicWrite) Rollback() {
 }
 
 func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
-	logger.Debugf("adding transaction record [%s:%d:%d,%s:%s:%s:%s]", r.TxID, r.Index, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+	logger.Debugf("adding transaction record [%s:%d:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
@@ -491,8 +489,8 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 		return errors.Wrapf(err, "error generating uuid")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, idx, action_type, sender_eid, recipient_eid, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);", w.db.table.Transactions)
-	args := []any{id, r.TxID, r.Index, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()}
+	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);", w.db.table.Transactions)
+	args := []any{id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()}
 	logger.Debug(query, args)
 	_, err = w.txn.Exec(query, args...)
 
