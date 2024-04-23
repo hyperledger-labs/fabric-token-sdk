@@ -7,11 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"encoding/base64"
 	"fmt"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -78,7 +76,7 @@ func (a *DB) GetTokenRequest(txID string) ([]byte, error) {
 	return a.ttxDB.GetTokenRequest(txID)
 }
 
-func (a *DB) AppendTransactionEndorseAck(txID string, id view2.Identity, sigma []byte) error {
+func (a *DB) AppendTransactionEndorseAck(txID string, id view.Identity, sigma []byte) error {
 	return a.ttxDB.AddTransactionEndorsementAck(txID, id, sigma)
 }
 
@@ -122,7 +120,6 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 	}()
 	logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
 	var txStatus ttxdb.TxStatus
-	var reference []byte
 	switch status {
 	case network.Valid:
 		txStatus = ttxdb.Confirmed
@@ -131,24 +128,6 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 		if err != nil {
 			logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 			panic(fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err))
-		}
-		logger.Debugf("get token request for [%s], done", txID)
-		if len(reference) != 0 {
-			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
-			if err != nil {
-				logger.Errorf("<message> [%s]: [%s]", txID, err)
-				panic(fmt.Errorf("<message> [%s]: [%s]", txID, err))
-			}
-			tr, err := tms.NewFullRequestFromBytes(tokenRequestRaw)
-			if err != nil {
-				logger.Errorf("<message> [%s]: [%s]", txID, err)
-				panic(fmt.Errorf("<message> [%s]: [%s]", txID, err))
-			}
-			if err := t.checkTokenRequest(txID, tr, reference); err != nil {
-				logger.Errorf("<message> [%s]: [%s]", txID, err)
-				txStatus = ttxdb.Deleted
-				break
-			}
 		}
 		logger.Debugf("append token request for [%s]", txID)
 		if err := t.tokens.AppendRaw(t.tmsID, txID, tokenRequestRaw); err != nil {
@@ -165,22 +144,4 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 		panic(fmt.Errorf("<message> [%s]: [%s]", txID, err))
 	}
 	logger.Debugf("tx status changed for tx [%s]: %s done", txID, status)
-}
-
-func (t *FinalityListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
-	trToSign, err := request.MarshalToSign()
-	if err != nil {
-		return errors.Errorf("can't get request hash '%s'", txID)
-	}
-	if base64.StdEncoding.EncodeToString(reference) != hash.Hashable(trToSign).String() {
-		logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), hash.Hashable(trToSign))
-		// no further processing of the tokens of these transactions
-		return errors.Errorf(
-			"tx [%s], token requests do not match, tr hashes [%s][%s]",
-			txID,
-			base64.StdEncoding.EncodeToString(reference),
-			hash.Hashable(trToSign),
-		)
-	}
-	return nil
 }
