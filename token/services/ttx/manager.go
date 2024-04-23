@@ -112,7 +112,7 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.db.Transactions(ttxdb.QueryTransactionsParams{})
+	it, err := db.ttxDB.Transactions(ttxdb.QueryTransactionsParams{})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
@@ -186,9 +186,9 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("ttxdb [%s:%s], found [%d] pending transactions", tmsID.Network, tmsID.Channel, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
-		if err := net.SubscribeTxStatusChanges(
+		if err := net.AddFinalityListener(
 			txID,
-			NewTxStatusChangesListener(net, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB),
+			NewFinalityListener(net, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB),
 		); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, txID)
 		}

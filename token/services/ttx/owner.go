@@ -38,7 +38,7 @@ func (a *TxOwner) Append(tx *Transaction) error {
 
 // Transactions returns an iterators of transaction records filtered by the given params.
 func (a *TxOwner) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return a.owner.db.Transactions(params)
+	return a.owner.ttxDB.Transactions(params)
 }
 
 // TransactionInfo returns the transaction info for the given transaction ID.

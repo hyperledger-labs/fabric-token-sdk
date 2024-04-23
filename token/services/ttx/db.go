@@ -46,11 +46,10 @@ func (a *DB) Append(tx *Transaction) error {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
-	if err := net.AddFinalityListener(tx.ID(), &FinalityListener{net, a.db}); err != nil {
 
 	if err := net.AddFinalityListener(
 		tx.ID(),
-		NewTxStatusChangesListener(net, a.tmsProvider, a.tmsID, a.ttxDB, a.tokenDB),
+		NewFinalityListener(net, a.tmsProvider, a.tmsID, a.ttxDB, a.tokenDB),
 	); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
@@ -94,8 +93,8 @@ type FinalityListener struct {
 	tokens      *tokens.Tokens
 }
 
-func NewTxStatusChangesListener(net *network.Network, tmsProvider TMSProvider, tmsID token.TMSID, ttxDB *ttxdb.DB, tokens *tokens.Tokens) *TxStatusChangesListener {
-	return &TxStatusChangesListener{
+func NewFinalityListener(net *network.Network, tmsProvider TMSProvider, tmsID token.TMSID, ttxDB *ttxdb.DB, tokens *tokens.Tokens) *FinalityListener {
+	return &FinalityListener{
 		net:         net,
 		tmsProvider: tmsProvider,
 		tmsID:       tmsID,
@@ -119,21 +118,25 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 		logger.Debugf("get token request for [%s]", txID)
 		tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
 		if err != nil {
-			return errors.WithMessagef(err, "failed retriving token request [%s]", txID)
+			logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+			// TODO: must fail and re-register the listener
 		}
 		logger.Debugf("get token request for [%s], done", txID)
 		if len(reference) != 0 {
 			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
 			if err != nil {
-				return err
+				logger.Errorf("<message> [%s]: [%s]", txID, err)
+				// TODO: must fail and re-register the listener
 			}
 			tr, err := tms.NewFullRequestFromBytes(tokenRequestRaw)
 			if err != nil {
-				return err
+				logger.Errorf("<message> [%s]: [%s]", txID, err)
+				// TODO: must fail and re-register the listener
 			}
 			if err := t.checkTokenRequest(txID, tr, reference); err != nil {
 				// TODO: mark the transaction as invalid
-				return err
+				logger.Errorf("<message> [%s]: [%s]", txID, err)
+				// TODO: must fail and re-register the listener
 			}
 		}
 		logger.Debugf("append token request for [%s]", txID)
@@ -147,12 +150,9 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 	case network.Invalid:
 		txStatus = ttxdb.Deleted
 	}
-	if err := t.db.SetStatus(txID, txStatus, message); err != nil {
-		logger.Errorf("failed setting status for request [%s]: [%s]", txID, err)
-		return
-
 	if err := t.ttxDB.SetStatus(txID, txStatus, statusMessage); err != nil {
-		return errors.WithMessagef(err, "failed setting status for request [%s]", txID)
+		logger.Errorf("<message> [%s]: [%s]", txID, err)
+		// TODO: must fail and re-register the listener
 	}
 	logger.Debugf("tx status changed for tx [%s]: %s done", txID, status)
 	go func() {
@@ -164,7 +164,7 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 	}()
 }
 
-func (t *TxStatusChangesListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
+func (t *FinalityListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
 	trToSign, err := request.MarshalToSign()
 	if err != nil {
 		return errors.Errorf("can't get request hash '%s'", txID)

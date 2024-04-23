@@ -67,7 +67,7 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	}
 
 	key := tmsKey(opts)
-	logger.Debugf("check existence token manager service for [%s] with key [%s]", opts, key)
+	m.logger.Debugf("check existence token manager service for [%s] with key [%s]", opts, key)
 	m.lock.RLock()
 	service, ok := m.services[key]
 	if ok {
@@ -76,14 +76,14 @@ func (m *TMSProvider) GetTokenManagerService(opts driver.ServiceOptions) (servic
 	}
 	m.lock.RUnlock()
 
-	logger.Debugf("lock to create token manager service for [%s] with key [%s]", opts, key)
+	m.logger.Debugf("lock to create token manager service for [%s] with key [%s]", opts, key)
 
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	service, ok = m.services[key]
 	if ok {
-		logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
+		m.logger.Debugf("token manager service for [%s] with key [%s] exists, return it", opts, key)
 		return service, nil
 	}
 
