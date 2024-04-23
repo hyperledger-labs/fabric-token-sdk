@@ -353,7 +353,6 @@ func TransactionRecords(record *token.AuditRecord, timestamp time.Time) (txs []T
 
 				txs = append(txs, driver.TransactionRecord{
 					TxID:         record.Anchor,
-					Index:        uint64(actionIndex),
 					SenderEID:    inEID,
 					RecipientEID: outEID,
 					TokenType:    tokenType,
