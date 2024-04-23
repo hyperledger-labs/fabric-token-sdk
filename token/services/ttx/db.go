@@ -8,6 +8,7 @@ package ttx
 
 import (
 	"encoding/base64"
+	"fmt"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -106,7 +107,17 @@ func NewFinalityListener(net *network.Network, tmsProvider TMSProvider, tmsID to
 func (t *FinalityListener) OnStatus(txID string, status int, statusMessage string) {
 	defer func() {
 		if e := recover(); e != nil {
-			logger.Errorf("failed on status change [%s]", txID)
+			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
+			if err := t.net.AddFinalityListener(txID, t); err != nil {
+				panic(err)
+			}
+			logger.Debugf("unsubscribe for tx [%s]...done", txID)
+		} else {
+			logger.Debugf("unsubscribe for tx [%s]...", txID)
+			if err := t.net.RemoveFinalityListener(txID, t); err != nil {
+				logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+			}
+			logger.Debugf("unsubscribe for tx [%s]...done", txID)
 		}
 	}()
 	logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
@@ -119,32 +130,31 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 		tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
 		if err != nil {
 			logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
-			// TODO: must fail and re-register the listener
+			panic(fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err))
 		}
 		logger.Debugf("get token request for [%s], done", txID)
 		if len(reference) != 0 {
 			tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
 			if err != nil {
 				logger.Errorf("<message> [%s]: [%s]", txID, err)
-				// TODO: must fail and re-register the listener
+				panic(fmt.Errorf("<message> [%s]: [%s]", txID, err))
 			}
 			tr, err := tms.NewFullRequestFromBytes(tokenRequestRaw)
 			if err != nil {
 				logger.Errorf("<message> [%s]: [%s]", txID, err)
-				// TODO: must fail and re-register the listener
+				panic(fmt.Errorf("<message> [%s]: [%s]", txID, err))
 			}
 			if err := t.checkTokenRequest(txID, tr, reference); err != nil {
-				// TODO: mark the transaction as invalid
 				logger.Errorf("<message> [%s]: [%s]", txID, err)
-				// TODO: must fail and re-register the listener
+				txStatus = ttxdb.Deleted
+				break
 			}
 		}
 		logger.Debugf("append token request for [%s]", txID)
 		if err := t.tokens.AppendRaw(t.tmsID, txID, tokenRequestRaw); err != nil {
-			// TODO: in this case we have to try again.
 			// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
-			//return errors.WithMessagef(err, "failed to append token request to token db [%s]", txID)
 			logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
+			panic(fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err))
 		}
 		logger.Debugf("append token request for [%s], done", txID)
 	case network.Invalid:
@@ -152,16 +162,9 @@ func (t *FinalityListener) OnStatus(txID string, status int, statusMessage strin
 	}
 	if err := t.ttxDB.SetStatus(txID, txStatus, statusMessage); err != nil {
 		logger.Errorf("<message> [%s]: [%s]", txID, err)
-		// TODO: must fail and re-register the listener
+		panic(fmt.Errorf("<message> [%s]: [%s]", txID, err))
 	}
 	logger.Debugf("tx status changed for tx [%s]: %s done", txID, status)
-	go func() {
-		logger.Debugf("unsubscribe for tx [%s]...", txID)
-		if err := t.net.RemoveFinalityListener(txID, t); err != nil {
-			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
-		}
-		logger.Debugf("unsubscribe for tx [%s]...done", txID)
-	}()
 }
 
 func (t *FinalityListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
