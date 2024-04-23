@@ -175,7 +175,7 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view
 		return errors.Wrapf(err, "error generating uuid")
 	}
 	if _, err = db.db.Exec(query, id, txID, endorser, sigma, now); err != nil {
-		return errors.Wrapf(err, "failed to add endorsement ack")
+		return dbError(err)
 	}
 	return
 }
@@ -281,7 +281,7 @@ func (db *TransactionDB) GetSchema() string {
 		-- tea
 		CREATE TABLE IF NOT EXISTS %s (
 			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
+			tx_id TEXT NOT NULL REFERENCES %s,
 			endorser BYTEA NOT NULL,
             sigma BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
@@ -292,7 +292,7 @@ func (db *TransactionDB) GetSchema() string {
 		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions,
 		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements,
 		db.table.Validations, db.table.Requests,
-		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
+		db.table.TransactionEndorseAck, db.table.Requests, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)
 }
 

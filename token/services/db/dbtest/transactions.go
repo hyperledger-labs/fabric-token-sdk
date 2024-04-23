@@ -40,7 +40,6 @@ var Cases = []struct {
 func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionDB) {
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
-		Index:        0,
 		ActionType:   driver.Transfer,
 		SenderEID:    "bob",
 		RecipientEID: "alice",
@@ -78,7 +77,6 @@ func TFailsIfRequestDoesNotExist(t *testing.T, db driver.TokenTransactionDB) {
 func TStatus(t *testing.T, db driver.TokenTransactionDB) {
 	tx := driver.TransactionRecord{
 		TxID:         "tx1",
-		Index:        0,
 		ActionType:   driver.Transfer,
 		SenderEID:    "bob",
 		RecipientEID: "alice",
@@ -139,7 +137,6 @@ func TStoresTimestamp(t *testing.T, db driver.TokenTransactionDB) {
 	assert.NoError(t, w.AddTokenRequest("tx1", []byte("")))
 	assert.NoError(t, w.AddTransaction(&driver.TransactionRecord{
 		TxID:         "tx1",
-		Index:        0,
 		ActionType:   driver.Transfer,
 		SenderEID:    "bob",
 		RecipientEID: "alice",
@@ -253,7 +250,6 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 		now := time.Now()
 		tr1 := &driver.TransactionRecord{
 			TxID:         fmt.Sprintf("tx%d", i),
-			Index:        0,
 			ActionType:   driver.Issue,
 			SenderEID:    "",
 			RecipientEID: "alice",
@@ -353,7 +349,6 @@ func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionDB) {
 	// bob sends 10 to alice
 	tr1 := &driver.TransactionRecord{
 		TxID:         "1",
-		Index:        0,
 		ActionType:   driver.Transfer,
 		SenderEID:    "bob",
 		RecipientEID: "alice",
@@ -364,7 +359,6 @@ func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionDB) {
 	// 1 is sent back to bobs wallet as change
 	tr2 := &driver.TransactionRecord{
 		TxID:         "1",
-		Index:        0,
 		ActionType:   driver.Transfer,
 		SenderEID:    "bob",
 		RecipientEID: "bob",
@@ -399,7 +393,6 @@ func TRollback(t *testing.T, db driver.TokenTransactionDB) {
 	}
 	tr1 := &driver.TransactionRecord{
 		TxID:         "1",
-		Index:        0,
 		ActionType:   driver.Transfer,
 		SenderEID:    "bob",
 		RecipientEID: "alice",
@@ -777,6 +770,7 @@ func getValidationRecords(t *testing.T, db driver.TokenTransactionDB, params dri
 }
 
 func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
+	createTransaction(t, db, "1")
 	wg := sync.WaitGroup{}
 	n := 100
 	wg.Add(n)
@@ -796,5 +790,31 @@ func TEndorserAcks(t *testing.T, db driver.TokenTransactionDB) {
 	assert.Len(t, acks, n)
 	for i := 0; i < n; i++ {
 		assert.Equal(t, []byte(fmt.Sprintf("sigma_%d", i)), acks[view.Identity(fmt.Sprintf("alice_%d", i)).String()])
+	}
+}
+
+func createTransaction(t *testing.T, db driver.TokenTransactionDB, txID string) {
+	w, err := db.BeginAtomicWrite()
+	if err != nil {
+		t.Fatalf("error creating transaction while trying to test something else: %w", err)
+	}
+	if err := w.AddTokenRequest(txID, []byte{}); err != nil {
+		t.Fatalf("error creating token request while trying to test something else: %w", err)
+	}
+	tr1 := &driver.TransactionRecord{
+		TxID:         txID,
+		ActionType:   driver.Transfer,
+		SenderEID:    "bob",
+		RecipientEID: "alice",
+		TokenType:    "magic",
+		Amount:       big.NewInt(10),
+		Timestamp:    time.Now().Local().UTC(),
+		Status:       driver.Pending,
+	}
+	if err := w.AddTransaction(tr1); err != nil {
+		t.Fatalf("error creating transaction while trying to test something else: %w", err)
+	}
+	if err := w.Commit(); err != nil {
+		t.Fatalf("error committing transaction while trying to test something else: %w", err)
 	}
 }
