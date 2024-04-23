@@ -1,6 +1,6 @@
 module github.com/hyperledger-labs/fabric-token-sdk
 
-go 1.20
+go 1.21
 
 require (
 	github.com/IBM/idemix v0.0.2-0.20231107110441-534ea4193b8f
