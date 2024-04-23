@@ -166,7 +166,7 @@ func (cm *Manager) RestoreTMS(tmsID token.TMSID) error {
 	logger.Infof("ttxdb [%s:%s], found [%d] pending transactions", tmsID.Network, tmsID.Channel, len(pendingTXs))
 
 	for _, txID := range pendingTXs {
-		if err := net.SubscribeTxStatusChanges(txID, &TxStatusChangesListener{net, db.db}); err != nil {
+		if err := net.AddFinalityListener(txID, &FinalityListener{net, db.db}); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, txID)
 		}
 	}

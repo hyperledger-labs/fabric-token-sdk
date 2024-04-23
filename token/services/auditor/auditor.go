@@ -89,7 +89,7 @@ func (a *Auditor) Append(tx Transaction) error {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx %s at network", tx.ID(), tx.Network())
-	if err := net.SubscribeTxStatusChanges(tx.ID(), &TxStatusChangesListener{net, a.db}); err != nil {
+	if err := net.AddFinalityListener(tx.ID(), &FinalityListener{net, a.db}); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("append done for request %s", tx.ID())
@@ -117,12 +117,12 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.db.GetTokenRequest(txID)
 }
 
-type TxStatusChangesListener struct {
+type FinalityListener struct {
 	net *network.Network
 	db  *auditdb.DB
 }
 
-func (t *TxStatusChangesListener) OnStatusChange(txID string, status int, message string) error {
+func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 	logger.Debugf("tx status changed for tx %s: %s", txID, status)
 	var txStatus auditdb.TxStatus
 	switch network.ValidationCode(status) {
@@ -132,15 +132,15 @@ func (t *TxStatusChangesListener) OnStatusChange(txID string, status int, messag
 		txStatus = auditdb.Deleted
 	}
 	if err := t.db.SetStatus(txID, txStatus, message); err != nil {
-		return errors.WithMessagef(err, "failed setting status for request %s", txID)
+		logger.Errorf("failed setting status for request [%s]: [%s]", txID, err)
+		return
 	}
 	logger.Debugf("tx status changed for tx %s: %s done", txID, status)
 	go func() {
 		logger.Debugf("unsubscribe for tx %s...", txID)
-		if err := t.net.UnsubscribeTxStatusChanges(txID, t); err != nil {
+		if err := t.net.RemoveFinalityListener(txID, t); err != nil {
 			logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
 		}
 		logger.Debugf("unsubscribe for tx %s...done", txID)
 	}()
-	return nil
 }

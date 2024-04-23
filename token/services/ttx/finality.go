@@ -93,7 +93,7 @@ func (f *finalityView) Call(ctx view.Context) (interface{}, error) {
 			if event.ValidationCode == ttxdb.Confirmed {
 				return nil, nil
 			}
-			return nil, errors.Errorf("transaction [%s] is not valid", txID)
+			return nil, errors.Errorf("transaction [%s] is not valid [%s]", txID, TxStatusMessage[event.ValidationCode])
 		case <-timeout.C:
 			timeout.Stop()
 			if logger.IsEnabledFor(zapcore.DebugLevel) {

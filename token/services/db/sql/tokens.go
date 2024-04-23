@@ -77,7 +77,7 @@ func (db *TokenDB) StoreToken(tr driver.TokenRecord, owners []string) (err error
 
 // DeleteTokens deletes multiple tokens at the same time (when spent, invalid or expired)
 func (db *TokenDB) DeleteTokens(deletedBy string, ids ...*token.ID) error {
-	logger.Debugf("delete tokens [%s:%v]", ids)
+	logger.Debugf("delete tokens [%s][%v]", deletedBy, ids)
 	if len(ids) == 0 {
 		return nil
 	}

@@ -136,7 +136,7 @@ func (n *Network) NewEnvelope() driver.Envelope {
 }
 
 func (n *Network) StoreTransient(id string, transient driver.TransientMap) error {
-	return n.n.Vault().StoreTransient(id, orion.TransientMap(transient))
+	return n.n.Vault().StoreTransient(id, transient)
 }
 
 func (n *Network) TransientExists(id string) bool {
@@ -214,12 +214,12 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	}
 }
 
-func (n *Network) SubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.n.Committer().SubscribeTxStatusChanges(txID, listener)
+func (n *Network) AddFinalityListener(txID string, listener driver.FinalityListener) error {
+	return n.n.Committer().AddFinalityListener(txID, listener)
 }
 
-func (n *Network) UnsubscribeTxStatusChanges(txID string, listener driver.TxStatusChangeListener) error {
-	return n.n.Committer().UnsubscribeTxStatusChanges(txID, listener)
+func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
+	return n.n.Committer().RemoveFinalityListener(txID, listener)
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
@@ -252,7 +252,7 @@ func (n *Network) ProcessNamespace(namespace string) error {
 }
 
 type nv struct {
-	v          *orion.Vault
+	v          orion.Vault
 	tokenVault driver.TokenVault
 }
 
