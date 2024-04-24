@@ -14,12 +14,14 @@ import (
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
@@ -96,6 +98,20 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		); err != nil {
 			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", tmsID)
 		}
+		ttxDB, err := ttxdb.GetByTMSId(p.sp, tmsID)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
+		}
+		auditDB, err := auditdb.GetByTMSId(p.sp, tmsID)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
+		}
+		if err := ons.Committer().AddTransactionFilter(&TransactionFilter{
+			ttxDB:   ttxDB,
+			auditDB: auditDB,
+		}); err != nil {
+			return errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
+		}
 
 		// fetch public params and instantiate the tms
 		nw := network.GetInstance(p.sp, networkID, channel)
@@ -133,6 +149,24 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
+	ttxDB, err := ttxdb.GetByTMSId(p.sp, tmsID)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
+	}
+	auditDB, err := auditdb.GetByTMSId(p.sp, tmsID)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
+	}
+	ch, err := n.Channel(channel)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get channel for [%s]", tmsID)
+	}
+	if err := ch.Committer().AddTransactionFilter(&TransactionFilter{
+		ttxDB:   ttxDB,
+		auditDB: auditDB,
+	}); err != nil {
+		return errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
+	}
 
 	// check the vault for public parameters,
 	// use them if they exists
@@ -156,4 +190,21 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		}
 	}
 	return nil
+}
+
+type TransactionFilter struct {
+	ttxDB   *ttxdb.DB
+	auditDB *auditdb.DB
+}
+
+func (t *TransactionFilter) Accept(txID string, env []byte) (bool, error) {
+	status, _, err := t.ttxDB.GetStatus(txID)
+	if err != nil || status == ttxdb.Unknown {
+		status, _, err = t.auditDB.GetStatus(txID)
+		if err != nil {
+			return false, err
+		}
+		return status != ttxdb.Unknown, nil
+	}
+	return status != ttxdb.Unknown, nil
 }
