@@ -14,6 +14,7 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -54,6 +55,7 @@ func Topology() []api.Topology {
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	issuer1 := fscTopology.AddNodeFromTemplate("issuer1", issuer).AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -81,6 +83,7 @@ func Topology() []api.Topology {
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 	auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	auditor.RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	auditor1 := fscTopology.AddNodeFromTemplate("auditor1", auditor).AddOptions(
 		fabric.WithOrganization("Org1"),
@@ -119,6 +122,7 @@ func Topology() []api.Topology {
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -149,6 +153,7 @@ func Topology() []api.Topology {
 	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	// Token topology
 	tokenTopology := token.NewTopology()

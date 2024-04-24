@@ -104,5 +104,5 @@ func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
 		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
 	}
 
-	return ctx.RunView(NewFinalityWithTimeoutView(o.tx, o.timeout))
+	return ctx.RunView(NewFinalityView(o.tx, WithTimeout(o.timeout)))
 }

@@ -137,7 +137,7 @@ func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 	}
 	c, err := s.(*Manager).DBByTMSId(tmsID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get db for wallet [%s]", tmsID)
+		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
 	return c, nil
 }

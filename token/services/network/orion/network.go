@@ -8,11 +8,13 @@ package orion
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -38,15 +40,17 @@ type Network struct {
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 	newVault       NewVaultFunc
+	subscribers    *events.Subscribers
 }
 
 func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
 	net := &Network{
-		sp:         sp,
-		ip:         ip,
-		n:          n,
-		vaultCache: map[string]driver.Vault{},
-		newVault:   newVault,
+		sp:          sp,
+		ip:          ip,
+		n:           n,
+		vaultCache:  map[string]driver.Vault{},
+		newVault:    newVault,
+		subscribers: events.NewSubscribers(),
 	}
 	net.ledger = &ledger{n: net}
 	return net
@@ -214,12 +218,24 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	}
 }
 
-func (n *Network) AddFinalityListener(txID string, listener driver.FinalityListener) error {
-	return n.n.Committer().AddFinalityListener(txID, listener)
+func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
+	wrapper := &FinalityListener{
+		net:       n,
+		root:      listener,
+		network:   n.n.Name(),
+		sp:        n.n.SP,
+		namespace: namespace,
+	}
+	n.subscribers.Set(txID, listener, wrapper)
+	return n.n.Committer().AddFinalityListener(txID, wrapper)
 }
 
 func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	return n.n.Committer().RemoveFinalityListener(txID, listener)
+	wrapper, ok := n.subscribers.Get(txID, listener)
+	if !ok {
+		return errors.Errorf("listener was not registered")
+	}
+	return n.n.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
@@ -294,9 +310,41 @@ type ledger struct {
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n, id))
+	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n.Name(), "", id))
 	if err != nil {
 		return driver.Unknown, err
 	}
 	return boxed.(driver.ValidationCode), nil
+}
+
+type FinalityListener struct {
+	net       *Network
+	root      driver.FinalityListener
+	sp        token2.ServiceProvider
+	network   string
+	namespace string
+}
+
+func (t *FinalityListener) OnStatus(txID string, status int, message string) {
+	defer func() {
+		if e := recover(); e != nil {
+			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
+			if err := t.net.AddFinalityListener(txID, t.namespace, t.root); err != nil {
+				panic(err)
+			}
+			logger.Debugf("added finality listener for tx [%s]...done", txID)
+		} else {
+			logger.Debugf("unsubscribe for tx [%s]...", txID)
+			if err := t.net.RemoveFinalityListener(txID, t.root); err != nil {
+				logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
+			}
+			logger.Debugf("unsubscribed for tx [%s]...done", txID)
+		}
+	}()
+
+	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID))
+	if err != nil {
+		panic(fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err))
+	}
+	t.root.OnStatus(txID, status, message, boxed.(*TxStatusResponse).TokenRequestReference)
 }

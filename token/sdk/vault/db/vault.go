@@ -79,8 +79,11 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 	}
 
 	// Create new vault
-	if fns := fabric.GetFabricNetworkService(v.sp, network); fns != nil {
-		ch := fabric.GetChannel(v.sp, network, channel)
+	if fns, err := fabric.GetFabricNetworkService(v.sp, network); err == nil {
+		ch, err := fns.Channel(channel)
+		if err != nil {
+			return nil, err
+		}
 		tmsID := token.TMSID{
 			Network:   network,
 			Channel:   ch.Name(),
@@ -95,9 +98,9 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}
 	} else {
-		ons := orion.GetOrionNetworkService(v.sp, network)
-		if ons == nil {
-			return nil, errors.Errorf("cannot find network [%s]", network)
+		ons, err := orion.GetOrionNetworkService(v.sp, network)
+		if err != nil {
+			return nil, errors.Wrapf(err, "cannot find network [%s]", network)
 		}
 		tmsID := token.TMSID{
 			Network:   network,

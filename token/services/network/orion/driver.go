@@ -18,9 +18,9 @@ import (
 type Driver struct{}
 
 func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.Network, error) {
-	n := orion.GetOrionNetworkService(sp, network)
-	if n == nil {
-		return nil, errors.Errorf("network [%s] not found", network)
+	n, err := orion.GetOrionNetworkService(sp, network)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "network [%s] not found", network)
 	}
 	m, err := vault.GetProvider(sp)
 	if err != nil {

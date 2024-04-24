@@ -17,6 +17,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -71,6 +72,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
 	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
 	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	var auditor *node.Node
 	if auditorAsIssuer {
@@ -107,6 +109,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 		auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 		auditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+		auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -138,6 +141,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
 	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -169,6 +173,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -196,6 +201,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	charlie.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	charlie.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	charlie.RegisterViewFactory("RegisterOwnerIdentity", &views.RegisterOwnerIdentityViewFactory{})
+	charlie.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -225,6 +231,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	manager.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	manager.RegisterViewFactory("ListOwnerWalletIDsView", &views.ListOwnerWalletIDsViewFactory{})
 	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	manager.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)

@@ -45,11 +45,11 @@ func NewNormalizer(cp TokenSDKConfig, sp view.ServiceProvider) *Normalizer {
 // If no network is specified, it will try to find a default network. And so on.
 func (n *Normalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions, error) {
 	if len(opt.Network) == 0 {
-		if fns := fabric.GetDefaultFNS(n.sp); fns != nil {
-			logger.Debugf("No network specified, using default FNS: %s", fns.Name())
+		if fns, err := fabric.GetDefaultFNS(n.sp); err == nil {
+			logger.Debugf("no network specified, using default FNS: %s", fns.Name())
 			opt.Network = fns.Name()
-		} else if ons := orion2.GetDefaultONS(n.sp); ons != nil {
-			logger.Debugf("No network specified, using default ONS: %s", ons.Name())
+		} else if ons, err := orion2.GetDefaultONS(n.sp); err == nil {
+			logger.Debugf("no network specified, using default ONS: %s", ons.Name())
 			opt.Network = ons.Name()
 		} else {
 			return nil, errors.Errorf("No network specified, and no default FNS or ONS found")
@@ -57,23 +57,23 @@ func (n *Normalizer) Normalize(opt *token.ServiceOptions) (*token.ServiceOptions
 	}
 
 	if len(opt.Channel) == 0 {
-		if fns := fabric.GetFabricNetworkService(n.sp, opt.Network); fns != nil {
-			logger.Debugf("No channel specified, using default channel: %s", fns.ConfigService().DefaultChannel())
+		if fns, err := fabric.GetFabricNetworkService(n.sp, opt.Network); err == nil {
+			logger.Debugf("no channel specified, using default channel: %s", fns.ConfigService().DefaultChannel())
 			opt.Channel = fns.ConfigService().DefaultChannel()
-		} else if ons := orion2.GetOrionNetworkService(n.sp, opt.Network); ons != nil {
-			logger.Debugf("No need to specify channel for orion")
+		} else if _, err := orion2.GetOrionNetworkService(n.sp, opt.Network); err == nil {
+			logger.Debugf("no need to specify channel for orion")
 			// Nothing to do here
 		} else {
-			return nil, errors.Errorf("No channel specified, and no default channel found")
+			return nil, errors.Errorf("no channel specified, and no default channel found")
 		}
 	}
 
 	if len(opt.Namespace) == 0 {
 		if ns, err := n.tokenSDKConfig.LookupNamespace(opt.Network, opt.Channel); err == nil {
-			logger.Debugf("No namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
+			logger.Debugf("no namespace specified, found namespace [%s] for [%s:%s]", ns, opt.Network, opt.Channel)
 			opt.Namespace = ns
 		} else {
-			logger.Errorf("No namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
+			logger.Errorf("no namespace specified, and no default namespace found [%s], use default [%s]", err, ttx.TokenNamespace)
 			opt.Namespace = ttx.TokenNamespace
 		}
 	}

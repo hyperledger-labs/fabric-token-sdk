@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	_ "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/db/driver/memory"
@@ -500,15 +502,15 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	//CheckOwnerDB(network, nil, "bob")
 	BroadcastPreparedTransferCash(network, "alice", txID1, tx1, true)
-	Expect(network.Client("bob").IsTxFinal(txID1)).NotTo(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(txID1)).NotTo(HaveOccurred())
+	common2.CheckFinality(network, "bob", txID1, nil, false)
+	common2.CheckFinality(network, auditor, txID1, nil, false)
 	CheckBalance(network, "alice", "", "PINE", 0)
 	CheckHolding(network, "alice", "", "PINE", -55, auditor)
 	CheckBalance(network, "bob", "", "PINE", 55)
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	BroadcastPreparedTransferCash(network, "alice", txID2, tx2, true, "is not valid")
-	Expect(network.Client("bob").IsTxFinal(txID2)).To(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(txID2)).To(HaveOccurred())
+	common2.CheckFinality(network, "bob", txID2, nil, true)
+	common2.CheckFinality(network, auditor, txID2, nil, true)
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55, auditor)
 	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
@@ -699,7 +701,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 				return
 			}
 			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
-			Expect(network.Client("charlie").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+			common2.CheckFinality(network, "charlie", common.JSONUnmarshalString(txid), nil, false)
 			transferError <- nil
 		}()
 	}

@@ -25,12 +25,8 @@ func NewOrderingAndFinalityWithTimeoutView(tx *Transaction, timeout time.Duratio
 	return ttx.NewOrderingAndFinalityWithTimeoutView(tx.Transaction, timeout)
 }
 
-func NewFinalityView(tx *Transaction) view.View {
-	return ttx.NewFinalityView(tx.Transaction)
-}
-
-func NewFinalityWithTimeoutView(tx *Transaction, timeout time.Duration) view.View {
-	return ttx.NewFinalityWithTimeoutView(tx.Transaction, timeout)
+func NewFinalityView(tx *Transaction, opts ...ttx.TxOption) view.View {
+	return ttx.NewFinalityView(tx.Transaction, opts...)
 }
 
 func NewAcceptView(tx *Transaction) view.View {

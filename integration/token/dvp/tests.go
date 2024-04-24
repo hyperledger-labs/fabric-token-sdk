@@ -10,6 +10,8 @@ import (
 	"encoding/json"
 	"time"
 
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
@@ -72,7 +74,7 @@ func sellHouse(network *integration.Infrastructure, houseID string) {
 		Buyer:   "buyer",
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client("buyer").IsTxFinal(common.JSONUnmarshalString(txIDBoxed))).NotTo(HaveOccurred())
+	common2.CheckFinality(network, "buyer", common.JSONUnmarshalString(txIDBoxed), nil, false)
 }
 
 func checkBalance(network *integration.Infrastructure, id string, wallet string, typ string, expected uint64) {

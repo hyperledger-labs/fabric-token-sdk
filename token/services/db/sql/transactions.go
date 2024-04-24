@@ -141,7 +141,7 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 	row := db.db.QueryRow(query, txID)
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
-			logger.Warnf("tried to get status for non-existent tx [%s], returning unknown", txID)
+			logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
 			return driver.Unknown, "", nil
 		}
 		return driver.Unknown, "", errors.Wrapf(err, "error querying db")
@@ -209,7 +209,7 @@ func (db *TransactionDB) GetTransactionEndorsementAcks(txID string) (map[string]
 		if err := rows.Scan(&endorser, &sigma); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				// not an error for compatibility with badger.
-				logger.Warnf("tried to get status for non-existent tx [%s], returning unknown", txID)
+				logger.Debugf("tried to get status for non-existent tx [%s], returning unknown", txID)
 				continue
 			}
 			return nil, errors.Wrapf(err, "error querying db")

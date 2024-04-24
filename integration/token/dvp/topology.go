@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
@@ -87,6 +88,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	buyer.RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{})
 	buyer.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
 	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
+	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
+	buyer.RegisterViewFactory("TxFinality", &views.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

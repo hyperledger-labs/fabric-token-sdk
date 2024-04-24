@@ -51,7 +51,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...TxOption) (*Transaction, e
 	}
 	return NewTransaction(
 		sp,
-		network.GetInstance(sp, txOpts.Network, txOpts.Channel).AnonymousIdentity(),
+		network.GetInstance(sp, txOpts.TMSID.Network, txOpts.TMSID.Channel).AnonymousIdentity(),
 		opts...,
 	)
 }
@@ -67,9 +67,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 
 	tms := token.GetManagementService(
 		sp,
-		token.WithNetwork(txOpts.Network),
-		token.WithChannel(txOpts.Channel),
-		token.WithNamespace(txOpts.Namespace),
+		token.WithTMSID(txOpts.TMSID),
 	)
 
 	nw := network.GetInstance(sp, tms.Network(), tms.Channel())

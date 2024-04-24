@@ -108,9 +108,9 @@ func (v *LookupKeyRequestRespondView) Call(context view.Context) (interface{}, e
 }
 
 func LookupKey(context view.Context, request *LookupKeyRequest) ([]byte, error) {
-	ons := orion2.GetOrionNetworkService(context, request.Network)
-	if ons == nil {
-		return nil, errors.Errorf("cannot find orion netwotk [%s]", request.Network)
+	ons, err := orion2.GetOrionNetworkService(context, request.Network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot find orion netwotk [%s]", request.Network)
 	}
 	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {

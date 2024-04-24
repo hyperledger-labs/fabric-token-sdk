@@ -116,9 +116,9 @@ func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface
 }
 
 func ReadPublicParameters(context view2.ServiceProvider, network, namespace string) ([]byte, error) {
-	ons := orion.GetOrionNetworkService(context, network)
-	if ons == nil {
-		return nil, errors.Errorf("failed to get orion network service for network [%s]", network)
+	ons, err := orion.GetOrionNetworkService(context, network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", network)
 	}
 	custodianID, err := GetCustodian(view2.GetConfigService(context), network)
 	if err != nil {

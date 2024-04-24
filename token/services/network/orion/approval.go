@@ -104,9 +104,9 @@ func (r *RequestApprovalResponderView) process(context view.Context, request *Ap
 	}
 
 	// Verify
-	ons := orion.GetOrionNetworkService(context, request.Network)
-	if ons == nil {
-		return nil, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
+	ons, err := orion.GetOrionNetworkService(context, request.Network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
 	}
 	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {

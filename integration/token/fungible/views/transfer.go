@@ -517,7 +517,7 @@ func (r *FinalityWithTimeoutView) Call(ctx view.Context) (interface{}, error) {
 
 	// broadcast the transaction to the ordering service
 	start := time.Now()
-	_, err = ctx.RunView(ttx.NewFinalityWithTimeoutView(tx, r.Timeout))
+	_, err = ctx.RunView(ttx.NewFinalityView(tx, ttx.WithTimeout(r.Timeout)))
 	end := time.Now()
 	assert.Error(err)
 	assert.True(strings.Contains(err.Error(), "timeout"))

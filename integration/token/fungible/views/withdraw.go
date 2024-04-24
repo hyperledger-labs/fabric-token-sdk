@@ -83,7 +83,7 @@ func (i *WithdrawalInitiatorView) Call(context view.Context) (interface{}, error
 			assert.NoError(err, "failed to accept new tokens")
 
 			// Before completing, the recipient waits for finality of the transaction
-			_, err = context.RunView(ttx.NewFinalityWithTimeoutView(tx, 1*time.Minute))
+			_, err = context.RunView(ttx.NewFinalityView(tx, ttx.WithTimeout(1*time.Minute)))
 			assert.NoError(err, "new tokens were not committed")
 
 			return tx.ID(), nil
