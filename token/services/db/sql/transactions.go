@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/hashicorp/go-uuid"
@@ -77,7 +78,9 @@ func (db *TransactionDB) GetTokenRequest(txID string) ([]byte, error) {
 
 func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res []*driver.MovementRecord, err error) {
 	conditions, args := movementConditionsSql(params)
-	query := fmt.Sprintf("SELECT tx_id, enrollment_id, token_type, amount, status FROM %s ", db.table.Movements) + conditions
+	query := fmt.Sprintf("SELECT %s.tx_id, enrollment_id, token_type, amount, %s.status FROM %s %s %s",
+		db.table.Movements, db.table.Requests,
+		db.table.Movements, joinOnTxID(db.table.Movements, db.table.Requests), conditions)
 
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -115,7 +118,10 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
 	conditions, args := transactionsConditionsSql(params)
-	query := fmt.Sprintf("SELECT tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at FROM %s ", db.table.Transactions) + conditions
+	query := fmt.Sprintf(
+		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, stored_at FROM %s %s %s",
+		db.table.Transactions, db.table.Requests,
+		db.table.Transactions, joinOnTxID(db.table.Transactions, db.table.Requests), conditions)
 
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -135,7 +141,6 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 	row := db.db.QueryRow(query, txID)
 	if err := row.Scan(&status, &statusMessage); err != nil {
 		if err == sql.ErrNoRows {
-			// not an error for compatibility with badger.
 			logger.Warnf("tried to get status for non-existent tx [%s], returning unknown", txID)
 			return driver.Unknown, "", nil
 		}
@@ -146,7 +151,9 @@ func (db *TransactionDB) GetStatus(txID string) (driver.TxStatus, string, error)
 
 func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsParams) (driver.ValidationRecordsIterator, error) {
 	conditions, args := validationConditionsSql(params)
-	query := fmt.Sprintf("SELECT tx_id, request, metadata, status, stored_at FROM %s ", db.table.Validations) + conditions
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.request, metadata, %s.status, stored_at FROM %s %s %s",
+		db.table.Validations, db.table.Requests, db.table.Requests,
+		db.table.Validations, joinOnTxID(db.table.Validations, db.table.Requests), conditions)
 
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -168,7 +175,7 @@ func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view
 		return errors.Wrapf(err, "error generating uuid")
 	}
 	if _, err = db.db.Exec(query, id, txID, endorser, sigma, now); err != nil {
-		return errors.Wrapf(err, "failed to add endorsement ack")
+		return dbError(err)
 	}
 	return
 }
@@ -212,48 +219,65 @@ func (db *TransactionDB) Close() error {
 	return nil
 }
 
+func (db *TransactionDB) SetStatus(txID string, status driver.TxStatus, message string) (err error) {
+	var query string
+	if len(message) != 0 {
+		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", db.table.Requests)
+		logger.Debug(query)
+		_, err = db.db.Exec(query, status, message, txID)
+	} else {
+		query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", db.table.Requests)
+		logger.Debug(query)
+		_, err = db.db.Exec(query, status, txID)
+	}
+	if err != nil {
+		return errors.Wrapf(err, "error updating tx [%s]", txID)
+	}
+	return
+}
+
 func (db *TransactionDB) GetSchema() string {
 	return fmt.Sprintf(`
-		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
-			action_type INT NOT NULL,
-			sender_eid TEXT NOT NULL,
-			recipient_eid TEXT NOT NULL,
-			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			status INT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
-
-		CREATE TABLE IF NOT EXISTS %s (
-			id CHAR(36) NOT NULL PRIMARY KEY,
-			tx_id TEXT NOT NULL,
-			enrollment_id TEXT NOT NULL,
-			token_type TEXT NOT NULL,
-			amount BIGINT NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			status INT NOT NULL
-		);
-		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
-
+		-- requests
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL PRIMARY KEY,
 			request BYTEA NOT NULL,
 			status INT NOT NULL,
 			status_message TEXT NOT NULL
 		);
+
+		-- transactions
+		CREATE TABLE IF NOT EXISTS %s (
+			id CHAR(36) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL REFERENCES %s,
+			action_type INT NOT NULL,
+			sender_eid TEXT NOT NULL,
+			recipient_eid TEXT NOT NULL,
+			token_type TEXT NOT NULL,
+			amount BIGINT NOT NULL,
+			stored_at TIMESTAMP NOT NULL
+		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 
+		-- movements
 		CREATE TABLE IF NOT EXISTS %s (
-			tx_id TEXT NOT NULL PRIMARY KEY,
-			request BYTEA NOT NULL,
+			id CHAR(36) NOT NULL PRIMARY KEY,
+			tx_id TEXT NOT NULL REFERENCES %s,
+			enrollment_id TEXT NOT NULL,
+			token_type TEXT NOT NULL,
+			amount BIGINT NOT NULL,
+			stored_at TIMESTAMP NOT NULL
+		);
+		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
+
+		-- validations
+		CREATE TABLE IF NOT EXISTS %s (
+			tx_id TEXT NOT NULL PRIMARY KEY REFERENCES %s,
 			metadata BYTEA NOT NULL,
-			stored_at TIMESTAMP NOT NULL,
-			status INT NOT NULL
+			stored_at TIMESTAMP NOT NULL
 		);
 
+		-- tea
 		CREATE TABLE IF NOT EXISTS %s (
 			id CHAR(36) NOT NULL PRIMARY KEY,
 			tx_id TEXT NOT NULL,
@@ -263,15 +287,11 @@ func (db *TransactionDB) GetSchema() string {
 		);
 		CREATE INDEX IF NOT EXISTS idx_tx_id_%s ON %s ( tx_id );
 		`,
-		db.table.Transactions,
-		db.table.Transactions, db.table.Transactions,
-		db.table.Movements,
-		db.table.Movements, db.table.Movements,
 		db.table.Requests,
-		db.table.Requests, db.table.Requests,
-		db.table.Validations,
-		db.table.TransactionEndorseAck,
-		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
+		db.table.Transactions, db.table.Requests, db.table.Transactions, db.table.Transactions,
+		db.table.Movements, db.table.Requests, db.table.Movements, db.table.Movements,
+		db.table.Validations, db.table.Requests,
+		db.table.TransactionEndorseAck, db.table.TransactionEndorseAck, db.table.TransactionEndorseAck,
 	)
 }
 
@@ -303,6 +323,7 @@ func (t *TransactionIterator) Next() (*driver.TransactionRecord, error) {
 	var actionType int
 	var amount int64
 	var status int
+	// tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at
 	err := t.txs.Scan(
 		&r.TxID,
 		&actionType,
@@ -342,6 +363,7 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	var meta []byte
 	var storedAt time.Time
 	var status int
+	// tx_id, request, metadata, status, stored_at
 	if err := t.txs.Scan(
 		&r.TxID,
 		&r.TokenRequest,
@@ -363,8 +385,7 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	}
 
 	// no filter supplied, or filter matches
-	if t.filter == nil ||
-		t.filter(&r) {
+	if t.filter == nil || t.filter(&r) {
 		return &r, nil
 	}
 
@@ -410,7 +431,7 @@ func (w *AtomicWrite) Rollback() {
 }
 
 func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
-	logger.Debugf("adding transaction record [%s:%d:%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
+	logger.Debugf("adding transaction record [%s:%d:%d,%s:%s:%s:%s]", r.TxID, r.ActionType, r.TokenType, r.SenderEID, r.RecipientEID, r.Amount)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
@@ -424,11 +445,12 @@ func (w *AtomicWrite) AddTransaction(r *driver.TransactionRecord) error {
 		return errors.Wrapf(err, "error generating uuid")
 	}
 
-	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, status, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);", w.db.table.Transactions)
-	logger.Debug(query, id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Status, r.Timestamp.UTC())
-	_, err = w.txn.Exec(query, id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Status, r.Timestamp.UTC())
+	query := fmt.Sprintf("INSERT INTO %s (id, tx_id, action_type, sender_eid, recipient_eid, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8);", w.db.table.Transactions)
+	args := []any{id, r.TxID, actionType, r.SenderEID, r.RecipientEID, r.TokenType, amount, r.Timestamp.UTC()}
+	logger.Debug(query, args)
+	_, err = w.txn.Exec(query, args...)
 
-	return err
+	return dbError(err)
 }
 
 func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte) error {
@@ -440,7 +462,7 @@ func (w *AtomicWrite) AddTokenRequest(txID string, tr []byte) error {
 	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tr)))
 
 	_, err := w.txn.Exec(query, txID, tr, driver.Pending, "")
-	return err
+	return dbError(err)
 }
 
 func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
@@ -459,85 +481,41 @@ func (w *AtomicWrite) AddMovement(r *driver.MovementRecord) error {
 	}
 	now := time.Now().UTC()
 
-	query := fmt.Sprintf(`INSERT INTO %s (id, tx_id, enrollment_id, token_type, amount, status, stored_at) VALUES ($1, $2, $3, $4, $5, $6, $7);`, w.db.table.Movements)
-	logger.Debug(query, id, r.TxID, r.EnrollmentID, r.TokenType, amount, r.Status, now)
-	_, err = w.txn.Exec(query, id, r.TxID, r.EnrollmentID, r.TokenType, amount, r.Status, now)
+	query := fmt.Sprintf(`INSERT INTO %s (id, tx_id, enrollment_id, token_type, amount, stored_at) VALUES ($1, $2, $3, $4, $5, $6);`, w.db.table.Movements)
+	args := []any{id, r.TxID, r.EnrollmentID, r.TokenType, amount, now}
+	logger.Debug(query, args)
+	_, err = w.txn.Exec(query, args...)
 
-	return err
+	return dbError(err)
 }
 
-func (w *AtomicWrite) AddValidationRecord(txID string, tokenrequest []byte, meta map[string][]byte) error {
+func (w *AtomicWrite) AddValidationRecord(txID string, meta map[string][]byte) error {
 	logger.Debugf("adding validation record [%s]", txID)
 	if w.txn == nil {
 		return errors.New("no db transaction in progress")
 	}
-
-	status := driver.Unknown
 	md, err := marshal(meta)
 	if err != nil {
 		return errors.New("can't marshal metadata")
 	}
 	now := time.Now().UTC()
 
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, request, metadata, status, stored_at) VALUES ($1, $2, $3, $4, $5)", w.db.table.Validations)
-	logger.Debug(query, txID, fmt.Sprintf("(%d bytes)", len(tokenrequest)), fmt.Sprintf("(%d bytes)", len(md)), now)
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, metadata, stored_at) VALUES ($1, $2, $3)", w.db.table.Validations)
+	logger.Debug(query, txID, len(md), now)
 
-	_, err = w.txn.Exec(query, txID, tokenrequest, md, status, now)
-	return err
+	_, err = w.txn.Exec(query, txID, md, now)
+	return dbError(err)
 }
 
-func (w *AtomicWrite) SetStatus(txID string, status driver.TxStatus, message string) (err error) {
-	if w.txn == nil {
-		return errors.New("no db transaction in progress")
-	}
-	if err = w.setStatusIfExists(w.db.table.Requests, txID, status, message); err != nil {
-		return
-	}
-	if err = w.setStatusIfExists(w.db.table.Movements, txID, status, ""); err != nil {
-		return
-	}
-	if err = w.setStatusIfExists(w.db.table.Transactions, txID, status, ""); err != nil {
-		return
-	}
-	if err = w.setStatusIfExists(w.db.table.Validations, txID, status, ""); err != nil {
-		return
-	}
-	return
-}
-
-// setStatusIfExists checks if the record exists before updating it, because some sql drivers return an
-// error on update of a non-existent record
-func (w *AtomicWrite) setStatusIfExists(table, txID string, status driver.TxStatus, statusMessage string) error {
-	curStatus := driver.Unknown
-	query := fmt.Sprintf("SELECT status FROM %s WHERE tx_id = $1 LIMIT 1;", table)
-	logger.Debug(query)
-
-	err := w.txn.QueryRow(query, txID).Scan(&curStatus)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			logger.Debugf("no %s found for txID %s, skipping", table, txID)
-			return nil
-		} else {
-			return errors.Wrapf(err, "db error")
-		}
-	}
-	if status == curStatus {
-		logger.Debugf("status for %s %s is already %s, skipping", table, txID, status)
+func dbError(err error) error {
+	if err == nil {
 		return nil
 	}
+	logger.Error(err)
+	e := strings.ToLower(err.Error())
+	if strings.Contains(e, "foreign key constraint") {
 
-	if len(statusMessage) != 0 {
-		query = fmt.Sprintf("UPDATE %s SET status = $1, status_message = $2 WHERE tx_id = $3;", table)
-		logger.Debug(query)
-		_, err = w.txn.Exec(query, status, statusMessage, txID)
-	} else {
-		query = fmt.Sprintf("UPDATE %s SET status = $1 WHERE tx_id = $2;", table)
-		logger.Debug(query)
-		_, err = w.txn.Exec(query, status, txID)
+		return driver.ErrTokenRequestDoesNotExist
 	}
-	if err != nil {
-		return errors.Wrapf(err, "error updating tx [%s]", txID)
-	}
-
-	return nil
+	return err
 }

@@ -11,7 +11,7 @@ import (
 	"path"
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb/db/dbtest"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 )
 
 func initTransactionsDB(driverName, dataSourceName, tablePrefix string, maxOpenConns int) (*TransactionDB, error) {

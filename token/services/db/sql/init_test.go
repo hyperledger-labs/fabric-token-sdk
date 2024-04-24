@@ -47,7 +47,7 @@ func TestGetTableNames(t *testing.T) {
 
 	names, err = getTableNames("Valid_Prefix")
 	assert.NoError(t, err)
-	assert.Equal(t, "Valid_Prefix_transactions", names.Transactions)
+	assert.Equal(t, "valid_prefix_transactions", names.Transactions)
 
 	names, err = getTableNames("valid")
 	assert.NoError(t, err)
@@ -63,12 +63,13 @@ func TestGetTableNames(t *testing.T) {
 		"\"invalid\"",
 		"in_valid1",
 		"Invalid-Prefix",
+		"too_long_abcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghijabcdefghij",
 	}
 
 	for _, inv := range invalid {
 		t.Run(fmt.Sprintf("Prefix: %s", inv), func(t *testing.T) {
 			names, err := getTableNames(inv)
-			assert.NotNil(t, err)
+			assert.Error(t, err)
 			assert.Equal(t, tableNames{}, names)
 		})
 	}

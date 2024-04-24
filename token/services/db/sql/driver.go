@@ -24,7 +24,8 @@ const sqlitePragmas = `
 	PRAGMA busy_timeout = 5000;
 	PRAGMA synchronous = NORMAL;
 	PRAGMA cache_size = 1000000000;
-	PRAGMA temp_store = memory;`
+	PRAGMA temp_store = memory;
+	PRAGMA foreign_keys = ON;`
 
 type Opts struct {
 	Driver          string

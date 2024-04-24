@@ -28,7 +28,7 @@ func TestTransactionSql(t *testing.T) {
 		{
 			name:         "No params",
 			params:       driver.QueryTransactionsParams{},
-			expectedSql:  ";",
+			expectedSql:  "",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -36,7 +36,7 @@ func TestTransactionSql(t *testing.T) {
 			params: driver.QueryTransactionsParams{
 				Statuses: []driver.TxStatus{driver.Confirmed},
 			},
-			expectedSql:  "WHERE status = $1;",
+			expectedSql:  "WHERE status = $1",
 			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
@@ -44,7 +44,7 @@ func TestTransactionSql(t *testing.T) {
 			params: driver.QueryTransactionsParams{
 				Statuses: []driver.TxStatus{driver.Pending, driver.Deleted},
 			},
-			expectedSql:  "WHERE (status = $1 OR status = $2);",
+			expectedSql:  "WHERE (status = $1 OR status = $2)",
 			expectedArgs: []interface{}{driver.Pending, driver.Deleted},
 		},
 		{
@@ -53,7 +53,7 @@ func TestTransactionSql(t *testing.T) {
 				SenderWallet: "alice",
 				Statuses:     []driver.TxStatus{driver.Confirmed},
 			},
-			expectedSql:  "WHERE status = $1;",
+			expectedSql:  "WHERE status = $1",
 			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
@@ -62,7 +62,7 @@ func TestTransactionSql(t *testing.T) {
 				SenderWallet:    "alice",
 				RecipientWallet: "bob",
 			},
-			expectedSql:  "WHERE (sender_eid = $1 OR recipient_eid = $2);",
+			expectedSql:  "WHERE (sender_eid = $1 OR recipient_eid = $2)",
 			expectedArgs: []interface{}{"alice", "bob"},
 		},
 		{
@@ -72,7 +72,7 @@ func TestTransactionSql(t *testing.T) {
 				RecipientWallet: "alice",
 				From:            &lastYear,
 			},
-			expectedSql:  "WHERE stored_at >= $1 AND (sender_eid = $2 OR recipient_eid = $3);",
+			expectedSql:  "WHERE stored_at >= $1 AND (sender_eid = $2 OR recipient_eid = $3)",
 			expectedArgs: []interface{}{&lastYear, "alice", "alice"},
 		},
 		{
@@ -81,7 +81,7 @@ func TestTransactionSql(t *testing.T) {
 				To:   &now,
 				From: &lastYear,
 			},
-			expectedSql:  "WHERE stored_at >= $1 AND stored_at <= $2;",
+			expectedSql:  "WHERE stored_at >= $1 AND stored_at <= $2",
 			expectedArgs: []interface{}{&lastYear, &now},
 		},
 	}
@@ -107,7 +107,7 @@ func TestMovementConditions(t *testing.T) {
 			params: driver.QueryMovementsParams{
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status != 'Deleted' ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE status != 3 ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -116,7 +116,7 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status != 'Deleted' ORDER BY stored_at DESC LIMIT 5;",
+			expectedSql:  "WHERE status != 3 ORDER BY stored_at DESC LIMIT 5",
 			expectedArgs: []interface{}{},
 		},
 		{
@@ -125,7 +125,7 @@ func TestMovementConditions(t *testing.T) {
 				EnrollmentIDs:     []string{"eid1", "eid2", "eid3"},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE (enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3) AND status != 'Deleted' ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE (enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3) AND status != 3 ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"eid1", "eid2", "eid3"},
 		},
 		{
@@ -134,7 +134,7 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver.TxStatus{driver.Confirmed},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE status = $1 ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE status = $1 ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{driver.Confirmed},
 		},
 		{
@@ -143,7 +143,7 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver.TxStatus{driver.Pending, driver.Deleted},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE (status = $1 OR status = $2) ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE (status = $1 OR status = $2) ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{driver.Pending, driver.Deleted},
 		},
 		{
@@ -153,7 +153,7 @@ func TestMovementConditions(t *testing.T) {
 				TxStatuses:        []driver.TxStatus{driver.Confirmed},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND status = $2 ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE enrollment_id = $1 AND status = $2 ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"alice", driver.Confirmed},
 		},
 		{
@@ -164,7 +164,7 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []string{"ABC", "XYZ"},
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"alice", "ABC", "XYZ", driver.Confirmed},
 		},
 		{
@@ -176,7 +176,7 @@ func TestMovementConditions(t *testing.T) {
 				NumRecords:        5,
 				MovementDirection: driver.All,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC LIMIT 5;",
+			expectedSql:  "WHERE enrollment_id = $1 AND (token_type = $2 OR token_type = $3) AND status = $4 ORDER BY stored_at DESC LIMIT 5",
 			expectedArgs: []interface{}{"alice", "ABC", "XYZ", driver.Confirmed},
 		},
 		{
@@ -186,7 +186,7 @@ func TestMovementConditions(t *testing.T) {
 				TokenTypes:        []string{"XYZ"},
 				MovementDirection: driver.Sent,
 			},
-			expectedSql:  "WHERE enrollment_id = $1 AND token_type = $2 AND status != 'Deleted' AND amount < 0 ORDER BY stored_at DESC;",
+			expectedSql:  "WHERE enrollment_id = $1 AND token_type = $2 AND status != 3 AND amount < 0 ORDER BY stored_at DESC",
 			expectedArgs: []interface{}{"alice", "XYZ"},
 		},
 		{
@@ -197,7 +197,7 @@ func TestMovementConditions(t *testing.T) {
 				MovementDirection: driver.Received,
 				NumRecords:        2,
 			},
-			expectedSql:  "WHERE status = $1 AND amount > 0 ORDER BY stored_at DESC LIMIT 2;",
+			expectedSql:  "WHERE status = $1 AND amount > 0 ORDER BY stored_at DESC LIMIT 2",
 			expectedArgs: []interface{}{driver.Pending},
 		},
 	}
@@ -260,7 +260,7 @@ func TestCertificationsQuerySql(t *testing.T) {
 	}
 	conditions, idStrs, err := certificationsQuerySql(ids)
 	assert.NoError(t, err)
-	assert.Equal(t, conditions, "token_id=$1 || token_id=$2;")
+	assert.Equal(t, conditions, "token_id=$1 || token_id=$2")
 	assert.Len(t, idStrs, len(ids))
 	for i := 0; i < len(ids); i++ {
 		assert.Equal(t, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index), idStrs[i])
@@ -268,6 +268,11 @@ func TestCertificationsQuerySql(t *testing.T) {
 
 	conditions, idStrs, err = certificationsQuerySql(nil)
 	assert.NoError(t, err)
-	assert.Equal(t, ";", conditions)
+	assert.Equal(t, "", conditions)
 	assert.Nil(t, idStrs)
+}
+
+func TestJoin(t *testing.T) {
+	j := joinOnTxID("t1", "t2")
+	assert.Equal(t, "LEFT JOIN t2 ON t1.tx_id = t2.tx_id", j)
 }

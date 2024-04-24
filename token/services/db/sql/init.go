@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"regexp"
 	"runtime/debug"
+	"strings"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/pkg/errors"
@@ -61,11 +62,14 @@ type tableNames struct {
 
 func getTableNames(prefix string) (tableNames, error) {
 	if prefix != "" {
+		if len(prefix) > 100 {
+			return tableNames{}, errors.New("table prefix must be shorter than 100 characters")
+		}
 		r := regexp.MustCompile("^[a-zA-Z_]+$")
 		if !r.MatchString(prefix) {
 			return tableNames{}, errors.New("illegal character in table prefix, only letters and underscores allowed")
 		}
-		prefix = prefix + "_"
+		prefix = strings.ToLower(prefix) + "_"
 	}
 
 	return tableNames{
