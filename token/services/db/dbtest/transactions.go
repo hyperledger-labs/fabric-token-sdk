@@ -268,6 +268,11 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	}
 	assert.NoError(t, w.Commit())
 
+	// get one
+	one := getTransactions(t, db, driver.QueryTransactionsParams{IDs: []string{"tx10"}})
+	assert.Len(t, one, 1)
+	assert.Equal(t, "tx10", one[0].TxID)
+
 	// get all except last year's
 	t1 := time.Now().Add(time.Second * 3)
 	it, err := db.QueryTransactions(driver.QueryTransactionsParams{From: &t0, To: &t1})
@@ -313,6 +318,28 @@ func TTransaction(t *testing.T, db driver.TokenTransactionDB) {
 	status, _, err = db.GetStatus("nonexistenttx")
 	assert.NoError(t, err, "a non existent transaction should return Unknown status but no error")
 	assert.Equal(t, driver.Unknown, status)
+
+	// exclude to self
+	w, err = db.BeginAtomicWrite()
+	assert.NoError(t, err)
+	tr1 = &driver.TransactionRecord{
+		TxID:                "1234",
+		ActionType:          driver.Transfer,
+		SenderEID:           "alice",
+		RecipientEID:        "alice",
+		TokenType:           "magic",
+		Amount:              big.NewInt(10),
+		ApplicationMetadata: map[string][]byte{},
+		Timestamp:           lastYear,
+	}
+	assert.NoError(t, w.AddTokenRequest(tr1.TxID, []byte(fmt.Sprintf("token request for %s", tr1.TxID)), map[string][]byte{}))
+	assert.NoError(t, w.AddTransaction(tr1))
+	assert.NoError(t, w.Commit())
+	noChange := getTransactions(t, db, driver.QueryTransactionsParams{ExcludeToSelf: true})
+	assert.Len(t, noChange, 21)
+	for _, tr := range noChange {
+		assert.NotEqual(t, tr.TxID, tr1.TxID, "transaction to self should not be included")
+	}
 }
 
 const explanation = "transactions [%s]=[%s]"

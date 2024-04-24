@@ -117,7 +117,7 @@ func (db *TransactionDB) QueryMovements(params driver.QueryMovementsParams) (res
 }
 
 func (db *TransactionDB) QueryTransactions(params driver.QueryTransactionsParams) (driver.TransactionIterator, error) {
-	conditions, args := transactionsConditionsSql(params)
+	conditions, args := transactionsConditionsSql(params, db.table.Transactions)
 	query := fmt.Sprintf(
 		"SELECT %s.tx_id, action_type, sender_eid, recipient_eid, token_type, amount, %s.status, %s.application_metadata, stored_at FROM %s %s %s",
 		db.table.Transactions, db.table.Requests, db.table.Requests,
@@ -287,7 +287,7 @@ func (db *TransactionDB) GetSchema() string {
 		-- validations
 		CREATE TABLE IF NOT EXISTS %s (
 			tx_id TEXT NOT NULL PRIMARY KEY REFERENCES %s,
-			metadata JSONB NOT NULL,
+			metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL
 		);
 

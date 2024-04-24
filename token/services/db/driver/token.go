@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"errors"
 	"time"
 
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -23,10 +24,12 @@ type TokenRecord struct {
 	// IssuerRaw represents the serialization of the issuer identity
 	// if this is an IssuedToken.
 	IssuerRaw []byte
-	// OwnerRaw is the serialization of the owner identity
+	// OwnerRaw is the serialization of the owner TypedIdentity
 	OwnerRaw []byte
 	// OwnerType is the deserialized type inside OwnerRaw
 	OwnerType string
+	// OwnerIdentity is the deserialized Identity inside OwnerRaw
+	OwnerIdentity []byte
 	// Ledger is the raw token as stored on the ledger
 	Ledger []byte
 	// LedgerMetadata is the metadata associated to the content of Ledger
@@ -52,8 +55,8 @@ type TokenDetails struct {
 	TxID string
 	// Index is the index in the transaction
 	Index uint64
-	// OwnerRaw is the serialization of the owner identity
-	OwnerRaw []byte
+	// OwnerIdentity is the serialization of the owner identity
+	OwnerIdentity []byte
 	// OwnerType is the deserialized type inside OwnerRaw
 	OwnerType string
 	// OwnerEnrollment is the enrollment id of the owner
@@ -72,6 +75,10 @@ type TokenDetails struct {
 
 // QueryTokenDetailsParams defines the parameters for querying token details
 type QueryTokenDetailsParams struct {
+	// OwnerEnrollmentID is the optional owner of the token
+	OwnerEnrollmentID string
+	// OwnerType is the type of owner, for instance 'idemix' or 'htlc'
+	OwnerType string
 	// TokenType (optional) is the type of token
 	TokenType string
 	//IDs is an optional list of specific token ids to return
@@ -155,7 +162,7 @@ type TokenDB interface {
 	// NewTokenDBTransaction returns a new Transaction to commit atomically multiple operations
 	NewTokenDBTransaction() (TokenDBTransaction, error)
 	// QueryTokenDetails provides detailed information about tokens
-	QueryTokenDetails(ownerEID string, params QueryTokenDetailsParams) ([]TokenDetails, error)
+	QueryTokenDetails(params QueryTokenDetailsParams) ([]TokenDetails, error)
 }
 
 // TokenDBDriver is the interface for a token database driver
@@ -163,3 +170,7 @@ type TokenDBDriver interface {
 	// Open opens a token database
 	Open(sp view2.ServiceProvider, tmsID token2.TMSID) (TokenDB, error)
 }
+
+var (
+	ErrTokenDoesNotExist = errors.New("token does not exist")
+)

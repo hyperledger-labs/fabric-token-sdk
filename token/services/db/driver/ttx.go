@@ -95,5 +95,4 @@ type TTXDBDriver interface {
 
 var (
 	ErrTokenRequestDoesNotExist = errors.New("token request does not exist")
-	ErrTokenDoesNotExist        = errors.New("token does not exist")
 )

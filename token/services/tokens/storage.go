@@ -126,6 +126,7 @@ func (t *transaction) AppendToken(
 			IssuerRaw:      issuer,
 			OwnerRaw:       tok.Owner.Raw,
 			OwnerType:      id.Type,
+			OwnerIdentity:  id.Identity,
 			Ledger:         tokenOnLedger,
 			LedgerMetadata: tokenOnLedgerMetadata,
 			Quantity:       tok.Quantity,

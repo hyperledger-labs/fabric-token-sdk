@@ -117,7 +117,10 @@ func (db *TokenDB) UnspentTokensIterator() (tdriver.UnspentTokensIterator, error
 // UnspentTokensIteratorBy returns an iterator of unspent tokens owned by the passed id and whose type is the passed on.
 // The token type can be empty. In that case, tokens of any type are returned.
 func (db *TokenDB) UnspentTokensIteratorBy(ownerEID, typ string) (tdriver.UnspentTokensIterator, error) {
-	where, join, args := tokenQuerySql(ownerEID, driver.QueryTokenDetailsParams{TokenType: typ}, db.table.Tokens, db.table.Ownership)
+	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+		OwnerEnrollmentID: ownerEID,
+		TokenType:         typ,
+	}, db.table.Tokens, db.table.Ownership)
 	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, token_type, quantity FROM %s %s %s",
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 
@@ -129,7 +132,7 @@ func (db *TokenDB) UnspentTokensIteratorBy(ownerEID, typ string) (tdriver.Unspen
 
 // ListUnspentTokensBy returns the list of unspent tokens, filtered by owner and token type
 func (db *TokenDB) ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentTokens, error) {
-	logger.Debugf("List unspent token by...")
+	logger.Debugf("list unspent token by [%s,%s]", ownerEID, typ)
 	it, err := db.UnspentTokensIteratorBy(ownerEID, typ)
 	if err != nil {
 		return nil, err
@@ -152,7 +155,7 @@ func (db *TokenDB) ListUnspentTokensBy(ownerEID, typ string) (*token.UnspentToke
 
 // ListUnspentTokens returns the list of unspent tokens
 func (db *TokenDB) ListUnspentTokens() (*token.UnspentTokens, error) {
-	logger.Debugf("List unspent token...")
+	logger.Debugf("list unspent tokens...")
 	it, err := db.UnspentTokensIterator()
 	if err != nil {
 		return nil, err
@@ -479,13 +482,13 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 	return ids, tokens, nil
 }
 
-// QueryTokensDetails returns details about owner tokens, regardless if they have been spent or not.
+// QueryTokensDetails returns details about owned tokens, regardless if they have been spent or not.
 // Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
 // is no filter on enrollmentID, the token will be returned twice (once for each owner).
-func (db *TokenDB) QueryTokenDetails(ownerEID string, params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
-	where, join, args := tokenQuerySql(ownerEID, params, db.table.Tokens, db.table.Ownership)
+func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
+	where, join, args := tokenQuerySql(params, db.table.Tokens, db.table.Ownership)
 
-	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_raw, owner_type, enrollment_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
+	query := fmt.Sprintf("SELECT %s.tx_id, %s.idx, owner_identity, owner_type, enrollment_id, token_type, amount, is_deleted, spent_by, stored_at FROM %s %s %s",
 		db.table.Tokens, db.table.Tokens, db.table.Tokens, join, where)
 	logger.Debug(query, args)
 	rows, err := db.db.Query(query, args...)
@@ -500,7 +503,7 @@ func (db *TokenDB) QueryTokenDetails(ownerEID string, params driver.QueryTokenDe
 		if err := rows.Scan(
 			&td.TxID,
 			&td.Index,
-			&td.OwnerRaw,
+			&td.OwnerIdentity,
 			&td.OwnerType,
 			&td.OwnerEnrollment,
 			&td.Type,
@@ -612,7 +615,13 @@ func (db *TokenDB) StoreCertifications(certifications map[*token.ID][]byte) (err
 	if err != nil {
 		return errors.New("failed starting a transaction")
 	}
-	defer tx.Rollback()
+	defer func() {
+		if err != nil && tx != nil {
+			if err := tx.Rollback(); err != nil {
+				logger.Errorf("failed to rollback [%s][%s]", err, debug.Stack())
+			}
+		}
+	}()
 
 	for tokenID, certification := range certifications {
 		if tokenID == nil {
@@ -707,6 +716,7 @@ func (db *TokenDB) GetSchema() string {
 			issuer_raw BYTEA,
 			owner_raw BYTEA NOT NULL,
 			owner_type TEXT NOT NULL,
+			owner_identity BYTEA NOT NULL,
 			ledger BYTEA NOT NULL,
 			ledger_metadata BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
@@ -777,27 +787,23 @@ func (t *TokenTransaction) TransactionExists(id string) (bool, error) {
 	logger.Debug(query, id)
 
 	row := t.tx.QueryRow(query, id)
-	var certification []byte
-	if err := row.Scan(&certification); err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+	var found string
+	if err := row.Scan(&found); err != nil {
+		if err == sql.ErrNoRows {
 			return false, nil
 		}
 		logger.Warnf("tried to check transaction existence for id %s, err %s", id, err)
 		return false, err
 	}
-	result := len(certification) != 0
-	if !result {
-		logger.Warnf("tried to check transaction existence for id %s, got nothing", id)
-	}
-	return result, nil
-
+	return true, nil
 }
 
 func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bool) (*token.Token, []string, error) {
-	where, join, args := tokenQuerySql("", driver.QueryTokenDetailsParams{
+	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
 		IDs:            []*token.ID{{TxId: txID, Index: index}},
 		IncludeDeleted: includeDeleted,
 	}, t.db.table.Tokens, t.db.table.Ownership)
+
 	query := fmt.Sprintf("SELECT owner_raw, token_type, quantity, enrollment_id FROM %s %s %s", t.db.table.Tokens, join, where)
 	logger.Debug(query, args)
 	rows, err := t.tx.Query(query, args...)
@@ -813,9 +819,6 @@ func (t *TokenTransaction) GetToken(txID string, index uint64, includeDeleted bo
 	for rows.Next() {
 		var owner string
 		if err := rows.Scan(&raw, &tokenType, &quantity, &owner); err != nil {
-			if errors.Is(err, sql.ErrNoRows) {
-				return nil, owners, nil
-			}
 			return nil, owners, err
 		}
 		if len(owner) > 0 {
@@ -883,9 +886,39 @@ func (t *TokenTransaction) StoreToken(tr driver.TokenRecord, owners []string) er
 
 	// Store token
 	now := time.Now().UTC()
-	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)", t.db.table.Tokens)
-	logger.Debug(query, tr.TxID, tr.Index, len(tr.IssuerRaw), len(tr.OwnerRaw), tr.OwnerType, len(tr.Ledger), len(tr.LedgerMetadata), tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer)
-	if _, err := t.tx.Exec(query, tr.TxID, tr.Index, tr.IssuerRaw, tr.OwnerRaw, tr.OwnerType, tr.Ledger, tr.LedgerMetadata, tr.Type, tr.Quantity, tr.Amount, now, tr.Owner, tr.Auditor, tr.Issuer); err != nil {
+	query := fmt.Sprintf("INSERT INTO %s (tx_id, idx, issuer_raw, owner_raw, owner_type, owner_identity, ledger, ledger_metadata, token_type, quantity, amount, stored_at, owner, auditor, issuer) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)", t.db.table.Tokens)
+	logger.Debug(query,
+		tr.TxID,
+		tr.Index,
+		len(tr.IssuerRaw),
+		len(tr.OwnerRaw),
+		tr.OwnerType,
+		len(tr.OwnerIdentity),
+		len(tr.Ledger),
+		len(tr.LedgerMetadata),
+		tr.Type,
+		tr.Quantity,
+		tr.Amount,
+		now,
+		tr.Owner,
+		tr.Auditor,
+		tr.Issuer)
+	if _, err := t.tx.Exec(query,
+		tr.TxID,
+		tr.Index,
+		tr.IssuerRaw,
+		tr.OwnerRaw,
+		tr.OwnerType,
+		tr.OwnerIdentity,
+		tr.Ledger,
+		tr.LedgerMetadata,
+		tr.Type,
+		tr.Quantity,
+		tr.Amount,
+		now,
+		tr.Owner,
+		tr.Auditor,
+		tr.Issuer); err != nil {
 		logger.Errorf("error storing token [%s] in table [%s]: [%s][%s]", tr.TxID, t.db.table.Tokens, err, string(debug.Stack()))
 		return errors.Wrapf(err, "error storing token [%s] in table [%s]", tr.TxID, t.db.table.Tokens)
 	}
@@ -954,7 +987,6 @@ func tokenDBError(err error) error {
 	logger.Error(err)
 	e := strings.ToLower(err.Error())
 	if strings.Contains(e, "foreign key constraint") {
-
 		return driver.ErrTokenDoesNotExist
 	}
 	return err

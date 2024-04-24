@@ -84,11 +84,31 @@ func TestTransactionSql(t *testing.T) {
 			expectedSql:  "WHERE stored_at >= $1 AND stored_at <= $2",
 			expectedArgs: []interface{}{&lastYear, &now},
 		},
+		{
+			name: "Sender OR recipient matches, specific tx",
+			params: driver.QueryTransactionsParams{
+				SenderWallet:    "alice",
+				RecipientWallet: "bob",
+				IDs:             []string{"transactionID"},
+			},
+			expectedSql:  "WHERE tbl.tx_id = $1 AND (sender_eid = $2 OR recipient_eid = $3)",
+			expectedArgs: []interface{}{"transactionID", "alice", "bob"},
+		},
+		{
+			name: "Sender OR recipient matches, specific tx ids",
+			params: driver.QueryTransactionsParams{
+				SenderWallet:    "alice",
+				RecipientWallet: "bob",
+				IDs:             []string{"transactionID1", "transactionID2", "transactionID3"},
+			},
+			expectedSql:  "WHERE (tbl.tx_id = $1 OR tbl.tx_id = $2 OR tbl.tx_id = $3) AND (sender_eid = $4 OR recipient_eid = $5)",
+			expectedArgs: []interface{}{"transactionID1", "transactionID2", "transactionID3", "alice", "bob"},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := transactionsConditionsSql(tc.params)
+			actualSql, actualArgs := transactionsConditionsSql(tc.params, "tbl")
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -214,7 +234,6 @@ func TestMovementConditions(t *testing.T) {
 func TestTokenSql(t *testing.T) {
 	testCases := []struct {
 		name         string
-		ownerEID     string
 		params       driver.QueryTokenDetailsParams
 		expectedArgs []interface{}
 		expectedSql  string
@@ -235,33 +254,41 @@ func TestTokenSql(t *testing.T) {
 		},
 		{
 			name:         "owner unspent",
-			ownerEID:     "me",
-			params:       driver.QueryTokenDetailsParams{},
+			params:       driver.QueryTokenDetailsParams{OwnerEnrollmentID: "me"},
 			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND is_deleted = false",
 			expectedArgs: []interface{}{"me"},
 		},
 		{
-			name:     "owner with deleted",
-			ownerEID: "me",
+			name: "owner with deleted",
 			params: driver.QueryTokenDetailsParams{
-				IncludeDeleted: true,
+				OwnerEnrollmentID: "me",
+				IncludeDeleted:    true,
 			},
 			expectedSql:  "WHERE owner = true AND enrollment_id = $1",
 			expectedArgs: []interface{}{"me"},
 		},
 		{
+			name: "owner and htlc with deleted",
+			params: driver.QueryTokenDetailsParams{
+				OwnerEnrollmentID: "me",
+				OwnerType:         "htlc",
+				IncludeDeleted:    true,
+			},
+			expectedSql:  "WHERE owner = true AND owner_type = $1 AND enrollment_id = $2",
+			expectedArgs: []interface{}{"htlc", "me"},
+		},
+		{
 			name:         "owner and type",
-			ownerEID:     "me",
-			params:       driver.QueryTokenDetailsParams{TokenType: "tok"},
+			params:       driver.QueryTokenDetailsParams{TokenType: "tok", OwnerEnrollmentID: "me"},
 			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND token_type = $2 AND is_deleted = false",
 			expectedArgs: []interface{}{"me", "tok"},
 		},
 		{
-			name:     "owner and type and id",
-			ownerEID: "me",
+			name: "owner and type and id",
 			params: driver.QueryTokenDetailsParams{
-				TokenType: "tok",
-				IDs:       []*token.ID{{TxId: "a", Index: 1}},
+				TokenType:         "tok",
+				OwnerEnrollmentID: "me",
+				IDs:               []*token.ID{{TxId: "a", Index: 1}},
 			},
 			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND token_type = $2 AND (tx_id, idx) IN ( ($3, $4) ) AND is_deleted = false",
 			expectedArgs: []interface{}{"me", "tok", "a", 1},
@@ -279,13 +306,16 @@ func TestTokenSql(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, _, actualArgs := tokenQuerySql(tc.ownerEID, tc.params, "", "")
+			actualSql, _, actualArgs := tokenQuerySql(tc.params, "", "")
 			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
 	}
 	// with join
-	where, join, args := tokenQuerySql("me", driver.QueryTokenDetailsParams{IDs: []*token.ID{{TxId: "a", Index: 1}}}, "A", "B")
+	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+		IDs:               []*token.ID{{TxId: "a", Index: 1}},
+		OwnerEnrollmentID: "me",
+	}, "A", "B")
 	assert.Equal(t, "WHERE owner = true AND enrollment_id = $1 AND (A.tx_id, A.idx) IN ( ($2, $3) ) AND is_deleted = false", where, "join")
 	assert.Equal(t, "LEFT JOIN B ON A.tx_id = B.tx_id AND A.idx = B.idx", join, "join")
 	assert.Len(t, args, 3)

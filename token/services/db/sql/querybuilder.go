@@ -14,8 +14,21 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-func transactionsConditionsSql(params driver.QueryTransactionsParams) (where string, args []any) {
+func transactionsConditionsSql(params driver.QueryTransactionsParams, table string) (where string, args []any) {
 	and := []string{}
+
+	// By id(s)
+	if len(params.IDs) > 0 {
+		colTxID := "tx_id"
+		if len(table) > 0 {
+			colTxID = fmt.Sprintf("%s.%s", table, colTxID)
+		}
+		and = append(and, in(&args, colTxID, params.IDs))
+	}
+	// Filter out 'change' transactions
+	if params.ExcludeToSelf {
+		and = append(and, "(sender_eid != recipient_eid)")
+	}
 
 	// Timestamp from
 	if params.From != nil && !params.From.IsZero() {
@@ -133,17 +146,22 @@ func movementConditionsSql(params driver.QueryMovementsParams) (where string, ar
 }
 
 // tokenQuerySql requires a join with the token ownership table if OwnerEnrollmentID is not empty
-func tokenQuerySql(ownerEID string, params driver.QueryTokenDetailsParams, tokenTable, ownerTable string) (where, join string, args []any) {
+func tokenQuerySql(params driver.QueryTokenDetailsParams, tokenTable, ownerTable string) (where, join string, args []any) {
 	and := []string{"owner = true"}
-
-	if ownerEID != "" {
-		args = append(args, ownerEID)
+	if params.OwnerType != "" {
+		args = append(args, params.OwnerType)
+		and = append(and, fmt.Sprintf("owner_type = $%d", len(args)))
+	}
+	if params.OwnerEnrollmentID != "" {
+		args = append(args, params.OwnerEnrollmentID)
 		and = append(and, fmt.Sprintf("enrollment_id = $%d", len(args)))
 	}
+
 	if params.TokenType != "" {
 		args = append(args, params.TokenType)
 		and = append(and, fmt.Sprintf("token_type = $%d", len(args)))
 	}
+
 	if len(params.TransactionIDs) > 0 {
 		colTxID := "tx_id"
 		if len(tokenTable) > 0 {
@@ -151,10 +169,10 @@ func tokenQuerySql(ownerEID string, params driver.QueryTokenDetailsParams, token
 		}
 		and = append(and, in(&args, colTxID, params.TransactionIDs))
 	}
-
 	if ids := whereTokenIDsForJoin(tokenTable, &args, params.IDs); ids != "" {
 		and = append(and, ids)
 	}
+
 	if !params.IncludeDeleted {
 		and = append(and, "is_deleted = false")
 	}
