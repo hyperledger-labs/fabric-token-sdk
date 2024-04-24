@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"math"
-	"math/big"
 	"strconv"
 
 	mathlib "github.com/IBM/mathlib"
@@ -34,10 +33,10 @@ type RangeProofParams struct {
 }
 
 func (rpp *RangeProofParams) Validate() error {
-	if rpp.BitLength <= 0 {
+	if rpp.BitLength == 0 {
 		return errors.New("invalid range proof parameters: bit length is zero")
 	}
-	if rpp.NumberOfRounds <= 0 {
+	if rpp.NumberOfRounds == 0 {
 		return errors.New("invalid range proof parameters: number of rounds is zero")
 	}
 	if rpp.BitLength != int(math.Pow(2, float64(rpp.NumberOfRounds))) {
@@ -83,10 +82,8 @@ type PublicParams struct {
 	Label string
 	// Curve is the pairing-friendly elliptic curve used for everything but Idemix.
 	Curve mathlib.CurveID
-	// PedGen is the generator of the Pedersen commitment group.
-	PedGen *mathlib.G1
-	// PedParams contains the public parameters for the Pedersen commitment scheme.
-	PedParams []*mathlib.G1
+	// PedersenGenerators contains the public parameters for the Pedersen commitment scheme.
+	PedersenGenerators []*mathlib.G1
 	// RangeProofParams contains the public parameters for the range proof scheme.
 	RangeProofParams *RangeProofParams
 	// IdemixCurveID is the pairing-friendly curve used for the idemix scheme.
@@ -101,13 +98,16 @@ type PublicParams struct {
 	MaxToken uint64
 	// QuantityPrecision is the precision used to represent quantities
 	QuantityPrecision uint64
+	// IsTypeHidden is a Boolean that indicates that issuance does not reveal
+	// the type
+	IsTypeHidden bool
 }
 
-func Setup(bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
+func Setup(confidential bool, bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(confidential, bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
-func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+func SetupWithCustomLabel(typeHidden bool, bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
 	pp := &PublicParams{Curve: mathlib.BN254}
 	pp.Label = label
 	if err := pp.GeneratePedersenParameters(); err != nil {
@@ -122,15 +122,8 @@ func SetupWithCustomLabel(bitLength int, idemixIssuerPK []byte, label string, id
 	pp.RangeProofParams.NumberOfRounds = int(math.Log2(float64(bitLength)))
 	pp.QuantityPrecision = DefaultPrecision
 	pp.MaxToken = pp.ComputeMaxTokenValue()
-	if err := pp.Validate(); err != nil {
-		return nil, errors.Wrapf(err, "verification failed, invalid parameters")
-	}
-
+	pp.IsTypeHidden = typeHidden
 	return pp, nil
-}
-
-func (pp *PublicParams) IdemixIssuerPublicKey() []byte {
-	return pp.IdemixIssuerPK
 }
 
 func (pp *PublicParams) IdemixCurve() mathlib.CurveID {
@@ -162,9 +155,6 @@ func (pp *PublicParams) Bytes() ([]byte, error) {
 }
 
 func (pp *PublicParams) Auditors() []view.Identity {
-	if pp.Auditor == nil {
-		return []view.Identity{}
-	}
 	return []view.Identity{pp.Auditor}
 }
 
@@ -203,19 +193,15 @@ func (pp *PublicParams) GeneratePedersenParameters() error {
 	if err != nil {
 		return errors.Errorf("failed to get RNG")
 	}
-	pp.PedGen = curve.GenG1.Mul(curve.NewRandomZr(rand))
-	pp.PedParams = make([]*mathlib.G1, 3)
+	pp.PedersenGenerators = make([]*mathlib.G1, 3)
 
-	for i := 0; i < len(pp.PedParams); i++ {
-		pp.PedParams[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
+	for i := 0; i < len(pp.PedersenGenerators); i++ {
+		pp.PedersenGenerators[i] = curve.GenG1.Mul(curve.NewRandomZr(rand))
 	}
 	return nil
 }
 
 func (pp *PublicParams) GenerateRangeProofParameters(bitLength int) error {
-	if bitLength <= 0 {
-		return errors.Errorf("invalid bit length, must be larger than 0")
-	}
 	curve := mathlib.Curves[pp.Curve]
 
 	pp.RangeProofParams = &RangeProofParams{
@@ -260,12 +246,7 @@ func (pp *PublicParams) ComputeHash() ([]byte, error) {
 }
 
 func (pp *PublicParams) ComputeMaxTokenValue() uint64 {
-	// We can't use math.Pow because it uses float64 which does not lead to the same results
-	// across architectures (see: https://go.dev/play/p/jwqAHvIXvRI; the same code returns
-	// 9223372036854775808 on x86 and 18446744073709551615 on arm).
-	var i, e = big.NewInt(2), big.NewInt(int64(pp.RangeProofParams.BitLength))
-	i.Exp(i, e, nil)
-	return i.Sub(i, big.NewInt(1)).Uint64()
+	return uint64(math.Pow(2, float64(pp.RangeProofParams.BitLength))) - 1
 }
 
 func (pp *PublicParams) String() string {
@@ -283,14 +264,11 @@ func (pp *PublicParams) Validate() error {
 	if int(pp.IdemixCurveID) > len(mathlib.Curves)-1 {
 		return errors.Errorf("invalid public parameters: invalid idemix curveID [%d > %d]", int(pp.Curve), len(mathlib.Curves)-1)
 	}
-	if pp.PedGen == nil {
-		return errors.New("invalid public parameters: nil Pedersen generator")
+	if len(pp.PedersenGenerators) != 3 {
+		return errors.Errorf("invalid public parameters: length mismatch in Pedersen parameters [%d vs. 3]", len(pp.PedersenGenerators))
 	}
-	if len(pp.PedParams) != 3 {
-		return errors.Errorf("invalid public parameters: length mismatch in Pedersen parameters [%d vs. 3]", len(pp.PedParams))
-	}
-	for i := 0; i < len(pp.PedParams); i++ {
-		if pp.PedParams[i] == nil {
+	for i := 0; i < len(pp.PedersenGenerators); i++ {
+		if pp.PedersenGenerators[i] == nil {
 			return errors.Errorf("invalid public parameters: nil Pedersen parameter at index %d", i)
 		}
 	}

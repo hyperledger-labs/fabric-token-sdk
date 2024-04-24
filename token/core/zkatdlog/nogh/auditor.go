@@ -56,7 +56,7 @@ func (s *AuditorService) AuditorCheck(tokenRequest *driver.TokenRequest, tokenRe
 	if err := audit.NewAuditor(
 		s.Logger,
 		s.Deserializer,
-		pp.PedParams,
+		pp.PedersenGenerators,
 		pp.IdemixIssuerPK,
 		nil,
 		math.Curves[pp.Curve],

@@ -74,8 +74,8 @@ var _ = Describe("Transfer", func() {
 			})
 			It("fails during proof generation", func() {
 				proof, err := prover.Prove()
-				Expect(err).NotTo(HaveOccurred())
 				Expect(proof).NotTo(BeNil())
+				Expect(err).NotTo(HaveOccurred())
 				err = verifier.Verify(proof)
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("invalid range proof at index 0: invalid range proof"))
@@ -85,7 +85,7 @@ var _ = Describe("Transfer", func() {
 })
 
 func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(32, []byte("issuerPK"), math.FP256BN_AMCL)
+	pp, err := crypto.Setup(true, 32, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
@@ -98,7 +98,7 @@ func prepareZKTransfer() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(32, []byte("issuerPK"), math.FP256BN_AMCL)
+	pp, err := crypto.Setup(true, 32, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInvalidInputsForZKTransfer(pp)
@@ -111,7 +111,7 @@ func prepareZKTransferWithWrongSum() (*transfer.Prover, *transfer.Verifier) {
 }
 
 func prepareZKTransferWithInvalidRange() (*transfer.Prover, *transfer.Verifier) {
-	pp, err := crypto.Setup(8, []byte("issuerPK"), math.FP256BN_AMCL)
+	pp, err := crypto.Setup(true, 8, nil, math.FP256BN_AMCL)
 	Expect(err).NotTo(HaveOccurred())
 
 	intw, outtw, in, out := prepareInputsForZKTransfer(pp)
@@ -143,7 +143,7 @@ func prepareInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenDataWitn
 	outValues[0] = 260
 	outValues[1] = 20
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedParams, c)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedersenGenerators, c)
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
@@ -178,7 +178,7 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenD
 	outValues[0] = 110
 	outValues[1] = 45
 
-	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedParams, c)
+	in, out := prepareInputsOutputs(inValues, outValues, inBF, outBF, ttype, pp.PedersenGenerators, c)
 	intw := make([]*token.TokenDataWitness, len(inValues))
 	for i := 0; i < len(intw); i++ {
 		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF[i], Value: inValues[i], Type: ttype}
@@ -189,5 +189,29 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenD
 		outtw[i] = &token.TokenDataWitness{BlindingFactor: outBF[i], Value: outValues[i], Type: ttype}
 	}
 
+	return intw, outtw, in, out
+}
+
+func prepareInputsForOwnershipTransfer(pp *crypto.PublicParams) ([]*token.TokenDataWitness, []*token.TokenDataWitness, []*math.G1, []*math.G1) {
+	c := math.Curves[pp.Curve]
+	rand, err := c.Rand()
+	Expect(err).NotTo(HaveOccurred())
+
+	inBF := c.NewRandomZr(rand)
+	outBF := c.NewRandomZr(rand)
+	ttype := "ABC"
+	inValue := uint64(90)
+	outValue := uint64(90)
+
+	in, out := prepareInputsOutputs([]uint64{inValue}, []uint64{outValue}, []*math.Zr{inBF}, []*math.Zr{outBF}, ttype, pp.PedersenGenerators, c)
+	intw := make([]*token.TokenDataWitness, 1)
+	for i := 0; i < len(intw); i++ {
+		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF, Value: inValue, Type: ttype}
+	}
+
+	outtw := make([]*token.TokenDataWitness, 1)
+	for i := 0; i < len(outtw); i++ {
+		outtw[i] = &token.TokenDataWitness{BlindingFactor: outBF, Value: outValue, Type: ttype}
+	}
 	return intw, outtw, in, out
 }

@@ -66,7 +66,7 @@ func (s *Sender) GenerateZKTransfer(values []uint64, owners [][]byte) (*Transfer
 
 		intw[i] = &token.TokenDataWitness{Value: uint64(v), Type: s.InputInformation[i].Type, BlindingFactor: s.InputInformation[i].BlindingFactor}
 	}
-	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedParams, math.Curves[s.PublicParams.Curve])
+	out, outtw, err := token.GetTokensWithWitness(values, s.InputInformation[0].Type, s.PublicParams.PedersenGenerators, math.Curves[s.PublicParams.Curve])
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "cannot generate transfer")
 	}
@@ -100,9 +100,6 @@ func (s *Sender) SignTokenActions(raw []byte, txID string) ([][]byte, error) {
 	signatures := make([][]byte, len(s.Signers))
 	var err error
 	for i := 0; i < len(signatures); i++ {
-		//toBesigned := append(raw, []byte(common.Separator)...)
-		//toBesigned = append(toBesigned, []byte(txID)...)
-
 		signatures[i], err = s.Signers[i].Sign(append(raw, []byte(txID)...))
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to sign token requests")
@@ -212,7 +209,8 @@ func (t *TransferAction) GetOutputCommitments() []*math.G1 {
 	return com
 }
 
-// IsGraphHiding returns false. zkatdlog is not graph hiding
+// IsGraphHiding returns false
+// zkatdlog is not graph hiding
 func (t *TransferAction) IsGraphHiding() bool {
 	return false
 }

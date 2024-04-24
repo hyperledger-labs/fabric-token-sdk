@@ -14,14 +14,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SameType shows that a bridge commitment is of the form G_0^typeH^r
+// SameType shows that issued tokens contains Pedersen commitments to (type, value)
+// SameType also shows that all the issued tokens contain the same type
 type SameType struct {
 	// Proof of type
 	Type *math.Zr
 	// Proof of randomness used to compute the commitment to type and value in the issued tokens
 	// i^th proof is for the randomness  used to compute the i^th token
 	BlindingFactor *math.Zr
-	// only when issue is not anonymous
+	// only when the type is not hidden
 	TypeInTheClear string
 	// Challenge computed using the Fiat-Shamir Heuristic
 	Challenge *math.Zr
@@ -49,8 +50,10 @@ type SameTypeRandomness struct {
 // SameTypeProver contains information that allows an Issuer to prove that
 // issued tokens are have the same type
 type SameTypeProver struct {
-	// Anonymous indicates if the issuance is anonymous, and therefore,  the type is hidden
-	Anonymous bool
+	PedParams []*math.G1
+	Curve     *math.Curve
+	// IsTypeHidden indicates if the type is hidden
+	IsTypeHidden bool
 	// tokenType is the type of the tokens to be issued
 	tokenType string
 	// blindingFactor is the blinding factor in the CommitmentToType
@@ -60,36 +63,32 @@ type SameTypeProver struct {
 	// randomness is the randomness during the proof generation
 	randomness *SameTypeRandomness
 	// commitment is the commitment to the randomness used to generate the proof
-	commitment         *math.G1
-	PedersenGenerators []*math.G1
-	Curve              *math.Curve
+	commitment *math.G1
 }
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
-func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
+func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, isTypeHidden bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
 
 	return &SameTypeProver{
-		tokenType:          ttype,
-		blindingFactor:     bf,
-		CommitmentToType:   com,
-		Anonymous:          anonymous,
-		PedersenGenerators: pp,
-		Curve:              c,
+		tokenType:        ttype,
+		blindingFactor:   bf,
+		CommitmentToType: com,
+		IsTypeHidden:     isTypeHidden,
+		PedParams:        pp,
+		Curve:            c,
 	}
 }
 
 // Prove returns a SameType proof
 func (p *SameTypeProver) Prove() (*SameType, error) {
 	tokenType := p.Curve.HashToZr([]byte(p.tokenType))
-	if p.Anonymous {
-		// the type of the token is hidden
-		// prove that commitToType is of the form G_0^typeH^r
+	if p.IsTypeHidden {
 		// compute commitments used in the Schnorr proof
 		err := p.computeCommitment()
 		if err != nil {
 			return nil, errors.Wrapf(err, "couldn't prove type during the issue")
 		}
-		array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment}, p.PedersenGenerators)
+		array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment})
 		var toHash []byte
 		toHash, err = array.Bytes()
 		if err != nil {
@@ -114,7 +113,7 @@ func (p *SameTypeProver) Prove() (*SameType, error) {
 	return proof, nil
 }
 
-// computeCommitment compute the commitments to the randomness used in the same type proof
+// computeCommitment compute the commitmentsto the randomness used in the same type proof
 func (p *SameTypeProver) computeCommitment() error {
 	// get random number generator
 	rand, err := p.Curve.Rand()
@@ -127,43 +126,42 @@ func (p *SameTypeProver) computeCommitment() error {
 	p.randomness.blindingFactor = p.Curve.NewRandomZr(rand)
 
 	// compute commitment
-	p.commitment = p.PedersenGenerators[0].Mul(p.randomness.tokenType)
-	p.commitment.Add(p.PedersenGenerators[2].Mul(p.randomness.blindingFactor))
+	p.commitment = p.PedParams[0].Mul(p.randomness.tokenType)
+	p.commitment.Add(p.PedParams[2].Mul(p.randomness.blindingFactor))
 
 	return nil
 }
 
 // SameTypeVerifier checks the validity of SameType proof
 type SameTypeVerifier struct {
-	PedersenGenerators []*math.G1
-	Curve              *math.Curve
-	// Tokens to be issued
-	Tokens []*math.G1
-	// anonymous indicates if the issuance is anonymous
-	anonymous bool
+	PedParams []*math.G1
+	Curve     *math.Curve
+	Tokens    []*math.G1
+	// IsTypeHidden indicates if the issuance is anonymous
+	IsTypeHidden bool
 }
 
 // NewSameTypeVerifier returns a SameTypeVerifier corresponding to the passed parameters
-func NewSameTypeVerifier(tokens []*math.G1, anonymous bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
+func NewSameTypeVerifier(tokens []*math.G1, isTypeHidden bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
 	return &SameTypeVerifier{
-		Tokens:             tokens,
-		anonymous:          anonymous,
-		PedersenGenerators: pp,
-		Curve:              c,
+		Tokens:       tokens,
+		IsTypeHidden: isTypeHidden,
+		PedParams:    pp,
+		Curve:        c,
 	}
 }
 
 // Verify returns an error if the serialized proof is an invalid SameType proof
 func (v *SameTypeVerifier) Verify(proof *SameType) error {
 	// recompute commitments used in ZK proofs
-	if v.anonymous {
+	if v.IsTypeHidden {
 		// recompute challenge and check proof validity
-		com := v.PedersenGenerators[0].Mul(proof.Type)
-		com.Add(v.PedersenGenerators[2].Mul(proof.BlindingFactor))
+		com := v.PedParams[0].Mul(proof.Type)
+		com.Add(v.PedParams[2].Mul(proof.BlindingFactor))
 		com.Sub(proof.CommitmentToType.Mul(proof.Challenge))
 
 		// recompute challenge
-		raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}, v.PedersenGenerators).Bytes()
+		raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}).Bytes()
 		if err != nil {
 			return errors.Wrapf(err, "failed to verify same type proof")
 		}
@@ -173,7 +171,7 @@ func (v *SameTypeVerifier) Verify(proof *SameType) error {
 		}
 		return nil
 	}
-	if !proof.CommitmentToType.Equals(v.PedersenGenerators[0].Mul(v.Curve.HashToZr([]byte(proof.TypeInTheClear)))) {
+	if !proof.CommitmentToType.Equals(v.PedParams[0].Mul(v.Curve.HashToZr([]byte(proof.TypeInTheClear)))) {
 		return errors.Errorf("invalid type in issue")
 	}
 	return nil

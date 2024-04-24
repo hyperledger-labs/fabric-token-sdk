@@ -24,7 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/ecdsa"
 	issue2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
 	tokn "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	enginedlog "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/validator"
@@ -68,7 +67,7 @@ var _ = Describe("validator", func() {
 		// prepare public parameters
 		ipk, err = os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 		Expect(err).NotTo(HaveOccurred())
-		pp, err = crypto.Setup(32, ipk, math.FP256BN_AMCL)
+		pp, err = crypto.Setup(false, 32, ipk, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 
 		c := math.Curves[pp.Curve]
@@ -76,7 +75,7 @@ var _ = Describe("validator", func() {
 		asigner, _ := prepareECDSASigner()
 		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(flogging.MustGetLogger("auditor"), des, pp.PedParams, pp.IdemixIssuerPK, asigner, c)
+		auditor = audit.NewAuditor(flogging.MustGetLogger("auditor"), des, pp.PedersenGenerators, pp.IdemixIssuerPK, asigner, c)
 		araw, err := asigner.Serialize()
 		Expect(err).NotTo(HaveOccurred())
 		pp.Auditor = araw
@@ -278,11 +277,11 @@ func prepareECDSASigner() (*ecdsa.ECDSASigner, *ecdsa.ECDSAVerifier) {
 	return signer, signer.ECDSAVerifier
 }
 
-func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*nonanonym.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareNonAnonymousIssueRequest(pp *crypto.PublicParams, auditor *audit.Auditor) (*issue2.Issuer, *driver.TokenRequest, *driver.TokenRequestMetadata) {
 	signer, err := ecdsa.NewECDSASigner()
 	Expect(err).NotTo(HaveOccurred())
 
-	issuer := &nonanonym.Issuer{}
+	issuer := &issue2.Issuer{}
 	issuer.New("ABC", signer, pp)
 	ir, metadata := prepareIssue(auditor, issuer)
 
@@ -408,7 +407,7 @@ func getIdemixInfo(dir string) (view.Identity, *msp3.AuditInfo, driver.SigningId
 	return id, auditInfo, signer
 }
 
-func prepareIssue(auditor *audit.Auditor, issuer issue2.Issuer) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
+func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenRequest, *driver.TokenRequestMetadata) {
 	id, auditInfo, _ := getIdemixInfo("./testdata/idemix")
 	ir := &driver.TokenRequest{}
 	owners := make([][]byte, 1)
@@ -483,7 +482,7 @@ func prepareTransfer(pp *crypto.PublicParams, signer driver.SigningIdentity, aud
 	ids[0] = "0"
 	ids[1] = "1"
 
-	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedParams, c)
+	inputs := prepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 	tokens := make([]*tokn.Token, 2)
 	tokens[0] = &tokn.Token{Data: inputs[0], Owner: id}
 	tokens[1] = &tokn.Token{Data: inputs[1], Owner: id}

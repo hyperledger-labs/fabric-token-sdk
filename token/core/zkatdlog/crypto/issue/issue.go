@@ -25,8 +25,6 @@ type IssueAction struct {
 	OutputTokens []*token.Token `protobuf:"bytes,1,rep,name=outputs,proto3" json:"outputs,omitempty"`
 	// Proof carries the ZKP of IssueAction validity
 	Proof []byte
-	// flag to indicate whether the Issuer is anonymous or not
-	Anonymous bool
 	// Metadata of the issue action
 	Metadata map[string][]byte
 }
@@ -43,7 +41,7 @@ func (i *IssueAction) GetMetadata() map[string][]byte {
 
 // IsAnonymous returns a Boolean. True if IssueAction is anonymous, and False otherwise.
 func (i *IssueAction) IsAnonymous() bool {
-	return i.Anonymous
+	return false
 }
 
 // Serialize marshal IssueAction
@@ -104,7 +102,7 @@ func (i *IssueAction) GetCommitments() ([]*math.G1, error) {
 }
 
 // NewIssue instantiates an IssueAction given the passed arguments
-func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, anonymous bool) (*IssueAction, error) {
+func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte) (*IssueAction, error) {
 	if len(owners) != len(coms) {
 		return nil, errors.New("number of owners does not match number of tokens")
 	}
@@ -118,7 +116,6 @@ func NewIssue(issuer []byte, coms []*math.G1, owners [][]byte, proof []byte, ano
 		Issuer:       issuer,
 		OutputTokens: outputs,
 		Proof:        proof,
-		Anonymous:    anonymous,
 	}, nil
 }
 
@@ -148,22 +145,22 @@ type Prover struct {
 	RangeCorrectness *rp.RangeCorrectnessProver
 }
 
-func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) (*Prover, error) {
+func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *crypto.PublicParams) (*Prover, error) {
 	c := math.Curves[pp.Curve]
 	p := &Prover{}
 	tokenType := c.HashToZr([]byte(tw[0].Type))
-	commitmentToType := pp.PedParams[0].Mul(tokenType)
-	if anonymous {
+	commitmentToType := pp.PedersenGenerators[0].Mul(tokenType)
+	if pp.IsTypeHidden {
 		rand, err := c.Rand()
 		if err != nil {
 			return nil, errors.Wrapf(err, "cannot get issue prover")
 		}
 		typeBF := c.NewRandomZr(rand)
-		commitmentToType.Add(pp.PedParams[2].Mul(typeBF))
-		p.SameType = NewSameTypeProver(tw[0].Type, typeBF, commitmentToType, anonymous, pp.PedParams, c)
+		commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
+		p.SameType = NewSameTypeProver(tw[0].Type, typeBF, commitmentToType, true, pp.PedersenGenerators, c)
 
 	} else {
-		p.SameType = NewSameTypeProver(tw[0].Type, c.NewZrFromInt(0), commitmentToType, anonymous, pp.PedParams, c)
+		p.SameType = NewSameTypeProver(tw[0].Type, c.NewZrFromInt(0), commitmentToType, false, pp.PedersenGenerators, c)
 
 	}
 	var values []uint64
@@ -183,19 +180,7 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, anonymous bool, 
 		coms = append(coms, token)
 	}
 	// range prover takes commitments tokens[i]/commitmentToType
-	p.RangeCorrectness = rp.NewRangeCorrectnessProver(
-		coms,
-		values,
-		blindingFactors,
-		pp.PedParams[1:],
-		pp.RangeProofParams.LeftGenerators,
-		pp.RangeProofParams.RightGenerators,
-		pp.RangeProofParams.P,
-		pp.RangeProofParams.Q,
-		pp.RangeProofParams.BitLength,
-		pp.RangeProofParams.NumberOfRounds,
-		math.Curves[pp.Curve],
-	)
+	p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 
 	return p, nil
 }
@@ -229,19 +214,10 @@ type Verifier struct {
 	RangeCorrectness *rp.RangeCorrectnessVerifier
 }
 
-func NewVerifier(tokens []*math.G1, anonymous bool, pp *crypto.PublicParams) *Verifier {
+func NewVerifier(tokens []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.SameType = NewSameTypeVerifier(tokens, anonymous, pp.PedParams, math.Curves[pp.Curve])
-	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(
-		pp.PedParams[1:],
-		pp.RangeProofParams.LeftGenerators,
-		pp.RangeProofParams.RightGenerators,
-		pp.RangeProofParams.P,
-		pp.RangeProofParams.Q,
-		pp.RangeProofParams.BitLength,
-		pp.RangeProofParams.NumberOfRounds,
-		math.Curves[pp.Curve],
-	)
+	v.SameType = NewSameTypeVerifier(tokens, pp.IsTypeHidden, pp.PedersenGenerators, math.Curves[pp.Curve])
+	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 	return v
 }
 

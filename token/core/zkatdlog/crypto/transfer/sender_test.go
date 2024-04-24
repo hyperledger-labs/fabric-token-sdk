@@ -36,7 +36,7 @@ var _ = Describe("Sender", func() {
 	)
 	BeforeEach(func() {
 		var err error
-		pp, err = crypto.Setup(8, []byte("issuerPK"), math.FP256BN_AMCL)
+		pp, err = crypto.Setup(true, 8, nil, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		owners = make([][]byte, 2)
 		owners[0] = []byte("bob")
@@ -72,7 +72,7 @@ var _ = Describe("Sender", func() {
 		ids[1] = "1"
 		ids[2] = "3"
 
-		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedParams, c)
+		inputs := PrepareTokens(invalues, inBF, "ABC", pp.PedersenGenerators, c)
 		tokens = make([]*token.Token, 3)
 
 		tokens[0] = &token.Token{Data: inputs[0], Owner: []byte("alice-1")}

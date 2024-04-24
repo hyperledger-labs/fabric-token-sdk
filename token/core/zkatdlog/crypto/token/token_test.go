@@ -3,6 +3,7 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package token_test
 
 import (
@@ -22,7 +23,7 @@ var _ = Describe("Token", func() {
 
 	BeforeEach(func() {
 		var err error
-		pp, err = crypto.Setup(64, []byte("issuerPK"), math.FP256BN_AMCL)
+		pp, err = crypto.Setup(true, 100, nil, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
 		c := math.Curves[pp.Curve]
 		rand, err := c.Rand()
@@ -34,9 +35,9 @@ var _ = Describe("Token", func() {
 		}
 		token = &token2.Token{}
 		token.Data = c.NewG1()
-		token.Data.Add(pp.PedParams[1].Mul(inf.Value))
-		token.Data.Add(pp.PedParams[2].Mul(inf.BlindingFactor))
-		token.Data.Add(pp.PedParams[0].Mul(c.HashToZr([]byte("ABC"))))
+		token.Data.Add(pp.PedersenGenerators[1].Mul(inf.Value))
+		token.Data.Add(pp.PedersenGenerators[2].Mul(inf.BlindingFactor))
+		token.Data.Add(pp.PedersenGenerators[0].Mul(c.HashToZr([]byte("ABC"))))
 	})
 	Describe("get token in the clear", func() {
 		When("token is computed correctly", func() {

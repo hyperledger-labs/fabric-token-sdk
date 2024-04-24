@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue/nonanonym"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -47,7 +46,7 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 	}
 
 	pp := s.PublicParametersManager.PublicParams()
-	issuer := &nonanonym.Issuer{}
+	issuer := &issue.Issuer{}
 	issuer.New(tokenType, &common.WrappedSigningIdentity{
 		Identity: issuerIdentity,
 		Signer:   signer,
@@ -96,7 +95,6 @@ func (s *IssueService) VerifyIssue(ia driver.IssueAction, outputsMetadata [][]by
 	// todo check tokenInfo
 	return issue.NewVerifier(
 		coms,
-		action.IsAnonymous(),
 		pp.(*crypto.PublicParams)).Verify(action.GetProof())
 }
 

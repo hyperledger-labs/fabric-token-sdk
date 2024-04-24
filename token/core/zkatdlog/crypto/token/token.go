@@ -11,7 +11,6 @@ import (
 
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -50,7 +49,7 @@ func (t *Token) GetCommitment() *math.G1 {
 
 // GetTokenInTheClear returns Token in the clear
 func (t *Token) GetTokenInTheClear(meta *Metadata, pp *crypto.PublicParams) (*token2.Token, error) {
-	com, err := common.ComputePedersenCommitment([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedParams, math.Curves[pp.Curve])
+	com, err := commit([]*math.Zr{math.Curves[pp.Curve].HashToZr([]byte(meta.Type)), meta.Value, meta.BlindingFactor}, pp.PedersenGenerators, math.Curves[pp.Curve])
 	if err != nil {
 		return nil, errors.Wrap(err, "cannot retrieve token in the clear: failed to check token data")
 	}
@@ -70,7 +69,7 @@ func computeTokens(tw []*TokenDataWitness, pp []*math.G1, c *math.Curve) ([]*mat
 	var err error
 	for i := 0; i < len(tw); i++ {
 		hash := c.HashToZr([]byte(tw[i].Type))
-		tokens[i], err = common.ComputePedersenCommitment([]*math.Zr{hash, c.NewZrFromInt(int64(tw[i].Value)), tw[i].BlindingFactor}, pp, c)
+		tokens[i], err = commit([]*math.Zr{hash, c.NewZrFromInt(int64(tw[i].Value)), tw[i].BlindingFactor}, pp, c)
 		if err != nil {
 			return nil, errors.WithMessagef(err, "failed to compute token [%d]", i)
 		}
@@ -150,4 +149,15 @@ func NewTokenDataWitness(ttype string, values []uint64, bfs []*math.Zr) []*Token
 	}
 	witness[0].Type = ttype
 	return witness
+}
+
+func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) (*math.G1, error) {
+	com := c.NewG1()
+	for i := range vector {
+		if vector[i] == nil {
+			return nil, errors.New("cannot commit a nil element")
+		}
+		com.Add(generators[i].Mul(vector[i]))
+	}
+	return com, nil
 }
