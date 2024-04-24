@@ -206,5 +206,5 @@ func (t *TransactionFilter) Accept(txID string, env []byte) (bool, error) {
 		}
 		return status != ttxdb.Unknown, nil
 	}
-	return status != ttxdb.Unknown, nil
+	return true, nil
 }
