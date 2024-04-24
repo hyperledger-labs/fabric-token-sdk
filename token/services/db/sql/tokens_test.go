@@ -29,7 +29,7 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -42,7 +42,7 @@ func TestTokensSqlite(t *testing.T) {
 
 func TestTokensSqliteMemory(t *testing.T) {
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initTokenDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -748,9 +748,9 @@ func TCertification(t *testing.T, db *TokenDB) {
 	assert.Empty(t, certifications)
 
 	// store an empty certification and check that an error is returned
-	assert.NoError(t, db.StoreCertifications(map[*token.ID][]byte{
+	err = db.StoreCertifications(map[*token.ID][]byte{
 		tokenID: {},
-	}))
+	})
 	assert.Error(t, err)
 	certifications, err = db.GetCertifications([]*token.ID{tokenID})
 	assert.Error(t, err)

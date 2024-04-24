@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package tokens
 
 import (
-	"fmt"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -116,7 +114,7 @@ func (t *transaction) AppendToken(
 	id, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
 	if err != nil {
 		logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
-		return fmt.Errorf("could not unmarshal identity when storing token: %w", err)
+		return errors.Wrap(err, "could not unmarshal identity when storing token")
 	}
 
 	err = t.tx.StoreToken(

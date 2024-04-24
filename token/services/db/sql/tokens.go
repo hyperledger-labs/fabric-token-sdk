@@ -736,7 +736,7 @@ func (db *TokenDB) GetSchema() string {
 			tx_id TEXT NOT NULL,
 			idx INT NOT NULL,
 			enrollment_id TEXT NOT NULL,
-			PRIMARY KEY (tx_id, idx, enrollment_id)
+			PRIMARY KEY (tx_id, idx, enrollment_id),
 			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
 
@@ -752,7 +752,7 @@ func (db *TokenDB) GetSchema() string {
 			idx INT NOT NULL,
 			certification BYTEA NOT NULL,
 			stored_at TIMESTAMP NOT NULL,
-			PRIMARY KEY (tx_id, idx)
+			PRIMARY KEY (tx_id, idx),
 			FOREIGN KEY (tx_id, idx) REFERENCES %s
 		);
 		`,
