@@ -9,7 +9,7 @@ require (
 	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/gammazero/deque v0.2.1
 	github.com/hashicorp/go-uuid v1.0.2
-	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240424041820-1b976fbce447
+	github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240424120928-5f2ef0fc1715
 	github.com/hyperledger-labs/orion-sdk-go v0.2.5
 	github.com/hyperledger-labs/orion-server v0.2.5
 	github.com/hyperledger/fabric v1.4.0-rc1.0.20230405174026-695dd57e01c2
@@ -117,6 +117,7 @@ require (
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.16.0 // indirect
+	github.com/hashicorp/consul/sdk v0.8.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
@@ -167,6 +168,7 @@ require (
 	github.com/mikioh/tcpopt v0.0.0-20190314235656-172688c1accc // indirect
 	github.com/minio/sha256-simd v1.0.1 // indirect
 	github.com/miracl/conflate v1.2.1 // indirect
+	github.com/mitchellh/go-testing-interface v1.0.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/mmcloughlin/addchain v0.4.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect

@@ -98,18 +98,11 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		); err != nil {
 			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", tmsID)
 		}
-		ttxDB, err := ttxdb.GetByTMSId(p.sp, tmsID)
+		transactionFilter, err := newTransactionFilter(p.sp, tmsID)
 		if err != nil {
-			return errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
+			return errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
 		}
-		auditDB, err := auditdb.GetByTMSId(p.sp, tmsID)
-		if err != nil {
-			return errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
-		}
-		if err := ons.Committer().AddTransactionFilter(&TransactionFilter{
-			ttxDB:   ttxDB,
-			auditDB: auditDB,
-		}); err != nil {
+		if err := ons.Committer().AddTransactionFilter(transactionFilter); err != nil {
 			return errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 		}
 
@@ -149,22 +142,15 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
-	ttxDB, err := ttxdb.GetByTMSId(p.sp, tmsID)
+	transactionFilter, err := newTransactionFilter(p.sp, tmsID)
 	if err != nil {
-		return errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
-	}
-	auditDB, err := auditdb.GetByTMSId(p.sp, tmsID)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
+		return errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
 	}
 	ch, err := n.Channel(channel)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get channel for [%s]", tmsID)
 	}
-	if err := ch.Committer().AddTransactionFilter(&TransactionFilter{
-		ttxDB:   ttxDB,
-		auditDB: auditDB,
-	}); err != nil {
+	if err := ch.Committer().AddTransactionFilter(transactionFilter); err != nil {
 		return errors.WithMessagef(err, "failed to fetch attach transaction filter [%s]", tmsID)
 	}
 
@@ -192,19 +178,37 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	return nil
 }
 
-type TransactionFilter struct {
+func newTransactionFilter(sp token3.ServiceProvider, tmsID token3.TMSID) (*AcceptTxInDBsFilter, error) {
+	ttxDB, err := ttxdb.GetByTMSId(sp, tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
+	}
+	auditDB, err := auditdb.GetByTMSId(sp, tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
+	}
+	return &AcceptTxInDBsFilter{
+		ttxDB:   ttxDB,
+		auditDB: auditDB,
+	}, nil
+}
+
+type AcceptTxInDBsFilter struct {
 	ttxDB   *ttxdb.DB
 	auditDB *auditdb.DB
 }
 
-func (t *TransactionFilter) Accept(txID string, env []byte) (bool, error) {
+func (t *AcceptTxInDBsFilter) Accept(txID string, env []byte) (bool, error) {
 	status, _, err := t.ttxDB.GetStatus(txID)
-	if err != nil || status == ttxdb.Unknown {
-		status, _, err = t.auditDB.GetStatus(txID)
-		if err != nil {
-			return false, err
-		}
-		return status != ttxdb.Unknown, nil
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+	if status != ttxdb.Unknown {
+		return true, nil
+	}
+	status, _, err = t.auditDB.GetStatus(txID)
+	if err != nil {
+		return false, err
+	}
+	return status != auditdb.Unknown, nil
 }

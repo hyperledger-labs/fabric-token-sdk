@@ -580,6 +580,7 @@ github.com/hashicorp/consul/api v1.11.0/go.mod h1:XjsvQN+RJGWI2TWy1/kqaE16HrR2J/
 github.com/hashicorp/consul/api v1.12.0/go.mod h1:6pVBMo0ebnYdt2S3H87XhekM/HHrUoTD2XXb/VrZVy0=
 github.com/hashicorp/consul/sdk v0.1.1/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
 github.com/hashicorp/consul/sdk v0.3.0/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
+github.com/hashicorp/consul/sdk v0.8.0 h1:OJtKBtEjboEZvG6AOUdh4Z1Zbyu0WcxQ0qatRrZHTVU=
 github.com/hashicorp/consul/sdk v0.8.0/go.mod h1:GBvyrGALthsZObzUGsfgHZQDXjg4lOjagTIwIR1vPms=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
 github.com/hashicorp/errwrap v1.1.0 h1:OxrOeh75EUXMY8TBjag2fzXGZ40LB6IKw45YeGUDY2I=
@@ -630,8 +631,8 @@ github.com/hpcloud/tail v1.0.0/go.mod h1:ab1qPbhIpdTxEkNHXyeSf5vhxWSCs/tWer42PpO
 github.com/hudl/fargo v1.3.0/go.mod h1:y3CKSmjA+wD2gak7sUSXTAoopbhU08POFhmITJgmKTg=
 github.com/huin/goupnp v1.2.0 h1:uOKW26NG1hsSSbXIZ1IR7XP9Gjd1U8pnLaCMgntmkmY=
 github.com/huin/goupnp v1.2.0/go.mod h1:gnGPsThkYa7bFi/KWmEysQRf48l2dvR5bxr2OFckNX8=
-github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240424041820-1b976fbce447 h1:b3JyEbt1BREhYSBVhRyI6dYRA+cXvuVlF0baQY7X66o=
-github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240424041820-1b976fbce447/go.mod h1:8gK8QkgMEs5MXBP1UnN8luEMulBkG465gpArTAkSxQs=
+github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240424120928-5f2ef0fc1715 h1:J/5VVq299wB36w/8Jn9Gz766RGCZ/fmO4t9HcRLfqGw=
+github.com/hyperledger-labs/fabric-smart-client v0.3.1-0.20240424120928-5f2ef0fc1715/go.mod h1:30VplCjZJRhZtBh+nKa4k8uulCj84Z3Ae7Ok4ZahB/M=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5 h1:HFGRTuMZgzo9EtyJeFAhVSlbrj6x3jtY0aDcghdjzRE=
 github.com/hyperledger-labs/orion-sdk-go v0.2.5/go.mod h1:At8hiFATfkDXQ4AFLVbaTiC9GDhVDo8aN/supb1KBb4=
 github.com/hyperledger-labs/orion-server v0.2.5 h1:aFudmB9SAnsT5v8jhazkuszEu0pdJNFqaYZF2GpvAuI=
@@ -861,6 +862,7 @@ github.com/mitchellh/cli v1.0.0/go.mod h1:hNIlj7HEI86fIcpObd7a0FcrxTWetlwJDGcceT
 github.com/mitchellh/cli v1.1.0/go.mod h1:xcISNoH86gajksDmfB23e/pu+B+GeFRMYmoHXxx3xhI=
 github.com/mitchellh/go-homedir v1.0.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
+github.com/mitchellh/go-testing-interface v1.0.0 h1:fzU/JVNcaqHQEcVFAKeR41fkiLdIPrefOvVG1VZ96U0=
 github.com/mitchellh/go-testing-interface v1.0.0/go.mod h1:kRemZodwjscx+RGhAo8eIhFbs2+BFgRtFPeD/KE+zxI=
 github.com/mitchellh/gox v0.4.0/go.mod h1:Sd9lOJ0+aimLBi73mGofS1ycjY8lL3uZM3JPS42BGNg=
 github.com/mitchellh/iochan v1.0.0/go.mod h1:JwYml1nuB7xOzsp52dPpHFffvOCDupsG0QubkSMEySY=
