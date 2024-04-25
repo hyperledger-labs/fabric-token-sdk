@@ -335,14 +335,105 @@ func assertTxEqual(t *testing.T, exp *driver.TransactionRecord, act *driver.Tran
 func TTokenRequest(t *testing.T, db driver.TokenTransactionDB) {
 	w, err := db.BeginAtomicWrite()
 	assert.NoError(t, err)
-	tr := []byte("arbitrary bytes")
-	err = w.AddTokenRequest("id1", tr)
+	tr1 := []byte("arbitrary bytes")
+	err = w.AddTokenRequest("id1", tr1)
+	assert.NoError(t, err)
+	tr2 := []byte("arbitrary bytes 2")
+	err = w.AddTokenRequest("id2", tr2)
 	assert.NoError(t, err)
 	assert.NoError(t, w.Commit())
+	assert.NoError(t, db.SetStatus("id2", driver.Confirmed, ""))
 
 	trq, err := db.GetTokenRequest("id1")
 	assert.NoError(t, err)
-	assert.Equal(t, tr, trq)
+	assert.Equal(t, tr1, trq)
+	trq, err = db.GetTokenRequest("id2")
+	assert.NoError(t, err)
+	assert.Equal(t, tr2, trq)
+
+	// iterate over all
+	it, err := db.QueryTokenRequests(driver.QueryTokenRequestsParams{})
+	assert.NoError(t, err)
+	counter := 0
+	for {
+		record, err := it.Next()
+		assert.NoError(t, err)
+		if record == nil {
+			break
+		}
+		if record.TxID == "id1" {
+			assert.Equal(t, tr1, record.TokenRequest)
+			assert.Equal(t, driver.Pending, record.Status)
+			counter++
+			continue
+		}
+		if record.TxID == "id2" {
+			assert.Equal(t, tr2, record.TokenRequest)
+			assert.Equal(t, driver.Confirmed, record.Status)
+			counter++
+			continue
+		}
+	}
+	assert.Equal(t, 2, counter)
+	it.Close()
+
+	// iterate over pending and confirmed
+	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Confirmed, driver.Pending}})
+	assert.NoError(t, err)
+	counter = 0
+	for {
+		record, err := it.Next()
+		assert.NoError(t, err)
+		if record == nil {
+			break
+		}
+		if record.TxID == "id1" {
+			assert.Equal(t, tr1, record.TokenRequest)
+			assert.Equal(t, driver.Pending, record.Status)
+			counter++
+			continue
+		}
+		if record.TxID == "id2" {
+			assert.Equal(t, tr2, record.TokenRequest)
+			assert.Equal(t, driver.Confirmed, record.Status)
+			counter++
+			continue
+		}
+	}
+	assert.Equal(t, 2, counter)
+	it.Close()
+
+	// iterator over confirmed
+	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Confirmed}})
+	assert.NoError(t, err)
+	record, err := it.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, tr2, record.TokenRequest)
+	assert.Equal(t, driver.Confirmed, record.Status)
+	record, err = it.Next()
+	assert.NoError(t, err)
+	assert.Nil(t, record)
+	it.Close()
+
+	// iterator over pending
+	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Pending}})
+	assert.NoError(t, err)
+	record, err = it.Next()
+	assert.NoError(t, err)
+	assert.Equal(t, tr1, record.TokenRequest)
+	assert.Equal(t, driver.Pending, record.Status)
+	record, err = it.Next()
+	assert.NoError(t, err)
+	assert.Nil(t, record)
+	it.Close()
+
+	// iterator over deleted
+	it, err = db.QueryTokenRequests(driver.QueryTokenRequestsParams{Statuses: []driver.TxStatus{driver.Deleted}})
+	assert.NoError(t, err)
+	record, err = it.Next()
+	assert.NoError(t, err)
+	assert.Nil(t, record)
+	it.Close()
 }
 
 func TAllowsSameTxID(t *testing.T, db driver.TokenTransactionDB) {

@@ -177,17 +177,25 @@ func newDB(p driver.TokenTransactionDB) *DB {
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
 
+// QueryTokenRequestsParams defines the parameters for querying token requests
+type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
+
 // QueryValidationRecordsParams defines the parameters for querying movements
 type QueryValidationRecordsParams = driver.QueryValidationRecordsParams
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (db *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return db.db.QueryTransactions(params)
+func (d *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+	return d.db.QueryTransactions(params)
+}
+
+// TokenRequests returns an iterator over the token requests matching the passed params
+func (d *DB) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+	return d.db.QueryTokenRequests(params)
 }
 
 // ValidationRecords returns an iterators of validation records filtered by the given params.
-func (db *DB) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
-	it, err := db.db.QueryValidations(params)
+func (d *DB) ValidationRecords(params QueryValidationRecordsParams) (*ValidationRecordsIterator, error) {
+	it, err := d.db.QueryValidations(params)
 	if err != nil {
 		return nil, errors.Errorf("failed to query validation records: %s", err)
 	}

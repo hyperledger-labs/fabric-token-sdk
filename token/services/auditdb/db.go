@@ -123,6 +123,9 @@ func (t *TransactionIterator) Next() (*TransactionRecord, error) {
 // QueryTransactionsParams defines the parameters for querying movements
 type QueryTransactionsParams = driver.QueryTransactionsParams
 
+// QueryTokenRequestsParams defines the parameters for querying token requests
+type QueryTokenRequestsParams = driver.QueryTokenRequestsParams
+
 // Wallet models a wallet
 type Wallet interface {
 	// ID returns the wallet ID
@@ -204,21 +207,26 @@ func (d *DB) Append(req *token.Request) error {
 }
 
 // Transactions returns an iterators of transaction records filtered by the given params.
-func (db *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
-	return db.db.QueryTransactions(params)
+func (d *DB) Transactions(params QueryTransactionsParams) (driver.TransactionIterator, error) {
+	return d.db.QueryTransactions(params)
+}
+
+// TokenRequests returns an iterator over the token requests matching the passed params
+func (d *DB) TokenRequests(params QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+	return d.db.QueryTokenRequests(params)
 }
 
 // NewPaymentsFilter returns a programmable filter over the payments sent or received by enrollment IDs.
-func (db *DB) NewPaymentsFilter() *PaymentsFilter {
+func (d *DB) NewPaymentsFilter() *PaymentsFilter {
 	return &PaymentsFilter{
-		db: db,
+		db: d,
 	}
 }
 
 // NewHoldingsFilter returns a programmable filter over the holdings owned by enrollment IDs.
-func (db *DB) NewHoldingsFilter() *HoldingsFilter {
+func (d *DB) NewHoldingsFilter() *HoldingsFilter {
 	return &HoldingsFilter{
-		db: db,
+		db: d,
 	}
 }
 

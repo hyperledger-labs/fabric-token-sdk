@@ -182,6 +182,27 @@ func certificationsQuerySql(ids []*token.ID) (string, []any, error) {
 	return builder.String(), tokenIDs, nil
 }
 
+func tokenRequestConditionsSql(params driver.QueryTokenRequestsParams) (string, []interface{}) {
+	args := make([]interface{}, 0)
+	and := make([]string, 0)
+
+	// Specific transaction status if requested, defaults to all but Deleted
+	if len(params.Statuses) > 0 {
+		t := make([]interface{}, len(params.Statuses))
+		for i, s := range params.Statuses {
+			t[i] = int(s)
+		}
+		add(&and, in(&args, "status", t))
+	}
+
+	if len(and) == 0 {
+		return "", args
+	}
+	where := fmt.Sprintf("WHERE %s", strings.Join(and, " AND "))
+
+	return where, args
+}
+
 func in(args *[]interface{}, field string, searchFor []interface{}) (where string) {
 	if len(searchFor) == 0 {
 		return ""
