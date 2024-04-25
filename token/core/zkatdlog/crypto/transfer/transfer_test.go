@@ -191,27 +191,3 @@ func prepareInvalidInputsForZKTransfer(pp *crypto.PublicParams) ([]*token.TokenD
 
 	return intw, outtw, in, out
 }
-
-func prepareInputsForOwnershipTransfer(pp *crypto.PublicParams) ([]*token.TokenDataWitness, []*token.TokenDataWitness, []*math.G1, []*math.G1) {
-	c := math.Curves[pp.Curve]
-	rand, err := c.Rand()
-	Expect(err).NotTo(HaveOccurred())
-
-	inBF := c.NewRandomZr(rand)
-	outBF := c.NewRandomZr(rand)
-	ttype := "ABC"
-	inValue := uint64(90)
-	outValue := uint64(90)
-
-	in, out := prepareInputsOutputs([]uint64{inValue}, []uint64{outValue}, []*math.Zr{inBF}, []*math.Zr{outBF}, ttype, pp.PedersenGenerators, c)
-	intw := make([]*token.TokenDataWitness, 1)
-	for i := 0; i < len(intw); i++ {
-		intw[i] = &token.TokenDataWitness{BlindingFactor: inBF, Value: inValue, Type: ttype}
-	}
-
-	outtw := make([]*token.TokenDataWitness, 1)
-	for i := 0; i < len(outtw); i++ {
-		outtw[i] = &token.TokenDataWitness{BlindingFactor: outBF, Value: outValue, Type: ttype}
-	}
-	return intw, outtw, in, out
-}
