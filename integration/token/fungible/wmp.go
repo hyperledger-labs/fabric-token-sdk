@@ -111,7 +111,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	configProvider, err := config.NewProvider(filepath.Join(ctx.RootDir(), "fsc", "nodes", node.ReplicaUniqueName(user, 0)))
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(configProvider)).ToNot(HaveOccurred())
-	kvss, err := kvs.NewWithConfig(sp, "memory", "", configProvider)
+	kvss, err := kvs.NewWithConfig("memory", "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
 	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
