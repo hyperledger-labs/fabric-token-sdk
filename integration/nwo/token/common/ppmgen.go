@@ -134,7 +134,7 @@ func (d *DLogPublicParamsGenerator) Generate(tms *topology.TMS, wallets *generat
 			return nil, err
 		}
 	}
-	pp, err := cryptodlog.Setup(int(bits), ipkBytes, curveID)
+	pp, err := cryptodlog.Setup(true, int(bits), ipkBytes, curveID)
 	if err != nil {
 		return nil, err
 	}

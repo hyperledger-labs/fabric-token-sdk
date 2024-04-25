@@ -125,7 +125,7 @@ func Gen(args *GeneratorArgs) ([]byte, error) {
 		curveID = math3.BLS12_381_BBS
 	}
 	// todo range is hardcoded, to be changed
-	pp, err := crypto.Setup(64, ipkBytes, curveID)
+	pp, err := crypto.Setup(true, 64, ipkBytes, curveID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed setting up public parameters")
 	}
