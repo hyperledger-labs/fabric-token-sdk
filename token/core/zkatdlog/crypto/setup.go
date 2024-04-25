@@ -103,8 +103,8 @@ type PublicParams struct {
 	IsTypeHidden bool
 }
 
-func Setup(confidential bool, bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
-	return SetupWithCustomLabel(confidential, bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
+func Setup(typeHidden bool, bitLength int, idemixIssuerPK []byte, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
+	return SetupWithCustomLabel(typeHidden, bitLength, idemixIssuerPK, DLogPublicParameters, idemixCurveID)
 }
 
 func SetupWithCustomLabel(typeHidden bool, bitLength int, idemixIssuerPK []byte, label string, idemixCurveID mathlib.CurveID) (*PublicParams, error) {
