@@ -50,7 +50,7 @@ func (d *DBOpener) Open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *O
 	}
 	sqlDB, err := d.OpenSQLDB(opts.Driver, opts.DataSource, opts.MaxOpenConns, opts.SkipPragmas)
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to open db at [%s:%s:%s]", d.optsKey, d.envVarKey, opts.Driver)
+		return nil, nil, errors.Wrapf(err, "failed to open db at [%s:%s]", d.optsKey, d.envVarKey)
 	}
 	return sqlDB, opts, nil
 }
@@ -77,10 +77,10 @@ func (d *DBOpener) compileOpts(sp view.ServiceProvider, tmsID token.TMSID) (*Opt
 	}
 
 	dataSourceName := os.Getenv(d.envVarKey)
-	if dataSourceName == "" {
-		dataSourceName = opts.DataSource
+	if dataSourceName != "" {
+		opts.DataSource = dataSourceName
 	}
-	if dataSourceName == "" {
+	if opts.DataSource == "" {
 		return nil, errors.Errorf("either %s.dataSource in core.yaml or %s"+
 			"environment variable must be set to a dataSourceName that can be used with the %s golang driver",
 			d.optsKey, d.envVarKey, opts.Driver)
