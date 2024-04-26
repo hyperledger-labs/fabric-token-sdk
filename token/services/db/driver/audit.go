@@ -27,14 +27,17 @@ type AuditTransactionDB interface {
 	// It returns an error if the transaction is not found
 	GetStatus(txID string) (TxStatus, string, error)
 
-	// QueryTransactions returns a list of transactions that match the given criteria
+	// QueryTransactions returns a list of transactions that match the passed params
 	QueryTransactions(params QueryTransactionsParams) (TransactionIterator, error)
 
 	// QueryMovements returns a list of movement records
 	QueryMovements(params QueryMovementsParams) ([]*MovementRecord, error)
 
-	// QueryValidations returns a list of validation  records
+	// QueryValidations returns an iterator over the validation records matching the passed params
 	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
+
+	// QueryTokenRequests returns an iterator over the token requests matching the passed params
+	QueryTokenRequests(params QueryTokenRequestsParams) (TokenRequestIterator, error)
 
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.

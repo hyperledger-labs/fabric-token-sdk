@@ -71,6 +71,9 @@ type TransactionDB interface {
 	// QueryValidations returns a list of validation  records
 	QueryValidations(params QueryValidationRecordsParams) (ValidationRecordsIterator, error)
 
+	// QueryTokenRequests returns an iterator over the token requests matching the passed params
+	QueryTokenRequests(params QueryTokenRequestsParams) (TokenRequestIterator, error)
+
 	// GetTokenRequest returns the token request bound to the passed transaction id, if available.
 	// It returns nil without error if the key is not found.
 	GetTokenRequest(txID string) ([]byte, error)

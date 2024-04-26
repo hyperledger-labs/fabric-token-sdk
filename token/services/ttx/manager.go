@@ -12,7 +12,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -112,88 +113,26 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.ttxDB.Transactions(ttxdb.QueryTransactionsParams{})
+	it, err := db.ttxDB.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []driver.TxStatus{auditdb.Pending}})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	defer it.Close()
-
-	v, err := net.Vault(tmsID.Namespace)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get vault for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
-	}
-	var pendingTXs []string
-	type ToBeUpdated struct {
-		TxID          string
-		Status        ttxdb.TxStatus
-		StatusMessage string
-	}
-	var toBeUpdated []ToBeUpdated
 	for {
-		tr, err := it.Next()
+		record, err := it.Next()
 		if err != nil {
 			return errors.WithMessagef(err, "failed to get next tx record for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 		}
-		if tr == nil {
+		if record == nil {
 			break
 		}
-		if tr.Status == ttxdb.Pending {
-			logger.Debugf("found pending transaction [%s] at [%s:%s]", tr.TxID, tmsID.Network, tmsID.Channel)
-			found := false
-			for _, txID := range pendingTXs {
-				if tr.TxID == txID {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-
-			// check the status of the pending transactions in the vault
-			status, sm, err := v.Status(tr.TxID)
-			if err != nil {
-				pendingTXs = append(pendingTXs, tr.TxID)
-				continue
-			}
-
-			var txStatus ttxdb.TxStatus
-			switch status {
-			case network.Valid:
-				txStatus = ttxdb.Confirmed
-			case network.Invalid:
-				txStatus = ttxdb.Deleted
-			default:
-				pendingTXs = append(pendingTXs, tr.TxID)
-				continue
-			}
-			toBeUpdated = append(toBeUpdated, ToBeUpdated{
-				TxID:          tr.TxID,
-				Status:        txStatus,
-				StatusMessage: sm,
-			})
-		}
-	}
-	it.Close()
-
-	for _, updated := range toBeUpdated {
-		if err := db.ttxDB.SetStatus(updated.TxID, updated.Status, updated.StatusMessage); err != nil {
-			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
-		}
-		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
-	}
-
-	logger.Infof("ttxdb [%s:%s], found [%d] pending transactions", tmsID.Network, tmsID.Channel, len(pendingTXs))
-
-	for _, txID := range pendingTXs {
 		if err := net.AddFinalityListener(
-			txID,
+			record.TxID,
 			NewFinalityListener(net, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB),
 		); err != nil {
-			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, txID)
+			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, record.TxID)
 		}
 	}
-
 	return nil
 }
 

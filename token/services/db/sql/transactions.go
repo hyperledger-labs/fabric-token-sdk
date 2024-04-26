@@ -164,6 +164,19 @@ func (db *TransactionDB) QueryValidations(params driver.QueryValidationRecordsPa
 	return &ValidationRecordsIterator{txs: rows, filter: params.Filter}, nil
 }
 
+// QueryTokenRequests returns an iterator over the token requests matching the passed params
+func (db *TransactionDB) QueryTokenRequests(params driver.QueryTokenRequestsParams) (driver.TokenRequestIterator, error) {
+	conditions, args := tokenRequestConditionsSql(params)
+
+	query := fmt.Sprintf("SELECT tx_id, request, status FROM %s %s", db.table.Requests, conditions)
+	logger.Debug(query, args)
+	rows, err := db.db.Query(query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return &TokenRequestIterator{txs: rows}, nil
+}
+
 func (db *TransactionDB) AddTransactionEndorsementAck(txID string, endorser view.Identity, sigma []byte) (err error) {
 	logger.Debugf("adding transaction endorse ack record [%s]", txID)
 
@@ -392,6 +405,37 @@ func (t *ValidationRecordsIterator) Next() (*driver.ValidationRecord, error) {
 	// Skipping this record causes a recursive call
 	// to this function to parse next record
 	return t.Next()
+}
+
+type TokenRequestIterator struct {
+	txs *sql.Rows
+}
+
+func (t *TokenRequestIterator) Close() {
+	t.txs.Close()
+}
+
+func (t *TokenRequestIterator) Next() (*driver.TokenRequestRecord, error) {
+	var r driver.TokenRequestRecord
+	if !t.txs.Next() {
+		return nil, nil
+	}
+
+	var status int
+	// tx_id, request, metadata, status, stored_at
+	if err := t.txs.Scan(
+		&r.TxID,
+		&r.TokenRequest,
+		&status,
+	); err != nil {
+		return nil, err
+	}
+	r.Status = driver.TxStatus(status)
+	// sqlite database returns nil for empty slice
+	if r.TokenRequest == nil {
+		r.TokenRequest = []byte{}
+	}
+	return &r, nil
 }
 
 func (db *TransactionDB) BeginAtomicWrite() (driver.AtomicWrite, error) {

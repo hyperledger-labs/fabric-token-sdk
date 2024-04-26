@@ -154,6 +154,15 @@ type ValidationRecord struct {
 	Status TxStatus
 }
 
+type TokenRequestRecord struct {
+	// TxID is the transaction ID
+	TxID string
+	// TokenRequest is the token request marshalled
+	TokenRequest []byte
+	// Status is the status of the transaction
+	Status TxStatus
+}
+
 // TransactionIterator is an iterator for transactions
 type TransactionIterator interface {
 	Close()
@@ -164,6 +173,12 @@ type TransactionIterator interface {
 type ValidationRecordsIterator interface {
 	Close()
 	Next() (*ValidationRecord, error)
+}
+
+// TokenRequestIterator is an iterator for token requests
+type TokenRequestIterator interface {
+	Close()
+	Next() (*TokenRequestRecord, error)
 }
 
 // QueryMovementsParams defines the parameters for querying movements.
@@ -227,4 +242,11 @@ type QueryValidationRecordsParams struct {
 	// If specified, this filter will be applied.
 	// the filter returns true if the record must be selected, false otherwise.
 	Filter func(record *ValidationRecord) bool
+}
+
+// QueryTokenRequestsParams defines the parameters for querying token requests
+type QueryTokenRequestsParams struct {
+	// Statuses is the list of transaction status to accept
+	// If empty, any status is accepted
+	Statuses []TxStatus
 }

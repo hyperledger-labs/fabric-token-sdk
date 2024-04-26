@@ -13,9 +13,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
 )
 
@@ -110,89 +109,27 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
-
 	auditor, err := cm.getAuditor(tmsID, walletID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditor for [%s]", walletID)
 	}
-	it, err := auditor.db.Transactions(auditdb.QueryTransactionsParams{})
+	it, err := auditor.db.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []driver.TxStatus{auditdb.Pending}})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s]", tmsID, walletID)
 	}
 	defer it.Close()
-	v, err := net.Vault(tmsID.Namespace)
-	if err != nil {
-		return errors.Errorf("failed to get vault for [%s:%s]", tmsID, walletID)
-	}
-	type ToBeUpdated struct {
-		TxID    string
-		Status  auditdb.TxStatus
-		Message string
-	}
-	var toBeUpdated []ToBeUpdated
-	var pendingTXs []string
 	for {
-		tr, err := it.Next()
+		record, err := it.Next()
 		if err != nil {
 			return errors.Errorf("failed to get next tx record for [%s:%s]", tmsID, walletID)
 		}
-		if tr == nil {
+		if record == nil {
 			break
 		}
-		if tr.Status == ttxdb.Pending {
-			logger.Infof("found pending transaction [%s] at [%s]", tr.TxID, tmsID)
-			found := false
-			for _, txID := range pendingTXs {
-				if tr.TxID == txID {
-					found = true
-					break
-				}
-			}
-			if found {
-				continue
-			}
-
-			// check the status of the pending transactions in the vault
-			status, message, err := v.Status(tr.TxID)
-			if err != nil {
-				pendingTXs = append(pendingTXs, tr.TxID)
-				continue
-			}
-
-			var txStatus auditdb.TxStatus
-			switch status {
-			case network.Valid:
-				txStatus = auditdb.Confirmed
-			case network.Invalid:
-				txStatus = auditdb.Deleted
-			default:
-				pendingTXs = append(pendingTXs, tr.TxID)
-				continue
-			}
-			toBeUpdated = append(toBeUpdated, ToBeUpdated{
-				TxID:    tr.TxID,
-				Status:  txStatus,
-				Message: message,
-			})
+		if err := net.AddFinalityListener(record.TxID, &FinalityListener{net, auditor.db}); err != nil {
+			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, record.TokenRequest)
 		}
 	}
-	it.Close()
-
-	for _, updated := range toBeUpdated {
-		if err := auditor.db.SetStatus(updated.TxID, updated.Status, updated.Message); err != nil {
-			return errors.WithMessagef(err, "failed setting status for request %s", updated.TxID)
-		}
-		logger.Infof("found transaction [%s] in vault with status [%s], corresponding pending transaction updated", updated.TxID, updated.Status)
-	}
-
-	logger.Infof("auditdb [%s], found [%d] pending transactions", tmsID, len(pendingTXs))
-
-	for _, txID := range pendingTXs {
-		if err := net.AddFinalityListener(txID, &FinalityListener{net, auditor.db}); err != nil {
-			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, txID)
-		}
-	}
-
 	return nil
 }
 
