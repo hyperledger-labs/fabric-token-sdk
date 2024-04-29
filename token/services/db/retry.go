@@ -4,7 +4,7 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package auditor
+package db
 
 import (
 	"errors"
@@ -44,6 +44,7 @@ func (f *retryRunner) Run(runner func() error) error {
 	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
 		if err := runner(); err != nil {
 			errs = append(errs, err)
+			time.Sleep(f.nextDelay())
 		} else {
 			return nil
 		}
