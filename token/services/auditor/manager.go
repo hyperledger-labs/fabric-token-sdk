@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
@@ -35,6 +36,7 @@ type Manager struct {
 	networkProvider NetworkProvider
 	auditDBProvider AuditDBProvider
 	tokenDBProvider TokenDBProvider
+	tmsProvider     TokenManagementServiceProvider
 
 	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
@@ -42,12 +44,13 @@ type Manager struct {
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, tokenDBProvider TokenDBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, tokenDBProvider TokenDBProvider, storage storage.DBEntriesStorage, tmsProvider TokenManagementServiceProvider) *Manager {
 	return &Manager{
 		networkProvider: networkProvider,
 		storage:         storage,
 		auditDBProvider: auditDBProvider,
 		tokenDBProvider: tokenDBProvider,
+		tmsProvider:     tmsProvider,
 		auditors:        map[string]*Auditor{},
 	}
 }
@@ -110,10 +113,11 @@ func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
 	auditor := &Auditor{
-		np:      cm.networkProvider,
-		tmsID:   tmsID,
-		auditDB: auditDB,
-		tokenDB: tokenDB,
+		np:          cm.networkProvider,
+		tmsID:       tmsID,
+		auditDB:     auditDB,
+		tokenDB:     tokenDB,
+		tmsProvider: cm.tmsProvider,
 	}
 	return auditor, nil
 }
@@ -146,12 +150,8 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 			break
 		}
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, &FinalityListener{
-			net:     net,
-			auditDB: auditor.auditDB,
-			tmsID:   tmsID,
-			tokens:  tokenDB,
-		}); err != nil {
+		var r driver.FinalityListener = NewFinalityListener(net, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB)
+		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, r); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, record.TokenRequest)
 		}
 		counter++

@@ -7,12 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package auditor
 
 import (
+	"encoding/base64"
 	"fmt"
+	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
@@ -49,10 +53,11 @@ type NetworkProvider interface {
 
 // Auditor is the interface for the auditor service
 type Auditor struct {
-	np      NetworkProvider
-	tmsID   token.TMSID
-	auditDB *auditdb.DB
-	tokenDB *tokens.Tokens
+	np          NetworkProvider
+	tmsID       token.TMSID
+	auditDB     *auditdb.DB
+	tokenDB     *tokens.Tokens
+	tmsProvider TokenManagementServiceProvider
 }
 
 // Validate validates the passed token request
@@ -96,7 +101,8 @@ func (a *Auditor) Append(tx Transaction) error {
 		return errors.WithMessagef(err, "failed getting network instance for [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("register tx status listener for tx [%s] at network [%s]", tx.ID(), tx.Network())
-	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), NewFinalityListener(net, a.auditDB, a.tmsID, a.tokenDB)); err != nil {
+	var r driver.FinalityListener = NewFinalityListener(net, a.tmsProvider, a.tmsID, a.auditDB, a.tokenDB)
+	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), r); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("append done for request [%s]", tx.ID())
@@ -124,52 +130,94 @@ func (a *Auditor) GetTokenRequest(txID string) ([]byte, error) {
 	return a.auditDB.GetTokenRequest(txID)
 }
 
-type FinalityListener struct {
-	net     *network.Network
-	auditDB *auditdb.DB
-	tmsID   token.TMSID
-	tokens  *tokens.Tokens
+type transactionDB interface {
+	GetTokenRequest(txID string) ([]byte, error)
+	SetStatus(txID string, status TxStatus, message string) error
 }
 
-func NewFinalityListener(net *network.Network, auditDB *auditdb.DB, tmsID token.TMSID, tokens *tokens.Tokens) *FinalityListener {
-	return &FinalityListener{net: net, auditDB: auditDB, tmsID: tmsID, tokens: tokens}
+type FinalityListener struct {
+	net         *network.Network
+	tmsProvider TokenManagementServiceProvider
+	tmsID       token.TMSID
+	ttxDB       transactionDB
+	tokens      *tokens.Tokens
+	retryRunner RetryRunner
+}
+
+func NewFinalityListener(net *network.Network, tmsProvider TokenManagementServiceProvider, tmsID token.TMSID, ttxDB transactionDB, tokens *tokens.Tokens) *FinalityListener {
+	return &FinalityListener{
+		net:         net,
+		tmsProvider: tmsProvider,
+		tmsID:       tmsID,
+		ttxDB:       ttxDB,
+		tokens:      tokens,
+		retryRunner: NewRetryRunner(Infinitely, time.Second, true),
+	}
 }
 
 func (t *FinalityListener) OnStatus(txID string, status int, message string, tokenRequestHash []byte) {
-	defer func() {
-		if e := recover(); e != nil {
-			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
-			if err := t.net.AddFinalityListener(t.tmsID.Namespace, txID, t); err != nil {
-				panic(err)
-			}
-			logger.Debugf("added finality listener for tx [%s]...done", txID)
-		}
-	}()
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(txID, status, message, tokenRequestHash) }); err != nil {
+		logger.Errorf("Listener failed")
+	}
+}
 
+func (t *FinalityListener) runOnStatus(txID string, status int, message string, tokenRequestHash []byte) error {
 	logger.Debugf("tx status changed for tx [%s]: [%s]", txID, status)
-	var txStatus auditdb.TxStatus
+	var txStatus ttxdb.TxStatus
 	switch status {
 	case network.Valid:
 		txStatus = ttxdb.Confirmed
 		logger.Debugf("get token request for [%s]", txID)
-		tokenRequestRaw, err := t.auditDB.GetTokenRequest(txID)
+		tokenRequestRaw, err := t.ttxDB.GetTokenRequest(txID)
 		if err != nil {
 			logger.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
-			panic(fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err))
+			return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 		}
-		logger.Debugf("append token request for [%s]", txID)
-		if err := t.tokens.AppendRaw(t.tmsID, txID, tokenRequestRaw); err != nil {
-			// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
-			logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
-			panic(fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err))
+		tms, err := t.tmsProvider.GetManagementService(token.WithTMSID(t.tmsID))
+		if err != nil {
+			return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 		}
-		logger.Debugf("append token request for [%s], done", txID)
+		tr, err := tms.NewFullRequestFromBytes(tokenRequestRaw)
+		if err != nil {
+			return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+		}
+		if err := t.checkTokenRequest(txID, tr, tokenRequestHash); err != nil {
+			logger.Errorf("tx [%d], %s", txID, err)
+			txStatus = ttxdb.Deleted
+			message = err.Error()
+		} else {
+			logger.Debugf("append token request for [%s]", txID)
+			if err := t.tokens.AppendRaw(t.tmsID, txID, tokenRequestRaw); err != nil {
+				// at this stage though, we don't fail here because the commit pipeline is processing the tokens still
+				logger.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
+				return fmt.Errorf("failed to append token request to token db [%s]: [%s]", txID, err)
+			}
+			logger.Debugf("append token request for [%s], done", txID)
+		}
 	case network.Invalid:
-		txStatus = auditdb.Deleted
+		txStatus = ttxdb.Deleted
 	}
-	if err := t.auditDB.SetStatus(txID, txStatus, message); err != nil {
-		logger.Errorf("failed setting status for request [%s]: [%s]", txID, err)
-		panic(fmt.Errorf("failed setting status for request [%s]: [%s]", txID, err))
+	if err := t.ttxDB.SetStatus(txID, txStatus, message); err != nil {
+		logger.Errorf("<message> [%s]: [%s]", txID, err)
+		return fmt.Errorf("<message> [%s]: [%s]", txID, err)
 	}
 	logger.Debugf("tx status changed for tx [%s]: [%s] done", txID, status)
+	return nil
+}
+
+func (t *FinalityListener) checkTokenRequest(txID string, request *token.Request, reference []byte) error {
+	trToSign, err := request.MarshalToSign()
+	if err != nil {
+		return errors.Errorf("can't get request hash '%s'", txID)
+	}
+	if base64.StdEncoding.EncodeToString(reference) != hash.Hashable(trToSign).String() {
+		logger.Errorf("tx [%s], tr hashes [%s][%s]", txID, base64.StdEncoding.EncodeToString(reference), hash.Hashable(trToSign))
+		// no further processing of the tokens of these transactions
+		return errors.Errorf(
+			"token requests do not match, tr hashes [%s][%s]",
+			base64.StdEncoding.EncodeToString(reference),
+			hash.Hashable(trToSign),
+		)
+	}
+	return nil
 }

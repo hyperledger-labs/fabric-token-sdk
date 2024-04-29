@@ -155,7 +155,7 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(tokensManager))
 	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
-	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
+	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)), tmsp)
 	assert.NoError(p.registry.RegisterService(auditorManager))
 
 	// TMS callback
