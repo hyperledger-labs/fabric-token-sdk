@@ -9,7 +9,7 @@ package orion
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/translator"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"

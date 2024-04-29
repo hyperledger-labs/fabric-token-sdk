@@ -15,6 +15,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -24,7 +26,6 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/hyperledger/fabric-protos-go/peer"
 	"github.com/pkg/errors"
@@ -38,7 +39,7 @@ const (
 	AreTokensSpent            = "areTokensSpent"
 )
 
-type NewVaultFunc = func(network, channel, namespace string) (vault.TokenVault, error)
+type NewVaultFunc = func(network, channel, namespace string) (vault.Vault, error)
 
 type lm struct {
 	lm *fabric.LocalMembership
@@ -61,7 +62,7 @@ func (v *nv) QueryEngine() api2.QueryEngine {
 	return v.tokenVault.QueryEngine()
 }
 
-func (v *nv) CertificationStorage() api2.CertificationStorage {
+func (v *nv) CertificationStorage() vault.CertificationStorage {
 	return v.tokenVault.CertificationStorage()
 }
 

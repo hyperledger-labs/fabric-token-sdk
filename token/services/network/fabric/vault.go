@@ -9,10 +9,11 @@ package fabric
 import (
 	"runtime/debug"
 
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/db"
+
 	"github.com/hashicorp/go-uuid"
 	driver3 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )

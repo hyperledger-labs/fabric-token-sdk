@@ -19,7 +19,6 @@ import (
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/certification"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
@@ -117,7 +116,6 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	Expect(sp.RegisterService(sigService)).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(identity2.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())
-	Expect(sp.RegisterService(certification.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())
 
 	wm, err := token.NewWalletManager(sp, tms.Network, tms.Channel, tms.Namespace, ppRaw)
 	Expect(err).ToNot(HaveOccurred())
