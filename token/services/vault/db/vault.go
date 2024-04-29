@@ -13,10 +13,23 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
-	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
+
+type ValidationCode = int
+
+const (
+	_               ValidationCode = iota
+	Valid                          // Transaction is valid and committed
+	Invalid                        // Transaction is invalid and has been discarded
+	Busy                           // Transaction does not yet have a validity state
+	Unknown                        // Transaction is unknown
+	HasDependencies                // Transaction is unknown but has known dependencies
+)
+
+type BackendVault interface {
+	TransactionStatus(txID string) (ValidationCode, string, error)
+}
 
 type Vault struct {
 	tmsID   token2.TMSID
@@ -24,10 +37,10 @@ type Vault struct {
 	ttxdb   *ttxdb.DB
 
 	queryEngine          *QueryEngine
-	certificationStorage certification.Storage
+	certificationStorage vault.CertificationStorage
 }
 
-func NewVault(tmsID token2.TMSID, cs certification.Storage, ttxdb *ttxdb.DB, tokenDB *tokendb.DB, backend driver2.Vault) (*Vault, error) {
+func NewVault(tmsID token2.TMSID, ttxdb *ttxdb.DB, tokenDB *tokendb.DB, backend BackendVault) (*Vault, error) {
 	return &Vault{
 		tmsID:   tmsID,
 		tokenDB: tokenDB,
@@ -36,7 +49,7 @@ func NewVault(tmsID token2.TMSID, cs certification.Storage, ttxdb *ttxdb.DB, tok
 			backend: backend,
 			DB:      tokenDB,
 		},
-		certificationStorage: cs,
+		certificationStorage: &CertificationStorage{DB: tokenDB},
 	}, nil
 }
 
@@ -44,7 +57,7 @@ func (v *Vault) QueryEngine() vault.QueryEngine {
 	return v.queryEngine
 }
 
-func (v *Vault) CertificationStorage() certification.Storage {
+func (v *Vault) CertificationStorage() vault.CertificationStorage {
 	return v.certificationStorage
 }
 
@@ -54,7 +67,7 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 
 type QueryEngine struct {
 	*tokendb.DB
-	backend driver2.Vault
+	backend BackendVault
 }
 
 func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
@@ -62,7 +75,7 @@ func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return vc == driver2.Busy, nil
+	return vc == Busy, nil
 }
 
 func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
@@ -70,4 +83,16 @@ func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
 		return false, nil
 	}
 	return q.DB.IsMine(id.TxId, id.Index)
+}
+
+type CertificationStorage struct {
+	*tokendb.DB
+}
+
+func (t *CertificationStorage) Exists(id *token.ID) bool {
+	return t.DB.ExistsCertification(id)
+}
+
+func (t *CertificationStorage) Store(certifications map[*token.ID][]byte) error {
+	return t.DB.StoreCertifications(certifications)
 }

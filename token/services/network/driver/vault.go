@@ -8,11 +8,12 @@ package driver
 
 import (
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type ValidationCode = driver.ValidationCode
+type ValidationCode = db.ValidationCode
 
 const (
 	_               ValidationCode = iota
@@ -32,7 +33,7 @@ type TokenVault interface {
 	QueryEngine() driver2.QueryEngine
 
 	// CertificationStorage returns the certification storage over this vault
-	CertificationStorage() driver2.CertificationStorage
+	CertificationStorage() vault.CertificationStorage
 
 	// DeleteTokens delete the passed tokens in the passed namespace
 	DeleteTokens(ids ...*token.ID) error

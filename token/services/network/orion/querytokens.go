@@ -12,8 +12,8 @@ import (
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )

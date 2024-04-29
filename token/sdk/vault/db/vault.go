@@ -17,7 +17,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/certification"
 	vaultdb "github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/db"
 	"github.com/pkg/errors"
 )
@@ -26,27 +25,25 @@ type VaultProvider struct {
 	tokenDBProvider tokens.DBProvider
 	ttxDBProvider   ttx.DBProvider
 	tokenProvider   ttx.TokensProvider
-	storageProvider certification.StorageProvider
 	fabricNSP       *fabric.NetworkServiceProvider
 	orionNSP        *orion.NetworkServiceProvider
 
 	vaultCacheLock sync.RWMutex
-	vaultCache     map[string]vault.TokenVault
+	vaultCache     map[string]vault.Vault
 }
 
-func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBProvider, tokenProvider ttx.TokensProvider, storageProvider certification.StorageProvider, fabricNSP *fabric.NetworkServiceProvider, orionNSP *orion.NetworkServiceProvider) *VaultProvider {
+func NewVaultProvider(tokenDBProvider tokens.DBProvider, ttxDBProvider ttx.DBProvider, tokenProvider ttx.TokensProvider, fabricNSP *fabric.NetworkServiceProvider, orionNSP *orion.NetworkServiceProvider) *VaultProvider {
 	return &VaultProvider{
 		tokenDBProvider: tokenDBProvider,
 		ttxDBProvider:   ttxDBProvider,
 		tokenProvider:   tokenProvider,
-		storageProvider: storageProvider,
 		fabricNSP:       fabricNSP,
 		orionNSP:        orionNSP,
-		vaultCache:      make(map[string]vault.TokenVault),
+		vaultCache:      make(map[string]vault.Vault),
 	}
 }
 
-func (v *VaultProvider) Vault(network string, channel string, namespace string) (vault.TokenVault, error) {
+func (v *VaultProvider) Vault(network string, channel string, namespace string) (vault.Vault, error) {
 	k := network + channel + namespace
 	// Check cache
 	v.vaultCacheLock.RLock()
@@ -95,11 +92,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 			Channel:   ch.Name(),
 			Namespace: namespace,
 		}
-		storage, err := v.storageProvider.NewStorage(tmsID)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create new storage")
-		}
-		res, err = vaultdb.NewVault(tmsID, storage, ttxDB, tokenDB, fabric2.NewVault(ch, tokens))
+		res, err = vaultdb.NewVault(tmsID, ttxDB, tokenDB, fabric2.NewVault(ch, tokens))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}
@@ -113,11 +106,7 @@ func (v *VaultProvider) Vault(network string, channel string, namespace string) 
 			Channel:   "",
 			Namespace: namespace,
 		}
-		storage, err := v.storageProvider.NewStorage(tmsID)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to create new storage")
-		}
-		res, err = vaultdb.NewVault(tmsID, storage, ttxDB, tokenDB, orion2.NewVault(ons, tokens))
+		res, err = vaultdb.NewVault(tmsID, ttxDB, tokenDB, orion2.NewVault(ons, tokens))
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to create new vault")
 		}

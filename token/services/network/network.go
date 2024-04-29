@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
+
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
@@ -156,7 +158,7 @@ func (v *Vault) QueryEngine() api2.QueryEngine {
 	return v.v.QueryEngine()
 }
 
-func (v *Vault) CertificationStorage() api2.CertificationStorage {
+func (v *Vault) CertificationStorage() vault.CertificationStorage {
 	return v.v.CertificationStorage()
 }
 

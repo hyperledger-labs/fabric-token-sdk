@@ -24,7 +24,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken/driver"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/nogh/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/certification"
 	dbconfig "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"

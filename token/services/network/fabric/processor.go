@@ -10,8 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
