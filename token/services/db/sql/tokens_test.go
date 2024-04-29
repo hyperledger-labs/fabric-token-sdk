@@ -81,7 +81,8 @@ var TokensCases = []struct {
 	{"ListIssuedTokens", TListIssuedTokens},
 	{"DeleteMultiple", TDeleteMultiple},
 	{"PublicParams", TPublicParams},
-	{"TCertification", TCertification},
+	{"Certification", TCertification},
+	{"QueryTokenDetails", TQueryTokenDetails},
 }
 
 func TTransaction(t *testing.T, db *TokenDB) {
@@ -755,4 +756,130 @@ func TCertification(t *testing.T, db *TokenDB) {
 	certifications, err = db.GetCertifications([]*token.ID{tokenID})
 	assert.Error(t, err)
 	assert.Empty(t, certifications)
+}
+
+func TQueryTokenDetails(t *testing.T, db *TokenDB) {
+	tx, err := db.NewTokenDBTransaction()
+	if err != nil {
+		t.Fatal(err)
+	}
+	tx1 := driver.TokenRecord{
+		TxID:           "tx1",
+		Index:          0,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x01",
+		Type:           "TST1",
+		Amount:         2,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	}
+	tx2 := driver.TokenRecord{
+		TxID:           "tx2",
+		Index:          0,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "htlc",
+		OwnerIdentity:  []byte("{}"),
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x02",
+		Type:           "TST",
+		Amount:         2,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	}
+	tx21 := driver.TokenRecord{
+		TxID:           "tx2",
+		Index:          1,
+		IssuerRaw:      []byte{},
+		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "htlc",
+		OwnerIdentity:  []byte("{}"),
+		Ledger:         []byte("ledger"),
+		LedgerMetadata: []byte{},
+		Quantity:       "0x02",
+		Type:           "TST",
+		Amount:         2,
+		Owner:          true,
+		Auditor:        false,
+		Issuer:         false,
+	}
+
+	err = tx.StoreToken(tx1, []string{"alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.StoreToken(tx2, []string{"alice"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.StoreToken(tx21, []string{"bob"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = tx.Commit()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// all
+	res, err := db.QueryTokenDetails(driver.QueryTokenDetailsParams{})
+	assert.NoError(t, err)
+	assert.Len(t, res, 3)
+	assertEqual(t, tx1, res[0])
+	assertEqual(t, tx2, res[1])
+	assertEqual(t, tx21, res[2])
+	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
+	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
+	assert.Equal(t, false, res[2].IsSpent, "tx2-1 is not spent")
+
+	// alice
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "alice"})
+	assert.NoError(t, err)
+	assert.Len(t, res, 2)
+	assertEqual(t, tx1, res[0])
+	assertEqual(t, tx2, res[1])
+
+	// alice TST1
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{OwnerEnrollmentID: "alice", TokenType: "TST1"})
+	assert.NoError(t, err)
+	assert.Len(t, res, 1)
+	assertEqual(t, tx1, res[0])
+
+	// spent
+	assert.NoError(t, db.DeleteTokens("delby", &token.ID{TxId: "tx2", Index: 1}))
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{})
+	assert.NoError(t, err)
+	assert.Len(t, res, 2)
+	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
+	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
+
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{IncludeDeleted: true})
+	assert.NoError(t, err)
+	assert.Len(t, res, 3)
+	assert.Equal(t, false, res[0].IsSpent, "tx1 is not spent")
+	assert.Equal(t, false, res[1].IsSpent, "tx2-0 is not spent")
+	assert.Equal(t, true, res[2].IsSpent, "tx2-1 is spent")
+	assert.Equal(t, "delby", res[2].SpentBy)
+
+	// by ids
+	res, err = db.QueryTokenDetails(driver.QueryTokenDetailsParams{IDs: []*token.ID{{TxId: "tx1", Index: 0}, {TxId: "tx2", Index: 0}}, IncludeDeleted: true})
+	assert.NoError(t, err)
+	assert.Len(t, res, 2)
+	assertEqual(t, tx1, res[0])
+	assertEqual(t, tx2, res[1])
+}
+
+func assertEqual(t *testing.T, r driver.TokenRecord, d driver.TokenDetails) {
+	assert.Equal(t, r.TxID, d.TxID)
+	assert.Equal(t, r.Index, d.Index)
+	assert.Equal(t, r.Amount, d.Amount)
+	assert.Equal(t, r.OwnerType, d.OwnerType)
 }
