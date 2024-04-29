@@ -483,7 +483,7 @@ func (db *TokenDB) GetTokens(inputs ...*token.ID) ([]string, []*token.Token, err
 	return ids, tokens, nil
 }
 
-// QueryTokensDetails returns details about owned tokens, regardless if they have been spent or not.
+// QueryTokenDetails returns details about owned tokens, regardless if they have been spent or not.
 // Filters work cumulatively and may be left empty. If a token is owned by two enrollmentIDs and there
 // is no filter on enrollmentID, the token will be returned twice (once for each owner).
 func (db *TokenDB) QueryTokenDetails(params driver.QueryTokenDetailsParams) ([]driver.TokenDetails, error) {
