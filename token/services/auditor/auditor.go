@@ -143,12 +143,6 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string, tok
 				panic(err)
 			}
 			logger.Debugf("added finality listener for tx [%s]...done", txID)
-		} else {
-			logger.Debugf("unsubscribe for tx [%s]...", txID)
-			if err := t.net.RemoveFinalityListener(txID, t); err != nil {
-				logger.Errorf("failed to unsubscribe auditor tx listener for tx-id [%s]: [%s]", txID, err)
-			}
-			logger.Debugf("unsubscribed for tx [%s]...done", txID)
 		}
 	}()
 
