@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
@@ -60,23 +59,21 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 
 	// Sanity checks:
 	// - the transaction is in busy state in the vault
-	net := network.GetInstance(context, tx.Network(), tx.Channel())
-	vault, err := net.Vault(tx.Namespace())
-	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, _, err := vault.Status(tx.ID())
-	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	owner := ttx.NewOwner(context, tx.TokenService())
+	vc, _, err := owner.GetStatus(tx.ID())
+	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
+	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Before completing, the recipient waits for finality of the transaction
 	_, err = context.RunView(ttx.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
-	vc, _, err = vault.Status(tx.ID())
-	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	vc, _, err = owner.GetStatus(tx.ID())
+	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
+	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
-	// Check that the tokens are or are not in the vault
-	AssertTokensInVault(vault, tx, outputs, id)
+	// Check that the tokens are or are not in the db
+	AssertTokens(context, tx, outputs, id)
 
 	return nil, nil
 }
