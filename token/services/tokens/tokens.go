@@ -28,7 +28,7 @@ type Authorization interface {
 	// AmIAnAuditor returns true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor(tms *token.ManagementService) bool
-	// GetOwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
+	// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
 	OwnerType(raw []byte) (string, []byte, error)
 }
 

@@ -77,7 +77,7 @@ func (o *AuthorizationMultiplexer) AmIAnAuditor(tms *token.ManagementService) bo
 	return false
 }
 
-// GetOwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
+// OwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
 func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (string, []byte, error) {
 	owner, err := identity.UnmarshalTypedIdentity(raw)
 	if err != nil {
