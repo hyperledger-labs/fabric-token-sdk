@@ -16,7 +16,6 @@ import (
 	view4 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -179,23 +178,21 @@ func (t *TransferView) Call(context view.Context) (txID interface{}, err error) 
 	assert.NoError(err, "failed to sign transaction [<<<%s>>>]", tx.ID())
 
 	// Sanity checks:
-	// - the transaction is in busy state in the vault
-	net := network.GetInstance(context, tx.Network(), tx.Channel())
-	vault, err := net.Vault(tx.Namespace())
-	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, _, err := vault.Status(tx.ID())
-	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	// - the transaction is in pending state
+	owner := ttx.NewOwner(context, tx.TokenService())
+	vc, _, err := owner.GetStatus(tx.ID())
+	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
+	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	// Send to the ordering service and wait for finality
 	_, err = context.RunView(ttx.NewOrderingAndFinalityView(tx))
 	assert.NoError(err, "failed asking ordering")
 
 	// Sanity checks:
-	// - the transaction is in valid state in the vault
-	vc, _, err = vault.Status(tx.ID())
-	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	// - the transaction is in confirmed state
+	vc, _, err = owner.GetStatus(tx.ID())
+	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
+	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	return tx.ID(), nil
 }
@@ -329,13 +326,11 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	assert.NoError(err, "failed to sign transaction")
 
 	// Sanity checks:
-	// - the transaction is in busy state in the vault
-	net := network.GetInstance(context, tx.Network(), tx.Channel())
-	vault, err := net.Vault(tx.Namespace())
-	assert.NoError(err, "failed to retrieve vault [%s]", tx.Namespace())
-	vc, _, err := vault.Status(tx.ID())
-	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Busy, vc, "transaction [%s] should be in busy state", tx.ID())
+	// - the transaction is in pending state
+	owner := ttx.NewOwner(context, tx.TokenService())
+	vc, _, err := owner.GetStatus(tx.ID())
+	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
+	assert.Equal(ttx.Pending, vc, "transaction [%s] should be in busy state", tx.ID())
 
 	if !t.Retry {
 		// Introduce a delay that will keep the tokens locked by the selector
@@ -347,10 +342,10 @@ func (t *TransferWithSelectorView) Call(context view.Context) (interface{}, erro
 	assert.NoError(err, "failed asking ordering")
 
 	// Sanity checks:
-	// - the transaction is in valid state in the vault
-	vc, _, err = vault.Status(tx.ID())
-	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
-	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
+	// - the transaction is in confirmed state
+	vc, _, err = owner.GetStatus(tx.ID())
+	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
+	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
 
 	return tx.ID(), nil
 }

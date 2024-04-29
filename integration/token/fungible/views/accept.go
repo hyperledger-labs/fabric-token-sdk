@@ -58,7 +58,7 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to accept new tokens")
 
 	// Sanity checks:
-	// - the transaction is in busy state in the vault
+	// - the transaction is in pending state
 	owner := ttx.NewOwner(context, tx.TokenService())
 	vc, _, err := owner.GetStatus(tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
@@ -68,6 +68,8 @@ func (a *AcceptCashView) Call(context view.Context) (interface{}, error) {
 	_, err = context.RunView(ttx.NewFinalityView(tx))
 	assert.NoError(err, "new tokens were not committed")
 
+	// Sanity checks:
+	// - the transaction is in confirmed state
 	vc, _, err = owner.GetStatus(tx.ID())
 	assert.NoError(err, "failed to retrieve status for transaction [%s]", tx.ID())
 	assert.Equal(ttx.Confirmed, vc, "transaction [%s] should be in valid state", tx.ID())
