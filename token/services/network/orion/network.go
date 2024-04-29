@@ -18,6 +18,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -220,11 +221,12 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 
 func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
 	wrapper := &FinalityListener{
-		net:       n,
-		root:      listener,
-		network:   n.n.Name(),
-		sp:        n.n.SP,
-		namespace: namespace,
+		net:         n,
+		root:        listener,
+		network:     n.n.Name(),
+		sp:          n.n.SP,
+		namespace:   namespace,
+		retryRunner: db.NewRetryRunner(-1, time.Second, true),
 	}
 	n.subscribers.Set(txID, listener, wrapper)
 	return n.n.Committer().AddFinalityListener(txID, wrapper)
@@ -318,27 +320,33 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 type FinalityListener struct {
-	net       *Network
-	root      driver.FinalityListener
-	sp        token2.ServiceProvider
-	network   string
-	namespace string
+	net         *Network
+	root        driver.FinalityListener
+	sp          token2.ServiceProvider
+	network     string
+	namespace   string
+	retryRunner db.RetryRunner
 }
 
 func (t *FinalityListener) OnStatus(txID string, status int, message string) {
-	defer func() {
-		if e := recover(); e != nil {
-			logger.Debugf("failed finality update for tx [%s]: [%s]", txID, e)
-			if err := t.net.AddFinalityListener(txID, t.namespace, t.root); err != nil {
-				panic(err)
-			}
-			logger.Debugf("added finality listener for tx [%s]...done", txID)
-		}
-	}()
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(txID, status, message) }); err != nil {
+		logger.Errorf("failed running finality listener: %v", err)
+	}
+}
 
+func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
+	defer func() { err = wrapRecover(recover()) }()
 	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID))
 	if err != nil {
-		panic(fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err))
+		return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
 	}
 	t.root.OnStatus(txID, status, message, boxed.(*TxStatusResponse).TokenRequestReference)
+	return
+}
+
+func wrapRecover(r any) error {
+	if r != nil {
+		return fmt.Errorf("panic caught: %v", r)
+	}
+	return nil
 }
