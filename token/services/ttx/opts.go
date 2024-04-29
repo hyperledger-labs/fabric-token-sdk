@@ -9,11 +9,9 @@ package ttx
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type TxOptions struct {
