@@ -297,8 +297,8 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 		TMSID:        tmsId,
 	}))
 	if len(expectedErrorMsgs) == 0 {
-		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
+		txID := common.JSONUnmarshalString(txidBoxed)
 		common2.CheckFinality(network, receiver, txID, tmsId, false)
 		common2.CheckFinality(network, auditor, txID, tmsId, false)
 
@@ -544,6 +544,31 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 	return strErr[s+4 : e]
 }
 
+func MaliciousTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	txidBoxed, err := network.Client(id).CallView("MaliciousTransfer", common.JSONMarshall(&views.Transfer{
+		Auditor:      auditor,
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amount,
+		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
+		TMSID:        tmsId,
+	}))
+	if len(expectedErrorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		txID := common.JSONUnmarshalString(txidBoxed)
+		time.Sleep(5 * time.Second)
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
+}
+
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
 	transferInput := &views.Transfer{
 		Auditor:      auditor,
@@ -738,6 +763,17 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 
 func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	CheckPublicParamsForTMSID(network, nil, ids...)
+}
+
+func GetTXStatus(network *integration.Infrastructure, id string, txID string) *views.TxStatusResponse {
+	boxed, err := network.Client(id).CallView("TxStatus", common.JSONMarshall(&views.TxStatus{
+		TMSID: token2.TMSID{},
+		TxID:  txID,
+	}))
+	Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
+	response := &views.TxStatusResponse{}
+	common.JSONUnmarshal(boxed.([]byte), response)
+	return response
 }
 
 func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...string) {

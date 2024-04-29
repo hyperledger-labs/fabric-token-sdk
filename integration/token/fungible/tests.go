@@ -13,6 +13,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -966,4 +968,22 @@ func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *Wall
 	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
 	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+}
+
+func TestMaliciousTransactions(net *integration.Infrastructure) {
+	CheckPublicParams(net, "issuer", "alice", "bob", "charlie", "manager")
+
+	Eventually(DoesWalletExist).WithArguments(net, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "bob", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	IssueCash(net, "", "USD", 110, "alice", "", true, "issuer")
+	CheckBalance(net, "alice", "", "USD", 110)
+
+	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
+	txStatusAlice := GetTXStatus(net, "alice", txID)
+	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+	txStatusBob := GetTXStatus(net, "bob", txID)
+	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }

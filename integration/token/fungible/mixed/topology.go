@@ -123,6 +123,8 @@ func Topology() []api.Topology {
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
+	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -132,6 +134,7 @@ func Topology() []api.Topology {
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{})
 	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -154,6 +157,7 @@ func Topology() []api.Topology {
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
 	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	// Token topology
 	tokenTopology := token.NewTopology()

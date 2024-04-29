@@ -71,11 +71,17 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 	)
 
 	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
-	if signer.IsNone() {
-		signer = nw.LocalMembership().DefaultIdentity()
+	var txID network.TxID
+	if len(txOpts.NetworkTxID.Creator) != 0 {
+		txID = txOpts.NetworkTxID
+		signer = txID.Creator
+	} else {
+		if signer.IsNone() {
+			signer = nw.LocalMembership().DefaultIdentity()
+		}
+		txID = network.TxID{Creator: signer}
 	}
-	txID := &network.TxID{Creator: signer}
-	id := nw.ComputeTxID(txID)
+	id := nw.ComputeTxID(&txID)
 	tr, err := tms.NewRequest(id)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
@@ -86,7 +92,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 			Signer:       signer,
 			TokenRequest: tr,
 			Envelope:     nil,
-			TxID:         *txID,
+			TxID:         txID,
 			ID:           id,
 			Network:      tms.Network(),
 			Channel:      tms.Channel(),
@@ -187,6 +193,10 @@ func (t *Transaction) Namespace() string {
 
 func (t *Transaction) Request() *token.Request {
 	return t.Payload.TokenRequest
+}
+
+func (t *Transaction) NetworkTxID() network.TxID {
+	return t.TxID
 }
 
 // Bytes returns the serialized version of the transaction.

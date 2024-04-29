@@ -9,6 +9,8 @@ package ttx
 import (
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -21,6 +23,7 @@ type TxOptions struct {
 	Timeout                   time.Duration
 	TxID                      string
 	Transaction               *Transaction
+	NetworkTxID               network.TxID
 }
 
 func compile(opts ...TxOption) (*TxOptions, error) {
@@ -105,6 +108,13 @@ func WithTxID(txID string) TxOption {
 func WithTransactions(tx *Transaction) TxOption {
 	return func(o *TxOptions) error {
 		o.Transaction = tx
+		return nil
+	}
+}
+
+func WithNetworkTxID(id network.TxID) TxOption {
+	return func(o *TxOptions) error {
+		o.NetworkTxID = id
 		return nil
 	}
 }

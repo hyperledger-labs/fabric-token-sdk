@@ -142,6 +142,8 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
 	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
+	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -153,6 +155,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{})
 	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -174,6 +177,7 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -251,7 +255,6 @@ func Topology(backend string, tokenSDKDriver string, auditorAsIssuer bool) []api
 		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
-	tms.AddAuditor(auditor)
 
 	if backend != "orion" {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
