@@ -314,7 +314,7 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 	if err != nil {
 		return driver.Unknown, err
 	}
-	return boxed.(driver.ValidationCode), nil
+	return boxed.(*TxStatusResponse).Status, nil
 }
 
 type FinalityListener struct {

@@ -29,6 +29,7 @@ type Opts struct {
 	Aries           bool
 	FSCLogSpec      string
 	NoAuditor       bool
+	HSM             bool
 }
 
 func Topology(opts Opts) []api.Topology {
@@ -57,8 +58,8 @@ func Topology(opts Opts) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithDefaultIssuerIdentity(opts.HSM),
+		token.WithIssuerIdentity("issuer.id1", opts.HSM),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
@@ -88,8 +89,8 @@ func Topology(opts Opts) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
-		token.WithIssuerIdentity("newIssuer.id1"),
+		token.WithDefaultIssuerIdentity(opts.HSM),
+		token.WithIssuerIdentity("newIssuer.id1", opts.HSM),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("newIssuer.owner"),
 	)
@@ -104,7 +105,7 @@ func Topology(opts Opts) []api.Topology {
 	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(opts.HSM),
 	)
 	newAuditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
@@ -116,7 +117,7 @@ func Topology(opts Opts) []api.Topology {
 	if opts.AuditorAsIssuer {
 		issuer.AddOptions(
 			orion.WithRole("auditor"),
-			token.WithAuditorIdentity(),
+			token.WithAuditorIdentity(opts.HSM),
 			fsc.WithAlias("auditor"),
 		)
 		issuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
@@ -132,7 +133,7 @@ func Topology(opts Opts) []api.Topology {
 
 		newIssuer.AddOptions(
 			orion.WithRole("auditor"),
-			token.WithAuditorIdentity(),
+			token.WithAuditorIdentity(opts.HSM),
 			fsc.WithAlias("auditor"),
 		)
 		newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
@@ -149,7 +150,7 @@ func Topology(opts Opts) []api.Topology {
 			fabric.WithOrganization("Org1"),
 			fabric.WithAnonymousIdentity(),
 			orion.WithRole("auditor"),
-			token.WithAuditorIdentity(),
+			token.WithAuditorIdentity(opts.HSM),
 		)
 		auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})

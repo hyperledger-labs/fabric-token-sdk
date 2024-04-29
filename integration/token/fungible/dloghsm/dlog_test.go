@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package dloghsm
 
 import (
+	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -27,7 +28,16 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with HSM", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", Topology("fabric", "dlog", false)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:         "fabric",
+					TokenSDKDriver:  "dlog",
+					Aries:           true,
+					HSM:             true,
+					AuditorAsIssuer: false,
+					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
+				})...,
+			)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -42,7 +52,16 @@ var _ = Describe("EndToEnd", func() {
 	Describe("Fungible with Auditor = Issuer with HSM", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", Topology("fabric", "dlog", true)...)
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:         "fabric",
+					TokenSDKDriver:  "dlog",
+					Aries:           true,
+					HSM:             true,
+					AuditorAsIssuer: true,
+					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
+				})...,
+			)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

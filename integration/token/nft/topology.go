@@ -47,7 +47,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueHouseViewFactory{})
 	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
@@ -56,7 +56,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})

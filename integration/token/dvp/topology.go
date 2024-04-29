@@ -42,7 +42,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 	issuer.RegisterViewFactory("issue", &cash.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("issued", &cash.ListIssuedTokensViewFactory{})
@@ -51,7 +51,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
@@ -59,13 +59,13 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	fscTopology.AddNodeByName("cash_issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	).RegisterViewFactory("issue_cash", &cash.IssueCashViewFactory{})
 
 	fscTopology.AddNodeByName("house_issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	).RegisterViewFactory("issue_house", &house.IssueHouseViewFactory{})
 
 	// seller and buyer

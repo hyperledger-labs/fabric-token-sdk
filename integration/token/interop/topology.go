@@ -37,7 +37,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -50,7 +50,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -122,7 +122,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -136,7 +136,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -221,7 +221,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -235,7 +235,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -327,7 +327,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -341,7 +341,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -432,7 +432,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -447,7 +447,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})

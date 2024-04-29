@@ -60,12 +60,12 @@ func Topology() []api.Topology {
 	issuer1 := fscTopology.AddNodeFromTemplate("issuer1", issuer).AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 	issuer2 := fscTopology.AddNodeFromTemplate("issuer2", issuer).AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 
 	auditor := fscTopology.NewTemplate("auditor")
@@ -88,12 +88,12 @@ func Topology() []api.Topology {
 	auditor1 := fscTopology.AddNodeFromTemplate("auditor1", auditor).AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor2 := fscTopology.AddNodeFromTemplate("auditor2", auditor).AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(

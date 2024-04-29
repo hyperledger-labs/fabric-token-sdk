@@ -39,8 +39,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithDefaultIssuerIdentity(false),
+		token.WithIssuerIdentity("issuer.id1", false),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("issued", &views.ListIssuedTokensViewFactory{})
@@ -49,7 +49,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 
