@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/test-go/testify/assert"
 )
 
@@ -84,11 +84,31 @@ func TestTransactionSql(t *testing.T) {
 			expectedSql:  "WHERE stored_at >= $1 AND stored_at <= $2",
 			expectedArgs: []interface{}{&lastYear, &now},
 		},
+		{
+			name: "Sender OR recipient matches, specific tx",
+			params: driver.QueryTransactionsParams{
+				SenderWallet:    "alice",
+				RecipientWallet: "bob",
+				IDs:             []string{"transactionID"},
+			},
+			expectedSql:  "WHERE tbl.tx_id = $1 AND (sender_eid = $2 OR recipient_eid = $3)",
+			expectedArgs: []interface{}{"transactionID", "alice", "bob"},
+		},
+		{
+			name: "Sender OR recipient matches, specific tx ids",
+			params: driver.QueryTransactionsParams{
+				SenderWallet:    "alice",
+				RecipientWallet: "bob",
+				IDs:             []string{"transactionID1", "transactionID2", "transactionID3"},
+			},
+			expectedSql:  "WHERE (tbl.tx_id = $1 OR tbl.tx_id = $2 OR tbl.tx_id = $3) AND (sender_eid = $4 OR recipient_eid = $5)",
+			expectedArgs: []interface{}{"transactionID1", "transactionID2", "transactionID3", "alice", "bob"},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualSql, actualArgs := transactionsConditionsSql(tc.params)
+			actualSql, actualArgs := transactionsConditionsSql(tc.params, "tbl")
 			assert.Equal(t, tc.expectedSql, actualSql)
 			compareArgs(t, tc.expectedArgs, actualArgs)
 		})
@@ -211,27 +231,117 @@ func TestMovementConditions(t *testing.T) {
 	}
 }
 
-func TestIn(t *testing.T) {
-	// 0
-	args := make([]interface{}, 0)
-	w := in(&args, "enrollment_id", []interface{}{})
-	assert.Equal(t, "", w)
-	assert.Equal(t, []interface{}{}, args)
-
-	// 1
-	args = make([]interface{}, 0)
-	w = in(&args, "enrollment_id", []interface{}{"eid1"})
-	assert.Equal(t, "enrollment_id = $1", w)
-	assert.Equal(t, []interface{}{"eid1"}, args)
-
-	// 3
-	args = make([]interface{}, 0)
-	w = in(&args, "enrollment_id", []interface{}{"eid1", "eid2", "eid3"})
-	assert.Equal(t, "(enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3)", w)
-	assert.Equal(t, []interface{}{"eid1", "eid2", "eid3"}, args)
+func TestTokenSql(t *testing.T) {
+	testCases := []struct {
+		name         string
+		params       driver.QueryTokenDetailsParams
+		expectedArgs []interface{}
+		expectedSql  string
+	}{
+		{
+			name:         "no filter",
+			params:       driver.QueryTokenDetailsParams{},
+			expectedSql:  "WHERE owner = true AND is_deleted = false",
+			expectedArgs: []interface{}{},
+		},
+		{
+			name: "no filter with deleted",
+			params: driver.QueryTokenDetailsParams{
+				IncludeDeleted: true,
+			},
+			expectedSql:  "WHERE owner = true",
+			expectedArgs: []interface{}{},
+		},
+		{
+			name:         "owner unspent",
+			params:       driver.QueryTokenDetailsParams{OwnerEnrollmentID: "me"},
+			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND is_deleted = false",
+			expectedArgs: []interface{}{"me"},
+		},
+		{
+			name: "owner with deleted",
+			params: driver.QueryTokenDetailsParams{
+				OwnerEnrollmentID: "me",
+				IncludeDeleted:    true,
+			},
+			expectedSql:  "WHERE owner = true AND enrollment_id = $1",
+			expectedArgs: []interface{}{"me"},
+		},
+		{
+			name: "owner and htlc with deleted",
+			params: driver.QueryTokenDetailsParams{
+				OwnerEnrollmentID: "me",
+				OwnerType:         "htlc",
+				IncludeDeleted:    true,
+			},
+			expectedSql:  "WHERE owner = true AND owner_type = $1 AND enrollment_id = $2",
+			expectedArgs: []interface{}{"htlc", "me"},
+		},
+		{
+			name:         "owner and type",
+			params:       driver.QueryTokenDetailsParams{TokenType: "tok", OwnerEnrollmentID: "me"},
+			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND token_type = $2 AND is_deleted = false",
+			expectedArgs: []interface{}{"me", "tok"},
+		},
+		{
+			name: "owner and type and id",
+			params: driver.QueryTokenDetailsParams{
+				TokenType:         "tok",
+				OwnerEnrollmentID: "me",
+				IDs:               []*token.ID{{TxId: "a", Index: 1}},
+			},
+			expectedSql:  "WHERE owner = true AND enrollment_id = $1 AND token_type = $2 AND (tx_id, idx) IN ( ($3, $4) ) AND is_deleted = false",
+			expectedArgs: []interface{}{"me", "tok", "a", 1},
+		},
+		{
+			name: "type and ids",
+			params: driver.QueryTokenDetailsParams{
+				TokenType:      "tok",
+				IDs:            []*token.ID{{TxId: "a", Index: 1}, {TxId: "b", Index: 2}},
+				IncludeDeleted: true,
+			},
+			expectedSql:  "WHERE owner = true AND token_type = $1 AND (tx_id, idx) IN ( ($2, $3), ($4, $5) )",
+			expectedArgs: []interface{}{"tok", "a", uint64(1), "b", uint64(2)},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actualSql, _, actualArgs := tokenQuerySql(tc.params, "", "")
+			assert.Equal(t, tc.expectedSql, actualSql, tc.name)
+			compareArgs(t, tc.expectedArgs, actualArgs)
+		})
+	}
+	// with join
+	where, join, args := tokenQuerySql(driver.QueryTokenDetailsParams{
+		IDs:               []*token.ID{{TxId: "a", Index: 1}},
+		OwnerEnrollmentID: "me",
+	}, "A", "B")
+	assert.Equal(t, "WHERE owner = true AND enrollment_id = $1 AND (A.tx_id, A.idx) IN ( ($2, $3) ) AND is_deleted = false", where, "join")
+	assert.Equal(t, "LEFT JOIN B ON A.tx_id = B.tx_id AND A.idx = B.idx", join, "join")
+	assert.Len(t, args, 3)
 }
 
-func compareArgs(t *testing.T, expected, actual []interface{}) {
+func TestIn(t *testing.T) {
+	// 0
+	args := make([]any, 0)
+	w := in(&args, "enrollment_id", []string{})
+	assert.Equal(t, "", w)
+	assert.Equal(t, []any{}, args)
+
+	// 1
+	args = make([]any, 0)
+	w = in(&args, "enrollment_id", []string{"eid1"})
+	assert.Equal(t, "enrollment_id = $1", w)
+	assert.Equal(t, []any{"eid1"}, args)
+
+	// 3
+	args = make([]any, 0)
+	w = in(&args, "enrollment_id", []string{"eid1", "eid2", "eid3"})
+	assert.Equal(t, "(enrollment_id = $1 OR enrollment_id = $2 OR enrollment_id = $3)", w)
+	assert.Equal(t, []any{"eid1", "eid2", "eid3"}, args)
+}
+
+func compareArgs(t *testing.T, expected, actual []any) {
 	assert.Len(t, actual, len(expected))
 	// assert.Equal(t, tc.expectedArgs, actualArgs)
 
@@ -242,37 +352,15 @@ func compareArgs(t *testing.T, expected, actual []interface{}) {
 			act, _ := actual[i].(time.Time)
 			assert.True(t, exp.Equal(act), fmt.Sprintf("timestamps not equal: %v != %v", exp, act))
 		default:
-			assert.Equal(t, expected[i], actual[i])
+			assert.EqualValues(t, expected[i], actual[i])
 		}
 	}
-}
-
-func TestCertificationsQuerySql(t *testing.T) {
-	ids := []*token2.ID{
-		{
-			TxId:  "pineapple",
-			Index: 1,
-		},
-		{
-			TxId:  "banana",
-			Index: 2,
-		},
-	}
-	conditions, idStrs, err := certificationsQuerySql(ids)
-	assert.NoError(t, err)
-	assert.Equal(t, conditions, "token_id=$1 || token_id=$2")
-	assert.Len(t, idStrs, len(ids))
-	for i := 0; i < len(ids); i++ {
-		assert.Equal(t, fmt.Sprintf("%s%d", ids[i].TxId, ids[i].Index), idStrs[i])
-	}
-
-	conditions, idStrs, err = certificationsQuerySql(nil)
-	assert.NoError(t, err)
-	assert.Equal(t, "", conditions)
-	assert.Nil(t, idStrs)
 }
 
 func TestJoin(t *testing.T) {
 	j := joinOnTxID("t1", "t2")
 	assert.Equal(t, "LEFT JOIN t2 ON t1.tx_id = t2.tx_id", j)
+
+	j = joinOnTokenID("t1", "t2")
+	assert.Equal(t, "LEFT JOIN t2 ON t1.tx_id = t2.tx_id AND t1.idx = t2.idx", j)
 }

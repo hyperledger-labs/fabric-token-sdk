@@ -182,7 +182,7 @@ func (d *DB) Append(req *token.Request) error {
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := w.AddTokenRequest(record.Anchor, raw); err != nil {
+	if err := w.AddTokenRequest(record.Anchor, raw, req.Metadata.Application); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}

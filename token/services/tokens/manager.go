@@ -88,7 +88,7 @@ func (cm *Manager) newTokens(tmsID token.TMSID) (*Tokens, error) {
 		return nil, errors.WithMessagef(err, "failed to get tokendb for [%s]", tmsID)
 	}
 
-	storage, err := NewDBStorage(cm.notifier, db, tmsID)
+	storage, err := NewDBStorage(cm.notifier, cm.authorization, db, tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get token store for [%s]", tmsID)
 	}

@@ -205,6 +205,11 @@ type QueryMovementsParams struct {
 // QueryTransactionsParams defines the parameters for querying transactions.
 // One can filter by sender, by recipient, and by time range.
 type QueryTransactionsParams struct {
+	// IDs is the list of transaction ids. If nil or empty, all transactions are returned
+	IDs []string
+	// ExcludeToSelf can be used to filter out 'change' transactions where the sender and
+	// recipient have the same enrollment id.
+	ExcludeToSelf bool
 	// SenderWallet is the wallet of the sender
 	// If empty, any sender is accepted
 	// If the sender does not match but the recipient matches, the transaction is returned

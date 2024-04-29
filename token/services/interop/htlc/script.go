@@ -137,6 +137,14 @@ func (s *ScriptOwnership) IsMine(tms *token.ManagementService, tok *token3.Token
 	return ids, len(ids) != 0
 }
 
+func (w *ScriptOwnership) OwnerType(raw []byte) (string, []byte, error) {
+	owner, err := identity.UnmarshalTypedIdentity(raw)
+	if err != nil {
+		return "", nil, err
+	}
+	return owner.Type, owner.Identity, nil
+}
+
 func senderWallet(w *token.OwnerWallet) string {
 	return "htlc.sender" + w.ID()
 }

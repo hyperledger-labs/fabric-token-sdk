@@ -30,10 +30,11 @@ type DBStorage struct {
 	notifier events.Publisher
 	tokenDB  *tokendb.DB
 	tmsID    token.TMSID
+	ote      OwnerTypeExtractor
 }
 
-func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
-	return &DBStorage{notifier: notifier, tokenDB: tokenDB, tmsID: tmsID}, nil
+func NewDBStorage(notifier events.Publisher, ote OwnerTypeExtractor, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
+	return &DBStorage{notifier: notifier, ote: ote, tokenDB: tokenDB, tmsID: tmsID}, nil
 }
 
 func (d *DBStorage) NewTransaction() (*transaction, error) {
@@ -41,7 +42,12 @@ func (d *DBStorage) NewTransaction() (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewTransaction(d.notifier, tx, d.tmsID)
+	return &transaction{
+		notifier: d.notifier,
+		tx:       tx,
+		tmsID:    d.tmsID,
+		ote:      d.ote,
+	}, nil
 }
 
 func (d *DBStorage) StorePublicParams(raw []byte) error {
@@ -52,6 +58,11 @@ type transaction struct {
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
+	ote      OwnerTypeExtractor
+}
+
+type OwnerTypeExtractor interface {
+	OwnerType(raw []byte) (string, []byte, error)
 }
 
 func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
@@ -63,7 +74,7 @@ func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID to
 }
 
 func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) error {
-	tok, err := t.tx.GetToken(txID, index, true)
+	tok, owners, err := t.tx.GetToken(txID, index, true)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get token [%s:%d]", txID, index)
 	}
@@ -78,10 +89,6 @@ func (t *transaction) DeleteToken(txID string, index uint64, deletedBy string) e
 	if tok == nil {
 		logger.Debugf("nothing further to delete for [%s:%d]", txID, index)
 		return nil
-	}
-	owners, err := t.tx.OwnersOf(txID, index)
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get owners for token [%s:%d]", txID, index)
 	}
 	for _, owner := range owners {
 		logger.Debugf("post new delete-token event [%s:%s:%s]", txID, index, owner)
@@ -114,12 +121,21 @@ func (t *transaction) AppendToken(
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
 	}
+
+	typ, id, err := t.ote.OwnerType(tok.Owner.Raw)
+	if err != nil {
+		logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
+		return errors.Wrap(err, "could not unmarshal identity when storing token")
+	}
+
 	err = t.tx.StoreToken(
 		tokendb.TokenRecord{
 			TxID:           txID,
 			Index:          index,
 			IssuerRaw:      issuer,
 			OwnerRaw:       tok.Owner.Raw,
+			OwnerType:      typ,
+			OwnerIdentity:  id,
 			Ledger:         tokenOnLedger,
 			LedgerMetadata: tokenOnLedgerMetadata,
 			Quantity:       tok.Quantity,

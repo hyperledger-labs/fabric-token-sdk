@@ -230,7 +230,7 @@ func (d *DB) AppendTransactionRecord(req *token.Request) error {
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", record.Anchor)
 	}
-	if err := w.AddTokenRequest(record.Anchor, raw); err != nil {
+	if err := w.AddTokenRequest(record.Anchor, raw, req.Metadata.Application); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", record.Anchor)
 	}
@@ -299,7 +299,8 @@ func (d *DB) AppendValidationRecord(txID string, tokenRequest []byte, meta map[s
 	if err != nil {
 		return errors.WithMessagef(err, "begin update for txid [%s] failed", txID)
 	}
-	if err := w.AddTokenRequest(txID, tokenRequest); err != nil {
+	// we store the token request, but don't have or care about the application metadata
+	if err := w.AddTokenRequest(txID, tokenRequest, nil); err != nil {
 		w.Rollback()
 		return errors.WithMessagef(err, "append token request for txid [%s] failed", txID)
 	}

@@ -29,7 +29,7 @@ func initTokenDB(driverName, dataSourceName, tablePrefix string, maxOpenConns in
 func TestTokensSqlite(t *testing.T) {
 	tempDir := t.TempDir()
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
+		db, err := initTokenDB("sqlite", fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)", path.Join(tempDir, "db.sqlite")), c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -42,7 +42,7 @@ func TestTokensSqlite(t *testing.T) {
 
 func TestTokensSqliteMemory(t *testing.T) {
 	for _, c := range TokensCases {
-		db, err := initTokenDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&mode=memory&cache=shared", c.Name, 10)
+		db, err := initTokenDB("sqlite", "file:tmp?_pragma=busy_timeout(5000)&_pragma=foreign_keys(1)&mode=memory&cache=shared", c.Name, 10)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -94,6 +94,8 @@ func TTransaction(t *testing.T, db *TokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
@@ -110,14 +112,18 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, err := tx.GetToken("tx1", 0, false)
-	assert.NoError(t, err)
+	tok, owners, err := tx.GetToken("tx1", 0, false)
+	assert.NoError(t, err, "get token")
 	assert.Equal(t, "0x02", tok.Quantity)
+	assert.Equal(t, []string{"alice"}, owners)
+
 	assert.NoError(t, tx.Delete("tx1", 0, "me"))
-	tok, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken("tx1", 0, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
-	tok, err = tx.GetToken("tx1", 0, true) // include deleted
+	assert.Len(t, owners, 0)
+
+	tok, _, err = tx.GetToken("tx1", 0, true) // include deleted
 	assert.NoError(t, err)
 	assert.Equal(t, "0x02", tok.Quantity)
 	assert.NoError(t, tx.Rollback())
@@ -126,10 +132,11 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken("tx1", 0, false)
 	assert.NoError(t, err)
 	assert.NotNil(t, tok)
 	assert.Equal(t, "0x02", tok.Quantity)
+	assert.Equal(t, []string{"alice"}, owners)
 	assert.NoError(t, tx.Delete("tx1", 0, "me"))
 	assert.NoError(t, tx.Commit())
 
@@ -137,41 +144,45 @@ func TTransaction(t *testing.T, db *TokenDB) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tok, err = tx.GetToken("tx1", 0, false)
+	tok, owners, err = tx.GetToken("tx1", 0, false)
 	assert.NoError(t, err)
 	assert.Nil(t, tok)
+	assert.Equal(t, []string{}, owners)
 	assert.NoError(t, tx.Commit())
 }
 
 func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 	for i := 0; i < 20; i++ {
-		owners := []string{"alice"}
 		tr := driver.TokenRecord{
 			TxID:           fmt.Sprintf("tx%d", i),
 			Index:          0,
 			IssuerRaw:      []byte{},
 			OwnerRaw:       []byte{1, 2, 3},
+			OwnerType:      "idemix",
+			OwnerIdentity:  []byte{},
 			Ledger:         []byte("ledger"),
 			LedgerMetadata: []byte{},
 			Quantity:       "0x02",
 			Type:           "TST",
-			Amount:         0,
+			Amount:         2,
 			Owner:          true,
 			Auditor:        false,
 			Issuer:         false,
 		}
-		assert.NoError(t, db.StoreToken(tr, owners))
+		assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	}
 	tr := driver.TokenRecord{
 		TxID:           fmt.Sprintf("tx%d", 100),
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST",
-		Amount:         0,
+		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
 		Issuer:         false,
@@ -183,11 +194,13 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "TST",
-		Amount:         0,
+		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
 		Issuer:         false,
@@ -199,11 +212,13 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
 		Type:           "ABC",
-		Amount:         0,
+		Amount:         2,
 		Owner:          true,
 		Auditor:        false,
 		Issuer:         false,
@@ -212,10 +227,9 @@ func TSaveAndGetToken(t *testing.T, db *TokenDB) {
 
 	tok, err := db.ListUnspentTokens()
 	assert.NoError(t, err)
-	assert.Len(t, tok.Tokens, 23, "unspentTokensIterator: expected all tokens to be returned")
-	assert.Equal(t, 23, tok.Count())
-	assert.Equal(t, "46", tok.Sum(64).Decimal(), "expect sum to be 2*23")
-	assert.Len(t, tok.ByType("TST").Tokens, 22, "expect filter on type to work")
+	assert.Len(t, tok.Tokens, 24, "unspentTokensIterator: expected all tokens to be returned (2 for the one owned by alice and bob)")
+	assert.Equal(t, "48", tok.Sum(64).Decimal(), "expect sum to be 2*22")
+	assert.Len(t, tok.ByType("TST").Tokens, 23, "expect filter on type to work")
 	for _, token := range tok.Tokens {
 		assert.NotNil(t, token.Owner, "expected owner to not be nil")
 		assert.NotEmpty(t, token.Owner.Raw, "expected owner raw to not be empty")
@@ -265,6 +279,8 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
@@ -280,6 +296,8 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
@@ -295,6 +313,8 @@ func TDeleteAndMine(t *testing.T, db *TokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
@@ -337,6 +357,8 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		TxID:           "tx101",
 		Index:          0,
 		OwnerRaw:       []byte{1, 2},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
@@ -351,6 +373,8 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		TxID:           "tx101",
 		Index:          1,
 		OwnerRaw:       []byte{3, 4},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x02",
@@ -365,6 +389,8 @@ func TListAuditTokens(t *testing.T, db *TokenDB) {
 		TxID:           "tx102",
 		Index:          0,
 		OwnerRaw:       []byte{5, 6},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x03",
@@ -400,6 +426,8 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		TxID:           "tx101",
 		Index:          0,
 		OwnerRaw:       []byte{1, 2},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		IssuerRaw:      []byte{11, 12},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -415,6 +443,8 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		TxID:           "tx101",
 		Index:          1,
 		OwnerRaw:       []byte{3, 4},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		IssuerRaw:      []byte{13, 14},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -430,6 +460,8 @@ func TListIssuedTokens(t *testing.T, db *TokenDB) {
 		TxID:           "tx102",
 		Index:          0,
 		OwnerRaw:       []byte{5, 6},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		IssuerRaw:      []byte{15, 16},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
@@ -477,6 +509,8 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("tx101l"),
 		LedgerMetadata: []byte("tx101"),
 		Quantity:       "0x01",
@@ -492,6 +526,8 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Index:          0,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("tx102l"),
 		LedgerMetadata: []byte("tx102"),
 		Quantity:       "0x01",
@@ -507,6 +543,8 @@ func TGetTokenInfos(t *testing.T, db *TokenDB) {
 		Index:          1,
 		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("tx102l"),
 		LedgerMetadata: []byte("tx102"),
 		Quantity:       "0x01",
@@ -572,46 +610,40 @@ func TDeleteMultiple(t *testing.T, db *TokenDB) {
 	tr := driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          0,
-		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
-		Amount:         0,
 		Owner:          true,
-		Auditor:        false,
-		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx101",
 		Index:          1,
-		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
-		Amount:         0,
 		Owner:          true,
-		Auditor:        false,
-		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"bob"}))
 	tr = driver.TokenRecord{
 		TxID:           "tx102",
 		Index:          0,
-		IssuerRaw:      []byte{},
 		OwnerRaw:       []byte{1, 2, 3},
+		OwnerType:      "idemix",
+		OwnerIdentity:  []byte{},
 		Ledger:         []byte("ledger"),
 		LedgerMetadata: []byte{},
 		Quantity:       "0x01",
 		Type:           "ABC",
-		Amount:         0,
 		Owner:          true,
-		Auditor:        false,
-		Issuer:         false,
 	}
 	assert.NoError(t, db.StoreToken(tr, []string{"alice"}))
 	assert.NoError(t, db.DeleteTokens("", &token.ID{TxId: "tx101", Index: 0}, &token.ID{TxId: "tx102", Index: 0}))
@@ -661,6 +693,22 @@ func TCertification(t *testing.T, db *TokenDB) {
 				TxId:  fmt.Sprintf("tx_%d", i),
 				Index: 0,
 			}
+			err := db.StoreToken(driver.TokenRecord{
+				TxID:           tokenID.TxId,
+				Index:          tokenID.Index,
+				OwnerRaw:       []byte{1, 2, 3},
+				OwnerType:      "idemix",
+				OwnerIdentity:  []byte{},
+				Quantity:       "0x01",
+				Ledger:         []byte("ledger"),
+				LedgerMetadata: []byte{},
+				Type:           "ABC",
+				Owner:          true,
+			}, []string{"alice"})
+			if err != nil {
+				t.Error(err)
+			}
+
 			assert.NoError(t, db.StoreCertifications(map[*token.ID][]byte{
 				tokenID: []byte(fmt.Sprintf("certification_%d", i)),
 			}))
@@ -700,9 +748,10 @@ func TCertification(t *testing.T, db *TokenDB) {
 	assert.Empty(t, certifications)
 
 	// store an empty certification and check that an error is returned
-	assert.NoError(t, db.StoreCertifications(map[*token.ID][]byte{
+	err = db.StoreCertifications(map[*token.ID][]byte{
 		tokenID: {},
-	}))
+	})
+	assert.Error(t, err)
 	certifications, err = db.GetCertifications([]*token.ID{tokenID})
 	assert.Error(t, err)
 	assert.Empty(t, certifications)
