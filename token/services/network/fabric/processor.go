@@ -20,23 +20,20 @@ var logger = flogging.MustGetLogger("token-sdk.vault.processor")
 
 type GetTokensFunc = func() (*tokens.Tokens, error)
 type GetTMSProviderFunc = func() *token.ManagementServiceProvider
-type GetTokenRequestFunc = func(tms *token.ManagementService, txID string) ([]byte, error)
 
 type RWSetProcessor struct {
-	network         string
-	nss             []string
-	GetTokens       GetTokensFunc
-	GetTMSProvider  GetTMSProviderFunc
-	GetTokenRequest GetTokenRequestFunc
+	network        string
+	nss            []string
+	GetTokens      GetTokensFunc
+	GetTMSProvider GetTMSProviderFunc
 }
 
-func NewTokenRWSetProcessor(network string, ns string, GetTokens GetTokensFunc, GetTMSProvider GetTMSProviderFunc, GetTokenRequest GetTokenRequestFunc) *RWSetProcessor {
+func NewTokenRWSetProcessor(network string, ns string, GetTokens GetTokensFunc, GetTMSProvider GetTMSProviderFunc) *RWSetProcessor {
 	return &RWSetProcessor{
-		network:         network,
-		nss:             []string{ns},
-		GetTokens:       GetTokens,
-		GetTMSProvider:  GetTMSProvider,
-		GetTokenRequest: GetTokenRequest,
+		network:        network,
+		nss:            []string{ns},
+		GetTokens:      GetTokens,
+		GetTMSProvider: GetTMSProvider,
 	}
 }
 
@@ -65,7 +62,7 @@ func (r *RWSetProcessor) Process(req fabric.Request, tx fabric.ProcessTransactio
 	case "init":
 		return r.init(tx, rws, ns)
 	default:
-		return r.tokenRequest(tx, ns)
+		return nil
 	}
 }
 
@@ -103,83 +100,4 @@ func (r *RWSetProcessor) init(tx fabric.ProcessTransaction, rws *fabric.RWSet, n
 		}
 	}
 	return nil
-}
-
-func (r *RWSetProcessor) tokenRequest(tx fabric.ProcessTransaction, ns string) error {
-	txID := tx.ID()
-
-	tms, err := r.GetTMSProvider().GetManagementService(
-		token.WithNetwork(tx.Network()),
-		token.WithChannel(tx.Channel()),
-		token.WithNamespace(ns),
-	)
-	if err != nil {
-		return errors.WithMessagef(err, "failed getting token management service [%s:%s:%s]", tx.Network(), tx.Channel(), ns)
-	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("transaction [%s on (%s)] is known, extract tokens", txID, tms.ID())
-	}
-	trRaw, err := r.GetTokenRequest(tms, txID)
-	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], failed getting token request [%s]", txID, err)
-		}
-		return errors.WithMessagef(err, "failed to get token request for [%s]", txID)
-	}
-	if len(trRaw) == 0 {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], no token request found, skip it", txID)
-		}
-		return nil
-	}
-	request, err := tms.NewFullRequestFromBytes(trRaw)
-	if err != nil {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction [%s], failed getting zkat state from transient map [%s]", txID, err)
-		}
-		return err
-	}
-	if request.Metadata == nil {
-		logger.Debugf("transaction [%s], no metadata found, skip it", txID)
-		return nil
-	}
-	tokens, err := r.GetTokens()
-	if err != nil {
-		return err
-	}
-	return tokens.AppendTransaction(&Transaction{
-		id:        txID,
-		network:   tms.Network(),
-		channel:   tms.Channel(),
-		namespace: tms.Namespace(),
-		request:   request,
-	})
-}
-
-type Transaction struct {
-	id        string
-	network   string
-	channel   string
-	namespace string
-	request   *token.Request
-}
-
-func (t *Transaction) ID() string {
-	return t.id
-}
-
-func (t *Transaction) Network() string {
-	return t.network
-}
-
-func (t *Transaction) Channel() string {
-	return t.channel
-}
-
-func (t *Transaction) Namespace() string {
-	return t.namespace
-}
-
-func (t *Transaction) Request() *token.Request {
-	return t.request
 }

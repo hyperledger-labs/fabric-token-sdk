@@ -89,17 +89,6 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	GetTMSProvider := func() *token3.ManagementServiceProvider {
 		return p.tmsProvider
 	}
-	GetTokenRequest := func(tms *token3.ManagementService, txID string) ([]byte, error) {
-		if ownerDB, err := p.ownerManager.DB(tms.ID()); err == nil {
-			if tr, err := ownerDB.GetTokenRequest(txID); len(tr) != 0 && err == nil {
-				return tr, nil
-			}
-		}
-		if auditorDB, err := p.auditorManager.Auditor(tms.ID()); err == nil {
-			return auditorDB.GetTokenRequest(txID)
-		}
-		return nil, errors.New("failed to get auditor manager")
-	}
 	n, err := p.fabricNetworkService(networkID)
 	if err != nil {
 		// ORION
@@ -149,15 +138,9 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	}
 	if err := n.ProcessorManager().AddProcessor(
 		namespace,
-		fabric2.NewTokenRWSetProcessor(
-			n.Name(),
-			namespace,
-			common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-				return p.tokensProvider.Tokens(tmsID)
-			}).Get,
-			GetTMSProvider,
-			GetTokenRequest,
-		),
+		fabric2.NewTokenRWSetProcessor(n.Name(), namespace, common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
+			return p.tokensProvider.Tokens(tmsID)
+		}).Get, GetTMSProvider),
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
