@@ -118,8 +118,8 @@ func (t *SwapInitiatorView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
-	// Check that the tokens are or are not in the vault
-	AssertTokensInVault(vault, tx, outputs, me)
+	// Check that the tokens are or are not in the db
+	AssertTokens(context, tx, outputs, me)
 
 	return tx.ID(), nil
 }
@@ -187,10 +187,10 @@ func (t *SwapResponderView) Call(context view.Context) (interface{}, error) {
 	assert.NoError(err, "failed to retrieve vault status for transaction [%s]", tx.ID())
 	assert.Equal(network.Valid, vc, "transaction [%s] should be in valid state", tx.ID())
 
-	// Check that the tokens are or are not in the vault
+	// Check that the tokens are or are not in the db
 	outputs, err := tx.Outputs()
 	assert.NoError(err, "failed to retrieve outputs")
-	AssertTokensInVault(vault, tx, outputs, me)
+	AssertTokens(context, tx, outputs, me)
 
 	return tx.ID(), nil
 }
