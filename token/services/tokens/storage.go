@@ -10,7 +10,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -31,10 +30,11 @@ type DBStorage struct {
 	notifier events.Publisher
 	tokenDB  *tokendb.DB
 	tmsID    token.TMSID
+	ote      OwnerTypeExtractor
 }
 
-func NewDBStorage(notifier events.Publisher, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
-	return &DBStorage{notifier: notifier, tokenDB: tokenDB, tmsID: tmsID}, nil
+func NewDBStorage(notifier events.Publisher, ote OwnerTypeExtractor, tokenDB *tokendb.DB, tmsID token.TMSID) (*DBStorage, error) {
+	return &DBStorage{notifier: notifier, ote: ote, tokenDB: tokenDB, tmsID: tmsID}, nil
 }
 
 func (d *DBStorage) NewTransaction() (*transaction, error) {
@@ -42,7 +42,12 @@ func (d *DBStorage) NewTransaction() (*transaction, error) {
 	if err != nil {
 		return nil, err
 	}
-	return NewTransaction(d.notifier, tx, d.tmsID)
+	return &transaction{
+		notifier: d.notifier,
+		tx:       tx,
+		tmsID:    d.tmsID,
+		ote:      d.ote,
+	}, nil
 }
 
 func (d *DBStorage) StorePublicParams(raw []byte) error {
@@ -53,6 +58,11 @@ type transaction struct {
 	notifier events.Publisher
 	tx       *tokendb.Transaction
 	tmsID    token.TMSID
+	ote      OwnerTypeExtractor
+}
+
+type OwnerTypeExtractor interface {
+	OwnerType(raw []byte) (string, []byte, error)
 }
 
 func NewTransaction(notifier events.Publisher, tx *tokendb.Transaction, tmsID token.TMSID) (*transaction, error) {
@@ -111,7 +121,8 @@ func (t *transaction) AppendToken(
 	if err != nil {
 		return errors.Wrapf(err, "cannot covert [%s] with precision [%d]", tok.Quantity, precision)
 	}
-	id, err := identity.UnmarshalTypedIdentity(tok.Owner.Raw)
+
+	typ, id, err := t.ote.OwnerType(tok.Owner.Raw)
 	if err != nil {
 		logger.Errorf("could not unmarshal identity when storing token: %s", err.Error())
 		return errors.Wrap(err, "could not unmarshal identity when storing token")
@@ -123,8 +134,8 @@ func (t *transaction) AppendToken(
 			Index:          index,
 			IssuerRaw:      issuer,
 			OwnerRaw:       tok.Owner.Raw,
-			OwnerType:      id.Type,
-			OwnerIdentity:  id.Identity,
+			OwnerType:      typ,
+			OwnerIdentity:  id,
 			Ledger:         tokenOnLedger,
 			LedgerMetadata: tokenOnLedgerMetadata,
 			Quantity:       tok.Quantity,

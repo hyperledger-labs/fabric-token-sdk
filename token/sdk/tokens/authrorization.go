@@ -8,6 +8,7 @@ package tokens
 
 import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -74,4 +75,13 @@ func (o *AuthorizationMultiplexer) AmIAnAuditor(tms *token.ManagementService) bo
 		}
 	}
 	return false
+}
+
+// GetOwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
+func (o *AuthorizationMultiplexer) OwnerType(raw []byte) (string, []byte, error) {
+	owner, err := identity.UnmarshalTypedIdentity(raw)
+	if err != nil {
+		return "", nil, err
+	}
+	return owner.Type, owner.Identity, nil
 }

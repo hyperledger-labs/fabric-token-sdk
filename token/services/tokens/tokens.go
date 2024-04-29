@@ -25,9 +25,11 @@ var logger = flogging.MustGetLogger("token-sdk.tokens")
 type Authorization interface {
 	// IsMine returns true if the passed token is owned by an owner wallet in the passed TMS
 	IsMine(tms *token.ManagementService, tok *token2.Token) ([]string, bool)
-	// AmIAnAuditor return true if the passed TMS contains an auditor wallet for any of the auditor identities
+	// AmIAnAuditor returns true if the passed TMS contains an auditor wallet for any of the auditor identities
 	// defined in the public parameters of the passed TMS.
 	AmIAnAuditor(tms *token.ManagementService) bool
+	// GetOwnerType returns the type of owner (e.g. 'idemix' or 'htlc') and the identity bytes
+	OwnerType(raw []byte) (string, []byte, error)
 }
 
 type Issued interface {
