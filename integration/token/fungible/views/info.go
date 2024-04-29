@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -221,7 +222,7 @@ type TxStatus struct {
 }
 
 type TxStatusResponse struct {
-	ValidationCode    network.ValidationCode
+	ValidationCode    ttx.TxStatus
 	ValidationMessage string
 }
 
@@ -230,10 +231,8 @@ type TxStatusView struct {
 }
 
 func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
-	net := network.GetInstance(context, p.TMSID.Network, p.TMSID.Channel)
-	vault, err := net.Vault(p.TMSID.Namespace)
-	assert.NoError(err, "failed to retrieve vault [%s]", p.TMSID.Namespace)
-	vc, message, err := vault.Status(p.TxID)
+	owner := ttx.NewOwner(context, token.GetManagementService(context, token.WithTMSID(p.TMSID)))
+	vc, message, err := owner.GetStatus(p.TxID)
 	assert.NoError(err, "failed to retrieve status of [%s]", p.TxID)
 	return &TxStatusResponse{
 		ValidationCode:    vc,

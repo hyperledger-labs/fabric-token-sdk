@@ -13,8 +13,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
-
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
@@ -981,9 +979,9 @@ func TestMaliciousTransactions(net *integration.Infrastructure) {
 
 	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
 	txStatusAlice := GetTXStatus(net, "alice", txID)
-	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
 	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 	txStatusBob := GetTXStatus(net, "bob", txID)
-	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(network.Invalid))
+	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
 	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }

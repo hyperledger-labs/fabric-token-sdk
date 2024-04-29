@@ -15,6 +15,9 @@ import (
 )
 
 func CheckFinality(network *integration.Infrastructure, id string, txID string, tmsID *token.TMSID, fail bool) {
+	if len(id) == 0 {
+		return
+	}
 	_, err := network.Client(id).CallView("TxFinality", common.JSONMarshall(&views.TxFinality{
 		TxID:  txID,
 		TMSID: tmsID,
