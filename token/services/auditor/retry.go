@@ -40,7 +40,7 @@ func (f *retryRunner) nextDelay() time.Duration {
 }
 
 func (f *retryRunner) Run(runner func() error) error {
-	errs := make([]error, 0, f.maxTimes)
+	errs := make([]error, 0)
 	for i := 0; f.maxTimes < 0 || i < f.maxTimes; i++ {
 		if err := runner(); err != nil {
 			errs = append(errs, err)
