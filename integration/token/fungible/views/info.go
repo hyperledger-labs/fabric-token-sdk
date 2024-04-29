@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -210,6 +211,39 @@ type DoesWalletExistViewFactory struct{}
 
 func (p *DoesWalletExistViewFactory) NewView(in []byte) (view.View, error) {
 	f := &DoesWalletExistView{DoesWalletExist: &DoesWalletExist{}}
+	err := json.Unmarshal(in, f)
+	assert.NoError(err, "failed unmarshalling input")
+	return f, nil
+}
+
+type TxStatus struct {
+	TMSID token.TMSID
+	TxID  string
+}
+
+type TxStatusResponse struct {
+	ValidationCode    ttx.TxStatus
+	ValidationMessage string
+}
+
+type TxStatusView struct {
+	*TxStatus
+}
+
+func (p *TxStatusView) Call(context view.Context) (interface{}, error) {
+	owner := ttx.NewOwner(context, token.GetManagementService(context, token.WithTMSID(p.TMSID)))
+	vc, message, err := owner.GetStatus(p.TxID)
+	assert.NoError(err, "failed to retrieve status of [%s]", p.TxID)
+	return &TxStatusResponse{
+		ValidationCode:    vc,
+		ValidationMessage: message,
+	}, nil
+}
+
+type TxStatusViewFactory struct{}
+
+func (p *TxStatusViewFactory) NewView(in []byte) (view.View, error) {
+	f := &TxStatusView{TxStatus: &TxStatus{}}
 	err := json.Unmarshal(in, f)
 	assert.NoError(err, "failed unmarshalling input")
 	return f, nil

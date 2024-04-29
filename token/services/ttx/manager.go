@@ -13,7 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -113,11 +113,12 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 		return errors.WithMessagef(err, "failed to get db for [%s:%s]", tmsID.Network, tmsID.Channel)
 	}
 
-	it, err := db.ttxDB.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []driver.TxStatus{auditdb.Pending}})
+	it, err := db.ttxDB.TokenRequests(auditdb.QueryTokenRequestsParams{})
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get tx iterator for [%s:%s:%s]", tmsID.Network, tmsID.Channel, tmsID)
 	}
 	defer it.Close()
+	counter := 0
 	for {
 		record, err := it.Next()
 		if err != nil {
@@ -126,13 +127,13 @@ func (m *Manager) RestoreTMS(tmsID token.TMSID) error {
 		if record == nil {
 			break
 		}
-		if err := net.AddFinalityListener(
-			record.TxID,
-			NewFinalityListener(net, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB),
-		); err != nil {
+		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
+		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, auditor.NewFinalityListener(net, db.tmsProvider, db.tmsID, db.ttxDB, db.tokenDB)); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s:%s] for [%s]", tmsID.Network, tmsID.Channel, record.TxID)
 		}
+		counter++
 	}
+	logger.Debugf("checked [%d] token requests", counter)
 	return nil
 }
 

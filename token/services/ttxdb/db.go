@@ -74,11 +74,11 @@ type ActionType = driver.ActionType
 
 const (
 	// Issue is the action type for issuing tokens.
-	Issue ActionType = iota
+	Issue = driver.Issue
 	// Transfer is the action type for transferring tokens.
-	Transfer
+	Transfer = driver.Transfer
 	// Redeem is the action type for redeeming tokens.
-	Redeem
+	Redeem = driver.Redeem
 )
 
 // TransactionRecord is a more finer-grained version of a movement record.
@@ -502,7 +502,7 @@ func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 	}
 	c, err := s.(*Manager).DBByTMSId(tmsID)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get db for wallet [%s]", tmsID)
+		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
 	return c, nil
 }

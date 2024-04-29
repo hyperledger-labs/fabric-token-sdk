@@ -20,7 +20,7 @@ import (
 // FinalityListener is the interface that must be implemented to receive transaction status change notifications
 type FinalityListener interface {
 	// OnStatus is called when the status of a transaction changes
-	OnStatus(txID string, status int, message string)
+	OnStatus(txID string, status int, message string, tokenRequestHash []byte)
 }
 
 type TransientMap = map[string][]byte
@@ -82,7 +82,7 @@ type Network interface {
 	// When the listener is invoked, then it is also removed.
 	// If the transaction id is empty, the listener will be called on status changes of any transaction.
 	// In this case, the listener is not removed
-	AddFinalityListener(txID string, listener FinalityListener) error
+	AddFinalityListener(namespace string, txID string, listener FinalityListener) error
 
 	// RemoveFinalityListener unregisters the passed listener.
 	RemoveFinalityListener(id string, listener FinalityListener) error

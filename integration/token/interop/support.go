@@ -15,7 +15,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
-	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
@@ -42,9 +42,9 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 		Recipient:    network.Identity(receiver),
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-
+	txID := common.JSONUnmarshalString(txid)
+	common2.CheckFinality(network, receiver, txID, nil, false)
+	common2.CheckFinality(network, "auditor", txID, nil, false)
 	return common.JSONUnmarshalString(txid)
 }
 
@@ -57,18 +57,10 @@ func IssueCashWithTMS(network *integration.Infrastructure, tmsID token.TMSID, is
 		Recipient:    network.Identity(receiver),
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(receiver).IsTxFinal(
-		common.JSONUnmarshalString(txid),
-		api.WithNetwork(tmsID.Network),
-		api.WithChannel(tmsID.Channel),
-	)).NotTo(HaveOccurred())
-	Expect(network.Client("auditor").IsTxFinal(
-		common.JSONUnmarshalString(txid),
-		api.WithNetwork(tmsID.Network),
-		api.WithChannel(tmsID.Channel),
-	)).NotTo(HaveOccurred())
-
-	return common.JSONUnmarshalString(txid)
+	txID := common.JSONUnmarshalString(txid)
+	common2.CheckFinality(network, receiver, txID, &tmsID, false)
+	common2.CheckFinality(network, "auditor", txID, &tmsID, false)
+	return txID
 }
 
 func ListIssuerHistory(network *integration.Infrastructure, wallet string, typ string) *token2.IssuedTokens {
@@ -272,16 +264,8 @@ func HTLCLock(network *integration.Infrastructure, tmsID token.TMSID, id string,
 		lockResult := &htlc.LockInfo{}
 		common.JSONUnmarshal(result.([]byte), lockResult)
 
-		Expect(network.Client(receiver).IsTxFinal(
-			lockResult.TxID,
-			api.WithNetwork(tmsID.Network),
-			api.WithChannel(tmsID.Channel),
-		)).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(
-			lockResult.TxID,
-			api.WithNetwork(tmsID.Network),
-			api.WithChannel(tmsID.Channel),
-		)).NotTo(HaveOccurred())
+		common2.CheckFinality(network, receiver, lockResult.TxID, &tmsID, false)
+		common2.CheckFinality(network, "auditor", lockResult.TxID, &tmsID, false)
 
 		if len(hash) == 0 {
 			Expect(lockResult.PreImage).NotTo(BeNil())
@@ -316,7 +300,7 @@ func HTLCReclaimAll(network *integration.Infrastructure, id string, wallet strin
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(id).IsTxFinal(common.JSONUnmarshalString(txID))).NotTo(HaveOccurred())
+		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), nil, false)
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
@@ -333,7 +317,7 @@ func HTLCReclaimByHash(network *integration.Infrastructure, id string, wallet st
 	}))
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(id).IsTxFinal(common.JSONUnmarshalString(txID))).NotTo(HaveOccurred())
+		common2.CheckFinality(network, id, common.JSONUnmarshalString(txID), nil, false)
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range errorMsgs {
@@ -368,16 +352,8 @@ func htlcClaim(network *integration.Infrastructure, tmsID token.TMSID, id string
 	if len(errorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
 		txID := common.JSONUnmarshalString(txIDBoxed)
-		Expect(network.Client(id).IsTxFinal(
-			txID,
-			api.WithNetwork(tmsID.Network),
-			api.WithChannel(tmsID.Channel),
-		)).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(
-			txID,
-			api.WithNetwork(tmsID.Network),
-			api.WithChannel(tmsID.Channel),
-		)).NotTo(HaveOccurred())
+		common2.CheckFinality(network, id, txID, &tmsID, false)
+		common2.CheckFinality(network, "auditor", txID, &tmsID, false)
 		return txID
 	} else {
 		Expect(err).To(HaveOccurred())

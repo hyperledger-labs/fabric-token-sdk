@@ -19,6 +19,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -500,15 +501,15 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
 	//CheckOwnerDB(network, nil, "bob")
 	BroadcastPreparedTransferCash(network, "alice", txID1, tx1, true)
-	Expect(network.Client("bob").IsTxFinal(txID1)).NotTo(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(txID1)).NotTo(HaveOccurred())
+	common2.CheckFinality(network, "bob", txID1, nil, false)
+	common2.CheckFinality(network, auditor, txID1, nil, false)
 	CheckBalance(network, "alice", "", "PINE", 0)
 	CheckHolding(network, "alice", "", "PINE", -55, auditor)
 	CheckBalance(network, "bob", "", "PINE", 55)
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	BroadcastPreparedTransferCash(network, "alice", txID2, tx2, true, "is not valid")
-	Expect(network.Client("bob").IsTxFinal(txID2)).To(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(txID2)).To(HaveOccurred())
+	common2.CheckFinality(network, "bob", txID2, nil, true)
+	common2.CheckFinality(network, auditor, txID2, nil, true)
 	CheckBalanceAndHolding(network, "alice", "", "PINE", 0, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "PINE", 55, auditor)
 	CheckOwnerDB(network, nil, "issuer", "alice", "bob", "charlie", "manager")
@@ -699,7 +700,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 				return
 			}
 			// The transaction didn't fail, let's wait for it to be confirmed, and return no error
-			Expect(network.Client("charlie").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+			common2.CheckFinality(network, "charlie", common.JSONUnmarshalString(txid), nil, false)
 			transferError <- nil
 		}()
 	}
@@ -964,4 +965,22 @@ func TestRemoteOwnerWalletWithWMP(network *integration.Infrastructure, wmp *Wall
 	CheckBalanceAndHolding(network, "bob", "", "USD", 4, auditor)
 	CheckBalanceAndHolding(network, "bob", "bob_remote", "USD", 1, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "USD", 4, auditor)
+}
+
+func TestMaliciousTransactions(net *integration.Infrastructure) {
+	CheckPublicParams(net, "issuer", "alice", "bob", "charlie", "manager")
+
+	Eventually(DoesWalletExist).WithArguments(net, "issuer", "", views.IssuerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "alice", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	Eventually(DoesWalletExist).WithArguments(net, "bob", "", views.OwnerWallet).WithTimeout(1 * time.Minute).WithPolling(15 * time.Second).Should(Equal(true))
+	IssueCash(net, "", "USD", 110, "alice", "", true, "issuer")
+	CheckBalance(net, "alice", "", "USD", 110)
+
+	txID := MaliciousTransferCash(net, "alice", "", "USD", 2, "bob", "", nil)
+	txStatusAlice := GetTXStatus(net, "alice", txID)
+	Expect(txStatusAlice.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
+	Expect(txStatusAlice.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
+	txStatusBob := GetTXStatus(net, "bob", txID)
+	Expect(txStatusBob.ValidationCode).To(BeEquivalentTo(ttx.Deleted))
+	Expect(txStatusBob.ValidationMessage).To(ContainSubstring("token requests do not match, tr hashes"))
 }

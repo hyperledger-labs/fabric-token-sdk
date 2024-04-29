@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"time"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
@@ -55,10 +57,13 @@ func (r *RequestSpentTokensView) Call(context view.Context) (interface{}, error)
 	if err := session.Send(request); err != nil {
 		return nil, errors.Wrapf(err, "failed to send request to custodian [%s]", custodian)
 	}
+	logger.Debugf("request sent: %s", custodian)
+
 	response := &SpentTokensResponse{}
-	if err := session.Receive(response); err != nil {
+	if err := session.ReceiveWithTimeout(response, 1*time.Minute); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
+	logger.Debugf("response received [%v]: %s", response, custodian)
 	return response.Flags, nil
 }
 
@@ -84,10 +89,12 @@ func (r *RequestSpentTokensResponderView) Call(context view.Context) (interface{
 }
 
 func (r *RequestSpentTokensResponderView) process(context view.Context, request *SpentTokensRequest) ([]bool, error) {
-	ons := orion.GetOrionNetworkService(context, request.Network)
-	if ons == nil {
-		return nil, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
+	logger.Debugf("get orion network service: %+v", request)
+	ons, err := orion.GetOrionNetworkService(context, request.Network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
 	}
+	logger.Debugf("get custodian ID: %+v", request)
 	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get custodian identifier")
@@ -102,11 +109,11 @@ func (r *RequestSpentTokensResponderView) process(context view.Context, request 
 		return nil, errors.Wrapf(err, "failed to get query executor for orion network [%s:%s]", request.Network, request.Namespace)
 	}
 
+	logger.Debugf("load flags... [%s]", custodianID)
 	tms := token.GetManagementService(context, token.WithTMS(request.Network, "", request.Namespace))
 	if tms == nil {
 		return nil, errors.Errorf("cannot find tms for [%s:%s]", request.Network, request.Namespace)
 	}
-
 	flags := make([]bool, len(request.IDs))
 	if tms.PublicParametersManager().PublicParameters().GraphHiding() {
 		for i, id := range request.IDs {
@@ -127,5 +134,6 @@ func (r *RequestSpentTokensResponderView) process(context view.Context, request 
 			flags[i] = len(v) == 0
 		}
 	}
+	logger.Debugf("flags loaded...[%s][%v]", custodianID, flags)
 	return flags, nil
 }

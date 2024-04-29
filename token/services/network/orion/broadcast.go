@@ -86,9 +86,9 @@ func (r *BroadcastResponderView) Call(context view.Context) (interface{}, error)
 	logger.Debugf("request: %+v", request)
 
 	// commit
-	ons := orion.GetOrionNetworkService(context, request.Network)
-	if ons == nil {
-		return nil, errors.Errorf("failed to get orion network service for network [%s]", request.Network)
+	ons, err := orion.GetOrionNetworkService(context, request.Network)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", request.Network)
 	}
 	custodianID, err := GetCustodian(view2.GetConfigService(context), request.Network)
 	if err != nil {

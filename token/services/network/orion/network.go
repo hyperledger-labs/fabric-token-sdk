@@ -8,14 +8,17 @@ package orion
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
@@ -38,15 +41,17 @@ type Network struct {
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
 	newVault       NewVaultFunc
+	subscribers    *events.Subscribers
 }
 
 func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
 	net := &Network{
-		sp:         sp,
-		ip:         ip,
-		n:          n,
-		vaultCache: map[string]driver.Vault{},
-		newVault:   newVault,
+		sp:          sp,
+		ip:          ip,
+		n:           n,
+		vaultCache:  map[string]driver.Vault{},
+		newVault:    newVault,
+		subscribers: events.NewSubscribers(),
 	}
 	net.ledger = &ledger{n: net}
 	return net
@@ -214,12 +219,25 @@ func (n *Network) LocalMembership() driver.LocalMembership {
 	}
 }
 
-func (n *Network) AddFinalityListener(txID string, listener driver.FinalityListener) error {
-	return n.n.Committer().AddFinalityListener(txID, listener)
+func (n *Network) AddFinalityListener(namespace string, txID string, listener driver.FinalityListener) error {
+	wrapper := &FinalityListener{
+		net:         n,
+		root:        listener,
+		network:     n.n.Name(),
+		sp:          n.n.SP,
+		namespace:   namespace,
+		retryRunner: db.NewRetryRunner(-1, time.Second, true),
+	}
+	n.subscribers.Set(txID, listener, wrapper)
+	return n.n.Committer().AddFinalityListener(txID, wrapper)
 }
 
 func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityListener) error {
-	return n.n.Committer().RemoveFinalityListener(txID, listener)
+	wrapper, ok := n.subscribers.Get(txID, listener)
+	if !ok {
+		return errors.Errorf("listener was not registered")
+	}
+	return n.n.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
 }
 
 func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
@@ -294,9 +312,41 @@ type ledger struct {
 }
 
 func (l *ledger) Status(id string) (driver.ValidationCode, error) {
-	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n, id))
+	boxed, err := view2.GetManager(l.n.sp).InitiateView(NewRequestTxStatusView(l.n.Name(), "", id))
 	if err != nil {
 		return driver.Unknown, err
 	}
-	return boxed.(driver.ValidationCode), nil
+	return boxed.(*TxStatusResponse).Status, nil
+}
+
+type FinalityListener struct {
+	net         *Network
+	root        driver.FinalityListener
+	sp          token2.ServiceProvider
+	network     string
+	namespace   string
+	retryRunner db.RetryRunner
+}
+
+func (t *FinalityListener) OnStatus(txID string, status int, message string) {
+	if err := t.retryRunner.Run(func() error { return t.runOnStatus(txID, status, message) }); err != nil {
+		logger.Errorf("failed running finality listener: %v", err)
+	}
+}
+
+func (t *FinalityListener) runOnStatus(txID string, status int, message string) (err error) {
+	defer func() { err = wrapRecover(recover()) }()
+	boxed, err := view2.GetManager(t.sp).InitiateView(NewRequestTxStatusView(t.network, t.namespace, txID))
+	if err != nil {
+		return fmt.Errorf("failed retrieving token request [%s]: [%s]", txID, err)
+	}
+	t.root.OnStatus(txID, status, message, boxed.(*TxStatusResponse).TokenRequestReference)
+	return
+}
+
+func wrapRecover(r any) error {
+	if r != nil {
+		return fmt.Errorf("panic caught: %v", r)
+	}
+	return nil
 }

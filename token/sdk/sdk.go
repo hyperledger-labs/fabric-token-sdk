@@ -142,8 +142,6 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(identityDBManager))
 	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
 	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
-	auditorManager := auditor.NewManager(networkProvider, auditDBManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)))
-	assert.NoError(p.registry.RegisterService(auditorManager))
 	publisher, err := events.GetPublisher(p.registry)
 	assert.NoError(err, "failed to get publisher")
 	tokensManager := tokens.NewManager(
@@ -157,6 +155,8 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(tokensManager))
 	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
+	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)), tmsp)
+	assert.NoError(p.registry.RegisterService(auditorManager))
 
 	// TMS callback
 	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)

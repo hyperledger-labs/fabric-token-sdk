@@ -46,16 +46,16 @@ func NewLockerProvider(sp view.ServiceProvider, sleepTimeout time.Duration, vali
 }
 
 func (s *LockerProvider) New(network string, channel string, namespace string) selector.Locker {
-	fns := fabric.GetFabricNetworkService(s.sp, network)
-	if fns != nil {
+	fns, err := fabric.GetFabricNetworkService(s.sp, network)
+	if err == nil {
 		ch, err := fns.Channel(channel)
 		if err == nil {
 			return inmemory.NewLocker(&FabricVault{Vault: ch.Vault()}, s.sleepTimeout, s.validTxEvictionTimeout)
 		}
 	}
-	ons := orion.GetOrionNetworkService(s.sp, network)
-	if ons == nil {
-		panic(fmt.Sprintf("network %s not found", network))
+	ons, err := orion.GetOrionNetworkService(s.sp, network)
+	if err != nil {
+		panic(fmt.Sprintf("network %s not found: [%s]", network, err))
 	}
 	return inmemory.NewLocker(&OrionVault{Vault: ons.Vault()}, s.sleepTimeout, s.validTxEvictionTimeout)
 }

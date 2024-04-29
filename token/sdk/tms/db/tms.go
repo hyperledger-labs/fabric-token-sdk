@@ -18,7 +18,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/fabric"
-	orion2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/network/orion"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -72,31 +71,19 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		return tr, nil
 	}
 
-	n := fabric.GetFabricNetworkService(p.sp, networkID)
-	if n == nil && orion.GetOrionNetworkService(p.sp, networkID) != nil {
+	n, err := fabric.GetFabricNetworkService(p.sp, networkID)
+	if err != nil {
 		// ORION
+		ons, err := orion.GetOrionNetworkService(p.sp, networkID)
+		if err != nil {
+			return err
+		}
 
 		// register processor
-		ons := orion.GetOrionNetworkService(p.sp, networkID)
 		tmsID := token3.TMSID{
 			Network:   ons.Name(),
 			Channel:   channel,
 			Namespace: namespace,
-		}
-		logger.Debugf("register orion committer processor for [%s]", tmsID)
-		if err := ons.ProcessorManager().AddProcessor(
-			namespace,
-			orion2.NewTokenRWSetProcessor(
-				ons.Name(),
-				namespace,
-				common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-					return tokens2.GetService(p.sp, tmsID)
-				}).Get,
-				GetTMSProvider,
-				GetTokenRequest,
-			),
-		); err != nil {
-			return errors.WithMessagef(err, "failed to add processor to orion network [%s]", tmsID)
 		}
 		transactionFilter, err := newTransactionFilter(p.sp, tmsID)
 		if err != nil {

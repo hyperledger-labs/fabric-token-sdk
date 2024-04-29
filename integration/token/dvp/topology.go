@@ -14,6 +14,7 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/cash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
@@ -41,7 +42,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 	issuer.RegisterViewFactory("issue", &cash.IssueCashViewFactory{})
 	issuer.RegisterViewFactory("issued", &cash.ListIssuedTokensViewFactory{})
@@ -50,7 +51,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
@@ -58,13 +59,13 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	fscTopology.AddNodeByName("cash_issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	).RegisterViewFactory("issue_cash", &cash.IssueCashViewFactory{})
 
 	fscTopology.AddNodeByName("house_issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	).RegisterViewFactory("issue_house", &house.IssueHouseViewFactory{})
 
 	// seller and buyer
@@ -87,6 +88,8 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	buyer.RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{})
 	buyer.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
 	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
+	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
+	buyer.RegisterViewFactory("TxFinality", &views.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})

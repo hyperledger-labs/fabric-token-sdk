@@ -3,20 +3,25 @@ Copyright IBM Corp. All Rights Reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package ttx
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 )
 
 type TxOptions struct {
 	Auditor                   view.Identity
-	Network                   string
-	Channel                   string
-	Namespace                 string
+	TMSID                     token.TMSID
 	NoTransactionVerification bool
+	Timeout                   time.Duration
+	TxID                      string
+	Transaction               *Transaction
+	NetworkTxID               network.TxID
 }
 
 func compile(opts ...TxOption) (*TxOptions, error) {
@@ -40,21 +45,21 @@ func WithAuditor(auditor view.Identity) TxOption {
 
 func WithNetwork(network string) TxOption {
 	return func(o *TxOptions) error {
-		o.Network = network
+		o.TMSID.Network = network
 		return nil
 	}
 }
 
 func WithChannel(channel string) TxOption {
 	return func(o *TxOptions) error {
-		o.Channel = channel
+		o.TMSID.Channel = channel
 		return nil
 	}
 }
 
 func WithNamespace(namespace string) TxOption {
 	return func(o *TxOptions) error {
-		o.Namespace = namespace
+		o.TMSID.Namespace = namespace
 		return nil
 	}
 }
@@ -62,9 +67,9 @@ func WithNamespace(namespace string) TxOption {
 // WithTMS filters by network, channel and namespace. Each of them can be empty
 func WithTMS(network, channel, namespace string) TxOption {
 	return func(o *TxOptions) error {
-		o.Network = network
-		o.Channel = channel
-		o.Namespace = namespace
+		o.TMSID.Network = network
+		o.TMSID.Channel = channel
+		o.TMSID.Namespace = namespace
 		return nil
 	}
 }
@@ -72,9 +77,7 @@ func WithTMS(network, channel, namespace string) TxOption {
 // WithTMSID filters by TMS identifier
 func WithTMSID(id token.TMSID) TxOption {
 	return func(o *TxOptions) error {
-		o.Network = id.Network
-		o.Channel = id.Channel
-		o.Namespace = id.Namespace
+		o.TMSID = id
 		return nil
 	}
 }
@@ -82,6 +85,34 @@ func WithTMSID(id token.TMSID) TxOption {
 func WithNoTransactionVerification() TxOption {
 	return func(o *TxOptions) error {
 		o.NoTransactionVerification = true
+		return nil
+	}
+}
+
+func WithTimeout(timeout time.Duration) TxOption {
+	return func(o *TxOptions) error {
+		o.Timeout = timeout
+		return nil
+	}
+}
+
+func WithTxID(txID string) TxOption {
+	return func(o *TxOptions) error {
+		o.TxID = txID
+		return nil
+	}
+}
+
+func WithTransactions(tx *Transaction) TxOption {
+	return func(o *TxOptions) error {
+		o.Transaction = tx
+		return nil
+	}
+}
+
+func WithNetworkTxID(id network.TxID) TxOption {
+	return func(o *TxOptions) error {
+		o.NetworkTxID = id
 		return nil
 	}
 }

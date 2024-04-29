@@ -12,6 +12,8 @@ type EndorsementsOpts struct {
 	SkipAuditing bool
 	// SkipApproval set it to true to skip the approval phase
 	SkipApproval bool
+	// SkipDistributeEnv set it to true to skip the distribution phase
+	SkipDistributeEnv bool
 	// External Signers
 	ExternalWalletSigners map[string]ExternalWalletSigner
 }
@@ -49,6 +51,14 @@ func WithSkipAuditing() EndorsementsOpt {
 func WithSkipApproval() EndorsementsOpt {
 	return func(o *EndorsementsOpts) error {
 		o.SkipApproval = true
+		return nil
+	}
+}
+
+// WithSkipDistributeEnv to skip approval
+func WithSkipDistributeEnv() EndorsementsOpt {
+	return func(o *EndorsementsOpts) error {
+		o.SkipDistributeEnv = true
 		return nil
 	}
 }

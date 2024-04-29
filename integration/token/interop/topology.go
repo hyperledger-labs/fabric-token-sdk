@@ -16,6 +16,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	views3 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
@@ -36,7 +37,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -44,11 +45,12 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -57,6 +59,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -73,6 +76,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -89,6 +93,7 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -117,7 +122,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -125,12 +130,13 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -139,6 +145,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -156,6 +163,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -173,6 +181,7 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))
@@ -212,7 +221,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -220,12 +229,13 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -234,6 +244,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -255,6 +266,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -275,6 +287,7 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -314,7 +327,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -322,12 +335,13 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -336,6 +350,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -356,6 +371,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithNetworkOrganization("beta", "Org4"),
@@ -376,6 +392,7 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
@@ -415,7 +432,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithIssuerIdentity("issuer.id1", false),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
 	issuer.RegisterViewFactory("issue", &views2.IssueCashViewFactory{})
@@ -423,13 +440,14 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	issuer.RegisterViewFactory("CheckPublicParamsMatch", &views.CheckPublicParamsMatchViewFactory{})
 	issuer.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),
 		fabric.WithNetworkOrganization("beta", "Org3"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 	auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -438,6 +456,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	auditor.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org2"),
@@ -458,6 +477,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	alice.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		orion.WithRole("bob"),
@@ -477,6 +497,7 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("CheckTTXDB", &views.CheckTTXDBViewFactory{})
 	bob.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	custodian := fscTopology.AddNodeByName("custodian")
 	custodian.AddOptions(orion.WithRole("custodian"))

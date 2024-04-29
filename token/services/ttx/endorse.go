@@ -348,6 +348,10 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 }
 
 func (c *CollectEndorsementsView) requestAudit(context view.Context) ([]view.Identity, error) {
+	if len(c.tx.TokenService().PublicParametersManager().PublicParameters().Auditors()) == 0 {
+		return nil, nil
+	}
+
 	if !c.tx.Opts.Auditor.IsNone() {
 		local := view2.GetSigService(context).IsMe(c.tx.Opts.Auditor)
 		sessionBoxed, err := context.RunView(newAuditingViewInitiator(c.tx, local))
@@ -372,6 +376,10 @@ func (c *CollectEndorsementsView) cleanupAudit(context view.Context) error {
 }
 
 func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *network.Envelope, distributionList []view.Identity, auditors []view.Identity) error {
+	if c.Opts.SkipDistributeEnv {
+		return nil
+	}
+
 	if !c.Opts.SkipApproval {
 		// perform sanity checks
 		if env == nil {

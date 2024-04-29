@@ -22,6 +22,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	tplatform "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttx"
@@ -82,13 +83,14 @@ func IssueCash(network *integration.Infrastructure, wallet string, typ string, a
 }
 
 func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string, auditor string, anonymous bool, IssuerId string, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	targetAuditor := auditor
 	if auditor == "issuer" || auditor == "newIssuer" {
 		// the issuer is the auditor, choose default identity
-		auditor = ""
+		targetAuditor = ""
 	}
-	txid, err := network.Client(IssuerId).CallView("issue", common.JSONMarshall(&views.IssueCash{
+	txIDBoxed, err := network.Client(IssuerId).CallView("issue", common.JSONMarshall(&views.IssueCash{
 		Anonymous:    anonymous,
-		Auditor:      auditor,
+		Auditor:      targetAuditor,
 		IssuerWallet: wallet,
 		TokenType:    typ,
 		Quantity:     amount,
@@ -99,13 +101,10 @@ func IssueCashForTMSID(network *integration.Infrastructure, wallet string, typ s
 
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		if len(auditor) == 0 {
-			Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		} else {
-			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		}
-		return common.JSONUnmarshalString(txid)
+		txID := common.JSONUnmarshalString(txIDBoxed)
+		common2.CheckFinality(network, receiver, txID, tmsId, false)
+		common2.CheckFinality(network, auditor, txID, tmsId, false)
+		return common.JSONUnmarshalString(txIDBoxed)
 	}
 
 	Expect(err).To(HaveOccurred())
@@ -128,15 +127,15 @@ func CheckAuditedTransactions(network *integration.Infrastructure, auditor strin
 		fmt.Printf("tx %d: %+v\n", i, tx)
 		fmt.Printf("expected %d: %+v\n", i, expected[i])
 		txExpected := expected[i]
-		Expect(tx.TokenType).To(Equal(txExpected.TokenType), "tx [%d] expected token type [%v], got [%v]", i, txExpected.TokenType, tx.TokenType)
-		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue(), "tx [%d] expected sender [%v], got [%v]", i, txExpected.SenderEID, tx.SenderEID)
-		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx [%d] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.RecipientEID, txExpected.RecipientEID)
-		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d] expected transaction type [%v], got [%v]", i, txExpected.ActionType, tx.ActionType)
-		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d] expected amount [%v], got [%v]", i, txExpected.Amount, tx.Amount)
+		Expect(tx.TokenType).To(Equal(txExpected.TokenType), "tx [%d][%s] expected token type [%v], got [%v]", i, tx.TxID, txExpected.TokenType, tx.TokenType)
+		Expect(strings.HasPrefix(tx.SenderEID, txExpected.SenderEID)).To(BeTrue(), "tx [%d][%s] expected sender [%v], got [%v]", i, tx.TxID, txExpected.SenderEID, tx.SenderEID)
+		Expect(strings.HasPrefix(tx.RecipientEID, txExpected.RecipientEID)).To(BeTrue(), "tx [%d][%s] tx.RecipientEID: %s, txExpected.RecipientEID: %s", i, tx.TxID, tx.RecipientEID, txExpected.RecipientEID)
+		Expect(tx.ActionType).To(Equal(txExpected.ActionType), "tx [%d][%s] expected transaction type [%v], got [%v]", i, tx.TxID, txExpected.ActionType, tx.ActionType)
+		Expect(tx.Amount).To(Equal(txExpected.Amount), "tx [%d][%s] expected amount [%v], got [%v]", i, tx.TxID, txExpected.Amount, tx.Amount)
 		if len(txExpected.TxID) != 0 {
-			Expect(txExpected.TxID).To(Equal(tx.TxID), "tx [%d] expected id [%s], got [%s]", i, txExpected.TxID, tx.TxID)
+			Expect(txExpected.TxID).To(Equal(tx.TxID), "tx [%d][%s] expected id [%s], got [%s]", i, tx.TxID, txExpected.TxID, tx.TxID)
 		}
-		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d] expected status [%v], got [%v]", i, txExpected.Status, tx.Status)
+		Expect(tx.Status).To(Equal(txExpected.Status), "tx [%d][%s] expected status [%v], got [%v]", i, tx.TxID, txExpected.Status, tx.Status)
 	}
 }
 
@@ -297,10 +296,10 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 		TMSID:        tmsId,
 	}))
 	if len(expectedErrorMsgs) == 0 {
-		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
-		Expect(network.Client(auditor).IsTxFinal(txID)).NotTo(HaveOccurred())
+		txID := common.JSONUnmarshalString(txidBoxed)
+		common2.CheckFinality(network, receiver, txID, tmsId, false)
+		common2.CheckFinality(network, auditor, txID, tmsId, false)
 
 		signers := []string{auditor}
 		if !strings.HasPrefix(receiver, id) {
@@ -355,8 +354,8 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+		common2.CheckFinality(network, receiver, txID, nil, false)
+		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		signers := []string{auditor}
 		if !strings.HasPrefix(receiver, id) {
@@ -401,8 +400,8 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+		common2.CheckFinality(network, receiver, txID, nil, false)
+		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		signers := []string{auditor}
 		if !strings.HasPrefix(receiver, id) {
@@ -463,8 +462,8 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 	if len(expectedErrorMsgs) == 0 {
 		txID := common.JSONUnmarshalString(txidBoxed)
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
-		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+		common2.CheckFinality(network, receiver, txID, nil, false)
+		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		signers := []string{auditor}
 		if !strings.HasPrefix(receiver, id) {
@@ -515,12 +514,12 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 		signers := []string{auditor}
 
 		for _, receiver := range receivers {
-			Expect(network.Client(receiver).IsTxFinal(txID)).NotTo(HaveOccurred())
+			common2.CheckFinality(network, receiver, txID, nil, false)
 			if !strings.HasPrefix(receiver, id) {
 				signers = append(signers, strings.Split(receiver, ".")[0])
 			}
 		}
-		Expect(network.Client("auditor").IsTxFinal(txID)).NotTo(HaveOccurred())
+		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		txInfo := GetTransactionInfo(network, id, txID)
 		for _, identity := range signers {
@@ -542,6 +541,31 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 	s := strings.LastIndex(strErr, "[<<<")
 	e := strings.LastIndex(strErr, ">>>]")
 	return strErr[s+4 : e]
+}
+
+func MaliciousTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tmsId *token2.TMSID, expectedErrorMsgs ...string) string {
+	txidBoxed, err := network.Client(id).CallView("MaliciousTransfer", common.JSONMarshall(&views.Transfer{
+		Auditor:      auditor,
+		Wallet:       wallet,
+		Type:         typ,
+		Amount:       amount,
+		Recipient:    network.Identity(receiver),
+		RecipientEID: receiver,
+		TMSID:        tmsId,
+	}))
+	if len(expectedErrorMsgs) == 0 {
+		Expect(err).NotTo(HaveOccurred())
+		txID := common.JSONUnmarshalString(txidBoxed)
+		time.Sleep(5 * time.Second)
+		return txID
+	}
+
+	Expect(err).To(HaveOccurred())
+	for _, msg := range expectedErrorMsgs {
+		Expect(err.Error()).To(ContainSubstring(msg), "err [%s] should contain [%s]", err.Error(), msg)
+	}
+	time.Sleep(5 * time.Second)
+	return ""
 }
 
 func PrepareTransferCash(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, tokenID *token.ID, expectedErrorMsgs ...string) (string, []byte) {
@@ -654,9 +678,10 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txIDBoxed))).NotTo(HaveOccurred())
-		Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txIDBoxed))).NotTo(HaveOccurred())
-		return common.JSONUnmarshalString(txIDBoxed)
+		txID := common.JSONUnmarshalString(txIDBoxed)
+		common2.CheckFinality(network, receiver, txID, nil, false)
+		common2.CheckFinality(network, auditor, txID, nil, false)
+		return txID
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
@@ -668,7 +693,7 @@ func TransferCashByIDs(network *integration.Infrastructure, id string, wallet st
 }
 
 func TransferCashWithSelector(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, receiver string, auditor string, expectedErrorMsgs ...string) {
-	txid, err := network.Client(id).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
+	txIDBoxed, err := network.Client(id).CallView("transferWithSelector", common.JSONMarshall(&views.Transfer{
 		Auditor:      auditor,
 		Wallet:       wallet,
 		Type:         typ,
@@ -678,8 +703,9 @@ func TransferCashWithSelector(network *integration.Infrastructure, id string, wa
 	}))
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+		txID := common.JSONUnmarshalString(txIDBoxed)
+		common2.CheckFinality(network, receiver, txID, nil, false)
+		common2.CheckFinality(network, auditor, txID, nil, false)
 	} else {
 		Expect(err).To(HaveOccurred())
 		for _, msg := range expectedErrorMsgs {
@@ -693,16 +719,16 @@ func RedeemCash(network *integration.Infrastructure, id string, wallet string, t
 	RedeemCashForTMSID(network, id, wallet, typ, amount, auditor, nil)
 }
 
-func RedeemCashForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, auditor string, tmsId *token2.TMSID) {
+func RedeemCashForTMSID(network *integration.Infrastructure, id string, wallet string, typ string, amount uint64, auditor string, tmsID *token2.TMSID) {
 	txid, err := network.Client(id).CallView("redeem", common.JSONMarshall(&views.Redeem{
 		Auditor: auditor,
 		Wallet:  wallet,
 		Type:    typ,
 		Amount:  amount,
-		TMSID:   tmsId,
+		TMSID:   tmsID,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), tmsID, false)
 }
 
 func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet string, ids []*token.ID, amount uint64, auditor string) {
@@ -714,7 +740,7 @@ func RedeemCashByIDs(network *integration.Infrastructure, id string, wallet stri
 		Amount:   amount,
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+	common2.CheckFinality(network, auditor, common.JSONUnmarshalString(txid), nil, false)
 }
 
 func SwapCash(network *integration.Infrastructure, id string, wallet string, typeLeft string, amountLeft uint64, typRight string, amountRight uint64, receiver string, auditor string) {
@@ -728,13 +754,25 @@ func SwapCash(network *integration.Infrastructure, id string, wallet string, typ
 		Bob:             network.Identity(receiver),
 	}))
 	Expect(err).NotTo(HaveOccurred())
-	Expect(network.Client(id).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	Expect(network.Client(receiver).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-	Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
+	txID := common.JSONUnmarshalString(txid)
+	common2.CheckFinality(network, id, txID, nil, false)
+	common2.CheckFinality(network, receiver, txID, nil, false)
+	common2.CheckFinality(network, auditor, txID, nil, false)
 }
 
 func CheckPublicParams(network *integration.Infrastructure, ids ...string) {
 	CheckPublicParamsForTMSID(network, nil, ids...)
+}
+
+func GetTXStatus(network *integration.Infrastructure, id string, txID string) *views.TxStatusResponse {
+	boxed, err := network.Client(id).CallView("TxStatus", common.JSONMarshall(&views.TxStatus{
+		TMSID: token2.TMSID{},
+		TxID:  txID,
+	}))
+	Expect(err).NotTo(HaveOccurred(), "failed to check public params at [%s]", id)
+	response := &views.TxStatusResponse{}
+	common.JSONUnmarshal(boxed.([]byte), response)
+	return response
 }
 
 func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...string) {
@@ -1037,11 +1075,6 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 	if wpm != nil {
 		recipientData = wpm.RecipientData(user, wallet)
 	}
-
-	if auditor == "issuer" || auditor == "newIssuer" {
-		// the issuer is the auditor, choose default identity
-		auditor = ""
-	}
 	txid, err := network.Client(user).CallView("withdrawal", common.JSONMarshall(&views.Withdrawal{
 		Wallet:        wallet,
 		TokenType:     typ,
@@ -1052,14 +1085,11 @@ func Withdraw(network *integration.Infrastructure, wpm *WalletManagerProvider, u
 
 	if len(expectedErrorMsgs) == 0 {
 		Expect(err).NotTo(HaveOccurred())
-		Expect(network.Client(user).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		if len(auditor) == 0 {
-			Expect(network.Client("auditor").IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		} else {
-			Expect(network.Client(auditor).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		}
-		Expect(network.Client(IssuerId).IsTxFinal(common.JSONUnmarshalString(txid))).NotTo(HaveOccurred())
-		return common.JSONUnmarshalString(txid)
+		txID := common.JSONUnmarshalString(txid)
+		common2.CheckFinality(network, user, txID, nil, false)
+		common2.CheckFinality(network, auditor, txID, nil, false)
+		common2.CheckFinality(network, IssuerId, txID, nil, false)
+		return txID
 	}
 
 	Expect(err).To(HaveOccurred())

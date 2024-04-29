@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -33,6 +34,7 @@ type TokenAndMetadataDeserializer[T LedgerToken, M any] interface {
 }
 
 type VaultLedgerTokenLoader[T any] struct {
+	Logger       logging.Logger
 	TokenVault   TokenVault
 	Deserializer TokenDeserializer[T]
 
@@ -41,8 +43,9 @@ type VaultLedgerTokenLoader[T any] struct {
 	RetryDelay time.Duration
 }
 
-func NewLedgerTokenLoader[T any](tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
+func NewLedgerTokenLoader[T any](logger logging.Logger, tokenVault TokenVault, deserializer TokenDeserializer[T]) *VaultLedgerTokenLoader[T] {
 	return &VaultLedgerTokenLoader[T]{
+		Logger:       logger,
 		TokenVault:   tokenVault,
 		Deserializer: deserializer,
 		NumRetries:   3,
@@ -69,13 +72,20 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 			return nil
 		})
 		if err == nil {
+			s.Logger.Debugf("retrieve [%d] token outputs for [%v]", len(tokens), ids)
 			return tokens, nil
 		}
+		s.Logger.Debugf("failed to retrieve tokens for [%v], any pending transaction? [%s]", ids, err)
 
 		// check if there is any token id whose corresponding transaction is pending
 		// if there is, then wait a bit and retry to load the outputs
-		if anyPending, anyError := s.isAnyPending(ids...); anyError != nil || !anyPending {
+		anyPending, anyError := s.isAnyPending(ids...)
+		if anyError != nil {
 			err = anyError
+			break
+		}
+		if anyError == nil && !anyPending {
+			s.Logger.Debugf("failed to retrieve tokens: no transaction is pending")
 			break
 		}
 
@@ -83,6 +93,7 @@ func (s *VaultLedgerTokenLoader[T]) GetTokenOutputs(ids []*token.ID) ([]T, error
 			time.Sleep(s.RetryDelay)
 		}
 	}
+	s.Logger.Debugf("failed to retrieve tokens [%s]", err)
 
 	return nil, errors.Wrapf(err, "failed to get token outputs")
 }

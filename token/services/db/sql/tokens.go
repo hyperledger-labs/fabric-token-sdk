@@ -367,6 +367,7 @@ func (db *TokenDB) getLedgerToken(ids []*token.ID) ([][]byte, error) {
 	if err = rows.Err(); err != nil {
 		return nil, err
 	}
+	logger.Debugf("retrieve ledger tokens for [%s], retrieved [%d] tokens", ids, len(tokenMap))
 
 	tokens := make([][]byte, len(ids))
 	for i, id := range ids {

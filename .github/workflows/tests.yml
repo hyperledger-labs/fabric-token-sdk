@@ -88,6 +88,7 @@ jobs:
           dlog-fabric-t1-extras,
           dlog-fabric-t2,
           dlog-fabric-t3,
+          dlog-fabric-t4,
           fabtoken-dlog-fabric,
           dloghsm-fabric-t1,
           dloghsm-fabric-t2,

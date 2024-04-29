@@ -17,6 +17,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -27,6 +28,8 @@ type Opts struct {
 	AuditorAsIssuer bool
 	Aries           bool
 	FSCLogSpec      string
+	NoAuditor       bool
+	HSM             bool
 }
 
 func Topology(opts Opts) []api.Topology {
@@ -55,8 +58,8 @@ func Topology(opts Opts) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
-		token.WithIssuerIdentity("issuer.id1"),
+		token.WithDefaultIssuerIdentity(opts.HSM),
+		token.WithIssuerIdentity("issuer.id1", opts.HSM),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("issuer.owner"),
 	)
@@ -80,13 +83,14 @@ func Topology(opts Opts) []api.Topology {
 	issuer.RegisterViewFactory("SetKVSEntry", &views.SetKVSEntryViewFactory{})
 	issuer.RegisterResponder(&views.WithdrawalResponderView{}, &views.WithdrawalInitiatorView{})
 	issuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	newIssuer := fscTopology.AddNodeByName("newIssuer").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
-		token.WithIssuerIdentity("newIssuer.id1"),
+		token.WithDefaultIssuerIdentity(opts.HSM),
+		token.WithIssuerIdentity("newIssuer.id1", opts.HSM),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("newIssuer.owner"),
 	)
@@ -95,23 +99,25 @@ func Topology(opts Opts) []api.Topology {
 	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
 	newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newIssuer.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	newIssuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	var auditor *node.Node
 	newAuditor := fscTopology.AddNodeByName("newAuditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(opts.HSM),
 	)
 	newAuditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newAuditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	newAuditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
 	newAuditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	newAuditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	if opts.AuditorAsIssuer {
 		issuer.AddOptions(
 			orion.WithRole("auditor"),
-			token.WithAuditorIdentity(),
+			token.WithAuditorIdentity(opts.HSM),
 			fsc.WithAlias("auditor"),
 		)
 		issuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
@@ -127,7 +133,7 @@ func Topology(opts Opts) []api.Topology {
 
 		newIssuer.AddOptions(
 			orion.WithRole("auditor"),
-			token.WithAuditorIdentity(),
+			token.WithAuditorIdentity(opts.HSM),
 			fsc.WithAlias("auditor"),
 		)
 		newIssuer.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
@@ -144,7 +150,7 @@ func Topology(opts Opts) []api.Topology {
 			fabric.WithOrganization("Org1"),
 			fabric.WithAnonymousIdentity(),
 			orion.WithRole("auditor"),
-			token.WithAuditorIdentity(),
+			token.WithAuditorIdentity(opts.HSM),
 		)
 		auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
@@ -161,6 +167,7 @@ func Topology(opts Opts) []api.Topology {
 		auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 		auditor.RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{})
 		auditor.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+		auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 	}
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -195,6 +202,9 @@ func Topology(opts Opts) []api.Topology {
 	alice.RegisterViewFactory("withdrawal", &views.WithdrawalInitiatorViewFactory{})
 	alice.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	alice.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
+	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -207,6 +217,7 @@ func Topology(opts Opts) []api.Topology {
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{})
 	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -230,6 +241,8 @@ func Topology(opts Opts) []api.Topology {
 	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
 	bob.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
 	bob.RegisterViewFactory("RegisterRecipientData", &views.RegisterRecipientDataViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	charlie := fscTopology.AddNodeByName("charlie").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -257,6 +270,7 @@ func Topology(opts Opts) []api.Topology {
 	charlie.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	charlie.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	charlie.RegisterViewFactory("RegisterOwnerIdentity", &views.RegisterOwnerIdentityViewFactory{})
+	charlie.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	manager := fscTopology.AddNodeByName("manager").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -286,6 +300,7 @@ func Topology(opts Opts) []api.Topology {
 	manager.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	manager.RegisterViewFactory("ListOwnerWalletIDsView", &views.ListOwnerWalletIDsViewFactory{})
 	manager.RegisterViewFactory("DoesWalletExist", &views.DoesWalletExistViewFactory{})
+	manager.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
@@ -310,7 +325,9 @@ func Topology(opts Opts) []api.Topology {
 		fscTopology.SetBootstrapNode(custodian)
 	}
 	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
-	tms.AddAuditor(auditor)
+	if !opts.NoAuditor {
+		tms.AddAuditor(auditor)
+	}
 
 	if opts.Backend != "orion" {
 		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))

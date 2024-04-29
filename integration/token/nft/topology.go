@@ -16,6 +16,7 @@ import (
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -46,17 +47,19 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("issuer"),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 	issuer.RegisterViewFactory("issue", &views.IssueHouseViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
 		orion.WithRole("auditor"),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -68,6 +71,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 	alice.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
 	alice.RegisterViewFactory("transfer", &views.TransferHouseViewFactory{})
 	alice.RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -80,6 +84,7 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 	bob.RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{})
 	bob.RegisterViewFactory("transfer", &views.TransferHouseViewFactory{})
 	bob.RegisterViewFactory("queryHouse", &views.GetHouseViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)

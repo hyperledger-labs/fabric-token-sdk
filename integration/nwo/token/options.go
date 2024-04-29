@@ -11,7 +11,10 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 )
 
-func WithIssuerIdentity(label string) fsc.Option {
+func WithIssuerIdentity(label string, hsm bool) fsc.Option {
+	if hsm {
+		return WithIssuerIdentityWithHSM(label)
+	}
 	return func(o *fsc.Options) error {
 		to := topology.ToOptions(o)
 		to.SetIssuers(append(to.Issuers(), label))
@@ -36,8 +39,11 @@ func WithIssuerIdentityWithHSM(label string) fsc.Option {
 	}
 }
 
-func WithDefaultIssuerIdentity() fsc.Option {
-	return WithIssuerIdentity("_default_")
+func WithDefaultIssuerIdentity(hsm bool) fsc.Option {
+	if hsm {
+		return WithDefaultIssuerIdentityWithHSM()
+	}
+	return WithIssuerIdentity("_default_", false)
 }
 
 func WithDefaultIssuerIdentityWithHSM() fsc.Option {
@@ -82,7 +88,10 @@ func WithCertifierIdentity() fsc.Option {
 	}
 }
 
-func WithAuditorIdentity() fsc.Option {
+func WithAuditorIdentity(hsm bool) fsc.Option {
+	if hsm {
+		return WithAuditorIdentityWithHSM()
+	}
 	return func(o *fsc.Options) error {
 		topology.ToOptions(o).SetAuditor(true)
 

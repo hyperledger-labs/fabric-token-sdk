@@ -13,8 +13,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/pkg/errors"
 )
 
@@ -26,10 +27,16 @@ type AuditDBProvider interface {
 	DBByTMSId(id token.TMSID) (*auditdb.DB, error)
 }
 
+type TokenDBProvider interface {
+	Tokens(id token.TMSID) (*tokens.Tokens, error)
+}
+
 // Manager handles the databases
 type Manager struct {
 	networkProvider NetworkProvider
 	auditDBProvider AuditDBProvider
+	tokenDBProvider TokenDBProvider
+	tmsProvider     TokenManagementServiceProvider
 
 	storage  storage.DBEntriesStorage
 	mutex    sync.Mutex
@@ -37,11 +44,13 @@ type Manager struct {
 }
 
 // NewManager creates a new Auditor manager.
-func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, storage storage.DBEntriesStorage) *Manager {
+func NewManager(networkProvider NetworkProvider, auditDBProvider AuditDBProvider, tokenDBProvider TokenDBProvider, storage storage.DBEntriesStorage, tmsProvider TokenManagementServiceProvider) *Manager {
 	return &Manager{
 		networkProvider: networkProvider,
 		storage:         storage,
 		auditDBProvider: auditDBProvider,
+		tokenDBProvider: tokenDBProvider,
+		tmsProvider:     tmsProvider,
 		auditors:        map[string]*Auditor{},
 	}
 }
@@ -91,16 +100,25 @@ func (cm *Manager) getAuditor(tmsID token.TMSID, walletID string) (*Auditor, err
 }
 
 func (cm *Manager) newAuditor(tmsID token.TMSID) (*Auditor, error) {
-	db, err := cm.auditDBProvider.DBByTMSId(tmsID)
+	auditDB, err := cm.auditDBProvider.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
 	}
-	auditor := &Auditor{np: cm.networkProvider, db: db}
+	tokenDB, err := cm.tokenDBProvider.Tokens(tmsID)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
+	}
 	_, err = cm.networkProvider.GetNetwork(tmsID.Network, tmsID.Channel)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
-	logger.Debugf("auditdb: register tx status listener for all tx at network [%s]", tmsID)
+	auditor := &Auditor{
+		np:          cm.networkProvider,
+		tmsID:       tmsID,
+		auditDB:     auditDB,
+		tokenDB:     tokenDB,
+		tmsProvider: cm.tmsProvider,
+	}
 	return auditor, nil
 }
 
@@ -109,15 +127,20 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get network instance for [%s]", tmsID)
 	}
+	tokenDB, err := cm.tokenDBProvider.Tokens(tmsID)
+	if err != nil {
+		return errors.WithMessagef(err, "failed to get auditdb for [%s]", tmsID)
+	}
 	auditor, err := cm.getAuditor(tmsID, walletID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to get auditor for [%s]", walletID)
 	}
-	it, err := auditor.db.TokenRequests(auditdb.QueryTokenRequestsParams{Statuses: []driver.TxStatus{auditdb.Pending}})
+	it, err := auditor.auditDB.TokenRequests(auditdb.QueryTokenRequestsParams{})
 	if err != nil {
 		return errors.Errorf("failed to get tx iterator for [%s:%s]", tmsID, walletID)
 	}
 	defer it.Close()
+	counter := 0
 	for {
 		record, err := it.Next()
 		if err != nil {
@@ -126,10 +149,14 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 		if record == nil {
 			break
 		}
-		if err := net.AddFinalityListener(record.TxID, &FinalityListener{net, auditor.db}); err != nil {
+		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
+		var r driver.FinalityListener = NewFinalityListener(net, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB)
+		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, r); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, record.TokenRequest)
 		}
+		counter++
 	}
+	logger.Debugf("checked [%d] token requests", counter)
 	return nil
 }
 

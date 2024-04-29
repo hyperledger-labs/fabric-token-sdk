@@ -14,6 +14,7 @@ import (
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
@@ -54,16 +55,17 @@ func Topology() []api.Topology {
 	issuer.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	issuer.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	issuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
+	issuer.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	issuer1 := fscTopology.AddNodeFromTemplate("issuer1", issuer).AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 	issuer2 := fscTopology.AddNodeFromTemplate("issuer2", issuer).AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(),
+		token.WithDefaultIssuerIdentity(false),
 	)
 
 	auditor := fscTopology.NewTemplate("auditor")
@@ -81,16 +83,17 @@ func Topology() []api.Topology {
 	auditor.RegisterViewFactory("CheckIfExistsInVault", &views.CheckIfExistsInVaultViewFactory{})
 	auditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
 	auditor.RegisterViewFactory("RevokeUser", &views.RevokeUserViewFactory{})
+	auditor.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	auditor1 := fscTopology.AddNodeFromTemplate("auditor1", auditor).AddOptions(
 		fabric.WithOrganization("Org1"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 	auditor2 := fscTopology.AddNodeFromTemplate("auditor2", auditor).AddOptions(
 		fabric.WithOrganization("Org2"),
 		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(),
+		token.WithAuditorIdentity(false),
 	)
 
 	alice := fscTopology.AddNodeByName("alice").AddOptions(
@@ -119,6 +122,9 @@ func Topology() []api.Topology {
 	alice.RegisterViewFactory("PruneInvalidUnspentTokens", &views.PruneInvalidUnspentTokensViewFactory{})
 	alice.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	alice.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
+	alice.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	alice.RegisterViewFactory("MaliciousTransfer", &views.MaliciousTransferViewFactory{})
+	alice.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	bob := fscTopology.AddNodeByName("bob").AddOptions(
 		fabric.WithOrganization("Org2"),
@@ -128,6 +134,7 @@ func Topology() []api.Topology {
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
+	bob.RegisterResponder(&views.AcceptCashView{}, &views.MaliciousTransferView{})
 	bob.RegisterResponder(&views.AcceptPreparedCashView{}, &views.PrepareTransferView{})
 	bob.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
 	bob.RegisterViewFactory("transfer", &views.TransferViewFactory{})
@@ -149,6 +156,8 @@ func Topology() []api.Topology {
 	bob.RegisterViewFactory("WhoDeletedToken", &views.WhoDeletedTokenViewFactory{})
 	bob.RegisterViewFactory("ListVaultUnspentTokens", &views.ListVaultUnspentTokensViewFactory{})
 	bob.RegisterViewFactory("GetRevocationHandle", &views.GetRevocationHandleViewFactory{})
+	bob.RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
+	bob.RegisterViewFactory("TxStatus", &views.TxStatusViewFactory{})
 
 	// Token topology
 	tokenTopology := token.NewTopology()
