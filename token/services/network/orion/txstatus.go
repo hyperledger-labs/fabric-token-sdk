@@ -7,12 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package orion
 
 import (
+	"encoding/base64"
+
+	errors2 "github.com/hyperledger-labs/fabric-smart-client/pkg/utils/errors"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault/rws/keys"
+	"github.com/hyperledger-labs/orion-sdk-go/pkg/bcdb"
 	"github.com/pkg/errors"
 )
 
@@ -104,23 +108,29 @@ func (r *RequestTxStatusResponderView) process(context view.Context, request *Tx
 	}
 	tx, err := ledger.GetTransactionByID(request.TxID)
 	if err != nil {
+		if errors2.HasCause(err, &bcdb.ErrorNotFound{}) {
+			return &TxStatusResponse{Status: driver.Unknown}, nil
+		}
 		return nil, errors.Wrapf(err, "failed to get transaction [%s] for orion network [%s]", request.TxID, request.Network)
 	}
 
 	var trRef []byte
 	if len(request.Namespace) != 0 {
-		// fetch token request reference
-		qe, err := oSession.QueryExecutor(request.Namespace)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get query executor [%s] for orion network [%s]", request.TxID, request.Network)
-		}
-		key, err := keys.CreateTokenRequestKey(request.TxID)
-		if err != nil {
-			return nil, errors.Errorf("can't create for token request '%s'", request.TxID)
-		}
-		trRef, err = qe.Get(key)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get token request reference [%s] for orion network [%s]", request.TxID, request.Network)
+		for {
+			// fetch token request reference
+			qe, err := oSession.QueryExecutor(request.Namespace)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get query executor [%s] for orion network [%s]", request.TxID, request.Network)
+			}
+			key, err := keys.CreateTokenRequestKey(request.TxID)
+			if err != nil {
+				return nil, errors.Errorf("can't create for token request '%s'", request.TxID)
+			}
+			trRef, err = qe.Get(orionKey(key))
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get token request reference [%s] for orion network [%s]", request.TxID, request.Network)
+			}
+			logger.Debugf("retrieved token request hash for [%s][%s]:[%s]", key, request.TxID, base64.StdEncoding.EncodeToString(trRef))
 		}
 	}
 
