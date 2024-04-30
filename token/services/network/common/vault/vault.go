@@ -68,7 +68,11 @@ func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
 }
 
 func (q *QueryEngine) GetStatus(txID string) (vault.TxStatus, string, error) {
-	panic("implement")
+	vd, msg, err := q.ttxdb.GetStatus(txID)
+	if err != nil || vd == ttxdb.Unknown {
+		vd, msg, err = q.auditDB.GetStatus(txID)
+	}
+	return vd, msg, err
 }
 
 func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
