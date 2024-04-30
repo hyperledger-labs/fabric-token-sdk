@@ -506,6 +506,17 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
 	owner := NewOwner(context, c.tx.TokenService())
+	// Store envelope
+	if !c.Opts.SkipApproval {
+		if err := StoreEnvelope(context, c.tx); err != nil {
+			return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
+		}
+	}
+
+	// Store transaction in the token transaction database
+	if err := StoreTransactionRecords(context, c.tx); err != nil {
+		return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
+	}
 	for _, entry := range distributionListCompressed {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("distribute transaction envelope to [%s]", entry.ID.UniqueID())
@@ -516,19 +527,6 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("This is me [%s], endorse locally", entry.ID.UniqueID())
 			}
-
-			// Store envelope
-			if !c.Opts.SkipApproval {
-				if err := StoreEnvelope(context, c.tx); err != nil {
-					return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
-				}
-			}
-
-			// Store transaction in the token transaction database
-			if err := StoreTransactionRecords(context, c.tx); err != nil {
-				return errors.Wrapf(err, "failed adding transaction %s to the token transaction database", c.tx.ID())
-			}
-
 			continue
 		} else {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {

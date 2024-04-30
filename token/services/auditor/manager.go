@@ -13,6 +13,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
@@ -150,7 +151,7 @@ func (cm *Manager) restore(tmsID token.TMSID, walletID string) error {
 			break
 		}
 		logger.Debugf("restore transaction [%s] with status [%s]", record.TxID, TxStatusMessage[record.Status])
-		var r driver.FinalityListener = NewFinalityListener(net, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB)
+		var r driver.FinalityListener = common.NewFinalityListener(logger, cm.tmsProvider, tmsID, auditor.auditDB, tokenDB)
 		if err := net.AddFinalityListener(tmsID.Namespace, record.TxID, r); err != nil {
 			return errors.WithMessagef(err, "failed to subscribe event listener to network [%s] for [%s]", tmsID, record.TokenRequest)
 		}
