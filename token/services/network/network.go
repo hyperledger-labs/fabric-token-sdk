@@ -172,7 +172,7 @@ func (v *Vault) GetLastTxID() (string, error) {
 
 func (v *Vault) Status(id string) (ValidationCode, string, error) {
 	vc, message, err := v.v.Status(id)
-	return ValidationCode(vc), message, err
+	return vc, message, err
 }
 
 func (v *Vault) DiscardTx(id string) error {

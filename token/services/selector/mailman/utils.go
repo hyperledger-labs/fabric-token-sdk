@@ -10,6 +10,7 @@ import (
 	"fmt"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
@@ -39,6 +40,7 @@ func (m *Unlocker) IsLocked(id *token2.ID) bool {
 }
 
 type QueryService interface {
+	GetStatus(txID string) (token.TxStatus, string, error)
 	UnspentTokensIterator() (*token.UnspentTokensIterator, error)
 	UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)

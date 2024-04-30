@@ -19,13 +19,12 @@ import (
 type Subscribe = events.Subscriber
 
 type VaultProvider interface {
-	Vault(tms *token.ManagementService) (Vault, QueryService, error)
+	Vault(tms *token.ManagementService) (QueryService, error)
 }
 
 type SelectorService struct {
-	vaultProvider VaultProvider
-	subscribe     Subscribe
-	tracer        Tracer
+	subscribe Subscribe
+	tracer    Tracer
 
 	lock     sync.RWMutex
 	managers map[string]token.SelectorManager
@@ -33,12 +32,11 @@ type SelectorService struct {
 	// workerPool []*worker
 }
 
-func NewService(vaultProvider VaultProvider, subscribe Subscribe, tracer Tracer) *SelectorService {
+func NewService(subscribe Subscribe, tracer Tracer) *SelectorService {
 	return &SelectorService{
-		vaultProvider: vaultProvider,
-		subscribe:     subscribe,
-		tracer:        tracer,
-		managers:      make(map[string]token.SelectorManager),
+		subscribe: subscribe,
+		tracer:    tracer,
+		managers:  make(map[string]token.SelectorManager),
 	}
 }
 
@@ -83,14 +81,9 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 	if pp == nil {
 		return nil, errors.Errorf("public parameters not set yet for TMS [%s]", tms.ID())
 	}
-	vault, qs, err := s.vaultProvider.Vault(tms)
-	if err != nil {
-		return nil, errors.Errorf("cannot get ntwork vault for TMS [%s]", tms.ID())
-	}
 	newManager, err := NewManager(
 		tms.ID(),
-		vault,
-		qs,
+		tms.Vault().NewQueryEngine(),
 		walletIDByRawIdentity,
 		s.tracer,
 		pp.Precision(),

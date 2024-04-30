@@ -23,7 +23,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
-	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -58,7 +57,7 @@ type nv struct {
 	tokenVault driver.TokenVault
 }
 
-func (v *nv) QueryEngine() api2.QueryEngine {
+func (v *nv) QueryEngine() vault.QueryEngine {
 	return v.tokenVault.QueryEngine()
 }
 

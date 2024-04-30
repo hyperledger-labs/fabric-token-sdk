@@ -14,6 +14,20 @@ type QueryCallbackFunc func(*token.ID, []byte) error
 
 type QueryCallback2Func func(*token.ID, string, []byte, []byte) error
 
+// TxStatus is the status of a transaction
+type TxStatus = int
+
+const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown TxStatus = iota
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted
+)
+
 type UnspentTokensIterator interface {
 	Close()
 	Next() (*token.UnspentToken, error)
@@ -32,6 +46,8 @@ type CertificationStorage interface {
 type QueryEngine interface {
 	// IsPending returns true if the transaction the passed id refers to is still pending, false otherwise
 	IsPending(id *token.ID) (bool, error)
+	// GetStatus returns the status of the passed transaction
+	GetStatus(txID string) (TxStatus, string, error)
 	// IsMine returns true if the passed id is owned by any known wallet
 	IsMine(id *token.ID) (bool, error)
 	// UnspentTokensIterator returns an iterator over all unspent tokens

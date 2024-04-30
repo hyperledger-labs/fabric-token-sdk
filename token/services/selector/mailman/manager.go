@@ -11,35 +11,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
-
-const (
-	_       int = iota
-	Valid       = network.Valid   // Transaction is valid and committed
-	Invalid     = network.Invalid // Transaction is invalid and has been discarded
-)
-
-type Vault interface {
-	Status(id string) (network.ValidationCode, string, error)
-}
-
-type WalletManager interface {
-	OwnerWallet(identity view.Identity) *token.OwnerWallet
-}
-
-type VaultProvide interface {
-	NewQueryEngine() *token.QueryEngine
-}
 
 type Tracer tracing.Tracer
 
@@ -51,7 +31,6 @@ type Manager struct {
 	tokenQuantityPrecision uint64
 	qs                     QueryService
 	walletIDByRawIdentity  WalletIDByRawIdentityFunc
-	vault                  Vault
 
 	selectorsLock sync.RWMutex
 	selectors     map[string]*SimpleSelector
@@ -62,7 +41,7 @@ type Manager struct {
 
 type WalletIDByRawIdentityFunc func(rawIdentity []byte) string
 
-func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) (*Manager, error) {
+func NewManager(tmsID token.TMSID, qs QueryService, walletIDByRawIdentity WalletIDByRawIdentityFunc, tracer Tracer, tokenQuantityPrecision uint64, notifier events.Subscriber) (*Manager, error) {
 	// pre-populate mailman instances
 	iter, err := qs.UnspentTokensIterator()
 	if err != nil {
@@ -118,7 +97,6 @@ func NewManager(tmsID token.TMSID, vault Vault, qs QueryService, walletIDByRawId
 		tracer:                 tracer,
 		mailmen:                mailmen,
 		tokenQuantityPrecision: tokenQuantityPrecision,
-		vault:                  vault,
 		qs:                     qs,
 		walletIDByRawIdentity:  walletIDByRawIdentity,
 		selectors:              map[string]*SimpleSelector{},
@@ -304,17 +282,17 @@ func (m *Manager) scan() {
 		var unlockList []*SimpleSelector
 		m.selectorsLock.RLock()
 		for txID, selector := range m.selectors {
-			status, _, err := m.vault.Status(txID)
+			status, _, err := m.qs.GetStatus(txID)
 			if err != nil {
 				logger.Warnf("failed getting status for tx [%s], unlocking", txID)
 				unlockList = append(unlockList, selector)
 				continue
 			}
 			switch status {
-			case Valid:
+			case vault.Confirmed:
 				deleteList = append(deleteList, txID)
 				logger.Debugf("tx [%s] locked but valid, remove", txID)
-			case Invalid:
+			case vault.Deleted:
 				unlockList = append(unlockList, selector)
 				logger.Debugf("tx [%s] locked but invalid, unlocking", txID)
 			default:

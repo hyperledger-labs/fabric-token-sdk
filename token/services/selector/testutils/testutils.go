@@ -32,7 +32,7 @@ type MockVault struct {
 }
 
 func (m *MockVault) Status(id string) (int, error) {
-	return 1, nil
+	return token.Pending, nil
 }
 
 type MockTracer struct {
@@ -161,6 +161,10 @@ func (q *MockQueryService) GetTokens(inputs ...*token2.ID) ([]*token2.Token, err
 	}
 
 	return ts, nil
+}
+
+func (q *MockQueryService) GetStatus(txID string) (token.TxStatus, string, error) {
+	return token.Pending, "", nil
 }
 
 type NoLock struct {
