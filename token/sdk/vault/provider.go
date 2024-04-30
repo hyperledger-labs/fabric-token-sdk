@@ -20,6 +20,10 @@ import (
 	"github.com/pkg/errors"
 )
 
+type DBProvider[T any] interface {
+	DBByTMSId(id token.TMSID) (T, error)
+}
+
 type Provider struct {
 	tokenDBProvider tokens.DBProvider
 	ttxDBProvider   ttx.DBProvider
