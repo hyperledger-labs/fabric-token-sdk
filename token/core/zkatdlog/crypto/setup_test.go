@@ -49,3 +49,10 @@ func TestSerialization(t *testing.T) {
 	assert.NoError(t, pp.Validate())
 
 }
+
+func TestNewG1(t *testing.T) {
+	for i := 0; i < len(math3.Curves); i++ {
+		c := math3.Curves[i]
+		assert.Equal(t, c.NewG1().IsInfinity(), true)
+	}
+}
