@@ -11,7 +11,9 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -96,7 +98,6 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
@@ -104,8 +105,10 @@ func HTLCSingleFabricNetworkTopology(tokenSDKDriver string) []api.Topology {
 
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
-	// Add Fabric SDK to FSC Nodes
-	fscTopology.AddSDK(&fabric3.SDK{})
+	sdks := []api2.SDK{&fabric3.SDK{}, &sdk.SDK{}}
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
@@ -188,7 +191,6 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	fscTopology.SetBootstrapNode(custodian)
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
 	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
@@ -196,12 +198,16 @@ func HTLCSingleOrionNetworkTopology(tokenSDKDriver string) []api.Topology {
 	orion2.SetCustodian(tms, custodian)
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
-	orionTopology.SetDefaultSDK(fscTopology)
+
+	sdks := []api2.SDK{&orion3.SDK{}, &sdk.SDK{}}
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 
 	return []api.Topology{orionTopology, tokenTopology, fscTopology}
 }
 
-func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
+func HTLCTwoFabricNetworksTopology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -290,7 +296,6 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
 	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
@@ -301,13 +306,13 @@ func HTLCTwoFabricNetworksTopology(tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
-	// Add Fabric SDK to FSC Nodes
-	fscTopology.AddSDK(&fabric3.SDK{})
-
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
-func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
+func HTLCNoCrossClaimTopology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -395,7 +400,6 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	bob.RegisterViewFactory("TxFinality", &views3.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
 	common.SetDefaultParams(tokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
@@ -406,13 +410,14 @@ func HTLCNoCrossClaimTopology(tokenSDKDriver string) []api.Topology {
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
-	// Add Fabric SDK to FSC Nodes
-	fscTopology.AddSDK(&fabric3.SDK{})
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
-func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
+func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -503,7 +508,6 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	custodian.AddOptions(orion.WithRole("custodian"))
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 
 	// TMS for the Fabric Network
 	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
@@ -519,10 +523,9 @@ func HTLCNoCrossClaimWithOrionTopology(tokenSDKDriver string) []api.Topology {
 	orion2.SetCustodian(tmsOrion, custodian)
 
 	orionTopology.AddDB(tmsOrion.Namespace, "custodian", "issuer", "auditor", "bob")
-	orionTopology.SetDefaultSDK(fscTopology)
 
-	// Add Fabric SDK to FSC Nodes
-	fscTopology.AddSDK(&fabric3.SDK{})
-
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 	return []api.Topology{f1Topology, orionTopology, tokenTopology, fscTopology}
 }

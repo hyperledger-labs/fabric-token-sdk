@@ -468,14 +468,18 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 
 // GetInstance returns a network instance for the given network and channel
 func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
-	s, err := sp.GetService(&Provider{})
-	if err != nil {
-		panic(fmt.Sprintf("Failed to get service: %s", err))
-	}
-	n, err := s.(*Provider).GetNetwork(network, channel)
+	n, err := GetProvider(sp).GetNetwork(network, channel)
 	if err != nil {
 		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
 		return nil
 	}
 	return n
+}
+
+func GetProvider(sp view2.ServiceProvider) *Provider {
+	s, err := sp.GetService(&Provider{})
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get service: %s", err))
+	}
+	return s.(*Provider)
 }

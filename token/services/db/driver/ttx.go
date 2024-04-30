@@ -9,9 +9,9 @@ package driver
 import (
 	"errors"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 )
 
 // TokenTransactionDB defines the interface for a token transaction database.
@@ -90,7 +90,7 @@ type TransactionEndorsementAckDB interface {
 // TTXDBDriver is the interface for a token transaction db driver
 type TTXDBDriver interface {
 	// Open opens a token transaction database
-	Open(sp view2.ServiceProvider, tmsID token2.TMSID) (TokenTransactionDB, error)
+	Open(cp core.ConfigProvider, tmsID token2.TMSID) (TokenTransactionDB, error)
 }
 
 var (

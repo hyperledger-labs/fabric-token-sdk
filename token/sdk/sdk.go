@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
+	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/assert"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
@@ -85,9 +87,6 @@ func (p *SDK) Install() error {
 
 	logger.Infof("Set TMS TMSProvider")
 
-	vaultProvider := db.NewVaultProvider(p.registry)
-	assert.NoError(p.registry.RegisterService(vaultProvider))
-
 	// Network provider
 	networkProvider := network.NewProvider(p.registry)
 	assert.NoError(p.registry.RegisterService(networkProvider))
@@ -100,12 +99,15 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tmsProvider))
 
+	fabricNSP, _ := fabric.GetNetworkServiceProvider(p.registry)
+	orionNSP, _ := orion2.GetNetworkServiceProvider(p.registry)
+
 	// configure selector service
 	var selectorManagerProvider token.SelectorManagerProvider
 	switch configProvider.GetString("token.selector.driver") {
 	case "simple":
 		selectorManagerProvider = selector.NewProvider(
-			network2.NewLockerProvider(p.registry, 2*time.Second, 5*time.Minute),
+			network2.NewLockerProvider(fabricNSP, orionNSP, 2*time.Second, 5*time.Minute),
 			2,
 			5*time.Second,
 			tracing.Get(p.registry).GetTracer(),
@@ -124,7 +126,7 @@ func (p *SDK) Install() error {
 	// Register the token management service provider
 	tmsp := token.NewManagementServiceProvider(
 		tmsProvider,
-		network2.NewNormalizer(config.NewTokenSDK(configProvider), p.registry),
+		network2.NewNormalizer(network.GetProvider(p.registry), fabricNSP, orionNSP, config.NewTokenSDK(configProvider)),
 		&vault.ProviderAdaptor{Provider: networkProvider},
 		network2.NewCertificationClientProvider(),
 		selectorManagerProvider,
@@ -132,13 +134,13 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(tmsp))
 
 	// DBs and their managers
-	ttxdbManager := ttxdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
+	ttxdbManager := ttxdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "ttxdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(ttxdbManager))
-	tokenDBManager := tokendb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
+	tokenDBManager := tokendb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "tokendb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(tokenDBManager))
-	auditDBManager := auditdb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
+	auditDBManager := auditdb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "auditdb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(auditDBManager))
-	identityDBManager := identitydb.NewManager(p.registry, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
+	identityDBManager := identitydb.NewManager(configProvider, dbconfig.NewConfig(configProvider, "identitydb.persistence.type", "db.persistence.type"))
 	assert.NoError(p.registry.RegisterService(identityDBManager))
 	identityStorageProvider := identity.NewDBStorageProvider(kvs.GetService(p.registry), identityDBManager)
 	assert.NoError(p.registry.RegisterService(identityStorageProvider), "failed to register identity storage")
@@ -153,13 +155,25 @@ func (p *SDK) Install() error {
 		storage.NewDBEntriesStorage("tokens", kvs.GetService(p.registry)),
 	)
 	assert.NoError(p.registry.RegisterService(tokensManager))
+
+	// Certification
+	storageProvider := certification.NewDBStorageProvider(tokenDBManager)
+	assert.NoError(p.registry.RegisterService(
+		storageProvider),
+		"failed to register certification storage",
+	)
+
+	vaultProvider := db.NewVaultProvider(tokenDBManager, ttxdbManager, tokensManager, storageProvider, fabricNSP, orionNSP)
+	assert.NoError(p.registry.RegisterService(vaultProvider))
+
 	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
 	assert.NoError(p.registry.RegisterService(ownerManager))
 	auditorManager := auditor.NewManager(networkProvider, auditDBManager, tokensManager, storage.NewDBEntriesStorage("auditor", kvs.GetService(p.registry)), tmsp)
 	assert.NoError(p.registry.RegisterService(auditorManager))
 
 	// TMS callback
-	p.postInitializer = tmsinit.NewPostInitializer(p.registry, networkProvider, ownerManager, auditorManager)
+	p.postInitializer, err = tmsinit.NewPostInitializer(tmsp, fabricNSP, orionNSP, tokensManager, auditDBManager, ttxdbManager, networkProvider, ownerManager, auditorManager)
+	assert.NoError(err)
 	tmsProvider.SetCallback(p.postInitializer.PostInit)
 
 	// Orion related initialization
@@ -167,14 +181,8 @@ func (p *SDK) Install() error {
 	assert.NoError(err, "failed to get custodian status")
 	logger.Infof("Orion Custodian enabled: %t", enabled)
 	if enabled {
-		assert.NoError(orion.InstallViews(p.registry), "failed to install custodian views")
+		assert.NoError(orion.InstallViews(view2.GetRegistry(p.registry)), "failed to install custodian views")
 	}
-
-	// Certification
-	assert.NoError(p.registry.RegisterService(
-		certification.NewDBStorageProvider(tokenDBManager)),
-		"failed to register certification storage",
-	)
 
 	// Install metrics
 	assert.NoError(

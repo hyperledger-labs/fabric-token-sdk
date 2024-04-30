@@ -10,9 +10,9 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
 )
@@ -58,7 +58,7 @@ type IdType = string
 
 // Manager handles the databases
 type Manager struct {
-	sp     view.ServiceProvider
+	cp     core.ConfigProvider
 	config Config
 
 	mutex       sync.Mutex
@@ -67,9 +67,9 @@ type Manager struct {
 }
 
 // NewManager creates a new DB manager.
-func NewManager(sp view.ServiceProvider, config Config) *Manager {
+func NewManager(cp core.ConfigProvider, config Config) *Manager {
 	return &Manager{
-		sp:          sp,
+		cp:          cp,
 		config:      config,
 		identityDBs: map[string]driver.IdentityDB{},
 		walletDBs:   map[string]driver.WalletDB{},
@@ -97,7 +97,7 @@ func (m *Manager) IdentityDBByTMSId(tmsID token.TMSID) (driver.IdentityDB, error
 	if d == nil {
 		return nil, errors.Errorf("no driver found for [%s]", driverName)
 	}
-	identityDB, err := d.OpenIdentityDB(m.sp, tmsID)
+	identityDB, err := d.OpenIdentityDB(m.cp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating identitydb driver [%s] for id [%s]", driverName, tmsID)
 	}
@@ -127,7 +127,7 @@ func (m *Manager) WalletDBByTMSId(tmsID token.TMSID) (driver.WalletDB, error) {
 	if d == nil {
 		return nil, errors.Errorf("no driver found for [%s]", driverName)
 	}
-	walletDB, err := d.OpenWalletDB(m.sp, tmsID)
+	walletDB, err := d.OpenWalletDB(m.cp, tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed instantiating walletdb driver [%s]", driverName)
 	}

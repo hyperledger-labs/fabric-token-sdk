@@ -8,9 +8,12 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -33,6 +36,7 @@ var _ = Describe("Orion EndToEnd", func() {
 					Backend:        "orion",
 					TokenSDKDriver: "fabtoken",
 					Aries:          true,
+					SDKs:           []api.SDK{&orion3.SDK{}, &sdk.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())

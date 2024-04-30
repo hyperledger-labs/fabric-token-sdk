@@ -11,17 +11,18 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func Topology(backend, tokenSDKDriver string) []api.Topology {
+func Topology(backend, tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
 	switch backend {
@@ -100,14 +101,21 @@ func Topology(backend, tokenSDKDriver string) []api.Topology {
 		// Enable orion sdk on each FSC node
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
-		orionTopology.SetDefaultSDK(fscTopology)
+		if _, ok := sdks[0].(*orion3.SDK); !ok {
+			panic("orion sdk missing")
+		}
 		fscTopology.SetBootstrapNode(custodian)
 	} else {
-		// Add Fabric SDK to FSC Nodes
-		fscTopology.AddSDK(&fabric3.SDK{})
+		if _, ok := sdks[0].(*fabric3.SDK); !ok {
+			panic("fabric sdk missing")
+		}
 	}
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
+
 	tms.AddAuditor(auditor)
+
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

@@ -107,13 +107,21 @@ var (
 
 // GetService returns the Tokens instance for the passed TMS
 func GetService(sp view.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
-	s, err := sp.GetService(managerType)
+	s, err := GetProvider(sp)
 	if err != nil {
 		return nil, err
 	}
-	tokens, err := s.(*Manager).Tokens(tmsID)
+	tokens, err := s.Tokens(tmsID)
 	if err != nil {
 		return nil, err
 	}
 	return tokens, nil
+}
+
+func GetProvider(sp view.ServiceProvider) (*Manager, error) {
+	s, err := sp.GetService(managerType)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get manager service")
+	}
+	return s.(*Manager), nil
 }

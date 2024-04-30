@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/cache/secondcache"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identitydb"
@@ -29,16 +29,16 @@ func NewDriver() *Driver {
 	return &Driver{DBOpener: sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)}
 }
 
-func (d *Driver) OpenIdentityDB(sp view.ServiceProvider, tmsID token.TMSID) (driver.IdentityDB, error) {
-	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
+func (d *Driver) OpenIdentityDB(cp core.ConfigProvider, tmsID token.TMSID) (driver.IdentityDB, error) {
+	sqlDB, opts, err := d.DBOpener.Open(cp, tmsID)
 	if err != nil {
 		return nil, err
 	}
 	return sqldb.NewIdentityDB(sqlDB, opts.TablePrefix, !opts.SkipCreateTable, secondcache.New(1000))
 }
 
-func (d *Driver) OpenWalletDB(sp view.ServiceProvider, tmsID token.TMSID) (driver.WalletDB, error) {
-	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
+func (d *Driver) OpenWalletDB(cp core.ConfigProvider, tmsID token.TMSID) (driver.WalletDB, error) {
+	sqlDB, opts, err := d.DBOpener.Open(cp, tmsID)
 	if err != nil {
 		return nil, err
 	}

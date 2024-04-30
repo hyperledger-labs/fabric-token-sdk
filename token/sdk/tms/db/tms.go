@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package db
 
 import (
+	driver2 "github.com/hyperledger-labs/fabric-smart-client/platform/common/driver"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	token3 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -27,19 +27,31 @@ import (
 var logger = flogging.MustGetLogger("token-sdk")
 
 type PostInitializer struct {
-	sp              view.ServiceProvider
+	tmsProvider    *token3.ManagementServiceProvider
+	fabricNSP      *fabric.NetworkServiceProvider
+	orionNSP       *orion.NetworkServiceProvider
+	tokensProvider *tokens2.Manager
+	filterProvider TransactionFilterProvider[*AcceptTxInDBsFilter]
+
 	networkProvider *network.Provider
 	ownerManager    *ttx.Manager
 	auditorManager  *auditor.Manager
 }
 
-func NewPostInitializer(sp view.ServiceProvider, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) *PostInitializer {
+func NewPostInitializer(tmsProvider *token3.ManagementServiceProvider, fabricNSP *fabric.NetworkServiceProvider, orionNSP *orion.NetworkServiceProvider, tokensProvider *tokens2.Manager, auditDBProvider *auditdb.Manager, ttxDBProvider *ttxdb.Manager, networkProvider *network.Provider, ownerManager *ttx.Manager, auditorManager *auditor.Manager) (*PostInitializer, error) {
 	return &PostInitializer{
-		sp:              sp,
+		tmsProvider:     tmsProvider,
+		tokensProvider:  tokensProvider,
 		networkProvider: networkProvider,
 		ownerManager:    ownerManager,
 		auditorManager:  auditorManager,
-	}
+		filterProvider: &acceptTxInDBFilterProvider{
+			auditDBProvider: auditDBProvider,
+			ttxDBProvider:   ttxDBProvider,
+		},
+		fabricNSP: fabricNSP,
+		orionNSP:  orionNSP,
+	}, nil
 }
 
 func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, channel, namespace string) error {
@@ -59,33 +71,50 @@ func (p *PostInitializer) PostInit(tms driver.TokenManagerService, networkID, ch
 	return nil
 }
 
+func (p *PostInitializer) fabricNetworkService(id string) (*fabric.NetworkService, error) {
+	if p.fabricNSP == nil {
+		return nil, errors.New("fabric nsp not found")
+	}
+	return p.fabricNSP.FabricNetworkService(id)
+}
+
+func (p *PostInitializer) orionNetworkService(id string) (*orion.NetworkService, error) {
+	if p.orionNSP == nil {
+		return nil, errors.New("orion nsp not found")
+	}
+	return p.orionNSP.NetworkService(id)
+}
+
 func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) error {
 	GetTMSProvider := func() *token3.ManagementServiceProvider {
-		return token3.GetManagementServiceProvider(p.sp)
+		return p.tmsProvider
 	}
 	GetTokenRequest := func(tms *token3.ManagementService, txID string) ([]byte, error) {
-		tr, err := ttx.Get(p.sp, tms).GetTokenRequest(txID)
-		if err != nil || len(tr) == 0 {
-			return auditor.GetByTMSID(p.sp, tms.ID()).GetTokenRequest(txID)
+		if ownerDB, err := p.ownerManager.DB(tms.ID()); err == nil {
+			if tr, err := ownerDB.GetTokenRequest(txID); len(tr) != 0 && err == nil {
+				return tr, nil
+			}
 		}
-		return tr, nil
+		if auditorDB, err := p.auditorManager.Auditor(tms.ID()); err == nil {
+			return auditorDB.GetTokenRequest(txID)
+		}
+		return nil, errors.New("failed to get auditor manager")
 	}
-
-	n, err := fabric.GetFabricNetworkService(p.sp, networkID)
+	n, err := p.fabricNetworkService(networkID)
 	if err != nil {
 		// ORION
-		ons, err := orion.GetOrionNetworkService(p.sp, networkID)
+
+		// register processor
+		ons, err := p.orionNetworkService(networkID)
 		if err != nil {
 			return err
 		}
-
-		// register processor
 		tmsID := token3.TMSID{
 			Network:   ons.Name(),
 			Channel:   channel,
 			Namespace: namespace,
 		}
-		transactionFilter, err := newTransactionFilter(p.sp, tmsID)
+		transactionFilter, err := p.filterProvider.New(tmsID)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
 		}
@@ -94,12 +123,15 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 		}
 
 		// fetch public params and instantiate the tms
-		nw := network.GetInstance(p.sp, networkID, channel)
+		nw, err := p.networkProvider.GetNetwork(networkID, channel)
+		if err != nil {
+			return errors.WithMessagef(err, "failed to get network")
+		}
 		ppRaw, err := nw.FetchPublicParameters(namespace)
 		if err != nil {
 			return errors.WithMessagef(err, "failed to fetch public parameters for [%s]", tmsID)
 		}
-		_, err = token3.GetManagementServiceProvider(p.sp).GetManagementService(token3.WithTMSID(tmsID), token3.WithPublicParameter(ppRaw))
+		_, err = p.tmsProvider.GetManagementService(token3.WithTMSID(tmsID), token3.WithPublicParameter(ppRaw))
 		if err != nil {
 			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
 		}
@@ -121,7 +153,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 			n.Name(),
 			namespace,
 			common.NewLazyGetter[*tokens2.Tokens](func() (*tokens2.Tokens, error) {
-				return tokens2.GetService(p.sp, tmsID)
+				return p.tokensProvider.Tokens(tmsID)
 			}).Get,
 			GetTMSProvider,
 			GetTokenRequest,
@@ -129,7 +161,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	); err != nil {
 		return errors.WithMessagef(err, "failed to add processor to fabric network [%s]", networkID)
 	}
-	transactionFilter, err := newTransactionFilter(p.sp, tmsID)
+	transactionFilter, err := p.filterProvider.New(tmsID)
 	if err != nil {
 		return errors.WithMessagef(err, "failed to create transaction filter for [%s]", tmsID)
 	}
@@ -157,7 +189,7 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	}
 	if len(ppRaw) != 0 {
 		// initialize the TMS with the public params from the vault
-		_, err := token3.GetManagementServiceProvider(p.sp).GetManagementService(token3.WithTMSID(tmsID), token3.WithPublicParameter(ppRaw))
+		_, err := p.tmsProvider.GetManagementService(token3.WithTMSID(tmsID), token3.WithPublicParameter(ppRaw))
 		if err != nil {
 			return errors.WithMessagef(err, "failed to instantiate tms [%s]", tmsID)
 		}
@@ -165,12 +197,21 @@ func (p *PostInitializer) ConnectNetwork(networkID, channel, namespace string) e
 	return nil
 }
 
-func newTransactionFilter(sp token3.ServiceProvider, tmsID token3.TMSID) (*AcceptTxInDBsFilter, error) {
-	ttxDB, err := ttxdb.GetByTMSId(sp, tmsID)
+type TransactionFilterProvider[F driver2.TransactionFilter] interface {
+	New(tmsID token3.TMSID) (F, error)
+}
+
+type acceptTxInDBFilterProvider struct {
+	ttxDBProvider   *ttxdb.Manager
+	auditDBProvider *auditdb.Manager
+}
+
+func (p *acceptTxInDBFilterProvider) New(tmsID token3.TMSID) (*AcceptTxInDBsFilter, error) {
+	ttxDB, err := p.ttxDBProvider.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get transaction db for [%s]", tmsID)
 	}
-	auditDB, err := auditdb.GetByTMSId(sp, tmsID)
+	auditDB, err := p.auditDBProvider.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to get audit db for [%s]", tmsID)
 	}

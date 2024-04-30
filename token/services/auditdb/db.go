@@ -15,6 +15,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
@@ -319,7 +320,7 @@ type Config interface {
 
 // Manager handles the databases
 type Manager struct {
-	sp     view.ServiceProvider
+	cp     core.ConfigProvider
 	config Config
 
 	mutex sync.Mutex
@@ -327,9 +328,9 @@ type Manager struct {
 }
 
 // NewManager creates a new DB manager.
-func NewManager(sp view.ServiceProvider, config Config) *Manager {
+func NewManager(cp core.ConfigProvider, config Config) *Manager {
 	return &Manager{
-		sp:     sp,
+		cp:     cp,
 		config: config,
 		dbs:    map[string]*DB{},
 	}
@@ -351,7 +352,7 @@ func (m *Manager) DBByTMSId(id token.TMSID) (*DB, error) {
 		if d == nil {
 			return nil, errors.Errorf("no driver found for [%s]", driverName)
 		}
-		driverInstance, err := d.Open(m.sp, id)
+		driverInstance, err := d.Open(m.cp, id)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed instantiating auditdb driver [%s]", driverName)
 		}
@@ -368,13 +369,21 @@ var (
 // GetByTMSId returns the DB for the given TMS id.
 // Nil might be returned if the wallet is not found or an error occurred.
 func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
-	s, err := sp.GetService(managerType)
+	s, err := GetProvider(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
 	}
-	c, err := s.(*Manager).DBByTMSId(tmsID)
+	c, err := s.DBByTMSId(tmsID)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get db for tms [%s]", tmsID)
 	}
 	return c, nil
+}
+
+func GetProvider(sp view.ServiceProvider) (*Manager, error) {
+	s, err := sp.GetService(managerType)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get manager service")
+	}
+	return s.(*Manager), nil
 }

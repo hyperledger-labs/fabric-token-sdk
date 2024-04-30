@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package sql
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
@@ -28,8 +28,8 @@ func NewDriver() *Driver {
 	return &Driver{DBOpener: sqldb.NewSQLDBOpener(OptsKey, EnvVarKey)}
 }
 
-func (d *Driver) Open(sp view.ServiceProvider, tmsID token.TMSID) (driver.TokenDB, error) {
-	sqlDB, opts, err := d.DBOpener.Open(sp, tmsID)
+func (d *Driver) Open(cp core.ConfigProvider, tmsID token.TMSID) (driver.TokenDB, error) {
+	sqlDB, opts, err := d.DBOpener.Open(cp, tmsID)
 	if err != nil {
 		return nil, err
 	}

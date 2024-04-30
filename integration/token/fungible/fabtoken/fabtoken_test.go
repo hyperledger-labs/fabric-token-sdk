@@ -10,10 +10,13 @@ import (
 	"math"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -35,6 +38,7 @@ var _ = Describe("EndToEnd", func() {
 					Backend:        "fabric",
 					TokenSDKDriver: "fabtoken",
 					Aries:          true,
+					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
