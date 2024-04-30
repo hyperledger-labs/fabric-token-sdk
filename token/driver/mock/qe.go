@@ -9,6 +9,21 @@ import (
 )
 
 type QueryEngine struct {
+	GetStatusStub        func(string) (int, string, error)
+	getStatusMutex       sync.RWMutex
+	getStatusArgsForCall []struct {
+		arg1 string
+	}
+	getStatusReturns struct {
+		result1 int
+		result2 string
+		result3 error
+	}
+	getStatusReturnsOnCall map[int]struct {
+		result1 int
+		result2 string
+		result3 error
+	}
 	GetTokenInfoAndOutputsStub        func([]*token.ID) ([]string, [][]byte, [][]byte, error)
 	getTokenInfoAndOutputsMutex       sync.RWMutex
 	getTokenInfoAndOutputsArgsForCall []struct {
@@ -184,6 +199,73 @@ type QueryEngine struct {
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
+}
+
+func (fake *QueryEngine) GetStatus(arg1 string) (int, string, error) {
+	fake.getStatusMutex.Lock()
+	ret, specificReturn := fake.getStatusReturnsOnCall[len(fake.getStatusArgsForCall)]
+	fake.getStatusArgsForCall = append(fake.getStatusArgsForCall, struct {
+		arg1 string
+	}{arg1})
+	stub := fake.GetStatusStub
+	fakeReturns := fake.getStatusReturns
+	fake.recordInvocation("GetStatus", []interface{}{arg1})
+	fake.getStatusMutex.Unlock()
+	if stub != nil {
+		return stub(arg1)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *QueryEngine) GetStatusCallCount() int {
+	fake.getStatusMutex.RLock()
+	defer fake.getStatusMutex.RUnlock()
+	return len(fake.getStatusArgsForCall)
+}
+
+func (fake *QueryEngine) GetStatusCalls(stub func(string) (int, string, error)) {
+	fake.getStatusMutex.Lock()
+	defer fake.getStatusMutex.Unlock()
+	fake.GetStatusStub = stub
+}
+
+func (fake *QueryEngine) GetStatusArgsForCall(i int) string {
+	fake.getStatusMutex.RLock()
+	defer fake.getStatusMutex.RUnlock()
+	argsForCall := fake.getStatusArgsForCall[i]
+	return argsForCall.arg1
+}
+
+func (fake *QueryEngine) GetStatusReturns(result1 int, result2 string, result3 error) {
+	fake.getStatusMutex.Lock()
+	defer fake.getStatusMutex.Unlock()
+	fake.GetStatusStub = nil
+	fake.getStatusReturns = struct {
+		result1 int
+		result2 string
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *QueryEngine) GetStatusReturnsOnCall(i int, result1 int, result2 string, result3 error) {
+	fake.getStatusMutex.Lock()
+	defer fake.getStatusMutex.Unlock()
+	fake.GetStatusStub = nil
+	if fake.getStatusReturnsOnCall == nil {
+		fake.getStatusReturnsOnCall = make(map[int]struct {
+			result1 int
+			result2 string
+			result3 error
+		})
+	}
+	fake.getStatusReturnsOnCall[i] = struct {
+		result1 int
+		result2 string
+		result3 error
+	}{result1, result2, result3}
 }
 
 func (fake *QueryEngine) GetTokenInfoAndOutputs(arg1 []*token.ID) ([]string, [][]byte, [][]byte, error) {
@@ -1015,6 +1097,8 @@ func (fake *QueryEngine) WhoDeletedTokensReturnsOnCall(i int, result1 []string, 
 func (fake *QueryEngine) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
+	fake.getStatusMutex.RLock()
+	defer fake.getStatusMutex.RUnlock()
 	fake.getTokenInfoAndOutputsMutex.RLock()
 	defer fake.getTokenInfoAndOutputsMutex.RUnlock()
 	fake.getTokenInfosMutex.RLock()
