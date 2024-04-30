@@ -9,9 +9,9 @@ package orion
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
@@ -40,22 +40,25 @@ type Network struct {
 	ip          IdentityProvider
 	ledger      *ledger
 
-	vaultCacheLock sync.RWMutex
-	vaultCache     map[string]driver.Vault
-	newVault       NewVaultFunc
+	vaultLazyCache common.LazyProvider[string, driver.Vault]
 	subscribers    *events.Subscribers
 }
 
 func NewNetwork(sp token2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
+	loader := &loader{
+		newVault: newVault,
+		name:     n.Name(),
+		channel:  "",
+		vault:    n.Vault(),
+	}
 	net := &Network{
-		sp:          sp,
-		ip:          ip,
-		n:           n,
-		viewManager: view2.GetManager(sp),
-		tmsProvider: token2.GetManagementServiceProvider(sp),
-		vaultCache:  map[string]driver.Vault{},
-		newVault:    newVault,
-		subscribers: events.NewSubscribers(),
+		sp:             sp,
+		ip:             ip,
+		n:              n,
+		viewManager:    view2.GetManager(sp),
+		tmsProvider:    token2.GetManagementServiceProvider(sp),
+		vaultLazyCache: common.NewLazyProvider(loader.load),
+		subscribers:    events.NewSubscribers(),
 	}
 	net.ledger = &ledger{n: net}
 	return net
@@ -78,36 +81,7 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		namespace = tms.Namespace()
 	}
 
-	// check cache
-	n.vaultCacheLock.RLock()
-	v, ok := n.vaultCache[namespace]
-	n.vaultCacheLock.RUnlock()
-	if ok {
-		return v, nil
-	}
-
-	// lock
-	n.vaultCacheLock.Lock()
-	defer n.vaultCacheLock.Unlock()
-
-	// check cache again
-	v, ok = n.vaultCache[namespace]
-	if ok {
-		return v, nil
-	}
-
-	tokenVault, err := n.newVault(n.Name(), n.Channel(), namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token vault")
-	}
-	nv := &nv{
-		v:          n.n.Vault(),
-		tokenVault: tokenVault,
-	}
-	// store in cache
-	n.vaultCache[namespace] = nv
-
-	return nv, nil
+	return n.vaultLazyCache.Get(namespace)
 }
 
 func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
@@ -326,4 +300,19 @@ func wrapRecover(r any) error {
 		return fmt.Errorf("panic caught: %v", r)
 	}
 	return nil
+}
+
+type loader struct {
+	newVault NewVaultFunc
+	name     string
+	channel  string
+	vault    orion.Vault
+}
+
+func (l *loader) load(namespace string) (driver.Vault, error) {
+	tokenVault, err := l.newVault(l.name, l.channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token vault")
+	}
+	return &nv{v: l.vault, tokenVault: tokenVault}, nil
 }

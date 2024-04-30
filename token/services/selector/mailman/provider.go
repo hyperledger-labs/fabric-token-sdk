@@ -8,11 +8,11 @@ package mailman
 
 import (
 	"runtime/debug"
-	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
 	"github.com/pkg/errors"
 )
 
@@ -26,17 +26,20 @@ type SelectorService struct {
 	subscribe Subscribe
 	tracer    Tracer
 
-	lock     sync.RWMutex
-	managers map[string]token.SelectorManager
+	managerLazyCache common.LazyProvider[*token.ManagementService, token.SelectorManager]
 	// TODO create a shared worker pool for all selectors
 	// workerPool []*worker
 }
 
 func NewService(subscribe Subscribe, tracer Tracer) *SelectorService {
-	return &SelectorService{
+	loader := &loader{
 		subscribe: subscribe,
 		tracer:    tracer,
-		managers:  make(map[string]token.SelectorManager),
+	}
+	return &SelectorService{
+		subscribe:        subscribe,
+		tracer:           tracer,
+		managerLazyCache: common.NewLazyProviderWithKeyMapper(key, loader.load),
 	}
 }
 
@@ -45,29 +48,15 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 		return nil, errors.Errorf("invalid tms, nil reference")
 	}
 
-	key := tms.Network() + tms.Channel() + tms.Namespace()
+	return s.managerLazyCache.Get(tms)
+}
 
-	// if Manager for this network/channel/namespace already exists, just return it
-	s.lock.RLock()
-	m, ok := s.managers[key]
-	if ok {
-		s.lock.RUnlock()
-		return m, nil
-	}
-	s.lock.RUnlock()
+type loader struct {
+	subscribe Subscribe
+	tracer    Tracer
+}
 
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	// check again if Manager for this network/channel/namespace already exists, just return it
-	m, ok = s.managers[key]
-	if ok {
-		return m, nil
-	}
-
-	// otherwise, build a new Manager
-
-	// create walletID extractor function using TMS wallet manager
+func (s *loader) load(tms *token.ManagementService) (token.SelectorManager, error) {
 	walletIDByRawIdentity := func(rawIdentity []byte) string {
 		w := tms.WalletManager().OwnerWallet(rawIdentity)
 		if w == nil {
@@ -93,6 +82,9 @@ func (s *SelectorService) SelectorManager(tms *token.ManagementService) (token.S
 		return nil, err
 	}
 	newManager.Start()
-	s.managers[key] = newManager
 	return newManager, nil
+}
+
+func key(tms *token.ManagementService) string {
+	return tms.Network() + tms.Channel() + tms.Namespace()
 }

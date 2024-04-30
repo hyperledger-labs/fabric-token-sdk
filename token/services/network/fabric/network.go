@@ -12,10 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
-
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric/services/chaincode"
@@ -23,6 +20,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/common"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/keys"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -107,22 +106,25 @@ type Network struct {
 	viewManager *view2.Manager
 	ledger      *ledger
 
-	vaultCacheLock sync.RWMutex
-	vaultCache     map[string]driver.Vault
-	NewVault       NewVaultFunc
+	vaultLazyCache common.LazyProvider[string, driver.Vault]
 	subscribers    *events.Subscribers
 }
 
 func NewNetwork(sp token2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel, newVault NewVaultFunc) *Network {
+	loader := &loader{
+		newVault: newVault,
+		name:     n.Name(),
+		channel:  ch.Name(),
+		vault:    ch.Vault(),
+	}
 	return &Network{
-		n:           n,
-		ch:          ch,
-		tmsProvider: token2.GetManagementServiceProvider(sp),
-		viewManager: view2.GetManager(sp),
-		ledger:      &ledger{ch.Ledger()},
-		vaultCache:  map[string]driver.Vault{},
-		NewVault:    newVault,
-		subscribers: events.NewSubscribers(),
+		n:              n,
+		ch:             ch,
+		tmsProvider:    token2.GetManagementServiceProvider(sp),
+		viewManager:    view2.GetManager(sp),
+		ledger:         &ledger{ch.Ledger()},
+		subscribers:    events.NewSubscribers(),
+		vaultLazyCache: common.NewLazyProvider(loader.load),
 	}
 }
 
@@ -143,36 +145,7 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 		namespace = tms.Namespace()
 	}
 
-	// check cache
-	n.vaultCacheLock.RLock()
-	v, ok := n.vaultCache[namespace]
-	n.vaultCacheLock.RUnlock()
-	if ok {
-		return v, nil
-	}
-
-	// lock
-	n.vaultCacheLock.Lock()
-	defer n.vaultCacheLock.Unlock()
-
-	// check cache again
-	v, ok = n.vaultCache[namespace]
-	if ok {
-		return v, nil
-	}
-
-	tokenVault, err := n.NewVault(n.Name(), n.Channel(), namespace)
-	if err != nil {
-		return nil, errors.WithMessagef(err, "failed to get token vault")
-	}
-	nv := &nv{
-		v:          n.ch.Vault(),
-		tokenVault: tokenVault,
-	}
-	// store in cache
-	n.vaultCache[namespace] = nv
-
-	return nv, nil
+	return n.vaultLazyCache.Get(namespace)
 }
 
 func (n *Network) Broadcast(context context.Context, blob interface{}) error {
@@ -460,4 +433,19 @@ func (t *FinalityListener) OnStatus(txID string, status int, message string) {
 	}
 	qe.Done()
 	t.root.OnStatus(txID, status, message, tokenRequestHash)
+}
+
+type loader struct {
+	newVault NewVaultFunc
+	name     string
+	channel  string
+	vault    *fabric.Vault
+}
+
+func (l *loader) load(namespace string) (driver.Vault, error) {
+	tokenVault, err := l.newVault(l.name, l.channel, namespace)
+	if err != nil {
+		return nil, errors.WithMessagef(err, "failed to get token vault")
+	}
+	return &nv{v: l.vault, tokenVault: tokenVault}, nil
 }
