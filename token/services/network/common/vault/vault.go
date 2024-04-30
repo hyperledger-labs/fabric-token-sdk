@@ -57,10 +57,7 @@ type QueryEngine struct {
 }
 
 func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
-	vd, _, err := q.ttxdb.GetStatus(id.TxId)
-	if err != nil || vd == ttxdb.Unknown {
-		vd, _, err = q.auditDB.GetStatus(id.TxId)
-	}
+	vd, _, err := q.GetStatus(id.TxId)
 	if err != nil {
 		return false, err
 	}
