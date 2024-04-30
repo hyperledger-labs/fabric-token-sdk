@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
@@ -65,7 +64,7 @@ type IdentityDB interface {
 // IdentityDBDriver is the interface for an identity database driver
 type IdentityDBDriver interface {
 	// OpenWalletDB opens a connection to the wallet DB
-	OpenWalletDB(sp view2.ServiceProvider, tmsID token.TMSID) (WalletDB, error)
+	OpenWalletDB(cp ConfigProvider, tmsID token.TMSID) (WalletDB, error)
 	// OpenIdentityDB opens a connection to the identity DB
-	OpenIdentityDB(sp view2.ServiceProvider, tmsID token.TMSID) (IdentityDB, error)
+	OpenIdentityDB(cp ConfigProvider, tmsID token.TMSID) (IdentityDB, error)
 }

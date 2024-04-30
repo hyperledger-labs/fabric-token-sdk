@@ -33,10 +33,12 @@ type IdentityProvider interface {
 }
 
 type Network struct {
-	sp     view2.ServiceProvider
-	n      *orion.NetworkService
-	ip     IdentityProvider
-	ledger *ledger
+	sp          view2.ServiceProvider
+	viewManager *view2.Manager
+	tmsProvider *token2.ManagementServiceProvider
+	n           *orion.NetworkService
+	ip          IdentityProvider
+	ledger      *ledger
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
@@ -49,6 +51,8 @@ func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkS
 		sp:          sp,
 		ip:          ip,
 		n:           n,
+		viewManager: view2.GetManager(sp),
+		tmsProvider: token2.GetManagementServiceProvider(sp),
 		vaultCache:  map[string]driver.Vault{},
 		newVault:    newVault,
 		subscribers: events.NewSubscribers(),
@@ -67,9 +71,9 @@ func (n *Network) Channel() string {
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	if len(namespace) == 0 {
-		tms := token2.GetManagementService(n.sp, token2.WithNetwork(n.n.Name()))
-		if tms == nil {
-			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s]", n.n.Name())
+		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()))
+		if tms == nil || err != nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s]: %v", n.n.Name(), err)
 		}
 		namespace = tms.Namespace()
 	}
@@ -129,9 +133,9 @@ func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {
 	case driver.Envelope:
-		_, err = view2.GetManager(n.sp).InitiateView(NewBroadcastView(n, b))
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b))
 	default:
-		_, err = view2.GetManager(n.sp).InitiateView(NewBroadcastView(n, b))
+		_, err = n.viewManager.InitiateView(NewBroadcastView(n, b))
 	}
 	return err
 }
@@ -180,7 +184,7 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 }
 
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	pp, err := view2.GetManager(n.sp).InitiateView(NewPublicParamsRequestView(n.Name(), namespace))
+	pp, err := n.viewManager.InitiateView(NewPublicParamsRequestView(n.Name(), namespace))
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +249,7 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
 	}
-	pp, err := view2.GetManager(n.sp).InitiateView(
+	pp, err := n.viewManager.InitiateView(
 		NewLookupKeyRequestView(
 			n.Name(),
 			namespace,

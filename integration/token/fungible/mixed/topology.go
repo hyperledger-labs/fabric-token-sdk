@@ -11,12 +11,11 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
-	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 const (
@@ -26,7 +25,7 @@ const (
 	FabTokenNamespace = "fabtoken-token-chaincode"
 )
 
-func Topology() []api.Topology {
+func Topology(sdks ...api2.SDK) []api.Topology {
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
 	fabricTopology.AddOrganizationsByName("Org1", "Org2", "Org3")
@@ -174,14 +173,15 @@ func Topology() []api.Topology {
 	fabTokenTms.SetTokenGenPublicParams("65535")
 	fabric2.SetOrgs(fabTokenTms, "Org2")
 
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	dlogTms.AddAuditor(auditor1)
 	fabTokenTms.AddAuditor(auditor2)
 
 	// FSC topology
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
-	// Add Fabric SDK to FSC Nodes
-	fscTopology.AddSDK(&fabric3.SDK{})
+
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

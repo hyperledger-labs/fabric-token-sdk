@@ -33,7 +33,7 @@ func TestDB(t *testing.T) {
 	registry := registry.New()
 	assert.NoError(t, registry.RegisterService(cp))
 
-	manager := ttxdb.NewManager(registry, db.NewConfig(cp, "ttxdb.persistence.type"))
+	manager := ttxdb.NewManager(cp, db.NewConfig(cp, "ttxdb.persistence.type"))
 	db1, err := manager.DBByTMSId(token.TMSID{Network: "pineapple"})
 	assert.NoError(t, err)
 	db2, err := manager.DBByTMSId(token.TMSID{Network: "grapes"})

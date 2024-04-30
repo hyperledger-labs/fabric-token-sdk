@@ -10,6 +10,7 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabricSDK "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/artifactgen"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
@@ -18,7 +19,7 @@ import (
 	tokenSDK "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func Topology(tokenSDKDriver string) []api.Topology {
+func Topology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -98,14 +99,14 @@ func Topology(tokenSDKDriver string) []api.Topology {
 	charlie.RegisterViewFactory("unspent", &views.ListUnspentTokensViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tokenTopology.SetSDK(fscTopology, &tokenSDK.SDK{})
 	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.SetTokenGenPublicParams("16")
 	tms.AddAuditor(auditor)
 
-	// Add Fabric SDK to FSC Nodes
-	fscTopology.AddSDK(&fabricSDK.SDK{})
+	for _, sdk := range sdks {
+		fscTopology.AddSDK(sdk)
+	}
 
 	return []api.Topology{
 		fabricTopology,
@@ -115,7 +116,7 @@ func Topology(tokenSDKDriver string) []api.Topology {
 }
 
 func main() {
-	if err := artifactgen.WriteTopologies("fungible.yaml", Topology("dlog"), 0766); err != nil {
+	if err := artifactgen.WriteTopologies("fungible.yaml", Topology("dlog", &fabricSDK.SDK{}, &tokenSDK.SDK{}), 0766); err != nil {
 		panic(err)
 	}
 }

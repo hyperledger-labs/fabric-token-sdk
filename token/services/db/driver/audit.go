@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
@@ -47,5 +46,12 @@ type AuditTransactionDB interface {
 // AuditDBDriver is the interface for an audit database driver
 type AuditDBDriver interface {
 	// Open opens an audit database connection
-	Open(sp view2.ServiceProvider, tmsID token2.TMSID) (AuditTransactionDB, error)
+	Open(cp ConfigProvider, tmsID token2.TMSID) (AuditTransactionDB, error)
+}
+
+type ConfigProvider interface {
+	UnmarshalKey(key string, rawVal interface{}) error
+	GetString(key string) string
+	IsSet(key string) bool
+	TranslatePath(path string) string
 }

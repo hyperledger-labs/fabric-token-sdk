@@ -13,8 +13,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/pkg/errors"
 )
@@ -43,8 +43,8 @@ type DBOpener struct {
 	envVarKey string
 }
 
-func (d *DBOpener) Open(sp view.ServiceProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
-	opts, err := d.compileOpts(sp, tmsID)
+func (d *DBOpener) Open(cp core.ConfigProvider, tmsID token.TMSID) (*sql.DB, *Opts, error) {
+	opts, err := d.compileOpts(cp, tmsID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -63,9 +63,9 @@ func NewSQLDBOpener(optsKey, envVarKey string) *DBOpener {
 	}
 }
 
-func (d *DBOpener) compileOpts(sp view.ServiceProvider, tmsID token.TMSID) (*Opts, error) {
+func (d *DBOpener) compileOpts(cp core.ConfigProvider, tmsID token.TMSID) (*Opts, error) {
 	opts := &Opts{}
-	tmsConfig, err := config.NewTokenSDK(view.GetConfigService(sp)).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
+	tmsConfig, err := config.NewTokenSDK(cp).GetTMS(tmsID.Network, tmsID.Channel, tmsID.Namespace)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to load configuration for tms [%s]", tmsID)
 	}

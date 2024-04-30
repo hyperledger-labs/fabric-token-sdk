@@ -8,9 +8,12 @@ package fabtoken_test
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	integration2 "github.com/hyperledger-labs/fabric-token-sdk/integration"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -72,7 +75,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCTwoFabricNetworksTopology("fabtoken")...,
+				interop.HTLCTwoFabricNetworksTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -91,7 +94,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropFastExchangeTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCTwoFabricNetworksTopology("fabtoken")...,
+				interop.HTLCTwoFabricNetworksTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -110,7 +113,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCSwapNoCrossTwoFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCNoCrossClaimTopology("fabtoken")...,
+				interop.HTLCNoCrossClaimTopology("fabtoken", &fabric3.SDK{}, &sdk.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())
@@ -129,7 +132,7 @@ var _ = Describe("FabToken end to end", func() {
 			ii, err = integration.New(
 				integration2.FabTokenInteropHTLCSwapNoCrossWithOrionAndFabricNetworks.StartPortForNode(),
 				"",
-				interop.HTLCNoCrossClaimWithOrionTopology("fabtoken")...,
+				interop.HTLCNoCrossClaimWithOrionTopology("fabtoken", &fabric3.SDK{}, &orion3.SDK{}, &sdk.SDK{})...,
 			)
 			Expect(err).NotTo(HaveOccurred())
 			ii.RegisterPlatformFactory(token.NewPlatformFactory())

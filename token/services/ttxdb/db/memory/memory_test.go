@@ -13,17 +13,18 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/dbtest"
 )
 
-type MockServiceProvider struct{}
+type mockConfigProvider struct{}
 
-func (sp MockServiceProvider) GetService(v interface{}) (interface{}, error) {
-	return v, nil
-}
+func (sp mockConfigProvider) UnmarshalKey(key string, rawVal interface{}) error { return nil }
+func (sp mockConfigProvider) GetString(key string) string                       { return "" }
+func (sp mockConfigProvider) IsSet(key string) bool                             { return false }
+func (sp mockConfigProvider) TranslatePath(path string) string                  { return "" }
 
 func TestMemory(t *testing.T) {
 	d := NewDriver()
 
 	for _, c := range dbtest.Cases {
-		db, err := d.Open(new(MockServiceProvider), token.TMSID{Network: c.Name})
+		db, err := d.Open(new(mockConfigProvider), token.TMSID{Network: c.Name})
 		if err != nil {
 			t.Fatal(err)
 		}

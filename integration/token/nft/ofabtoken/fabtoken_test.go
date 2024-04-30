@@ -8,8 +8,10 @@ package fabtoken
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	orion "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
@@ -26,7 +28,7 @@ var _ = Describe("EndToEnd", func() {
 	Describe("NFT Orion", func() {
 		BeforeEach(func() {
 			var err error
-			network, err = integration.New(StartPortDlog(), "", nft.Topology("orion", "fabtoken")...)
+			network, err = integration.New(StartPortDlog(), "", nft.Topology("orion", "fabtoken", &orion.SDK{}, &sdk.SDK{})...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()

@@ -109,10 +109,11 @@ func (l *ledger) Status(id string) (driver.ValidationCode, error) {
 }
 
 type Network struct {
-	n      *fabric.NetworkService
-	ch     *fabric.Channel
-	sp     view2.ServiceProvider
-	ledger *ledger
+	n           *fabric.NetworkService
+	ch          *fabric.Channel
+	tmsProvider *token2.ManagementServiceProvider
+	viewManager *view2.Manager
+	ledger      *ledger
 
 	vaultCacheLock sync.RWMutex
 	vaultCache     map[string]driver.Vault
@@ -124,7 +125,8 @@ func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.C
 	return &Network{
 		n:           n,
 		ch:          ch,
-		sp:          sp,
+		tmsProvider: token2.GetManagementServiceProvider(sp),
+		viewManager: view2.GetManager(sp),
 		ledger:      &ledger{ch.Ledger()},
 		vaultCache:  map[string]driver.Vault{},
 		NewVault:    newVault,
@@ -142,9 +144,9 @@ func (n *Network) Channel() string {
 
 func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	if len(namespace) == 0 {
-		tms := token2.GetManagementService(n.sp, token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
-		if tms == nil {
-			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]", n.n.Name(), n.ch.Name())
+		tms, err := n.tmsProvider.GetManagementService(token2.WithNetwork(n.n.Name()), token2.WithChannel(n.ch.Name()))
+		if tms == nil || err != nil {
+			return nil, errors.Errorf("empty namespace passed, cannot find TMS for [%s:%s]: %v", n.n.Name(), n.ch.Name(), err)
 		}
 		namespace = tms.Namespace()
 	}
@@ -261,7 +263,7 @@ func (n *Network) ComputeTxID(id *driver.TxID) string {
 }
 
 func (n *Network) FetchPublicParameters(namespace string) ([]byte, error) {
-	ppBoxed, err := view2.GetManager(n.sp).InitiateView(
+	ppBoxed, err := n.viewManager.InitiateView(
 		chaincode.NewQueryView(
 			namespace,
 			QueryPublicParamsFunction,
