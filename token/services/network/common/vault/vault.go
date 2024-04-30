@@ -4,50 +4,35 @@ Copyright IBM Corp. All Rights Reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package db
+package vault
 
 import (
 	"runtime/debug"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokendb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type ValidationCode = int
-
-const (
-	_               ValidationCode = iota
-	Valid                          // Transaction is valid and committed
-	Invalid                        // Transaction is invalid and has been discarded
-	Busy                           // Transaction does not yet have a validity state
-	Unknown                        // Transaction is unknown
-	HasDependencies                // Transaction is unknown but has known dependencies
-)
-
-type BackendVault interface {
-	TransactionStatus(txID string) (ValidationCode, string, error)
-}
-
 type Vault struct {
 	tmsID   token2.TMSID
 	tokenDB *tokendb.DB
-	ttxdb   *ttxdb.DB
 
 	queryEngine          *QueryEngine
 	certificationStorage vault.CertificationStorage
 }
 
-func NewVault(tmsID token2.TMSID, ttxdb *ttxdb.DB, tokenDB *tokendb.DB, backend BackendVault) (*Vault, error) {
+func NewVault(tmsID token2.TMSID, auditdb *auditdb.DB, ttxdb *ttxdb.DB, tokenDB *tokendb.DB) (*Vault, error) {
 	return &Vault{
 		tmsID:   tmsID,
 		tokenDB: tokenDB,
-		ttxdb:   ttxdb,
 		queryEngine: &QueryEngine{
-			backend: backend,
 			DB:      tokenDB,
+			auditDB: auditdb,
+			ttxdb:   ttxdb,
 		},
 		certificationStorage: &CertificationStorage{DB: tokenDB},
 	}, nil
@@ -67,15 +52,19 @@ func (v *Vault) DeleteTokens(ids ...*token.ID) error {
 
 type QueryEngine struct {
 	*tokendb.DB
-	backend BackendVault
+	auditDB *auditdb.DB
+	ttxdb   *ttxdb.DB
 }
 
 func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
-	vc, _, err := q.backend.TransactionStatus(id.TxId)
+	vd, _, err := q.ttxdb.GetStatus(id.TxId)
+	if err != nil || vd == ttxdb.Unknown {
+		vd, _, err = q.auditDB.GetStatus(id.TxId)
+	}
 	if err != nil {
 		return false, err
 	}
-	return vc == Busy, nil
+	return vd == ttxdb.Pending, nil
 }
 
 func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {

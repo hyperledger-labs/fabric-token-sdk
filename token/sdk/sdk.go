@@ -32,7 +32,6 @@ import (
 	tmsinit "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms/db"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault/db"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	_ "github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb/db/sql"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
@@ -155,14 +154,7 @@ func (p *SDK) Install() error {
 	)
 	assert.NoError(p.registry.RegisterService(tokensManager))
 
-	// Certification
-	storageProvider := certification.NewDBStorageProvider(tokenDBManager)
-	assert.NoError(p.registry.RegisterService(
-		storageProvider),
-		"failed to register certification storage",
-	)
-
-	vaultProvider := db.NewVaultProvider(tokenDBManager, ttxdbManager, tokensManager, storageProvider, fabricNSP, orionNSP)
+	vaultProvider := vault.NewVaultProvider(tokenDBManager, ttxdbManager, auditDBManager, fabricNSP, orionNSP)
 	assert.NoError(p.registry.RegisterService(vaultProvider))
 
 	ownerManager := ttx.NewManager(networkProvider, tmsp, ttxdbManager, tokensManager, storage.NewDBEntriesStorage("owner", kvs.GetService(p.registry)))
