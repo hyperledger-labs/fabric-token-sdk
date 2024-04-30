@@ -123,7 +123,7 @@ func (pp *PublicParams) AddIssuer(issuer view.Identity) {
 // Auditors returns the list of authorized auditors
 // fabtoken only supports a single auditor
 func (pp *PublicParams) Auditors() []view.Identity {
-	if pp.Auditor == nil {
+	if len(pp.Auditor) == 0 {
 		return []view.Identity{}
 	}
 	return []view.Identity{pp.Auditor}

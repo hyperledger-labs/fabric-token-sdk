@@ -155,6 +155,9 @@ func (pp *PublicParams) Bytes() ([]byte, error) {
 }
 
 func (pp *PublicParams) Auditors() []view.Identity {
+	if len(pp.Auditor) == 0 {
+		return []view.Identity{}
+	}
 	return []view.Identity{pp.Auditor}
 }
 
