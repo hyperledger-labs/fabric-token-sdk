@@ -79,14 +79,6 @@ func (v *nv) GetLastTxID() (string, error) {
 	return v.v.GetLastTxID()
 }
 
-func (v *nv) Exists(id *token.ID) bool {
-	return v.tokenVault.CertificationStorage().Exists(id)
-}
-
-func (v *nv) Store(certifications map[*token.ID][]byte) error {
-	return v.tokenVault.CertificationStorage().Store(certifications)
-}
-
 func (v *nv) DiscardTx(id string, message string) error {
 	return v.v.DiscardTx(id, message)
 }
