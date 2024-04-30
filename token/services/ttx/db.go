@@ -9,8 +9,8 @@ package ttx
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	"github.com/pkg/errors"
@@ -45,7 +45,7 @@ func (a *DB) Append(tx *Transaction) error {
 	}
 	logger.Debugf("register tx status listener for tx [%s:%s] at network", tx.ID(), tx.Network())
 
-	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), auditor.NewFinalityListener(net, a.tmsProvider, a.tmsID, a.ttxDB, a.tokenDB)); err != nil {
+	if err := net.AddFinalityListener(tx.Namespace(), tx.ID(), common.NewFinalityListener(logger, a.tmsProvider, a.tmsID, a.ttxDB, a.tokenDB)); err != nil {
 		return errors.WithMessagef(err, "failed listening to network [%s:%s]", tx.Network(), tx.Channel())
 	}
 	logger.Debugf("append done for request %s", tx.ID())

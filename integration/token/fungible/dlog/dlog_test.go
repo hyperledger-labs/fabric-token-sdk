@@ -107,6 +107,7 @@ var _ = Describe("EndToEnd", func() {
 					AuditorAsIssuer: true,
 					Aries:           true,
 					SDKs:            []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					//FSCLogSpec:      "token-sdk=debug:fabric-sdk=debug:info",
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
