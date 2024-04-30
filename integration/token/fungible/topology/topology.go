@@ -12,14 +12,15 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
+	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
 type Opts struct {
@@ -30,6 +31,7 @@ type Opts struct {
 	FSCLogSpec      string
 	NoAuditor       bool
 	HSM             bool
+	SDKs            []api2.SDK
 }
 
 func Topology(opts Opts) []api.Topology {
@@ -321,19 +323,22 @@ func Topology(opts Opts) []api.Topology {
 		// Enable orion sdk on each FSC node
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob", "charlie", "manager")
-		orionTopology.SetDefaultSDK(fscTopology)
 		fscTopology.SetBootstrapNode(custodian)
+		if _, ok := opts.SDKs[0].(*orion3.SDK); !ok {
+			panic("orion sdk missing")
+		}
+	} else {
+		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
+		if _, ok := opts.SDKs[0].(*fabric3.SDK); !ok {
+			panic("fabric sdk missing")
+		}
 	}
-	tokenTopology.SetSDK(fscTopology, &sdk.SDK{})
 	if !opts.NoAuditor {
 		tms.AddAuditor(auditor)
 	}
 
-	if opts.Backend != "orion" {
-		fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
-		// Add Fabric SDK to FSC Nodes
-		fscTopology.AddSDK(&fabric3.SDK{})
+	for _, sdk := range opts.SDKs {
+		fscTopology.AddSDK(sdk)
 	}
-
 	return []api.Topology{backendNetwork, tokenTopology, fscTopology}
 }

@@ -10,12 +10,15 @@ import (
 	"os"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
+	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
+	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	_ "modernc.org/sqlite"
@@ -41,6 +44,7 @@ var _ = Describe("EndToEnd", func() {
 					TokenSDKDriver: "dlog",
 					Aries:          true,
 					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:info",
+					SDKs: []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
@@ -64,7 +68,9 @@ var _ = Describe("EndToEnd", func() {
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
 					Aries:          true,
-				})...)
+					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+				},
+			)...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())
 			network.Generate()
@@ -100,6 +106,7 @@ var _ = Describe("EndToEnd", func() {
 					TokenSDKDriver:  "dlog",
 					AuditorAsIssuer: true,
 					Aries:           true,
+					SDKs:            []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
@@ -127,6 +134,7 @@ var _ = Describe("EndToEnd", func() {
 				topology2.Opts{
 					Backend:        "fabric",
 					TokenSDKDriver: "dlog",
+					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())
@@ -150,6 +158,7 @@ var _ = Describe("EndToEnd", func() {
 					TokenSDKDriver: "dlog",
 					Aries:          true,
 					NoAuditor:      true,
+					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
 				})...)
 			Expect(err).NotTo(HaveOccurred())
 			network.RegisterPlatformFactory(token.NewPlatformFactory())

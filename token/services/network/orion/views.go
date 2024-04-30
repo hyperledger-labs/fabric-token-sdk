@@ -10,27 +10,31 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 )
 
-func InstallViews(sp view.ServiceProvider) error {
+type ResponderRegistry interface {
+	RegisterResponder(responder view.View, initiatedBy interface{}) error
+}
+
+func InstallViews(viewRegistry ResponderRegistry) error {
 	logger.Debugf("Installing custodian views...")
-	if err := view.GetRegistry(sp).RegisterResponder(&PublicParamsRequestResponderView{}, &PublicParamsRequestView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&PublicParamsRequestResponderView{}, &PublicParamsRequestView{}); err != nil {
 		return err
 	}
-	if err := view.GetRegistry(sp).RegisterResponder(&RequestApprovalResponderView{}, &RequestApprovalView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&RequestApprovalResponderView{}, &RequestApprovalView{}); err != nil {
 		return err
 	}
-	if err := view.GetRegistry(sp).RegisterResponder(&BroadcastResponderView{}, &BroadcastView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&BroadcastResponderView{}, &BroadcastView{}); err != nil {
 		return err
 	}
-	if err := view.GetRegistry(sp).RegisterResponder(&LookupKeyRequestRespondView{}, &LookupKeyRequestView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&LookupKeyRequestRespondView{}, &LookupKeyRequestView{}); err != nil {
 		return err
 	}
-	if err := view.GetRegistry(sp).RegisterResponder(&RequestTxStatusResponderView{}, &RequestTxStatusView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&RequestTxStatusResponderView{}, &RequestTxStatusView{}); err != nil {
 		return err
 	}
-	if err := view.GetRegistry(sp).RegisterResponder(&RequestSpentTokensResponderView{}, &RequestSpentTokensView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&RequestSpentTokensResponderView{}, &RequestSpentTokensView{}); err != nil {
 		return err
 	}
-	if err := view.GetRegistry(sp).RegisterResponder(&RequestQueryTokensResponderView{}, &RequestQueryTokensView{}); err != nil {
+	if err := viewRegistry.RegisterResponder(&RequestQueryTokensResponderView{}, &RequestQueryTokensView{}); err != nil {
 		return err
 	}
 

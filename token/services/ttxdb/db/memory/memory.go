@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	sqldb "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/sql"
@@ -29,7 +28,7 @@ func NewDriver() *Driver {
 }
 
 // Open returns a pure go sqlite implementation in memory for testing purposes.
-func (d *Driver) Open(sp view2.ServiceProvider, tmsID token.TMSID) (driver.TokenTransactionDB, error) {
+func (d *Driver) Open(_ driver.ConfigProvider, tmsID token.TMSID) (driver.TokenTransactionDB, error) {
 	h := sha256.New()
 	if _, err := h.Write([]byte(tmsID.String())); err != nil {
 		return nil, err

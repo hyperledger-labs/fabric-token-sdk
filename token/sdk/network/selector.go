@@ -12,9 +12,9 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple/inmemory"
+	"github.com/pkg/errors"
 )
 
 type FabricVault struct {
@@ -36,26 +36,47 @@ func (v *OrionVault) Status(id string) (int, error) {
 }
 
 type LockerProvider struct {
-	sp                     view.ServiceProvider
+	fabricNSP              *fabric.NetworkServiceProvider
+	orionNSP               *orion.NetworkServiceProvider
 	sleepTimeout           time.Duration
 	validTxEvictionTimeout time.Duration
 }
 
-func NewLockerProvider(sp view.ServiceProvider, sleepTimeout time.Duration, validTxEvictionTimeout time.Duration) *LockerProvider {
-	return &LockerProvider{sp: sp, sleepTimeout: sleepTimeout, validTxEvictionTimeout: validTxEvictionTimeout}
+func NewLockerProvider(fabricNSP *fabric.NetworkServiceProvider, orionNSP *orion.NetworkServiceProvider, sleepTimeout time.Duration, validTxEvictionTimeout time.Duration) *LockerProvider {
+	return &LockerProvider{
+		fabricNSP:              fabricNSP,
+		orionNSP:               orionNSP,
+		sleepTimeout:           sleepTimeout,
+		validTxEvictionTimeout: validTxEvictionTimeout,
+	}
+}
+
+func (s *LockerProvider) fabricNetworkService(id string) (*fabric.NetworkService, error) {
+	if s.fabricNSP == nil {
+		return nil, errors.New("fabric nsp not found")
+	}
+	return s.fabricNSP.FabricNetworkService(id)
+}
+
+func (s *LockerProvider) orionNetworkService(id string) (*orion.NetworkService, error) {
+	if s.orionNSP == nil {
+		return nil, errors.New("orion nsp not found")
+	}
+	return s.orionNSP.NetworkService(id)
 }
 
 func (s *LockerProvider) New(network string, channel string, namespace string) selector.Locker {
-	fns, err := fabric.GetFabricNetworkService(s.sp, network)
-	if err == nil {
-		ch, err := fns.Channel(channel)
-		if err == nil {
+
+	if fns, err := s.fabricNetworkService(network); err == nil {
+		if ch, err := fns.Channel(channel); err == nil {
 			return inmemory.NewLocker(&FabricVault{Vault: ch.Vault()}, s.sleepTimeout, s.validTxEvictionTimeout)
 		}
 	}
-	ons, err := orion.GetOrionNetworkService(s.sp, network)
-	if err != nil {
-		panic(fmt.Sprintf("network %s not found: [%s]", network, err))
+
+	if ons, err := s.orionNetworkService(network); err == nil {
+		return inmemory.NewLocker(&OrionVault{Vault: ons.Vault()}, s.sleepTimeout, s.validTxEvictionTimeout)
 	}
-	return inmemory.NewLocker(&OrionVault{Vault: ons.Vault()}, s.sleepTimeout, s.validTxEvictionTimeout)
+
+	panic(fmt.Sprintf("network %s not found", network))
+
 }
