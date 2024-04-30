@@ -10,8 +10,22 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
+)
+
+// TxStatus is the status of a transaction
+type TxStatus = driver.TxStatus
+
+const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown = driver.Unknown
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending = driver.Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed = driver.Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted = driver.Deleted
 )
 
 // QueryEngine models a token query engine
@@ -28,7 +42,7 @@ func NewQueryEngine(qe driver.QueryEngine, numRetries int, retryDelay time.Durat
 }
 
 // IsMine returns true is the given token is in this vault and therefore owned by this client
-func (q *QueryEngine) IsMine(id *token2.ID) (bool, error) {
+func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
 	return q.qe.IsMine(id)
 }
 
@@ -51,12 +65,12 @@ func (q *QueryEngine) UnspentTokensIteratorBy(walletID, tokenType string) (*Unsp
 }
 
 // ListUnspentTokens returns a list of all unspent tokens stored in the vault
-func (q *QueryEngine) ListUnspentTokens() (*token2.UnspentTokens, error) {
+func (q *QueryEngine) ListUnspentTokens() (*token.UnspentTokens, error) {
 	return q.qe.ListUnspentTokens()
 }
 
-func (q *QueryEngine) ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error) {
-	var tokens []*token2.Token
+func (q *QueryEngine) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) {
+	var tokens []*token.Token
 	var err error
 
 	for i := 0; i < q.NumRetries; i++ {
@@ -97,7 +111,7 @@ func (q *QueryEngine) ListAuditTokens(ids ...*token2.ID) ([]*token2.Token, error
 	return tokens, nil
 }
 
-func (q *QueryEngine) ListHistoryIssuedTokens() (*token2.IssuedTokens, error) {
+func (q *QueryEngine) ListHistoryIssuedTokens() (*token.IssuedTokens, error) {
 	return q.qe.ListHistoryIssuedTokens()
 }
 
@@ -107,20 +121,25 @@ func (q *QueryEngine) PublicParams() ([]byte, error) {
 }
 
 // GetTokens returns the tokens stored in the vault matching the given ids
-func (q *QueryEngine) GetTokens(inputs ...*token2.ID) ([]*token2.Token, error) {
+func (q *QueryEngine) GetTokens(inputs ...*token.ID) ([]*token.Token, error) {
 	_, tokens, err := q.qe.GetTokens(inputs...)
 	return tokens, err
+}
+
+// GetStatus returns the status of the passed transaction
+func (q *QueryEngine) GetStatus(txID string) (TxStatus, string, error) {
+	return q.qe.GetStatus(txID)
 }
 
 type CertificationStorage struct {
 	c driver.CertificationStorage
 }
 
-func (c *CertificationStorage) Exists(id *token2.ID) bool {
+func (c *CertificationStorage) Exists(id *token.ID) bool {
 	return c.c.Exists(id)
 }
 
-func (c *CertificationStorage) Store(certifications map[*token2.ID][]byte) error {
+func (c *CertificationStorage) Store(certifications map[*token.ID][]byte) error {
 	return c.c.Store(certifications)
 }
 
@@ -145,9 +164,9 @@ type UnspentTokensIterator struct {
 
 // Sum  computes the sum of the quantities of the tokens in the iterator.
 // Sum closes the iterator at the end of the execution.
-func (u *UnspentTokensIterator) Sum(precision uint64) (token2.Quantity, error) {
+func (u *UnspentTokensIterator) Sum(precision uint64) (token.Quantity, error) {
 	defer u.Close()
-	sum := token2.NewZeroQuantity(precision)
+	sum := token.NewZeroQuantity(precision)
 	for {
 		tok, err := u.Next()
 		if err != nil {
@@ -157,7 +176,7 @@ func (u *UnspentTokensIterator) Sum(precision uint64) (token2.Quantity, error) {
 			break
 		}
 
-		q, err := token2.ToQuantity(tok.Quantity, precision)
+		q, err := token.ToQuantity(tok.Quantity, precision)
 		if err != nil {
 			return nil, err
 		}

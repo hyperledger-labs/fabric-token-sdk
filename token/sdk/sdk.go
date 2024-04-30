@@ -29,7 +29,6 @@ import (
 	network2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/storage"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms"
-	tmsinit "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tms/db"
 	tokens2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/tokens"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/sdk/vault"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
@@ -68,7 +67,7 @@ type Registry interface {
 
 type SDK struct {
 	registry        Registry
-	postInitializer *tmsinit.PostInitializer
+	postInitializer *tms.PostInitializer
 }
 
 func NewSDK(registry Registry) *SDK {
@@ -114,11 +113,7 @@ func (p *SDK) Install() error {
 		// we use mailman as our default selector
 		subscriber, err := events.GetSubscriber(p.registry)
 		assert.NoError(err, "failed to get events subscriber")
-		selectorManagerProvider = mailman.NewService(
-			tms.NewVaultProvider(networkProvider),
-			subscriber,
-			tracing.Get(p.registry).GetTracer(),
-		)
+		selectorManagerProvider = mailman.NewService(subscriber, tracing.Get(p.registry).GetTracer())
 	}
 
 	// Register the token management service provider
@@ -163,7 +158,7 @@ func (p *SDK) Install() error {
 	assert.NoError(p.registry.RegisterService(auditorManager))
 
 	// TMS callback
-	p.postInitializer, err = tmsinit.NewPostInitializer(tmsp, fabricNSP, orionNSP, tokensManager, auditDBManager, ttxdbManager, networkProvider, ownerManager, auditorManager)
+	p.postInitializer, err = tms.NewPostInitializer(tmsp, fabricNSP, orionNSP, tokensManager, auditDBManager, ttxdbManager, networkProvider, ownerManager, auditorManager)
 	assert.NoError(err)
 	tmsProvider.SetCallback(p.postInitializer.PostInit)
 

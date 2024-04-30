@@ -28,7 +28,7 @@ type UnspentTokensIterator = driver2.UnspentTokensIterator
 // TokenVault models the token vault
 type TokenVault interface {
 	// QueryEngine returns the query engine over this vault
-	QueryEngine() driver2.QueryEngine
+	QueryEngine() vault.QueryEngine
 
 	// CertificationStorage returns the certification storage over this vault
 	CertificationStorage() vault.CertificationStorage

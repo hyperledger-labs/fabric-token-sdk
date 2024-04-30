@@ -150,7 +150,14 @@ func NewSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.W
 }
 
 func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(token.TMSID{}, nil, qs, walletIDByRawIdentity, &testutils.MockTracer{}, testutils.TokenQuantityPrecision, nil)
+	mmManager, err := mailman.NewManager(
+		token.TMSID{},
+		qs,
+		walletIDByRawIdentity,
+		&testutils.MockTracer{},
+		testutils.TokenQuantityPrecision,
+		nil,
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -176,7 +183,14 @@ func NewSimpleSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mai
 }
 
 func NewSimpleSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
-	mmManager, err := mailman.NewManager(token.TMSID{}, nil, qs, walletIDByRawIdentity, &testutils.MockTracer{}, testutils.TokenQuantityPrecision, nil)
+	mmManager, err := mailman.NewManager(
+		token.TMSID{},
+		qs,
+		walletIDByRawIdentity,
+		&testutils.MockTracer{},
+		testutils.TokenQuantityPrecision,
+		nil,
+	)
 	if err != nil {
 		panic(err)
 	}

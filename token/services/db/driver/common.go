@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
 // ActionType is the type of transaction
@@ -48,17 +50,17 @@ const (
 )
 
 // TxStatus is the status of a transaction
-type TxStatus int
+type TxStatus = driver2.TxStatus
 
 const (
 	// Unknown is the status of a transaction that is unknown
-	Unknown TxStatus = iota
+	Unknown = driver2.Unknown
 	// Pending is the status of a transaction that has been submitted to the ledger
-	Pending
+	Pending = driver2.Pending
 	// Confirmed is the status of a transaction that has been confirmed by the ledger
-	Confirmed
+	Confirmed = driver2.Confirmed
 	// Deleted is the status of a transaction that has been deleted due to a failure to commit
-	Deleted
+	Deleted = driver2.Deleted
 )
 
 var (

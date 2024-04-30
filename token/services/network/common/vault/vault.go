@@ -67,6 +67,10 @@ func (q *QueryEngine) IsPending(id *token.ID) (bool, error) {
 	return vd == ttxdb.Pending, nil
 }
 
+func (q *QueryEngine) GetStatus(txID string) (vault.TxStatus, string, error) {
+	panic("implement")
+}
+
 func (q *QueryEngine) IsMine(id *token.ID) (bool, error) {
 	if id == nil {
 		return false, nil

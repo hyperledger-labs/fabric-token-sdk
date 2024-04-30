@@ -11,13 +11,31 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
 
-type QueryEngine = driver.QueryEngine
+type QueryEngine interface {
+	driver.QueryEngine
+	GetStatus(txID string) (TxStatus, string, error)
+}
 
 type CertificationStorage = driver.CertificationStorage
+
+// TxStatus is the status of a transaction
+type TxStatus = db.TxStatus
+
+const (
+	// Unknown is the status of a transaction that is unknown
+	Unknown = db.Unknown
+	// Pending is the status of a transaction that has been submitted to the ledger
+	Pending = db.Pending
+	// Confirmed is the status of a transaction that has been confirmed by the ledger
+	Confirmed = db.Confirmed
+	// Deleted is the status of a transaction that has been deleted due to a failure to commit
+	Deleted = db.Deleted
+)
 
 type Vault interface {
 	QueryEngine() QueryEngine
