@@ -42,3 +42,65 @@ func TestRequestSerialization(t *testing.T) {
 
 	assert.Equal(t, mRaw, mRaw2)
 }
+
+func TestRequest_ApplicationMetadata(t *testing.T) {
+	// Test case: No application metadata set
+	request := &Request{
+		Metadata: &driver.TokenRequestMetadata{
+			Application: map[string][]byte{},
+		},
+	}
+
+	// Retrieve non-existent metadata
+	data := request.ApplicationMetadata("key")
+	assert.Nil(t, data)
+
+	// Test case: Application metadata set
+	request = &Request{
+		Metadata: &driver.TokenRequestMetadata{
+			Application: map[string][]byte{
+				"key1": []byte("value1"),
+				"key2": []byte("value2"),
+			},
+		},
+	}
+
+	// Retrieve existing metadata
+	data = request.ApplicationMetadata("key1")
+	assert.Equal(t, []byte("value1"), data)
+
+	// Retrieve non-existent metadata
+	data = request.ApplicationMetadata("non_existent_key")
+	assert.Nil(t, data)
+}
+
+func TestRequest_SetApplicationMetadata(t *testing.T) {
+	// Test case: No application metadata set
+	request := &Request{}
+
+	// Set application metadata
+	request.SetApplicationMetadata("key", []byte("value"))
+
+	// Assert metadata set correctly
+	assert.NotNil(t, request.Metadata)
+	assert.NotNil(t, request.Metadata.Application)
+	assert.Equal(t, []byte("value"), request.Metadata.Application["key"])
+
+	// Test case: Application metadata already set
+	request = &Request{
+		Metadata: &driver.TokenRequestMetadata{
+			Application: map[string][]byte{
+				"key1": []byte("value1"),
+			},
+		},
+	}
+
+	// Set additional application metadata
+	request.SetApplicationMetadata("key2", []byte("value2"))
+
+	// Assert metadata set correctly
+	assert.NotNil(t, request.Metadata)
+	assert.NotNil(t, request.Metadata.Application)
+	assert.Equal(t, []byte("value1"), request.Metadata.Application["key1"])
+	assert.Equal(t, []byte("value2"), request.Metadata.Application["key2"])
+}

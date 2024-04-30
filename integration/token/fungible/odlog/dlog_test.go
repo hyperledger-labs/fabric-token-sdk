@@ -35,8 +35,8 @@ var _ = Describe("Orion EndToEnd", func() {
 					Backend:        "orion",
 					TokenSDKDriver: "dlog",
 					Aries:          true,
+					SDKs:           []api.SDK{&orion3.SDK{}, &sdk.SDK{}},
 					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:orion-sdk=debug:info",
-					SDKs: []api.SDK{&orion3.SDK{}, &sdk.SDK{}},
 				},
 			)...)
 			Expect(err).NotTo(HaveOccurred())

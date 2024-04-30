@@ -1103,9 +1103,6 @@ func (r *Request) FilterMetadataBy(eIDs ...string) (*Request, error) {
 
 // GetMetadata returns the metadata of the request.
 func (r *Request) GetMetadata() (*Metadata, error) {
-	if r.TokenService == nil {
-		return nil, errors.New("can't get metadata: nil token service in request")
-	}
 	return &Metadata{
 		TokenService:         r.TokenService.tms.TokensService(),
 		WalletService:        r.TokenService.tms.WalletService(),

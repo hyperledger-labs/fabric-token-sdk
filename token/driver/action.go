@@ -11,6 +11,8 @@ type SetupAction interface {
 	GetSetupParameters() ([]byte, error)
 }
 
+//go:generate counterfeiter -o mock/ia.go -fake-name IssueAction . IssueAction
+
 // IssueAction is the action used to issue tokens
 type IssueAction interface {
 	// Serialize returns the serialized version of the action
@@ -36,6 +38,8 @@ type Output interface {
 	// IsRedeem returns true if the output is a redeem output
 	IsRedeem() bool
 }
+
+//go:generate counterfeiter -o mock/ta.go -fake-name TransferAction . TransferAction
 
 // TransferAction is the action used to transfer tokens
 type TransferAction interface {

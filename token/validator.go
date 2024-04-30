@@ -11,9 +11,7 @@ import (
 )
 
 // Ledger models a read-only ledger
-type Ledger interface {
-	GetState(key string) ([]byte, error)
-}
+type Ledger = driver.ValidatorLedger
 
 // Validator validates a token request
 type Validator struct {
@@ -27,9 +25,7 @@ func (c *Validator) UnmarshalActions(raw []byte) ([]interface{}, error) {
 
 // UnmarshallAndVerify unmarshalls the token request and verifies it against the passed ledger and anchor
 func (c *Validator) UnmarshallAndVerify(ledger Ledger, anchor string, raw []byte) ([]interface{}, error) {
-	actions, _, err := c.backend.VerifyTokenRequestFromRaw(func(key string) ([]byte, error) {
-		return ledger.GetState(key)
-	}, anchor, raw)
+	actions, _, err := c.backend.VerifyTokenRequestFromRaw(ledger.GetState, anchor, raw)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +38,7 @@ func (c *Validator) UnmarshallAndVerify(ledger Ledger, anchor string, raw []byte
 // UnmarshallAndVerifyWithMetadata behaves as UnmarshallAndVerify. In addition, it returns the metadata extracts from the token request
 // in the form of map.
 func (c *Validator) UnmarshallAndVerifyWithMetadata(ledger Ledger, anchor string, raw []byte) ([]interface{}, map[string][]byte, error) {
-	actions, meta, err := c.backend.VerifyTokenRequestFromRaw(func(key string) ([]byte, error) {
-		return ledger.GetState(key)
-	}, anchor, raw)
+	actions, meta, err := c.backend.VerifyTokenRequestFromRaw(ledger.GetState, anchor, raw)
 	if err != nil {
 		return nil, nil, err
 	}

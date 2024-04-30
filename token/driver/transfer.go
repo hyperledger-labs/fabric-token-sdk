@@ -16,6 +16,8 @@ type TransferOptions struct {
 	Attributes map[interface{}]interface{}
 }
 
+//go:generate counterfeiter -o mock/ts.go -fake-name TransferService . TransferService
+
 // TransferService models the token transfer service
 type TransferService interface {
 	// Transfer generates a TransferAction that spend the passed token ids and created the passed outputs.

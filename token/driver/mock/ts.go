@@ -4,142 +4,76 @@ package mock
 import (
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
-type TokenService struct {
-	DeserializeTokenStub        func([]byte, []byte) (*token.Token, view.Identity, error)
-	deserializeTokenMutex       sync.RWMutex
-	deserializeTokenArgsForCall []struct {
+type TransferService struct {
+	DeserializeTransferActionStub        func([]byte) (driver.TransferAction, error)
+	deserializeTransferActionMutex       sync.RWMutex
+	deserializeTransferActionArgsForCall []struct {
 		arg1 []byte
-		arg2 []byte
 	}
-	deserializeTokenReturns struct {
-		result1 *token.Token
-		result2 view.Identity
-		result3 error
-	}
-	deserializeTokenReturnsOnCall map[int]struct {
-		result1 *token.Token
-		result2 view.Identity
-		result3 error
-	}
-	GetTokenInfoStub        func(*driver.TokenRequestMetadata, []byte) ([]byte, error)
-	getTokenInfoMutex       sync.RWMutex
-	getTokenInfoArgsForCall []struct {
-		arg1 *driver.TokenRequestMetadata
-		arg2 []byte
-	}
-	getTokenInfoReturns struct {
-		result1 []byte
+	deserializeTransferActionReturns struct {
+		result1 driver.TransferAction
 		result2 error
 	}
-	getTokenInfoReturnsOnCall map[int]struct {
-		result1 []byte
+	deserializeTransferActionReturnsOnCall map[int]struct {
+		result1 driver.TransferAction
 		result2 error
+	}
+	TransferStub        func(string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)
+	transferMutex       sync.RWMutex
+	transferArgsForCall []struct {
+		arg1 string
+		arg2 driver.OwnerWallet
+		arg3 []*token.ID
+		arg4 []*token.Token
+		arg5 *driver.TransferOptions
+	}
+	transferReturns struct {
+		result1 driver.TransferAction
+		result2 *driver.TransferMetadata
+		result3 error
+	}
+	transferReturnsOnCall map[int]struct {
+		result1 driver.TransferAction
+		result2 *driver.TransferMetadata
+		result3 error
+	}
+	VerifyTransferStub        func(driver.TransferAction, [][]byte) error
+	verifyTransferMutex       sync.RWMutex
+	verifyTransferArgsForCall []struct {
+		arg1 driver.TransferAction
+		arg2 [][]byte
+	}
+	verifyTransferReturns struct {
+		result1 error
+	}
+	verifyTransferReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *TokenService) DeserializeToken(arg1 []byte, arg2 []byte) (*token.Token, view.Identity, error) {
+func (fake *TransferService) DeserializeTransferAction(arg1 []byte) (driver.TransferAction, error) {
 	var arg1Copy []byte
 	if arg1 != nil {
 		arg1Copy = make([]byte, len(arg1))
 		copy(arg1Copy, arg1)
 	}
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.deserializeTokenMutex.Lock()
-	ret, specificReturn := fake.deserializeTokenReturnsOnCall[len(fake.deserializeTokenArgsForCall)]
-	fake.deserializeTokenArgsForCall = append(fake.deserializeTokenArgsForCall, struct {
+	fake.deserializeTransferActionMutex.Lock()
+	ret, specificReturn := fake.deserializeTransferActionReturnsOnCall[len(fake.deserializeTransferActionArgsForCall)]
+	fake.deserializeTransferActionArgsForCall = append(fake.deserializeTransferActionArgsForCall, struct {
 		arg1 []byte
-		arg2 []byte
-	}{arg1Copy, arg2Copy})
-	stub := fake.DeserializeTokenStub
-	fakeReturns := fake.deserializeTokenReturns
-	fake.recordInvocation("DeserializeToken", []interface{}{arg1Copy, arg2Copy})
-	fake.deserializeTokenMutex.Unlock()
+	}{arg1Copy})
+	stub := fake.DeserializeTransferActionStub
+	fakeReturns := fake.deserializeTransferActionReturns
+	fake.recordInvocation("DeserializeTransferAction", []interface{}{arg1Copy})
+	fake.deserializeTransferActionMutex.Unlock()
 	if stub != nil {
-		return stub(arg1, arg2)
-	}
-	if specificReturn {
-		return ret.result1, ret.result2, ret.result3
-	}
-	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
-}
-
-func (fake *TokenService) DeserializeTokenCallCount() int {
-	fake.deserializeTokenMutex.RLock()
-	defer fake.deserializeTokenMutex.RUnlock()
-	return len(fake.deserializeTokenArgsForCall)
-}
-
-func (fake *TokenService) DeserializeTokenCalls(stub func([]byte, []byte) (*token.Token, view.Identity, error)) {
-	fake.deserializeTokenMutex.Lock()
-	defer fake.deserializeTokenMutex.Unlock()
-	fake.DeserializeTokenStub = stub
-}
-
-func (fake *TokenService) DeserializeTokenArgsForCall(i int) ([]byte, []byte) {
-	fake.deserializeTokenMutex.RLock()
-	defer fake.deserializeTokenMutex.RUnlock()
-	argsForCall := fake.deserializeTokenArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
-}
-
-func (fake *TokenService) DeserializeTokenReturns(result1 *token.Token, result2 view.Identity, result3 error) {
-	fake.deserializeTokenMutex.Lock()
-	defer fake.deserializeTokenMutex.Unlock()
-	fake.DeserializeTokenStub = nil
-	fake.deserializeTokenReturns = struct {
-		result1 *token.Token
-		result2 view.Identity
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *TokenService) DeserializeTokenReturnsOnCall(i int, result1 *token.Token, result2 view.Identity, result3 error) {
-	fake.deserializeTokenMutex.Lock()
-	defer fake.deserializeTokenMutex.Unlock()
-	fake.DeserializeTokenStub = nil
-	if fake.deserializeTokenReturnsOnCall == nil {
-		fake.deserializeTokenReturnsOnCall = make(map[int]struct {
-			result1 *token.Token
-			result2 view.Identity
-			result3 error
-		})
-	}
-	fake.deserializeTokenReturnsOnCall[i] = struct {
-		result1 *token.Token
-		result2 view.Identity
-		result3 error
-	}{result1, result2, result3}
-}
-
-func (fake *TokenService) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 []byte) ([]byte, error) {
-	var arg2Copy []byte
-	if arg2 != nil {
-		arg2Copy = make([]byte, len(arg2))
-		copy(arg2Copy, arg2)
-	}
-	fake.getTokenInfoMutex.Lock()
-	ret, specificReturn := fake.getTokenInfoReturnsOnCall[len(fake.getTokenInfoArgsForCall)]
-	fake.getTokenInfoArgsForCall = append(fake.getTokenInfoArgsForCall, struct {
-		arg1 *driver.TokenRequestMetadata
-		arg2 []byte
-	}{arg1, arg2Copy})
-	stub := fake.GetTokenInfoStub
-	fakeReturns := fake.getTokenInfoReturns
-	fake.recordInvocation("GetTokenInfo", []interface{}{arg1, arg2Copy})
-	fake.getTokenInfoMutex.Unlock()
-	if stub != nil {
-		return stub(arg1, arg2)
+		return stub(arg1)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -147,58 +81,208 @@ func (fake *TokenService) GetTokenInfo(arg1 *driver.TokenRequestMetadata, arg2 [
 	return fakeReturns.result1, fakeReturns.result2
 }
 
-func (fake *TokenService) GetTokenInfoCallCount() int {
-	fake.getTokenInfoMutex.RLock()
-	defer fake.getTokenInfoMutex.RUnlock()
-	return len(fake.getTokenInfoArgsForCall)
+func (fake *TransferService) DeserializeTransferActionCallCount() int {
+	fake.deserializeTransferActionMutex.RLock()
+	defer fake.deserializeTransferActionMutex.RUnlock()
+	return len(fake.deserializeTransferActionArgsForCall)
 }
 
-func (fake *TokenService) GetTokenInfoCalls(stub func(*driver.TokenRequestMetadata, []byte) ([]byte, error)) {
-	fake.getTokenInfoMutex.Lock()
-	defer fake.getTokenInfoMutex.Unlock()
-	fake.GetTokenInfoStub = stub
+func (fake *TransferService) DeserializeTransferActionCalls(stub func([]byte) (driver.TransferAction, error)) {
+	fake.deserializeTransferActionMutex.Lock()
+	defer fake.deserializeTransferActionMutex.Unlock()
+	fake.DeserializeTransferActionStub = stub
 }
 
-func (fake *TokenService) GetTokenInfoArgsForCall(i int) (*driver.TokenRequestMetadata, []byte) {
-	fake.getTokenInfoMutex.RLock()
-	defer fake.getTokenInfoMutex.RUnlock()
-	argsForCall := fake.getTokenInfoArgsForCall[i]
-	return argsForCall.arg1, argsForCall.arg2
+func (fake *TransferService) DeserializeTransferActionArgsForCall(i int) []byte {
+	fake.deserializeTransferActionMutex.RLock()
+	defer fake.deserializeTransferActionMutex.RUnlock()
+	argsForCall := fake.deserializeTransferActionArgsForCall[i]
+	return argsForCall.arg1
 }
 
-func (fake *TokenService) GetTokenInfoReturns(result1 []byte, result2 error) {
-	fake.getTokenInfoMutex.Lock()
-	defer fake.getTokenInfoMutex.Unlock()
-	fake.GetTokenInfoStub = nil
-	fake.getTokenInfoReturns = struct {
-		result1 []byte
+func (fake *TransferService) DeserializeTransferActionReturns(result1 driver.TransferAction, result2 error) {
+	fake.deserializeTransferActionMutex.Lock()
+	defer fake.deserializeTransferActionMutex.Unlock()
+	fake.DeserializeTransferActionStub = nil
+	fake.deserializeTransferActionReturns = struct {
+		result1 driver.TransferAction
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokenService) GetTokenInfoReturnsOnCall(i int, result1 []byte, result2 error) {
-	fake.getTokenInfoMutex.Lock()
-	defer fake.getTokenInfoMutex.Unlock()
-	fake.GetTokenInfoStub = nil
-	if fake.getTokenInfoReturnsOnCall == nil {
-		fake.getTokenInfoReturnsOnCall = make(map[int]struct {
-			result1 []byte
+func (fake *TransferService) DeserializeTransferActionReturnsOnCall(i int, result1 driver.TransferAction, result2 error) {
+	fake.deserializeTransferActionMutex.Lock()
+	defer fake.deserializeTransferActionMutex.Unlock()
+	fake.DeserializeTransferActionStub = nil
+	if fake.deserializeTransferActionReturnsOnCall == nil {
+		fake.deserializeTransferActionReturnsOnCall = make(map[int]struct {
+			result1 driver.TransferAction
 			result2 error
 		})
 	}
-	fake.getTokenInfoReturnsOnCall[i] = struct {
-		result1 []byte
+	fake.deserializeTransferActionReturnsOnCall[i] = struct {
+		result1 driver.TransferAction
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *TokenService) Invocations() map[string][][]interface{} {
+func (fake *TransferService) Transfer(arg1 string, arg2 driver.OwnerWallet, arg3 []*token.ID, arg4 []*token.Token, arg5 *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	var arg3Copy []*token.ID
+	if arg3 != nil {
+		arg3Copy = make([]*token.ID, len(arg3))
+		copy(arg3Copy, arg3)
+	}
+	var arg4Copy []*token.Token
+	if arg4 != nil {
+		arg4Copy = make([]*token.Token, len(arg4))
+		copy(arg4Copy, arg4)
+	}
+	fake.transferMutex.Lock()
+	ret, specificReturn := fake.transferReturnsOnCall[len(fake.transferArgsForCall)]
+	fake.transferArgsForCall = append(fake.transferArgsForCall, struct {
+		arg1 string
+		arg2 driver.OwnerWallet
+		arg3 []*token.ID
+		arg4 []*token.Token
+		arg5 *driver.TransferOptions
+	}{arg1, arg2, arg3Copy, arg4Copy, arg5})
+	stub := fake.TransferStub
+	fakeReturns := fake.transferReturns
+	fake.recordInvocation("Transfer", []interface{}{arg1, arg2, arg3Copy, arg4Copy, arg5})
+	fake.transferMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2, arg3, arg4, arg5)
+	}
+	if specificReturn {
+		return ret.result1, ret.result2, ret.result3
+	}
+	return fakeReturns.result1, fakeReturns.result2, fakeReturns.result3
+}
+
+func (fake *TransferService) TransferCallCount() int {
+	fake.transferMutex.RLock()
+	defer fake.transferMutex.RUnlock()
+	return len(fake.transferArgsForCall)
+}
+
+func (fake *TransferService) TransferCalls(stub func(string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error)) {
+	fake.transferMutex.Lock()
+	defer fake.transferMutex.Unlock()
+	fake.TransferStub = stub
+}
+
+func (fake *TransferService) TransferArgsForCall(i int) (string, driver.OwnerWallet, []*token.ID, []*token.Token, *driver.TransferOptions) {
+	fake.transferMutex.RLock()
+	defer fake.transferMutex.RUnlock()
+	argsForCall := fake.transferArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2, argsForCall.arg3, argsForCall.arg4, argsForCall.arg5
+}
+
+func (fake *TransferService) TransferReturns(result1 driver.TransferAction, result2 *driver.TransferMetadata, result3 error) {
+	fake.transferMutex.Lock()
+	defer fake.transferMutex.Unlock()
+	fake.TransferStub = nil
+	fake.transferReturns = struct {
+		result1 driver.TransferAction
+		result2 *driver.TransferMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *TransferService) TransferReturnsOnCall(i int, result1 driver.TransferAction, result2 *driver.TransferMetadata, result3 error) {
+	fake.transferMutex.Lock()
+	defer fake.transferMutex.Unlock()
+	fake.TransferStub = nil
+	if fake.transferReturnsOnCall == nil {
+		fake.transferReturnsOnCall = make(map[int]struct {
+			result1 driver.TransferAction
+			result2 *driver.TransferMetadata
+			result3 error
+		})
+	}
+	fake.transferReturnsOnCall[i] = struct {
+		result1 driver.TransferAction
+		result2 *driver.TransferMetadata
+		result3 error
+	}{result1, result2, result3}
+}
+
+func (fake *TransferService) VerifyTransfer(arg1 driver.TransferAction, arg2 [][]byte) error {
+	var arg2Copy [][]byte
+	if arg2 != nil {
+		arg2Copy = make([][]byte, len(arg2))
+		copy(arg2Copy, arg2)
+	}
+	fake.verifyTransferMutex.Lock()
+	ret, specificReturn := fake.verifyTransferReturnsOnCall[len(fake.verifyTransferArgsForCall)]
+	fake.verifyTransferArgsForCall = append(fake.verifyTransferArgsForCall, struct {
+		arg1 driver.TransferAction
+		arg2 [][]byte
+	}{arg1, arg2Copy})
+	stub := fake.VerifyTransferStub
+	fakeReturns := fake.verifyTransferReturns
+	fake.recordInvocation("VerifyTransfer", []interface{}{arg1, arg2Copy})
+	fake.verifyTransferMutex.Unlock()
+	if stub != nil {
+		return stub(arg1, arg2)
+	}
+	if specificReturn {
+		return ret.result1
+	}
+	return fakeReturns.result1
+}
+
+func (fake *TransferService) VerifyTransferCallCount() int {
+	fake.verifyTransferMutex.RLock()
+	defer fake.verifyTransferMutex.RUnlock()
+	return len(fake.verifyTransferArgsForCall)
+}
+
+func (fake *TransferService) VerifyTransferCalls(stub func(driver.TransferAction, [][]byte) error) {
+	fake.verifyTransferMutex.Lock()
+	defer fake.verifyTransferMutex.Unlock()
+	fake.VerifyTransferStub = stub
+}
+
+func (fake *TransferService) VerifyTransferArgsForCall(i int) (driver.TransferAction, [][]byte) {
+	fake.verifyTransferMutex.RLock()
+	defer fake.verifyTransferMutex.RUnlock()
+	argsForCall := fake.verifyTransferArgsForCall[i]
+	return argsForCall.arg1, argsForCall.arg2
+}
+
+func (fake *TransferService) VerifyTransferReturns(result1 error) {
+	fake.verifyTransferMutex.Lock()
+	defer fake.verifyTransferMutex.Unlock()
+	fake.VerifyTransferStub = nil
+	fake.verifyTransferReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *TransferService) VerifyTransferReturnsOnCall(i int, result1 error) {
+	fake.verifyTransferMutex.Lock()
+	defer fake.verifyTransferMutex.Unlock()
+	fake.VerifyTransferStub = nil
+	if fake.verifyTransferReturnsOnCall == nil {
+		fake.verifyTransferReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.verifyTransferReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *TransferService) Invocations() map[string][][]interface{} {
 	fake.invocationsMutex.RLock()
 	defer fake.invocationsMutex.RUnlock()
-	fake.deserializeTokenMutex.RLock()
-	defer fake.deserializeTokenMutex.RUnlock()
-	fake.getTokenInfoMutex.RLock()
-	defer fake.getTokenInfoMutex.RUnlock()
+	fake.deserializeTransferActionMutex.RLock()
+	defer fake.deserializeTransferActionMutex.RUnlock()
+	fake.transferMutex.RLock()
+	defer fake.transferMutex.RUnlock()
+	fake.verifyTransferMutex.RLock()
+	defer fake.verifyTransferMutex.RUnlock()
 	copiedInvocations := map[string][][]interface{}{}
 	for key, value := range fake.invocations {
 		copiedInvocations[key] = value
@@ -206,7 +290,7 @@ func (fake *TokenService) Invocations() map[string][][]interface{} {
 	return copiedInvocations
 }
 
-func (fake *TokenService) recordInvocation(key string, args []interface{}) {
+func (fake *TransferService) recordInvocation(key string, args []interface{}) {
 	fake.invocationsMutex.Lock()
 	defer fake.invocationsMutex.Unlock()
 	if fake.invocations == nil {
@@ -218,4 +302,4 @@ func (fake *TokenService) recordInvocation(key string, args []interface{}) {
 	fake.invocations[key] = append(fake.invocations[key], args)
 }
 
-var _ driver.TokensService = new(TokenService)
+var _ driver.TransferService = new(TransferService)

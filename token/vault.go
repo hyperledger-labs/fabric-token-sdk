@@ -82,13 +82,10 @@ func (q *QueryEngine) ListAuditTokens(ids ...*token.ID) ([]*token.Token, error) 
 			retry := false
 			for _, id := range ids {
 				pending, err := q.qe.IsPending(id)
-				if err != nil {
-					break
-				}
-				if pending {
-					logger.Warnf("cannot get audit token for id [%s] because the relative transaction is pending, retry at [%d]", id, i)
+				if pending || err != nil {
+					logger.Warnf("cannot get audit token for id [%s] because the relative transaction is pending, retry at [%d]: with err [%s]", id, i, err)
 					if i == q.NumRetries-1 {
-						return nil, errors.Wrapf(err, "failed to get audit tokens, tx [%s] is still pending", id.TxId)
+						return nil, errors.Errorf("failed to get audit tokens, tx [%s] is still pending", id.TxId)
 					}
 					time.Sleep(q.RetryDelay)
 					retry = true

@@ -20,11 +20,15 @@ type SigningIdentity interface {
 	Serialize() ([]byte, error)
 }
 
+//go:generate counterfeiter -o mock/verifier.go -fake-name Verifier . Verifier
+
 // Verifier is an interface which wraps the Verify method.
 type Verifier interface {
 	// Verify verifies the signature over the message bytes and returns nil if the signature is valid and an error otherwise.
 	Verify(message, sigma []byte) error
 }
+
+//go:generate counterfeiter -o mock/signer.go -fake-name Signer . Signer
 
 // Signer is an interface which wraps the Sign method.
 type Signer interface {
