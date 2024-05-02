@@ -33,8 +33,6 @@ func TestSerialization(t *testing.T) {
 	ser, err := pp.Serialize()
 	assert.NoError(t, err)
 
-	fmt.Printf("%s\n", ser)
-
 	pp2, err := NewPublicParamsFromBytes(ser, DLogPublicParameters)
 	assert.NoError(t, err)
 
