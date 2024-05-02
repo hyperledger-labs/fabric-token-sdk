@@ -52,8 +52,6 @@ type SameTypeRandomness struct {
 type SameTypeProver struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
-	// IsTypeHidden indicates if the type is hidden
-	IsTypeHidden bool
 	// tokenType is the type of the tokens to be issued
 	tokenType string
 	// blindingFactor is the blinding factor in the CommitmentToType
@@ -67,13 +65,12 @@ type SameTypeProver struct {
 }
 
 // NewSameTypeProver returns a SameTypeProver for the passed parameters
-func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, isTypeHidden bool, pp []*math.G1, c *math.Curve) *SameTypeProver {
+func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, pp []*math.G1, c *math.Curve) *SameTypeProver {
 
 	return &SameTypeProver{
 		tokenType:        ttype,
 		blindingFactor:   bf,
 		CommitmentToType: com,
-		IsTypeHidden:     isTypeHidden,
 		PedParams:        pp,
 		Curve:            c,
 	}
@@ -82,35 +79,30 @@ func NewSameTypeProver(ttype string, bf *math.Zr, com *math.G1, isTypeHidden boo
 // Prove returns a SameType proof
 func (p *SameTypeProver) Prove() (*SameType, error) {
 	tokenType := p.Curve.HashToZr([]byte(p.tokenType))
-	if p.IsTypeHidden {
-		// compute commitments used in the Schnorr proof
-		err := p.computeCommitment()
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't prove type during the issue")
-		}
-		array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment})
-		var toHash []byte
-		toHash, err = array.Bytes()
-		if err != nil {
-			return nil, errors.Wrapf(err, "couldn't prove type during the issue")
-		}
-		chal := p.Curve.HashToZr(toHash)
-		proof := &SameType{
-			CommitmentToType: p.CommitmentToType,
-			Challenge:        chal,
-		}
-		proof.Type = p.Curve.ModMul(chal, tokenType, p.Curve.GroupOrder)
-		proof.Type = p.Curve.ModAdd(proof.Type, p.randomness.tokenType, p.Curve.GroupOrder)
 
-		proof.BlindingFactor = p.Curve.ModMul(chal, p.blindingFactor, p.Curve.GroupOrder)
-		proof.BlindingFactor = p.Curve.ModAdd(proof.BlindingFactor, p.randomness.blindingFactor, p.Curve.GroupOrder)
-		return proof, nil
+	// compute commitments used in the Schnorr proof
+	err := p.computeCommitment()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't prove type during the issue")
 	}
+	array := common.GetG1Array([]*math.G1{p.CommitmentToType, p.commitment})
+	var toHash []byte
+	toHash, err = array.Bytes()
+	if err != nil {
+		return nil, errors.Wrapf(err, "couldn't prove type during the issue")
+	}
+	chal := p.Curve.HashToZr(toHash)
 	proof := &SameType{
 		CommitmentToType: p.CommitmentToType,
-		TypeInTheClear:   p.tokenType,
+		Challenge:        chal,
 	}
+	proof.Type = p.Curve.ModMul(chal, tokenType, p.Curve.GroupOrder)
+	proof.Type = p.Curve.ModAdd(proof.Type, p.randomness.tokenType, p.Curve.GroupOrder)
+
+	proof.BlindingFactor = p.Curve.ModMul(chal, p.blindingFactor, p.Curve.GroupOrder)
+	proof.BlindingFactor = p.Curve.ModAdd(proof.BlindingFactor, p.randomness.blindingFactor, p.Curve.GroupOrder)
 	return proof, nil
+
 }
 
 // computeCommitment compute the commitmentsto the randomness used in the same type proof
@@ -137,42 +129,32 @@ type SameTypeVerifier struct {
 	PedParams []*math.G1
 	Curve     *math.Curve
 	Tokens    []*math.G1
-	// IsTypeHidden indicates if the issuance is anonymous
-	IsTypeHidden bool
 }
 
 // NewSameTypeVerifier returns a SameTypeVerifier corresponding to the passed parameters
-func NewSameTypeVerifier(tokens []*math.G1, isTypeHidden bool, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
+func NewSameTypeVerifier(tokens []*math.G1, pp []*math.G1, c *math.Curve) *SameTypeVerifier {
 	return &SameTypeVerifier{
-		Tokens:       tokens,
-		IsTypeHidden: isTypeHidden,
-		PedParams:    pp,
-		Curve:        c,
+		Tokens:    tokens,
+		PedParams: pp,
+		Curve:     c,
 	}
 }
 
 // Verify returns an error if the serialized proof is an invalid SameType proof
 func (v *SameTypeVerifier) Verify(proof *SameType) error {
 	// recompute commitments used in ZK proofs
-	if v.IsTypeHidden {
-		// recompute challenge and check proof validity
-		com := v.PedParams[0].Mul(proof.Type)
-		com.Add(v.PedParams[2].Mul(proof.BlindingFactor))
-		com.Sub(proof.CommitmentToType.Mul(proof.Challenge))
+	com := v.PedParams[0].Mul(proof.Type)
+	com.Add(v.PedParams[2].Mul(proof.BlindingFactor))
+	com.Sub(proof.CommitmentToType.Mul(proof.Challenge))
 
-		// recompute challenge
-		raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}).Bytes()
-		if err != nil {
-			return errors.Wrapf(err, "failed to verify same type proof")
-		}
-
-		if !v.Curve.HashToZr(raw).Equals(proof.Challenge) {
-			return errors.Errorf("invalid same type proof")
-		}
-		return nil
+	// recompute challenge and check proof validity
+	raw, err := common.GetG1Array([]*math.G1{proof.CommitmentToType, com}).Bytes()
+	if err != nil {
+		return errors.Wrapf(err, "failed to verify same type proof")
 	}
-	if !proof.CommitmentToType.Equals(v.PedParams[0].Mul(v.Curve.HashToZr([]byte(proof.TypeInTheClear)))) {
-		return errors.Errorf("invalid type in issue")
+
+	if !v.Curve.HashToZr(raw).Equals(proof.Challenge) {
+		return errors.Errorf("invalid same type proof")
 	}
 	return nil
 }

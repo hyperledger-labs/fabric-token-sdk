@@ -150,19 +150,15 @@ func NewProver(tw []*token.TokenDataWitness, tokens []*math.G1, pp *crypto.Publi
 	p := &Prover{}
 	tokenType := c.HashToZr([]byte(tw[0].Type))
 	commitmentToType := pp.PedersenGenerators[0].Mul(tokenType)
-	if pp.IsTypeHidden {
-		rand, err := c.Rand()
-		if err != nil {
-			return nil, errors.Wrapf(err, "cannot get issue prover")
-		}
-		typeBF := c.NewRandomZr(rand)
-		commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
-		p.SameType = NewSameTypeProver(tw[0].Type, typeBF, commitmentToType, true, pp.PedersenGenerators, c)
 
-	} else {
-		p.SameType = NewSameTypeProver(tw[0].Type, c.NewZrFromInt(0), commitmentToType, false, pp.PedersenGenerators, c)
-
+	rand, err := c.Rand()
+	if err != nil {
+		return nil, errors.Wrapf(err, "cannot get issue prover")
 	}
+	typeBF := c.NewRandomZr(rand)
+	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
+	p.SameType = NewSameTypeProver(tw[0].Type, typeBF, commitmentToType, pp.PedersenGenerators, c)
+
 	var values []uint64
 	var blindingFactors []*math.Zr
 	for i := 0; i < len(tw); i++ {
@@ -216,7 +212,7 @@ type Verifier struct {
 
 func NewVerifier(tokens []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.SameType = NewSameTypeVerifier(tokens, pp.IsTypeHidden, pp.PedersenGenerators, math.Curves[pp.Curve])
+	v.SameType = NewSameTypeVerifier(tokens, pp.PedersenGenerators, math.Curves[pp.Curve])
 	v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 	return v
 }

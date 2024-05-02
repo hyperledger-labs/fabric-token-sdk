@@ -17,22 +17,27 @@ import (
 
 func TestSetup(t *testing.T) {
 	s := time.Now()
-	_, err := Setup(true, 32, []byte("issuerPK"), math3.FP256BN_AMCL)
+	_, err := Setup(32, []byte("issuerPK"), math3.FP256BN_AMCL)
 	e := time.Now()
 	fmt.Printf("elapsed %d", e.Sub(s).Milliseconds())
 	assert.NoError(t, err)
+
 }
 
 func TestSerialization(t *testing.T) {
 	issuerPK, err := os.ReadFile("./testdata/idemix/msp/IssuerPublicKey")
 	assert.NoError(t, err)
-	pp, err := Setup(false, 32, issuerPK, math3.BN254)
+	pp, err := Setup(32, issuerPK, math3.BN254)
 	assert.NoError(t, err)
+
 	ser, err := pp.Serialize()
 	assert.NoError(t, err)
 
+	fmt.Printf("%s\n", ser)
+
 	pp2, err := NewPublicParamsFromBytes(ser, DLogPublicParameters)
 	assert.NoError(t, err)
+
 	ser2, err := pp2.Serialize()
 	assert.NoError(t, err)
 

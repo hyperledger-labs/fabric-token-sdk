@@ -71,7 +71,7 @@ func GetSameTypeProverAndVerifier() (*issue.SameTypeProver, *issue.SameTypeVerif
 	com.Add(pp[2].Mul(blindingFactor))
 
 	tokens := prepareTokens(pp)
-	return issue.NewSameTypeProver("ABC", blindingFactor, com, true, pp, math.Curves[1]), issue.NewSameTypeVerifier(tokens, true, pp, math.Curves[1])
+	return issue.NewSameTypeProver("ABC", blindingFactor, com, pp, math.Curves[1]), issue.NewSameTypeVerifier(tokens, pp, math.Curves[1])
 }
 
 func preparePedersenParameters() []*math.G1 {

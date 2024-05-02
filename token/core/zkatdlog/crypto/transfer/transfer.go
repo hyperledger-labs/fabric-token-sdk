@@ -55,32 +55,22 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 	var blindingFactors []*math.Zr
 	// commit to the type of inputs and outputs
 	commitmentToType := pp.PedersenGenerators[0].Mul(c.HashToZr([]byte(inputWitness[0].Type)))
-	typeBF := c.NewZrFromInt(0)
-	if pp.IsTypeHidden {
-		rand, err := c.Rand()
-		if err != nil {
-			return nil, err
-		}
-		typeBF = c.NewRandomZr(rand)
-		for i := 0; i < len(outputWitness); i++ {
-			if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
-				return nil, errors.New("invalid token witness")
-			}
-			outW[i] = outputWitness[i].Clone()
-			values = append(values, outW[i].Value)
-			blindingFactors = append(blindingFactors, c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder))
-		}
-		commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
-	} else {
-		for i := 0; i < len(outputWitness); i++ {
-			if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
-				return nil, errors.New("invalid token witness")
-			}
-			outW[i] = outputWitness[i].Clone()
-			values = append(values, outW[i].Value)
-			blindingFactors = append(blindingFactors, outW[i].BlindingFactor)
-		}
+
+	rand, err := c.Rand()
+	if err != nil {
+		return nil, err
 	}
+	typeBF := c.NewRandomZr(rand)
+	for i := 0; i < len(outputWitness); i++ {
+		if outputWitness[i] == nil || outputWitness[i].BlindingFactor == nil {
+			return nil, errors.New("invalid token witness")
+		}
+		outW[i] = outputWitness[i].Clone()
+		values = append(values, outW[i].Value)
+		blindingFactors = append(blindingFactors, c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder))
+	}
+	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
+
 	p.TypeAndSum = NewTypeAndSumProver(NewTypeAndSumWitness(typeBF, inW, outW, c), pp.PedersenGenerators, inputs, outputs, commitmentToType, c)
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
