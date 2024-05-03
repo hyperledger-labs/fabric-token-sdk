@@ -8,46 +8,38 @@ package dlog
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/topology"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("Orion EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		network.Stop()
-	})
-
 	Describe("Orion ZKAT-DLog", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", topology.Topology(
-				topology.Opts{
-					Backend:        "orion",
-					TokenSDKDriver: "dlog",
-					Aries:          true,
-					SDKs:           []api.SDK{&orion3.SDK{}, &sdk.SDK{}},
-					//FSCLogSpec:     "token-sdk=debug:fabric-sdk=debug:orion-sdk=debug:info",
-				},
-			)...)
-			Expect(err).NotTo(HaveOccurred())
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
+		var ts = newTestSuite(fsc.LibP2P, integration.NoReplication)
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(network, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true)
 		})
 	})
 
 })
+
+func newTestSuite(commType fsc.P2PCommunicationType, opts *integration.ReplicationOptions) *token2.TestSuite {
+	return token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
+		topology.Opts{
+			Backend:        "orion",
+			CommType:       commType,
+			TokenSDKDriver: "dlog",
+			Aries:          true,
+			SDKs:           []api.SDK{&orion3.SDK{}, &sdk.SDK{}},
+			Replication:    &token2.ReplicationOptions{ReplicationOptions: opts},
+		},
+	))
+}
