@@ -23,10 +23,18 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 )
 
-func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
+type Opts struct {
+	Backend        string
+	CommType       fsc.P2PCommunicationType
+	TokenSDKDriver string
+	SDKs           []api2.SDK
+	Replication    token2.ReplicationOpts
+}
+
+func Topology(opts Opts) []api.Topology {
 	var backendNetwork api.Topology
 	backendChannel := ""
-	switch backend {
+	switch opts.Backend {
 	case "fabric":
 		fabricTopology := fabric.NewDefaultTopology()
 		fabricTopology.EnableIdemix()
@@ -38,13 +46,13 @@ func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string,
 		orionTopology := orion.NewTopology()
 		backendNetwork = orionTopology
 	default:
-		panic("unknown backend: " + backend)
+		panic("unknown backend: " + opts.Backend)
 	}
 
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("grpc=error:debug", "")
-	fscTopology.P2PCommunicationType = commType
+	fscTopology.P2PCommunicationType = opts.CommType
 
 	fscTopology.AddNodeByName("issuer").
 		AddOptions(
@@ -53,7 +61,7 @@ func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string,
 			orion.WithRole("issuer"),
 			token.WithDefaultIssuerIdentity(false),
 		).
-		AddOptions(replicationOpts.For("issuer")...).
+		AddOptions(opts.Replication.For("issuer")...).
 		RegisterViewFactory("issue", &views.IssueHouseViewFactory{}).
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
@@ -64,7 +72,7 @@ func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string,
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(false),
 		).
-		AddOptions(replicationOpts.For("auditor")...).
+		AddOptions(opts.Replication.For("auditor")...).
 		RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{}).
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
@@ -74,7 +82,7 @@ func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string,
 		orion.WithRole("alice"),
 		token.WithOwnerIdentity("alice.id1"),
 	).
-		AddOptions(replicationOpts.For("alice")...).
+		AddOptions(opts.Replication.For("alice")...).
 		RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{}).
 		RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{}).
 		RegisterViewFactory("transfer", &views.TransferHouseViewFactory{}).
@@ -89,7 +97,7 @@ func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string,
 			token.WithDefaultOwnerIdentity(),
 			token.WithOwnerIdentity("bob.id1"),
 		).
-		AddOptions(replicationOpts.For("bob")...).
+		AddOptions(opts.Replication.For("bob")...).
 		RegisterResponder(&views.AcceptIssuedHouseView{}, &views.IssueHouseView{}).
 		RegisterResponder(&views.AcceptTransferHouseView{}, &views.TransferHouseView{}).
 		RegisterViewFactory("transfer", &views.TransferHouseViewFactory{}).
@@ -97,33 +105,33 @@ func Topology(backend, commType fsc.P2PCommunicationType, tokenSDKDriver string,
 		RegisterViewFactory("TxFinality", &views2.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), backendNetwork, backendChannel, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
-	if backend == "orion" {
+	if opts.Backend == "orion" {
 		// we need to define the custodian
 		custodian := fscTopology.AddNodeByName("custodian").
 			AddOptions(orion.WithRole("custodian")).
-			AddOptions(replicationOpts.For("custodian")...)
+			AddOptions(opts.Replication.For("custodian")...)
 		orion2.SetCustodian(tms, custodian)
 		tms.AddNode(custodian)
 
 		// Enable orion sdk on each FSC node
 		orionTopology := backendNetwork.(*orion.Topology)
 		orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
-		if _, ok := sdks[0].(*orion3.SDK); !ok {
+		if _, ok := opts.SDKs[0].(*orion3.SDK); !ok {
 			panic("orion sdk missing")
 		}
 		fscTopology.SetBootstrapNode(custodian)
 	} else {
-		if _, ok := sdks[0].(*fabric3.SDK); !ok {
+		if _, ok := opts.SDKs[0].(*fabric3.SDK); !ok {
 			panic("fabric sdk missing")
 		}
 	}
 
 	tms.AddAuditor(auditor)
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 
