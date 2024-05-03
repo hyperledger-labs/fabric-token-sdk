@@ -15,10 +15,6 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/api"
-	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
-	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
@@ -26,15 +22,6 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/pkg/errors"
 )
-
-type startPortProvider interface {
-	StartPortForNode() int
-}
-type topologyProvider = func(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology
-
-func NewTestSuiteLibP2P(provider startPortProvider, tokenSDKDriver string, topologyProvider topologyProvider, sdks ...api2.SDK) *token2.TestSuite {
-	return token2.NewTestSuite(nil, provider.StartPortForNode, topologyProvider(fsc.LibP2P, tokenSDKDriver, integration.NoReplication, sdks...))
-}
 
 func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	// give some time to the nodes to get the public parameters

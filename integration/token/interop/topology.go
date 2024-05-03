@@ -24,7 +24,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
 )
 
-func HTLCSingleFabricNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
+type Opts struct {
+	CommType       fsc.P2PCommunicationType
+	TokenSDKDriver string
+	FSCLogSpec     string
+	SDKs           []api2.SDK
+	Replication    token2.ReplicationOpts
+}
+
+func HTLCSingleFabricNetworkTopology(opts Opts) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -33,78 +41,78 @@ func HTLCSingleFabricNetworkTopology(commType fsc.P2PCommunicationType, tokenSDK
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("token-sdk=debug:fabric-sdk=debug:info", "")
-	fscTopology.P2PCommunicationType = commType
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
 		AddOptions(fabric.WithOrganization("Org1")).
-		AddOptions(replicationOpts.For("issuer")...)
+		AddOptions(opts.Replication.For("issuer")...)
 	auditor := addAuditor(fscTopology).
 		AddOptions(fabric.WithOrganization("Org1")).
-		AddOptions(replicationOpts.For("auditor")...)
+		AddOptions(opts.Replication.For("auditor")...)
 	addAlice(fscTopology).
 		AddOptions(fabric.WithOrganization("Org2")).
-		AddOptions(replicationOpts.For("alice")...)
+		AddOptions(opts.Replication.For("alice")...)
 	addBob(fscTopology).
 		AddOptions(fabric.WithOrganization("Org2")).
-		AddOptions(replicationOpts.For("bob")...)
+		AddOptions(opts.Replication.For("bob")...)
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
 
-func HTLCSingleOrionNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
+func HTLCSingleOrionNetworkTopology(opts Opts) []api.Topology {
 	// Orion
 	orionTopology := orion.NewTopology()
 
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("debug", "")
-	fscTopology.P2PCommunicationType = commType
+	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
 		AddOptions(fabric.WithOrganization("Org1"), orion.WithRole("issuer")).
-		AddOptions(replicationOpts.For("issuer")...)
+		AddOptions(opts.Replication.For("issuer")...)
 	auditor := addAuditor(fscTopology).
 		AddOptions(fabric.WithOrganization("Org1"), orion.WithRole("auditor")).
-		AddOptions(replicationOpts.For("auditor")...)
+		AddOptions(opts.Replication.For("auditor")...)
 	addAlice(fscTopology).
 		AddOptions(fabric.WithOrganization("Org2"), orion.WithRole("alice")).
-		AddOptions(replicationOpts.For("alice")...)
+		AddOptions(opts.Replication.For("alice")...)
 	addBob(fscTopology).
 		AddOptions(fabric.WithOrganization("Org2"), orion.WithRole("bob")).
-		AddOptions(replicationOpts.For("bob")...)
+		AddOptions(opts.Replication.For("bob")...)
 	custodian := addCustodian(fscTopology).
-		AddOptions(replicationOpts.For("custodian")...)
+		AddOptions(opts.Replication.For("custodian")...)
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), orionTopology, "", opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 	orion2.SetCustodian(tms, custodian)
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 
 	return []api.Topology{orionTopology, tokenTopology, fscTopology}
 }
 
-func HTLCTwoFabricNetworksTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
+func HTLCTwoFabricNetworksTopology(opts Opts) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -118,16 +126,16 @@ func HTLCTwoFabricNetworksTopology(commType fsc.P2PCommunicationType, tokenSDKDr
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
-	fscTopology.P2PCommunicationType = commType
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
 		AddOptions(
 			fabric.WithNetworkOrganization("alpha", "Org1"),
 			fabric.WithNetworkOrganization("beta", "Org3")).
-		AddOptions(replicationOpts.For("issuer")...)
+		AddOptions(opts.Replication.For("issuer")...)
 	auditor := addAuditor(fscTopology).
-		AddOptions(replicationOpts.For("auditor")...).
+		AddOptions(opts.Replication.For("auditor")...).
 		AddOptions(
 			fabric.WithNetworkOrganization("alpha", "Org1"),
 			fabric.WithNetworkOrganization("beta", "Org3"))
@@ -135,7 +143,7 @@ func HTLCTwoFabricNetworksTopology(commType fsc.P2PCommunicationType, tokenSDKDr
 		AddOptions(
 			fabric.WithNetworkOrganization("alpha", "Org2"),
 			fabric.WithNetworkOrganization("beta", "Org4")).
-		AddOptions(replicationOpts.For("alice")...).
+		AddOptions(opts.Replication.For("alice")...).
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
 		RegisterViewFactory("htlc.reclaimByHash", &htlc.ReclaimByHashViewFactory{}).
 		RegisterViewFactory("htlc.CheckExistenceReceivedExpiredByHash", &htlc.CheckExistenceReceivedExpiredByHashViewFactory{}).
@@ -145,28 +153,28 @@ func HTLCTwoFabricNetworksTopology(commType fsc.P2PCommunicationType, tokenSDKDr
 			fabric.WithNetworkOrganization("alpha", "Org2"),
 			fabric.WithNetworkOrganization("beta", "Org4"),
 		).
-		AddOptions(replicationOpts.For("bob")...).
+		AddOptions(opts.Replication.For("bob")...).
 		RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{}).
 		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms = tokenTopology.AddTMS(fscTopology.ListNodes(), f2Topology, f2Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
-func HTLCNoCrossClaimTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
+func HTLCNoCrossClaimTopology(opts Opts) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -181,14 +189,14 @@ func HTLCNoCrossClaimTopology(commType fsc.P2PCommunicationType, tokenSDKDriver 
 	// FSC
 	fscTopology := fsc.NewTopology()
 	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
-	fscTopology.P2PCommunicationType = commType
+	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
 		AddOptions(
 			fabric.WithNetworkOrganization("alpha", "Org1"),
 			fabric.WithNetworkOrganization("beta", "Org3"),
 		).
-		AddOptions(replicationOpts.For("issuer")...)
+		AddOptions(opts.Replication.For("issuer")...)
 
 	auditor := addAuditor(fscTopology).AddOptions(
 		fabric.WithNetworkOrganization("alpha", "Org1"),
@@ -211,24 +219,24 @@ func HTLCNoCrossClaimTopology(commType fsc.P2PCommunicationType, tokenSDKDriver 
 		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms = tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "bob"), f2Topology, f2Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org3")
 	tms.AddAuditor(auditor)
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 
 	return []api.Topology{f1Topology, f2Topology, tokenTopology, fscTopology}
 }
 
-func HTLCNoCrossClaimWithOrionTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
+func HTLCNoCrossClaimWithOrionTopology(opts Opts) []api.Topology {
 	// Define two Fabric topologies
 	f1Topology := fabric.NewTopologyWithName("alpha").SetDefault()
 	f1Topology.EnableIdemix()
@@ -241,8 +249,8 @@ func HTLCNoCrossClaimWithOrionTopology(commType fsc.P2PCommunicationType, tokenS
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("db.driver.badger=info:debug", "")
-	fscTopology.P2PCommunicationType = commType
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
+	fscTopology.P2PCommunicationType = opts.CommType
 
 	addIssuer(fscTopology).
 		AddOptions(
@@ -250,20 +258,20 @@ func HTLCNoCrossClaimWithOrionTopology(commType fsc.P2PCommunicationType, tokenS
 			fabric.WithNetworkOrganization("beta", "Org3"),
 			orion.WithRole("issuer"),
 		).
-		AddOptions(replicationOpts.For("issuer")...)
+		AddOptions(opts.Replication.For("issuer")...)
 	auditor := addAuditor(fscTopology).
 		AddOptions(
 			fabric.WithNetworkOrganization("alpha", "Org1"),
 			fabric.WithNetworkOrganization("beta", "Org3"),
 			orion.WithRole("auditor"),
 		).
-		AddOptions(replicationOpts.For("auditor")...)
+		AddOptions(opts.Replication.For("auditor")...)
 	addAlice(fscTopology).
 		AddOptions(
 			fabric.WithNetworkOrganization("alpha", "Org2"),
 			token.WithOwnerIdentity("alice.id2"),
 		).
-		AddOptions(replicationOpts.For("alice")...).
+		AddOptions(opts.Replication.For("alice")...).
 		RegisterViewFactory("htlc.claim", &htlc.ClaimViewFactory{}).
 		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{}).
 		RegisterResponder(&htlc.LockAcceptView{}, &htlc.LockView{})
@@ -273,30 +281,30 @@ func HTLCNoCrossClaimWithOrionTopology(commType fsc.P2PCommunicationType, tokenS
 			orion.WithRole("bob"),
 			token.WithOwnerIdentity("bob.id2"),
 		).
-		AddOptions(replicationOpts.For("bob")...).
+		AddOptions(opts.Replication.For("bob")...).
 		RegisterViewFactory("htlc.lock", &htlc.LockViewFactory{}).
 		RegisterViewFactory("htlc.reclaimAll", &htlc.ReclaimAllViewFactory{}).
 		RegisterViewFactory("htlc.scan", &htlc.ScanViewFactory{})
 	custodian := addCustodian(fscTopology).
-		AddOptions(replicationOpts.For("custodian")...)
+		AddOptions(opts.Replication.For("custodian")...)
 
 	tokenTopology := token.NewTopology()
 
 	// TMS for the Fabric Network
-	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tmsFabric, true)
+	tmsFabric := tokenTopology.AddTMS(fscTopology.ListNodes("auditor", "issuer", "alice"), f1Topology, f1Topology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tmsFabric, true)
 	fabric2.SetOrgs(tmsFabric, "Org1")
 	tmsFabric.AddAuditor(auditor)
 
 	// TMS for the Orion Network
-	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tmsOrion, true)
+	tmsOrion := tokenTopology.AddTMS(fscTopology.ListNodes("custodian", "auditor", "issuer", "bob"), orionTopology, "", opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tmsOrion, true)
 	tmsOrion.AddAuditor(auditor)
 	orion2.SetCustodian(tmsOrion, custodian)
 
 	orionTopology.AddDB(tmsOrion.Namespace, "custodian", "issuer", "auditor", "bob")
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 	return []api.Topology{f1Topology, orionTopology, tokenTopology, fscTopology}
