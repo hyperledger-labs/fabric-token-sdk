@@ -13,8 +13,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc/node"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/orion"
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
-	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
-	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/orion"
@@ -24,10 +22,9 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views/htlc"
-	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 )
 
-func HTLCSingleFabricNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts) []api.Topology {
+func HTLCSingleFabricNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -60,7 +57,6 @@ func HTLCSingleFabricNetworkTopology(commType fsc.P2PCommunicationType, tokenSDK
 
 	fscTopology.SetBootstrapNode(fscTopology.AddNodeByName("lib-p2p-bootstrap-node"))
 
-	sdks := []api2.SDK{&fabric3.SDK{}, &sdk.SDK{}}
 	for _, sdk := range sdks {
 		fscTopology.AddSDK(sdk)
 	}
@@ -68,7 +64,7 @@ func HTLCSingleFabricNetworkTopology(commType fsc.P2PCommunicationType, tokenSDK
 	return []api.Topology{fabricTopology, tokenTopology, fscTopology}
 }
 
-func HTLCSingleOrionNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts) []api.Topology {
+func HTLCSingleOrionNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKDriver string, replicationOpts token2.ReplicationOpts, sdks ...api2.SDK) []api.Topology {
 	// Orion
 	orionTopology := orion.NewTopology()
 
@@ -101,7 +97,6 @@ func HTLCSingleOrionNetworkTopology(commType fsc.P2PCommunicationType, tokenSDKD
 
 	orionTopology.AddDB(tms.Namespace, "custodian", "issuer", "auditor", "alice", "bob")
 
-	sdks := []api2.SDK{&orion3.SDK{}, &sdk.SDK{}}
 	for _, sdk := range sdks {
 		fscTopology.AddSDK(sdk)
 	}

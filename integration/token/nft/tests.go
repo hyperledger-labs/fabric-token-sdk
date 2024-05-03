@@ -13,18 +13,19 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/common"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/nft/views"
 	. "github.com/onsi/gomega"
 )
 
-func NewTestSuiteLibP2P(backend string, startPort func() int, tokenSDKDriver string) *token.TestSuite {
-	return token.NewTestSuite(nil, startPort, Topology(backend, fsc.LibP2P, tokenSDKDriver, integration.NoReplication))
+func NewTestSuiteLibP2P(backend string, startPort func() int, tokenSDKDriver string, sdks ...api2.SDK) *token.TestSuite {
+	return token.NewTestSuite(nil, startPort, Topology(backend, fsc.LibP2P, tokenSDKDriver, integration.NoReplication, sdks...))
 }
 
-func NewTestSuiteWebsocket(backend string, startPort func() int, tokenSDKDriver string, replicationOpts *integration.ReplicationOptions) *token.TestSuite {
-	return token.NewTestSuite(replicationOpts.SQLConfigs, startPort, Topology(backend, fsc.WebSocket, tokenSDKDriver, &token.ReplicationOptions{ReplicationOptions: replicationOpts}))
+func NewTestSuiteWebsocket(backend string, startPort func() int, tokenSDKDriver string, replicationOpts *integration.ReplicationOptions, sdks ...api2.SDK) *token.TestSuite {
+	return token.NewTestSuite(replicationOpts.SQLConfigs, startPort, Topology(backend, fsc.WebSocket, tokenSDKDriver, &token.ReplicationOptions{ReplicationOptions: replicationOpts}, sdks...))
 }
 
 func TestAll(network *integration.Infrastructure) {
