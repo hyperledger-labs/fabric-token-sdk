@@ -23,7 +23,6 @@ func IssueValidate(ctx *Context) error {
 	}
 	if err := issue.NewVerifier(
 		commitments,
-		action.IsAnonymous(),
 		ctx.PP).Verify(action.GetProof()); err != nil {
 		return err
 	}

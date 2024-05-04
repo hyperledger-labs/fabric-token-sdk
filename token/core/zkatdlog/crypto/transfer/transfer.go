@@ -53,6 +53,9 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 	}
 	var values []uint64
 	var blindingFactors []*math.Zr
+	// commit to the type of inputs and outputs
+	commitmentToType := pp.PedersenGenerators[0].Mul(c.HashToZr([]byte(inputWitness[0].Type)))
+
 	rand, err := c.Rand()
 	if err != nil {
 		return nil, err
@@ -66,12 +69,9 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 		values = append(values, outW[i].Value)
 		blindingFactors = append(blindingFactors, c.ModSub(outW[i].BlindingFactor, typeBF, c.GroupOrder))
 	}
-	// commit to the type of inputs and outputs
-	commitmentToType := pp.PedParams[0].Mul(c.HashToZr([]byte(inputWitness[0].Type)))
-	commitmentToType.Add(pp.PedParams[2].Mul(typeBF))
+	commitmentToType.Add(pp.PedersenGenerators[2].Mul(typeBF))
 
-	p.TypeAndSum = NewTypeAndSumProver(NewTypeAndSumWitness(typeBF, inW, outW, c), pp.PedParams, inputs, outputs, commitmentToType, c)
-
+	p.TypeAndSum = NewTypeAndSumProver(NewTypeAndSumWitness(typeBF, inW, outW, c), pp.PedersenGenerators, inputs, outputs, commitmentToType, c)
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputWitness) != 1 || len(outputWitness) != 1 {
@@ -82,7 +82,7 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 			out.Sub(commitmentToType)
 			coms = append(coms, out)
 		}
-		p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedParams[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+		p.RangeCorrectness = rp.NewRangeCorrectnessProver(coms, values, blindingFactors, pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 
 	}
 	return p, nil
@@ -91,12 +91,12 @@ func NewProver(inputWitness, outputWitness []*token.TokenDataWitness, inputs, ou
 // NewVerifier returns a TransferAction Verifier as a function of the passed parameters
 func NewVerifier(inputs, outputs []*math.G1, pp *crypto.PublicParams) *Verifier {
 	v := &Verifier{}
-	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedParams, inputs, outputs, math.Curves[pp.Curve])
+	v.TypeAndSum = NewTypeAndSumVerifier(pp.PedersenGenerators, inputs, outputs, math.Curves[pp.Curve])
 
 	// check if this is an ownership transfer
 	// if so, skip range proof, well-formedness proof is enough
 	if len(inputs) != 1 || len(outputs) != 1 {
-		v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedParams[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
+		v.RangeCorrectness = rp.NewRangeCorrectnessVerifier(pp.PedersenGenerators[1:], pp.RangeProofParams.LeftGenerators, pp.RangeProofParams.RightGenerators, pp.RangeProofParams.P, pp.RangeProofParams.Q, pp.RangeProofParams.BitLength, pp.RangeProofParams.NumberOfRounds, math.Curves[pp.Curve])
 	}
 
 	return v

@@ -22,7 +22,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/audit/mock"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	transfer2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -53,7 +52,7 @@ var _ = Describe("Auditor", func() {
 		Expect(err).NotTo(HaveOccurred())
 		des, err := idemix.NewDeserializer(pp.IdemixIssuerPK, math.FP256BN_AMCL)
 		Expect(err).NotTo(HaveOccurred())
-		auditor = audit.NewAuditor(flogging.MustGetLogger("auditor"), des, pp.PedParams, nil, fakeSigningIdentity, math.Curves[pp.Curve])
+		auditor = audit.NewAuditor(flogging.MustGetLogger("auditor"), des, pp.PedersenGenerators, nil, fakeSigningIdentity, math.Curves[pp.Curve])
 		fakeSigningIdentity.SignReturns([]byte("auditor-signature"), nil)
 
 	})
@@ -286,7 +285,7 @@ func createInputs(pp *crypto.PublicParams, id view.Identity) ([]*token.Token, []
 		infos[i].Value = values[i]
 		infos[i].Type = "ABC"
 		inputs[i] = &token.Token{}
-		inputs[i].Data, err = common.ComputePedersenCommitment([]*math.Zr{ttype, values[i], infos[i].BlindingFactor}, pp.PedParams, c)
+		inputs[i].Data = commit([]*math.Zr{ttype, values[i], infos[i].BlindingFactor}, pp.PedersenGenerators, c)
 		Expect(err).NotTo(HaveOccurred())
 		inputs[i].Owner = id
 	}
@@ -304,4 +303,12 @@ func prepareTransfer(pp *crypto.PublicParams, id view.Identity) (*transfer2.Tran
 	Expect(err).NotTo(HaveOccurred())
 
 	return transfer, inf, inputs
+}
+
+func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
+	com := c.NewG1()
+	for i := range vector {
+		com.Add(generators[i].Mul(vector[i]))
+	}
+	return com
 }

@@ -13,7 +13,6 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -214,10 +213,7 @@ func (a *Auditor) InspectOutput(output *AuditableToken, index int) error {
 	if output == nil || output.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
-	tokenComm, err := common.ComputePedersenCommitment([]*math.Zr{a.Curve.HashToZr([]byte(output.Data.TokenType)), output.Data.Value, output.Data.BF}, a.PedersenParams, a.Curve)
-	if err != nil {
-		return err
-	}
+	tokenComm := commit([]*math.Zr{a.Curve.HashToZr([]byte(output.Data.TokenType)), output.Data.Value, output.Data.BF}, a.PedersenParams, a.Curve)
 	if output.Token == nil || output.Token.Data == nil {
 		return errors.Errorf("invalid output at index [%d]", index)
 	}
@@ -412,4 +408,12 @@ func GetAuditInfoForTransfers(transfers [][]byte, metadata []driver.TransferMeta
 		}
 	}
 	return auditableInputs, outputs, nil
+}
+
+func commit(vector []*math.Zr, generators []*math.G1, c *math.Curve) *math.G1 {
+	com := c.NewG1()
+	for i := range vector {
+		com.Add(generators[i].Mul(vector[i]))
+	}
+	return com
 }

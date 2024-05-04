@@ -49,20 +49,20 @@ func prepareInputsForZKIssue(pp *crypto.PublicParams) ([]*token.TokenDataWitness
 
 	tokens := make([]*math.G1, len(values))
 	for i := 0; i < len(values); i++ {
-		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedParams, curve)
+		tokens[i] = NewToken(curve.NewZrFromInt(int64(values[i])), bf[i], "ABC", pp.PedersenGenerators, curve)
 	}
 	return token.NewTokenDataWitness("ABC", values, bf), tokens
 }
 
 func prepareZKIssue() (*issue.Prover, *issue.Verifier) {
-	pp, err := crypto.Setup(32, []byte("issuerPK"), math.BN254)
+	pp, err := crypto.Setup(32, nil, math.BN254)
 	Expect(err).NotTo(HaveOccurred())
 
 	tw, tokens := prepareInputsForZKIssue(pp)
 
-	prover, err := issue.NewProver(tw, tokens, true, pp)
+	prover, err := issue.NewProver(tw, tokens, pp)
 	Expect(err).NotTo(HaveOccurred())
-	verifier := issue.NewVerifier(tokens, true, pp)
+	verifier := issue.NewVerifier(tokens, pp)
 
 	return prover, verifier
 }
