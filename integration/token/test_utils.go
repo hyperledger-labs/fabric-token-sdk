@@ -67,7 +67,6 @@ func (s *ReplicaSelector) Get(name string) string {
 		idx := v[currentIdx]
 		v[currentIdx] = (idx + 1) % v[totalReplicas]
 		return replicaName(name, idx)
-		return name
 	}
 	return name
 }
