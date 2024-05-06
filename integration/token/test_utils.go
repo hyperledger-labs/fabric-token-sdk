@@ -93,8 +93,7 @@ func NewTestSuite(sqlConfigs map[string]*sql.PostgresConfig, startPort func() in
 	return &TestSuite{
 		sqlConfigs: sqlConfigs,
 		generator: func() (*integration.Infrastructure, error) {
-			i, err := integration.New(startPort(), "./mytopos", topologies...)
-			i.DeleteOnStop = false
+			i, err := integration.New(startPort(), "", topologies...)
 			return i, err
 		},
 		closeFunc: func() {},
