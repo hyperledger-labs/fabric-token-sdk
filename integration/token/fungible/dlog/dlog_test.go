@@ -39,11 +39,28 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("Extras", func() {
-		var ts = newTestSuite(fsc.LibP2P, true, false, false, integration.NoReplication)
-		network := ts.II
-		// notice that fabric-ca does not support yet aries
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
+		var network *integration.Infrastructure
+		BeforeEach(func() {
+			// notice that fabric-ca does not support yet aries
+			var err error
+			network, err = integration.New(StartPortDlog(), "", topology2.Topology(
+				topology2.Opts{
+					Backend:        "fabric",
+					TokenSDKDriver: "dlog",
+					Aries:          true,
+					SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
+					Replication:    integration.NoReplication,
+				},
+			)...)
+			Expect(err).NotTo(HaveOccurred())
+			network.RegisterPlatformFactory(token.NewPlatformFactory())
+			network.Generate()
+			network.Start()
+		})
+		AfterEach(func() {
+			network.DeleteOnStop = false
+			network.Stop()
+		})
 
 		It("Update public params", func() {
 			tms := fungible.GetTMS(network, "default")
