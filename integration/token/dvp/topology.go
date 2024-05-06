@@ -13,6 +13,7 @@ import (
 	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
 	fabric2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/fabric"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/common/views"
 	views2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views"
@@ -20,7 +21,15 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/dvp/views/house"
 )
 
-func Topology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
+type Opts struct {
+	CommType       fsc.P2PCommunicationType
+	TokenSDKDriver string
+	FSCLogSpec     string
+	SDKs           []api2.SDK
+	Replication    token2.ReplicationOpts
+}
+
+func Topology(opts Opts) []api.Topology {
 	// Fabric
 	fabricTopology := fabric.NewDefaultTopology()
 	fabricTopology.EnableIdemix()
@@ -33,70 +42,84 @@ func Topology(tokenSDKDriver string, sdks ...api2.SDK) []api.Topology {
 
 	// FSC
 	fscTopology := fsc.NewTopology()
-	//fscTopology.SetLogging("debug", "")
+	fscTopology.P2PCommunicationType = opts.CommType
+	fscTopology.SetLogging(opts.FSCLogSpec, "")
 	fscTopology.EnableLogToFile()
 	fscTopology.EnablePrometheusMetrics()
 
 	// issuer
-	issuer := fscTopology.AddNodeByName("issuer").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(false),
-	)
-	issuer.RegisterViewFactory("issue", &cash.IssueCashViewFactory{})
-	issuer.RegisterViewFactory("issued", &cash.ListIssuedTokensViewFactory{})
+	fscTopology.AddNodeByName("issuer").
+		AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			token.WithDefaultIssuerIdentity(false),
+		).
+		AddOptions(opts.Replication.For("issuer")...).
+		RegisterViewFactory("issue", &cash.IssueCashViewFactory{}).
+		RegisterViewFactory("issued", &cash.ListIssuedTokensViewFactory{})
 
 	// auditor
-	auditor := fscTopology.AddNodeByName("auditor").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		token.WithAuditorIdentity(false),
-	)
-	auditor.RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
+	auditor := fscTopology.AddNodeByName("auditor").
+		AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			token.WithAuditorIdentity(false),
+		).
+		AddOptions(opts.Replication.For("auditor")...).
+		RegisterViewFactory("registerAuditor", &views2.RegisterAuditorViewFactory{})
 
 	// issuers
-	fscTopology.AddNodeByName("cash_issuer").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(false),
-	).RegisterViewFactory("issue_cash", &cash.IssueCashViewFactory{})
+	fscTopology.AddNodeByName("cash_issuer").
+		AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			token.WithDefaultIssuerIdentity(false),
+		).
+		AddOptions(opts.Replication.For("cash_issuer")...).
+		RegisterViewFactory("issue_cash", &cash.IssueCashViewFactory{})
 
-	fscTopology.AddNodeByName("house_issuer").AddOptions(
-		fabric.WithOrganization("Org1"),
-		fabric.WithAnonymousIdentity(),
-		token.WithDefaultIssuerIdentity(false),
-	).RegisterViewFactory("issue_house", &house.IssueHouseViewFactory{})
+	fscTopology.AddNodeByName("house_issuer").
+		AddOptions(
+			fabric.WithOrganization("Org1"),
+			fabric.WithAnonymousIdentity(),
+			token.WithDefaultIssuerIdentity(false),
+		).
+		AddOptions(opts.Replication.For("house_issuer")...).
+		RegisterViewFactory("issue_house", &house.IssueHouseViewFactory{})
 
-	// seller and buyer
-	seller := fscTopology.AddNodeByName("seller").AddOptions(
-		fabric.WithOrganization("Org2"),
-		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(),
-	)
-	seller.RegisterResponder(&house.AcceptHouseView{}, &house.IssueHouseView{})
-	seller.RegisterViewFactory("sell", &views2.SellHouseViewFactory{})
-	seller.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
-	seller.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
+	fscTopology.AddNodeByName("seller").
+		AddOptions(
+			fabric.WithOrganization("Org2"),
+			fabric.WithAnonymousIdentity(),
+			token.WithDefaultOwnerIdentity(),
+		).
+		AddOptions(opts.Replication.For("seller")...).
+		RegisterResponder(&house.AcceptHouseView{}, &house.IssueHouseView{}).
+		RegisterViewFactory("sell", &views2.SellHouseViewFactory{}).
+		RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{}).
+		RegisterViewFactory("balance", &views2.BalanceViewFactory{})
 
-	buyer := fscTopology.AddNodeByName("buyer").AddOptions(
-		fabric.WithOrganization("Org2"),
-		fabric.WithAnonymousIdentity(),
-		token.WithDefaultOwnerIdentity(),
-	)
-	buyer.RegisterResponder(&cash.AcceptCashView{}, &cash.IssueCashView{})
-	buyer.RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{})
-	buyer.RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{})
-	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
-	buyer.RegisterViewFactory("balance", &views2.BalanceViewFactory{})
-	buyer.RegisterViewFactory("TxFinality", &views.TxFinalityViewFactory{})
+	fscTopology.AddNodeByName("buyer").
+		AddOptions(
+			fabric.WithOrganization("Org2"),
+			fabric.WithAnonymousIdentity(),
+			token.WithDefaultOwnerIdentity(),
+		).
+		AddOptions(opts.Replication.For("buyer")...).
+		RegisterResponder(&cash.AcceptCashView{}, &cash.IssueCashView{}).
+		RegisterResponder(&views2.BuyHouseView{}, &views2.SellHouseView{}).
+		RegisterViewFactory("queryHouse", &house.GetHouseViewFactory{}).
+		RegisterViewFactory("balance", &views2.BalanceViewFactory{}).
+		RegisterViewFactory("balance", &views2.BalanceViewFactory{}).
+		RegisterViewFactory("TxFinality", &views.TxFinalityViewFactory{})
 
 	tokenTopology := token.NewTopology()
-	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, tokenSDKDriver)
-	common.SetDefaultParams(tokenSDKDriver, tms, true)
+	tms := tokenTopology.AddTMS(fscTopology.ListNodes(), fabricTopology, fabricTopology.Channels[0].Name, opts.TokenSDKDriver)
+	common.SetDefaultParams(opts.TokenSDKDriver, tms, true)
 	fabric2.SetOrgs(tms, "Org1")
 	tms.AddAuditor(auditor)
 
-	for _, sdk := range sdks {
+	for _, sdk := range opts.SDKs {
 		fscTopology.AddSDK(sdk)
 	}
 	return []api.Topology{
