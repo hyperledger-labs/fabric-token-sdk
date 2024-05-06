@@ -8,39 +8,29 @@ package mixed
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
+	api2 "github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric3 "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
-	"github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/fungible"
 	sdk "github.com/hyperledger-labs/fabric-token-sdk/token/sdk"
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
 )
 
 var _ = Describe("EndToEnd", func() {
-	var (
-		network *integration.Infrastructure
-	)
-
-	AfterEach(func() {
-		network.Stop()
-	})
-
 	Describe("Fungible with Auditor ne Issuer", func() {
-		BeforeEach(func() {
-			var err error
-			network, err = integration.New(StartPortDlog(), "", Topology(&fabric3.SDK{}, &sdk.SDK{})...)
-			Expect(err).NotTo(HaveOccurred())
-			network.DeleteOnStop = false
-			network.DeleteOnStart = true
-			network.RegisterPlatformFactory(token.NewPlatformFactory())
-			network.Generate()
-			network.Start()
-		})
-
-		It("succeeded", func() {
-			fungible.TestMixed(network)
-		})
-
+		var ts = newTestSuite(fsc.LibP2P, integration.NoReplication)
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
+		It("succeeded", func() { fungible.TestMixed(ts.II) })
 	})
-
 })
+
+func newTestSuite(commType fsc.P2PCommunicationType, opts *integration.ReplicationOptions) *token2.TestSuite {
+	return token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, Topology(Opts{
+		CommType:    commType,
+		FSCLogSpec:  "",
+		SDKs:        []api2.SDK{&fabric3.SDK{}, &sdk.SDK{}},
+		Replication: opts,
+	}))
+}
