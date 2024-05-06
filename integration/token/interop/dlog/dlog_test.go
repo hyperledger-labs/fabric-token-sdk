@@ -26,43 +26,85 @@ var _ = Describe("DLog end to end", func() {
 		token.Drivers = append(token.Drivers, "dlog")
 	})
 
-	Describe("HTLC Single Fabric Network", func() {
+	Describe("HTLC Single Fabric Network with libp2p", func() {
 		var ts = newTestSuite(fsc.LibP2P, integration2.ZKATDLogInteropHTLC, interop.HTLCSingleFabricNetworkTopology, integration.NoReplication)
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
 		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
 	})
 
-	Describe("HTLC Single Orion Network", func() {
+	Describe("HTLC Single Fabric Network with websockets", func() {
+		var ts = newTestSuite(fsc.WebSocket, integration2.ZKATDLogInteropHTLC, interop.HTLCSingleFabricNetworkTopology, integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
+	})
+
+	Describe("HTLC Single Orion Network with libp2p", func() {
 		var ts = newTestSuite(fsc.LibP2P, integration2.ZKATDLogInteropHTLCOrion, interop.HTLCSingleOrionNetworkTopology, integration.NoReplication)
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
 		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
 	})
 
-	Describe("HTLC Two Fabric Networks", func() {
+	Describe("HTLC Single Orion Network with websockets", func() {
+		var ts = newTestSuite(fsc.WebSocket, integration2.ZKATDLogInteropHTLCOrion, interop.HTLCSingleOrionNetworkTopology, integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed htlc-related basic operations", func() { interop.TestHTLCSingleNetwork(ts.II) })
+	})
+
+	Describe("HTLC Two Fabric Networks with libp2p", func() {
 		var ts = newTestSuite(fsc.LibP2P, integration2.ZKATDLogInteropHTLCTwoFabricNetworks, interop.HTLCTwoFabricNetworksTopology, integration.NoReplication)
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
 		It("Performed an htlc based atomic swap", func() { interop.TestHTLCTwoNetworks(ts.II) })
 	})
 
-	Describe("Fast Exchange Two Fabric Networks", func() {
+	Describe("HTLC Two Fabric Networks with websockets", func() {
+		var ts = newTestSuite(fsc.WebSocket, integration2.ZKATDLogInteropHTLCTwoFabricNetworks, interop.HTLCTwoFabricNetworksTopology, integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed an htlc based atomic swap", func() { interop.TestHTLCTwoNetworks(ts.II) })
+	})
+
+	Describe("Fast Exchange Two Fabric Networks with libp2p", func() {
 		var ts = newTestSuite(fsc.LibP2P, integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks, interop.HTLCTwoFabricNetworksTopology, integration.NoReplication)
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
 		It("Performed a fast exchange", func() { interop.TestFastExchange(ts.II) })
 	})
 
-	Describe("HTLC No Cross Claim Two Fabric Networks", func() {
+	Describe("Fast Exchange Two Fabric Networks with websockets", func() {
+		var ts = newTestSuite(fsc.WebSocket, integration2.ZKATDLogInteropFastExchangeTwoFabricNetworks, interop.HTLCTwoFabricNetworksTopology, integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed a fast exchange", func() { interop.TestFastExchange(ts.II) })
+	})
+
+	Describe("HTLC No Cross Claim Two Fabric Networks with libp2p", func() {
 		var ts = newTestSuite(fsc.LibP2P, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks, interop.HTLCNoCrossClaimTopology, integration.NoReplication)
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
 		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II) })
 	})
 
-	Describe("HTLC No Cross Claim with Orion and Fabric Networks", func() {
+	Describe("HTLC No Cross Claim Two Fabric Networks with websockets", func() {
+		var ts = newTestSuite(fsc.WebSocket, integration2.ZKATDLogInteropHTLCSwapNoCrossTwoFabricNetworks, interop.HTLCNoCrossClaimTopology, integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II) })
+	})
+
+	Describe("HTLC No Cross Claim with Orion and Fabric Networks with libp2p", func() {
 		var ts = newTestSuite(fsc.LibP2P, integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks, interop.HTLCNoCrossClaimWithOrionTopology, integration.NoReplication)
+		AfterEach(ts.TearDown)
+		BeforeEach(ts.Setup)
+		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II) })
+	})
+
+	Describe("HTLC No Cross Claim with Orion and Fabric Networks with websockets", func() {
+		var ts = newTestSuite(fsc.WebSocket, integration2.ZKATDLogInteropHTLCSwapNoCrossWithOrionAndFabricNetworks, interop.HTLCNoCrossClaimWithOrionTopology, integration.NoReplication)
 		AfterEach(ts.TearDown)
 		BeforeEach(ts.Setup)
 		It("Performed an htlc based atomic swap", func() { interop.TestHTLCNoCrossClaimTwoNetworks(ts.II) })
