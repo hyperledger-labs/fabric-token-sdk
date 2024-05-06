@@ -27,15 +27,37 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	Describe("T1 Fungible with Auditor ne Issuer", func() {
-		var ts = newTestSuite(fsc.LibP2P, true, false, false, integration.NoReplication)
+	Describe("T1 Fungible with Auditor ne Issuer with libp2p", func() {
+		opts, _ := token2.NoReplication()
+		var ts = newTestSuite(fsc.LibP2P, true, false, false, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
 			fungible.TestAll(ts.II, "auditor", nil, true)
 		})
+	})
 
+	Describe("T1 Fungible with Auditor ne Issuer with websockets", func() {
+		opts, _ := token2.NoReplication()
+		var ts = newTestSuite(fsc.WebSocket, true, false, false, opts)
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
+
+		It("succeeded", func() {
+			fungible.TestAll(ts.II, "auditor", nil, true)
+		})
+	})
+
+	Describe("T1 Fungible with Auditor ne Issuer with replicas", func() {
+		opts, _ := token2.NewReplicationOptions(2, "alice")
+		var ts = newTestSuite(fsc.WebSocket, true, false, false, opts)
+		BeforeEach(ts.Setup)
+		AfterEach(ts.TearDown)
+
+		It("succeeded", func() {
+			fungible.TestAll(ts.II, "auditor", nil, true)
+		})
 	})
 
 	Describe("Extras", func() {
@@ -83,7 +105,8 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T2 Fungible with Auditor = Issuer", func() {
-		var ts = newTestSuite(fsc.LibP2P, true, false, true, integration.NoReplication)
+		opts, _ := token2.NoReplication()
+		var ts = newTestSuite(fsc.LibP2P, true, false, true, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
@@ -99,7 +122,8 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T3 Fungible with Auditor ne Issuer + Fabric CA", func() {
-		var ts = newTestSuite(fsc.LibP2P, false, false, false, integration.NoReplication)
+		opts, _ := token2.NoReplication()
+		var ts = newTestSuite(fsc.LibP2P, false, false, false, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 		It("succeeded", func() {
@@ -108,7 +132,8 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T4 Malicious Transactions", func() {
-		var ts = newTestSuite(fsc.LibP2P, true, true, false, integration.NoReplication)
+		opts, _ := token2.NoReplication()
+		var ts = newTestSuite(fsc.LibP2P, true, true, false, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
@@ -120,7 +145,7 @@ var _ = Describe("EndToEnd", func() {
 
 })
 
-func newTestSuite(commType fsc.P2PCommunicationType, aries, noAuditor, auditorAsIssuer bool, opts *integration.ReplicationOptions) *token2.TestSuite {
+func newTestSuite(commType fsc.P2PCommunicationType, aries, noAuditor, auditorAsIssuer bool, opts *token2.ReplicationOptions) *token2.TestSuite {
 	return token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology2.Topology(
 		topology2.Opts{
 			Backend:         "fabric",
@@ -130,7 +155,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, aries, noAuditor, auditorAs
 			AuditorAsIssuer: auditorAsIssuer,
 			NoAuditor:       noAuditor,
 			SDKs:            []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
-			Replication:     &token2.ReplicationOptions{ReplicationOptions: opts},
+			Replication:     opts,
 		},
 	))
 }
