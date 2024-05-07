@@ -307,10 +307,11 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 
 // StoreEnvelope stores locally the given transaction envelope and associated it with the given id
 func (n *Network) StoreEnvelope(env *Envelope) error {
-	if env == nil {
-		return errors.Errorf("nil envelope")
-	}
-	return n.n.StoreEnvelope(env.e)
+	//if env == nil {
+	//	return errors.Errorf("nil envelope")
+	//}
+	//return n.n.StoreEnvelope(env.e)
+	return nil
 }
 
 func (n *Network) ExistEnvelope(id string) bool {

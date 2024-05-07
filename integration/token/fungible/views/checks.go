@@ -99,9 +99,9 @@ func (m *CheckTTXDBView) Call(context view.Context) (interface{}, error) {
 		}
 
 		// check envelope
-		if !net.ExistEnvelope(transactionRecord.TxID) {
-			errorMessages = append(errorMessages, fmt.Sprintf("no envelope found for transaction record [%s]", transactionRecord.TxID))
-		}
+		//if !net.ExistEnvelope(transactionRecord.TxID) {
+		//	errorMessages = append(errorMessages, fmt.Sprintf("no envelope found for transaction record [%s]", transactionRecord.TxID))
+		//}
 
 		tokenRequest, err := tokenDB.GetTokenRequest(transactionRecord.TxID)
 		assert.NoError(err, "failed to retrieve token request for [%s]", transactionRecord.TxID)

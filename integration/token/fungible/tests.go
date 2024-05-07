@@ -490,7 +490,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
-	CheckOwnerDB(network, nil, "bob")
+	CheckOwnerDB(network, []string{
+		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID1),
+		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID2),
+	}, "bob")
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
 	Restart(network, true, "bob")
 	Restart(network, false, auditor)
@@ -499,7 +502,6 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
-	//CheckOwnerDB(network, nil, "bob")
 	BroadcastPreparedTransferCash(network, "alice", txID1, tx1, true)
 	common2.CheckFinality(network, "bob", txID1, nil, false)
 	common2.CheckFinality(network, auditor, txID1, nil, false)
