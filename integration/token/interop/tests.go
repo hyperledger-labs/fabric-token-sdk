@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/hyperledger-labs/fabric-smart-client/integration"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/integration/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/integration/token/interop/views"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditor"
@@ -23,17 +24,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func TestHTLCSingleNetwork(network *integration.Infrastructure) {
+func TestHTLCSingleNetwork(network *integration.Infrastructure, sel *token2.ReplicaSelector) {
 	// give some time to the nodes to get the public parameters
 	time.Sleep(10 * time.Second)
 
 	defaultTMSID := token.TMSID{}
 	RegisterAuditor(network)
 
-	IssueCash(network, "", "USD", 110, "alice")
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
-	IssueCash(network, "", "USD", 10, "alice")
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 120, 0, 0, -1)
+	IssueCash(network, "", "USD", 110, "alice", sel.Get("alice"))
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 110, 0, 0, -1)
+	IssueCash(network, "", "USD", 10, "alice", sel.Get("alice"))
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 120, 0, 0, -1)
 
 	h := ListIssuerHistory(network, "", "USD")
 	Expect(h.Count() > 0).To(BeTrue())
@@ -43,11 +44,11 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	h = ListIssuerHistory(network, "", "EUR")
 	Expect(h.Count()).To(BeEquivalentTo(0))
 
-	IssueCash(network, "", "EUR", 10, "bob")
+	IssueCash(network, "", "EUR", 10, "bob", sel.Get("bob"))
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 10, 0, 0, -1)
-	IssueCash(network, "", "EUR", 10, "bob")
+	IssueCash(network, "", "EUR", 10, "bob", sel.Get("bob"))
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 20, 0, 0, -1)
-	IssueCash(network, "", "EUR", 10, "bob")
+	IssueCash(network, "", "EUR", 10, "bob", sel.Get("bob"))
 	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
 
 	h = ListIssuerHistory(network, "", "USD")
@@ -60,59 +61,60 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	Expect(h.Sum(64).ToBigInt().Cmp(big.NewInt(30))).To(BeEquivalentTo(0))
 	Expect(h.ByType("EUR").Count()).To(BeEquivalentTo(h.Count()))
 
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 120, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 120, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 0, 0, 0, -1)
 
-	Restart(network, "issuer", "auditor", "alice", "bob")
+	Restart(network, sel.All("issuer", "auditor", "alice", "bob")...)
 	RegisterAuditor(network)
 
 	// htlc (lock, failing claim, reclaim)
-	_, preImage, _ := HTLCLock(network, token.TMSID{}, "alice", "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 10, 0, -1)
+	_, preImage, _ := HTLCLock(network, token.TMSID{}, sel.Get("alice"), "", "USD", 10, "bob", 10*time.Second, nil, crypto.SHA512)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 110, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 0, 10, 0, -1)
 	time.Sleep(15 * time.Second)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 10, -1)
-	htlcClaim(network, defaultTMSID, "bob", "", preImage, "deadline elapsed")
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 110, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 10, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 110, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 0, 0, 10, -1)
+	htlcClaim(network, defaultTMSID, sel.Get("bob"), "", preImage, "deadline elapsed")
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 110, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 0, 0, 10, -1)
 
-	HTLCReclaimAll(network, "alice", "")
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 120, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 0, 0, -1)
+	HTLCReclaimAll(network, sel.Get("alice"), "")
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 120, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 0, 0, 0, -1)
 
 	// htlc (lock, claim)
-	_, preImage, _ = HTLCLock(network, defaultTMSID, "alice", "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 0, 20, 0, -1)
+	_, preImage, _ = HTLCLock(network, defaultTMSID, sel.Get("alice"), "", "USD", 20, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 100, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 0, 20, 0, -1)
 
-	htlcClaim(network, defaultTMSID, "bob", "", preImage)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
+	htlcClaim(network, defaultTMSID, sel.Get("bob"), "", preImage)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 100, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 20, 0, 0, -1)
 
 	// payment limit reached
-	lockTxID, _, _ := HTLCLock(network, defaultTMSID, "alice", "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "USD", 100, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "alice", "", "EUR", 0, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "EUR", 30, 0, 0, -1)
-	CheckBalanceWithLockedAndHolding(network, "bob", "", "USD", 20, 0, 0, -1)
+	lockTxID, _, _ := HTLCLock(network, defaultTMSID, sel.Get("alice"), "", "USD", uint64(views.Limit+10), "bob", 1*time.Hour, nil, crypto.SHA3_256, "payment limit reached")
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "USD", 100, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("alice"), "", "EUR", 0, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "EUR", 30, 0, 0, -1)
+	CheckBalanceWithLockedAndHolding(network, sel.Get("bob"), "", "USD", 20, 0, 0, -1)
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
-	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "alice", "bob")
+	<-time.After(30 * time.Second)
+	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "fsc.alice.1", "bob")
 	CheckAuditorDB(network, defaultTMSID, "auditor", "", func(errs []string) error {
 		if len(errs) != 1 {
 			return errors.Errorf("expected 1 errors, got [%d][%v][%s]", len(errs), errs, lockTxID)
@@ -126,15 +128,15 @@ func TestHTLCSingleNetwork(network *integration.Infrastructure) {
 	})
 
 	// lock two times with the same hash, the second lock should fail
-	_, _, hash := HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
-	failedLockTXID, _, _ := HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
+	_, _, hash := HTLCLock(network, defaultTMSID, sel.Get("alice"), "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	failedLockTXID, _, _ := HTLCLock(network, defaultTMSID, sel.Get("alice"), "", "USD", 1, "bob", 1*time.Hour, hash, crypto.SHA3_256,
 		fmt.Sprintf(
 			"entry with transfer metadata key [%s] is already occupied by [%s]",
 			htlc.LockKey(hash),
 			base64.StdEncoding.EncodeToString(htlc.LockValue(hash)),
 		),
 	)
-	HTLCLock(network, defaultTMSID, "alice", "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
+	HTLCLock(network, defaultTMSID, sel.Get("alice"), "", "USD", 1, "bob", 1*time.Hour, nil, crypto.SHA3_256)
 
 	CheckPublicParams(network, defaultTMSID, "issuer", "auditor", "alice", "bob")
 	CheckOwnerDB(network, defaultTMSID, nil, "issuer", "auditor", "alice", "bob")

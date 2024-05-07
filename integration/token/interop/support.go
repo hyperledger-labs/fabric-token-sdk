@@ -34,12 +34,12 @@ func RegisterAuditor(network *integration.Infrastructure, opts ...token.ServiceO
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiver string) string {
+func IssueCash(network *integration.Infrastructure, wallet string, typ string, amount uint64, receiverID string, receiver string) string {
 	txid, err := network.Client("issuer").CallView("issue", common.JSONMarshall(&views.IssueCash{
 		IssuerWallet: wallet,
 		TokenType:    typ,
 		Quantity:     amount,
-		Recipient:    network.Identity(receiver),
+		Recipient:    network.Identity(receiverID),
 	}))
 	Expect(err).NotTo(HaveOccurred())
 	txID := common.JSONUnmarshalString(txid)
