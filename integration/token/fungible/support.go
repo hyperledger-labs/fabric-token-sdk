@@ -302,7 +302,7 @@ func TransferCashForTMSID(network *integration.Infrastructure, id string, wallet
 		common2.CheckFinality(network, auditor, txID, tmsId, false)
 
 		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
+		if !strings.Contains(receiver, id) {
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
 		txInfo := GetTransactionInfoForTMSID(network, id, txID, tmsId)
@@ -358,7 +358,7 @@ func TransferCashFromExternalWallet(network *integration.Infrastructure, wmp *Wa
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
+		if !strings.Contains(receiver, id) {
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
 		txInfo := GetTransactionInfo(network, id, txID)
@@ -404,7 +404,7 @@ func TransferCashToExternalWallet(network *integration.Infrastructure, wmp *Wall
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
+		if !strings.Contains(receiver, id) {
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
 		txInfo := GetTransactionInfo(network, id, txID)
@@ -466,7 +466,7 @@ func TransferCashFromAndToExternalWallet(network *integration.Infrastructure, wm
 		common2.CheckFinality(network, auditor, txID, nil, false)
 
 		signers := []string{auditor}
-		if !strings.HasPrefix(receiver, id) {
+		if !strings.Contains(receiver, id) {
 			signers = append(signers, strings.Split(receiver, ".")[0])
 		}
 		txInfo := GetTransactionInfo(network, id, txID)
@@ -515,7 +515,7 @@ func TransferCashMultiActions(network *integration.Infrastructure, id string, wa
 
 		for _, receiver := range receivers {
 			common2.CheckFinality(network, receiver, txID, nil, false)
-			if !strings.HasPrefix(receiver, id) {
+			if !strings.Contains(receiver, id) {
 				signers = append(signers, strings.Split(receiver, ".")[0])
 			}
 		}
@@ -776,7 +776,13 @@ func GetTXStatus(network *integration.Infrastructure, id string, txID string) *v
 }
 
 func CheckPublicParamsForTMSID(network *integration.Infrastructure, tmsId *token2.TMSID, ids ...string) {
+	for k, _ := range network.Ctx.ViewClients {
+		fmt.Println("Found name: " + k)
+	}
 	for _, id := range ids {
+		if network.Client(id) == nil {
+			panic("did not find id " + id)
+		}
 		_, err := network.Client(id).CallView("CheckPublicParamsMatch", common.JSONMarshall(&views.CheckPublicParamsMatch{
 			TMSID: tmsId,
 		}))

@@ -9,7 +9,6 @@ package fabtoken
 import (
 	"math"
 
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	fabric "github.com/hyperledger-labs/fabric-smart-client/platform/fabric/sdk"
@@ -24,12 +23,13 @@ import (
 
 var _ = Describe("EndToEnd", func() {
 	Describe("Fungible", func() {
-		var ts = newTestSuite(fsc.LibP2P, integration.NoReplication)
+		opts, selector := token2.NoReplication()
+		var ts = newTestSuite(fsc.LibP2P, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 
 		It("Update public params", func() {
@@ -69,7 +69,7 @@ var _ = Describe("EndToEnd", func() {
 
 })
 
-func newTestSuite(commType fsc.P2PCommunicationType, opts *integration.ReplicationOptions) *token2.TestSuite {
+func newTestSuite(commType fsc.P2PCommunicationType, opts *token2.ReplicationOptions) *token2.TestSuite {
 	return token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		topology.Opts{
 			Backend:        "fabric",
@@ -77,7 +77,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, opts *integration.Replicati
 			TokenSDKDriver: "fabtoken",
 			Aries:          true,
 			SDKs:           []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
-			Replication:    &token2.ReplicationOptions{ReplicationOptions: opts},
+			Replication:    opts,
 		},
 	))
 }

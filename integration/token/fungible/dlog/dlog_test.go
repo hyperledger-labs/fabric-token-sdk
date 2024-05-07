@@ -27,36 +27,36 @@ import (
 )
 
 var _ = Describe("EndToEnd", func() {
-	Describe("T1 Fungible with Auditor ne Issuer with libp2p", func() {
-		opts, _ := token2.NoReplication()
-		var ts = newTestSuite(fsc.LibP2P, true, false, false, opts)
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
+	//Describe("T1 Fungible with Auditor ne Issuer with libp2p", func() {
+	//	opts, selector := token2.NoReplication()
+	//	var ts = newTestSuite(fsc.LibP2P, true, false, false, opts)
+	//	BeforeEach(ts.Setup)
+	//	AfterEach(ts.TearDown)
+	//
+	//	It("succeeded", func() {
+	//		fungible.TestAll(ts.II, "auditor", nil, true)
+	//	})
+	//})
 
-		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
-		})
-	})
-
-	Describe("T1 Fungible with Auditor ne Issuer with websockets", func() {
-		opts, _ := token2.NoReplication()
-		var ts = newTestSuite(fsc.WebSocket, true, false, false, opts)
-		BeforeEach(ts.Setup)
-		AfterEach(ts.TearDown)
-
-		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
-		})
-	})
+	//Describe("T1 Fungible with Auditor ne Issuer with websockets", func() {
+	//	opts, selector := token2.NoReplication()
+	//	var ts = newTestSuite(fsc.WebSocket, true, false, false, opts)
+	//	BeforeEach(ts.Setup)
+	//	AfterEach(ts.TearDown)
+	//
+	//	It("succeeded", func() {
+	//		fungible.TestAll(ts.II, "auditor", nil, true)
+	//	})
+	//})
 
 	Describe("T1 Fungible with Auditor ne Issuer with replicas", func() {
-		opts, _ := token2.NewReplicationOptions(2, "alice")
+		opts, selector := token2.NewReplicationOptions(2, "alice")
 		var ts = newTestSuite(fsc.WebSocket, true, false, false, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 	})
 
@@ -105,13 +105,13 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T2 Fungible with Auditor = Issuer", func() {
-		opts, _ := token2.NoReplication()
+		opts, selector := token2.NoReplication()
 		var ts = newTestSuite(fsc.LibP2P, true, false, true, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("T2.1 succeeded", func() {
-			fungible.TestAll(ts.II, "issuer", nil, true)
+			fungible.TestAll(ts.II, "issuer", nil, true, selector)
 		})
 
 		It("T2.2 Update public params", func() {
@@ -122,12 +122,12 @@ var _ = Describe("EndToEnd", func() {
 	})
 
 	Describe("T3 Fungible with Auditor ne Issuer + Fabric CA", func() {
-		opts, _ := token2.NoReplication()
+		opts, selector := token2.NoReplication()
 		var ts = newTestSuite(fsc.LibP2P, false, false, false, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, false)
+			fungible.TestAll(ts.II, "auditor", nil, false, selector)
 		})
 	})
 

@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package dlog
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/integration"
 	"github.com/hyperledger-labs/fabric-smart-client/integration/nwo/fsc"
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/api"
 	orion3 "github.com/hyperledger-labs/fabric-smart-client/platform/orion/sdk"
@@ -20,18 +19,19 @@ import (
 
 var _ = Describe("Orion EndToEnd", func() {
 	Describe("Orion ZKAT-DLog", func() {
-		var ts = newTestSuite(fsc.LibP2P, integration.NoReplication)
+		opts, selector := token2.NoReplication()
+		var ts = newTestSuite(fsc.LibP2P, opts)
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true)
+			fungible.TestAll(ts.II, "auditor", nil, true, selector)
 		})
 	})
 
 })
 
-func newTestSuite(commType fsc.P2PCommunicationType, opts *integration.ReplicationOptions) *token2.TestSuite {
+func newTestSuite(commType fsc.P2PCommunicationType, opts *token2.ReplicationOptions) *token2.TestSuite {
 	return token2.NewTestSuite(opts.SQLConfigs, StartPortDlog, topology.Topology(
 		topology.Opts{
 			Backend:        "orion",
@@ -39,7 +39,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, opts *integration.Replicati
 			TokenSDKDriver: "dlog",
 			Aries:          true,
 			SDKs:           []api.SDK{&orion3.SDK{}, &sdk.SDK{}},
-			Replication:    &token2.ReplicationOptions{ReplicationOptions: opts},
+			Replication:    opts,
 		},
 	))
 }

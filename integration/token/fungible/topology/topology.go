@@ -99,7 +99,7 @@ func Topology(opts Opts) []api.Topology {
 		token.WithIssuerIdentity("newIssuer.id1", opts.HSM),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("newIssuer.owner"),
-	).AddOptions(opts.Replication.For("issuer")...)
+	).AddOptions(opts.Replication.For("newIssuer")...)
 	newIssuer.RegisterViewFactory("issue", &views.IssueCashViewFactory{})
 	newIssuer.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newIssuer.RegisterViewFactory("GetIssuerWalletIdentity", &views.GetIssuerWalletIdentityViewFactory{})
@@ -112,7 +112,7 @@ func Topology(opts Opts) []api.Topology {
 		fabric.WithOrganization("Org1"),
 		orion.WithRole("auditor"),
 		token.WithAuditorIdentity(opts.HSM),
-	).AddOptions(opts.Replication.For("issuer")...)
+	).AddOptions(opts.Replication.For("newAuditor")...)
 	newAuditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 	newAuditor.RegisterViewFactory("GetPublicParams", &views.GetPublicParamsViewFactory{})
 	newAuditor.RegisterViewFactory("GetAuditorWalletIdentity", &views.GetAuditorWalletIdentityViewFactory{})
@@ -157,7 +157,7 @@ func Topology(opts Opts) []api.Topology {
 			fabric.WithAnonymousIdentity(),
 			orion.WithRole("auditor"),
 			token.WithAuditorIdentity(opts.HSM),
-		).AddOptions(opts.Replication.For("issuer")...)
+		).AddOptions(opts.Replication.For("auditor")...)
 		auditor.RegisterViewFactory("registerAuditor", &views.RegisterAuditorViewFactory{})
 		auditor.RegisterViewFactory("historyAuditing", &views.ListAuditedTransactionsViewFactory{})
 		auditor.RegisterViewFactory("holding", &views.CurrentHoldingViewFactory{})
@@ -183,7 +183,7 @@ func Topology(opts Opts) []api.Topology {
 		token.WithOwnerIdentity("alice.id1"),
 		token.WithRemoteOwnerIdentity("alice_remote"),
 		token.WithRemoteOwnerIdentity("alice_remote_2"),
-	).AddOptions(opts.Replication.For("issuer")...)
+	).AddOptions(opts.Replication.For("alice")...)
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	alice.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
@@ -219,7 +219,7 @@ func Topology(opts Opts) []api.Topology {
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("bob.id1"),
 		token.WithRemoteOwnerIdentity("bob_remote"),
-	).AddOptions(opts.Replication.For("issuer")...)
+	).AddOptions(opts.Replication.For("bob")...)
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	bob.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
@@ -256,7 +256,7 @@ func Topology(opts Opts) []api.Topology {
 		orion.WithRole("charlie"),
 		token.WithDefaultOwnerIdentity(),
 		token.WithOwnerIdentity("charlie.id1"),
-	).AddOptions(opts.Replication.For("issuer")...)
+	).AddOptions(opts.Replication.For("charlie")...)
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	charlie.RegisterResponder(&views.AcceptCashView{}, &views.TransferWithSelectorView{})
@@ -286,7 +286,7 @@ func Topology(opts Opts) []api.Topology {
 		token.WithOwnerIdentity("manager.id1"),
 		token.WithOwnerIdentity("manager.id2"),
 		token.WithOwnerIdentity("manager.id3"),
-	).AddOptions(opts.Replication.For("issuer")...)
+	).AddOptions(opts.Replication.For("manager")...)
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.IssueCashView{})
 	manager.RegisterResponder(&views.AcceptCashView{}, &views.TransferView{})
 	manager.RegisterResponder(&views.SwapResponderView{}, &views.SwapInitiatorView{})
