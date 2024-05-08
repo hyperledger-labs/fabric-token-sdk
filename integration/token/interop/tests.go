@@ -258,11 +258,11 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 
 	go func() { htlcClaim(network, alpha, "alice", "alice.id2", preImage) }()
 	go func() { htlcClaim(network, beta, "bob", "bob.id2", preImage) }()
-	scan(network, "alice", hash, crypto.SHA256, "", token.WithTMSID(alpha))
-	scan(network, "alice", hash, crypto.SHA256, aliceLockTxID, token.WithTMSID(alpha))
+	scan(network, "alice", hash, crypto.SHA256, "", false, token.WithTMSID(alpha))
+	scan(network, "alice", hash, crypto.SHA256, aliceLockTxID, false, token.WithTMSID(alpha))
 
-	scan(network, "bob", hash, crypto.SHA256, "", token.WithTMSID(beta))
-	scan(network, "bob", hash, crypto.SHA256, bobLockTxID, token.WithTMSID(beta))
+	scan(network, "bob", hash, crypto.SHA256, "", false, token.WithTMSID(beta))
+	scan(network, "bob", hash, crypto.SHA256, bobLockTxID, false, token.WithTMSID(beta))
 
 	CheckBalanceWithLockedAndHolding(network, "alice", "alice.id1", "EUR", 20, 0, 0, -1, token.WithTMSID(alpha))
 	CheckBalanceWithLockedAndHolding(network, "alice", "alice.id2", "EUR", 10, 0, 0, -1, token.WithTMSID(alpha))
@@ -270,7 +270,12 @@ func TestHTLCNoCrossClaimTwoNetworks(network *integration.Infrastructure) {
 	CheckBalanceWithLockedAndHolding(network, "bob", "bob.id2", "USD", 10, 0, 0, -1, token.WithTMSID(beta))
 
 	txID := IssueCashWithTMS(network, alpha, "issuer", "", "EUR", 30, "alice.id1")
-	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"timeout reached"}, token.WithTMSID(alpha))
+
+	scan(network, "bob", hash, crypto.SHA256, bobLockTxID, true, token.WithTMSID(beta))
+	start := time.Now()
+	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"context done"}, true, token.WithTMSID(alpha))
+	Expect(time.Since(start)).To(BeNumerically("<", time.Second*30), "scan should be canceled on last tx, before timeout")
+	scanWithError(network, "alice", hash, crypto.SHA256, txID, []string{"timeout reached"}, false, token.WithTMSID(alpha))
 
 	CheckPublicParams(network, token.TMSID{}, "alice", "bob")
 	CheckPublicParams(network, alpha, "issuer", "auditor")
