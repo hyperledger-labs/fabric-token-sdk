@@ -225,7 +225,7 @@ func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityLi
 	return n.n.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
 }
 
-func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, _ bool) ([]byte, error) {
 	k, err := keys.CreateTransferActionMetadataKey(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)

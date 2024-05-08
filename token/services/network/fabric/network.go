@@ -338,7 +338,7 @@ func (n *Network) RemoveFinalityListener(txID string, listener driver.FinalityLi
 	return n.ch.Committer().RemoveFinalityListener(txID, wrapper.(*FinalityListener))
 }
 
-func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration) ([]byte, error) {
+func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID string, key string, timeout time.Duration, stopOnLastTx bool) ([]byte, error) {
 	transferMetadataKey, err := keys.CreateTransferActionMetadataKey(key)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to generate transfer action metadata key from [%s]", key)
@@ -347,6 +347,16 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 	c, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 	v := n.ch.Vault()
+
+	var lastTxID string
+	if stopOnLastTx {
+		id, err := v.GetLastTxID()
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get last transaction id")
+		}
+		lastTxID = id
+	}
+
 	if err := n.ch.Delivery().Scan(c, startingTxID, func(tx *fabric.ProcessedTransaction) (bool, error) {
 		logger.Debugf("scanning [%s]...", tx.TxID())
 
@@ -379,6 +389,11 @@ func (n *Network) LookupTransferMetadataKey(namespace string, startingTxID strin
 			}
 		}
 		logger.Debugf("scanning for key [%s] on [%s] not found", transferMetadataKey, tx.TxID())
+		if stopOnLastTx && lastTxID == tx.TxID() {
+			logger.Debugf("final transaction reached on [%s]", tx.TxID())
+			cancel()
+		}
+
 		return false, nil
 	}); err != nil {
 		if strings.Contains(err.Error(), "context done") {
