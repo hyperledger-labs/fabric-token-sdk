@@ -110,25 +110,6 @@ func (n *Network) Vault(namespace string) (driver.Vault, error) {
 	return nv, nil
 }
 
-func (n *Network) StoreEnvelope(env driver.Envelope) error {
-	rws, err := n.n.Vault().GetRWSet(env.TxID(), env.Results())
-	if err != nil {
-		return errors.WithMessagef(err, "failed to get rwset")
-	}
-	rws.Done()
-
-	rawEnv, err := env.Bytes()
-	if err != nil {
-		return errors.WithMessagef(err, "failed marshalling tx env [%s]", env.TxID())
-	}
-
-	return n.n.Vault().StoreEnvelope(env.TxID(), rawEnv)
-}
-
-func (n *Network) EnvelopeExists(id string) bool {
-	return n.n.EnvelopeService().Exists(id)
-}
-
 func (n *Network) Broadcast(_ context.Context, blob interface{}) error {
 	var err error
 	switch b := blob.(type) {

@@ -506,12 +506,6 @@ func (c *CollectEndorsementsView) distributeEnv(context view.Context, env *netwo
 	// Filter the metadata by Enrollment ID.
 	// The auditor will receive the full set of metadata
 	owner := NewOwner(context, c.tx.TokenService())
-	// Store envelope
-	if !c.Opts.SkipApproval {
-		if err := StoreEnvelope(context, c.tx); err != nil {
-			return errors.Wrapf(err, "failed storing envelope %s", c.tx.ID())
-		}
-	}
 
 	// Store transaction in the token transaction database
 	if err := StoreTransactionRecords(context, c.tx); err != nil {
@@ -766,11 +760,6 @@ func (s *EndorseView) Call(context view.Context) (interface{}, error) {
 	_, rawRequest, err := s.receiveTransaction(context)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed receiving transaction")
-	}
-
-	// Store envelope
-	if err := StoreEnvelope(context, s.tx); err != nil {
-		return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
 	}
 
 	// Store transaction in the token transaction database

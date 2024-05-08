@@ -19,8 +19,7 @@ import (
 )
 
 const (
-	TokenNamespace       = "tns"
-	TokenRequestMetadata = "trmd"
+	TokenNamespace = "tns"
 )
 
 type Payload struct {
@@ -291,25 +290,13 @@ func (t *Transaction) TMSID() token.TMSID {
 }
 
 func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
-	if len(envelope.Nonce()) != 0 {
-		networkTxID := &network.TxID{
-			Nonce:   envelope.Nonce(),
-			Creator: envelope.Creator(),
-		}
-		tempTXID := network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(networkTxID)
-		if tempTXID != envelope.TxID() {
-			return errors.Errorf("txid mismatch, expected [%s], got [%s]", tempTXID, envelope.TxID())
-		}
+	if envelope == nil {
+		return errors.Errorf("envelope should not be nil")
 	}
-
-	if t.Payload.ID != envelope.TxID() {
-		return errors.Errorf("txid mismatch, expected [%s], got [%s]", t.Payload.ID, envelope.TxID())
-	}
-	t.Envelope = envelope
-
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("setting envelope [%s]", envelope.String())
 	}
+	t.Envelope = envelope
 	return nil
 }
 
@@ -447,9 +434,6 @@ func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
 		if err := p.Envelope.FromBytes(ser.Envelope); err != nil {
 			return errors.Wrapf(err, "failed unmarshalling envelope [%d]", len(ser.Envelope))
 		}
-		// if err := t.setEnvelope(t.Envelope); err != nil {
-		// 	return errors.Wrap(err, "failed setting envelope")
-		// }
 	}
 	return nil
 }

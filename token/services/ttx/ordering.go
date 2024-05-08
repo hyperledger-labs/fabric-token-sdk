@@ -16,32 +16,66 @@ import (
 )
 
 type orderingView struct {
-	tx *Transaction
+	opts []TxOption
 }
 
 // NewOrderingView returns a new instance of the orderingView struct.
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
-func NewOrderingView(tx *Transaction) *orderingView {
-	return &orderingView{tx: tx}
+func NewOrderingView(tx *Transaction, opts ...TxOption) *orderingView {
+	return NewOrderingViewWithOpts(append([]TxOption{WithTransactions(tx)}, opts...)...)
+}
+
+func NewOrderingViewWithOpts(opts ...TxOption) *orderingView {
+	return &orderingView{opts: opts}
 }
 
 // Call execute the view.
 // The view does the following:
 // 1. It broadcasts the token transaction to the proper backend.
 func (o *orderingView) Call(context view.Context) (interface{}, error) {
-	if o.tx.Payload.Envelope == nil {
-		return nil, errors.Errorf("envelope is nil for token transaction [%s]", o.tx.ID())
+	// Compile options
+	options, err := compile(o.opts...)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to compile options")
 	}
-
-	if len(o.tx.Payload.Envelope.TxID()) == 0 {
-		return nil, errors.Errorf("txID is empty for token transaction [%s]", o.tx.ID())
-	}
-
-	if err := network.GetInstance(context, o.tx.Network(), o.tx.Channel()).Broadcast(context.Context(), o.tx.Payload.Envelope); err != nil {
-		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
+	if err := o.broadcast(context, options.Transaction); err != nil {
+		return nil, err
 	}
 	return nil, nil
+}
+
+func (o *orderingView) broadcast(context view.Context, transaction *Transaction) error {
+	if transaction == nil {
+		return errors.Errorf("transaction is nil")
+	}
+	if transaction.Payload.Envelope == nil {
+		return errors.Errorf("envelope is nil for token transaction [%s]", transaction.ID())
+	}
+
+	if len(transaction.Payload.Envelope.TxID()) == 0 {
+		return errors.Errorf("txID is empty for token transaction [%s]", transaction.ID())
+	}
+
+	nw := network.GetInstance(context, transaction.Network(), transaction.Channel())
+	if nw == nil {
+		return errors.Errorf("network [%s] not found", transaction.Network())
+	}
+
+	if logger.IsEnabledFor(zapcore.DebugLevel) {
+		rawEnv, err := transaction.Payload.Envelope.Bytes()
+		if err != nil {
+			return errors.WithMessagef(err, "failed to marshal envelope for token transaction [%s]", transaction.ID())
+		}
+		if logger.IsEnabledFor(zapcore.DebugLevel) {
+			logger.Debugf("send for ordering, ttx size [%d]", len(rawEnv))
+		}
+	}
+
+	if err := nw.Broadcast(context.Context(), transaction.Payload.Envelope); err != nil {
+		return errors.WithMessagef(err, "failed to broadcast token transaction [%s]", transaction.ID())
+	}
+	return nil
 }
 
 type orderingAndFinalityView struct {
@@ -72,37 +106,8 @@ func NewOrderingAndFinalityWithTimeoutView(tx *Transaction, timeout time.Duratio
 // 2. It waits for finality of the token transaction.
 // It returns in case the operation is not completed before the passed timeout.
 func (o *orderingAndFinalityView) Call(ctx view.Context) (interface{}, error) {
-	nw := network.GetInstance(ctx, o.tx.Network(), o.tx.Channel())
-	if nw == nil {
-		return nil, errors.Errorf("network [%s] not found", o.tx.Network())
+	if _, err := ctx.RunView(NewOrderingView(o.tx)); err != nil {
+		return nil, err
 	}
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("[%s] broadcasting token transaction [%s]", o.tx.Channel(), o.tx.ID())
-	}
-
-	if o.tx.Payload.Envelope == nil {
-		return nil, errors.Errorf("envelope is nil for token transaction [%s]", o.tx.ID())
-	}
-
-	if len(o.tx.Payload.Envelope.TxID()) == 0 {
-		return nil, errors.Errorf("txID is empty for token transaction [%s]", o.tx.ID())
-	}
-
-	env := o.tx.Payload.Envelope
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		rawEnv, err := env.Bytes()
-		if err != nil {
-			return nil, errors.WithMessagef(err, "failed to marshal envelope for token transaction [%s]", o.tx.ID())
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("send for ordering, ttx size [%d], rws [%d], creator [%d]", len(rawEnv), len(env.Results()), len(env.Creator()))
-		}
-	}
-
-	if err := nw.Broadcast(ctx.Context(), env); err != nil {
-		return nil, errors.WithMessagef(err, "failed to broadcast token transaction [%s]", o.tx.ID())
-	}
-
 	return ctx.RunView(NewFinalityView(o.tx, WithTimeout(o.timeout)))
 }
