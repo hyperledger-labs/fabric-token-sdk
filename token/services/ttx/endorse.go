@@ -338,12 +338,7 @@ func (c *CollectEndorsementsView) requestApproval(context view.Context) (*networ
 	if err != nil {
 		return nil, err
 	}
-
-	err = c.tx.setEnvelope(env)
-	if err != nil {
-		return nil, err
-	}
-
+	c.tx.Envelope = env
 	return env, nil
 }
 

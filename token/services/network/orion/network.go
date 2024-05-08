@@ -138,12 +138,12 @@ func (n *Network) GetTransient(id string) (driver.TransientMap, error) {
 	if err != nil {
 		return nil, err
 	}
-	return driver.TransientMap(tm), nil
+	return tm, nil
 }
 
 func (n *Network) RequestApproval(context view.Context, tms *token2.ManagementService, requestRaw []byte, signer view.Identity, txID driver.TxID) (driver.Envelope, error) {
 	envBoxed, err := view2.GetManager(context).InitiateView(NewRequestApprovalView(
-		n, tms.Namespace(),
+		n.n, tms.Namespace(),
 		requestRaw, signer, n.ComputeTxID(&txID),
 	))
 	if err != nil {

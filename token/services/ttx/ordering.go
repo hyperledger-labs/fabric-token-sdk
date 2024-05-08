@@ -12,7 +12,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/pkg/errors"
-	"go.uber.org/zap/zapcore"
 )
 
 type orderingView struct {
@@ -49,29 +48,10 @@ func (o *orderingView) broadcast(context view.Context, transaction *Transaction)
 	if transaction == nil {
 		return errors.Errorf("transaction is nil")
 	}
-	if transaction.Payload.Envelope == nil {
-		return errors.Errorf("envelope is nil for token transaction [%s]", transaction.ID())
-	}
-
-	if len(transaction.Payload.Envelope.TxID()) == 0 {
-		return errors.Errorf("txID is empty for token transaction [%s]", transaction.ID())
-	}
-
 	nw := network.GetInstance(context, transaction.Network(), transaction.Channel())
 	if nw == nil {
 		return errors.Errorf("network [%s] not found", transaction.Network())
 	}
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		rawEnv, err := transaction.Payload.Envelope.Bytes()
-		if err != nil {
-			return errors.WithMessagef(err, "failed to marshal envelope for token transaction [%s]", transaction.ID())
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("send for ordering, ttx size [%d]", len(rawEnv))
-		}
-	}
-
 	if err := nw.Broadcast(context.Context(), transaction.Payload.Envelope); err != nil {
 		return errors.WithMessagef(err, "failed to broadcast token transaction [%s]", transaction.ID())
 	}

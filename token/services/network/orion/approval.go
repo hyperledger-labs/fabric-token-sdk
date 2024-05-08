@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/pkg/errors"
 )
 
@@ -30,14 +29,14 @@ type ApprovalResponse struct {
 }
 
 type RequestApprovalView struct {
-	Network    driver.Network
+	Network    *orion.NetworkService
 	Namespace  string
 	RequestRaw []byte
 	Signer     view.Identity
 	TxID       string
 }
 
-func NewRequestApprovalView(network driver.Network, namespace string, requestRaw []byte, signer view.Identity, txID string) *RequestApprovalView {
+func NewRequestApprovalView(network *orion.NetworkService, namespace string, requestRaw []byte, signer view.Identity, txID string) *RequestApprovalView {
 	return &RequestApprovalView{Network: network, Namespace: namespace, RequestRaw: requestRaw, Signer: signer, TxID: txID}
 }
 
@@ -65,7 +64,7 @@ func (r *RequestApprovalView) Call(context view.Context) (interface{}, error) {
 	if err := session.Receive(response); err != nil {
 		return nil, errors.Wrapf(err, "failed to receive response from custodian [%s]", custodian)
 	}
-	env := r.Network.NewEnvelope()
+	env := r.Network.TransactionManager().NewEnvelope()
 	if err := env.FromBytes(response.Envelope); err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal transaction")
 	}

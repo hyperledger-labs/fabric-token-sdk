@@ -71,9 +71,14 @@ func compileTransferOptions(opts ...token.TransferOption) (*token.TransferOption
 	return txOptions, nil
 }
 
+type Binder interface {
+	Bind(longTerm view.Identity, ephemeral view.Identity) error
+}
+
 // Transaction holds a ttx transaction
 type Transaction struct {
 	*ttx.Transaction
+	Binder Binder
 }
 
 // NewTransaction returns a new token transaction customized with the passed opts that will be signed by the passed signer
@@ -84,6 +89,7 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...ttx.TxOption)
 	}
 	return &Transaction{
 		Transaction: tx,
+		Binder:      view2.GetEndpointService(sp),
 	}, nil
 }
 
@@ -95,6 +101,7 @@ func NewAnonymousTransaction(sp view.Context, opts ...ttx.TxOption) (*Transactio
 	}
 	return &Transaction{
 		Transaction: tx,
+		Binder:      view2.GetEndpointService(sp),
 	}, nil
 }
 
@@ -106,6 +113,7 @@ func NewTransactionFromBytes(ctx view.Context, network, channel string, raw []by
 	}
 	return &Transaction{
 		Transaction: tx,
+		Binder:      view2.GetEndpointService(ctx),
 	}, nil
 }
 
@@ -223,7 +231,7 @@ func (t *Transaction) Reclaim(wallet *token.OwnerWallet, tok *token2.UnspentToke
 		return err
 	}
 
-	if err := view2.GetEndpointService(t.SP).Bind(script.Sender, tok.Owner.Raw); err != nil {
+	if err := t.Binder.Bind(script.Sender, tok.Owner.Raw); err != nil {
 		return err
 	}
 
@@ -291,7 +299,7 @@ func (t *Transaction) Claim(wallet *token.OwnerWallet, tok *token2.UnspentToken,
 		return err
 	}
 
-	if err := view2.GetEndpointService(t.SP).Bind(script.Recipient, tok.Owner.Raw); err != nil {
+	if err := t.Binder.Bind(script.Recipient, tok.Owner.Raw); err != nil {
 		return err
 	}
 
