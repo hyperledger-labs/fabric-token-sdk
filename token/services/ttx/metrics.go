@@ -9,8 +9,8 @@ package ttx
 import (
 	"reflect"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/metrics"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 )
 
 var (
@@ -53,7 +53,7 @@ func NewMetrics(p metrics.Provider) *Metrics {
 	}
 }
 
-func GetMetrics(sp view2.ServiceProvider) *Metrics {
+func GetMetrics(sp token.ServiceProvider) *Metrics {
 	s, err := sp.GetService(spKey)
 	if err != nil {
 		panic(err)

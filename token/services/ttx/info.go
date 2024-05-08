@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
@@ -30,13 +29,12 @@ type TransactionInfo struct {
 
 // TransactionInfoProvider allows the retrieval of the transaction info
 type TransactionInfoProvider struct {
-	sp    view.ServiceProvider
 	tms   *token.ManagementService
 	ttxDB TokenTransactionDB
 }
 
-func newTransactionInfoProvider(sp view.ServiceProvider, tms *token.ManagementService, ttxDB TokenTransactionDB) *TransactionInfoProvider {
-	return &TransactionInfoProvider{sp: sp, tms: tms, ttxDB: ttxDB}
+func newTransactionInfoProvider(tms *token.ManagementService, ttxDB TokenTransactionDB) *TransactionInfoProvider {
+	return &TransactionInfoProvider{tms: tms, ttxDB: ttxDB}
 }
 
 // TransactionInfo returns the transaction info for the given transaction ID.

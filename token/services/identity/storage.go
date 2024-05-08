@@ -9,7 +9,6 @@ package identity
 import (
 	"reflect"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/pkg/errors"
@@ -31,7 +30,7 @@ var (
 )
 
 // GetStorageProvider returns the registered instance of StorageProvider from the passed service provider
-func GetStorageProvider(sp view.ServiceProvider) (StorageProvider, error) {
+func GetStorageProvider(sp token.ServiceProvider) (StorageProvider, error) {
 	s, err := sp.GetService(storageProviderType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get token vault provider")

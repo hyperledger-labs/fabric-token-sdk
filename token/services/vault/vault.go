@@ -9,7 +9,7 @@ package vault
 import (
 	"reflect"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	token2 "github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	db "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -52,7 +52,7 @@ var (
 )
 
 // GetProvider returns the registered instance of Provider from the passed service provider
-func GetProvider(sp view.ServiceProvider) (Provider, error) {
+func GetProvider(sp token2.ServiceProvider) (Provider, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get token vault provider")

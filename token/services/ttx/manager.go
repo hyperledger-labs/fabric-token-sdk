@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -142,7 +141,7 @@ var (
 )
 
 // Get returns the DB instance for the passed TMS
-func Get(sp view.ServiceProvider, tms *token.ManagementService) *DB {
+func Get(sp token.ServiceProvider, tms *token.ManagementService) *DB {
 	if tms == nil {
 		logger.Debugf("no TMS provided")
 		return nil
@@ -161,6 +160,6 @@ func Get(sp view.ServiceProvider, tms *token.ManagementService) *DB {
 }
 
 // New returns the DB instance for the passed TMS
-func New(sp view.ServiceProvider, tms *token.ManagementService) *DB {
+func New(sp token.ServiceProvider, tms *token.ManagementService) *DB {
 	return Get(sp, tms)
 }

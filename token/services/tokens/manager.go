@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/storage"
@@ -106,7 +105,7 @@ var (
 )
 
 // GetService returns the Tokens instance for the passed TMS
-func GetService(sp view.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
+func GetService(sp token.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
 	s, err := GetProvider(sp)
 	if err != nil {
 		return nil, err
@@ -118,7 +117,7 @@ func GetService(sp view.ServiceProvider, tmsID token.TMSID) (*Tokens, error) {
 	return tokens, nil
 }
 
-func GetProvider(sp view.ServiceProvider) (*Manager, error) {
+func GetProvider(sp token.ServiceProvider) (*Manager, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")

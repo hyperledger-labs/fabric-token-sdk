@@ -8,7 +8,7 @@ package fabric
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
@@ -17,7 +17,7 @@ import (
 
 type Driver struct{}
 
-func (d *Driver) New(sp view.ServiceProvider, network, channel string) (driver.Network, error) {
+func (d *Driver) New(sp token.ServiceProvider, network, channel string) (driver.Network, error) {
 	n, err := fabric.GetFabricNetworkService(sp, network)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "fabric network [%s] not found", network)

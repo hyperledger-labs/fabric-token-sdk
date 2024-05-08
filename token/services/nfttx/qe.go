@@ -9,7 +9,6 @@ package nfttx
 import (
 	"encoding/base64"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
@@ -37,7 +36,7 @@ type QueryExecutor struct {
 	precision uint64
 }
 
-func NewQueryExecutor(sp view.ServiceProvider, wallet string, precision uint64, opts ...token.ServiceOption) (*QueryExecutor, error) {
+func NewQueryExecutor(sp token.ServiceProvider, wallet string, precision uint64, opts ...token.ServiceOption) (*QueryExecutor, error) {
 	tms := token.GetManagementService(sp, opts...)
 	qe := tms.Vault().NewQueryEngine()
 	return &QueryExecutor{

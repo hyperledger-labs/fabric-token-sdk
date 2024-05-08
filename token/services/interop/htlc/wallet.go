@@ -9,7 +9,6 @@ package htlc
 import (
 	"encoding/json"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
@@ -309,12 +308,12 @@ func (w *OwnerWallet) filterIterator(tokenType string, sender bool, selector Sel
 }
 
 // GetWallet returns the wallet whose id is the passed id
-func GetWallet(sp view2.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
+func GetWallet(sp token.ServiceProvider, id string, opts ...token.ServiceOption) *token.OwnerWallet {
 	return ttx.GetWallet(sp, id, opts...)
 }
 
 // Wallet returns an OwnerWallet which contains a wallet and a query service
-func Wallet(sp view2.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
+func Wallet(sp token.ServiceProvider, wallet *token.OwnerWallet) *OwnerWallet {
 	if wallet == nil {
 		return nil
 	}

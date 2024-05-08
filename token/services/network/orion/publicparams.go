@@ -9,13 +9,13 @@ package orion
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	session2 "github.com/hyperledger-labs/fabric-smart-client/platform/view/services/session"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common/rws/translator"
 	"github.com/pkg/errors"
 )
 
@@ -115,7 +115,7 @@ func (v *PublicParamsRequestResponderView) Call(context view.Context) (interface
 	return nil, nil
 }
 
-func ReadPublicParameters(context view2.ServiceProvider, network, namespace string) ([]byte, error) {
+func ReadPublicParameters(context token.ServiceProvider, network, namespace string) ([]byte, error) {
 	ons, err := orion.GetOrionNetworkService(context, network)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get orion network service for network [%s]", network)

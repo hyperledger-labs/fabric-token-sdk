@@ -113,7 +113,7 @@ type Network struct {
 	subscribers    *events.Subscribers
 }
 
-func NewNetwork(sp view2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel, newVault NewVaultFunc) *Network {
+func NewNetwork(sp token2.ServiceProvider, n *fabric.NetworkService, ch *fabric.Channel, newVault NewVaultFunc) *Network {
 	return &Network{
 		n:           n,
 		ch:          ch,

@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core"
@@ -368,7 +367,7 @@ var (
 
 // GetByTMSId returns the DB for the given TMS id.
 // Nil might be returned if the wallet is not found or an error occurred.
-func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
+func GetByTMSId(sp token.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 	s, err := GetProvider(sp)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
@@ -380,7 +379,7 @@ func GetByTMSId(sp view.ServiceProvider, tmsID token.TMSID) (*DB, error) {
 	return c, nil
 }
 
-func GetProvider(sp view.ServiceProvider) (*Manager, error) {
+func GetProvider(sp token.ServiceProvider) (*Manager, error) {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get manager service")
