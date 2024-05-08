@@ -25,7 +25,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/ttxdb"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	. "github.com/onsi/gomega"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -490,7 +489,10 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
-	CheckOwnerDB(network, nil, "bob")
+	CheckOwnerDB(network, []string{
+		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID1),
+		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Pending]", txID2),
+	}, "bob")
 	fmt.Printf("prepared transactions [%s:%s]", txID1, txID2)
 	Restart(network, true, "bob")
 	Restart(network, false, auditor)
@@ -499,7 +501,6 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckHolding(network, "bob", "", "PINE", 110, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "EUR", 20, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "USD", 110, auditor)
-	//CheckOwnerDB(network, nil, "bob")
 	BroadcastPreparedTransferCash(network, "alice", txID1, tx1, true)
 	common2.CheckFinality(network, "bob", txID1, nil, false)
 	common2.CheckFinality(network, auditor, txID1, nil, false)
@@ -772,19 +773,7 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	CheckBalanceAndHolding(network, "alice", "", "Pineapples", 6, auditor)
 	CheckBalanceAndHolding(network, "bob", "", "Pineapples", 0, auditor)
 	CheckBalanceAndHolding(network, "charlie", "", "Pineapples", 0, auditor)
-	CheckAuditorDB(network, auditor, "", func(errs []string) error {
-		// We should expect 6 errors, 3 records (Alice->Bob, Alice->Charlie, Alice-Alice (the rest) * 2 (envelope non found, no match in vault)
-		// each error should contain failedTransferTxID
-		if len(errs) != 6 {
-			return errors.Errorf("expected only 6 error, got [%d][%s]", len(errs), errs)
-		}
-		for _, err := range errs {
-			if !strings.Contains(err, failedTransferTxID) {
-				return errors.Errorf("expected error to contain [%s], got [%s]", failedTransferTxID, err)
-			}
-		}
-		return nil
-	})
+	CheckAuditorDB(network, auditor, "", nil)
 }
 
 func TestPublicParamsUpdate(network *integration.Infrastructure, auditor string, ppBytes []byte, tms *topology.TMS, issuerAsAuditor bool) {

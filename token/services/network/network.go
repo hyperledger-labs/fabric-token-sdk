@@ -103,10 +103,6 @@ type Envelope struct {
 	e driver.Envelope
 }
 
-func (e *Envelope) Results() []byte {
-	return e.e.Results()
-}
-
 func (e *Envelope) Bytes() ([]byte, error) {
 	return e.e.Bytes()
 }
@@ -117,14 +113,6 @@ func (e *Envelope) FromBytes(raw []byte) error {
 
 func (e *Envelope) TxID() string {
 	return e.e.TxID()
-}
-
-func (e *Envelope) Nonce() []byte {
-	return e.e.Nonce()
-}
-
-func (e *Envelope) Creator() []byte {
-	return e.e.Creator()
 }
 
 func (e *Envelope) MarshalJSON() ([]byte, error) {
@@ -303,18 +291,6 @@ func (n *Network) Vault(namespace string) (*Vault, error) {
 		return nil, err
 	}
 	return &Vault{n: n, v: v, ns: namespace}, nil
-}
-
-// StoreEnvelope stores locally the given transaction envelope and associated it with the given id
-func (n *Network) StoreEnvelope(env *Envelope) error {
-	if env == nil {
-		return errors.Errorf("nil envelope")
-	}
-	return n.n.StoreEnvelope(env.e)
-}
-
-func (n *Network) ExistEnvelope(id string) bool {
-	return n.n.EnvelopeExists(id)
 }
 
 // Broadcast sends the given blob to the network

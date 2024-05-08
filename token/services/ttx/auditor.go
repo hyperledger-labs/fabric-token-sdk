@@ -343,20 +343,11 @@ func (a *AuditApproveView) waitEnvelope(context view.Context) error {
 	if tx.Payload == nil {
 		return errors.Errorf("expected transaction payload not found")
 	}
-	env := tx.Payload.Envelope
-	if env == nil {
-		return errors.Errorf("expected envelope not found")
-	}
 	// Ack for distribution
 	// Send the signature back
 	rawRequest, err := tx.Bytes()
 	if err != nil {
 		return errors.Wrapf(err, "failed marshalling tx [%s]", tx.ID())
-	}
-
-	backend := network.GetInstance(context, tx.Network(), tx.Channel())
-	if err := backend.StoreEnvelope(env); err != nil {
-		return errors.WithMessagef(err, "failed storing tx env [%s]", tx.ID())
 	}
 
 	var sigma []byte

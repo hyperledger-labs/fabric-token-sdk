@@ -40,18 +40,6 @@ func (s *AcceptView) Call(context view.Context) (interface{}, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal token request")
 	}
-	// Check the envelope exists
-	env := s.tx.Payload.Envelope
-	if env == nil {
-		return nil, errors.Errorf("expected fabric envelope")
-	}
-
-	// Store envelope
-	if !s.options.SkipApproval {
-		if err := StoreEnvelope(context, s.tx); err != nil {
-			return nil, errors.Wrapf(err, "failed storing envelope %s", s.tx.ID())
-		}
-	}
 
 	// Store transaction in the token transaction database
 	if err := StoreTransactionRecords(context, s.tx); err != nil {

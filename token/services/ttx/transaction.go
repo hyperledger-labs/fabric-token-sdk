@@ -7,10 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	"encoding/asn1"
-
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network"
@@ -19,8 +15,7 @@ import (
 )
 
 const (
-	TokenNamespace       = "tns"
-	TokenRequestMetadata = "trmd"
+	TokenNamespace = "tns"
 )
 
 type Payload struct {
@@ -33,14 +28,15 @@ type Payload struct {
 	Transient network.TransientMap
 
 	TokenRequest *token.Request
-
-	Envelope *network.Envelope
+	Envelope     *network.Envelope
 }
 
 type Transaction struct {
 	*Payload
-	SP   view2.ServiceProvider
-	Opts *TxOptions
+
+	TMS             *token.ManagementService
+	NetworkProvider GetNetworkFunc
+	Opts            *TxOptions
 }
 
 // NewAnonymousTransaction returns a new anonymous token transaction customized with the passed opts
@@ -69,19 +65,20 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 		sp,
 		token.WithTMSID(txOpts.TMSID),
 	)
+	networkService := network.GetInstance(sp, tms.Network(), tms.Channel())
+	networkProvider := network.GetProvider(sp).GetNetwork
 
-	nw := network.GetInstance(sp, tms.Network(), tms.Channel())
 	var txID network.TxID
 	if len(txOpts.NetworkTxID.Creator) != 0 {
 		txID = txOpts.NetworkTxID
 		signer = txID.Creator
 	} else {
 		if signer.IsNone() {
-			signer = nw.LocalMembership().DefaultIdentity()
+			signer = networkService.LocalMembership().DefaultIdentity()
 		}
 		txID = network.TxID{Creator: signer}
 	}
-	id := nw.ComputeTxID(&txID)
+	id := networkService.ComputeTxID(&txID)
 	tr, err := tms.NewRequest(id)
 	if err != nil {
 		return nil, errors.WithMessage(err, "failed init token request")
@@ -99,8 +96,9 @@ func NewTransaction(sp view.Context, signer view.Identity, opts ...TxOption) (*T
 			Namespace:    tms.Namespace(),
 			Transient:    map[string][]byte{},
 		},
-		SP:   sp,
-		Opts: txOpts,
+		TMS:             tms,
+		NetworkProvider: networkProvider,
+		Opts:            txOpts,
 	}
 	sp.OnError(tx.Release)
 	return tx, nil
@@ -112,33 +110,25 @@ func NewTransactionFromBytes(sp view.Context, raw []byte) (*Transaction, error) 
 			Transient:    map[string][]byte{},
 			TokenRequest: token.NewRequest(nil, ""),
 		},
-		SP: sp,
 	}
-
-	if err := unmarshal(sp, tx.Payload, raw); err != nil {
+	networkProvider := network.GetProvider(sp).GetNetwork
+	if err := unmarshal(networkProvider, tx.Payload, raw); err != nil {
 		return nil, err
 	}
-
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("unmarshalling tx, id [%s]", tx.Payload.TxID.String())
 	}
-
-	tx.TokenRequest.SetTokenService(
-		token.GetManagementService(sp,
-			token.WithNetwork(tx.Network()),
-			token.WithChannel(tx.Channel()),
-			token.WithNamespace(tx.Namespace()),
-		),
+	tms := token.GetManagementService(sp,
+		token.WithNetwork(tx.Network()),
+		token.WithChannel(tx.Channel()),
+		token.WithNamespace(tx.Namespace()),
 	)
+	tx.TMS = tms
+	tx.NetworkProvider = networkProvider
+	tx.TokenRequest.SetTokenService(tms)
 	if tx.ID() != tx.TokenRequest.ID() {
 		return nil, errors.Errorf("invalid transaction, transaction ids do not match [%s][%s]", tx.ID(), tx.TokenRequest.ID())
 	}
-
-	// if tx.Envelope != nil {
-	// 	if err := tx.setEnvelope(tx.Envelope); err != nil {
-	// 		return nil, err
-	// 	}
-	// }
 	sp.OnError(tx.Release)
 	return tx, nil
 }
@@ -270,12 +260,7 @@ func (t *Transaction) Release() {
 }
 
 func (t *Transaction) TokenService() *token.ManagementService {
-	return token.GetManagementService(
-		t.SP,
-		token.WithNetwork(t.Network()),
-		token.WithChannel(t.Channel()),
-		token.WithNamespace(t.Namespace()),
-	)
+	return t.TMS
 }
 
 func (t *Transaction) ApplicationMetadata(k string) []byte {
@@ -288,29 +273,6 @@ func (t *Transaction) SetApplicationMetadata(k string, v []byte) {
 
 func (t *Transaction) TMSID() token.TMSID {
 	return t.TokenRequest.TokenService.ID()
-}
-
-func (t *Transaction) setEnvelope(envelope *network.Envelope) error {
-	if len(envelope.Nonce()) != 0 {
-		networkTxID := &network.TxID{
-			Nonce:   envelope.Nonce(),
-			Creator: envelope.Creator(),
-		}
-		tempTXID := network.GetInstance(t.SP, t.Network(), t.Channel()).ComputeTxID(networkTxID)
-		if tempTXID != envelope.TxID() {
-			return errors.Errorf("txid mismatch, expected [%s], got [%s]", tempTXID, envelope.TxID())
-		}
-	}
-
-	if t.Payload.ID != envelope.TxID() {
-		return errors.Errorf("txid mismatch, expected [%s], got [%s]", t.Payload.ID, envelope.TxID())
-	}
-	t.Envelope = envelope
-
-	if logger.IsEnabledFor(zapcore.DebugLevel) {
-		logger.Debugf("setting envelope [%s]", envelope.String())
-	}
-	return nil
 }
 
 func (t *Transaction) appendPayload(payload *Payload) error {
@@ -343,113 +305,4 @@ func (t *Transaction) appendPayload(payload *Payload) error {
 	//	}
 	// }
 	// return nil
-}
-
-type TransactionSer struct {
-	Nonce        []byte
-	Creator      []byte
-	ID           string
-	Network      string
-	Channel      string
-	Namespace    string
-	Signer       []byte
-	Transient    []byte
-	TokenRequest []byte
-	Envelope     []byte
-}
-
-func marshal(t *Transaction, eIDs ...string) ([]byte, error) {
-	var err error
-
-	var transientRaw []byte
-	if len(t.Payload.Transient) != 0 {
-		transientRaw, err = MarshalMeta(t.Payload.Transient)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal transient")
-		}
-	}
-
-	var tokenRequestRaw []byte
-	if t.Payload.TokenRequest != nil {
-		req := t.Payload.TokenRequest
-		// If eIDs are specified, we only marshal the metadata for the passed eIDs
-		if len(eIDs) != 0 {
-			req, err = t.Payload.TokenRequest.FilterMetadataBy(eIDs...)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to filter metadata")
-			}
-		}
-		tokenRequestRaw, err = req.Bytes()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal token request")
-		}
-	}
-
-	var envRaw []byte
-	if t.Payload.Envelope != nil {
-		envRaw, err = t.Envelope.Bytes()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to marshal envelope")
-		}
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("transaction envelope [%s]", hash.Hashable(t.Envelope.String()))
-		}
-	}
-
-	res, err := asn1.Marshal(TransactionSer{
-		Nonce:        t.Payload.TxID.Nonce,
-		Creator:      t.Payload.TxID.Creator,
-		ID:           t.Payload.ID,
-		Network:      t.Payload.Network,
-		Channel:      t.Payload.Channel,
-		Namespace:    t.Payload.Namespace,
-		Signer:       t.Payload.Signer,
-		Transient:    transientRaw,
-		TokenRequest: tokenRequestRaw,
-		Envelope:     envRaw,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to marshal transaction")
-	}
-	return res, nil
-}
-
-func unmarshal(sp view2.ServiceProvider, p *Payload, raw []byte) error {
-	var ser TransactionSer
-	if _, err := asn1.Unmarshal(raw, &ser); err != nil {
-		return errors.Wrapf(err, "failed unmarshalling transaction [%s]", string(raw))
-	}
-
-	p.TxID.Nonce = ser.Nonce
-	p.TxID.Creator = ser.Creator
-	p.ID = ser.ID
-	p.Network = ser.Network
-	p.Channel = ser.Channel
-	p.Namespace = ser.Namespace
-	p.Signer = ser.Signer
-	p.Transient = make(map[string][]byte)
-	if len(ser.Transient) != 0 {
-		meta, err := UnmarshalMeta(ser.Transient)
-		if err != nil {
-			return errors.Wrap(err, "failed unmarshalling transient")
-		}
-		p.Transient = meta
-	}
-	if len(ser.TokenRequest) != 0 {
-		if err := p.TokenRequest.FromBytes(ser.TokenRequest); err != nil {
-			return errors.Wrap(err, "failed unmarshalling token request")
-		}
-	}
-	if p.Envelope == nil {
-		p.Envelope = network.GetInstance(sp, p.Network, p.Channel).NewEnvelope()
-	}
-	if len(ser.Envelope) != 0 {
-		if err := p.Envelope.FromBytes(ser.Envelope); err != nil {
-			return errors.Wrapf(err, "failed unmarshalling envelope [%d]", len(ser.Envelope))
-		}
-		// if err := t.setEnvelope(t.Envelope); err != nil {
-		// 	return errors.Wrap(err, "failed setting envelope")
-		// }
-	}
-	return nil
 }
