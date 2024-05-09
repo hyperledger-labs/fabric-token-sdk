@@ -31,6 +31,8 @@ type Scan struct {
 	// StartingTransactionID  is the transaction id from which to start the scan.
 	// If empty, the scan starts from the genesis block
 	StartingTransactionID string
+	// StopOnLastTx stops the scan if the last transaction is reached.
+	StopOnLastTx bool
 }
 
 type ScanView struct {
@@ -38,15 +40,21 @@ type ScanView struct {
 }
 
 func (s *ScanView) Call(context view.Context) (interface{}, error) {
+	opts := []token.ServiceOption{
+		token.WithTMSID(s.TMSID),
+		htlc.WithStartingTransaction(s.StartingTransactionID),
+	}
+	if s.StopOnLastTx {
+		opts = append(opts, htlc.WithStopOnLastTransaction())
+	}
+
 	preImage, err := htlc.ScanForPreImage(
 		context,
 		s.Hash,
 		s.HashFunc,
 		encoding.None,
 		s.Timeout,
-		token.WithTMSID(s.TMSID),
-		htlc.WithStartingTransaction(s.StartingTransactionID),
-	)
+		opts...)
 	assert.NoError(err, "failed to scan for pre-image")
 	return preImage, nil
 }

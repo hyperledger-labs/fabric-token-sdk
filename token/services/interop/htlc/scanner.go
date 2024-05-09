@@ -20,6 +20,8 @@ import (
 
 const (
 	ScanForPreImageStartingTransaction = "htlc.ScanForPreImage.StartingTransaction"
+	StopScanningOnLastTransaction      = "htlc.ScanForPreImage.StopOnLastTransaction"
+	True                               = "true"
 )
 
 // WithStartingTransaction sets the network name
@@ -29,6 +31,18 @@ func WithStartingTransaction(txID string) token.ServiceOption {
 			o.Params = map[string]interface{}{}
 		}
 		o.Params[ScanForPreImageStartingTransaction] = txID
+		return nil
+	}
+}
+
+// WithStopOnLastTransaction stops the scan when the last transaction is reached.
+// When this is not set, the scan will wait until timeout or until the key is found.
+func WithStopOnLastTransaction() token.ServiceOption {
+	return func(o *token.ServiceOptions) error {
+		if o.Params == nil {
+			o.Params = map[string]interface{}{}
+		}
+		o.Params[StopScanningOnLastTransaction] = True
 		return nil
 	}
 }
@@ -59,9 +73,15 @@ func ScanForPreImage(sp token.ServiceProvider, image []byte, hashFunc crypto.Has
 	if err != nil {
 		return nil, errors.Wrapf(err, "invalid starting transaction param")
 	}
+	var stopOnLastTx bool
+	stop, err := tokenOptions.ParamAsString(StopScanningOnLastTransaction)
+	if err != nil {
+		return nil, errors.Wrapf(err, "invalid stop on last transaction param")
+	}
+	stopOnLastTx = stop == True
 
 	claimKey := ClaimKey(image)
-	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), startingTxID, claimKey, timeout, opts...)
+	preImage, err := network.LookupTransferMetadataKey(tms.Namespace(), startingTxID, claimKey, timeout, stopOnLastTx, opts...)
 	if err != nil {
 		return nil, errors.WithMessagef(err, "failed to lookup key [%s]", claimKey)
 	}

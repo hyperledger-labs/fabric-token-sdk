@@ -390,7 +390,7 @@ func fastExchange(network *integration.Infrastructure, id string, recipient stri
 	time.Sleep(10 * time.Second)
 }
 
-func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, opts ...token.ServiceOption) {
+func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, stopOnLastTx bool, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -400,11 +400,12 @@ func scan(network *integration.Infrastructure, id string, hash []byte, hashFunc 
 		Hash:                  hash,
 		HashFunc:              hashFunc,
 		StartingTransactionID: startingTransactionID,
+		StopOnLastTx:          stopOnLastTx,
 	}))
 	Expect(err).NotTo(HaveOccurred())
 }
 
-func scanWithError(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, errorMsgs []string, opts ...token.ServiceOption) {
+func scanWithError(network *integration.Infrastructure, id string, hash []byte, hashFunc crypto.Hash, startingTransactionID string, errorMsgs []string, stopOnLastTx bool, opts ...token.ServiceOption) {
 	options, err := token.CompileServiceOptions(opts...)
 	Expect(err).NotTo(HaveOccurred())
 
@@ -414,6 +415,7 @@ func scanWithError(network *integration.Infrastructure, id string, hash []byte, 
 		Hash:                  hash,
 		HashFunc:              hashFunc,
 		StartingTransactionID: startingTransactionID,
+		StopOnLastTx:          stopOnLastTx,
 	}))
 	Expect(err).To(HaveOccurred())
 	for _, msg := range errorMsgs {
