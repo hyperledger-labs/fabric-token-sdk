@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -37,8 +36,8 @@ type WalletRegistry interface {
 	RegisterIdentity(config driver.IdentityConfiguration) error
 	Lookup(id driver.WalletLookupID) (driver.Wallet, driver.IdentityInfo, string, error)
 	RegisterWallet(id string, wallet driver.Wallet) error
-	BindIdentity(identity view.Identity, eID string, wID string, meta any) error
-	ContainsIdentity(i view.Identity, id string) bool
+	BindIdentity(identity driver.Identity, eID string, wID string, meta any) error
+	ContainsIdentity(i driver.Identity, id string) bool
 }
 
 type WalletFactory interface {
@@ -92,15 +91,15 @@ func (s *WalletService) RegisterIssuerIdentity(config driver.IdentityConfigurati
 	return s.Registries[driver.IssuerRole].Registry.RegisterIdentity(config)
 }
 
-func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
+func (s *WalletService) GetAuditInfo(id driver.Identity) ([]byte, error) {
 	return s.IdentityProvider.GetAuditInfo(id)
 }
 
-func (s *WalletService) GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error) {
+func (s *WalletService) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
 	return s.IdentityProvider.GetEnrollmentID(identity, auditInfo)
 }
 
-func (s *WalletService) GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error) {
+func (s *WalletService) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
 	return s.IdentityProvider.GetRevocationHandler(identity, auditInfo)
 }
 
@@ -133,7 +132,7 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 	return nil
 }
 
-func (s *WalletService) Wallet(identity view.Identity) driver.Wallet {
+func (s *WalletService) Wallet(identity driver.Identity) driver.Wallet {
 	w, _ := s.OwnerWallet(identity)
 	if w != nil {
 		return w

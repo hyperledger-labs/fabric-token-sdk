@@ -10,6 +10,8 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 )
 
+type Identity = view.Identity
+
 // IdentityRole is the role of an identity
 type IdentityRole int
 

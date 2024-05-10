@@ -9,8 +9,10 @@ package deserializer
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/pkg/errors"
 )
 
@@ -86,11 +88,19 @@ func (v *TypedVerifierDeserializerMultiplex) Match(id view.Identity, ai []byte) 
 	return nil
 }
 
-type TypedIdentityVerifierDeserializer struct {
-	VerifierDeserializer
+func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	auditInfo, err := htlc.GetOwnerAuditInfo(raw, p)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
+	}
+	return [][]byte{auditInfo}, nil
 }
 
-func NewTypedIdentityVerifierDeserializer(verifierDeserializer VerifierDeserializer) *TypedIdentityVerifierDeserializer {
+type TypedIdentityVerifierDeserializer struct {
+	common.VerifierDeserializer
+}
+
+func NewTypedIdentityVerifierDeserializer(verifierDeserializer common.VerifierDeserializer) *TypedIdentityVerifierDeserializer {
 	return &TypedIdentityVerifierDeserializer{VerifierDeserializer: verifierDeserializer}
 }
 

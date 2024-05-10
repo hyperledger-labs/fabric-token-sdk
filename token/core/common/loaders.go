@@ -9,7 +9,6 @@ package common
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -120,7 +119,7 @@ func NewVaultLedgerTokenAndMetadataLoader[T LedgerToken, M any](tokenVault Token
 // matching the token identifiers, the corresponding zkatdlog tokens, the information of the
 // tokens in clear text and the identities of their owners
 // LoadToken returns an error in case of failure
-func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([]string, []T, []M, []view.Identity, error) {
+func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([]string, []T, []M, []driver.Identity, error) {
 	// return token outputs and the corresponding opening
 	inputIDs, comms, infos, err := s.TokenVault.GetTokenInfoAndOutputs(ids)
 	if err != nil {
@@ -129,7 +128,7 @@ func (s *VaultLedgerTokenAndMetadataLoader[T, M]) LoadTokens(ids []*token.ID) ([
 
 	tokens := make([]T, len(ids))
 	inputInf := make([]M, len(ids))
-	signerIds := make([]view.Identity, len(ids))
+	signerIds := make([]driver.Identity, len(ids))
 	for i, id := range ids {
 		if len(comms[i]) == 0 {
 			return nil, nil, nil, nil, errors.Errorf("failed getting state for id [%v], nil comm value", id)

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/fabtoken"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
@@ -17,7 +18,7 @@ import (
 
 // Deserializer deserializes verifiers associated with issuers, owners, and auditors
 type Deserializer struct {
-	*deserializer.Deserializer
+	*common.Deserializer
 }
 
 // NewDeserializer returns a deserializer
@@ -27,7 +28,7 @@ func NewDeserializer() *Deserializer {
 	m.AddTypedVerifierDeserializer(htlc2.ScriptType, htlc.NewTypedIdentityDeserializer(m))
 
 	return &Deserializer{
-		Deserializer: deserializer.NewDeserializer(
+		Deserializer: common.NewDeserializer(
 			msp.X509Identity,
 			&x509.MSPIdentityDeserializer{}, // audit
 			m,                               // owner
