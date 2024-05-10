@@ -11,9 +11,10 @@ import (
 	"runtime/debug"
 	"sync"
 
+	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )

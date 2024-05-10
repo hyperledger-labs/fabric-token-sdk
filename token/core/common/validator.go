@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
@@ -94,7 +93,7 @@ func (v *Validator[P, T, TA, IA]) VerifyTokenRequestFromRaw(getState driver.GetS
 		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
 
-	v.Logger.Debugf("cc tx-id [%s][%s]", hash.Hashable(raqRaw).String(), anchor)
+	v.Logger.Debugf("cc tx-id [%s][%s]", Hashable(raqRaw).String(), anchor)
 	signed := append(raqRaw, []byte(anchor)...)
 	var signatures [][]byte
 	if len(v.PublicParams.Auditors()) != 0 {

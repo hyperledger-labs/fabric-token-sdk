@@ -8,6 +8,7 @@ package driver
 
 import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 
+// Identity represents a generic identity
 type Identity = view.Identity
 
 // IdentityRole is the role of an identity

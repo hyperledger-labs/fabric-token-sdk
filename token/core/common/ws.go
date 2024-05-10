@@ -10,8 +10,8 @@ import (
 	err "errors"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -108,13 +108,13 @@ func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) er
 		return errors.WithStack(ErrNilRecipientData)
 	}
 	if s.Logger.IsEnabledFor(zapcore.DebugLevel) {
-		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, hash.Hashable(data.AuditInfo))
+		s.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, Hashable(data.AuditInfo))
 	}
 
 	// match identity and audit info
-	err := s.Deserializer.Match(data.Identity, data.AuditInfo)
+	err := s.Deserializer.MatchOwnerIdentity(data.Identity, data.AuditInfo)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, Hashable(data.AuditInfo))
 	}
 
 	// register verifier and audit info

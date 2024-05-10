@@ -7,8 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -321,13 +320,13 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
-	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), hash.Hashable(data.AuditInfo).String())
+	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), Hashable(data.AuditInfo).String())
 
 	// recognize identity and register it
 	// match identity and audit info
-	err := w.Deserializer.Match(data.Identity, data.AuditInfo)
+	err := w.Deserializer.MatchOwnerIdentity(data.Identity, data.AuditInfo)
 	if err != nil {
-		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, hash.Hashable(data.AuditInfo))
+		return errors.Wrapf(err, "failed to match identity to audit infor for [%s:%s]", data.Identity, Hashable(data.AuditInfo))
 	}
 	// register verifier and audit info
 	v, err := w.Deserializer.GetOwnerVerifier(data.Identity)

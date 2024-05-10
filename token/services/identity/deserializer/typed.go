@@ -66,7 +66,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(raw []byte) (driver
 	return v.auditMatcherDeserializer.GetOwnerMatcher(raw)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) Match(id driver.Identity, ai []byte) error {
+func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
 	// match identity and audit info
 	recipient, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {

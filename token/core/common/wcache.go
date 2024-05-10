@@ -9,7 +9,8 @@ package common
 import (
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/core/logging"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 

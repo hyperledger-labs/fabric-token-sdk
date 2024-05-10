@@ -200,7 +200,7 @@ type Deserializer interface {
 	Recipients(raw view.Identity) ([]view.Identity, error)
 	// Match returns nil if the given identity matches the given audit information.
 	// An error otherwise
-	Match(identity view.Identity, info []byte) error
+	MatchOwnerIdentity(identity view.Identity, info []byte) error
 	// GetOwnerAuditInfo returns the audit information for each identity contained in the given serialized representation
 	GetOwnerAuditInfo(raw []byte, p AuditInfoProvider) ([][]byte, error)
 }

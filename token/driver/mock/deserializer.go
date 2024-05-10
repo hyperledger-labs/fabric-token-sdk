@@ -435,7 +435,7 @@ func (fake *Deserializer) GetOwnerVerifierReturnsOnCall(i int, result1 driver.Ve
 	}{result1, result2}
 }
 
-func (fake *Deserializer) Match(arg1 view.Identity, arg2 []byte) error {
+func (fake *Deserializer) MatchOwnerIdentity(arg1 view.Identity, arg2 []byte) error {
 	var arg2Copy []byte
 	if arg2 != nil {
 		arg2Copy = make([]byte, len(arg2))
