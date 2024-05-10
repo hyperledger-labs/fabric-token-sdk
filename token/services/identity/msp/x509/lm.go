@@ -11,12 +11,13 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
@@ -38,7 +39,7 @@ type LocalMembership struct {
 	defaultNetworkIdentity view.Identity
 	signerService          common.SigService
 	binderService          common.BinderService
-	deserializerManager    deserializer.Manager
+	deserializerManager    sig.Manager
 	identityDB             driver2.IdentityDB
 	mspID                  string
 
@@ -56,7 +57,7 @@ func NewLocalMembership(
 	defaultNetworkIdentity view.Identity,
 	signerService common.SigService,
 	binderService common.BinderService,
-	deserializerManager deserializer.Manager,
+	deserializerManager sig.Manager,
 	identityDB driver2.IdentityDB,
 	mspID string,
 	ignoreVerifyOnlyWallet bool,

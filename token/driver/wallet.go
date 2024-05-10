@@ -123,6 +123,8 @@ type IdentityConfiguration struct {
 // Ultimately, it is the token driver to decide which types are allowed.
 type WalletLookupID = any
 
+//go:generate counterfeiter -o mock/ws.go -fake-name WalletService . WalletService
+
 // WalletService models the wallet service that handles issuer, recipient, auditor and certifier wallets
 type WalletService interface {
 	// RegisterRecipientIdentity registers the passed recipient identity together with the associated audit information
@@ -132,10 +134,10 @@ type WalletService interface {
 	GetAuditInfo(id view.Identity) ([]byte, error)
 
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
-	GetEnrollmentID(auditInfo []byte) (string, error)
+	GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error)
 
 	// GetRevocationHandler extracts the revocation handler from the passed audit information
-	GetRevocationHandler(auditInfo []byte) (string, error)
+	GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
 	Wallet(identity view.Identity) Wallet
@@ -195,7 +197,7 @@ type Deserializer interface {
 	// GetOwnerMatcher returns an identity matcher for the passed identity audit data
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
 	// Recipients returns the recipient identities from the given serialized representation
-	Recipients(raw []byte) ([]view.Identity, error)
+	Recipients(raw view.Identity) ([]view.Identity, error)
 	// Match returns nil if the given identity matches the given audit information.
 	// An error otherwise
 	Match(identity view.Identity, info []byte) error

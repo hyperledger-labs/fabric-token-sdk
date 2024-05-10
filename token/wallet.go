@@ -147,7 +147,7 @@ func (wm *WalletManager) GetEnrollmentID(identity view.Identity) (string, error)
 	if err != nil {
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
-	return wm.walletService.GetEnrollmentID(auditInfo)
+	return wm.walletService.GetEnrollmentID(identity, auditInfo)
 }
 
 // GetRevocationHandle returns the revocation handle of the passed identity
@@ -157,7 +157,7 @@ func (wm *WalletManager) GetRevocationHandle(identity view.Identity) (string, er
 		return "", errors.WithMessagef(err, "failed to get audit info for identity %s", identity)
 	}
 
-	return wm.walletService.GetRevocationHandler(auditInfo)
+	return wm.walletService.GetRevocationHandler(identity, auditInfo)
 }
 
 // SpentIDs returns the spent keys corresponding to the passed token IDs

@@ -11,6 +11,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/cache"
 
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
@@ -23,7 +25,6 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	"github.com/hyperledger/fabric-protos-go/msp"
@@ -40,7 +41,7 @@ type LocalMembership struct {
 	config                 config2.Config
 	defaultNetworkIdentity view.Identity
 	signerService          common.SigService
-	deserializerManager    deserializer.Manager
+	deserializerManager    sig.Manager
 	identityDB             driver3.IdentityDB
 	keyStore               bccsp.KeyStore
 	mspID                  string
@@ -61,7 +62,7 @@ func NewLocalMembership(
 	config config2.Config,
 	defaultNetworkIdentity view.Identity,
 	signerService common.SigService,
-	deserializerManager deserializer.Manager,
+	deserializerManager sig.Manager,
 	identityDB driver3.IdentityDB,
 	keyStore bccsp.KeyStore,
 	mspID string,

@@ -11,7 +11,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -20,37 +19,30 @@ type VerifierDES interface {
 	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
 }
 
-type Deserializer struct {
-	OwnerDeserializer VerifierDES
+type TypedIdentityDeserializer struct {
+	VerifierDeserializer VerifierDES
 }
 
-func NewDeserializer(ownerDeserializer VerifierDES) *Deserializer {
-	return &Deserializer{OwnerDeserializer: ownerDeserializer}
+func NewTypedIdentityDeserializer(verifierDeserializer VerifierDES) *TypedIdentityDeserializer {
+	return &TypedIdentityDeserializer{VerifierDeserializer: verifierDeserializer}
 }
 
-func (d *Deserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := identity.UnmarshalTypedIdentity(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal TypedIdentity")
+func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error) {
+	if typ != htlc.ScriptType {
+		return nil, errors.Errorf("cannot deserializer type [%s], expected [%s]", typ, htlc.ScriptType)
 	}
-	if si.Type == htlc.ScriptType {
-		return d.getHTLCVerifier(si.Identity)
-	}
-	return d.OwnerDeserializer.DeserializeVerifier(id)
-}
 
-func (d *Deserializer) getHTLCVerifier(raw []byte) (driver.Verifier, error) {
 	script := &htlc.Script{}
 	err := json.Unmarshal(raw, script)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal TypedIdentity as an htlc script")
 	}
 	v := &htlc.Verifier{}
-	v.Sender, err = d.OwnerDeserializer.DeserializeVerifier(script.Sender)
+	v.Sender, err = t.VerifierDeserializer.DeserializeVerifier(script.Sender)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the sender in the htlc script")
 	}
-	v.Recipient, err = d.OwnerDeserializer.DeserializeVerifier(script.Recipient)
+	v.Recipient, err = t.VerifierDeserializer.DeserializeVerifier(script.Recipient)
 	if err != nil {
 		return nil, errors.Errorf("failed to unmarshal the identity of the recipient in the htlc script")
 	}
@@ -59,4 +51,17 @@ func (d *Deserializer) getHTLCVerifier(raw []byte) (driver.Verifier, error) {
 	v.HashInfo.HashFunc = script.HashInfo.HashFunc
 	v.HashInfo.HashEncoding = script.HashInfo.HashEncoding
 	return v, nil
+}
+
+func (t *TypedIdentityDeserializer) Recipients(id view.Identity, typ string, raw []byte) ([]view.Identity, error) {
+	if typ != htlc.ScriptType {
+		return nil, errors.New("unknown identity type")
+	}
+
+	script := &htlc.Script{}
+	err := json.Unmarshal(raw, script)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to unmarshal htlc script")
+	}
+	return []view.Identity{script.Sender, script.Recipient}, nil
 }

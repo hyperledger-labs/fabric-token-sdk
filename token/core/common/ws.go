@@ -96,12 +96,12 @@ func (s *WalletService) GetAuditInfo(id view.Identity) ([]byte, error) {
 	return s.IdentityProvider.GetAuditInfo(id)
 }
 
-func (s *WalletService) GetEnrollmentID(auditInfo []byte) (string, error) {
-	return s.IdentityProvider.GetEnrollmentID(auditInfo)
+func (s *WalletService) GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error) {
+	return s.IdentityProvider.GetEnrollmentID(identity, auditInfo)
 }
 
-func (s *WalletService) GetRevocationHandler(auditInfo []byte) (string, error) {
-	return s.IdentityProvider.GetRevocationHandler(auditInfo)
+func (s *WalletService) GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error) {
+	return s.IdentityProvider.GetRevocationHandler(identity, auditInfo)
 }
 
 func (s *WalletService) RegisterRecipientIdentity(data *driver.RecipientData) error {

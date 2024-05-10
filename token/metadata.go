@@ -68,7 +68,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 
 		for i, auditInfo := range issue.ReceiversAuditInfos {
 			// If the receiver has the given enrollment ID, add it
-			recipientEID, err := m.WalletService.GetEnrollmentID(auditInfo)
+			recipientEID, err := m.WalletService.GetEnrollmentID(issue.Receivers[i], auditInfo)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
@@ -105,7 +105,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 		// if the receiver has the given enrollment ID, add it. Otherwise, add empty entries
 		skip := true
 		for i, auditInfo := range transfer.ReceiverAuditInfos {
-			recipientEID, err := m.WalletService.GetEnrollmentID(auditInfo)
+			recipientEID, err := m.WalletService.GetEnrollmentID(transfer.Receivers[i], auditInfo)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}

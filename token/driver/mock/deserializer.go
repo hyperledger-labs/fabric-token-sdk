@@ -87,10 +87,10 @@ type Deserializer struct {
 	matchReturnsOnCall map[int]struct {
 		result1 error
 	}
-	RecipientsStub        func([]byte) ([]view.Identity, error)
+	RecipientsStub        func(view.Identity) ([]view.Identity, error)
 	recipientsMutex       sync.RWMutex
 	recipientsArgsForCall []struct {
-		arg1 []byte
+		arg1 view.Identity
 	}
 	recipientsReturns struct {
 		result1 []view.Identity
@@ -502,20 +502,15 @@ func (fake *Deserializer) MatchReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *Deserializer) Recipients(arg1 []byte) ([]view.Identity, error) {
-	var arg1Copy []byte
-	if arg1 != nil {
-		arg1Copy = make([]byte, len(arg1))
-		copy(arg1Copy, arg1)
-	}
+func (fake *Deserializer) Recipients(arg1 view.Identity) ([]view.Identity, error) {
 	fake.recipientsMutex.Lock()
 	ret, specificReturn := fake.recipientsReturnsOnCall[len(fake.recipientsArgsForCall)]
 	fake.recipientsArgsForCall = append(fake.recipientsArgsForCall, struct {
-		arg1 []byte
-	}{arg1Copy})
+		arg1 view.Identity
+	}{arg1})
 	stub := fake.RecipientsStub
 	fakeReturns := fake.recipientsReturns
-	fake.recordInvocation("Recipients", []interface{}{arg1Copy})
+	fake.recordInvocation("Recipients", []interface{}{arg1})
 	fake.recipientsMutex.Unlock()
 	if stub != nil {
 		return stub(arg1)
@@ -532,13 +527,13 @@ func (fake *Deserializer) RecipientsCallCount() int {
 	return len(fake.recipientsArgsForCall)
 }
 
-func (fake *Deserializer) RecipientsCalls(stub func([]byte) ([]view.Identity, error)) {
+func (fake *Deserializer) RecipientsCalls(stub func(view.Identity) ([]view.Identity, error)) {
 	fake.recipientsMutex.Lock()
 	defer fake.recipientsMutex.Unlock()
 	fake.RecipientsStub = stub
 }
 
-func (fake *Deserializer) RecipientsArgsForCall(i int) []byte {
+func (fake *Deserializer) RecipientsArgsForCall(i int) view.Identity {
 	fake.recipientsMutex.RLock()
 	defer fake.recipientsMutex.RUnlock()
 	argsForCall := fake.recipientsArgsForCall[i]

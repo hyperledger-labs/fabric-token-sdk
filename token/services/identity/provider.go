@@ -10,10 +10,11 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -29,9 +30,9 @@ type Deserializer interface {
 // EnrollmentIDUnmarshaler decodes an enrollment ID form an audit info
 type EnrollmentIDUnmarshaler interface {
 	// GetEnrollmentID returns the enrollment ID from the audit info
-	GetEnrollmentID(auditInfo []byte) (string, error)
+	GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error)
 	// GetRevocationHandler returns the revocation handle from the audit info
-	GetRevocationHandler(auditInfo []byte) (string, error)
+	GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error)
 }
 
 type sigService interface {
@@ -59,7 +60,7 @@ type Provider struct {
 	Binder     Binder
 	Storage    Storage
 
-	deserializerManager     deserializer.Manager
+	deserializerManager     sig.Manager
 	enrollmentIDUnmarshaler EnrollmentIDUnmarshaler
 	isMeCacheLock           sync.RWMutex
 	isMeCache               map[string]bool
@@ -67,7 +68,7 @@ type Provider struct {
 
 // NewProvider creates a new identity provider implementing the driver.IdentityProvider interface.
 // The Provider handles the long-term identities on top of which wallets are defined.
-func NewProvider(Storage Storage, sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, deserializerManager deserializer.Manager) *Provider {
+func NewProvider(Storage Storage, sigService sigService, binder Binder, enrollmentIDUnmarshaler EnrollmentIDUnmarshaler, deserializerManager sig.Manager) *Provider {
 	return &Provider{
 		Storage:                 Storage,
 		SigService:              sigService,
@@ -176,12 +177,12 @@ func (p *Provider) GetSigner(identity view.Identity) (driver.Signer, error) {
 	return nil, errors.Errorf("failed to get signer for identity [%s], it is neither register nor deserialazable", identity.String())
 }
 
-func (p *Provider) GetEnrollmentID(auditInfo []byte) (string, error) {
-	return p.enrollmentIDUnmarshaler.GetEnrollmentID(auditInfo)
+func (p *Provider) GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetEnrollmentID(identity, auditInfo)
 }
 
-func (p *Provider) GetRevocationHandler(auditInfo []byte) (string, error) {
-	return p.enrollmentIDUnmarshaler.GetRevocationHandler(auditInfo)
+func (p *Provider) GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error) {
+	return p.enrollmentIDUnmarshaler.GetRevocationHandler(identity, auditInfo)
 }
 
 func (p *Provider) Bind(id view.Identity, to view.Identity) error {

@@ -20,7 +20,6 @@ import (
 	topology2 "github.com/hyperledger-labs/fabric-token-sdk/integration/nwo/token/topology"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	identity2 "github.com/hyperledger-labs/fabric-token-sdk/token/sdk/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	kvs2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/kvs"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	. "github.com/onsi/gomega"
@@ -113,7 +112,7 @@ func (l *walletManagerLoader) Load(user string) *token.WalletManager {
 	kvss, err := kvs.NewWithConfig("memory", "", configProvider)
 	Expect(err).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(kvss)).ToNot(HaveOccurred())
-	sigService := sig.NewService(deserializer.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
+	sigService := sig.NewService(sig.NewMultiplexDeserializer(), kvs2.NewIdentityDB(kvss, token.TMSID{Network: "pineapple"}))
 	Expect(sp.RegisterService(sigService)).ToNot(HaveOccurred())
 	Expect(sp.RegisterService(identity2.NewKVSStorageProvider(kvss))).ToNot(HaveOccurred())
 

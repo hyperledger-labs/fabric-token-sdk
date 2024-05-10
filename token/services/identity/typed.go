@@ -10,7 +10,6 @@ import (
 	"encoding/asn1"
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
@@ -41,35 +40,4 @@ func WrapWithType(idType string, id view.Identity) (view.Identity, error) {
 		return nil, err
 	}
 	return raw, nil
-}
-
-type DeserializeVerifierProvider interface {
-	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
-}
-
-// TypedIdentityDeserializer takes as MSP identity and returns an ECDSA verifier
-type TypedIdentityDeserializer struct {
-	DeserializeVerifierProvider
-}
-
-func NewTypedIdentityDeserializer(dvp DeserializeVerifierProvider) *TypedIdentityDeserializer {
-	return &TypedIdentityDeserializer{
-		DeserializeVerifierProvider: dvp,
-	}
-}
-
-func (d *TypedIdentityDeserializer) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
-	si, err := UnmarshalTypedIdentity(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
-	}
-	return d.DeserializeVerifierProvider.DeserializeVerifier(si.Identity)
-}
-
-func (d *TypedIdentityDeserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
-	return nil, errors.Errorf("signer deserialization not supported")
-}
-
-func (d *TypedIdentityDeserializer) Info(raw []byte, auditInfo []byte) (string, error) {
-	return "info not supported", nil
 }

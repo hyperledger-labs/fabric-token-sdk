@@ -14,7 +14,6 @@ import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/pkg/errors"
 	"go.uber.org/zap/zapcore"
 )
@@ -42,12 +41,12 @@ type SignerEntry struct {
 type Service struct {
 	signers      map[string]SignerEntry
 	verifiers    map[string]VerifierEntry
-	deserializer deserializer.Deserializer
+	deserializer Deserializer
 	viewsSync    sync.RWMutex
 	storage      Storage
 }
 
-func NewService(deserializer deserializer.Deserializer, storage Storage) *Service {
+func NewService(deserializer Deserializer, storage Storage) *Service {
 	return &Service{
 		signers:      map[string]SignerEntry{},
 		verifiers:    map[string]VerifierEntry{},

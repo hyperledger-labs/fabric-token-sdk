@@ -13,12 +13,12 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	config2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/config"
 	idemix2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/idemix/msp"
 	x5092 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/sig"
 	"github.com/pkg/errors"
 )
 
@@ -51,7 +51,7 @@ type RoleFactory struct {
 	SignerService          common.SigService
 	BinderService          common.BinderService
 	StorageProvider        identity.StorageProvider
-	DeserializerManager    deserializer.Manager
+	DeserializerManager    sig.Manager
 	ignoreRemote           bool
 }
 
@@ -65,7 +65,7 @@ func NewRoleFactory(
 	signerService common.SigService,
 	binderService common.BinderService,
 	storageProvider identity.StorageProvider,
-	deserializerManager deserializer.Manager,
+	deserializerManager sig.Manager,
 	ignoreRemote bool,
 ) *RoleFactory {
 	return &RoleFactory{
