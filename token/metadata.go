@@ -66,9 +66,9 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			ExtraSigners: issue.ExtraSigners,
 		}
 
-		for i, auditInfo := range issue.ReceiversAuditInfos {
+		for i, receivedAuditInfo := range issue.ReceiversAuditInfos {
 			// If the receiver has the given enrollment ID, add it
-			recipientEID, err := m.WalletService.GetEnrollmentID(issue.Receivers[i], auditInfo)
+			recipientEID, err := m.WalletService.GetEnrollmentID(issue.Receivers[i], receivedAuditInfo)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}

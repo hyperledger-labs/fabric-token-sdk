@@ -46,10 +46,10 @@ func NewTransferService(
 
 // Transfer returns a TransferActionMetadata as a function of the passed arguments
 // It also returns the corresponding TransferMetadata
-func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
-	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, ids)
+func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, tokenIDs []*token3.ID, outputTokens []*token3.Token, opts *driver.TransferOptions) (driver.TransferAction, *driver.TransferMetadata, error) {
+	s.Logger.Debugf("Prepare Transfer Action [%s,%v]", txID, tokenIDs)
 	// load tokens with the passed token identifiers
-	inputIDs, tokens, inputInf, signerIds, err := s.TokenLoader.LoadTokens(ids)
+	inputIDs, tokens, inputInf, senders, err := s.TokenLoader.LoadTokens(tokenIDs)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed to load tokens")
 	}
@@ -62,7 +62,8 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	}
 	var values []uint64
 	var owners [][]byte
-	var ownerIdentities []view.Identity
+	var receivers []view.Identity
+	var outputAuditInfos [][]byte
 
 	// get values and owners of outputs
 	for i, output := range outputTokens {
@@ -76,14 +77,20 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 		}
 		owners = append(owners, output.Owner.Raw)
 		if len(output.Owner.Raw) == 0 { // redeem
-			ownerIdentities = append(ownerIdentities, output.Owner.Raw)
+			receivers = append(receivers, output.Owner.Raw)
+			outputAuditInfos = append(outputAuditInfos, []byte{})
 			continue
 		}
 		recipients, err := s.Deserializer.Recipients(output.Owner.Raw)
 		if err != nil {
 			return nil, nil, errors.Wrap(err, "failed getting recipients")
 		}
-		ownerIdentities = append(ownerIdentities, recipients...)
+		receivers = append(receivers, recipients...)
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner.Raw, s.WalletService)
+		if err != nil {
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(output.Owner.Raw).String())
+		}
+		outputAuditInfos = append(outputAuditInfos, auditInfo...)
 	}
 	// produce zkatdlog transfer action
 	// return for each output its information in the clear
@@ -98,20 +105,24 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 	ws := s.WalletService
 
 	// prepare metadata
-	var outputMetadataRaw [][]byte
+	var outputsMetadataRaw [][]byte
 	for _, information := range outputMetadata {
 		raw, err := information.Serialize()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed serializing token info for zkatdlog transfer action")
 		}
-		outputMetadataRaw = append(outputMetadataRaw, raw)
+		outputsMetadataRaw = append(outputsMetadataRaw, raw)
 	}
 	// audit info for receivers
 	var receiverAuditInfos [][]byte
-	for _, output := range outputTokens {
-		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(output.Owner.Raw, ws)
+	for _, receiver := range receivers {
+		if len(receiver) == 0 {
+			receiverAuditInfos = append(receiverAuditInfos, []byte{})
+			continue
+		}
+		auditInfo, err := s.Deserializer.GetOwnerAuditInfo(receiver, ws)
 		if err != nil {
-			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(output.Owner.Raw).String())
+			return nil, nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", receiver.String())
 		}
 		receiverAuditInfos = append(receiverAuditInfos, auditInfo...)
 	}
@@ -124,7 +135,7 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 			return nil, nil, errors.Wrapf(err, "failed getting audit info for sender identity [%s]", view.Identity(t.Owner).String())
 		}
 		if len(auditInfo) == 0 {
-			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", ids[i].String(), view.Identity(t.Owner))
+			s.Logger.Errorf("empty audit info for the owner [%s] of the i^th token [%s]", tokenIDs[i].String(), view.Identity(t.Owner))
 		}
 		senderAuditInfos = append(senderAuditInfos, auditInfo...)
 	}
@@ -134,21 +145,22 @@ func (s *TransferService) Transfer(txID string, wallet driver.OwnerWallet, ids [
 		return nil, nil, errors.Wrapf(err, "failed getting serialized outputs")
 	}
 
-	receiverIsSender := make([]bool, len(ownerIdentities))
-	for i, receiver := range ownerIdentities {
+	receiverIsSender := make([]bool, len(receivers))
+	for i, receiver := range receivers {
 		_, err := ws.OwnerWallet(receiver)
 		receiverIsSender[i] = err == nil
 	}
 
-	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(ids), len(senderAuditInfos), len(outputs))
+	s.Logger.Debugf("Transfer Action Prepared [id:%s,ins:%d:%d,outs:%d]", txID, len(tokenIDs), len(senderAuditInfos), len(outputs))
 
 	metadata := &driver.TransferMetadata{
-		Outputs:            outputs,
-		Senders:            signerIds,
+		TokenIDs:           tokenIDs,
+		Senders:            senders,
 		SenderAuditInfos:   senderAuditInfos,
-		TokenIDs:           ids,
-		OutputsMetadata:    outputMetadataRaw,
-		Receivers:          ownerIdentities,
+		Outputs:            outputs,
+		OutputsMetadata:    outputsMetadataRaw,
+		OutputAuditInfos:   outputAuditInfos,
+		Receivers:          receivers,
 		ReceiverAuditInfos: receiverAuditInfos,
 		ReceiverIsSender:   receiverIsSender,
 	}

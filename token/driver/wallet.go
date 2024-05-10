@@ -198,11 +198,11 @@ type Deserializer interface {
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
 	// Recipients returns the recipient identities from the given serialized representation
 	Recipients(raw view.Identity) ([]view.Identity, error)
-	// Match returns nil if the given identity matches the given audit information.
+	// MatchOwnerIdentity returns nil if the given identity matches the given audit information.
 	// An error otherwise
 	MatchOwnerIdentity(identity view.Identity, info []byte) error
 	// GetOwnerAuditInfo returns the audit information for each identity contained in the given serialized representation
-	GetOwnerAuditInfo(raw []byte, p AuditInfoProvider) ([][]byte, error)
+	GetOwnerAuditInfo(id Identity, p AuditInfoProvider) ([][]byte, error)
 }
 
 // Serializer models the serialization needs of the Token Service

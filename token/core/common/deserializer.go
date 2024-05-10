@@ -20,7 +20,7 @@ type VerifierDeserializer interface {
 type AuditMatcherProvider interface {
 	GetOwnerMatcher(raw []byte) (driver.Matcher, error)
 	MatchOwnerIdentity(id driver.Identity, ai []byte) error
-	GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error)
+	GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([][]byte, error)
 }
 
 // RecipientExtractor extracts the recipients from an identity
@@ -56,17 +56,14 @@ func NewDeserializer(
 	}
 }
 
-// GetOwnerVerifier deserializes the verifier for the passed owner identity
 func (d *Deserializer) GetOwnerVerifier(id driver.Identity) (driver.Verifier, error) {
 	return d.ownerDeserializer.DeserializeVerifier(id)
 }
 
-// GetIssuerVerifier deserializes the verifier for the passed issuer identity
 func (d *Deserializer) GetIssuerVerifier(id driver.Identity) (driver.Verifier, error) {
 	return d.issuerDeserializer.DeserializeVerifier(id)
 }
 
-// GetAuditorVerifier deserializes the verifier for the passed auditor identity
 func (d *Deserializer) GetAuditorVerifier(id driver.Identity) (driver.Verifier, error) {
 	return d.auditorDeserializer.DeserializeVerifier(id)
 }
@@ -75,7 +72,6 @@ func (d *Deserializer) Recipients(id driver.Identity) ([]driver.Identity, error)
 	return d.recipientExtractor.Recipients(id)
 }
 
-// GetOwnerMatcher is not needed in fabtoken, as identities are in the clear
 func (d *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
 	return d.auditMatcherProvider.GetOwnerMatcher(raw)
 }
@@ -84,6 +80,6 @@ func (d *Deserializer) MatchOwnerIdentity(id driver.Identity, ai []byte) error {
 	return d.auditMatcherProvider.MatchOwnerIdentity(id, ai)
 }
 
-func (d *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	return d.auditMatcherProvider.GetOwnerAuditInfo(raw, p)
+func (d *Deserializer) GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([][]byte, error) {
+	return d.auditMatcherProvider.GetOwnerAuditInfo(id, p)
 }

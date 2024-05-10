@@ -11,13 +11,13 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/pkg/errors"
 )
 
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
 	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
+	GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error)
 }
 
 // AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
@@ -87,12 +87,20 @@ func (v *TypedVerifierDeserializerMultiplex) MatchOwnerIdentity(id driver.Identi
 	return nil
 }
 
-func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
-	auditInfo, err := htlc.GetOwnerAuditInfo(raw, p)
+func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(id driver.Identity, p driver.AuditInfoProvider) ([][]byte, error) {
+	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
+		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-	return [][]byte{auditInfo}, nil
+	d, ok := v.deserializers[si.Type]
+	if !ok {
+		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+	}
+	res, err := d.GetOwnerAuditInfo(id, si.Type, si.Identity, p)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to get owner audit info, type [%s]", si.Type)
+	}
+	return res, nil
 }
 
 type TypedIdentityVerifierDeserializer struct {
@@ -109,4 +117,12 @@ func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(typ string, raw 
 
 func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
 	return []driver.Identity{id}, nil
+}
+
+func (t *TypedIdentityVerifierDeserializer) GetOwnerAuditInfo(id driver.Identity, typ string, raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	auditInfo, err := p.GetAuditInfo(id)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", id)
+	}
+	return [][]byte{auditInfo}, nil
 }

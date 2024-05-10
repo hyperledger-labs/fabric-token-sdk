@@ -11,6 +11,7 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
 	"github.com/hyperledger/fabric-protos-go/msp"
 	"github.com/pkg/errors"
@@ -72,7 +73,7 @@ func (a *AuditInfoMatcher) Match(id []byte) error {
 
 type AuditInfoDeserializer struct{}
 
-func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (*AuditInfo, error) {
+func (a *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (deserializer.AuditInfo, error) {
 	ai := &AuditInfo{}
 	err := ai.FromBytes(raw)
 	if err != nil {

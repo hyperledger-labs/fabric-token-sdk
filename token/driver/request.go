@@ -77,6 +77,8 @@ type TransferMetadata struct {
 	Outputs [][]byte
 	// OutputsMetadata, for each output we have an OutputsMetadata entry that contains secrets to de-obfuscate the output
 	OutputsMetadata [][]byte
+	// OutputAuditInfos, for each output owner we have audit info
+	OutputAuditInfos [][]byte
 	// Receivers is the list of receivers
 	Receivers []view.Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
@@ -143,6 +145,7 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 		transfers[i] = TransferMetadataSer{
 			TokenIDs:           TokenIDs,
 			Outputs:            transfer.Outputs,
+			OutputAuditInfos:   transfer.OutputAuditInfos,
 			TokenInfo:          transfer.OutputsMetadata,
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
@@ -180,6 +183,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 		m.Transfers[i] = TransferMetadata{
 			TokenIDs:           TokenIDs,
 			Outputs:            transfer.Outputs,
+			OutputAuditInfos:   transfer.OutputAuditInfos,
 			OutputsMetadata:    transfer.TokenInfo,
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
@@ -204,6 +208,7 @@ type TokenIDSer struct {
 type TransferMetadataSer struct {
 	TokenIDs           []TokenIDSer
 	Outputs            [][]byte
+	OutputAuditInfos   [][]byte
 	TokenInfo          [][]byte
 	Senders            []view.Identity
 	SenderAuditInfos   [][]byte

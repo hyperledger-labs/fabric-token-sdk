@@ -19,49 +19,6 @@ type AuditInfoProvider interface {
 	GetAuditInfo(identity driver.Identity) ([]byte, error)
 }
 
-// GetOwnerAuditInfo returns the audit info of the owner
-func GetOwnerAuditInfo(raw []byte, s AuditInfoProvider) ([]byte, error) {
-	if len(raw) == 0 {
-		// this is a redeem
-		return nil, nil
-	}
-
-	owner, err := identity.UnmarshalTypedIdentity(raw)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal owner of input token")
-	}
-
-	if owner.Type == htlc.ScriptType {
-		sender, recipient, err := GetScriptSenderAndRecipient(owner)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting script sender and recipient")
-		}
-
-		auditInfo := &ScriptInfo{}
-		auditInfo.Sender, err = s.GetAuditInfo(sender)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting audit info for htlc script [%s]", driver.Identity(raw).String())
-		}
-
-		auditInfo.Recipient, err = s.GetAuditInfo(recipient)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed getting audit info for script [%s]", driver.Identity(raw).String())
-		}
-		raw, err = json.Marshal(auditInfo)
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed marshaling audit info for script")
-		}
-		return raw, nil
-	}
-
-	// delegate
-	auditInfo, err := s.GetAuditInfo(raw)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
-	}
-	return auditInfo, nil
-}
-
 // ScriptInfo includes info about the sender and the recipient
 type ScriptInfo struct {
 	Sender    []byte
@@ -72,7 +29,7 @@ func (si *ScriptInfo) Marshal() ([]byte, error) {
 	return json.Marshal(si)
 }
 
-func (si *ScriptInfo) Unarshal(raw []byte) error {
+func (si *ScriptInfo) Unmarshal(raw []byte) error {
 	return json.Unmarshal(raw, si)
 }
 

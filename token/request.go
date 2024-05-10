@@ -565,14 +565,14 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		}
 		var eID string
 		var rID string
-		var ownerAuditInfo []byte
+		var receiverAuditInfo []byte
 		if len(tok.Owner.Raw) != 0 {
-			ownerAuditInfo = transferMeta.ReceiverAuditInfos[j]
-			eID, err = tms.WalletService().GetEnrollmentID(transferMeta.Receivers[j], ownerAuditInfo)
+			receiverAuditInfo = transferMeta.ReceiverAuditInfos[j]
+			eID, err = tms.WalletService().GetEnrollmentID(transferMeta.Receivers[j], receiverAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting enrollment id [%d,%d]", i, j)
 			}
-			rID, err = tms.WalletService().GetRevocationHandler(transferMeta.Receivers[j], ownerAuditInfo)
+			rID, err = tms.WalletService().GetRevocationHandler(transferMeta.Receivers[j], receiverAuditInfo)
 			if err != nil {
 				return nil, 0, errors.Wrapf(err, "failed getting revocation handler [%d,%d]", i, j)
 			}
@@ -591,7 +591,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 			ActionIndex:       i,
 			Index:             counter,
 			Owner:             tok.Owner.Raw,
-			OwnerAuditInfo:    ownerAuditInfo,
+			OwnerAuditInfo:    receiverAuditInfo,
 			EnrollmentID:      eID,
 			RevocationHandler: rID,
 			Type:              tok.Type,

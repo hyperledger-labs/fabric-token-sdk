@@ -7,10 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package deserializer
 
 import (
-	"encoding/json"
-
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
 	"github.com/pkg/errors"
 )
 
@@ -19,64 +17,60 @@ type AuditInfo interface {
 	RevocationHandle() string
 }
 
-type AuditInfoDeserializer[T AuditInfo] interface {
-	DeserializeAuditInfo([]byte) (T, error)
+type AuditInfoDeserializer interface {
+	DeserializeAuditInfo([]byte) (AuditInfo, error)
 }
 
 // EIDRHDeserializer returns enrollment IDs behind the owners of token
-type EIDRHDeserializer[T AuditInfo] struct {
-	AuditInfoDeserializer AuditInfoDeserializer[T]
+type EIDRHDeserializer struct {
+	deserializers map[string]AuditInfoDeserializer
 }
 
 // NewEIDRHDeserializer returns an enrollmentService
-func NewEIDRHDeserializer[T AuditInfo](AuditInfoDeserializer AuditInfoDeserializer[T]) *EIDRHDeserializer[T] {
-	return &EIDRHDeserializer[T]{
-		AuditInfoDeserializer: AuditInfoDeserializer,
+func NewEIDRHDeserializer() *EIDRHDeserializer {
+	return &EIDRHDeserializer{
+		deserializers: map[string]AuditInfoDeserializer{},
 	}
 }
 
+func (e *EIDRHDeserializer) AddDeserializer(typ string, d AuditInfoDeserializer) {
+	e.deserializers[typ] = d
+}
+
 // GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
-func (e *EIDRHDeserializer[T]) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
-	ai, err := e.getAuditInfo(auditInfo)
+func (e *EIDRHDeserializer) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(identity, auditInfo)
 	if err != nil {
 		return "", err
 	}
 	return ai.EnrollmentID(), nil
 }
 
-// GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
-func (e *EIDRHDeserializer[T]) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
-	ai, err := e.getAuditInfo(auditInfo)
+// GetRevocationHandler returns the revocation handle associated with the identity matched to the passed auditInfo
+func (e *EIDRHDeserializer) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
+	ai, err := e.getAuditInfo(identity, auditInfo)
 	if err != nil {
 		return "", err
 	}
 	return ai.RevocationHandle(), nil
 }
 
-func (e *EIDRHDeserializer[T]) getAuditInfo(auditInfo []byte) (T, error) {
-	var zeroAuditInfo T
+func (e *EIDRHDeserializer) getAuditInfo(id driver.Identity, auditInfo []byte) (AuditInfo, error) {
 	if len(auditInfo) == 0 {
-		return zeroAuditInfo, nil
+		return nil, errors.Errorf("nil audit info")
 	}
 
-	// Try to unmarshal it as ScriptInfo
-	si := &htlc.ScriptInfo{}
-	err := json.Unmarshal(auditInfo, si)
-	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
-		if len(si.Recipient) != 0 {
-			ai, err := e.AuditInfoDeserializer.DeserializeAuditInfo(si.Recipient)
-			if err != nil {
-				return zeroAuditInfo, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
-			}
-			return ai, nil
-		}
-
-		return zeroAuditInfo, nil
-	}
-
-	ai, err := e.AuditInfoDeserializer.DeserializeAuditInfo(auditInfo)
+	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
-		return zeroAuditInfo, errors.Wrapf(err, "failed unamrshalling audit info [%s]", auditInfo)
+		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
 	}
-	return ai, nil
+	d, ok := e.deserializers[si.Type]
+	if !ok {
+		return nil, errors.Errorf("no deserializer found for [%s]", si.Type)
+	}
+	res, err := d.DeserializeAuditInfo(auditInfo)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to deserialize audit info for identity type [%s]", si.Type)
+	}
+	return res, nil
 }

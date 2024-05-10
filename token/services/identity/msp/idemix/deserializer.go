@@ -9,6 +9,8 @@ package idemix
 import (
 	"fmt"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/deserializer"
+
 	msp "github.com/IBM/idemix"
 	csp "github.com/IBM/idemix/bccsp/types"
 	math "github.com/IBM/mathlib"
@@ -106,12 +108,20 @@ func (i *Deserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
 	return nil, errors.New("not supported")
 }
 
-func (i *Deserializer) DeserializeAuditInfo(raw []byte) (*msp2.AuditInfo, error) {
+func (i *Deserializer) DeserializeAuditInfo(raw []byte) (deserializer.AuditInfo, error) {
 	return i.Deserializer.DeserializeAuditInfo(raw)
 }
 
 func (i *Deserializer) GetOwnerMatcher(raw []byte) (driver.Matcher, error) {
-	return i.DeserializeAuditInfo(raw)
+	return i.Deserializer.DeserializeAuditInfo(raw)
+}
+
+func (i *Deserializer) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
+	auditInfo, err := p.GetAuditInfo(raw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
+	}
+	return [][]byte{auditInfo}, nil
 }
 
 func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
@@ -137,4 +147,14 @@ func (i *Deserializer) Info(raw []byte, auditInfo []byte) (string, error) {
 
 func (i *Deserializer) String() string {
 	return fmt.Sprintf("Idemix with IPK [%s]", hash.Hashable(i.Ipk).String())
+}
+
+type AuditInfoDeserializer struct{}
+
+func (c *AuditInfoDeserializer) DeserializeAuditInfo(raw []byte) (deserializer.AuditInfo, error) {
+	ai, err := msp2.DeserializeAuditInfo(raw)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed deserializing audit info [%s]", string(raw))
+	}
+	return ai, nil
 }
