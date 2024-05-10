@@ -10,7 +10,6 @@ import (
 	"reflect"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/auditdb"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/common"
@@ -166,7 +165,7 @@ var (
 )
 
 // Get returns the Auditor instance for the passed auditor wallet
-func Get(sp view.ServiceProvider, w *token.AuditorWallet) *Auditor {
+func Get(sp token.ServiceProvider, w *token.AuditorWallet) *Auditor {
 	if w == nil {
 		logger.Debugf("no wallet provided")
 		return nil
@@ -175,7 +174,7 @@ func Get(sp view.ServiceProvider, w *token.AuditorWallet) *Auditor {
 }
 
 // GetByTMSID returns the Auditor instance for the passed auditor wallet
-func GetByTMSID(sp view.ServiceProvider, tmsID token.TMSID) *Auditor {
+func GetByTMSID(sp token.ServiceProvider, tmsID token.TMSID) *Auditor {
 	s, err := sp.GetService(managerType)
 	if err != nil {
 		logger.Errorf("failed to get manager service: [%s]", err)
@@ -190,6 +189,6 @@ func GetByTMSID(sp view.ServiceProvider, tmsID token.TMSID) *Auditor {
 }
 
 // New returns the Auditor instance for the passed auditor wallet
-func New(sp view.ServiceProvider, w *token.AuditorWallet) *Auditor {
+func New(sp token.ServiceProvider, w *token.AuditorWallet) *Auditor {
 	return Get(sp, w)
 }

@@ -12,11 +12,17 @@ import (
 	"encoding/base64"
 	"sync"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/kvs"
+	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/marshaller"
 	"github.com/pkg/errors"
 )
+
+type KVS interface {
+	Exists(k string) bool
+	Get(k string, v interface{}) error
+	Put(k string, key interface{}) error
+}
 
 // Service is a uniqueness service.
 // The service computes a unique id for a given object by hashing the object's json representation together with a random salt.
@@ -24,7 +30,7 @@ import (
 // The random salt is stored in the KVS and is generated on the first call to the service.
 type Service struct {
 	mutex sync.Mutex
-	sp    view.ServiceProvider
+	kvs   KVS
 }
 
 // ComputeID computes the unique ID of the given object.
@@ -36,11 +42,10 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
-	kvs := kvs.GetService(s.sp)
 	k := "github.com/hyperledger-labs/fabric-token-sdk/token/services/nfttx/uniqueness/key"
 	var key []byte
-	if kvs.Exists(k) {
-		if err := kvs.Get(k, &key); err != nil {
+	if s.kvs.Exists(k) {
+		if err := s.kvs.Get(k, &key); err != nil {
 			return "", errors.WithMessagef(err, "failed to get key %s", k)
 		}
 	} else {
@@ -54,7 +59,7 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 		if n != size {
 			return "", errors.New("error getting random bytes")
 		}
-		if err := kvs.Put(k, key); err != nil {
+		if err := s.kvs.Put(k, key); err != nil {
 			return "", errors.WithMessagef(err, "failed to put key %s", k)
 		}
 	}
@@ -78,8 +83,8 @@ func (s *Service) ComputeID(state interface{}) (string, error) {
 }
 
 // GetService returns the uniqueness service.
-func GetService(sp view.ServiceProvider) *Service {
+func GetService(sp token.ServiceProvider) *Service {
 	return &Service{
-		sp: sp,
+		kvs: kvs.GetService(sp),
 	}
 }

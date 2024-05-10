@@ -24,14 +24,13 @@ import (
 )
 
 type TxAuditor struct {
-	sp                      view2.ServiceProvider
 	w                       *token.AuditorWallet
 	auditor                 *auditor.Auditor
 	auditDB                 *auditdb.DB
 	transactionInfoProvider *TransactionInfoProvider
 }
 
-func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
+func NewAuditor(sp token.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, error) {
 	backend := auditor.New(sp, w)
 	auditDB, err := auditdb.GetByTMSId(sp, w.TMS().ID())
 	if err != nil {
@@ -42,11 +41,10 @@ func NewAuditor(sp view2.ServiceProvider, w *token.AuditorWallet) (*TxAuditor, e
 		return nil, err
 	}
 	return &TxAuditor{
-		sp:                      sp,
 		w:                       w,
 		auditor:                 backend,
 		auditDB:                 auditDB,
-		transactionInfoProvider: newTransactionInfoProvider(sp, w.TMS(), ttxDB),
+		transactionInfoProvider: newTransactionInfoProvider(w.TMS(), ttxDB),
 	}, nil
 }
 
@@ -80,7 +78,7 @@ func (a *TxAuditor) NewHoldingsFilter() *auditdb.HoldingsFilter {
 
 // SetStatus sets the status of the audit records with the passed transaction id to the passed status
 func (a *TxAuditor) SetStatus(txID string, status TxStatus, message string) error {
-	return a.auditDB.SetStatus(txID, auditdb.TxStatus(status), message)
+	return a.auditDB.SetStatus(txID, status, message)
 }
 
 func (a *TxAuditor) GetTokenRequest(txID string) ([]byte, error) {

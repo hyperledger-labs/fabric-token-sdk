@@ -7,27 +7,24 @@ SPDX-License-Identifier: Apache-2.0
 package ttx
 
 import (
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
 )
 
 type TxOwner struct {
-	sp                      view2.ServiceProvider
 	tms                     *token.ManagementService
 	owner                   *DB
 	transactionInfoProvider *TransactionInfoProvider
 }
 
 // NewOwner returns a new owner service.
-func NewOwner(sp view2.ServiceProvider, tms *token.ManagementService) *TxOwner {
+func NewOwner(sp token.ServiceProvider, tms *token.ManagementService) *TxOwner {
 	backend := New(sp, tms)
 	return &TxOwner{
-		sp:                      sp,
 		tms:                     tms,
 		owner:                   backend,
-		transactionInfoProvider: newTransactionInfoProvider(sp, tms, backend),
+		transactionInfoProvider: newTransactionInfoProvider(tms, backend),
 	}
 }
 

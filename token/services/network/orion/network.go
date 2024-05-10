@@ -33,7 +33,7 @@ type IdentityProvider interface {
 }
 
 type Network struct {
-	sp          view2.ServiceProvider
+	sp          token2.ServiceProvider
 	viewManager *view2.Manager
 	tmsProvider *token2.ManagementServiceProvider
 	n           *orion.NetworkService
@@ -46,7 +46,7 @@ type Network struct {
 	subscribers    *events.Subscribers
 }
 
-func NewNetwork(sp view2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
+func NewNetwork(sp token2.ServiceProvider, ip IdentityProvider, n *orion.NetworkService, newVault NewVaultFunc) *Network {
 	net := &Network{
 		sp:          sp,
 		ip:          ip,

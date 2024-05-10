@@ -14,14 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
-
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	api2 "github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/network/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/vault"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -391,14 +389,14 @@ func (n *Network) ProcessNamespace(namespace string) error {
 
 // Provider returns an instance of network provider
 type Provider struct {
-	sp view2.ServiceProvider
+	sp token.ServiceProvider
 
 	lock     sync.Mutex
 	networks map[string]*Network
 }
 
 // NewProvider returns a new instance of network provider
-func NewProvider(sp view2.ServiceProvider) *Provider {
+func NewProvider(sp token.ServiceProvider) *Provider {
 	ms := &Provider{
 		sp:       sp,
 		networks: map[string]*Network{},
@@ -445,7 +443,7 @@ func (np *Provider) newNetwork(network string, channel string) (*Network, error)
 }
 
 // GetInstance returns a network instance for the given network and channel
-func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
+func GetInstance(sp token.ServiceProvider, network, channel string) *Network {
 	n, err := GetProvider(sp).GetNetwork(network, channel)
 	if err != nil {
 		logger.Errorf("Failed to get network [%s:%s]: %s", network, channel, err)
@@ -454,7 +452,7 @@ func GetInstance(sp view2.ServiceProvider, network, channel string) *Network {
 	return n
 }
 
-func GetProvider(sp view2.ServiceProvider) *Provider {
+func GetProvider(sp token.ServiceProvider) *Provider {
 	s, err := sp.GetService(&Provider{})
 	if err != nil {
 		panic(fmt.Sprintf("Failed to get service: %s", err))
