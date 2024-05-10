@@ -9,7 +9,7 @@ package identity
 import (
 	"encoding/asn1"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
 )
 
@@ -25,7 +25,7 @@ func (i TypedIdentity) Bytes() ([]byte, error) {
 	return asn1.Marshal(i)
 }
 
-func UnmarshalTypedIdentity(id view.Identity) (*TypedIdentity, error) {
+func UnmarshalTypedIdentity(id driver.Identity) (*TypedIdentity, error) {
 	si := &TypedIdentity{}
 	_, err := asn1.Unmarshal(id, si)
 	if err != nil {
@@ -34,7 +34,7 @@ func UnmarshalTypedIdentity(id view.Identity) (*TypedIdentity, error) {
 	return si, nil
 }
 
-func WrapWithType(idType string, id view.Identity) (view.Identity, error) {
+func WrapWithType(idType string, id driver.Identity) (driver.Identity, error) {
 	raw, err := (&TypedIdentity{Type: idType, Identity: id}).Bytes()
 	if err != nil {
 		return nil, err

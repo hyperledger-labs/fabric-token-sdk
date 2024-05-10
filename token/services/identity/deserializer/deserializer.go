@@ -9,7 +9,7 @@ package deserializer
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/interop/htlc"
 	"github.com/pkg/errors"
 )
@@ -36,7 +36,7 @@ func NewEIDRHDeserializer[T AuditInfo](AuditInfoDeserializer AuditInfoDeserializ
 }
 
 // GetEnrollmentID returns the enrollmentID associated with the identity matched to the passed auditInfo
-func (e *EIDRHDeserializer[T]) GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error) {
+func (e *EIDRHDeserializer[T]) GetEnrollmentID(identity driver.Identity, auditInfo []byte) (string, error) {
 	ai, err := e.getAuditInfo(auditInfo)
 	if err != nil {
 		return "", err
@@ -45,7 +45,7 @@ func (e *EIDRHDeserializer[T]) GetEnrollmentID(identity view.Identity, auditInfo
 }
 
 // GetRevocationHandler returns the recoatopn handle associated with the identity matched to the passed auditInfo
-func (e *EIDRHDeserializer[T]) GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error) {
+func (e *EIDRHDeserializer[T]) GetRevocationHandler(identity driver.Identity, auditInfo []byte) (string, error) {
 	ai, err := e.getAuditInfo(auditInfo)
 	if err != nil {
 		return "", err

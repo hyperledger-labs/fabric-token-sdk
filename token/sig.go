@@ -11,6 +11,8 @@ import (
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 )
 
+type Identity = driver.Identity
+
 // Verifier models a signature verifier
 type Verifier = driver.Verifier
 

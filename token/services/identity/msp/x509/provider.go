@@ -12,7 +12,6 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/pkg/utils/proto"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	msp2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/x509/msp"
@@ -23,7 +22,7 @@ import (
 var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.x509")
 
 type SignerService interface {
-	RegisterSigner(identity view.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
+	RegisterSigner(identity driver.Identity, signer driver.Signer, verifier driver.Verifier, signerInfo []byte) error
 }
 
 type Provider struct {
@@ -79,7 +78,7 @@ func newSigningProvider(conf *msp.MSPConfig, mspConfigPath, keyStorePath, mspID 
 		return nil, err
 	}
 	if signerService != nil {
-		logger.Debugf("register signer [%s][%s]", mspID, view.Identity(idRaw))
+		logger.Debugf("register signer [%s][%s]", mspID, driver.Identity(idRaw))
 		err = signerService.RegisterSigner(idRaw, sID, sID, nil)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed registering x509 signer")
@@ -116,7 +115,7 @@ func (p *Provider) IsRemote() bool {
 	return p.sID == nil
 }
 
-func (p *Provider) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
+func (p *Provider) Identity(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
 	revocationHandle, err := msp2.GetRevocationHandle(p.id)
 	if err != nil {
 		return nil, nil, errors.Wrapf(err, "failed getting revocation handle")
@@ -171,7 +170,7 @@ func (p *Provider) Info(raw []byte, auditInfo []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("MSP.x509: [%s][%s][%s]", view.Identity(raw).UniqueID(), si.Mspid, cert.Subject.CommonName), nil
+	return fmt.Sprintf("MSP.x509: [%s][%s][%s]", driver.Identity(raw).UniqueID(), si.Mspid, cert.Subject.CommonName), nil
 }
 
 func (p *Provider) SerializedIdentity() (driver.SigningIdentity, error) {

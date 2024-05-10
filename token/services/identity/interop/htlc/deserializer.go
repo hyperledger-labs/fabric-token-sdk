@@ -9,14 +9,13 @@ package htlc
 import (
 	"encoding/json"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/interop/htlc"
 	"github.com/pkg/errors"
 )
 
 type VerifierDES interface {
-	DeserializeVerifier(id view.Identity) (driver.Verifier, error)
+	DeserializeVerifier(id driver.Identity) (driver.Verifier, error)
 }
 
 type TypedIdentityDeserializer struct {
@@ -53,7 +52,7 @@ func (t *TypedIdentityDeserializer) DeserializeVerifier(typ string, raw []byte) 
 	return v, nil
 }
 
-func (t *TypedIdentityDeserializer) Recipients(id view.Identity, typ string, raw []byte) ([]view.Identity, error) {
+func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
 	if typ != htlc.ScriptType {
 		return nil, errors.New("unknown identity type")
 	}
@@ -63,5 +62,5 @@ func (t *TypedIdentityDeserializer) Recipients(id view.Identity, typ string, raw
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
-	return []view.Identity{script.Sender, script.Recipient}, nil
+	return []driver.Identity{script.Sender, script.Recipient}, nil
 }

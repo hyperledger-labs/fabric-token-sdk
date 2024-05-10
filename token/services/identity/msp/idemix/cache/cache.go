@@ -13,17 +13,17 @@ import (
 
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity/msp/common"
 	"go.uber.org/zap/zapcore"
 )
 
 var logger = flogging.MustGetLogger("token-sdk.services.identity.msp.idemix")
 
-type IdentityCacheBackendFunc func(opts *common.IdentityOptions) (view.Identity, []byte, error)
+type IdentityCacheBackendFunc func(opts *common.IdentityOptions) (driver.Identity, []byte, error)
 
 type identityCacheEntry struct {
-	Identity view.Identity
+	Identity driver.Identity
 	Audit    []byte
 }
 
@@ -44,7 +44,7 @@ func NewIdentityCache(backed IdentityCacheBackendFunc, size int, opts *common.Id
 	return ci
 }
 
-func (c *IdentityCache) Identity(opts *common.IdentityOptions) (view.Identity, []byte, error) {
+func (c *IdentityCache) Identity(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
 	if opts != nil {
 		return c.fetchIdentityFromBackend(opts)
 	}
@@ -66,8 +66,8 @@ func (c *IdentityCache) Identity(opts *common.IdentityOptions) (view.Identity, [
 
 }
 
-func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (view.Identity, []byte, error) {
-	var identity view.Identity
+func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
+	var identity driver.Identity
 	var audit []byte
 
 	var start time.Time
@@ -105,7 +105,7 @@ func (c *IdentityCache) fetchIdentityFromCache(opts *common.IdentityOptions) (vi
 	return identity, audit, nil
 }
 
-func (c *IdentityCache) fetchIdentityFromBackend(opts *common.IdentityOptions) (view.Identity, []byte, error) {
+func (c *IdentityCache) fetchIdentityFromBackend(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
 	if logger.IsEnabledFor(zapcore.DebugLevel) {
 		logger.Debugf("fetching identity from backend")
 	}

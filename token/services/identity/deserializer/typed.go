@@ -8,7 +8,6 @@ package deserializer
 
 import (
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/identity"
@@ -18,7 +17,7 @@ import (
 
 type TypedVerifierDeserializer interface {
 	DeserializeVerifier(typ string, raw []byte) (driver.Verifier, error)
-	Recipients(id view.Identity, typ string, raw []byte) ([]view.Identity, error)
+	Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error)
 }
 
 // AuditMatcherDeserializer deserializes raw bytes into a matcher, which allows an auditor to match an identity to an enrollment ID
@@ -39,7 +38,7 @@ func (v *TypedVerifierDeserializerMultiplex) AddTypedVerifierDeserializer(typ st
 	v.deserializers[typ] = d
 }
 
-func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id view.Identity) (driver.Verifier, error) {
+func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id driver.Identity) (driver.Verifier, error) {
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -51,7 +50,7 @@ func (v *TypedVerifierDeserializerMultiplex) DeserializeVerifier(id view.Identit
 	return d.DeserializeVerifier(si.Type, si.Identity)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) Recipients(id view.Identity) ([]view.Identity, error) {
+func (v *TypedVerifierDeserializerMultiplex) Recipients(id driver.Identity) ([]driver.Identity, error) {
 	si, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal to TypedIdentity")
@@ -67,7 +66,7 @@ func (v *TypedVerifierDeserializerMultiplex) GetOwnerMatcher(raw []byte) (driver
 	return v.auditMatcherDeserializer.GetOwnerMatcher(raw)
 }
 
-func (v *TypedVerifierDeserializerMultiplex) Match(id view.Identity, ai []byte) error {
+func (v *TypedVerifierDeserializerMultiplex) Match(id driver.Identity, ai []byte) error {
 	// match identity and audit info
 	recipient, err := identity.UnmarshalTypedIdentity(id)
 	if err != nil {
@@ -91,7 +90,7 @@ func (v *TypedVerifierDeserializerMultiplex) Match(id view.Identity, ai []byte) 
 func (v *TypedVerifierDeserializerMultiplex) GetOwnerAuditInfo(raw []byte, p driver.AuditInfoProvider) ([][]byte, error) {
 	auditInfo, err := htlc.GetOwnerAuditInfo(raw, p)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", view.Identity(raw).String())
+		return nil, errors.Wrapf(err, "failed getting audit info for recipient identity [%s]", driver.Identity(raw).String())
 	}
 	return [][]byte{auditInfo}, nil
 }
@@ -108,6 +107,6 @@ func (t *TypedIdentityVerifierDeserializer) DeserializeVerifier(typ string, raw 
 	return t.VerifierDeserializer.DeserializeVerifier(raw)
 }
 
-func (t *TypedIdentityVerifierDeserializer) Recipients(id view.Identity, typ string, raw []byte) ([]view.Identity, error) {
-	return []view.Identity{id}, nil
+func (t *TypedIdentityVerifierDeserializer) Recipients(id driver.Identity, typ string, raw []byte) ([]driver.Identity, error) {
+	return []driver.Identity{id}, nil
 }

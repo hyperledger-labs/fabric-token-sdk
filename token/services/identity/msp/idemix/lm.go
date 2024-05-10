@@ -21,7 +21,6 @@ import (
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/flogging"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/config"
 	driver3 "github.com/hyperledger-labs/fabric-token-sdk/token/services/db/driver"
@@ -39,7 +38,7 @@ type LocalMembership struct {
 	curveID         math.CurveID
 
 	config                 config2.Config
-	defaultNetworkIdentity view.Identity
+	defaultNetworkIdentity driver.Identity
 	signerService          common.SigService
 	deserializerManager    sig.Manager
 	identityDB             driver3.IdentityDB
@@ -60,7 +59,7 @@ func NewLocalMembership(
 	issuerPublicKey []byte,
 	idemixCurveID math.CurveID,
 	config config2.Config,
-	defaultNetworkIdentity view.Identity,
+	defaultNetworkIdentity driver.Identity,
 	signerService common.SigService,
 	deserializerManager sig.Manager,
 	identityDB driver3.IdentityDB,
@@ -88,15 +87,15 @@ func NewLocalMembership(
 	}
 }
 
-func (l *LocalMembership) DefaultNetworkIdentity() view.Identity {
+func (l *LocalMembership) DefaultNetworkIdentity() driver.Identity {
 	return l.defaultNetworkIdentity
 }
 
-func (l *LocalMembership) IsMe(id view.Identity) bool {
+func (l *LocalMembership) IsMe(id driver.Identity) bool {
 	return l.signerService.IsMe(id)
 }
 
-func (l *LocalMembership) GetIdentifier(id view.Identity) (string, error) {
+func (l *LocalMembership) GetIdentifier(id driver.Identity) (string, error) {
 	l.resolversMutex.RLock()
 	defer l.resolversMutex.RUnlock()
 
@@ -139,7 +138,7 @@ func (l *LocalMembership) GetIdentityInfo(label string, auditInfo []byte) (drive
 		r.Name,
 		r.EnrollmentID,
 		r.Remote,
-		func() (view.Identity, []byte, error) {
+		func() (driver.Identity, []byte, error) {
 			return r.GetIdentity(&common.IdentityOptions{
 				EIDExtension: true,
 				AuditInfo:    auditInfo,
@@ -260,10 +259,10 @@ func (l *LocalMembership) registerProvider(identityConfig driver.IdentityConfigu
 		return err
 	}
 
-	var getIdentityFunc func(opts *common.IdentityOptions) (view.Identity, []byte, error)
+	var getIdentityFunc func(opts *common.IdentityOptions) (driver.Identity, []byte, error)
 	l.deserializerManager.AddDeserializer(provider)
 	if provider.IsRemote() {
-		getIdentityFunc = func(opts *common.IdentityOptions) (view.Identity, []byte, error) {
+		getIdentityFunc = func(opts *common.IdentityOptions) (driver.Identity, []byte, error) {
 			return nil, nil, errors.Errorf("cannot invoke this function, remote must register pseudonyms")
 		}
 	} else {
