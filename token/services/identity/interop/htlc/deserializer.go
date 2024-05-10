@@ -62,5 +62,5 @@ func (t *TypedIdentityDeserializer) Recipients(id driver.Identity, typ string, r
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to unmarshal htlc script")
 	}
-	return []driver.Identity{script.Sender, script.Recipient}, nil
+	return []driver.Identity{script.Recipient}, nil
 }
