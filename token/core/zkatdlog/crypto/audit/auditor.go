@@ -10,10 +10,9 @@ import (
 	"encoding/asn1"
 	"encoding/json"
 
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-
 	math "github.com/IBM/mathlib"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/issue"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/transfer"
@@ -84,7 +83,7 @@ type OwnerOpening struct {
 
 // Auditor inspects zkat tokens and their owners.
 type Auditor struct {
-	Logger common2.Logger
+	Logger logging.Logger
 	// Owner Identity Deserializer
 	Des Deserializer
 	// Auditor's signing identity
@@ -102,7 +101,7 @@ type Auditor struct {
 	GetAuditInfoForTransfersFunc GetAuditInfoForTransfersFunc
 }
 
-func NewAuditor(logger common2.Logger, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
+func NewAuditor(logger logging.Logger, des Deserializer, pp []*math.G1, nymparams []byte, signer SigningIdentity, c *math.Curve) *Auditor {
 	a := &Auditor{
 		Logger:         logger,
 		Des:            des,

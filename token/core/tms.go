@@ -11,9 +11,8 @@ import (
 	"runtime/debug"
 	"sync"
 
-	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
-
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/logging"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/config"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/pkg/errors"
@@ -36,7 +35,7 @@ type ConfigProvider interface {
 // It is responsible for creating token management services for different networks.
 type TMSProvider struct {
 	sp             view.ServiceProvider
-	logger         common2.Logger
+	logger         logging.Logger
 	configProvider ConfigProvider
 	vault          Vault
 	callback       CallbackFunc
@@ -45,7 +44,7 @@ type TMSProvider struct {
 	services map[string]driver.TokenManagerService
 }
 
-func NewTMSProvider(sp view.ServiceProvider, logger common2.Logger, configProvider ConfigProvider, vault Vault) *TMSProvider {
+func NewTMSProvider(sp view.ServiceProvider, logger logging.Logger, configProvider ConfigProvider, vault Vault) *TMSProvider {
 	ms := &TMSProvider{
 		sp:             sp,
 		logger:         logger,
