@@ -8,7 +8,9 @@ package mailman
 
 import (
 	"fmt"
+	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -45,6 +47,73 @@ type QueryService interface {
 	UnspentTokensIteratorBy(id, typ string) (*token.UnspentTokensIterator, error)
 	GetTokens(inputs ...*token2.ID) ([]*token2.Token, error)
 }
+
+type unspentTokenIterator struct {
+	*UnspentTokenIterator
+
+	seen      utils.Set[token2.ID]
+	walletID  string
+	tokenType string
+}
+
+func newUnspentTokenIterator(qs QueryService, mailman *Mailman, walletID, tokenType string) *token.UnspentTokensIterator {
+	return &token.UnspentTokensIterator{UnspentTokensIterator: &unspentTokenIterator{
+		UnspentTokenIterator: &UnspentTokenIterator{
+			qs:      qs,
+			mailman: mailman,
+		},
+		seen:      utils.NewSet[token2.ID](),
+		walletID:  walletID,
+		tokenType: tokenType,
+	}}
+}
+
+func (m *unspentTokenIterator) Next() (*token2.UnspentToken, error) {
+	res, err := m.UnspentTokenIterator.Next()
+	if err != nil {
+		return nil, err
+	}
+	if res != nil {
+		m.seen[*res.Id] = struct{}{} // TODO: Add add method
+		return res, nil
+	}
+	logger.Debugf("No more tokens found in mailman. Attempting to look up in the tokenDB...")
+	// Reload from tokenDB
+	it, err := m.qs.UnspentTokensIteratorBy(m.walletID, m.tokenType)
+	if err != nil {
+		return nil, err
+	}
+	updates := make([]update, 0)
+	for tok, err := it.Next(); tok != nil && err == nil; tok, err = it.Next() {
+		if !m.seen.Contains(*tok.Id) {
+			logger.Debugf("Found token %s, will add it to mailman", tok)
+			updates = append(updates, update{op: Add, tokenID: *tok.Id})
+		} else {
+			logger.Debugf("Found token %s, but we have already used it", tok)
+		}
+	}
+	if len(updates) == 0 {
+		logger.Debugf("No new tokens found. Returning empty result")
+		return nil, nil
+	}
+
+	logger.Debugf("Updating the mailman with %d new tokens", len(updates))
+	m.mailman.Update(updates...)
+	for {
+		if tok, err := m.UnspentTokenIterator.Next(); tok != nil || err != nil {
+			return tok, err
+		}
+		logger.Debugf("Attempt to poll the mailman again until the new tokens have been added")
+		time.Sleep(100 * time.Millisecond)
+	}
+}
+
+//func newUnspentTokenIterator(qs QueryService, mailman *Mailman) *token.UnspentTokensIterator {
+//	return &token.UnspentTokensIterator{UnspentTokensIterator: &UnspentTokenIterator{
+//		qs:      qs,
+//		mailman: mailman,
+//	}}
+//}
 
 type UnspentTokenIterator struct {
 	qs      QueryService

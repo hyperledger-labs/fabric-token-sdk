@@ -178,10 +178,7 @@ func (m *Manager) UnspentTokensIteratorBy(walletId, tokenType string) (*token.Un
 		return nil, fmt.Errorf("no mailman for this wallet ID / token type combination? k = %s", k)
 	}
 
-	return &token.UnspentTokensIterator{UnspentTokensIterator: &UnspentTokenIterator{
-		qs:      m.qs,
-		mailman: mm,
-	}}, nil
+	return newUnspentTokenIterator(m.qs, mm, walletId, tokenType), nil
 }
 
 func (m *Manager) Shutdown() {
