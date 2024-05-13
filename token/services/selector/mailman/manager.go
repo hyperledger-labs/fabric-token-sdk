@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/events"
 	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/tracing"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
@@ -175,6 +176,20 @@ func (m *Manager) UnspentTokensIteratorBy(walletId, tokenType string) (driver.Un
 	k := spaceKey(walletId, tokenType)
 
 	mm, ok := m.mailmen[k]
+	if !ok {
+		logger.Debugf("No mailman found for [%s]. Checking token DB", k)
+		it, err := m.qs.UnspentTokensIteratorBy(walletId, tokenType)
+		if err != nil {
+			return nil, err
+		}
+		if updates := tokenUpdates(it, collections.NewSet[token2.ID]()); len(updates) > 0 {
+			logger.Debugf("Found %d tokens for [%s]. Creating new mailman", len(updates), k)
+			mm, ok = NewMailman(), true
+			mm.Start()
+			m.mailmen[k] = mm
+			mm.Update(updates...)
+		}
+	}
 	if !ok {
 		return nil, fmt.Errorf("no mailman for this wallet ID / token type combination? k = %s", k)
 	}

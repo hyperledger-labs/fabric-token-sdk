@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils"
+	"github.com/hyperledger-labs/fabric-smart-client/platform/common/utils/collections"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -51,7 +51,7 @@ type QueryService interface {
 type unspentTokenIterator struct {
 	*UnspentTokenIterator
 
-	seen      utils.Set[token2.ID]
+	seen      collections.Set[token2.ID]
 	walletID  string
 	tokenType string
 }
@@ -62,7 +62,7 @@ func newUnspentTokenIterator(qs QueryService, mailman *Mailman, walletID, tokenT
 			qs:      qs,
 			mailman: mailman,
 		},
-		seen:      utils.NewSet[token2.ID](),
+		seen:      collections.NewSet[token2.ID](),
 		walletID:  walletID,
 		tokenType: tokenType,
 	}}
@@ -74,7 +74,7 @@ func (m *unspentTokenIterator) Next() (*token2.UnspentToken, error) {
 		return nil, err
 	}
 	if res != nil {
-		m.seen[*res.Id] = struct{}{} // TODO: Add add method
+		m.seen.Add(*res.Id)
 		return res, nil
 	}
 	logger.Debugf("No more tokens found in mailman. Attempting to look up in the tokenDB...")
@@ -83,15 +83,7 @@ func (m *unspentTokenIterator) Next() (*token2.UnspentToken, error) {
 	if err != nil {
 		return nil, err
 	}
-	updates := make([]update, 0)
-	for tok, err := it.Next(); tok != nil && err == nil; tok, err = it.Next() {
-		if !m.seen.Contains(*tok.Id) {
-			logger.Debugf("Found token %s, will add it to mailman", tok)
-			updates = append(updates, update{op: Add, tokenID: *tok.Id})
-		} else {
-			logger.Debugf("Found token %s, but we have already used it", tok)
-		}
-	}
+	updates := tokenUpdates(it, m.seen)
 	if len(updates) == 0 {
 		logger.Debugf("No new tokens found. Returning empty result")
 		return nil, nil
@@ -106,6 +98,19 @@ func (m *unspentTokenIterator) Next() (*token2.UnspentToken, error) {
 		logger.Debugf("Attempt to poll the mailman again until the new tokens have been added")
 		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+func tokenUpdates(it driver.UnspentTokensIterator, seen collections.Set[token2.ID]) []update {
+	updates := make([]update, 0)
+	for tok, err := it.Next(); tok != nil && err == nil; tok, err = it.Next() {
+		if !seen.Contains(*tok.Id) {
+			logger.Debugf("Found token %s, will add it to mailman", tok)
+			updates = append(updates, update{op: Add, tokenID: *tok.Id})
+		} else {
+			logger.Debugf("Found token %s, but we have already used it", tok)
+		}
+	}
+	return updates
 }
 
 //func newUnspentTokenIterator(qs QueryService, mailman *Mailman) *token.UnspentTokensIterator {
