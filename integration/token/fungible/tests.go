@@ -531,13 +531,9 @@ func TestAll(network *integration.Infrastructure, auditor string, onAuditorResta
 	SetTransactionOwnersStatus(network, txID3, ttx.Deleted, sel.All("alice", "bob")...)
 
 	// Restart
-	CheckOwnerDB(network, []string{ // TODO: AF
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Deleted]", txID3),
-		fmt.Sprintf("transaction record [%s] is unknown for vault but not for the db [Deleted]", txID3),
-	}, "bob")
-	//CheckOwnerDB(network, nil, sel.All("bob", "alice")...)
-	//CheckOwnerDB(network, nil, sel.All("issuer", "charlie", "manager")...)
-	//CheckAuditorDB(network, auditor, "", nil)
+	CheckOwnerDB(network, nil, sel.All("bob", "alice")...)
+	CheckOwnerDB(network, nil, sel.All("issuer", "charlie", "manager")...)
+	CheckAuditorDB(network, auditor, "", nil)
 	Restart(network, false, sel.All("alice", "bob", "charlie", "manager")...)
 	CheckOwnerDB(network, nil, sel.All("bob", "alice")...)
 	CheckOwnerDB(network, nil, sel.All("issuer", "charlie", "manager")...)
