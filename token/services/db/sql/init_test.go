@@ -32,6 +32,7 @@ func TestGetTableNames(t *testing.T) {
 		IdentityConfigurations: "id_configs",
 		IdentityInfo:           "id_info",
 		Signers:                "signers",
+		TokenLocks:             "token_locks",
 	}, names)
 
 	names, err = getTableNames("valid_prefix")

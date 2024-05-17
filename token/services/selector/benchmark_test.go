@@ -15,6 +15,8 @@ import (
 
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/mailman"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock"
+	inmemory2 "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/sherdlock/inmemory"
 	selector "github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/simple/inmemory"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/services/selector/testutils"
@@ -23,6 +25,8 @@ import (
 
 func BenchmarkSelectorSingle(b *testing.B) {
 	settings := []Setting{
+		{name: "sherdlock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewNoLocker},
+		{name: "sherdlock+lock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
 		{name: "simple", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelector, lockProvider: NewNoLocker},
 		{name: "simple+mailman", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelectorWithMailman, lockProvider: NewNoLocker},
 		{name: "selector+nolock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelector, lockProvider: NewNoLocker},
@@ -57,6 +61,10 @@ func BenchmarkSelectorSingle(b *testing.B) {
 
 func BenchmarkSelectorParallel(b *testing.B) {
 	settings := []Setting{
+		{name: "sherdlock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewNoLocker},
+		{name: "sherdlock+lock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
+		{name: "sherdlock+lock+parallelism", clients: 10, tokens: 10 * testutils.NumTokensPerWallet, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
+		{name: "sherdlock+lock+contention", clients: 8, tokens: testutils.NumTokensPerWallet / 1000, selectorProvider: NewSherdSelector, lockProvider: NewLocker},
 		{name: "simple", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelector, lockProvider: NewNoLocker},
 		{name: "simple+mailman", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSimpleSelectorWithMailman, lockProvider: NewNoLocker},
 		{name: "selector+nolock", clients: 1, tokens: testutils.NumTokensPerWallet, selectorProvider: NewSelector, lockProvider: NewNoLocker},
@@ -69,6 +77,7 @@ func BenchmarkSelectorParallel(b *testing.B) {
 		setup(&s)
 		b.ResetTimer()
 		b.Run(s.name, func(b *testing.B) {
+			b.SetParallelism(s.clients)
 			b.RunParallel(func(pb *testing.PB) {
 				for pb.Next() {
 					// select
@@ -173,6 +182,13 @@ func NewSelectorWithMailman(qs *testutils.MockQueryService, walletIDByRawIdentit
 		Selector: s,
 		Lock:     mmlock,
 	}, mmManager.Shutdown
+}
+
+func NewSherdSelector(qs *testutils.MockQueryService, _ mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {
+	return &mailman.ExtendedSelector{
+		Selector: sherdlock.NewSherdSelector(testutils.TxID, qs, inmemory2.NewLocker(lock), testutils.TokenQuantityPrecision, sherdlock.NoBackoff),
+		Lock:     nil,
+	}, nil
 }
 
 func NewSimpleSelector(qs *testutils.MockQueryService, walletIDByRawIdentity mailman.WalletIDByRawIdentityFunc, lock selector.Locker) (ExtendedSelector, CleanupFunction) {

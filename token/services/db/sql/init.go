@@ -58,6 +58,7 @@ type tableNames struct {
 	IdentityConfigurations string
 	IdentityInfo           string
 	Signers                string
+	TokenLocks             string
 }
 
 func getTableNames(prefix string) (tableNames, error) {
@@ -86,5 +87,6 @@ func getTableNames(prefix string) (tableNames, error) {
 		IdentityConfigurations: fmt.Sprintf("%sid_configs", prefix),
 		IdentityInfo:           fmt.Sprintf("%sid_info", prefix),
 		Signers:                fmt.Sprintf("%ssigners", prefix),
+		TokenLocks:             fmt.Sprintf("%stoken_locks", prefix),
 	}, nil
 }
