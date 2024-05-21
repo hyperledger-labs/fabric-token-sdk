@@ -24,7 +24,7 @@ var _ = Describe("Orion EndToEnd", func() {
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true, selector)
+			fungible.TestAll(ts.II, "auditor", true, selector)
 		})
 	})
 

@@ -56,7 +56,7 @@ var _ = Describe("EndToEnd", func() {
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true, selector)
+			fungible.TestAll(ts.II, "auditor", true, selector)
 		})
 	})
 
@@ -90,7 +90,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(network, "auditor", nil)
+			fungible.RegisterAuditor(network, "auditor")
 			rId := fungible.GetRevocationHandle(network, "bob")
 			fungible.TestRevokeIdentity(network, "auditor", rId, hash.Hashable(rId).String()+" Identity is in revoked state")
 		})
@@ -111,7 +111,7 @@ var _ = Describe("EndToEnd", func() {
 		AfterEach(ts.TearDown)
 
 		It("T2.1 succeeded", func() {
-			fungible.TestAll(ts.II, "issuer", nil, true, selector)
+			fungible.TestAll(ts.II, "issuer", true, selector)
 		})
 
 		It("T2.2 Update public params", func() {
@@ -127,7 +127,7 @@ var _ = Describe("EndToEnd", func() {
 		BeforeEach(ts.Setup)
 		AfterEach(ts.TearDown)
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, false, selector)
+			fungible.TestAll(ts.II, "auditor", false, selector)
 		})
 	})
 
@@ -154,6 +154,7 @@ func newTestSuite(commType fsc.P2PCommunicationType, aries, noAuditor, auditorAs
 			Aries:           aries,
 			AuditorAsIssuer: auditorAsIssuer,
 			NoAuditor:       noAuditor,
+			FSCLogSpec:      "debug",
 			SDKs:            []api.SDK{&fabric.SDK{}, &sdk.SDK{}},
 			Replication:     opts,
 		},

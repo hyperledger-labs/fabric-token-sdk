@@ -29,7 +29,7 @@ var _ = Describe("EndToEnd", func() {
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true, selector)
+			fungible.TestAll(ts.II, "auditor", true, selector)
 		})
 
 		It("Update public params", func() {
@@ -52,7 +52,7 @@ var _ = Describe("EndToEnd", func() {
 		})
 
 		It("Test Identity Revocation", func() {
-			fungible.RegisterAuditor(ts.II, "auditor", nil)
+			fungible.RegisterAuditor(ts.II, "auditor")
 			rId := fungible.GetRevocationHandle(ts.II, "bob")
 			fungible.TestRevokeIdentity(ts.II, "auditor", rId, " Identity is in revoked state")
 		})

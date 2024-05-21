@@ -25,7 +25,7 @@ var _ = Describe("EndToEnd", func() {
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "auditor", nil, true, selector)
+			fungible.TestAll(ts.II, "auditor", true, selector)
 		})
 	})
 
@@ -36,7 +36,7 @@ var _ = Describe("EndToEnd", func() {
 		AfterEach(ts.TearDown)
 
 		It("succeeded", func() {
-			fungible.TestAll(ts.II, "issuer", nil, true, selector)
+			fungible.TestAll(ts.II, "issuer", true, selector)
 		})
 	})
 
