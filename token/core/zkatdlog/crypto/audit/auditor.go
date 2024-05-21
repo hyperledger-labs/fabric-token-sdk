@@ -331,12 +331,12 @@ func GetAuditInfoForIssues(issues [][]byte, metadata []driver.IssueMetadata) ([]
 			return nil, err
 		}
 
-		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.TokenInfo) {
+		if len(ia.OutputTokens) != len(md.ReceiversAuditInfos) || len(ia.OutputTokens) != len(md.OutputsMetadata) {
 			return nil, errors.Errorf("number of output does not match number of provided metadata")
 		}
 		for i := 0; i < len(md.ReceiversAuditInfos); i++ {
 			ti := &token.Metadata{}
-			err := json.Unmarshal(md.TokenInfo[i], ti)
+			err := json.Unmarshal(md.OutputsMetadata[i], ti)
 			if err != nil {
 				return nil, err
 			}

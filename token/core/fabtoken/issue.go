@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package fabtoken
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -26,7 +25,7 @@ func NewIssueService(publicParamsManager driver.PublicParamsManager, walletServi
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization OutputMetadata associated with issued tokens
 // and the identity of the issuer
-func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
@@ -35,7 +34,7 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 	}
 
 	var outs []*Output
-	var metas [][]byte
+	var outputsMetadata [][]byte
 	pp := s.PublicParamsManager.PublicParameters()
 	if pp == nil {
 		return nil, nil, errors.Errorf("public paramenters not set")
@@ -63,7 +62,7 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 		if err != nil {
 			return nil, nil, errors.Wrapf(err, "failed serializing token information")
 		}
-		metas = append(metas, metaRaw)
+		outputsMetadata = append(outputsMetadata, metaRaw)
 	}
 
 	action := &IssueAction{Issuer: issuerIdentity, Outputs: outs}
@@ -79,8 +78,8 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerIdentity,
 		Outputs:             outputs,
-		TokenInfo:           metas,
-		Receivers:           []view.Identity{view.Identity(owners[0])},
+		OutputsMetadata:     outputsMetadata,
+		Receivers:           []driver.Identity{driver.Identity(owners[0])},
 		ReceiversAuditInfos: auditInfo,
 		ExtraSigners:        nil,
 	}

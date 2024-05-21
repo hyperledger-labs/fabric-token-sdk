@@ -423,7 +423,7 @@ func prepareIssue(auditor *audit.Auditor, issuer *issue2.Issuer) (*driver.TokenR
 	}
 
 	metadata := driver.IssueMetadata{}
-	metadata.TokenInfo = marshalledinf
+	metadata.OutputsMetadata = marshalledinf
 	metadata.Outputs = make([][]byte, len(issue.OutputTokens))
 	metadata.ReceiversAuditInfos = make([][]byte, len(issue.OutputTokens))
 	for i := 0; i < len(issue.OutputTokens); i++ {

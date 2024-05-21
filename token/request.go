@@ -248,7 +248,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q u
 	}
 
 	// Compute Issue
-	issue, meta, err := r.TokenService.tms.IssueService().Issue(
+	action, meta, err := r.TokenService.tms.IssueService().Issue(
 		id,
 		typ,
 		[]uint64{q},
@@ -262,36 +262,14 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q u
 	}
 
 	// Append
-	raw, err := issue.Serialize()
+	raw, err := action.Serialize()
 	if err != nil {
 		return nil, err
 	}
 	r.Actions.Issues = append(r.Actions.Issues, raw)
-	outputs, err := issue.GetSerializedOutputs()
-	if err != nil {
-		return nil, err
-	}
+	r.Metadata.Issues = append(r.Metadata.Issues, *meta)
 
-	auditInfo, err := r.TokenService.tms.WalletService().GetAuditInfo(receiver)
-	if err != nil {
-		return nil, err
-	}
-	if r.Metadata == nil {
-		return nil, errors.New("failed to complete issue: nil ValidationRecords in token request")
-	}
-
-	r.Metadata.Issues = append(r.Metadata.Issues,
-		driver.IssueMetadata{
-			Issuer:              meta.Issuer,
-			Outputs:             outputs,
-			TokenInfo:           meta.TokenInfo,
-			Receivers:           []Identity{receiver},
-			ReceiversAuditInfos: [][]byte{auditInfo},
-			ExtraSigners:        meta.ExtraSigners,
-		},
-	)
-
-	return &IssueAction{a: issue}, nil
+	return &IssueAction{a: action}, nil
 }
 
 // Transfer appends a transfer action to the request. The action will be prepared using the provided owner wallet.
@@ -497,10 +475,10 @@ func (r *Request) extractIssueOutputs(i int, counter uint64, issueAction driver.
 			counter++
 			continue
 		}
-		if len(issueAction.GetOutputs()) != len(issueMeta.TokenInfo) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
+		if len(issueAction.GetOutputs()) != len(issueMeta.OutputsMetadata) || len(issueMeta.ReceiversAuditInfos) != len(issueAction.GetOutputs()) {
 			return nil, 0, errors.Wrapf(err, "failed matching issue action with its metadata [%d]: invalid metadata", i)
 		}
-		tok, _, err := tms.TokensService().DeserializeToken(raw, issueMeta.TokenInfo[j])
+		tok, _, err := tms.TokensService().DeserializeToken(raw, issueMeta.OutputsMetadata[j])
 		if err != nil {
 			return nil, 0, errors.Wrapf(err, "failed getting issue action output in the clear [%d,%d]", i, j)
 		}
@@ -722,7 +700,7 @@ func (r *Request) inputsAndOutputs(failOnMissing, verifyActions bool) (*InputStr
 		}
 
 		if verifyActions {
-			if err := issueService.VerifyIssue(issueAction, issueMeta.TokenInfo); err != nil {
+			if err := issueService.VerifyIssue(issueAction, issueMeta.OutputsMetadata); err != nil {
 				return nil, nil, errors.WithMessagef(err, "failed verifying issue action")
 			}
 		}

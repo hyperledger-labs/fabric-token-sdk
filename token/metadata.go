@@ -71,13 +71,13 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 				return nil, errors.Wrap(err, "failed getting enrollment ID")
 			}
 			var Outputs []byte
-			var TokenInfo []byte
+			var OutputsMetadata []byte
 			var Receivers Identity
 			var ReceiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
 				Outputs = issue.Outputs[i]
-				TokenInfo = issue.TokenInfo[i]
+				OutputsMetadata = issue.OutputsMetadata[i]
 				Receivers = issue.Receivers[i]
 				ReceiverAuditInfos = issue.ReceiversAuditInfos[i]
 			} else {
@@ -85,7 +85,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 
 			issueRes.Outputs = append(issueRes.Outputs, Outputs)
-			issueRes.TokenInfo = append(issueRes.TokenInfo, TokenInfo)
+			issueRes.OutputsMetadata = append(issueRes.OutputsMetadata, OutputsMetadata)
 			issueRes.Receivers = append(issueRes.Receivers, Receivers)
 			issueRes.ReceiversAuditInfos = append(issueRes.ReceiversAuditInfos, ReceiverAuditInfos)
 		}
@@ -190,8 +190,8 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 	if len(m.Outputs) != action.NumOutputs() {
 		return errors.Errorf("expected [%d] outputs but got [%d]", len(m.Outputs), action.NumOutputs())
 	}
-	if len(m.Outputs) != len(m.TokenInfo) {
-		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.TokenInfo))
+	if len(m.Outputs) != len(m.OutputsMetadata) {
+		return errors.Errorf("expected [%d] token info but got [%d]", len(m.Outputs), len(m.OutputsMetadata))
 	}
 	if len(m.Outputs) != len(m.Receivers) {
 		return errors.Errorf("expected [%d] receivers but got [%d]", len(m.Outputs), len(m.Receivers))
@@ -204,7 +204,7 @@ func (m *IssueMetadata) Match(action *IssueAction) error {
 
 // IsOutputAbsent returns true if the given output's metadata is absent
 func (m *IssueMetadata) IsOutputAbsent(j int) bool {
-	return len(m.TokenInfo[j]) == 0
+	return len(m.OutputsMetadata[j]) == 0
 }
 
 // TransferMetadata contains the metadata of a transfer action

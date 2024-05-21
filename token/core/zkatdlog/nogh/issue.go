@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package nogh
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	common2 "github.com/hyperledger-labs/fabric-token-sdk/token/core/common"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/zkatdlog/crypto/common"
@@ -37,7 +36,7 @@ func NewIssueService(
 // Issue returns an IssueAction as a function of the passed arguments
 // Issue also returns a serialization TokenInformation associated with issued tokens
 // and the identity of the issuer
-func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
+func (s *IssueService) Issue(issuerIdentity driver.Identity, tokenType string, values []uint64, owners [][]byte, opts *driver.IssueOptions) (driver.IssueAction, *driver.IssueMetadata, error) {
 	for _, owner := range owners {
 		// a recipient cannot be empty
 		if len(owner) == 0 {
@@ -61,18 +60,18 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 		Signer:   signer,
 	}, pp)
 
-	issue, outputMetadata, err := issuer.GenerateZKIssue(values, owners)
+	action, zkOutputsMetadata, err := issuer.GenerateZKIssue(values, owners)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	var outputMetadataRaw [][]byte
-	for _, meta := range outputMetadata {
+	var outputsMetadata [][]byte
+	for _, meta := range zkOutputsMetadata {
 		raw, err := meta.Serialize()
 		if err != nil {
 			return nil, nil, errors.WithMessage(err, "failed serializing token info")
 		}
-		outputMetadataRaw = append(outputMetadataRaw, raw)
+		outputsMetadata = append(outputsMetadata, raw)
 	}
 
 	issuerSerializedIdentity, err := issuer.Signer.Serialize()
@@ -80,7 +79,7 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 		return nil, nil, err
 	}
 
-	outputs, err := issue.GetSerializedOutputs()
+	outputs, err := action.GetSerializedOutputs()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -92,12 +91,12 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 	meta := &driver.IssueMetadata{
 		Issuer:              issuerSerializedIdentity,
 		Outputs:             outputs,
-		TokenInfo:           outputMetadataRaw,
-		Receivers:           []view.Identity{view.Identity(owners[0])},
+		OutputsMetadata:     outputsMetadata,
+		Receivers:           []driver.Identity{driver.Identity(owners[0])},
 		ReceiversAuditInfos: auditInfo,
 		ExtraSigners:        nil,
 	}
-	return issue, meta, err
+	return action, meta, err
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed metadata

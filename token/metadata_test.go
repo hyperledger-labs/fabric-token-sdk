@@ -150,7 +150,7 @@ func testFilterByCase1(t *testing.T) {
 	aliceIssue := driver.IssueMetadata{
 		Issuer:              token.Identity("Issuer"),
 		Outputs:             [][]byte{[]byte("Alice's output")},
-		TokenInfo:           [][]byte{[]byte("Alice's output's token info")},
+		OutputsMetadata:     [][]byte{[]byte("Alice's output's token info")},
 		Receivers:           []token.Identity{token.Identity("Alice")},
 		ReceiversAuditInfos: [][]byte{[]byte("Alice")},
 	}
@@ -159,7 +159,7 @@ func testFilterByCase1(t *testing.T) {
 	bobIssue := driver.IssueMetadata{
 		Issuer:              token.Identity("Issuer"),
 		Outputs:             [][]byte{[]byte("Bob's output")},
-		TokenInfo:           [][]byte{[]byte("Bob's output's token info")},
+		OutputsMetadata:     [][]byte{[]byte("Bob's output's token info")},
 		Receivers:           []token.Identity{token.Identity("Bob")},
 		ReceiversAuditInfos: [][]byte{[]byte("Bob")},
 	}
@@ -244,7 +244,7 @@ func testFilterByCase1(t *testing.T) {
 func assertEqualIssueMetadata(t *testing.T, original, filtered *driver.IssueMetadata) {
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	assert.Equal(t, original.Outputs, filtered.Outputs)
-	assert.Equal(t, original.TokenInfo, filtered.TokenInfo)
+	assert.Equal(t, original.OutputsMetadata, filtered.OutputsMetadata)
 	assert.Equal(t, original.Receivers, filtered.Receivers)
 }
 
@@ -253,7 +253,7 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 	assert.Equal(t, original.Issuer, filtered.Issuer)
 	// assert that the lengths are the same
 	assert.Len(t, original.Outputs, len(filtered.Outputs))
-	assert.Len(t, original.TokenInfo, len(filtered.TokenInfo))
+	assert.Len(t, original.OutputsMetadata, len(filtered.OutputsMetadata))
 	assert.Len(t, original.Receivers, len(filtered.Receivers))
 	assert.Len(t, original.ReceiversAuditInfos, len(filtered.ReceiversAuditInfos))
 
@@ -262,8 +262,8 @@ func assertEmptyIssueMetadata(t *testing.T, original, filtered *driver.IssueMeta
 		assert.Empty(t, filtered.Outputs[i])
 	}
 	// assert that the token info is empty
-	for i := 0; i < len(original.TokenInfo); i++ {
-		assert.Empty(t, filtered.TokenInfo[i])
+	for i := 0; i < len(original.OutputsMetadata); i++ {
+		assert.Empty(t, filtered.OutputsMetadata[i])
 	}
 	// assert that the receivers are empty
 	for i := 0; i < len(original.Receivers); i++ {

@@ -45,8 +45,8 @@ type IssueMetadata struct {
 
 	// Outputs is the list of outputs issued
 	Outputs [][]byte
-	// TokenInfo, for each output we have a TokenInfo entry that contains secrets to de-obfuscate the output
-	TokenInfo [][]byte
+	// OutputsMetadata, for each output we have a OutputsMetadata entry that contains secrets to de-obfuscate the output
+	OutputsMetadata [][]byte
 	// Receivers, for each output we have a receiver
 	Receivers []Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
@@ -109,12 +109,12 @@ type TokenRequestMetadata struct {
 	Application map[string][]byte
 }
 
-// GetTokenInfo returns the TokenInfo that matches the given token
+// GetTokenInfo returns the OutputsMetadata that matches the given token
 func (m *TokenRequestMetadata) GetTokenInfo(tokenRaw []byte) []byte {
 	for _, issue := range m.Issues {
 		for i, output := range issue.Outputs {
 			if bytes.Equal(output, tokenRaw) {
-				return issue.TokenInfo[i]
+				return issue.OutputsMetadata[i]
 			}
 		}
 	}
@@ -145,7 +145,7 @@ func (m *TokenRequestMetadata) Bytes() ([]byte, error) {
 			TokenIDs:           TokenIDs,
 			Outputs:            transfer.Outputs,
 			OutputAuditInfos:   transfer.OutputAuditInfos,
-			TokenInfo:          transfer.OutputsMetadata,
+			OutputsMetadata:    transfer.OutputsMetadata,
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
 			Receivers:          transfer.Receivers,
@@ -183,7 +183,7 @@ func (m *TokenRequestMetadata) FromBytes(raw []byte) error {
 			TokenIDs:           TokenIDs,
 			Outputs:            transfer.Outputs,
 			OutputAuditInfos:   transfer.OutputAuditInfos,
-			OutputsMetadata:    transfer.TokenInfo,
+			OutputsMetadata:    transfer.OutputsMetadata,
 			Senders:            transfer.Senders,
 			SenderAuditInfos:   transfer.SenderAuditInfos,
 			Receivers:          transfer.Receivers,
@@ -208,7 +208,7 @@ type TransferMetadataSer struct {
 	TokenIDs           []TokenIDSer
 	Outputs            [][]byte
 	OutputAuditInfos   [][]byte
-	TokenInfo          [][]byte
+	OutputsMetadata    [][]byte
 	Senders            []Identity
 	SenderAuditInfos   [][]byte
 	Receivers          []Identity
