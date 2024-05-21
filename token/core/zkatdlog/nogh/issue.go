@@ -19,10 +19,19 @@ import (
 type IssueService struct {
 	PublicParametersManager common2.PublicParametersManager[*crypto.PublicParams]
 	WalletService           driver.WalletService
+	Deserializer            driver.Deserializer
 }
 
-func NewIssueService(publicParametersManager common2.PublicParametersManager[*crypto.PublicParams], walletService driver.WalletService) *IssueService {
-	return &IssueService{PublicParametersManager: publicParametersManager, WalletService: walletService}
+func NewIssueService(
+	publicParametersManager common2.PublicParametersManager[*crypto.PublicParams],
+	walletService driver.WalletService,
+	deserializer driver.Deserializer,
+) *IssueService {
+	return &IssueService{
+		PublicParametersManager: publicParametersManager,
+		WalletService:           walletService,
+		Deserializer:            deserializer,
+	}
 }
 
 // Issue returns an IssueAction as a function of the passed arguments
@@ -71,9 +80,22 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 		return nil, nil, err
 	}
 
+	outputs, err := issue.GetSerializedOutputs()
+	if err != nil {
+		return nil, nil, err
+	}
+	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	meta := &driver.IssueMetadata{
-		Issuer:    issuerSerializedIdentity,
-		TokenInfo: outputMetadataRaw,
+		Issuer:              issuerSerializedIdentity,
+		Outputs:             outputs,
+		TokenInfo:           outputMetadataRaw,
+		Receivers:           []view.Identity{view.Identity(owners[0])},
+		ReceiversAuditInfos: auditInfo,
+		ExtraSigners:        nil,
 	}
 	return issue, meta, err
 }

@@ -15,10 +15,12 @@ import (
 
 type IssueService struct {
 	PublicParamsManager driver.PublicParamsManager
+	WalletService       driver.WalletService
+	Deserializer        driver.Deserializer
 }
 
-func NewIssueService(publicParamsManager driver.PublicParamsManager) *IssueService {
-	return &IssueService{PublicParamsManager: publicParamsManager}
+func NewIssueService(publicParamsManager driver.PublicParamsManager, walletService driver.WalletService, deserializer driver.Deserializer) *IssueService {
+	return &IssueService{PublicParamsManager: publicParamsManager, WalletService: walletService, Deserializer: deserializer}
 }
 
 // Issue returns an IssueAction as a function of the passed arguments
@@ -64,12 +66,25 @@ func (s *IssueService) Issue(issuerIdentity view.Identity, tokenType string, val
 		metas = append(metas, metaRaw)
 	}
 
-	meta := &driver.IssueMetadata{
-		Issuer:    issuerIdentity,
-		TokenInfo: metas,
+	action := &IssueAction{Issuer: issuerIdentity, Outputs: outs}
+	outputs, err := action.GetSerializedOutputs()
+	if err != nil {
+		return nil, nil, err
+	}
+	auditInfo, err := s.Deserializer.GetOwnerAuditInfo(owners[0], s.WalletService)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	return &IssueAction{Issuer: issuerIdentity, Outputs: outs}, meta, nil
+	meta := &driver.IssueMetadata{
+		Issuer:              issuerIdentity,
+		Outputs:             outputs,
+		TokenInfo:           metas,
+		Receivers:           []view.Identity{view.Identity(owners[0])},
+		ReceiversAuditInfos: auditInfo,
+		ExtraSigners:        nil,
+	}
+	return action, meta, nil
 }
 
 // VerifyIssue checks if the outputs of an IssueAction match the passed tokenInfos

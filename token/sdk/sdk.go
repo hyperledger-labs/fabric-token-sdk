@@ -10,6 +10,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
+
 	"github.com/hyperledger-labs/fabric-smart-client/platform/fabric"
 	orion2 "github.com/hyperledger-labs/fabric-smart-client/platform/orion"
 	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
@@ -118,6 +120,7 @@ func (p *SDK) Install() error {
 
 	// Register the token management service provider
 	tmsp := token.NewManagementServiceProvider(
+		logging.MustGetLogger("token-sdk"),
 		tmsProvider,
 		network2.NewNormalizer(network.GetProvider(p.registry), fabricNSP, orionNSP, config.NewTokenSDK(configProvider)),
 		&vault.ProviderAdaptor{Provider: networkProvider},

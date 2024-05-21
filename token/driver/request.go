@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"encoding/asn1"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -42,20 +41,20 @@ func (r *TokenRequest) FromBytes(raw []byte) error {
 // For each output, there is a token info and a list of receivers with their audit info to recover their enrollment ID.
 type IssueMetadata struct {
 	// Issuer is the identity of the issuer
-	Issuer view.Identity
+	Issuer Identity
 
 	// Outputs is the list of outputs issued
 	Outputs [][]byte
 	// TokenInfo, for each output we have a TokenInfo entry that contains secrets to de-obfuscate the output
 	TokenInfo [][]byte
 	// Receivers, for each output we have a receiver
-	Receivers []view.Identity
+	Receivers []Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
 	ReceiversAuditInfos [][]byte
 
 	// ExtraSigners is the list of extra identities that are not part of the issue action per se
 	// but needs to sign the request
-	ExtraSigners []view.Identity
+	ExtraSigners []Identity
 }
 
 // TransferMetadata contains the metadata of a transfer action
@@ -69,7 +68,7 @@ type TransferMetadata struct {
 	// TokenIDs is the list of TokenIDs spent by this action
 	TokenIDs []*token.ID
 	// Senders is the list of senders
-	Senders []view.Identity
+	Senders []Identity
 	// SendersAuditInfos, for each sender we have audit info to recover the enrollment ID of the sender
 	SenderAuditInfos [][]byte
 
@@ -80,7 +79,7 @@ type TransferMetadata struct {
 	// OutputAuditInfos, for each output owner we have audit info
 	OutputAuditInfos [][]byte
 	// Receivers is the list of receivers
-	Receivers []view.Identity
+	Receivers []Identity
 	// ReceiversAuditInfos, for each receiver we have audit info to recover the enrollment ID of the receiver
 	ReceiverAuditInfos [][]byte
 	// ReceiverIsSender indicates if the receiver is a sender in this very same action
@@ -88,7 +87,7 @@ type TransferMetadata struct {
 
 	// ExtraSigners is the list of extra identities that are not part of the transfer action per se
 	// but needs to sign the request
-	ExtraSigners []view.Identity
+	ExtraSigners []Identity
 }
 
 // TokenIDAt returns the TokenID at the given index.
@@ -210,12 +209,12 @@ type TransferMetadataSer struct {
 	Outputs            [][]byte
 	OutputAuditInfos   [][]byte
 	TokenInfo          [][]byte
-	Senders            []view.Identity
+	Senders            []Identity
 	SenderAuditInfos   [][]byte
-	Receivers          []view.Identity
+	Receivers          []Identity
 	ReceiverIsSender   []bool
 	ReceiverAuditInfos [][]byte
-	ExtraSigners       []view.Identity
+	ExtraSigners       []Identity
 }
 
 type tokenRequestMetadataSer struct {

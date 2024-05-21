@@ -141,7 +141,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		fabtoken.NewIssueService(publicParamsManager),
+		fabtoken.NewIssueService(publicParamsManager, ws, deserializer),
 		fabtoken.NewTransferService(logger, publicParamsManager, ws, common.NewVaultTokenLoader(qe), deserializer),
 		fabtoken.NewAuditorService(),
 		fabtoken.NewTokensService(),

@@ -9,7 +9,6 @@ package driver
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/stretchr/testify/assert"
 
 	token2 "github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -47,7 +46,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("token_info1"),
 					[]byte("token_info2"),
 				},
-				Receivers: []view.Identity{
+				Receivers: []Identity{
 					[]byte("receiver1"),
 					[]byte("receiver2"),
 				},
@@ -55,7 +54,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("audit_info1"),
 					[]byte("audit_info2"),
 				},
-				ExtraSigners: []view.Identity{
+				ExtraSigners: []Identity{
 					[]byte("issue_extra_signer1"),
 					[]byte("issue_extra_signer2"),
 				},
@@ -85,7 +84,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("output_token_audit_info1"),
 					[]byte("output_token_audit_info2"),
 				},
-				Senders: []view.Identity{
+				Senders: []Identity{
 					[]byte("sender1"),
 					[]byte("sender2"),
 				},
@@ -93,7 +92,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("sender_audit_info1"),
 					[]byte("sender_audit_info2"),
 				},
-				Receivers: []view.Identity{
+				Receivers: []Identity{
 					[]byte("receiver1"),
 					[]byte("receiver2"),
 				},
@@ -102,7 +101,7 @@ func TestTokenRequestMetadataSerialization(t *testing.T) {
 					[]byte("receiver_audit_info1"),
 					[]byte("receiver_audit_info2"),
 				},
-				ExtraSigners: []view.Identity{
+				ExtraSigners: []Identity{
 					[]byte("extra_signer1"),
 					[]byte("extra_signer2"),
 				},

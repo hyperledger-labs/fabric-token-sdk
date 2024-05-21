@@ -7,14 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package driver
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 )
 
 // RecipientData contains information about the identity of a token owner
 type RecipientData struct {
 	// Identity is the identity of the token owner
-	Identity view.Identity
+	Identity Identity
 	// AuditInfo contains private information Identity
 	AuditInfo []byte
 	// TokenMetadata contains public information related to the token to be assigned to this Recipient.
@@ -35,13 +34,13 @@ type Wallet interface {
 	ID() string
 
 	// Contains returns true if the passed identity belongs to this wallet
-	Contains(identity view.Identity) bool
+	Contains(identity Identity) bool
 
 	// ContainsToken returns true if the passed token is owned by this wallet
 	ContainsToken(token *token.UnspentToken) bool
 
 	// GetSigner returns the Signer bound to the passed identity
-	GetSigner(identity view.Identity) (Signer, error)
+	GetSigner(identity Identity) (Signer, error)
 }
 
 // OwnerWallet models the wallet of a token recipient.
@@ -54,16 +53,16 @@ type OwnerWallet interface {
 	// - Identity audit info via GetAuditInfo;
 	// - TokenMetadata via GetTokenMetadata;
 	// - TokenIdentityMetadata via GetTokenMetadataAuditInfo.
-	GetRecipientIdentity() (view.Identity, error)
+	GetRecipientIdentity() (Identity, error)
 
 	// GetAuditInfo returns auditing information for the passed identity
-	GetAuditInfo(id view.Identity) ([]byte, error)
+	GetAuditInfo(id Identity) ([]byte, error)
 
 	// GetTokenMetadata returns the public information related to the token to be assigned to passed recipient identity.
-	GetTokenMetadata(id view.Identity) ([]byte, error)
+	GetTokenMetadata(id Identity) ([]byte, error)
 
 	// GetTokenMetadataAuditInfo returns private information about the token metadata assigned to the passed recipient identity.
-	GetTokenMetadataAuditInfo(id view.Identity) ([]byte, error)
+	GetTokenMetadataAuditInfo(id Identity) ([]byte, error)
 
 	// ListTokens returns the list of unspent tokens owned by this wallet filtered using the passed options.
 	ListTokens(opts *ListTokensOptions) (*token.UnspentTokens, error)
@@ -87,7 +86,7 @@ type IssuerWallet interface {
 
 	// GetIssuerIdentity returns an issuer identity for the passed token type.
 	// Depending on the underlying wallet implementation, this can be a long-term or ephemeral identity.
-	GetIssuerIdentity(tokenType string) (view.Identity, error)
+	GetIssuerIdentity(tokenType string) (Identity, error)
 
 	// HistoryTokens returns the list of tokens issued by this wallet filtered using the passed options.
 	HistoryTokens(opts *ListTokensOptions) (*token.IssuedTokens, error)
@@ -99,7 +98,7 @@ type AuditorWallet interface {
 
 	// GetAuditorIdentity returns an auditor identity.
 	// Depending on the underlying wallet implementation, this can be a long-term or ephemeral identity.
-	GetAuditorIdentity() (view.Identity, error)
+	GetAuditorIdentity() (Identity, error)
 }
 
 // CertifierWallet models the wallet of a certifier
@@ -108,7 +107,7 @@ type CertifierWallet interface {
 
 	// GetCertifierIdentity returns a certifier identity.
 	// Depending on the underlying wallet implementation, this can be a long-term or ephemeral identity.
-	GetCertifierIdentity() (view.Identity, error)
+	GetCertifierIdentity() (Identity, error)
 }
 
 type IdentityConfiguration struct {
@@ -131,16 +130,16 @@ type WalletService interface {
 	RegisterRecipientIdentity(data *RecipientData) error
 
 	// GetAuditInfo retrieves the audit information for the passed identity
-	GetAuditInfo(id view.Identity) ([]byte, error)
+	GetAuditInfo(id Identity) ([]byte, error)
 
 	// GetEnrollmentID extracts the enrollment id from the passed audit information
-	GetEnrollmentID(identity view.Identity, auditInfo []byte) (string, error)
+	GetEnrollmentID(identity Identity, auditInfo []byte) (string, error)
 
 	// GetRevocationHandler extracts the revocation handler from the passed audit information
-	GetRevocationHandler(identity view.Identity, auditInfo []byte) (string, error)
+	GetRevocationHandler(identity Identity, auditInfo []byte) (string, error)
 
 	// Wallet returns the wallet bound to the passed identity, if any is available
-	Wallet(identity view.Identity) Wallet
+	Wallet(identity Identity) Wallet
 
 	// RegisterOwnerIdentity registers an owner long-term identity
 	RegisterOwnerIdentity(config IdentityConfiguration) error
@@ -180,7 +179,7 @@ type Matcher interface {
 // AuditInfoProvider models a provider of audit information
 type AuditInfoProvider interface {
 	// GetAuditInfo returns the audit information for the given identity, if available.
-	GetAuditInfo(identity view.Identity) ([]byte, error)
+	GetAuditInfo(identity Identity) ([]byte, error)
 }
 
 //go:generate counterfeiter -o mock/deserializer.go -fake-name Deserializer . Deserializer
@@ -189,18 +188,18 @@ type AuditInfoProvider interface {
 // get signature verifiers
 type Deserializer interface {
 	// GetOwnerVerifier returns the verifier associated to the passed owner identity
-	GetOwnerVerifier(id view.Identity) (Verifier, error)
+	GetOwnerVerifier(id Identity) (Verifier, error)
 	// GetIssuerVerifier returns the verifier associated to the passed issuer identity
-	GetIssuerVerifier(id view.Identity) (Verifier, error)
+	GetIssuerVerifier(id Identity) (Verifier, error)
 	// GetAuditorVerifier returns the verifier associated to the passed auditor identity
-	GetAuditorVerifier(id view.Identity) (Verifier, error)
+	GetAuditorVerifier(id Identity) (Verifier, error)
 	// GetOwnerMatcher returns an identity matcher for the passed identity audit data
 	GetOwnerMatcher(auditData []byte) (Matcher, error)
 	// Recipients returns the recipient identities from the given serialized representation
-	Recipients(raw view.Identity) ([]view.Identity, error)
+	Recipients(raw Identity) ([]Identity, error)
 	// MatchOwnerIdentity returns nil if the given identity matches the given audit information.
 	// An error otherwise
-	MatchOwnerIdentity(identity view.Identity, info []byte) error
+	MatchOwnerIdentity(identity Identity, info []byte) error
 	// GetOwnerAuditInfo returns the audit information for each identity contained in the given serialized representation
 	GetOwnerAuditInfo(id Identity, p AuditInfoProvider) ([][]byte, error)
 }

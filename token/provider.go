@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
+	"github.com/hyperledger-labs/fabric-token-sdk/token/services/logging"
 	"github.com/pkg/errors"
 )
 
@@ -50,6 +50,7 @@ type CertificationClientProvider interface {
 
 // ManagementServiceProvider provides instances of the management service
 type ManagementServiceProvider struct {
+	logger                      logging.Logger
 	tmsProvider                 driver.TokenManagerServiceProvider
 	normalizer                  Normalizer
 	certificationClientProvider CertificationClientProvider
@@ -59,6 +60,7 @@ type ManagementServiceProvider struct {
 
 // NewManagementServiceProvider returns a new instance of ManagementServiceProvider
 func NewManagementServiceProvider(
+	logger logging.Logger,
 	tmsProvider driver.TokenManagerServiceProvider,
 	normalizer Normalizer,
 	vaultProvider VaultProvider,
@@ -66,6 +68,7 @@ func NewManagementServiceProvider(
 	selectorManagerProvider SelectorManagerProvider,
 ) *ManagementServiceProvider {
 	return &ManagementServiceProvider{
+		logger:                      logger,
 		tmsProvider:                 tmsProvider,
 		normalizer:                  normalizer,
 		vaultProvider:               vaultProvider,
@@ -95,7 +98,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		return nil, errors.Wrap(err, "failed to normalize options")
 	}
 
-	logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
+	p.logger.Debugf("get tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
 	var tokenService driver.TokenManagerService
 	driverOpts := driver.ServiceOptions{
@@ -115,9 +118,10 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 		return nil, errors.Wrapf(err, "failed getting TMS for [%s]", opt)
 	}
 
-	logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
+	p.logger.Debugf("returning tms for [%s,%s,%s]", opt.Network, opt.Channel, opt.Namespace)
 
 	ms := &ManagementService{
+		logger:                      logging.DeriveDriverLogger(p.logger, "", opt.Network, opt.Channel, opt.Namespace),
 		network:                     opt.Network,
 		channel:                     opt.Channel,
 		namespace:                   opt.Namespace,
@@ -137,7 +141,7 @@ func (p *ManagementServiceProvider) managementService(aNew bool, opts ...Service
 }
 
 func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
-	logger.Debugf("update tms [%s] with public params [%s]", tmsID, hash.Hashable(val))
+	p.logger.Debugf("update tms [%s] with public params [%s]", tmsID, Hashable(val))
 	err := p.tmsProvider.Update(driver.ServiceOptions{
 		Network:      tmsID.Network,
 		Channel:      tmsID.Channel,
@@ -147,7 +151,7 @@ func (p *ManagementServiceProvider) Update(tmsID TMSID, val []byte) error {
 	if err != nil {
 		return errors.Wrapf(err, "failed updating tms [%s]", tmsID)
 	}
-	logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, hash.Hashable(val))
+	p.logger.Debugf("update tms [%s] with public params [%s]...done", tmsID, Hashable(val))
 	return nil
 }
 

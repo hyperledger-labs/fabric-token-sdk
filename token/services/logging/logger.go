@@ -33,8 +33,20 @@ type Logger interface {
 	IsEnabledFor(level zapcore.Level) bool
 }
 
+func MustGetLogger(loggerName string) Logger {
+	return flogging.MustGetLogger(loggerName)
+}
+
 func DriverLogger(prefix string, networkID string, channel string, namespace string) Logger {
 	return flogging.MustGetLogger(loggerName(prefix, networkID, channel, namespace))
+}
+
+func DeriveDriverLogger(logger Logger, prefix string, networkID string, channel string, namespace string) Logger {
+	l, ok := logger.(*flogging.FabricLogger)
+	if !ok {
+		panic("invalid logger")
+	}
+	return l.Named(loggerName(prefix, networkID, channel, namespace))
 }
 
 func DriverLoggerFromPP(prefix string, ppIdentifier string) Logger {

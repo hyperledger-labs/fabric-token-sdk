@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
 )
@@ -26,7 +25,7 @@ type Output struct {
 	// Index is the absolute position of this output in the token request
 	Index uint64
 	// Owner is the identity of the owner of this output
-	Owner view.Identity
+	Owner Identity
 	// OwnerAuditInfo contains the audit information of the output's owner
 	OwnerAuditInfo []byte
 	// EnrollmentID is the enrollment ID of the owner of this output
@@ -68,7 +67,7 @@ func (o *OutputStream) Filter(f func(t *Output) bool) *OutputStream {
 }
 
 // ByRecipient filters the OutputStream to only include outputs that match the passed recipient.
-func (o *OutputStream) ByRecipient(id view.Identity) *OutputStream {
+func (o *OutputStream) ByRecipient(id Identity) *OutputStream {
 	return o.Filter(func(t *Output) bool {
 		return id.Equal(t.Owner)
 	})
@@ -169,7 +168,7 @@ func (o *OutputStream) String() string {
 type Input struct {
 	ActionIndex       int
 	Id                *token.ID
-	Owner             view.Identity
+	Owner             Identity
 	OwnerAuditInfo    []byte
 	EnrollmentID      string
 	RevocationHandler string

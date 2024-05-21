@@ -155,7 +155,7 @@ func (d *Driver) NewTokenService(sp driver.ServiceProvider, networkID string, ch
 		common.NewSerializer(),
 		deserializer,
 		tmsConfig,
-		zkatdlog.NewIssueService(ppm, ws),
+		zkatdlog.NewIssueService(ppm, ws, deserializer),
 		zkatdlog.NewTransferService(logger, ppm, ws, common.NewVaultLedgerTokenAndMetadataLoader[*token3.Token, *token3.Metadata](qe, tokDeserializer), deserializer),
 		zkatdlog.NewAuditorService(logger, ppm, common.NewLedgerTokenLoader[*token3.Token](logger, qe, tokDeserializer), deserializer),
 		zkatdlog.NewTokensService(ppm),

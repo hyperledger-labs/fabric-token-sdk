@@ -9,7 +9,6 @@ package token_test
 import (
 	"testing"
 
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver/mock"
@@ -39,11 +38,11 @@ func testFilterByCase0(t *testing.T) {
 				Index: 0,
 			},
 		},
-		Senders:            []view.Identity{view.Identity("Alice")},
+		Senders:            []token.Identity{token.Identity("Alice")},
 		SenderAuditInfos:   [][]byte{[]byte("Alice")},
 		Outputs:            [][]byte{[]byte("Bob's output")},
 		OutputsMetadata:    [][]byte{[]byte("Bob's output's token info")},
-		Receivers:          []view.Identity{view.Identity("Bob")},
+		Receivers:          []token.Identity{token.Identity("Bob")},
 		ReceiverAuditInfos: [][]byte{[]byte("Bob")},
 		ReceiverIsSender:   []bool{false},
 	}
@@ -55,11 +54,11 @@ func testFilterByCase0(t *testing.T) {
 				Index: 0,
 			},
 		},
-		Senders:            []view.Identity{view.Identity("Charlie")},
+		Senders:            []token.Identity{token.Identity("Charlie")},
 		SenderAuditInfos:   [][]byte{[]byte("Charlie")},
 		Outputs:            [][]byte{[]byte("Dave's output")},
 		OutputsMetadata:    [][]byte{[]byte("Dave's output's token info")},
-		Receivers:          []view.Identity{view.Identity("Dave")},
+		Receivers:          []token.Identity{token.Identity("Dave")},
 		ReceiverAuditInfos: [][]byte{[]byte("Dave")},
 		ReceiverIsSender:   []bool{false},
 	}
@@ -149,19 +148,19 @@ func testFilterByCase1(t *testing.T) {
 
 	// Alice's issue
 	aliceIssue := driver.IssueMetadata{
-		Issuer:              view.Identity("Issuer"),
+		Issuer:              token.Identity("Issuer"),
 		Outputs:             [][]byte{[]byte("Alice's output")},
 		TokenInfo:           [][]byte{[]byte("Alice's output's token info")},
-		Receivers:           []view.Identity{view.Identity("Alice")},
+		Receivers:           []token.Identity{token.Identity("Alice")},
 		ReceiversAuditInfos: [][]byte{[]byte("Alice")},
 	}
 
 	// Bob's issue
 	bobIssue := driver.IssueMetadata{
-		Issuer:              view.Identity("Issuer"),
+		Issuer:              token.Identity("Issuer"),
 		Outputs:             [][]byte{[]byte("Bob's output")},
 		TokenInfo:           [][]byte{[]byte("Bob's output's token info")},
-		Receivers:           []view.Identity{view.Identity("Bob")},
+		Receivers:           []token.Identity{token.Identity("Bob")},
 		ReceiversAuditInfos: [][]byte{[]byte("Bob")},
 	}
 
@@ -335,12 +334,12 @@ func TestMetadata_GetToken(t *testing.T) {
 	// Mocks and expectations
 	raw := []byte("some raw data")
 	expectedToken := &token2.Token{}
-	expectedIdentity := view.Identity("identity1")
+	expectedIdentity := token.Identity("identity1")
 	expectedTokenInfoRaw := []byte("token info raw")
 	mockTokenService.GetTokenInfoStub = func(metadata *driver.TokenRequestMetadata, raw []byte) ([]byte, error) {
 		return expectedTokenInfoRaw, nil
 	}
-	mockTokenService.DeserializeTokenStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, view.Identity, error) {
+	mockTokenService.DeserializeTokenStub = func(raw []byte, tokenInfoRaw []byte) (*token2.Token, token.Identity, error) {
 		return expectedToken, expectedIdentity, nil
 	}
 

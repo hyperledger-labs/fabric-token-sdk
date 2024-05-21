@@ -9,9 +9,6 @@ package token
 import (
 	"encoding/asn1"
 
-	view2 "github.com/hyperledger-labs/fabric-smart-client/platform/view"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/core/common/meta"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
@@ -22,6 +19,10 @@ import (
 const (
 	TransferMetadataPrefix = meta.TransferMetadataPrefix
 )
+
+type Binder interface {
+	Bind(longTerm Identity, ephemeral Identity) error
+}
 
 // RecipientData contains information about the identity of a token owner
 type RecipientData = driver.RecipientData
@@ -133,26 +134,26 @@ type AuditRecord struct {
 // In particular, it carries the identities of the issuer and the receivers
 type Issue struct {
 	// Issuer is the issuer of the tokens
-	Issuer view.Identity
+	Issuer Identity
 	// Receivers is the list of identities of the receivers
-	Receivers []view.Identity
+	Receivers []Identity
 	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
-	ExtraSigners []view.Identity
+	ExtraSigners []Identity
 }
 
 // Transfer contains information about a transfer operation.
 // In particular, it carries the identities of the senders and the receivers
 type Transfer struct {
 	// Senders is the list of identities of the senders
-	Senders []view.Identity
+	Senders []Identity
 	// Receivers is the list of identities of the receivers
-	Receivers []view.Identity
+	Receivers []Identity
 	// ExtraSigners is the list of extra identities that must sign the token request to make it valid.
 	// This field is to be used by the token drivers to list any additional identities that must
 	// sign the token request.
-	ExtraSigners []view.Identity
+	ExtraSigners []Identity
 }
 
 // Request aggregates token operations that must be performed atomically.
@@ -217,7 +218,7 @@ func (r *Request) ID() string {
 // Issue appends an issue action to the request. The action will be prepared using the provided issuer wallet.
 // The action issues to the receiver a token of the passed type and quantity.
 // Additional options can be passed to customize the action.
-func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
+func (r *Request) Issue(wallet *IssuerWallet, receiver Identity, typ string, q uint64, opts ...IssueOption) (*IssueAction, error) {
 	if wallet == nil {
 		return nil, errors.Errorf("wallet is nil")
 	}
@@ -284,7 +285,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 			Issuer:              meta.Issuer,
 			Outputs:             outputs,
 			TokenInfo:           meta.TokenInfo,
-			Receivers:           []view.Identity{receiver},
+			Receivers:           []Identity{receiver},
 			ReceiversAuditInfos: [][]byte{auditInfo},
 			ExtraSigners:        meta.ExtraSigners,
 		},
@@ -297,7 +298,7 @@ func (r *Request) Issue(wallet *IssuerWallet, receiver view.Identity, typ string
 // The action transfers tokens of the passed types to the receivers for the passed quantities.
 // In other words, owners[0] will receives values[0], and so on.
 // Additional options can be passed to customize the action.
-func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []view.Identity, opts ...TransferOption) (*TransferAction, error) {
+func (r *Request) Transfer(wallet *OwnerWallet, typ string, values []uint64, owners []Identity, opts ...TransferOption) (*TransferAction, error) {
 	for _, v := range values {
 		if v == 0 {
 			return nil, errors.Errorf("value is zero")
@@ -355,7 +356,7 @@ func (r *Request) Redeem(wallet *OwnerWallet, typ string, value uint64, opts ...
 	if err != nil {
 		return errors.WithMessagef(err, "failed compiling options [%v]", opts)
 	}
-	tokenIDs, outputTokens, err := r.prepareTransfer(true, wallet, typ, []uint64{value}, []view.Identity{nil}, opt)
+	tokenIDs, outputTokens, err := r.prepareTransfer(true, wallet, typ, []uint64{value}, []Identity{nil}, opt)
 	if err != nil {
 		return errors.Wrap(err, "failed preparing transfer")
 	}
@@ -586,7 +587,7 @@ func (r *Request) extractTransferOutputs(i int, counter uint64, transferAction d
 		if !output.IsRedeem() {
 			ledgerOutput = raw
 		}
-		logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, hash.Hashable(ledgerOutput))
+		logger.Debugf("Transfer Action Output [%d,%d][%s:%d] is present, extract [%s]", i, j, r.Anchor, counter, Hashable(ledgerOutput))
 		outputs = append(outputs, &Output{
 			ActionIndex:       i,
 			Index:             counter,
@@ -895,8 +896,8 @@ func (r *Request) SetSignatures(sigmas map[string][]byte) {
 	r.Actions.Signatures = signatures
 }
 
-func (r *Request) TransferSigners() []view.Identity {
-	signers := make([]view.Identity, 0)
+func (r *Request) TransferSigners() []Identity {
+	signers := make([]Identity, 0)
 	for _, transfer := range r.Transfers() {
 		signers = append(signers, transfer.Senders...)
 		signers = append(signers, transfer.ExtraSigners...)
@@ -904,8 +905,8 @@ func (r *Request) TransferSigners() []view.Identity {
 	return signers
 }
 
-func (r *Request) IssueSigners() []view.Identity {
-	signers := make([]view.Identity, 0)
+func (r *Request) IssueSigners() []Identity {
+	signers := make([]Identity, 0)
 	for _, issue := range r.Issues() {
 		signers = append(signers, issue.Issuer)
 		signers = append(signers, issue.ExtraSigners...)
@@ -919,13 +920,7 @@ func (r *Request) SetTokenService(service *ManagementService) {
 }
 
 // BindTo binds transfers' senders and receivers, that are senders, that are not me to the passed identity
-func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
-	resolver := view2.GetEndpointService(sp)
-	longTermIdentity, _, _, err := view2.GetEndpointService(sp).Resolve(party)
-	if err != nil {
-		return errors.Wrap(err, "cannot resolve identity")
-	}
-
+func (r *Request) BindTo(binder Binder, identity Identity) error {
 	for i := range r.Actions.Transfers {
 		// senders
 		for _, eid := range r.Metadata.Transfers[i].Senders {
@@ -933,8 +928,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind sender [%s] to [%s]", eid, party)
-			if err := resolver.Bind(longTermIdentity, eid); err != nil {
+			logger.Debugf("bind sender [%s] to [%s]", eid, identity)
+			if err := binder.Bind(identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -945,8 +940,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 				// this is me, skip
 				continue
 			}
-			logger.Debugf("bind extra signer [%s] to [%s]", eid, party)
-			if err := resolver.Bind(longTermIdentity, eid); err != nil {
+			logger.Debugf("bind extra signer [%s] to [%s]", eid, identity)
+			if err := binder.Bind(identity, eid); err != nil {
 				return errors.Wrap(err, "failed binding sender identities")
 			}
 		}
@@ -960,8 +955,8 @@ func (r *Request) BindTo(sp view2.ServiceProvider, party view.Identity) error {
 					continue
 				}
 
-				logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], party)
-				if err := resolver.Bind(longTermIdentity, receivers[j]); err != nil {
+				logger.Debugf("bind receiver as sender [%s] to [%s]", receivers[j], identity)
+				if err := binder.Bind(identity, receivers[j]); err != nil {
 					return errors.Wrap(err, "failed binding receiver identities")
 				}
 			}
@@ -1139,7 +1134,7 @@ func (r *Request) parseInputIDs(inputs []*token.ID) ([]*token.ID, token.Quantity
 	return inputs, sum, typ, nil
 }
 
-func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType string, values []uint64, owners []view.Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
+func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType string, values []uint64, owners []Identity, transferOpts *TransferOptions) ([]*token.ID, []*token.Token, error) {
 	for _, owner := range owners {
 		if redeem {
 			if !owner.IsNone() {
@@ -1240,7 +1235,7 @@ func (r *Request) prepareTransfer(redeem bool, wallet *OwnerWallet, tokenType st
 	return tokenIDs, outputTokens, nil
 }
 
-func (r *Request) genOutputs(values []uint64, owners []view.Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
+func (r *Request) genOutputs(values []uint64, owners []Identity, tokenType string) ([]*token.Token, token.Quantity, error) {
 	pp := r.TokenService.PublicParametersManager().PublicParameters()
 	precision := pp.Precision()
 	maxTokenValue := pp.MaxTokenValue()

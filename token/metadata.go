@@ -7,8 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package token
 
 import (
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/services/hash"
-	"github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/driver"
 	"github.com/hyperledger-labs/fabric-token-sdk/token/token"
 	"github.com/pkg/errors"
@@ -22,10 +20,10 @@ type Metadata struct {
 }
 
 // GetToken unmarshals the given bytes to extract the token and its issuer (if any).
-func (m *Metadata) GetToken(raw []byte) (*token.Token, view.Identity, []byte, error) {
+func (m *Metadata) GetToken(raw []byte) (*token.Token, Identity, []byte, error) {
 	tokenInfoRaw, err := m.TokenService.GetTokenInfo(m.TokenRequestMetadata, raw)
 	if err != nil {
-		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", hash.Hashable(raw).String())
+		return nil, nil, nil, errors.WithMessagef(err, "metadata for [%s] not found", Hashable(raw).String())
 	}
 	tok, id, err := m.TokenService.DeserializeToken(raw, tokenInfoRaw)
 	if err != nil {
@@ -74,7 +72,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 			var Outputs []byte
 			var TokenInfo []byte
-			var Receivers view.Identity
+			var Receivers Identity
 			var ReceiverAuditInfos []byte
 
 			if search(eIDs, recipientEID) != -1 {
@@ -111,7 +109,7 @@ func (m *Metadata) FilterBy(eIDs ...string) (*Metadata, error) {
 			}
 			var Outputs []byte
 			var TokenInfo []byte
-			var Receivers view.Identity
+			var Receivers Identity
 			var ReceiverIsSender bool
 			var ReceiverAuditInfos []byte
 

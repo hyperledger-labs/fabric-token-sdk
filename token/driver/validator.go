@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 // ValidationAttributeID is the type of validation attribute identifier
 type ValidationAttributeID = string
 
@@ -25,7 +23,7 @@ type Ledger interface {
 
 type SignatureProvider interface {
 	// HasBeenSignedBy returns true and the verified signature if the provider contains a valid signature for the passed identity and verifier
-	HasBeenSignedBy(id view.Identity, verifier Verifier) ([]byte, error)
+	HasBeenSignedBy(id Identity, verifier Verifier) ([]byte, error)
 	// Signatures returns the signatures inside this provider
 	Signatures() [][]byte
 }

@@ -6,8 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 
 package driver
 
-import "github.com/hyperledger-labs/fabric-smart-client/platform/view/view"
-
 // IssueOptions models the options that can be passed to the issue command
 type IssueOptions struct {
 	// Attributes is a container of generic options that might be driver specific
@@ -22,7 +20,7 @@ type IssueService interface {
 	// The function returns an IssuerAction, the associated metadata, and the identity of the issuer (depending on the implementation, it can be different from
 	// the one passed in input).
 	// The metadata is an array with an entry for each output created by the action.
-	Issue(issuerIdentity view.Identity, tokenType string, values []uint64, owners [][]byte, opts *IssueOptions) (IssueAction, *IssueMetadata, error)
+	Issue(issuerIdentity Identity, tokenType string, values []uint64, owners [][]byte, opts *IssueOptions) (IssueAction, *IssueMetadata, error)
 
 	// VerifyIssue checks the well-formedness of the passed IssuerAction with the respect to the passed metadata
 	VerifyIssue(tr IssueAction, metadata [][]byte) error
