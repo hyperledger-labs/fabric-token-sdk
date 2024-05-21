@@ -67,8 +67,8 @@ func NewTokenService[T driver.PublicParameters](
 func (s *Service[T]) GetTokenInfo(meta *driver.TokenRequestMetadata, target []byte) ([]byte, error) {
 	tokenInfoRaw := meta.GetTokenInfo(target)
 	if len(tokenInfoRaw) == 0 {
-		s.Logger.Debugf("metadata for [%s] not found", Hashable(target).String())
-		return nil, errors.Errorf("metadata for [%s] not found", Hashable(target).String())
+		s.Logger.Debugf("metadata for [%s] not found", Hashable(target))
+		return nil, errors.Errorf("metadata for [%s] not found", Hashable(target))
 	}
 	return tokenInfoRaw, nil
 }

@@ -25,57 +25,58 @@ type Manager interface {
 	DeserializeSigner(raw []byte) (driver.Signer, error)
 }
 
-type multipler struct {
+type MultiplexDeserializer struct {
 	deserializersMutex sync.RWMutex
 	deserializers      []Deserializer
 }
 
-func NewMultiplexDeserializer() *multipler {
-	return &multipler{
+func NewMultiplexDeserializer() *MultiplexDeserializer {
+	return &MultiplexDeserializer{
 		deserializers: []Deserializer{},
 	}
 }
 
-func (d *multipler) AddDeserializer(newD Deserializer) {
+func (d *MultiplexDeserializer) AddDeserializer(newD Deserializer) {
 	d.deserializersMutex.Lock()
 	d.deserializers = append(d.deserializers, newD)
 	d.deserializersMutex.Unlock()
 }
 
-func (d *multipler) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
-	var errs []error
-
-	copyDeserial := d.threadSafeCopyDeserializers()
-	for _, des := range copyDeserial {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying deserialization with [%v]", des)
-		}
-		v, err := des.DeserializeVerifier(raw)
-		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("trying deserialization with [%v] succeeded", des)
-			}
-			return v, nil
-		}
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying deserialization with [%v] failed", des)
-		}
-		errs = append(errs, err)
-	}
-
-	return nil, errors.Errorf("failed deserialization [%v]", errs)
+func (d *MultiplexDeserializer) DeserializeVerifier(raw []byte) (driver.Verifier, error) {
+	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer Deserializer) (driver.Verifier, error) {
+		return deserializer.DeserializeVerifier(raw)
+	})
 }
 
-func (d *multipler) DeserializeSigner(raw []byte) (driver.Signer, error) {
+func (d *MultiplexDeserializer) DeserializeSigner(raw []byte) (driver.Signer, error) {
+	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer Deserializer) (driver.Signer, error) {
+		return deserializer.DeserializeSigner(raw)
+	})
+}
+
+func (d *MultiplexDeserializer) Info(raw []byte, auditInfo []byte) (string, error) {
+	return deserialize(d.threadSafeCopyDeserializers(), func(deserializer Deserializer) (string, error) {
+		return deserializer.Info(raw, auditInfo)
+	})
+}
+
+func (d *MultiplexDeserializer) threadSafeCopyDeserializers() []Deserializer {
+	d.deserializersMutex.RLock()
+	res := make([]Deserializer, len(d.deserializers))
+	copy(res, d.deserializers)
+	d.deserializersMutex.RUnlock()
+	return res
+}
+
+func deserialize[V any](copyDeserial []Deserializer, extractor func(Deserializer) (V, error)) (V, error) {
+	var defaultV V
 	var errs []error
 
-	copyDeserial := d.threadSafeCopyDeserializers()
 	for _, des := range copyDeserial {
 		if logger.IsEnabledFor(zapcore.DebugLevel) {
 			logger.Debugf("trying signer deserialization with [%s]", des)
 		}
-		v, err := des.DeserializeSigner(raw)
+		v, err := extractor(des)
 		if err == nil {
 			if logger.IsEnabledFor(zapcore.DebugLevel) {
 				logger.Debugf("trying signer deserialization with [%s] succeeded", des)
@@ -89,38 +90,5 @@ func (d *multipler) DeserializeSigner(raw []byte) (driver.Signer, error) {
 		errs = append(errs, err)
 	}
 
-	return nil, errors.Errorf("failed signer deserialization [%v]", errs)
-}
-
-func (d *multipler) Info(raw []byte, auditInfo []byte) (string, error) {
-	var errs []error
-
-	copyDeserial := d.threadSafeCopyDeserializers()
-	for _, des := range copyDeserial {
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying info deserialization with [%v]", des)
-		}
-		v, err := des.Info(raw, auditInfo)
-		if err == nil {
-			if logger.IsEnabledFor(zapcore.DebugLevel) {
-				logger.Debugf("trying info deserialization with [%v] succeeded", des)
-			}
-			return v, nil
-		}
-
-		if logger.IsEnabledFor(zapcore.DebugLevel) {
-			logger.Debugf("trying info deserialization with [%v] failed", des)
-		}
-		errs = append(errs, err)
-	}
-
-	return "", errors.Errorf("failed info deserialization [%v]", errs)
-}
-
-func (d *multipler) threadSafeCopyDeserializers() []Deserializer {
-	d.deserializersMutex.RLock()
-	res := make([]Deserializer, len(d.deserializers))
-	copy(res, d.deserializers)
-	d.deserializersMutex.RUnlock()
-	return res
+	return defaultV, errors.Errorf("failed signer deserialization [%v]", errs)
 }

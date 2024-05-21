@@ -159,7 +159,7 @@ func (w *CertifierWallet) GetCertifierIdentity() (driver.Identity, error) {
 
 func (w *CertifierWallet) GetSigner(id driver.Identity) (driver.Signer, error) {
 	if !w.Contains(id) {
-		return nil, errors.Errorf("identity does not belong to this AnonymousOwnerWallet [%s]", id.String())
+		return nil, errors.Errorf("identity does not belong to this AnonymousOwnerWallet [%s]", id)
 	}
 	return w.IdentityProvider.GetSigner(id)
 }
@@ -320,7 +320,7 @@ func (w *AnonymousOwnerWallet) RegisterRecipient(data *driver.RecipientData) err
 	if data == nil {
 		return errors.WithStack(ErrNilRecipientData)
 	}
-	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity.String(), Hashable(data.AuditInfo).String())
+	w.Logger.Debugf("register recipient identity [%s] with audit info [%s]", data.Identity, Hashable(data.AuditInfo))
 
 	// recognize identity and register it
 	// match identity and audit info

@@ -23,7 +23,7 @@ type AuditInfoDeserializer interface {
 
 // EIDRHDeserializer returns enrollment IDs behind the owners of token
 type EIDRHDeserializer struct {
-	deserializers map[string]AuditInfoDeserializer
+	deserializers map[identity.Type]AuditInfoDeserializer
 }
 
 // NewEIDRHDeserializer returns an enrollmentService

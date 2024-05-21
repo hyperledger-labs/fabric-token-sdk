@@ -13,12 +13,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type (
+	Type     = string
+	Identity = driver.Identity
+)
+
 // TypedIdentity encodes an identity with a type.
 type TypedIdentity struct {
 	// Type encodes the type of the identity
-	Type string `protobuf:"bytes,1,opt,name=type,json=type,proto3" json:"type,omitempty"`
+	Type Type `protobuf:"bytes,1,opt,name=type,json=type,proto3" json:"type,omitempty"`
 	// Identity encodes the identity itself
-	Identity []byte `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
+	Identity Identity `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 }
 
 func (i TypedIdentity) Bytes() ([]byte, error) {
@@ -34,7 +39,7 @@ func UnmarshalTypedIdentity(id driver.Identity) (*TypedIdentity, error) {
 	return si, nil
 }
 
-func WrapWithType(idType string, id driver.Identity) (driver.Identity, error) {
+func WrapWithType(idType Type, id driver.Identity) (driver.Identity, error) {
 	raw, err := (&TypedIdentity{Type: idType, Identity: id}).Bytes()
 	if err != nil {
 		return nil, err

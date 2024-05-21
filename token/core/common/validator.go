@@ -93,7 +93,7 @@ func (v *Validator[P, T, TA, IA]) VerifyTokenRequestFromRaw(getState driver.GetS
 		return nil, nil, errors.Wrap(err, "failed to marshal signed token request")
 	}
 
-	v.Logger.Debugf("cc tx-id [%s][%s]", Hashable(raqRaw).String(), anchor)
+	v.Logger.Debugf("cc tx-id [%s][%s]", Hashable(raqRaw), anchor)
 	signed := append(raqRaw, []byte(anchor)...)
 	var signatures [][]byte
 	if len(v.PublicParams.Auditors()) != 0 {

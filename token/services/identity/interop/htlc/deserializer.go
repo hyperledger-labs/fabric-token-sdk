@@ -105,15 +105,15 @@ func NewAuditDeserializer(auditInfoDeserializer deserializer.AuditInfoDeserializ
 func (a *AuditDeserializer) DeserializeAuditInfo(bytes []byte) (deserializer.AuditInfo, error) {
 	si := &ScriptInfo{}
 	err := json.Unmarshal(bytes, si)
-	if err == nil && (len(si.Sender) != 0 || len(si.Recipient) != 0) {
-		if len(si.Recipient) != 0 {
-			ai, err := a.AuditInfoDeserializer.DeserializeAuditInfo(si.Recipient)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", bytes)
-			}
-			return ai, nil
-		}
+	if err != nil || (len(si.Sender) == 0 && len(si.Recipient) == 0) {
+		return nil, errors.Errorf("ivalid audit info, failed unmarshal [%s][%d][%d]", string(bytes), len(si.Sender), len(si.Recipient))
+	}
+	if len(si.Recipient) == 0 {
 		return nil, errors.Errorf("no recipient defined")
 	}
-	return nil, errors.Errorf("ivalid audit info, failed unmarshal [%s]", string(bytes))
+	ai, err := a.AuditInfoDeserializer.DeserializeAuditInfo(si.Recipient)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed unamrshalling audit info [%s]", bytes)
+	}
+	return ai, nil
 }
